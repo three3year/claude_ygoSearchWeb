@@ -11,12 +11,6 @@ TYPE_PENDULUM = 0x1000000
 TYPE_LINK = 0x4000000  # Link 怪獸位元;勿與 TYPE_TOKEN 混用
 TYPE_TOKEN = 0x4000    # 衍生物位元
 
-FIELD_ORDER = [
-    "id", "alt_ids", "name_zh", "name_ja", "name_en", "desc",
-    "type", "atk", "def", "level", "race", "attribute",
-    "scale", "link_marker", "setcode", "ot",
-]
-
 
 def _read_cdb(path):
     con = sqlite3.connect(path)
@@ -61,29 +55,47 @@ def _merge_alt_arts(entries):
     """同名異圖卡合併:alias 指向同名主卡者併入其 alt_ids。
 
     entries: {id: (card, alias)}。回傳 (cards, merged_alt 數, 例外清單)。
+
+    迭代解析:alias 目標若已被併入他卡,沿合併結果追到最終主卡(鏈式異圖);
+    目標不存在、卡名不同、或互指成環者保留為獨立條目並列入例外。
     """
     exceptions = []
     merged = 0
     cards = {}
-    alts = []
+    pending = []
+    merged_into = {}
     for cid, (card, alias) in entries.items():
         if alias == 0:
             cards[cid] = card
         else:
-            alts.append((cid, card, alias))
-    for cid, card, alias in alts:
-        target = entries.get(alias)
-        if target is None:
-            exceptions.append(
-                {"id": cid, "alias": alias, "reason": "target_missing"})
-            cards[cid] = card
-        elif target[0]["name_zh"] != card["name_zh"]:
-            exceptions.append(
-                {"id": cid, "alias": alias, "reason": "name_mismatch"})
-            cards[cid] = card
-        else:
-            cards[alias]["alt_ids"].append(cid)
-            merged += 1
+            pending.append((cid, card, alias))
+    progress = True
+    while pending and progress:
+        progress = False
+        deferred = []
+        for cid, card, alias in pending:
+            target_id = merged_into.get(alias, alias)
+            if target_id in cards:
+                if cards[target_id]["name_zh"] == card["name_zh"]:
+                    cards[target_id]["alt_ids"].append(cid)
+                    merged_into[cid] = target_id
+                    merged += 1
+                else:
+                    exceptions.append(
+                        {"id": cid, "alias": alias, "reason": "name_mismatch"})
+                    cards[cid] = card
+                progress = True
+            elif target_id not in entries:
+                exceptions.append(
+                    {"id": cid, "alias": alias, "reason": "target_missing"})
+                cards[cid] = card
+                progress = True
+            else:
+                deferred.append((cid, card, alias))  # 目標尚未解析,下輪再試
+        pending = deferred
+    for cid, card, alias in pending:  # 互指成環,無法解析
+        exceptions.append({"id": cid, "alias": alias, "reason": "unresolved"})
+        cards[cid] = card
     for card in cards.values():
         card["alt_ids"].sort()
     exceptions.sort(key=lambda e: e["id"])

@@ -119,6 +119,49 @@ class CardListTest(unittest.TestCase):
             [{"id": 20409757, "alias": 1861628, "reason": "name_mismatch"},
              {"id": 30000000, "alias": 99999999, "reason": "target_missing"}])
 
+    def test_alias_chain_resolves_to_root(self):
+        """鏈式 alias:異圖指向異圖時沿合併結果解析,同名者都併入最終主卡。"""
+        zh = self.cdb("zh.cdb", [
+            {"id": 10000001, "name": "主卡"},
+            {"id": 10000002, "name": "主卡", "alias": 10000001},
+            {"id": 10000003, "name": "主卡", "alias": 10000002},  # 指向異圖
+        ])
+        cards, report = build_card_list(zh)
+        self.assertEqual([c["id"] for c in cards], [10000001])
+        self.assertEqual(cards[0]["alt_ids"], [10000002, 10000003])
+        self.assertEqual(report["alias_exceptions"], [])
+
+    def test_alias_chain_through_renamed_card(self):
+        """異圖指向「同名但其 alias 指向異名卡」的條目:該條目保留後,異圖併入它。
+
+        真實案例:6218705(霸王天龍 異色眼弧光龍)→6218704(同名,alias→霸王龍 札克)。
+        """
+        zh = self.cdb("zh.cdb", [
+            {"id": 13331639, "name": "霸王龍 札克"},
+            {"id": 6218704, "name": "霸王天龍 異色眼弧光龍", "alias": 13331639},
+            {"id": 6218705, "name": "霸王天龍 異色眼弧光龍", "alias": 6218704},
+        ])
+        cards, report = build_card_list(zh)
+        by_id = {c["id"]: c for c in cards}
+        self.assertEqual(sorted(by_id), [6218704, 13331639])
+        self.assertEqual(by_id[6218704]["alt_ids"], [6218705])
+        self.assertEqual(
+            report["alias_exceptions"],
+            [{"id": 6218704, "alias": 13331639, "reason": "name_mismatch"}])
+
+    def test_alias_cycle_kept_with_exception(self):
+        """alias 互指成環(畸形資料)不崩潰:各自保留並列入例外。"""
+        zh = self.cdb("zh.cdb", [
+            {"id": 10000001, "name": "環卡", "alias": 10000002},
+            {"id": 10000002, "name": "環卡", "alias": 10000001},
+        ])
+        cards, report = build_card_list(zh)
+        self.assertEqual([c["id"] for c in cards], [10000001, 10000002])
+        self.assertEqual(
+            report["alias_exceptions"],
+            [{"id": 10000001, "alias": 10000002, "reason": "unresolved"},
+             {"id": 10000002, "alias": 10000001, "reason": "unresolved"}])
+
     def test_level_decomposition(self):
         """靈擺卡的複合 level 欄位拆出等級與刻度;Link 怪的 def 欄位是連結標記。"""
         zh = self.cdb("zh.cdb", [

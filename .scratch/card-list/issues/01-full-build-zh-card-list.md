@@ -4,12 +4,12 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] 對真實 `cards.cdb` 執行後產出 `cards.json`,欄位含 id、alt_ids、name_zh、desc、type、atk、def、level、race、attribute、scale、link_marker、setcode、ot(name_ja/name_en 先為空字串)
-- [ ] 9 位數暫時編號的卡不會出現在總表(以 fixture 驗證)
-- [ ] `type` 含 `0x4000` 位元的衍生物不會出現在總表(以 fixture 驗證;不得誤用 `0x4000000`)
-- [ ] 同名 alias 條目合併進主卡且 `alt_ids` 正確;alias 指向不同卡名的例外不合併並列入報告(以 fixture 驗證)
-- [ ] 等級/靈擺刻度/Link 值自 cdb 複合 level 欄位正確拆出(以 fixture 驗證)
-- [ ] 同輸入執行兩次,輸出逐位元組相同
-- [ ] 測試不碰網路,fixture cdb 於測試內以 sqlite3 程式化建立
+- [x] 對真實 `cards.cdb` 執行後產出 `cards.json`,欄位含 id、alt_ids、name_zh、desc、type、atk、def、level、race、attribute、scale、link_marker、setcode、ot(name_ja/name_en 先為空字串)
+- [x] 9 位數暫時編號的卡不會出現在總表(以 fixture 驗證)
+- [x] `type` 含 `0x4000` 位元的衍生物不會出現在總表(以 fixture 驗證;不得誤用 `0x4000000`)
+- [x] 同名 alias 條目合併進主卡且 `alt_ids` 正確;alias 指向不同卡名的例外不合併並列入報告(以 fixture 驗證)
+- [x] 等級/靈擺刻度/Link 值自 cdb 複合 level 欄位正確拆出(以 fixture 驗證)
+- [x] 同輸入執行兩次,輸出逐位元組相同
+- [x] 測試不碰網路,fixture cdb 於測試內以 sqlite3 程式化建立

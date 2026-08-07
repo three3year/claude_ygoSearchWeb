@@ -4,8 +4,8 @@ import os
 import tempfile
 import unittest
 
-from update_cards import (SOURCES, download_genesys, download_md_rarity,
-                          download_sources)
+from update_cards import (SOURCES, check_faq_gap, download_genesys,
+                          download_md_rarity, download_sources)
 
 
 class DownloadSourcesTest(unittest.TestCase):
@@ -135,6 +135,55 @@ class DownloadGenesysTest(unittest.TestCase):
             self.assertEqual(json.load(f), {"1": 5})
         self.assertEqual(
             download_genesys(self.dir, fetch_json=None, offline=True), path)
+
+
+class CheckFaqGapTest(unittest.TestCase):
+    """差值更新後的官方 Q&A 對帳:純本地比對,只回報不自動補爬。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.faq_path = os.path.join(self.tmp.name, "faq_info.json")
+
+    def _write_faq(self, entries):
+        with open(self.faq_path, "w", encoding="utf-8") as f:
+            json.dump(entries, f)
+
+    @staticmethod
+    def _card(id_, ot=1, name_ja="カード"):
+        return {"id": id_, "ot": ot, "alt_ids": [], "name_ja": name_ja,
+                "name_zh": "卡"}
+
+    def test_missing_cards_reported_with_refill_hint(self):
+        """有缺口:報張數、列出卡,並指出用哪支腳本補齊。"""
+        self._write_faq([{"cid": 1, "password": 111}])
+        lines = check_faq_gap([self._card(111), self._card(222, name_ja="新卡")],
+                              self.faq_path)
+        text = "\n".join(lines)
+        self.assertIn("1 張", text)
+        self.assertIn("222", text)
+        self.assertIn("新卡", text)
+        self.assertIn("refill_faq.py", text)
+
+    def test_no_gap_reports_clean_without_hint(self):
+        """無缺口:不提補齊指令,免得每次更新都像有事要做。"""
+        self._write_faq([{"cid": 1, "password": 111}])
+        lines = check_faq_gap([self._card(111)], self.faq_path)
+        text = "\n".join(lines)
+        self.assertIn("無缺口", text)
+        self.assertNotIn("refill_faq.py", text)
+
+    def test_tcg_only_cards_not_counted_as_gap(self):
+        """TCG 限定卡官方無日文頁,不算缺口。"""
+        self._write_faq([])
+        lines = check_faq_gap([self._card(111, ot=2)], self.faq_path)
+        self.assertIn("無缺口", "\n".join(lines))
+
+    def test_missing_faq_json_skips_check(self):
+        """尚未建過 faq_info.json:略過對帳而非報錯。"""
+        lines = check_faq_gap([self._card(111)],
+                              os.path.join(self.tmp.name, "nope.json"))
+        self.assertIn("略過", "\n".join(lines))
 
 
 if __name__ == "__main__":

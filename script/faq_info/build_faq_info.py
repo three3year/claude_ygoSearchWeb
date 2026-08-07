@@ -1,7 +1,8 @@
 """抽取官方 Q&A 快取的 CLI 薄殼:掃描快取目錄 → faqinfo 管線 → 寫出 faq_info.json。
 
-用法(於 repo 任意位置執行皆可):
-    python script/faq_info/build_faq_info.py --cache F:/AiProject/_cache
+用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
+    python script/faq_info/build_faq_info.py
+    python script/faq_info/build_faq_info.py --cache 別處的快取目錄
 """
 import argparse
 import glob
@@ -11,6 +12,7 @@ import re
 import sys
 
 from faqinfo import extract_faq_info
+from faqgap import DEFAULT_CACHE, build_cid_to_password
 
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -30,18 +32,16 @@ def iter_cache_pages(cache_dir):
             yield int(m.group(1)), f.read()
 
 
-def load_cid_to_password(cache_dir):
-    """由快取目錄的 ygoprodeck 資料檔建 cid(konami_id)→卡片密碼 對應表。"""
-    mapping = {}
+def iter_dumps(cache_dir):
+    """依檔名排序產出快取目錄中的 ygoprodeck 資料檔內容。"""
     for path in sorted(glob.glob(os.path.join(cache_dir, "ygopro_*.json"))):
         with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        for card in data.get("data", []):
-            for misc in card.get("misc_info", []):
-                kid = misc.get("konami_id")
-                if kid is not None:
-                    mapping.setdefault(kid, card["id"])
-    return mapping
+            yield json.load(f)
+
+
+def load_cid_to_password(cache_dir):
+    """由快取目錄的 ygoprodeck 資料檔建 cid(konami_id)→卡片密碼 對應表。"""
+    return build_cid_to_password(iter_dumps(cache_dir))
 
 
 def print_report(report, file=sys.stdout):
@@ -65,7 +65,8 @@ def print_report(report, file=sys.stdout):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="抽取官方 Q&A 快取為補足情報 JSON")
-    parser.add_argument("--cache", required=True, help="官方 Q&A 快取目錄")
+    parser.add_argument("--cache", default=DEFAULT_CACHE,
+                        help=f"官方 Q&A 快取目錄 (預設 {DEFAULT_CACHE})")
     parser.add_argument("--out", default=DEFAULT_OUTPUT,
                         help="輸出 JSON 路徑 (預設 data/sources/faq_info.json)")
     args = parser.parse_args(argv)

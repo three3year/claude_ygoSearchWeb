@@ -4,34 +4,21 @@
 發現線上新增補足情報時明確回報並以非零碼結束,不自動全量重爬。
 薄殼不納入自動測試。
 
-用法:
-    python script/faq_info/recrawl_faq.py --cache F:/AiProject/_cache \
-        --sample 20 --cids 19359,20691
+用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
+    python script/faq_info/recrawl_faq.py --sample 20 --cids 19359,20691
 """
 import argparse
 import json
 import os
 import sys
-import time
-import urllib.request
 
 from faqinfo import parse_faq_page
+from faqgap import DEFAULT_CACHE
+from faqfetch import fetch_faq_page, sleep_between
 
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_FAQ_JSON = os.path.join(ROOT, "data", "sources", "faq_info.json")
-
-URL = ("https://www.db.yugioh-card.com/yugiohdb/faq_search.action"
-       "?ope=4&cid={cid}&request_locale=ja")
-USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-              "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36")
-
-
-def fetch(cid):
-    req = urllib.request.Request(
-        URL.format(cid=cid), headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return resp.read().decode("utf-8")
 
 
 def sample_evenly(items, n):
@@ -48,7 +35,8 @@ def supplement_keys(fields):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="抽樣重爬官方 Q&A 頁並比對補足情報")
-    parser.add_argument("--cache", required=True, help="官方 Q&A 快取目錄")
+    parser.add_argument("--cache", default=DEFAULT_CACHE,
+                        help=f"官方 Q&A 快取目錄 (預設 {DEFAULT_CACHE})")
     parser.add_argument("--faq-json", default=DEFAULT_FAQ_JSON,
                         help="整合 JSON 路徑,用來挑出無補足情報的卡")
     parser.add_argument("--sample", type=int, default=20,
@@ -72,14 +60,13 @@ def main(argv=None):
 
     gained = []
     for i, cid in enumerate(targets):
-        if i:
-            time.sleep(args.delay)
+        sleep_between(i, args.delay)
         path = os.path.join(args.cache, f"faq_{cid}.html")
         old_fields = {}
         if os.path.exists(path):
             with open(path, encoding="utf-8") as f:
                 old_fields, _, _ = parse_faq_page(f.read())
-        html = fetch(cid)
+        html = fetch_faq_page(cid)
         with open(path, "w", encoding="utf-8", newline="") as f:
             f.write(html)
         new_fields, _, _ = parse_faq_page(html)

@@ -1,4 +1,5 @@
-"""一鍵更新卡片總表:下載三來源 → 管線建置 → 寫出 cards.json 與報告。
+"""一鍵更新卡片總表:下載三來源 → 管線建置 → 寫出 cards.json 與報告
+→ 官方 Q&A 對帳(回報缺口,不自動補爬)。
 
 用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
     python script/card_list/update_cards.py            # 下載最新來源後(差值)建置
@@ -8,6 +9,7 @@ import argparse
 import json
 import os
 import ssl
+import sys
 import urllib.request
 
 from build_cards import DEFAULT_OUTPUT, print_report
@@ -16,6 +18,12 @@ from cardlist import build_card_list, serialize_card_list
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_SOURCES_DIR = os.path.join(ROOT, "data", "sources")
+DEFAULT_FAQ_JSON = os.path.join(ROOT, "data", "sources", "faq_info.json")
+
+# 官方 Q&A 對帳復用 faq_info 的純函式模組(跨資料夾,需手動加入搜尋路徑)。
+# 用 append 而非 insert:不讓這個目錄有機會遮蔽標準庫或既有模組。
+sys.path.append(os.path.join(ROOT, "script", "faq_info"))
+from faqgap import find_missing_cards, format_gap_report  # noqa: E402
 
 SOURCES = {
     "zh": "https://github.com/salix5/cdb/releases/latest/download/cards.cdb",
@@ -143,6 +151,24 @@ def download_genesys(dest_dir, fetch_json=_fetch_json, offline=False):
     return path
 
 
+def check_faq_gap(cards, faq_json_path=DEFAULT_FAQ_JSON):
+    """對帳:卡片總表對官方 Q&A 整合檔,回傳可列印的報告行。
+
+    純本地比對、不連網。只回報缺口,不自動補爬——補爬要下載 dump 並對官方站
+    發數十次請求,那是 refill_faq.py 的工作,由人決定何時執行。
+    """
+    if not os.path.exists(faq_json_path):
+        return [f"官方 Q&A 對帳: 尚無 {os.path.basename(faq_json_path)},略過"]
+    with open(faq_json_path, encoding="utf-8") as f:
+        faq_entries = json.load(f)
+    missing, excluded = find_missing_cards(cards, faq_entries,
+                                           with_excluded=True)
+    lines = format_gap_report(missing, excluded)
+    if missing:
+        lines.append("  補齊方式: python script/faq_info/refill_faq.py")
+    return lines
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="一鍵更新卡片總表")
     parser.add_argument("--offline", action="store_true",
@@ -151,6 +177,8 @@ def main(argv=None):
                         help="來源暫存目錄 (預設 data/sources/,不入版控)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
                         help="輸出 JSON 路徑 (預設 data/cards.json)")
+    parser.add_argument("--faq-json", default=DEFAULT_FAQ_JSON,
+                        help="官方 Q&A 整合檔路徑,用於更新後對帳")
     args = parser.parse_args(argv)
 
     paths = download_sources(args.sources_dir, offline=args.offline)
@@ -169,6 +197,9 @@ def main(argv=None):
         f.write(serialize_card_list(cards))
     print_report(report)
     print(f"已寫出 {args.output}")
+
+    for line in check_faq_gap(cards, args.faq_json):
+        print(line)
 
 
 if __name__ == "__main__":

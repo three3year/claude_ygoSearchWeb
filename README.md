@@ -1,8 +1,9 @@
 # ygoSearchWeb — 卡片總表
 
 遊戲王 OCG 自建查卡網站的資料基礎。本階段產出**卡片總表** `cards.json`:
-繁中卡文(salix5/cdb)+ 日/英卡名(mycard/ygopro-database),以卡片密碼對齊整合,
-只收錄有正式 8 位數密碼的已發售實卡(排除先行卡與衍生物),同名異圖卡合併為主卡一筆。
+繁中卡文(salix5/cdb)+ 日/英卡名(mycard/ygopro-database)+ MD 稀有度(masterduelmeta),
+以卡片密碼對齊整合,只收錄有正式 8 位數密碼的已發售實卡(排除先行卡與衍生物),
+同名異圖卡合併為主卡一筆。
 
 領域詞彙見 [CONTEXT.md](CONTEXT.md);規格與票券見 `.scratch/card-list/`。
 
@@ -39,7 +40,8 @@ python -m unittest discover -s script
 
 `id`(主卡密碼)、`alt_ids`(異圖密碼)、`name_zh/ja/en`、`desc`(繁中卡文)、
 `type/race/attribute/setcode`(cdb 原始位元值)、`atk`、`def`(Link 怪為 null)、
-`level`、`scale`(靈擺刻度)、`link_marker`(Link 箭頭)、`ot`。
+`level`、`scale`(靈擺刻度)、`link_marker`(Link 箭頭)、`ot`、
+`md_rarity`(Master Duel 稀有度 N/R/SR/UR,未實裝為空字串)。
 
 ## 後續階段(未實作)
 

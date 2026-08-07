@@ -41,9 +41,10 @@ Status: ready-for-agent
 - **來源**:
   - 繁中:salix5/cdb Releases 的 `cards.cdb`(`datas` + `texts` 兩表)。不使用 `pre-release.cdb`。
   - 日英:mycard/ygopro-database `locales/ja-JP/cards.cdb` 與 `locales/en-US/cards.cdb`,以卡片密碼(id)對齊。實作時先驗證覆蓋率;若明顯不足,再評估補充來源(記錄於報告即可,本階段不自動混源)。
+  - MD 稀有度:masterduelmeta.com API(`konamiID` 即卡片密碼,分頁抓取、需 User-Agent),彙整為本地 JSON 後以密碼對齊;主卡沒對到時嘗試異圖密碼。未實裝 MD 的卡留空字串(空值本身代表「MD 未實裝」)。(票 05 追加)
 - **收錄規則**:以 `cards.cdb` 為卡片全集,過濾條件為 id 是正式 8 位數卡片密碼(id < 100000000)。同時排除 Token/衍生物(`type` 含 TYPE_TOKEN 位元 `0x4000`;注意不要誤用 `0x4000000`,那是 Link 怪獸位元)——衍生物不是可組牌實卡,實測 cards.cdb 內有 265 筆。
 - **同名異圖卡合併**:`alias` 不為 0 且卡名與主卡相同的條目視為異圖卡,合併進主卡——主卡一筆為代表,異圖密碼收進 `alt_ids` 副欄位。alias 不為 0 但卡名與主卡不同的例外條目不合併,記入建置報告供人工檢視。
-- **輸出格式**:單一 `cards.json`,UTF-8,一卡一物件,以卡片密碼為主鍵、依密碼排序,鍵順序固定。欄位:`id`(主卡密碼)、`alt_ids`(異圖密碼陣列,無則空)、`name_zh`、`name_ja`、`name_en`(缺漏為空字串)、`desc`(繁中卡文原文)、`type`、`atk`、`def`、`level`、`race`、`attribute`、`scale`、`link_marker`、`setcode`、`ot`。數值欄位保留 cdb 原始位元值(bitfield 不展開,解讀留給消費端;等級/刻度/Link 從 cdb 的複合 level 欄位拆出)。
+- **輸出格式**:單一 `cards.json`,UTF-8,一卡一物件,以卡片密碼為主鍵、依密碼排序,鍵順序固定。欄位:`id`(主卡密碼)、`alt_ids`(異圖密碼陣列,無則空)、`name_zh`、`name_ja`、`name_en`(缺漏為空字串)、`desc`(繁中卡文原文)、`type`、`atk`、`def`、`level`、`race`、`attribute`、`scale`、`link_marker`、`setcode`、`ot`、`md_rarity`(N/R/SR/UR,未實裝 MD 為空字串)。數值欄位保留 cdb 原始位元值(bitfield 不展開,解讀留給消費端;等級/刻度/Link 從 cdb 的複合 level 欄位拆出)。
 - **差值更新**:以卡片密碼為 key 比對既有總表與新來源;新增卡直接併入,既有卡欄位有變動則覆蓋並記錄。輸出變動報告(新增清單、變動清單與變動欄位)。不處理刪除(官方卡不會消失)。
 - **產出位置**:`cards.json` 置於 repo 內版本控管;來源 cdb 下載到不入版控的暫存目錄。
 - **建置報告**:每次執行輸出統計——收錄數、排除數(含排除原因分類)、日/英卡名覆蓋率。

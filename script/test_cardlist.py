@@ -3,6 +3,7 @@
 接縫:cardlist.build_card_list(來源 cdb 路徑們[, 既有總表]) → (cards, report)。
 fixture cdb 於測試內程式化建立,不碰網路。
 """
+import json
 import os
 import sqlite3
 import tempfile
@@ -64,7 +65,7 @@ class CardListTest(unittest.TestCase):
         self.assertEqual(list(card.keys()), [
             "id", "alt_ids", "name_zh", "name_ja", "name_en", "desc",
             "type", "atk", "def", "level", "race", "attribute",
-            "scale", "link_marker", "setcode", "ot"])
+            "scale", "link_marker", "setcode", "ot", "md_rarity"])
         self.assertEqual(card["id"], 63028558)
         self.assertEqual(card["alt_ids"], [])
         self.assertEqual(card["name_zh"], "青眼白龍")
@@ -228,6 +229,32 @@ class CardListTest(unittest.TestCase):
         cards, report = build_card_list(zh)
         self.assertEqual(cards[0]["name_ja"], "")
         self.assertNotIn("name_coverage", report)
+
+    def test_md_rarity_merge(self):
+        """MD 稀有度以密碼對齊;主卡沒對到時用異圖密碼;缺卡留空;報告含覆蓋率。"""
+        zh = self.cdb("zh.cdb", [
+            {"id": 89631139, "name": "青眼白龍"},
+            {"id": 10000001, "name": "異圖對齊卡"},
+            {"id": 10000002, "name": "異圖對齊卡", "alias": 10000001},
+            {"id": 20000001, "name": "未實裝卡"},
+        ])
+        md = os.path.join(self.tmp.name, "md.json")
+        with open(md, "w", encoding="utf-8") as f:
+            json.dump({"89631139": "UR", "10000002": "SR"}, f)
+        cards, report = build_card_list(zh, md_rarity_path=md)
+        by_id = {c["id"]: c for c in cards}
+        self.assertEqual(by_id[89631139]["md_rarity"], "UR")
+        self.assertEqual(by_id[10000001]["md_rarity"], "SR")  # 經異圖密碼對到
+        self.assertEqual(by_id[20000001]["md_rarity"], "")
+        self.assertEqual(report["md_rarity_coverage"],
+                         {"rated": 2, "missing": 1})
+
+    def test_md_rarity_optional(self):
+        """不給 MD 來源:欄位為空字串,報告無 MD 覆蓋率段。"""
+        zh = self.cdb("zh.cdb", [{"id": 89631139, "name": "青眼白龍"}])
+        cards, report = build_card_list(zh)
+        self.assertEqual(cards[0]["md_rarity"], "")
+        self.assertNotIn("md_rarity_coverage", report)
 
     def test_incremental_update(self):
         """差值更新:新增卡併入、變動卡覆蓋並報告變動欄位、結果與全量建置一致。"""

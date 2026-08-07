@@ -45,6 +45,7 @@ def _make_card(row):
         "link_marker": def_ if is_link else 0,
         "setcode": setcode,
         "ot": ot,
+        "md_rarity": "",
     }
 
 
@@ -130,6 +131,24 @@ def _fill_names(cards, field, names):
     return {"named": named, "missing": len(cards) - named}
 
 
+def _fill_md_rarity(cards, path):
+    """MD 稀有度 JSON({密碼字串: 稀有度})以密碼填入;主卡沒對到時試異圖密碼。"""
+    with open(path, encoding="utf-8") as f:
+        rarity = {int(k): v for k, v in json.load(f).items()}
+    rated = 0
+    for card in cards:
+        value = rarity.get(card["id"], "")
+        if not value:
+            for alt in card["alt_ids"]:
+                value = rarity.get(alt, "")
+                if value:
+                    break
+        card["md_rarity"] = value
+        if value:
+            rated += 1
+    return {"rated": rated, "missing": len(cards) - rated}
+
+
 def _diff_cards(existing, cards):
     """比對既有總表與新總表 → 變動報告(不處理刪除:官方卡不會消失)。"""
     old_by_id = {c["id"]: c for c in existing}
@@ -146,7 +165,8 @@ def _diff_cards(existing, cards):
     return {"added": added, "changed": changed}
 
 
-def build_card_list(zh_path, ja_path=None, en_path=None, existing=None):
+def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
+                    existing=None):
     excluded = {"no_password": 0, "token": 0}
     entries = {}
     for row in _read_cdb(zh_path):
@@ -173,6 +193,8 @@ def build_card_list(zh_path, ja_path=None, en_path=None, existing=None):
         if en_path is not None:
             coverage["en"] = _fill_names(cards, "name_en", _read_names(en_path))
         report["name_coverage"] = coverage
+    if md_rarity_path is not None:
+        report["md_rarity_coverage"] = _fill_md_rarity(cards, md_rarity_path)
     if existing is not None:
         report["changes"] = _diff_cards(existing, cards)
     return cards, report

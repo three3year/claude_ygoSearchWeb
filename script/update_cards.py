@@ -24,14 +24,60 @@ SOURCES = {
            "master/locales/en-US/cards.cdb"),
 }
 FILENAMES = {"zh": "cards.cdb", "ja": "ja-JP.cdb", "en": "en-US.cdb"}
+MD_RARITY_URL = ("https://www.masterduelmeta.com/api/v1/cards"
+                 "?limit=3000&page={page}&fields=konamiID,rarity")
+MD_RARITY_FILENAME = "md-rarity.json"
 
 
 def _fetch_url(url):
     # 本機 curl 對 github.com 有憑證撤銷檢查問題(需 --ssl-no-revoke);
     # Python 預設不做撤銷檢查,維持憑證驗證即可。
+    # MDM API 會擋無 User-Agent 的請求(403)。
     ctx = ssl.create_default_context()
-    with urllib.request.urlopen(url, timeout=120, context=ctx) as resp:
+    req = urllib.request.Request(
+        url, headers={"User-Agent": "ygoSearchWeb/1.0"})
+    with urllib.request.urlopen(req, timeout=120, context=ctx) as resp:
         return resp.read()
+
+
+def _fetch_json(url):
+    return json.loads(_fetch_url(url))
+
+
+def download_md_rarity(dest_dir, fetch_json=_fetch_json, offline=False):
+    """自 masterduelmeta API 分頁抓取 {卡片密碼: MD稀有度} → md-rarity.json。
+
+    分頁抓到空頁為止;konamiID 非純數字或缺稀有度的條目略過。
+    先寫 .tmp 再原子替換,失敗時既有檔不受影響。
+    """
+    os.makedirs(dest_dir, exist_ok=True)
+    path = os.path.join(dest_dir, MD_RARITY_FILENAME)
+    if offline:
+        if not os.path.exists(path):
+            raise RuntimeError(
+                f"離線模式但缺少來源 md({path});請先連網下載一次")
+        return path
+    rarity = {}
+    page = 1
+    try:
+        while True:
+            rows = fetch_json(MD_RARITY_URL.format(page=page))
+            if not rows:
+                break
+            for row in rows:
+                kid = row.get("konamiID")
+                value = row.get("rarity")
+                if kid and value and str(kid).isdigit():
+                    rarity[int(kid)] = value
+            page += 1
+    except Exception as e:
+        raise RuntimeError(f"來源 md 下載失敗(第 {page} 頁): {e}") from e
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump({str(k): v for k, v in sorted(rarity.items())}, f,
+                  ensure_ascii=False, indent=0)
+    os.replace(tmp_path, path)
+    return path
 
 
 def download_sources(dest_dir, fetch=_fetch_url, offline=False):
@@ -72,6 +118,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     paths = download_sources(args.sources_dir, offline=args.offline)
+    md_path = download_md_rarity(args.sources_dir, offline=args.offline)
 
     existing = None
     if os.path.exists(args.output):
@@ -80,7 +127,7 @@ def main(argv=None):
 
     cards, report = build_card_list(
         paths["zh"], ja_path=paths["ja"], en_path=paths["en"],
-        existing=existing)
+        md_rarity_path=md_path, existing=existing)
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_card_list(cards))
     print_report(report)

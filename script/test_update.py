@@ -1,9 +1,10 @@
 """來源下載殼測試:注入假 fetch,不實際連網。"""
+import json
 import os
 import tempfile
 import unittest
 
-from update_cards import SOURCES, download_sources
+from update_cards import SOURCES, download_md_rarity, download_sources
 
 
 class DownloadSourcesTest(unittest.TestCase):
@@ -49,6 +50,54 @@ class DownloadSourcesTest(unittest.TestCase):
         with self.assertRaises(RuntimeError) as ctx:
             download_sources(self.dir, fetch=None, offline=True)
         self.assertIn("zh", str(ctx.exception))
+
+
+class DownloadMdRarityTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = self.tmp.name
+
+    def test_paged_fetch_builds_password_rarity_map(self):
+        """分頁抓到空頁為止,彙整成 {密碼: 稀有度} JSON;略過無效條目。"""
+        pages = {
+            1: [{"konamiID": "89631139", "rarity": "UR"},
+                {"konamiID": "12345678", "rarity": "N"}],
+            2: [{"konamiID": None, "rarity": "R"},        # 無密碼 → 略過
+                {"konamiID": "23456789", "rarity": ""}],   # 無稀有度 → 略過
+            3: [],
+        }
+        def fetch_json(url):
+            page = int(url.split("page=")[1].split("&")[0])
+            return pages[page]
+        path = download_md_rarity(self.dir, fetch_json=fetch_json)
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f),
+                             {"12345678": "N", "89631139": "UR"})
+
+    def test_failure_keeps_existing_file(self):
+        """抓取失敗:錯誤指明 md 來源,既有檔不毀損。"""
+        path = download_md_rarity(
+            self.dir, fetch_json=lambda url: [] if "page=2" in url
+            else [{"konamiID": "1", "rarity": "N"}])
+        def boom(url):
+            raise OSError("boom")
+        with self.assertRaises(RuntimeError) as ctx:
+            download_md_rarity(self.dir, fetch_json=boom)
+        self.assertIn("md", str(ctx.exception))
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"1": "N"})
+
+    def test_offline_uses_cache_and_errors_when_missing(self):
+        """offline:有既有檔直接沿用;沒有則指明缺 md 來源。"""
+        with self.assertRaises(RuntimeError) as ctx:
+            download_md_rarity(self.dir, fetch_json=None, offline=True)
+        self.assertIn("md", str(ctx.exception))
+        download_md_rarity(
+            self.dir, fetch_json=lambda url: [] if "page=2" in url
+            else [{"konamiID": "1", "rarity": "N"}])
+        path = download_md_rarity(self.dir, fetch_json=None, offline=True)
+        self.assertTrue(os.path.exists(path))
 
 
 if __name__ == "__main__":

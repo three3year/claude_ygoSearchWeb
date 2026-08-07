@@ -1,8 +1,8 @@
 """一鍵更新卡片總表:下載三來源 → 管線建置 → 寫出 cards.json 與報告。
 
 用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
-    python script/update_cards.py            # 下載最新來源後(差值)建置
-    python script/update_cards.py --offline  # 不連網,用既有來源檔重跑
+    python script/card_list/update_cards.py            # 下載最新來源後(差值)建置
+    python script/card_list/update_cards.py --offline  # 不連網,用既有來源檔重跑
 """
 import argparse
 import json
@@ -13,7 +13,8 @@ import urllib.request
 from build_cards import DEFAULT_OUTPUT, print_report
 from cardlist import build_card_list, serialize_card_list
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_SOURCES_DIR = os.path.join(ROOT, "data", "sources")
 
 SOURCES = {

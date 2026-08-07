@@ -1,5 +1,9 @@
 # claude_ygoSearchWeb
 
+## Git
+
+只 commit 到本地分支,**永遠不要 git push**(即使未來設定了遠端,也須使用者明確要求才能 push)。
+
 ## Agent skills
 
 ### Issue tracker

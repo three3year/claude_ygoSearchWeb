@@ -155,6 +155,37 @@ class CardListTest(unittest.TestCase):
         self.assertNotIn("\\u", text1)  # 中文不被 escape,git diff 可讀
         self.assertEqual(json.loads(text1), cards1)
 
+    def test_ja_en_name_merge(self):
+        """日英卡名以密碼對齊填入;來源缺卡時留空;異圖主卡取主卡密碼的名稱;報告含覆蓋率。"""
+        zh = self.cdb("zh.cdb", [
+            {"id": 89631139, "name": "青眼白龍"},
+            {"id": 89631140, "name": "青眼白龍", "alias": 89631139},  # 異圖
+            {"id": 46986414, "name": "黑魔導"},
+        ])
+        ja = self.cdb("ja.cdb", [
+            {"id": 89631139, "name": "青眼の白龍"},
+            {"id": 89631140, "name": "（異圖名,不應被採用）"},
+        ])
+        en = self.cdb("en.cdb", [
+            {"id": 46986414, "name": "Dark Magician"},
+        ])
+        cards, report = build_card_list(zh, ja_path=ja, en_path=en)
+        by_id = {c["id"]: c for c in cards}
+        self.assertEqual(by_id[89631139]["name_ja"], "青眼の白龍")
+        self.assertEqual(by_id[89631139]["name_en"], "")
+        self.assertEqual(by_id[46986414]["name_ja"], "")
+        self.assertEqual(by_id[46986414]["name_en"], "Dark Magician")
+        cov = report["name_coverage"]
+        self.assertEqual(cov["ja"], {"named": 1, "missing": 1})
+        self.assertEqual(cov["en"], {"named": 1, "missing": 1})
+
+    def test_ja_en_optional(self):
+        """不給日英來源時行為與純繁中建置相同,報告無覆蓋率段。"""
+        zh = self.cdb("zh.cdb", [{"id": 89631139, "name": "青眼白龍"}])
+        cards, report = build_card_list(zh)
+        self.assertEqual(cards[0]["name_ja"], "")
+        self.assertNotIn("name_coverage", report)
+
 
 if __name__ == "__main__":
     unittest.main()

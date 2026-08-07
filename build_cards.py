@@ -16,6 +16,13 @@ def print_report(report, file=sys.stdout):
     p(f"排除: 無正式密碼(先行卡) {excluded['no_password']} 筆、"
       f"衍生物 {excluded['token']} 筆")
     p(f"異圖合併: {report['merged_alt']} 筆")
+    for lang, label in (("ja", "日文"), ("en", "英文")):
+        cov = report.get("name_coverage", {}).get(lang)
+        if cov:
+            total = cov["named"] + cov["missing"]
+            pct = cov["named"] / total * 100 if total else 0.0
+            p(f"{label}卡名覆蓋率: {cov['named']}/{total} ({pct:.1f}%),"
+              f" 缺漏 {cov['missing']} 筆")
     if report["alias_exceptions"]:
         p(f"alias 例外(未合併,請人工檢視): {len(report['alias_exceptions'])} 筆")
         for e in report["alias_exceptions"]:
@@ -25,11 +32,13 @@ def print_report(report, file=sys.stdout):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="建置卡片總表")
     parser.add_argument("--zh", required=True, help="繁中 cards.cdb 路徑")
+    parser.add_argument("--ja", help="日文卡名 cdb 路徑 (mycard ja-JP)")
+    parser.add_argument("--en", help="英文卡名 cdb 路徑 (mycard en-US)")
     parser.add_argument("-o", "--output", default="cards.json",
                         help="輸出 JSON 路徑 (預設 cards.json)")
     args = parser.parse_args(argv)
 
-    cards, report = build_card_list(args.zh)
+    cards, report = build_card_list(args.zh, ja_path=args.ja, en_path=args.en)
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_card_list(cards))
     print_report(report)

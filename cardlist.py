@@ -97,7 +97,28 @@ def serialize_card_list(cards):
     return "[\n" + ",\n".join(lines) + "\n]\n"
 
 
-def build_card_list(zh_path):
+def _read_names(path):
+    """讀取多語卡名 cdb → {密碼: 卡名}。"""
+    con = sqlite3.connect(path)
+    try:
+        rows = con.execute("SELECT id, name FROM texts").fetchall()
+    finally:
+        con.close()
+    return dict(rows)
+
+
+def _fill_names(cards, field, names):
+    """以主卡密碼對齊填入卡名;缺漏留空。回傳覆蓋統計。"""
+    named = 0
+    for card in cards:
+        name = names.get(card["id"], "")
+        card[field] = name
+        if name:
+            named += 1
+    return {"named": named, "missing": len(cards) - named}
+
+
+def build_card_list(zh_path, ja_path=None, en_path=None):
     excluded = {"no_password": 0, "token": 0}
     entries = {}
     for row in _read_cdb(zh_path):
@@ -117,4 +138,11 @@ def build_card_list(zh_path):
         "merged_alt": merged,
         "alias_exceptions": exceptions,
     }
+    if ja_path is not None or en_path is not None:
+        coverage = {}
+        if ja_path is not None:
+            coverage["ja"] = _fill_names(cards, "name_ja", _read_names(ja_path))
+        if en_path is not None:
+            coverage["en"] = _fill_names(cards, "name_en", _read_names(en_path))
+        report["name_coverage"] = coverage
     return cards, report

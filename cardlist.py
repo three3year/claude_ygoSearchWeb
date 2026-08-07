@@ -118,7 +118,23 @@ def _fill_names(cards, field, names):
     return {"named": named, "missing": len(cards) - named}
 
 
-def build_card_list(zh_path, ja_path=None, en_path=None):
+def _diff_cards(existing, cards):
+    """比對既有總表與新總表 → 變動報告(不處理刪除:官方卡不會消失)。"""
+    old_by_id = {c["id"]: c for c in existing}
+    added = []
+    changed = []
+    for card in cards:
+        old = old_by_id.get(card["id"])
+        if old is None:
+            added.append(card["id"])
+            continue
+        fields = sorted(k for k in card if card[k] != old.get(k))
+        if fields:
+            changed.append({"id": card["id"], "fields": fields})
+    return {"added": added, "changed": changed}
+
+
+def build_card_list(zh_path, ja_path=None, en_path=None, existing=None):
     excluded = {"no_password": 0, "token": 0}
     entries = {}
     for row in _read_cdb(zh_path):
@@ -145,4 +161,6 @@ def build_card_list(zh_path, ja_path=None, en_path=None):
         if en_path is not None:
             coverage["en"] = _fill_names(cards, "name_en", _read_names(en_path))
         report["name_coverage"] = coverage
+    if existing is not None:
+        report["changes"] = _diff_cards(existing, cards)
     return cards, report

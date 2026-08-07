@@ -186,6 +186,34 @@ class CardListTest(unittest.TestCase):
         self.assertEqual(cards[0]["name_ja"], "")
         self.assertNotIn("name_coverage", report)
 
+    def test_incremental_update(self):
+        """差值更新:新增卡併入、變動卡覆蓋並報告變動欄位、結果與全量建置一致。"""
+        old_zh = self.cdb("old.cdb", [
+            {"id": 11111111, "name": "舊卡", "atk": 1000},
+            {"id": 22222222, "name": "改動卡", "atk": 1500, "desc": "舊效果"},
+        ])
+        old_cards, _ = build_card_list(old_zh)
+        new_zh = self.cdb("new.cdb", [
+            {"id": 11111111, "name": "舊卡", "atk": 1000},
+            {"id": 22222222, "name": "改動卡", "atk": 2000, "desc": "新效果"},
+            {"id": 33333333, "name": "新卡", "atk": 2500},
+        ])
+        cards, report = build_card_list(new_zh, existing=old_cards)
+        full_cards, _ = build_card_list(new_zh)
+        self.assertEqual(cards, full_cards)
+        self.assertEqual(report["changes"]["added"], [33333333])
+        self.assertEqual(report["changes"]["changed"],
+                         [{"id": 22222222, "fields": ["atk", "desc"]}])
+
+    def test_incremental_idempotent(self):
+        """來源無變化時,更新輸出逐位元組相同且報告無變動。"""
+        zh = self.cdb("zh.cdb", [{"id": 11111111, "name": "卡", "atk": 100}])
+        cards1, _ = build_card_list(zh)
+        cards2, report = build_card_list(zh, existing=cards1)
+        self.assertEqual(serialize_card_list(cards2).encode("utf-8"),
+                         serialize_card_list(cards1).encode("utf-8"))
+        self.assertEqual(report["changes"], {"added": [], "changed": []})
+
 
 if __name__ == "__main__":
     unittest.main()

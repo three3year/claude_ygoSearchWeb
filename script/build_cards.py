@@ -1,13 +1,17 @@
 """建置卡片總表的 CLI 薄殼:讀來源 cdb → cardlist 管線 → 寫出 cards.json。
 
-用法:
-    python build_cards.py --zh sources/cards.cdb -o cards.json
+用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
+    python script/build_cards.py --zh data/sources/cards.cdb
 """
 import argparse
 import json
+import os
 import sys
 
 from cardlist import build_card_list, serialize_card_list
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_OUTPUT = os.path.join(ROOT, "data", "cards.json")
 
 
 def print_report(report, file=sys.stdout):
@@ -45,8 +49,8 @@ def main(argv=None):
     parser.add_argument("--en", help="英文卡名 cdb 路徑 (mycard en-US)")
     parser.add_argument("--existing",
                         help="既有 cards.json 路徑;給定時執行差值更新並輸出變動報告")
-    parser.add_argument("-o", "--output", default="cards.json",
-                        help="輸出 JSON 路徑 (預設 cards.json)")
+    parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
+                        help="輸出 JSON 路徑 (預設 data/cards.json)")
     args = parser.parse_args(argv)
 
     existing = None

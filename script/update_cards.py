@@ -1,8 +1,8 @@
 """一鍵更新卡片總表:下載三來源 → 管線建置 → 寫出 cards.json 與報告。
 
-用法:
-    python update_cards.py            # 下載最新來源後(差值)建置
-    python update_cards.py --offline  # 不連網,用 sources/ 既有檔重跑
+用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
+    python script/update_cards.py            # 下載最新來源後(差值)建置
+    python script/update_cards.py --offline  # 不連網,用既有來源檔重跑
 """
 import argparse
 import json
@@ -10,8 +10,11 @@ import os
 import ssl
 import urllib.request
 
-from build_cards import print_report
+from build_cards import DEFAULT_OUTPUT, print_report
 from cardlist import build_card_list, serialize_card_list
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_SOURCES_DIR = os.path.join(ROOT, "data", "sources")
 
 SOURCES = {
     "zh": "https://github.com/salix5/cdb/releases/latest/download/cards.cdb",
@@ -62,10 +65,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="一鍵更新卡片總表")
     parser.add_argument("--offline", action="store_true",
                         help="不連網,使用 sources/ 既有來源檔")
-    parser.add_argument("--sources-dir", default="sources",
-                        help="來源暫存目錄 (預設 sources/,不入版控)")
-    parser.add_argument("-o", "--output", default="cards.json",
-                        help="輸出 JSON 路徑 (預設 cards.json)")
+    parser.add_argument("--sources-dir", default=DEFAULT_SOURCES_DIR,
+                        help="來源暫存目錄 (預設 data/sources/,不入版控)")
+    parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
+                        help="輸出 JSON 路徑 (預設 data/cards.json)")
     args = parser.parse_args(argv)
 
     paths = download_sources(args.sources_dir, offline=args.offline)

@@ -9,30 +9,31 @@
 ## 使用
 
 ```bash
-# 一鍵更新:下載最新來源 → (差值)建置 → cards.json + 報告
-python update_cards.py
+# 一鍵更新:下載最新來源 → (差值)建置 → data/cards.json + 報告
+python script/update_cards.py
 
-# 離線重跑(用 sources/ 既有來源檔,不連網)
-python update_cards.py --offline
+# 離線重跑(用 data/sources/ 既有來源檔,不連網)
+python script/update_cards.py --offline
 
 # 手動指定來源建置
-python build_cards.py --zh sources/cards.cdb --ja sources/ja-JP.cdb --en sources/en-US.cdb
+python script/build_cards.py --zh data/sources/cards.cdb --ja data/sources/ja-JP.cdb --en data/sources/en-US.cdb
 
 # 測試(不連網)
-python -m unittest discover
+python -m unittest discover -s script
 ```
 
-僅需 Python 3 標準庫,無安裝依賴。
+僅需 Python 3 標準庫,無安裝依賴;預設路徑以 repo 根為準,任意位置執行皆可。
 
-## 檔案
+## 目錄
 
-| 檔案 | 內容 |
+| 位置 | 內容 |
 |---|---|
-| `cardlist.py` | 核心管線(純函式):來源 cdb → 總表結構 + 建置/變動報告 |
-| `build_cards.py` | 建置 CLI 薄殼(讀檔、寫 `cards.json`、印報告) |
-| `update_cards.py` | 一鍵更新殼(下載三來源 → 建置;`--offline` 離線重跑) |
-| `cards.json` | 卡片總表(一卡一行,git diff 可讀) |
-| `sources/` | 來源 cdb 暫存(不入版控) |
+| `script/cardlist.py` | 核心管線(純函式):來源 cdb → 總表結構 + 建置/變動報告 |
+| `script/build_cards.py` | 建置 CLI 薄殼(讀檔、寫 JSON、印報告) |
+| `script/update_cards.py` | 一鍵更新殼(下載三來源 → 建置;`--offline` 離線重跑) |
+| `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
+| `data/sources/` | 來源 cdb 暫存(不入版控) |
+| `web/` | 查卡網站(後續階段) |
 
 ## cards.json 欄位
 

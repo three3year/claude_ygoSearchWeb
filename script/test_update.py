@@ -4,7 +4,8 @@ import os
 import tempfile
 import unittest
 
-from update_cards import SOURCES, download_md_rarity, download_sources
+from update_cards import (SOURCES, download_genesys, download_md_rarity,
+                          download_sources)
 
 
 class DownloadSourcesTest(unittest.TestCase):
@@ -98,6 +99,42 @@ class DownloadMdRarityTest(unittest.TestCase):
             else [{"konamiID": "1", "rarity": "N"}])
         path = download_md_rarity(self.dir, fetch_json=None, offline=True)
         self.assertTrue(os.path.exists(path))
+
+
+class DownloadGenesysTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = self.tmp.name
+
+    def test_extracts_password_points_map(self):
+        """從 YGOPRODeck dump 萃取有 genesys_points 的卡 → {密碼: 點數}。"""
+        dump = {"data": [
+            {"id": 55144522, "misc_info": [{"genesys_points": 30}]},
+            {"id": 46986414, "misc_info": [{"konami_id": 4041}]},   # 未列點
+            {"id": 89631139, "misc_info": [{"genesys_points": 0}]},  # 明確 0 點
+        ]}
+        path = download_genesys(self.dir, fetch_json=lambda url: dump)
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f),
+                             {"55144522": 30, "89631139": 0})
+
+    def test_failure_keeps_existing_and_offline_cache(self):
+        """失敗指明 genesys 來源且不毀既有檔;offline 沿用快取、缺檔報錯。"""
+        with self.assertRaises(RuntimeError) as ctx:
+            download_genesys(self.dir, fetch_json=None, offline=True)
+        self.assertIn("genesys", str(ctx.exception))
+        dump = {"data": [{"id": 1, "misc_info": [{"genesys_points": 5}]}]}
+        path = download_genesys(self.dir, fetch_json=lambda url: dump)
+        def boom(url):
+            raise OSError("boom")
+        with self.assertRaises(RuntimeError) as ctx:
+            download_genesys(self.dir, fetch_json=boom)
+        self.assertIn("genesys", str(ctx.exception))
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"1": 5})
+        self.assertEqual(
+            download_genesys(self.dir, fetch_json=None, offline=True), path)
 
 
 if __name__ == "__main__":

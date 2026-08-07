@@ -34,6 +34,9 @@ def print_report(report, file=sys.stdout):
         pct = md_cov["rated"] / total * 100 if total else 0.0
         p(f"MD 稀有度覆蓋率: {md_cov['rated']}/{total} ({pct:.1f}%),"
           f" 未實裝 {md_cov['missing']} 筆")
+    genesys_listed = report.get("genesys_listed")
+    if genesys_listed is not None:
+        p(f"Genesys 列點卡: {genesys_listed} 張(其餘為 0 點)")
     changes = report.get("changes")
     if changes is not None:
         p(f"差值更新: 新增 {len(changes['added'])} 張、"
@@ -54,6 +57,8 @@ def main(argv=None):
     parser.add_argument("--ja", help="日文卡名 cdb 路徑 (mycard ja-JP)")
     parser.add_argument("--en", help="英文卡名 cdb 路徑 (mycard en-US)")
     parser.add_argument("--md", help="MD 稀有度 JSON 路徑 (masterduelmeta)")
+    parser.add_argument("--genesys",
+                        help="Genesys 點數 JSON 路徑 (YGOPRODeck 萃取)")
     parser.add_argument("--existing",
                         help="既有 cards.json 路徑;給定時執行差值更新並輸出變動報告")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
@@ -66,7 +71,7 @@ def main(argv=None):
             existing = json.load(f)
     cards, report = build_card_list(
         args.zh, ja_path=args.ja, en_path=args.en, md_rarity_path=args.md,
-        existing=existing)
+        genesys_path=args.genesys, existing=existing)
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_card_list(cards))
     print_report(report)

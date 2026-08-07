@@ -46,6 +46,7 @@ def _make_card(row):
         "setcode": setcode,
         "ot": ot,
         "md_rarity": "",
+        "genesys_points": 0,
     }
 
 
@@ -149,6 +150,27 @@ def _fill_md_rarity(cards, path):
     return {"rated": rated, "missing": len(cards) - rated}
 
 
+def _fill_genesys_points(cards, path):
+    """Genesys 點數 JSON({密碼字串: 點數})以密碼填入;主卡沒對到時試異圖密碼。
+
+    官方點數表未列的卡為 0。回傳有點數(非 0)的卡數。
+    """
+    with open(path, encoding="utf-8") as f:
+        points = {int(k): v for k, v in json.load(f).items()}
+    listed = 0
+    for card in cards:
+        value = points.get(card["id"])
+        if value is None:
+            for alt in card["alt_ids"]:
+                value = points.get(alt)
+                if value is not None:
+                    break
+        card["genesys_points"] = value if value is not None else 0
+        if value:
+            listed += 1
+    return listed
+
+
 def _diff_cards(existing, cards):
     """比對既有總表與新總表 → 變動報告(不處理刪除:官方卡不會消失)。"""
     old_by_id = {c["id"]: c for c in existing}
@@ -166,7 +188,7 @@ def _diff_cards(existing, cards):
 
 
 def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
-                    existing=None):
+                    genesys_path=None, existing=None):
     excluded = {"no_password": 0, "token": 0}
     entries = {}
     for row in _read_cdb(zh_path):
@@ -195,6 +217,8 @@ def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
         report["name_coverage"] = coverage
     if md_rarity_path is not None:
         report["md_rarity_coverage"] = _fill_md_rarity(cards, md_rarity_path)
+    if genesys_path is not None:
+        report["genesys_listed"] = _fill_genesys_points(cards, genesys_path)
     if existing is not None:
         report["changes"] = _diff_cards(existing, cards)
     return cards, report

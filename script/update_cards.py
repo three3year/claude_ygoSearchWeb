@@ -27,6 +27,10 @@ FILENAMES = {"zh": "cards.cdb", "ja": "ja-JP.cdb", "en": "en-US.cdb"}
 MD_RARITY_URL = ("https://www.masterduelmeta.com/api/v1/cards"
                  "?limit=3000&page={page}&fields=konamiID,rarity")
 MD_RARITY_FILENAME = "md-rarity.json"
+# genesys_points 只在帶 format=genesys 時才出現於 misc_info
+GENESYS_URL = ("https://db.ygoprodeck.com/api/v7/cardinfo.php"
+               "?misc=yes&format=genesys")
+GENESYS_FILENAME = "genesys.json"
 
 
 def _fetch_url(url):
@@ -107,6 +111,37 @@ def download_sources(dest_dir, fetch=_fetch_url, offline=False):
     return paths
 
 
+def download_genesys(dest_dir, fetch_json=_fetch_json, offline=False):
+    """自 YGOPRODeck 全量 dump 萃取 {卡片密碼: Genesys點數} → genesys.json。
+
+    只保留 misc_info 帶 genesys_points 的卡(官方點數表);未列點的卡不入檔,
+    管線端預設 0。先寫 .tmp 再原子替換,失敗時既有檔不受影響。
+    """
+    os.makedirs(dest_dir, exist_ok=True)
+    path = os.path.join(dest_dir, GENESYS_FILENAME)
+    if offline:
+        if not os.path.exists(path):
+            raise RuntimeError(
+                f"離線模式但缺少來源 genesys({path});請先連網下載一次")
+        return path
+    try:
+        dump = fetch_json(GENESYS_URL)
+        points = {}
+        for card in dump["data"]:
+            misc = (card.get("misc_info") or [{}])[0]
+            value = misc.get("genesys_points")
+            if value is not None:
+                points[int(card["id"])] = value
+    except Exception as e:
+        raise RuntimeError(f"來源 genesys 下載失敗: {e}") from e
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump({str(k): v for k, v in sorted(points.items())}, f,
+                  ensure_ascii=False, indent=0)
+    os.replace(tmp_path, path)
+    return path
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="一鍵更新卡片總表")
     parser.add_argument("--offline", action="store_true",
@@ -119,6 +154,7 @@ def main(argv=None):
 
     paths = download_sources(args.sources_dir, offline=args.offline)
     md_path = download_md_rarity(args.sources_dir, offline=args.offline)
+    genesys_path = download_genesys(args.sources_dir, offline=args.offline)
 
     existing = None
     if os.path.exists(args.output):
@@ -127,7 +163,7 @@ def main(argv=None):
 
     cards, report = build_card_list(
         paths["zh"], ja_path=paths["ja"], en_path=paths["en"],
-        md_rarity_path=md_path, existing=existing)
+        md_rarity_path=md_path, genesys_path=genesys_path, existing=existing)
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_card_list(cards))
     print_report(report)

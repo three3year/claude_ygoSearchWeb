@@ -65,7 +65,8 @@ class CardListTest(unittest.TestCase):
         self.assertEqual(list(card.keys()), [
             "id", "alt_ids", "name_zh", "name_ja", "name_en", "desc",
             "type", "atk", "def", "level", "race", "attribute",
-            "scale", "link_marker", "setcode", "ot", "md_rarity"])
+            "scale", "link_marker", "setcode", "ot", "md_rarity",
+            "genesys_points"])
         self.assertEqual(card["id"], 63028558)
         self.assertEqual(card["alt_ids"], [])
         self.assertEqual(card["name_zh"], "青眼白龍")
@@ -255,6 +256,31 @@ class CardListTest(unittest.TestCase):
         cards, report = build_card_list(zh)
         self.assertEqual(cards[0]["md_rarity"], "")
         self.assertNotIn("md_rarity_coverage", report)
+
+    def test_genesys_points_merge(self):
+        """Genesys 點數以密碼對齊;異圖後備;未列點為 0;報告含列點數。"""
+        zh = self.cdb("zh.cdb", [
+            {"id": 55144522, "name": "強欲之壺"},
+            {"id": 10000001, "name": "異圖對齊卡"},
+            {"id": 10000002, "name": "異圖對齊卡", "alias": 10000001},
+            {"id": 20000001, "name": "未列點卡"},
+        ])
+        gp = os.path.join(self.tmp.name, "genesys.json")
+        with open(gp, "w", encoding="utf-8") as f:
+            json.dump({"55144522": 30, "10000002": 5}, f)
+        cards, report = build_card_list(zh, genesys_path=gp)
+        by_id = {c["id"]: c for c in cards}
+        self.assertEqual(by_id[55144522]["genesys_points"], 30)
+        self.assertEqual(by_id[10000001]["genesys_points"], 5)  # 異圖後備
+        self.assertEqual(by_id[20000001]["genesys_points"], 0)
+        self.assertEqual(report["genesys_listed"], 2)
+
+    def test_genesys_optional(self):
+        """不給 Genesys 來源:欄位為 0,報告無 Genesys 段。"""
+        zh = self.cdb("zh.cdb", [{"id": 55144522, "name": "強欲之壺"}])
+        cards, report = build_card_list(zh)
+        self.assertEqual(cards[0]["genesys_points"], 0)
+        self.assertNotIn("genesys_listed", report)
 
     def test_incremental_update(self):
         """差值更新:新增卡併入、變動卡覆蓋並報告變動欄位、結果與全量建置一致。"""

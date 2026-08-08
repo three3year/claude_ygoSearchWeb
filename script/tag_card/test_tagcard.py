@@ -5,6 +5,7 @@ fixture 於測試內程式化建立,不碰網路與真實資料檔。
 """
 import unittest
 
+import rules
 from tagcard import build_tag_cards
 
 TYPE_NORMAL_MONSTER = 0x11       # 怪獸 + 通常
@@ -1389,6 +1390,271 @@ class TestRerunEndToEnd(unittest.TestCase):
         self.assertTrue(clause["needs_review"])
         self.assertEqual([(r["id"], r["index"])
                           for r in report["needs_review"]], [(1000, "①")])
+
+
+class TestShadowPrediction(unittest.TestCase):
+    """效果類型規則層:規則只寫影子預測,不決定 kind(ADR-0002)。
+
+    fixture 用的是真的規則清單(`rules.RULES`),不是為測試捏造的假規則——規則層
+    要覆蓋 ≥8 條才上工,所以每個場景都得成批餵卡,這也順便把「覆蓋條數由本次
+    全表算出來」測進去了。
+    """
+
+    # 只命中 R1(發動子句含「〜た場合に発動」)→ 誘發效果(1速)
+    ZH = "①：此卡被送去墓地的場合發動。從牌組抽1張卡。"
+    JA = "①：このカードが墓地へ送られた場合に発動する。デッキから１枚ドローする。"
+    PREDICTED = "誘發效果(1速)"
+
+    def build(self, count, existing=None, supplement=None):
+        cards = [card(1000 + i, desc=self.ZH) for i in range(count)]
+        faqs = [faq(1000 + i, card_text=self.JA, supplement=supplement)
+                for i in range(count)]
+        return build_tag_cards(cards, faqs, existing=existing)
+
+    def judged(self, count, kind, source):
+        """既有標記表:每一張的①都已判定成 kind,來源為 source。"""
+        entries, _ = self.build(count)
+        for cid in range(1000, 1000 + count):
+            mark(entries, cid, "①", kind=kind, source=source)
+        return entries
+
+    def rule_row(self, report, rule_id):
+        for row in report["rules"]:
+            if row["id"] == rule_id:
+                return row
+        raise AssertionError(f"報告沒有 {rule_id}")
+
+    def test_prediction_is_written_without_deciding_the_kind(self):
+        entries, report = self.build(8)
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["rule_predicted"], self.PREDICTED)
+        self.assertIsNone(clause["kind"])
+        self.assertIsNone(clause["source"])
+        self.assertEqual(report["rule_predictions"], 8)
+
+    def test_coverage_is_counted_from_this_run_not_from_the_registry(self):
+        _, report = self.build(11)
+        self.assertEqual(self.rule_row(report, "R1")["coverage"], 11)
+        self.assertEqual(self.rule_row(report, "R2")["coverage"], 0)
+
+    def test_a_rule_below_the_coverage_threshold_does_not_run(self):
+        entries, report = self.build(7)
+        self.assertIsNone(clauses_of(entries, 1000)[0]["rule_predicted"])
+        self.assertEqual(report["rule_predictions"], 0)
+        self.assertIn("R1", report["rule_below_threshold"])
+        self.assertFalse(self.rule_row(report, "R1")["applied"])
+
+    def test_agreeing_llm_row_becomes_a_double_confirmation(self):
+        entries, report = self.build(8, self.judged(8, self.PREDICTED, "llm"))
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         (self.PREDICTED, "llm_then_rule"))
+        self.assertEqual(report["rule_upgrades"], 8)
+        self.assertEqual(report["rule_conflicts"], [])
+        self.assertEqual(report["source_counts"]["llm_then_rule"], 8)
+
+    def test_disagreeing_llm_row_is_left_alone_and_listed(self):
+        entries, report = self.build(8, self.judged(8, "永續效果", "llm"))
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "llm"))
+        self.assertEqual(clause["rule_predicted"], self.PREDICTED)
+        self.assertEqual(report["rule_upgrades"], 0)
+        self.assertEqual(
+            [(r["id"], r["rules"], r["existing"], r["predicted"])
+             for r in report["rule_conflicts"][:1]],
+            [(1000, ["R1"], "永續效果", self.PREDICTED)])
+        self.assertEqual(len(report["rule_conflicts"]), 8)
+
+    def test_below_threshold_rule_leaves_the_llm_row_untouched(self):
+        entries, report = self.build(7, self.judged(7, self.PREDICTED, "llm"))
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["source"], "llm")
+        self.assertIsNone(clause["rule_predicted"])
+        self.assertEqual(report["rule_upgrades"], 0)
+
+    def test_manual_row_agreeing_with_the_shadow_keeps_its_provenance(self):
+        """`manual` 是使用者看過這一行的證據,不因規則附和而洗掉。"""
+        entries, report = self.build(8,
+                                     self.judged(8, self.PREDICTED, "manual"))
+        self.assertEqual(clauses_of(entries, 1000)[0]["source"], "manual")
+        self.assertEqual(report["rule_upgrades"], 0)
+        self.assertEqual(report["rule_conflicts"], [])
+
+    def test_disagreeing_manual_row_is_listed_without_being_touched(self):
+        entries, report = self.build(8, self.judged(8, "永續效果", "manual"))
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "manual"))
+        self.assertEqual([r["source"] for r in report["rule_conflicts"][:1]],
+                         ["manual"])
+
+    def test_double_confirmation_survives_the_next_rerun(self):
+        upgraded, _ = self.build(8, self.judged(8, self.PREDICTED, "llm"))
+        entries, report = self.build(8, upgraded)
+        self.assertEqual(clauses_of(entries, 1000)[0]["source"],
+                         "llm_then_rule")
+        self.assertEqual(report["rule_upgrades"], 0)
+        self.assertEqual(report["preserved_judgments"], 8)
+
+    def test_official_agreement_counts_as_validation_not_an_upgrade(self):
+        entries, report = self.build(
+            8, supplement="■モンスターゾーンで発動する誘発効果です。")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         (self.PREDICTED, "official"))
+        row = self.rule_row(report, "R1")
+        self.assertEqual((row["attested"], row["agree"], row["disagree"]),
+                         (8, 8, 0))
+        self.assertEqual(report["rule_upgrades"], 0)
+
+    def test_official_disagreement_is_validation_not_a_conflict(self):
+        """官方明示是規則層的驗證集,不是被規則檢查的對象——另立一份清單。"""
+        _, report = self.build(8, supplement="■永続効果です。")
+        row = self.rule_row(report, "R1")
+        self.assertEqual((row["attested"], row["agree"], row["disagree"]),
+                         (8, 0, 8))
+        self.assertEqual(report["rule_conflicts"], [])
+        self.assertEqual(
+            [(r["id"], r["official"], r["predicted"])
+             for r in report["rule_official_disagree"][:1]],
+            [(1000, "永續效果", self.PREDICTED)])
+
+    def test_first_build_lists_every_prediction_as_a_change(self):
+        _, report = self.build(8)
+        self.assertEqual(
+            [(r["id"], r["before"], r["after"])
+             for r in report["rule_prediction_changed"][:1]],
+            [(1000, None, self.PREDICTED)])
+        self.assertEqual(len(report["rule_prediction_changed"]), 8)
+
+    def test_rerun_without_a_rule_change_lists_no_difference(self):
+        first, _ = self.build(8)
+        _, report = self.build(8, first)
+        self.assertEqual(report["rule_prediction_changed"], [])
+
+    def test_a_rule_change_shows_up_line_by_line(self):
+        """既有標記表記的是上一版規則的預測,逐行差異就是這次改動的影響範圍。"""
+        stale, _ = self.build(8)
+        for cid in range(1000, 1008):
+            mark(stale, cid, "①", rule_predicted="啟動效果")
+        _, report = self.build(8, stale)
+        self.assertEqual(
+            [(r["before"], r["after"])
+             for r in report["rule_prediction_changed"]],
+            [("啟動效果", self.PREDICTED)] * 8)
+
+    def test_overlapping_rules_with_different_kinds_predict_nothing(self):
+        """判別條件重疊且結論不同時規則層自相矛盾,不猜哪一條對。"""
+        zh = "①：此卡被送去墓地的場合,可以在自己主要階段發動。"
+        ja = "①：このカードが墓地へ送られた場合に、自分メインフェイズに発動できる。"
+        cards = [card(1000 + i, desc=zh) for i in range(8)]
+        faqs = [faq(1000 + i, card_text=ja) for i in range(8)]
+        entries, report = build_tag_cards(cards, faqs)
+        self.assertIsNone(clauses_of(entries, 1000)[0]["rule_predicted"])
+        self.assertEqual(report["rule_predictions"], 0)
+        self.assertEqual(
+            [(r["id"], r["rules"], r["kinds"])
+             for r in report["rule_overlaps"][:1]],
+            [(1000, ["R1", "R4"], ["啟動效果", self.PREDICTED])])
+
+
+class TestRuleLayerScope(unittest.TestCase):
+    """規則層只管效果句;前言段的類型由位置規則決定,不歸規則層。"""
+
+    ZH = "此卡不能通常召喚。\n①：此卡不受魔法效果影響。"
+    JA = ("このカードはモンスターゾーンに存在する限り通常召喚できない。"
+          "①：このカードがモンスターゾーンに存在する限り、魔法の効果を受けない。")
+
+    def build(self):
+        cards = [card(1000 + i, desc=self.ZH) for i in range(8)]
+        faqs = [faq(1000 + i, card_text=self.JA) for i in range(8)]
+        return build_tag_cards(cards, faqs)
+
+    def test_preamble_gets_no_shadow_prediction(self):
+        entries, _ = self.build()
+        preamble, effect = clauses_of(entries, 1000)
+        self.assertEqual((preamble["index"], preamble["kind"]),
+                         ("0", "效果外文本"))
+        self.assertIsNone(preamble["rule_predicted"])
+        self.assertEqual(effect["rule_predicted"], "永續效果")
+
+    def test_preamble_does_not_count_toward_coverage(self):
+        """前言段的日文也命中 R7,若算進覆蓋條數就會是 16。"""
+        _, report = self.build()
+        coverage = {row["id"]: row["coverage"] for row in report["rules"]}
+        self.assertEqual((coverage["R7"], coverage["R8"]), (8, 8))
+        self.assertEqual(report["rule_predictions"], 8)
+
+
+class TestRuleRegistry(unittest.TestCase):
+    """規則清單本身:登記的欄位、合併語意、變更紀律。"""
+
+    def test_shipped_registry_is_well_formed(self):
+        self.assertEqual(rules.problems(), [])
+        _, report = build_tag_cards([card(desc="①：效果甲。")],
+                                    [faq(card_text="①：効果甲。")])
+        self.assertEqual(report["rules_problems"], [])
+
+    def test_every_registered_rule_reaches_the_report_with_its_metadata(self):
+        _, report = build_tag_cards([card(desc="①：效果甲。")],
+                                    [faq(card_text="①：効果甲。")])
+        rows = {row["id"]: row for row in report["rules"]}
+        self.assertEqual(sorted(rows), sorted(r["id"] for r in rules.RULES))
+        for rule in rules.RULES:
+            row = rows[rule["id"]]
+            self.assertEqual(row["kind"], rule["kind"])
+            self.assertEqual(row["condition"], rule["condition"])
+            self.assertEqual(row["ticket"], rule["ticket"])
+
+    def test_a_broken_registry_shuts_the_whole_layer_down(self):
+        """規則清單自己都對不起來時不上工——寧可沒有影子預測。"""
+        broken = (rules.define("R1", "不存在的類型", rules.SCOPE_CLAUSE,
+                               "條件", r"効果甲", "票06"),)
+        self.assertEqual(len(rules.problems(broken)), 1)
+
+    def test_change_without_a_ticket_or_a_listed_reason_is_a_problem(self):
+        no_ticket = rules.define(
+            "R1", "永續效果", rules.SCOPE_CLAUSE, "條件", r"甲", "票06",
+            changes=({"reason": rules.CHANGE_TOO_BROAD, "ticket": "",
+                      "note": "說明"},))
+        bad_reason = rules.define(
+            "R1", "永續效果", rules.SCOPE_CLAUSE, "條件", r"甲", "票06",
+            changes=({"reason": "手滑", "ticket": "票09", "note": "說明"},))
+        self.assertEqual(len(rules.problems((no_ticket,))), 1)
+        self.assertEqual(len(rules.problems((bad_reason,))), 1)
+
+    def test_merged_rule_keeps_its_row_and_leaves_the_layer(self):
+        """R12 + R15 → R31:舊條標記合併去向而不刪行。"""
+        merge = {"reason": rules.CHANGE_MERGE, "ticket": "票09",
+                 "note": "與 R15 判別條件幾乎相同"}
+        registry = (
+            rules.define("R12", "永續效果", rules.SCOPE_CLAUSE, "甲", r"甲",
+                         "票06", changes=(merge,), merged_into="R31"),
+            rules.define("R15", "永續效果", rules.SCOPE_CLAUSE, "乙", r"乙",
+                         "票06", changes=(merge,), merged_into="R31"),
+            rules.define("R31", "永續效果", rules.SCOPE_CLAUSE, "甲或乙",
+                         r"甲|乙", "票09"),
+        )
+        self.assertEqual(rules.problems(registry), [])
+        self.assertEqual([r["id"] for r in rules.active(registry)], ["R31"])
+        self.assertEqual(rules.merged_groups(registry), {"R31": ["R12", "R15"]})
+
+    def test_merge_without_a_merge_change_or_a_target_is_a_problem(self):
+        undocumented = rules.define("R12", "永續效果", rules.SCOPE_CLAUSE, "甲",
+                                    r"甲", "票06", merged_into="R31")
+        self.assertEqual(len(rules.problems((undocumented,))), 2)
+
+    def test_digest_tracks_definitions_only(self):
+        """收斂條件的第一問靠指紋回答:規則清單本輪是否有異動。"""
+        base = (rules.define("R1", "永續效果", rules.SCOPE_CLAUSE, "甲", r"甲",
+                             "票06"),)
+        same = (rules.define("R1", "永續效果", rules.SCOPE_CLAUSE, "甲", r"甲",
+                             "票06"),)
+        widened = (rules.define("R1", "永續效果", rules.SCOPE_CLAUSE, "甲",
+                                r"甲|乙", "票06"),)
+        self.assertEqual(rules.digest(base), rules.digest(same))
+        self.assertNotEqual(rules.digest(base), rules.digest(widened))
 
 
 if __name__ == "__main__":

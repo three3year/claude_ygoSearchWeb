@@ -4,6 +4,10 @@
 餵回管線,人工修正與已判定的行因此活過每一次重跑。要完全重建請加
 `--ignore-existing`——那會丟掉檔案裡所有 manual / official / llm 的判定。
 
+順帶把效果類型規則清單回寫 `docs/effect_kind_rules.md`:規則的定義寫在
+`script/tag_card/rules.py`,但覆蓋條數與對官方明示的一致率一律由這一次的全表
+統計算出來後填進去,不靠人工計數(票06)。`--rules-doc` 可改路徑。
+
 `--attribution-lists` 會把報告的三份人工清單(歸屬由判定決定、引號對不上、
 明示句只提別卡名)完整寫成 JSON,方便逐條抽查。
 
@@ -14,8 +18,10 @@
 import argparse
 import json
 import os
+import re
 import sys
 
+import rules
 from tagcard import build_tag_cards, serialize_tag_cards
 
 ROOT = os.path.dirname(
@@ -23,9 +29,11 @@ ROOT = os.path.dirname(
 DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_FAQ_INFO = os.path.join(ROOT, "data", "sources", "faq_info.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "data", "tag_cards.json")
+DEFAULT_RULES_DOC = os.path.join(ROOT, "docs", "effect_kind_rules.md")
 
 LIST_PREVIEW = 20  # 清單過長時只印前幾筆,完整內容看輸出檔
 OPTIONAL_THRESHOLD = 0.98  # 必發/選發規則層的獨立驗證門檻(票04)
+DIGEST_RE = re.compile(r"規則定義指紋:`([0-9a-f]+)`")
 
 # 五種對位方式(spec 的階梯一~五)加上效果外文本的官方明示
 LADDER_LABELS = (
@@ -109,7 +117,199 @@ def print_merge(report, file=sys.stdout):
               f"index={row['index']} {extra}")
 
 
-def print_report(report, file=sys.stdout):
+def verdict_of(rate, threshold):
+    return "PASS" if rate >= threshold else "FAIL"
+
+
+def rule_verdict(row):
+    """一條規則對官方明示的一致率與判讀。沒有官方明示可對照時不給判讀。"""
+    if not row["attested"]:
+        return None, "—"
+    rate = row["agree"] / row["attested"]
+    return rate, verdict_of(rate, rules.AGREEMENT_THRESHOLD)
+
+
+def rule_status(row):
+    if row["merged_into"]:
+        return f"已併入 {row['merged_into']}"
+    if row["applied"]:
+        return "生效"
+    return f"覆蓋不足 {rules.MIN_COVERAGE} 條,未上工"
+
+
+def clause_line(row, tail, indent="  "):
+    """報告裡指向單一效果句的一行,前綴一律是那三個穩定鍵。"""
+    return (f"{indent}id={row['id']} section={row['section']} "
+            f"index={row['index']} {tail}")
+
+
+def print_rules(report, digest_changed, file=sys.stdout):
+    """效果類型規則層:影子預測、獨立驗證,以及收斂條件的三個問題。"""
+    p = lambda *a: print(*a, file=file)  # noqa: E731
+    applied = [row for row in report["rules"] if row["applied"]]
+    attested = sum(row["attested"] for row in applied)
+    agree = sum(row["agree"] for row in applied)
+    rate = agree / max(attested, 1)
+    p("")
+    p(f"效果類型規則層(只寫影子預測,不寫 kind):"
+      f"{len(applied)} 條生效 / {len(report['rules'])} 條登記,"
+      f"指紋 {report['rules_digest']}")
+    p(f"規則清單自身的毛病(必須為 0): {len(report['rules_problems'])} 筆 "
+      f"{report['rules_problems'][:LIST_PREVIEW]}")
+    p(f"影子預測: {report['rule_predictions']} 條"
+      f"(其中尚未判定、留給判定票對照的 {report['rule_predictions_pending']} 條)")
+    p(f"與既有判定一致升為 llm_then_rule: {report['rule_upgrades']} 條")
+    p(f"判別條件重疊且結論不同(必須為 0): {len(report['rule_overlaps'])} 筆")
+    for row in report["rule_overlaps"][:LIST_PREVIEW]:
+        p(clause_line(row, f"規則={'+'.join(row['rules'])} 結論={row['kinds']}"))
+
+    p(f"獨立驗證(官方明示的 {attested} 條遮答案跑規則): {agree}/{attested} = "
+      f"{100 * rate:.1f}% [{verdict_of(rate, rules.AGREEMENT_THRESHOLD)} "
+      f"門檻 {100 * rules.AGREEMENT_THRESHOLD:.0f}%]")
+    for row in report["rules"]:
+        row_rate, row_verdict = rule_verdict(row)
+        rate_text = "—" if row_rate is None else f"{100 * row_rate:.1f}%"
+        p(f"  {row['id']:>4} {row['kind']:<12} 覆蓋 {row['coverage']:>5} "
+          f"官方 {row['attested']:>5} 一致 {rate_text:>6} [{row_verdict}] "
+          f"{rule_status(row)}")
+    disagree = report["rule_official_disagree"]
+    p(f"  與官方明示不一致(規則要收緊的線索): {len(disagree)} 筆")
+    for row in disagree[:LIST_PREVIEW]:
+        p(clause_line(row, f"規則={'+'.join(row['rules'])} "
+                           f"官方={row['official']} 預測={row['predicted']}",
+                      indent="    "))
+
+    changed = report["rule_prediction_changed"]
+    p(f"影子預測與既有標記表不同(規則改動的影響範圍): {len(changed)} 筆")
+    for row in changed[:LIST_PREVIEW]:
+        p(clause_line(row, f"{row['before'] or '—'} → {row['after'] or '—'}"))
+
+    conflicts = report["rule_conflicts"]
+    p(f"衝突清單(影子預測與判定不一致,資料未動): {len(conflicts)} 筆")
+    for row in conflicts[:LIST_PREVIEW]:
+        p(clause_line(row, f"規則={'+'.join(row['rules'])} "
+                           f"既有={row['existing']} 預測={row['predicted']} "
+                           f"source={row['source']}"))
+
+    below = report["rule_below_threshold"]
+    p("收斂條件:")
+    p(f"  規則清單本輪有異動: {'是' if digest_changed else '否'}")
+    p(f"  每條規則覆蓋 ≥ {rules.MIN_COVERAGE}: "
+      f"{'否 ' + str(below) if below else '是'}")
+    p(f"  衝突清單為空: {'是' if not conflicts else '否'}")
+    converged = not digest_changed and not below and not conflicts
+    p(f"  → {'已收斂' if converged else '未收斂'}")
+
+
+def escape_cell(text):
+    """表格欄位裡的 `|` 會把 markdown 的欄位切開,判別條件裡就有。"""
+    return text.replace("|", "\\|")
+
+
+def rules_doc_preamble(report):
+    return [
+        "# 效果類型規則清單",
+        "",
+        "<!-- 這份文件由 script/tag_card/build_tag_cards.py 產生,不要手改。 -->",
+        "<!-- 規則定義寫在 script/tag_card/rules.py;覆蓋條數與一致率由建置流程"
+        "統計後回寫。 -->",
+        "",
+        f"規則定義指紋:`{report['rules_digest']}`"
+        "(定義有異動時才會變,覆蓋條數變動不算)",
+        "",
+        f"統計基準:{report['cards']:,} 張卡 / {report['rule_targets']:,} 條"
+        "有日文原文的效果句(規則層的管轄範圍,前言段不在其中),"
+        f"產出影子預測 {report['rule_predictions']:,} 條"
+        f"(其中尚未判定 {report['rule_predictions_pending']:,} 條)。",
+        "",
+        "規則只寫 `rule_predicted` 影子預測,**不寫 `kind`**——每條規則都必須有一次"
+        "獨立判定作對照(ADR-0002)。",
+        f"覆蓋不足 {rules.MIN_COVERAGE} 條的規則視為過擬合的單卡特例,不進規則層。",
+    ]
+
+
+def rules_doc_registry(report):
+    lines = [
+        "## 規則清單",
+        "",
+        "| 編號 | 對應類型 | 掃描範圍 | 判別條件 | 覆蓋條數 | 新增票號 | 狀態 |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    return lines + [
+        f"| {row['id']} | {row['kind']} | {row['scope']} | "
+        f"{escape_cell(row['condition'])} | {row['coverage']} | "
+        f"{row['ticket']} | {rule_status(row)} |"
+        for row in report["rules"]]
+
+
+def rules_doc_validation(report):
+    lines = [
+        "## 獨立驗證(以[[官方明示]]的效果句遮答案跑規則)",
+        "",
+        f"門檻 {100 * rules.AGREEMENT_THRESHOLD:.0f}%。未達門檻的規則不自動停用"
+        "——那會把問題藏起來;它會一直標成 FAIL,直到判別條件收緊或使用者判定"
+        "官方那一行是特例。",
+        "",
+        "| 編號 | 官方明示條數 | 一致 | 不一致 | 一致率 | 判讀 |",
+        "|---|---|---|---|---|---|",
+    ]
+    for row in report["rules"]:
+        rate, verdict = rule_verdict(row)
+        rate_text = "—" if rate is None else f"{100 * rate:.1f}%"
+        lines.append(f"| {row['id']} | {row['attested']} | {row['agree']} | "
+                     f"{row['disagree']} | {rate_text} | {verdict} |")
+    lines += ["", "不一致的逐條清單(規則要不要收緊,看的就是這幾行):", ""]
+    return lines + ([f"- {'+'.join(row['rules'])} `{row['id']}` "
+                     f"section={row['section']} index={row['index']} "
+                     f"官方={row['official']} 規則={row['predicted']}"
+                     for row in report["rule_official_disagree"]] or ["(無)"])
+
+
+def rules_doc_changes(report):
+    lines = ["## 變更記錄", "",
+             "規則變更僅限三種情況,每次都要記理由與票號:"]
+    lines += [f"- `{key}` —— {label}"
+              for key, label in rules.CHANGE_REASONS.items()]
+    changes = [(row, change) for row in report["rules"]
+               for change in row["changes"]]
+    lines += [""]
+    lines += [f"- {row['id']} {change['ticket']} "
+              f"`{change['reason']}` {change['note']}"
+              for row, change in changes] or ["(尚無變更)"]
+    lines += ["", "合併記錄(舊條標記合併去向而不刪行):", ""]
+    return lines + ([f"- {' + '.join(sorted(sources))} → {target}"
+                     for target, sources
+                     in sorted(rules.merged_groups().items())]
+                    or ["(尚無合併)"])
+
+
+def render_rules_doc(report):
+    """報告 → docs/effect_kind_rules.md 的內容。
+
+    規則的定義來自 `rules.py`,數字全部來自這一次的全表統計——覆蓋條數不靠人工
+    計數是 票06 的驗收項目,所以這份文件是產出物而不是手寫檔。
+    """
+    sections = (rules_doc_preamble(report), rules_doc_registry(report),
+                rules_doc_validation(report), rules_doc_changes(report))
+    # 每一節後面補一個空行,最後那個空行就是檔案結尾的換行
+    return "\n".join(line for section in sections
+                     for line in [*section, ""])
+
+
+def write_rules_doc(path, report):
+    """回寫規則清單;回傳規則定義本輪是否有異動(收斂條件的第一問)。"""
+    previous = None
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            match = DIGEST_RE.search(f.read())
+        previous = match.group(1) if match else None
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(render_rules_doc(report))
+    return previous != report["rules_digest"]
+
+
+def print_report(report, digest_changed=False, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p(f"卡片: {report['cards']} 張,效果句: {report['clauses']} 條")
     p(f"純通常怪獸(空 clauses): {report['pure_normal']} 張")
@@ -162,6 +362,8 @@ def print_report(report, file=sys.stdout):
 
     print_optional(report, file=file)
 
+    print_rules(report, digest_changed, file=file)
+
     print_merge(report, file=file)
 
     for key, label in ATTRIBUTION_LISTS:
@@ -187,6 +389,9 @@ def main(argv=None):
                         help="補足情報 JSON (預設 data/sources/faq_info.json)")
     parser.add_argument("--out", default=DEFAULT_OUTPUT,
                         help="輸出 JSON 路徑 (預設 data/tag_cards.json)")
+    parser.add_argument("--rules-doc", default=DEFAULT_RULES_DOC,
+                        help="效果類型規則清單的回寫路徑 "
+                             "(預設 docs/effect_kind_rules.md)")
     parser.add_argument("--attribution-lists",
                         help="把三份人工清單完整寫成 JSON 的路徑")
     parser.add_argument("--ignore-existing", action="store_true",
@@ -213,8 +418,9 @@ def main(argv=None):
             json.dump(lists, f, ensure_ascii=False, indent=2)
             f.write("\n")
 
-    print_report(report)
-    print(f"已寫出 {args.out}")
+    rules_changed = write_rules_doc(args.rules_doc, report)
+    print_report(report, digest_changed=rules_changed)
+    print(f"已寫出 {args.out} 與 {args.rules_doc}")
     return 0
 
 

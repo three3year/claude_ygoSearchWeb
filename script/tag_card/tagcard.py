@@ -5,14 +5,16 @@
 純函式,不碰網路與檔案系統。詞彙見 CONTEXT.md:效果標記表、效果句、效果類型、
 效果外文本、必發/選發。
 
-拆句、官方明示、必發/選發與既有標記表的合併(票02/03/04/05)已實作;判定結果的
-合併(票08)另票處理。
+拆句、官方明示、必發/選發、既有標記表的合併與效果類型規則層的影子預測
+(票02/03/04/05/06)已實作;判定結果的合併(票08)另票處理。
 """
 import hashlib
 import json
 import re
+from collections import Counter
 
 import official
+import rules
 from official import (INDEX_PREAMBLE, KIND_NON_EFFECT, KIND_QUICK,
                       KIND_TRIGGER, NUMERALS, OPTIONAL_MANDATORY,
                       OPTIONAL_OPTIONAL)
@@ -540,6 +542,132 @@ def _report_orphans(existing_index, matched, report):
         key=lambda row: (row["id"], row["section"], row["index"]))
 
 
+# ------------------------------------------------- 效果類型規則層(影子預測)
+
+def _rule_targets(entries):
+    """規則層的管轄範圍:有日文原文的效果句。
+
+    前言段不在其中——它的類型由位置規則決定(第一個效果編號之前的段落即
+    效果外文本),不是歸納出來的效果類型規則管得到的事。
+    """
+    for entry in entries:
+        for clause in entry["clauses"]:
+            if clause["index"] != INDEX_PREAMBLE and clause["text_ja"]:
+                yield entry["id"], clause
+
+
+def _rule_row(cid, clause, rule_ids, **extra):
+    return {"id": cid, "section": clause["section"], "index": clause["index"],
+            "rules": rule_ids, **extra}
+
+
+def _compare_prediction(cid, clause, rule_ids, report):
+    """影子預測 × 既有判定:一致的升級、不一致的列清單,兩種都不動判定。
+
+    官方明示那批走的是另一條路——它們是規則層的驗證集而不是被規則檢查的對象,
+    一致率進報告的獨立驗證,不一致列進獨立的清單(與 票04 必發/選發的驗證同一
+    個做法)。判定票的產出(llm)才是 ADR-0002 所說的獨立對照。
+    """
+    predicted = clause["rule_predicted"]
+    kind, source = clause["kind"], clause["source"]
+    if source == official.SOURCE_OFFICIAL:
+        for rule_id in rule_ids:
+            counts = report["rule_validation"][rule_id]
+            counts["attested"] += 1
+            counts["agree" if kind == predicted else "disagree"] += 1
+        if kind != predicted:
+            report["rule_official_disagree"].append(_rule_row(
+                cid, clause, rule_ids, official=kind, predicted=predicted))
+        return
+    if kind is None:
+        return  # 尚未判定:只留影子預測,類型仍等判定票決定(ADR-0002)
+    if kind != predicted:
+        report["rule_conflicts"].append(_rule_row(
+            cid, clause, rule_ids, existing=kind, predicted=predicted,
+            source=source))
+    elif source == SOURCE_LLM:
+        # 判定與規則各自到達同一個結論:這一行從此是雙重確認的
+        clause["source"] = SOURCE_LLM_THEN_RULE
+        report["rule_upgrades"] += 1
+
+
+def _predict(cid, clause, matched, report):
+    """一個效果句 → 影子預測。多條規則結論不同時不寫,那是規則層該修了。"""
+    if not matched:
+        return
+    rule_ids = [rule["id"] for rule in matched]
+    kinds = {rule["kind"] for rule in matched}
+    if len(kinds) > 1:
+        # 判別條件重疊且結論不同:規則層自相矛盾,不猜哪一條對
+        report["rule_overlaps"].append(_rule_row(
+            cid, clause, rule_ids, kinds=sorted(kinds)))
+        return
+    clause["rule_predicted"] = kinds.pop()
+    report["rule_predictions"] += 1
+    if clause["kind"] is None:
+        # 判定票要吃的就是這一批:有影子預測、但類型仍待判定的行
+        report["rule_predictions_pending"] += 1
+    _compare_prediction(cid, clause, rule_ids, report)
+
+
+def _apply_rules(entries, existing_index, report):
+    """規則層跑兩趟:先量覆蓋條數,再讓覆蓋足夠的規則寫影子預測。
+
+    覆蓋條數必須由本次全表算出來(票06「不靠人工計數」),而門檻要在寫預測之前
+    就知道,所以量與寫不能合成一趟。規則清單本身有毛病時整層不上工——寧可沒有
+    影子預測,也不要拿一份自己都對不起來的規則去對照判定。
+    """
+    report["rules_problems"] = rules.problems()
+    registry = [] if report["rules_problems"] else rules.active()
+    targets = []
+    for cid, clause in _rule_targets(entries):
+        prior = existing_index.get((cid, clause["section"], clause["index"]))
+        targets.append((cid, clause, prior, rules.matching(
+            clause["text_ja"], _activation_clause(clause["text_ja"]),
+            registry)))
+
+    report["rule_targets"] = len(targets)
+    coverage = Counter()
+    for _, _, _, matched in targets:
+        coverage.update(rule["id"] for rule in matched)
+    applied = {rule["id"] for rule in registry
+               if coverage[rule["id"]] >= rules.MIN_COVERAGE}
+    report["rule_validation"] = {
+        rule_id: {"attested": 0, "agree": 0, "disagree": 0}
+        for rule_id in applied}
+
+    for cid, clause, prior, matched in targets:
+        matched = [rule for rule in matched if rule["id"] in applied]
+        _predict(cid, clause, matched, report)
+        before = prior.get("rule_predicted") if prior else None
+        if before != clause["rule_predicted"]:
+            # 規則一改,全表重跑後的逐行差異就在這裡(Story 49 / 票06)
+            report["rule_prediction_changed"].append(_rule_row(
+                cid, clause, [rule["id"] for rule in matched], before=before,
+                after=clause["rule_predicted"]))
+
+    report["rules"] = [_registry_row(rule, coverage, applied, report)
+                       for rule in rules.RULES]
+    report["rule_below_threshold"] = [
+        row["id"] for row in report["rules"]
+        if not row["merged_into"] and not row["applied"]]
+
+
+def _registry_row(rule, coverage, applied, report):
+    """一條規則在本次全表的成績,給報告與 docs/effect_kind_rules.md 用。
+
+    `merged_into` 有值代表這一條已被合併、退出規則層;`applied` 代表它本輪確實
+    上工(未被合併,且覆蓋條數過門檻)。兩者都不是就是覆蓋不足。
+    """
+    validation = report["rule_validation"].get(
+        rule["id"], {"attested": 0, "agree": 0, "disagree": 0})
+    return {"id": rule["id"], "kind": rule["kind"], "scope": rule["scope"],
+            "condition": rule["condition"], "ticket": rule["ticket"],
+            "changes": rule["changes"], "merged_into": rule["merged_into"],
+            "applied": rule["id"] in applied,
+            "coverage": coverage[rule["id"]], **validation}
+
+
 def _new_report():
     return {
         "cards": 0,
@@ -589,6 +717,19 @@ def _new_report():
         "official_changed": [],
         "rule_changed": [],
         "orphaned_judgments": [],
+        "rules": [],
+        "rules_digest": rules.digest(),
+        "rules_problems": [],
+        "rule_targets": 0,
+        "rule_predictions": 0,
+        "rule_predictions_pending": 0,
+        "rule_upgrades": 0,
+        "rule_conflicts": [],
+        "rule_official_disagree": [],
+        "rule_overlaps": [],
+        "rule_prediction_changed": [],
+        "rule_below_threshold": [],
+        "rule_validation": {},
         **{key: [] for key in official.NOTE_KEYS},
     }
 
@@ -695,6 +836,26 @@ def _check_substrings(cid, clauses, desc, ja_texts, report):
                 {"id": cid, "index": clause["index"], "side": "ja"})
 
 
+def _count_clauses(entries, report):
+    """全表的欄位統計。
+
+    規則層會把比對一致的 `llm` 行升成 `llm_then_rule`,所以來源分布必須等它跑完
+    才數,否則報告印的是升級前的數字。
+    """
+    for entry in entries:
+        for clause in entry["clauses"]:
+            if clause["kind"] is not None:
+                report["kind_counts"][clause["kind"]] += 1
+            report["optional_counts"][clause["optional"] or "null"] += 1
+            report["source_counts"][clause["source"] or "null"] += 1
+            if (clause["optional"] is not None
+                    and clause["kind"] not in ACTIVATED_KINDS):
+                report["optional_on_wrong_kind"].append(
+                    {"id": entry["id"], "section": clause["section"],
+                     "index": clause["index"]})
+        report["clauses"] += len(entry["clauses"])
+
+
 def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
     """卡片總表 + 補足情報 → (效果標記表條目, 報告)。
 
@@ -703,6 +864,8 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
         pen_effect / pen_supplement)。
     existing: 既有標記表(上一次的輸出)。以 (卡片密碼, section, index) 對應回
         既有行,保留已判定的成果;首次建置傳 None,兩者走同一條路徑。
+        效果類型規則層的影子預測在合併之後才跑,因此既有判定與本次規則的比對
+        (升為 llm_then_rule、或列進衝突清單)看的是合併後的那一行。
     judgments: 判定結果。本票尚未實作合併(票08),傳入時列進報告的
         unsupported_inputs 而不靜靜忽略。
     """
@@ -769,20 +932,11 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
         _check_substrings(cid, clauses, desc, ja_by_section, report)
         if any(c["confidence"] == CONFIDENCE_LOW for c in clauses):
             report["low_confidence"].append(cid)
-        for clause in clauses:
-            if clause["kind"] is not None:
-                report["kind_counts"][clause["kind"]] += 1
-            report["optional_counts"][clause["optional"] or "null"] += 1
-            report["source_counts"][clause["source"] or "null"] += 1
-            if (clause["optional"] is not None
-                    and clause["kind"] not in ACTIVATED_KINDS):
-                report["optional_on_wrong_kind"].append(
-                    {"id": cid, "section": clause["section"],
-                     "index": clause["index"]})
-        report["clauses"] += len(clauses)
         entries.append({"id": cid, "clauses": clauses})
 
     _report_orphans(existing_index, matched, report)
+    _apply_rules(entries, existing_index, report)
+    _count_clauses(entries, report)
     report["no_japanese_text"].sort()
     report["low_confidence"].sort()
     return entries, report

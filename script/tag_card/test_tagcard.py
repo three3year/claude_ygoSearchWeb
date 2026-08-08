@@ -568,9 +568,9 @@ class TestCardNameLimited(unittest.TestCase):
 
     def test_own_name_with_a_single_clause_applies(self):
         entries, report = build_tag_cards(
-            [card(desc="只要「海」在場上存在,此卡不受魔法效果影響。",
+            [card(desc="①：只要「海」在場上存在,此卡不受魔法效果影響。",
                   name_ja="深海の戦士")],
-            [faq(card_text="「海」がフィールド上に存在する限り、"
+            [faq(card_text="①：「海」がフィールド上に存在する限り、"
                            "このカードは魔法の効果を受けない。",
                  name_ja="深海の戦士",
                  supplement="■「深海の戦士」の効果は永続効果です。")])
@@ -605,9 +605,9 @@ class TestCardNameLimited(unittest.TestCase):
 
     def test_own_name_line_still_applies_when_another_line_names_others(self):
         entries, report = build_tag_cards(
-            [card(desc="只要「海」在場上存在,此卡不受魔法效果影響。",
+            [card(desc="①：只要「海」在場上存在,此卡不受魔法效果影響。",
                   name_ja="深海の戦士")],
-            [faq(card_text="「海」がフィールド上に存在する限り、"
+            [faq(card_text="①：「海」がフィールド上に存在する限り、"
                            "このカードは魔法の効果を受けない。",
                  name_ja="深海の戦士",
                  supplement="■「深海の戦士」の効果は永続効果です。\n"
@@ -650,13 +650,87 @@ class TestGenericSingleClause(unittest.TestCase):
                          [(1000, "永續效果")])
 
 
+class TestUnsplitOldStyleAttribution(unittest.TestCase):
+    """階梯四、五問的是「這張卡只有一個效果句嗎」,未拆的舊式整團答不出來。
+
+    舊式無編號卡文在依語意拆開之前整團只算一個效果句,兩道階梯會在一個假的前提
+    上開火——整團拿到一個官方類型,而那個類型其實只描述整團裡的其中一段。
+    """
+
+    # 機海竜プレシオン(40160226)的實例:第一段是無種類效果、第二段是啟動效果,
+    # 官方明示講的是第一段
+    DESC = ("我方場上有海龍族怪獸存在的場合,此卡可以不用解放來召喚。"
+            "1回合1次,藉由解放我方場上的1隻水屬性怪獸,"
+            "選擇對手場上表側表示存在的1張卡破壞。")
+    CARD_TEXT = ("自分フィールド上に海竜族モンスターが存在する場合、"
+                 "このカードはリリースなしで召喚できる。"
+                 "１ターンに１度、自分フィールド上の水属性モンスター１体を"
+                 "リリースする事で、相手フィールド上に表側表示で存在する"
+                 "カード１枚を選択して破壊する。")
+
+    def _build(self, supplement, name_ja="機海竜プレシオン"):
+        return build_tag_cards(
+            [card(desc=self.DESC, name_ja=name_ja)],
+            [faq(card_text=self.CARD_TEXT, name_ja=name_ja,
+                 supplement=supplement)])
+
+    def test_unmarked_line_on_an_unsplit_blob_defers(self):
+        entries, report = self._build(
+            "■手札から自身を召喚する効果の種別は、永続効果、起動効果、誘発効果、"
+            "誘発即時効果のどれにも分類されない効果となります。")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["index"], "1")
+        self.assertIsNone(clause["kind"])
+        self.assertIsNone(clause["source"])
+        self.assertEqual(report["official_coverage"]["single"], 0)
+        self.assertEqual([(r["id"], r["kind"], r["reason"])
+                          for r in report["attribution_deferred"]],
+                         [(1000, "無種類效果", "無編號卡文待拆")])
+
+    def test_name_limited_line_on_an_unsplit_blob_defers(self):
+        entries, report = self._build(
+            "■「機海竜プレシオン」の効果は起動効果です。")
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+        self.assertEqual(report["official_coverage"]["name_single"], 0)
+        self.assertEqual([(r["id"], r["kind"], r["reason"])
+                          for r in report["attribution_deferred"]],
+                         [(1000, "啟動效果", "無編號卡文待拆")])
+
+    def test_mandatory_line_on_an_unsplit_blob_defers_too(self):
+        """必發明示與類型明示共用同一套歸屬對位,排除條件也必須一起生效。"""
+        entries, report = self._build(
+            "■フィールドで発動する誘発効果です。必ず発動します。")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertIsNone(clause["kind"])
+        self.assertIsNone(clause["optional"])
+        self.assertEqual([r["id"] for r in report["attribution_deferred"]],
+                         [1000])
+
+    def test_a_numbered_single_clause_card_still_applies(self):
+        """排除的是「未拆的整團」而不是「單效果卡」,階梯五本身照常運作。"""
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。",
+                 supplement="■モンスターゾーンで適用する永続効果です。")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "永續效果")
+        self.assertEqual(report["official_coverage"]["single"], 1)
+        self.assertEqual(report["attribution_deferred"], [])
+
+    def test_sequence_reference_still_reaches_the_unsplit_blob(self):
+        """官方以『①』稱呼整團時,歸屬證據是官方自己給的,階梯二不受影響。"""
+        entries, report = self._build(
+            "■『①』の効果はフィールドで発動する誘発効果です。")
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "誘發效果(1速)")
+        self.assertEqual(report["official_coverage"]["seq"], 1)
+
+
 class TestNegationAndForbiddenPhrases(unittest.TestCase):
 
     def test_izure_ni_mo_bunrui_sarenai_is_a_single_unclassified_kind(self):
         """否定句優先:列舉了四個類型詞也只判無種類效果。"""
         entries, _ = build_tag_cards(
-            [card(desc="可以代替1隻融合素材怪獸。")],
-            [faq(card_text="このカードを融合素材モンスター１体の代わりにする"
+            [card(desc="①：可以代替1隻融合素材怪獸。")],
+            [faq(card_text="①：このカードを融合素材モンスター１体の代わりにする"
                            "事ができる。",
                  supplement="■起動効果・誘発効果・誘発即時効果・永続効果の"
                             "いずれにも分類されない効果です。")])
@@ -667,8 +741,8 @@ class TestNegationAndForbiddenPhrases(unittest.TestCase):
     def test_dore_ni_mo_variant_is_also_unclassified(self):
         """官方寫過「いずれにも」與「どれにも」兩種,都是無種類效果。"""
         entries, _ = build_tag_cards(
-            [card(desc="可以代替1隻融合素材怪獸。")],
-            [faq(card_text="このカードを融合素材モンスター１体の代わりにする"
+            [card(desc="①：可以代替1隻融合素材怪獸。")],
+            [faq(card_text="①：このカードを融合素材モンスター１体の代わりにする"
                            "事ができる。",
                  supplement="■効果の種別は、永続効果、起動効果、誘発効果、"
                             "誘発即時効果のどれにも分類されない効果となります。")])
@@ -736,6 +810,89 @@ class TestNonEffectAttestation(unittest.TestCase):
         self.assertIsNone(clauses[1]["kind"])
         self.assertEqual(
             [r["id"] for r in report["non_effect_outside_preamble"]], [1000])
+
+    # 官方寫過的八種變體(2026-08-09 實測:「効果として扱いません」1,214 行、
+    # 「効果の扱いではありません」476 行、其餘六種各 0~9 行)
+    VARIANTS = ("効果として扱いません", "効果の扱いではありません",
+                "効果として扱われません", "効果としては扱いません",
+                "効果としては扱われません", "効果としての扱いではありません",
+                "効果としての扱いません", "効果の扱いにはなりません")
+
+    def test_every_official_variant_is_the_same_attestation(self):
+        for mark_text in self.VARIANTS:
+            with self.subTest(mark=mark_text):
+                entries, report = build_tag_cards(
+                    [card(desc="此卡不能通常召喚。\n①：效果甲。")],
+                    [faq(card_text="このカードは通常召喚できない。①：効果甲。",
+                         supplement="【『このカードは通常召喚できない』について】"
+                                    f"\n■{mark_text}。")])
+                preamble = clauses_of(entries, 1000)[0]
+                self.assertEqual(preamble["kind"], "效果外文本")
+                self.assertEqual(preamble["source"], "official")
+                self.assertEqual(report["official_coverage"]["non_effect"], 1)
+
+    def test_variant_pointing_outside_the_preamble_is_reported_only(self):
+        """變體與既有寫法走完全相同的歸屬路徑,不因為是新寫法就放寬。"""
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。\n①：效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。①：効果甲。",
+                 supplement="■『①：効果甲。』そのものは効果の扱いでは"
+                            "ありません。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual(clauses[0]["source"], "rule")
+        self.assertIsNone(clauses[1]["kind"])
+        self.assertEqual(
+            [r["id"] for r in report["non_effect_outside_preamble"]], [1000])
+
+    def test_the_variant_does_not_punch_through_the_forbidden_phrase(self):
+        """「効果の扱いではありません」與「効果ではありません」只差三個字。"""
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。\n①：效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。①：効果甲。",
+                 supplement="【『このカードは通常召喚できない』について】\n"
+                            "■対象を取る効果ではありません。")])
+        preamble = clauses_of(entries, 1000)[0]
+        self.assertEqual(preamble["source"], "rule")
+        self.assertEqual(report["official_coverage"]["non_effect"], 0)
+        self.assertEqual(report["non_effect_outside_preamble"], [])
+
+    def test_negation_inside_a_parenthetical_is_only_a_scoping_aside(self):
+        """括弧裡的否定是「不算哪一種效果」的補述,不是「這一段不是效果」。
+
+        實測 7 行的明示句只在括弧內出現,無一例外都是限定否定
+        (「ダメージを与える効果としては扱われません」「罠カードの効果としては
+        扱われません」),而其中兩行的括弧外正是一句貨真價實的類型明示——
+        整行改判會把那個類型吃掉。
+        """
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。",
+                 supplement="■モンスターゾーンで適用する永続効果です。"
+                            "（モンスター効果として扱われます。"
+                            "罠カードの効果としては扱われません。）")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "永續效果")
+        self.assertEqual(report["non_effect_outside_preamble"], [])
+
+    # 「効果」與「扱い」之間夾了別的詞:講的是別件事(被效果破壞、效果傷害),
+    # 不是「這一段不是效果」
+    LOOKALIKES = ("このカードが効果で破壊された扱いにはなりません",
+                  "この効果で墓地へ送られた扱いにはなりません",
+                  "効果ダメージの扱いではありません",
+                  "効果による破壊として扱いません",
+                  "この効果でリリースされた扱いではありません")
+
+    def test_lookalike_atsukai_phrases_are_not_attestations(self):
+        for line in self.LOOKALIKES:
+            with self.subTest(line=line):
+                entries, report = build_tag_cards(
+                    [card(desc="此卡不能通常召喚。\n①：效果甲。")],
+                    [faq(card_text="このカードは通常召喚できない。①：効果甲。",
+                         supplement="【『このカードは通常召喚できない』について】"
+                                    f"\n■{line}。")])
+                preamble = clauses_of(entries, 1000)[0]
+                self.assertEqual(preamble["source"], "rule")
+                self.assertEqual(report["official_coverage"]["non_effect"], 0)
+                self.assertEqual(report["non_effect_outside_preamble"], [])
 
 
 class TestBulletSubEffects(unittest.TestCase):
@@ -1001,12 +1158,16 @@ class TestOptionalRule(unittest.TestCase):
                           for r in report["optional_pending"]], [(1000, "①")])
 
     def test_unsplit_old_style_text_is_left_for_judgment(self):
-        """舊式無編號卡文還沒依語意拆開,第一句不保證是發動子句。"""
+        """舊式無編號卡文還沒依語意拆開,第一句不保證是發動子句。
+
+        整團的類型只能由官方自己給的『①』歸屬證據決定(階梯二)——階梯四、五
+        對未拆的整團不開火。
+        """
         entries, report = build_tag_cards(
             [card(desc="這張卡被送去墓地時可以發動。從卡組抽1張卡。")],
             [faq(card_text="このカードが墓地へ送られた場合に発動できる。"
                            "デッキから１枚ドローする。",
-                 supplement="■モンスターゾーンで発動する誘発効果です。")])
+                 supplement="■『①』はモンスターゾーンで発動する誘発効果です。")])
         clause = clauses_of(entries, 1000)[0]
         self.assertEqual(clause["kind"], "誘發效果(1速)")
         self.assertIsNone(clause["optional"])
@@ -1058,7 +1219,7 @@ class TestOptionalValidation(unittest.TestCase):
             [card(desc="這張卡被送去墓地時發動。從卡組抽1張卡。")],
             [faq(card_text="このカードが墓地へ送られた場合に発動できる。"
                            "デッキから１枚ドローする。",
-                 supplement="■モンスターゾーンで発動する誘発効果です。"
+                 supplement="■『①』はモンスターゾーンで発動する誘発効果です。"
                             "（必ず発動する効果です。）")])
         validation = report["optional_validation"]
         self.assertEqual(validation["attested"], 1)

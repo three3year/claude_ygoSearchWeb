@@ -13,6 +13,8 @@ import unicodedata
 
 NUMERALS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫"
 INDEX_PREAMBLE = "0"
+# 舊式無編號卡文在依語意拆開之前的整團(拆句骨架給的唯一 index)
+INDEX_UNNUMBERED = "1"
 
 # 效果類型的六種固定值(CONTEXT.md 定義,「(2速)」「(1速)」是名稱的一部分)
 KIND_NON_EFFECT = "效果外文本"
@@ -59,7 +61,20 @@ _KIND_RE = re.compile("(" + "|".join(_KIND_BY_WORD) + ")です")
 _UNCLASSIFIED_MARK = "分類されない"
 # 「対象を取る効果ではありません」這類限定否定與效果分類無關,絕不可作為判定依據
 _FORBIDDEN_MARK = "効果ではありません"
-_NON_EFFECT_MARK = "効果として扱いません"
+# 效果外文本的官方明示。官方寫過八種變體(實測「効果として扱いません」1,214 行、
+# 「効果の扱いではありません」476 行、其餘各 1~9 行),語幹一律是「効果」直接接
+# 「扱い」——中間夾了別的詞的(「効果で破壊された扱いにはなりません」「効果ダメージ
+# の扱いではありません」)講的是別件事,不得混入。
+# 「効果の扱いではありません」與禁用句型「効果ではありません」只差三個字,兩者
+# 互不包含,禁令因此不會被這組變體打穿。
+_NON_EFFECT_RE = re.compile(
+    r"効果(?:としては?|としての|の)"
+    r"(?:扱いません|扱われません|扱いではありません|扱いにはなりません)")
+# 括弧內的否定不算。官方把「不算哪一種效果」的補述寫在句尾括弧裡,那是限定否定
+# 而不是「這一段不是效果」——實測只在括弧內出現的 7 行全是這一種,其中兩行的
+# 括弧外正是一句貨真價實的類型明示,整行改判會把那個類型吃掉。
+_PAREN_OPEN = "（("
+_PAREN_CLOSE = "）)"
 # 必發的官方明示。實測 1,526 行全是「必ず発動する効果です」「必ず発動します」
 # 「必ず発動し、〜」三種肯定寫法,沒有一行是否定,所以認前綴就夠。
 _MANDATORY_MARK = "必ず発動"
@@ -88,6 +103,20 @@ _NOISE_RE = re.compile(r"[\s…‥]+")
 def _normalise(text):
     folded = unicodedata.normalize("NFKC", text or "")
     return _NOISE_RE.sub("", folded.translate(_DASH_MAP))
+
+
+def _is_non_effect_line(line):
+    """這一行有沒有在括弧之外寫下效果外文本的明示。"""
+    depth = 0
+    outside = []
+    for ch in line:
+        if ch in _PAREN_OPEN:
+            depth += 1
+        elif ch in _PAREN_CLOSE:
+            depth = max(depth - 1, 0)
+        elif not depth:
+            outside.append(ch)
+    return bool(_NON_EFFECT_RE.search("".join(outside)))
 
 
 def _is_sequence_ref(quoted):
@@ -333,14 +362,28 @@ def attest(name_ja, supplement, clauses):
                              is_mandatory)
 
     def apply_to_sole_effect(kind, ladder, line, reason, is_mandatory):
-        if len(effects) == 1:
-            assign(effects[0]["index"], kind, ladder, line, is_mandatory)
-        else:
+        """階梯四、五:這張卡只有一個效果句時整卡套用。
+
+        「只有一個效果句」必須是已經成立的事實。舊式無編號卡文在依語意拆開之前
+        整團只算一個效果句,那是拆句骨架的暫代值而不是證據——整團套上一個類型
+        會把只描述其中一段的明示放大成整團的判定(機海竜プレシオン 40160226:
+        第一段無種類、第二段啟動,官方講的是第一段),而且整團從此 `kind` 不再是
+        null,再也進不了拆句用的判定批次,連自癒的機會都沒有。
+        """
+        if len(effects) != 1:
             note("attribution_deferred",
                  {"kind": kind, "reason": reason, "line": line})
+        elif effects[0]["index"] == INDEX_UNNUMBERED:
+            note("attribution_deferred",
+                 {"kind": kind, "reason": "無編號卡文待拆", "line": line})
+        else:
+            assign(effects[0]["index"], kind, ladder, line, is_mandatory)
 
     def non_effect(line, header):
-        """「〜は効果として扱いません」:指向前言段才自動套用,否則只進報告。"""
+        """效果外文本的明示:指向前言段才自動套用,否則只進報告。
+
+        八種變體走的是同一條路徑——寫法不同不代表證據更強。
+        """
         targets = [q for q in _QUOTE_RE.findall(line)
                    if not _is_sequence_ref(q)]
         if not targets and header:
@@ -362,7 +405,7 @@ def attest(name_ja, supplement, clauses):
             line = raw.strip()
             if not line:
                 continue
-            if _NON_EFFECT_MARK in line:
+            if _is_non_effect_line(line):
                 non_effect(line, header)
                 continue
             kinds = _line_kinds(line)

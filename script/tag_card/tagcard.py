@@ -15,8 +15,8 @@ from collections import Counter
 
 import official
 import rules
-from official import (INDEX_PREAMBLE, KIND_NON_EFFECT, KIND_QUICK,
-                      KIND_TRIGGER, NUMERALS, OPTIONAL_MANDATORY,
+from official import (INDEX_PREAMBLE, INDEX_UNNUMBERED, KIND_NON_EFFECT,
+                      KIND_QUICK, KIND_TRIGGER, NUMERALS, OPTIONAL_MANDATORY,
                       OPTIONAL_OPTIONAL)
 
 # NUMERALS:效果編號字元。官方目前最多用到⑤,official 多留幾個位以防新卡。
@@ -49,7 +49,6 @@ CONFIDENCE_LOW = "low"
 
 SECTION_MAIN = "main"
 SECTION_PENDULUM = "pendulum"
-INDEX_UNNUMBERED = "1"
 
 # 只有這兩類寫必發/選發:啟動效果本就由玩家主動開啟,其餘三類不發動
 ACTIVATED_KINDS = (KIND_QUICK, KIND_TRIGGER)

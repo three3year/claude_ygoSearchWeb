@@ -42,7 +42,7 @@ LADDER_LABELS = (
     ("quote", "原文引用對位『效果原文』"),
     ("name_single", "卡名限定 + 單效果卡"),
     ("single", "無歸屬標記 + 單效果卡"),
-    ("non_effect", "效果外文本(効果として扱いません)"),
+    ("non_effect", "效果外文本(効果として扱いません 系列)"),
 )
 # 需要人工看的三份清單(票03 驗收項目)
 ATTRIBUTION_LISTS = (

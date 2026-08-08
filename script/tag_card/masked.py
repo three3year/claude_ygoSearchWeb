@@ -1,0 +1,288 @@
+"""遮蔽測試:量化[[效果類型]]判定的準確率(票07)。
+
+做法是拿[[官方明示]]當標準答案:從已經填好類型的效果句分層抽一批,把補足情報
+裡的類型結論句遮掉,判定者只憑卡名、繁中與日文效果句原文、以及剩下的補足情報,
+依 `docs/effect_kind_guide.md` 判一次,再對答案。
+
+兩個接縫,都是純函式,不碰網路與檔案系統:
+
+    sample_masked(標記表, 卡片總表, 補足情報, ...) → (樣本, 報告)
+    score_masked(標記表, 樣本, 判定, 已知歧義) → 報告
+
+標準答案**不寫進樣本檔**——對答案時現場從標記表照 (卡片密碼, section, index)
+查回來。樣本檔因此不可能夾帶答案,判定者拿到的就是遮蔽過的那一份。
+
+門檻是**逐類別 100%**:難分的類別不該被簡單類別的高分稀釋,所以總體準確率照算
+但不作為門檻。未達標時要修的是規範文件而不是重刷分數(見票07 的分流)。
+
+詞彙見 CONTEXT.md。
+"""
+import random
+import re
+
+from official import KINDS
+
+DEFAULT_SIZE = 300
+DEFAULT_PER_KIND_MIN = 40
+# 抽樣種子。寫死才能「同一份標記表抽出同一份樣本」,換樣本要換這個數字。
+DEFAULT_SEED = 20260809
+
+SOURCE_OFFICIAL = "official"
+SECTION_PENDULUM = "pendulum"
+
+# 逐類別門檻(票07 由使用者定為 100%)
+RECALL_THRESHOLD = 1.0
+# 已知歧義的上限。超過代表六類邊界的定義本身有問題,該回頭改 CONTEXT.md 而不是
+# 繼續重跑(票07)。
+AMBIGUOUS_CAP = 5
+
+# 樣本檔的欄位。答案(kind / optional / source / rule_predicted)一律不在其中。
+SAMPLE_FIELDS = ("id", "section", "index", "name_zh", "name_ja",
+                 "text_zh", "text_ja", "supplement")
+
+# 補足情報裡會直接講出答案的句型,整句遮掉。
+# 「効果ではありません」不必單獨列——那個句型裡的類型詞已經被類型詞本身命中。
+_CONCLUSION_MARKS = ("誘発即時効果", "誘発効果", "起動効果", "永続効果",
+                     "分類されない", "効果として扱いません", "必ず発動")
+
+_HEADER_PREFIX_RE = re.compile(r"^【[^】]*】")
+_SENTENCE_RE = re.compile(r"[^。]*。|[^。]+$")
+# 遮蔽後只剩標點、括號或「■」的行等於沒有內容
+_RESIDUE_RE = re.compile(r"^[\s。、，,・…（）()「」『』■\-—]*$")
+
+
+# ---------------------------------------------------------------- 遮蔽
+
+def _tidy(text):
+    """句子被遮掉後可能留下沒有開頭的右括號(官方把補述寫在括號裡)。"""
+    while text and text[-1] in "）)":
+        if text.count("（") + text.count("(") >= text.count("）") + text.count(")"):
+            break
+        text = text[:-1]
+    return text.strip()
+
+
+def _mask_line(line):
+    """一行補足情報 → 遮掉類型結論句之後的樣子(整行沒內容了就回空字串)。
+
+    標頭 `【①の効果について】` 是歸屬標記而不是結論,保留——它告訴判定者官方在
+    講哪一個效果句,不告訴他是哪一種。
+    """
+    match = _HEADER_PREFIX_RE.match(line)
+    header, body = (match.group(0), line[match.end():]) if match else ("", line)
+    kept = "".join(sentence for sentence in _SENTENCE_RE.findall(body)
+                   if not any(mark in sentence for mark in _CONCLUSION_MARKS))
+    kept = _tidy(kept)
+    if _RESIDUE_RE.match(kept):
+        kept = ""
+    return header + kept
+
+
+def mask_supplement(text):
+    """補足情報 → 不含類型結論的補足情報。"""
+    lines = [_mask_line(raw.strip()) for raw in (text or "").split("\n")]
+    return "\n".join(line for line in lines if line)
+
+
+# ---------------------------------------------------------------- 抽樣
+
+def _quotas(population, size, per_kind_min):
+    """六類的母體大小 → 各抽幾條。
+
+    先給每一類抽滿下限(母體不足就全取),多出來的名額再依母體比例分配(最大餘數
+    法),配額不得超過母體。這樣難分的小類別有保底條數,大類別也不會被壓成陪襯。
+    """
+    quota = {kind: min(per_kind_min, population[kind]) for kind in population}
+    extra = size - sum(quota.values())
+    while extra > 0:
+        room = {kind: population[kind] - quota[kind] for kind in population}
+        room = {kind: n for kind, n in room.items() if n > 0}
+        if not room:
+            break
+        total = sum(population[kind] for kind in room)
+        exact = {kind: extra * population[kind] / total for kind in room}
+        add = {kind: min(room[kind], int(exact[kind])) for kind in room}
+        left = extra - sum(add.values())
+        for kind in sorted(room, key=lambda k: (-(exact[k] % 1),
+                                                -population[k], k)):
+            if left <= 0:
+                break
+            if add[kind] < room[kind]:
+                add[kind] += 1
+                left -= 1
+        for kind, count in add.items():
+            quota[kind] += count
+        extra -= sum(add.values())
+    return quota
+
+
+def _candidates(entries):
+    """標記表 → 可以當標準答案的效果句(官方明示且類型在值域內)。"""
+    return [(entry["id"], clause) for entry in sorted(entries,
+                                                      key=lambda e: e["id"])
+            for clause in entry["clauses"]
+            if clause["source"] == SOURCE_OFFICIAL and clause["kind"] in KINDS]
+
+
+def _row(cid, clause, card, faq):
+    supplement = faq.get("pen_supplement" if clause["section"]
+                         == SECTION_PENDULUM else "supplement")
+    return {
+        "id": cid,
+        "section": clause["section"],
+        "index": clause["index"],
+        "name_zh": card.get("name_zh") or "",
+        "name_ja": faq.get("name_ja") or card.get("name_ja") or "",
+        "text_zh": clause["text_zh"],
+        "text_ja": clause["text_ja"],
+        "supplement": mask_supplement(supplement),
+    }
+
+
+def sample_masked(entries, cards, faq_entries, size=DEFAULT_SIZE,
+                  per_kind_min=DEFAULT_PER_KIND_MIN, seed=DEFAULT_SEED):
+    """標記表 + 卡片總表 + 補足情報 → (遮蔽樣本, 抽樣報告)。
+
+    只抽 `source: "official"` 的效果句——標準答案是官方寫的,不是推論來的。
+    六種類型分層,每類至少 per_kind_min 條,母體不足的類別全取並列進 shortfall。
+    """
+    by_kind = {kind: [] for kind in KINDS}
+    for cid, clause in _candidates(entries):
+        by_kind[clause["kind"]].append((cid, clause))
+    population = {kind: len(rows) for kind, rows in by_kind.items()}
+    quota = _quotas(population, size, per_kind_min)
+
+    cards_by_id = {card["id"]: card for card in cards}
+    faq_by_id = {faq["password"]: faq for faq in faq_entries
+                 if faq.get("password") is not None}
+    rng = random.Random(seed)
+    picked = []
+    for kind in KINDS:
+        picked += rng.sample(by_kind[kind], quota[kind])
+    picked.sort(key=lambda row: (row[0], row[1]["section"], row[1]["index"]))
+
+    sample = [_row(cid, clause, cards_by_id.get(cid, {}),
+                   faq_by_id.get(cid, {})) for cid, clause in picked]
+    report = {
+        "size": len(sample),
+        "population": population,
+        "quota": quota,
+        "taken": {kind: sum(1 for cid, clause in picked
+                            if clause["kind"] == kind) for kind in KINDS},
+        "shortfall": [kind for kind in KINDS
+                      if population[kind] < per_kind_min],
+        "seed": seed,
+    }
+    return sample, report
+
+
+# ---------------------------------------------------------------- 對答案
+
+def _key(row):
+    return (row["id"], row["section"], row["index"])
+
+
+def _answer_key(entries):
+    return {(entry["id"], clause["section"], clause["index"]): clause["kind"]
+            for entry in entries for clause in entry["clauses"]}
+
+
+def _identity(key):
+    cid, section, index = key
+    return {"id": cid, "section": section, "index": index}
+
+
+def score_masked(entries, sample, answers, ambiguous=()):
+    """標記表 + 樣本 + 判定 → 逐類別 recall 報告。
+
+    標準答案現場從標記表查回來,樣本檔不帶答案。判定的集合必須與樣本完全一致
+    (漏判進 missing、多判進 extra、值域外的類型進 invalid),三者任一非空即不通過
+    ——分母對不上的準確率沒有意義。
+
+    ambiguous 是[[已知歧義清單]]:官方文本本身歧義的條目不計入分母,但超過
+    AMBIGUOUS_CAP 條就代表六類邊界的定義有問題,直接判不通過。
+
+    樣本檔是先產出、後判定的,中間標記表可能已經重跑過。對不回標記表的樣本行
+    列進 stale 並排除於分母之外——那代表這份樣本過期了,該重抽而不是硬算分數。
+    """
+    official = _answer_key(entries)
+    stale = [_identity(_key(row)) for row in sample
+             if _key(row) not in official]
+    sample_keys = [_key(row) for row in sample if _key(row) in official]
+    in_sample = set(sample_keys)
+    text_by_key = {_key(row): row for row in sample}
+
+    answered, extra, invalid = {}, [], []
+    for row in answers:
+        key = _key(row)
+        if key not in in_sample:
+            extra.append(_identity(key))
+            continue
+        kind = row.get("kind")
+        if kind is not None and kind not in KINDS:
+            invalid.append({**_identity(key), "kind": kind})
+            kind = None
+        answered[key] = kind
+    invalid_keys = {(row["id"], row["section"], row["index"]) for row in invalid}
+    missing = [_identity(key) for key in sample_keys if key not in answered]
+
+    skipped = {}
+    ambiguous_unknown = []
+    for row in ambiguous:
+        key = _key(row)
+        if key in in_sample:
+            skipped[key] = row.get("reason", "")
+        else:
+            ambiguous_unknown.append(_identity(key))
+
+    per_kind = {}
+    errors, blank = [], []
+    correct = scored = 0
+    for key in sample_keys:
+        kind = official[key]
+        stats = per_kind.setdefault(kind, {"total": 0, "ambiguous": 0,
+                                           "scored": 0, "correct": 0})
+        stats["total"] += 1
+        if key in skipped:
+            stats["ambiguous"] += 1
+            continue
+        given = answered.get(key)
+        stats["scored"] += 1
+        scored += 1
+        if given == kind:
+            stats["correct"] += 1
+            correct += 1
+            continue
+        row = text_by_key[key]
+        errors.append({**_identity(key), "official": kind, "answered": given,
+                       "name_zh": row["name_zh"], "text_zh": row["text_zh"],
+                       "text_ja": row["text_ja"]})
+        if given is None and key not in invalid_keys:
+            blank.append(_identity(key))
+    for stats in per_kind.values():
+        stats["recall"] = stats["correct"] / stats["scored"] \
+            if stats["scored"] else None
+
+    over_cap = len(skipped) > AMBIGUOUS_CAP
+    consistent = not (missing or extra or invalid or ambiguous_unknown or stale)
+    passed = (consistent and not over_cap and bool(per_kind)
+              and all(stats["recall"] is not None
+                      and stats["recall"] >= RECALL_THRESHOLD
+                      for stats in per_kind.values()))
+    return {
+        "size": len(sample),
+        "stale": stale,
+        "missing": missing,
+        "extra": extra,
+        "invalid": invalid,
+        "ambiguous": [{**_identity(key), "reason": reason}
+                      for key, reason in sorted(skipped.items())],
+        "ambiguous_unknown": ambiguous_unknown,
+        "ambiguous_over_cap": over_cap,
+        "per_kind": per_kind,
+        "overall": {"scored": scored, "correct": correct,
+                    "accuracy": correct / scored if scored else None},
+        "errors": errors,
+        "blank": blank,
+        "passed": passed,
+    }

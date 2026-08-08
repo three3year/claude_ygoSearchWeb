@@ -213,7 +213,7 @@ Status: ready-for-agent
 ## Testing Decisions
 
 - 測試只驗證接縫的外部行為:給定合成的卡片總表條目與補足情報條目,斷言回傳的 `entries` 欄位值與 `report` 內容。不測內部函式、不測拆句器的中間產物。
-- 受測模組:`build_tag_cards` 這一個純函式,外加 `rules` 的規則清單自檢(`rules.problems` / `active` / `merged_groups` / `digest`)。後者測的是**規則清單這份資料本身合不合法**(編號、變更有無票號與正當理由、合併去向)而不是管線的中間產物;它是接縫測不到的——接縫吃的永遠是 repo 裡那一份規則清單,而要測的正是「換一份壞的進來會怎樣」。CLI 薄殼不納入自動測試,與 card_list 的 `build_cards`/`update_cards`、faq_info 的 `build_faq_info`/`recrawl_faq` 同等待遇。
+- 受測模組:`build_tag_cards` 這一個純函式,外加 `rules` 的規則清單自檢(`rules.problems` / `active` / `merged_groups` / `digest`)與[[遮蔽測試]]的兩個接縫(`masked.sample_masked` / `masked.score_masked`)。後者是獨立的量測工具而不是建置管線的一部分——它吃的是**已經產出的**標記表,輸出是一份遮蔽樣本與一份 recall 報告,因此不掛在 `build_tag_cards` 底下,自成一個接縫對。後者測的是**規則清單這份資料本身合不合法**(編號、變更有無票號與正當理由、合併去向)而不是管線的中間產物;它是接縫測不到的——接縫吃的永遠是 repo 裡那一份規則清單,而要測的正是「換一份壞的進來會怎樣」。CLI 薄殼不納入自動測試,與 card_list 的 `build_cards`/`update_cards`、faq_info 的 `build_faq_info`/`recrawl_faq` 同等待遇。
 - 先例:`script/card_list/test_cardlist.py` 與 `script/faq_info/test_faqinfo.py` —— unittest、fixture 於測試內程式化建立、不碰網路不碰真實資料檔。
 - 應覆蓋的情境:
   - 有編號卡文的拆句與繁中/日文對位

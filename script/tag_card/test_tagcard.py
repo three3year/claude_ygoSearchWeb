@@ -389,5 +389,396 @@ class TestAggregation(unittest.TestCase):
                          ["existing", "judgments"])
 
 
+class TestOfficialHeaderAttestation(unittest.TestCase):
+    """階梯一:【①の効果について】系列標頭直接對位編號。"""
+
+    def test_header_maps_each_kind_to_its_numbered_clause(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="【①の効果について】\n"
+                            "■モンスターゾーンで発動できる起動効果です。\n\n"
+                            "【②の効果について】\n"
+                            "■モンスターゾーンで適用する永続効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses], ["啟動效果", "永續效果"])
+        self.assertEqual([c["source"] for c in clauses],
+                         ["official", "official"])
+        self.assertEqual(report["official_coverage"]["header"], 2)
+
+    def test_monster_effect_header_variant_is_recognised(self):
+        entries, _ = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="【②のモンスター効果について】\n"
+                            "■墓地で発動する誘発効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses], [None, "誘發效果(1速)"])
+
+    def test_pendulum_header_targets_the_pendulum_section_only(self):
+        entries, _ = build_tag_cards(
+            [card(desc="【靈擺效果】\n①：靈擺甲。\n【怪獸效果】\n①：怪獸甲。",
+                  ctype=TYPE_PENDULUM_EFFECT)],
+            [faq(card_text="①：モンスター甲。", supplement="■永続効果です。",
+                 pen_effect="①：ペンデュラム甲。",
+                 pen_supplement="【①のペンデュラム効果について】\n"
+                                "■ペンデュラムゾーンで発動できる起動効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([(c["section"], c["kind"]) for c in clauses],
+                         [("pendulum", "啟動效果"), ("main", "永續效果")])
+
+    def test_header_naming_an_absent_index_assigns_nothing(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="【③の効果について】\n■永続効果です。")])
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, None])
+        self.assertEqual(report["header_index_missing"],
+                         [{"id": 1000, "section": "main", "index": "③"}])
+
+
+class TestSequenceReference(unittest.TestCase):
+    """階梯二:『①』純序號引用。短引號不得被字元長度過濾掉。"""
+
+    def test_short_numeral_quote_is_not_filtered_out(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="■『①』のモンスター効果は、"
+                            "フィールドで発動する誘発効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses], ["誘發效果(1速)", None])
+        self.assertEqual(clauses[0]["source"], "official")
+        self.assertEqual(report["official_coverage"]["seq"], 1)
+
+    def test_sequence_reference_to_a_missing_index_is_reported(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="■『③』の効果は永続効果です。")])
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, None])
+        self.assertEqual(report["seq_missing"],
+                         [{"id": 1000, "section": "main", "index": "③"}])
+
+    def test_sequence_reference_on_old_style_text_hits_the_sole_effect(self):
+        """舊式無編號卡文沒有①,但官方仍以『①』稱呼那唯一的效果。"""
+        entries, report = build_tag_cards(
+            [card(desc="反轉:從牌組選1張場地魔法卡放到牌組最上方。")],
+            [faq(card_text="リバース：デッキからフィールド魔法カードを"
+                           "１枚選択し、デッキの一番上に置く。",
+                 supplement="■『①』のモンスター効果は、"
+                            "フィールドで発動する誘発効果です。")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "誘發效果(1速)")
+        self.assertEqual(report["seq_missing"], [])
+
+
+class TestQuoteReference(unittest.TestCase):
+    """階梯三:『效果原文』引用比對回日文卡文的編號區段。"""
+
+    def test_quote_locates_the_matching_numbered_clause(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="■『②：効果乙。』のモンスター効果は永続効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses], [None, "永續效果"])
+        self.assertEqual(report["official_coverage"]["quote"], 1)
+
+    def test_fullwidth_and_halfwidth_digits_are_normalised(self):
+        entries, _ = build_tag_cards(
+            [card(desc="①：效果甲。\n②：支付1000基本分發動。")],
+            [faq(card_text="①：効果甲。②：１０００ライフを払って発動する。",
+                 supplement="■『②：1000ライフを払って発動する。』は"
+                            "起動効果です。")])
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, "啟動效果"])
+
+    def test_truncated_quote_matches_by_prefix(self):
+        entries, _ = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙,然後抽1張卡。")],
+            [faq(card_text="①：効果甲。②：効果乙、その後カードを１枚ドローする。",
+                 supplement="■『②：効果乙』の効果は誘発即時効果です。")])
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, "誘發即時效果(2速)"])
+
+    def test_quote_matching_no_clause_makes_no_guess(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="■『このカードは魔法の効果を受けない』効果は"
+                            "永続効果です。")])
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, None])
+        self.assertEqual([row["id"] for row in report["quote_unmatched"]],
+                         [1000])
+
+    def test_quote_matching_several_clauses_is_treated_as_ambiguous(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果甲。")],
+            [faq(card_text="①：効果甲。②：効果甲。",
+                 supplement="■『効果甲。』の効果は永続効果です。")])
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, None])
+        self.assertEqual([row["id"] for row in report["quote_ambiguous"]],
+                         [1000])
+
+
+class TestCardNameLimited(unittest.TestCase):
+    """階梯四與「只提別卡名」的排除。"""
+
+    def test_own_name_with_a_single_clause_applies(self):
+        entries, report = build_tag_cards(
+            [card(desc="只要「海」在場上存在,此卡不受魔法效果影響。",
+                  name_ja="深海の戦士")],
+            [faq(card_text="「海」がフィールド上に存在する限り、"
+                           "このカードは魔法の効果を受けない。",
+                 name_ja="深海の戦士",
+                 supplement="■「深海の戦士」の効果は永続効果です。")])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["kind"], "永續效果")
+        self.assertEqual(clause["source"], "official")
+        self.assertEqual(report["official_coverage"]["name_single"], 1)
+
+    def test_own_name_with_several_clauses_defers_attribution(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。", name_ja="深海の戦士")],
+            [faq(card_text="①：効果甲。②：効果乙。", name_ja="深海の戦士",
+                 supplement="■「深海の戦士」の効果は永続効果です。")])
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, None])
+        self.assertEqual([(r["id"], r["kind"])
+                          for r in report["attribution_deferred"]],
+                         [(1000, "永續效果")])
+
+    def test_line_naming_only_another_card_makes_no_judgment(self):
+        """深海の戦士型陷阱:補足為了解說而提到別張卡,不得產生任何判定。"""
+        entries, report = build_tag_cards(
+            [card(desc="只要「海」在場上存在,此卡不受魔法效果影響。",
+                  name_ja="深海の戦士")],
+            [faq(card_text="「海」がフィールド上に存在する限り、"
+                           "このカードは魔法の効果を受けない。",
+                 name_ja="深海の戦士",
+                 supplement="■「海神の巫女」の効果は永続効果です。")])
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+        self.assertEqual([r["id"] for r in report["other_card_only"]], [1000])
+        self.assertEqual(report["official_coverage"]["name_single"], 0)
+
+    def test_own_name_line_still_applies_when_another_line_names_others(self):
+        entries, report = build_tag_cards(
+            [card(desc="只要「海」在場上存在,此卡不受魔法效果影響。",
+                  name_ja="深海の戦士")],
+            [faq(card_text="「海」がフィールド上に存在する限り、"
+                           "このカードは魔法の効果を受けない。",
+                 name_ja="深海の戦士",
+                 supplement="■「深海の戦士」の効果は永続効果です。\n"
+                            "■「海神の巫女」の効果は永続効果です。")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "永續效果")
+        self.assertEqual([r["id"] for r in report["other_card_only"]], [1000])
+
+
+class TestGenericSingleClause(unittest.TestCase):
+    """階梯五:無任何歸屬標記且該卡只有一個效果句。"""
+
+    def test_unmarked_attestation_applies_to_the_only_clause(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。",
+                 supplement="■モンスターゾーンで発動できる起動効果です。")])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["kind"], "啟動效果")
+        self.assertEqual(report["official_coverage"]["single"], 1)
+
+    def test_preamble_does_not_count_as_a_second_clause(self):
+        entries, _ = build_tag_cards(
+            [card(desc="這個卡名的①效果1回合只能使用1次。\n①：效果甲。")],
+            [faq(card_text="このカード名の①の効果は１ターンに１度しか使用できない。"
+                           "①：効果甲。",
+                 supplement="■モンスターゾーンで発動できる起動効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses],
+                         ["效果外文本", "啟動效果"])
+
+    def test_unmarked_attestation_on_a_multi_clause_card_defers(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="■モンスターゾーンで適用する永続効果です。")])
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, None])
+        self.assertEqual([(r["id"], r["kind"])
+                          for r in report["attribution_deferred"]],
+                         [(1000, "永續效果")])
+
+
+class TestNegationAndForbiddenPhrases(unittest.TestCase):
+
+    def test_izure_ni_mo_bunrui_sarenai_is_a_single_unclassified_kind(self):
+        """否定句優先:列舉了四個類型詞也只判無種類效果。"""
+        entries, _ = build_tag_cards(
+            [card(desc="可以代替1隻融合素材怪獸。")],
+            [faq(card_text="このカードを融合素材モンスター１体の代わりにする"
+                           "事ができる。",
+                 supplement="■起動効果・誘発効果・誘発即時効果・永続効果の"
+                            "いずれにも分類されない効果です。")])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["kind"], "無種類效果")
+        self.assertEqual(clause["source"], "official")
+
+    def test_dore_ni_mo_variant_is_also_unclassified(self):
+        """官方寫過「いずれにも」與「どれにも」兩種,都是無種類效果。"""
+        entries, _ = build_tag_cards(
+            [card(desc="可以代替1隻融合素材怪獸。")],
+            [faq(card_text="このカードを融合素材モンスター１体の代わりにする"
+                           "事ができる。",
+                 supplement="■効果の種別は、永続効果、起動効果、誘発効果、"
+                            "誘発即時効果のどれにも分類されない効果となります。")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "無種類效果")
+
+    def test_one_sentence_naming_two_kinds_produces_no_judgment(self):
+        """官方在一句裡分別交代兩個子效果時,無從得知「です」收尾的是哪一個。"""
+        entries, _ = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。",
+                 supplement="■『甲』の効果が永続効果、『乙』の効果が誘発効果です。")])
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+
+    def test_a_later_sentence_mentioning_another_kind_is_harmless(self):
+        entries, _ = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。",
+                 supplement="■フィールドで発動する誘発効果です。"
+                            "（自身の起動効果を発動した場合に発動します。）")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "誘發效果(1速)")
+
+    def test_kouka_dewa_arimasen_never_produces_a_judgment(self):
+        """禁令回歸測試:「効果ではありません」不得產生任何判定。"""
+        for line in ("■対象を取る効果ではありません。",
+                     "■チェーンブロックの作られる効果ではありません。",
+                     "■起動効果ではありません。"):
+            with self.subTest(line=line):
+                entries, _ = build_tag_cards(
+                    [card(desc="①：效果甲。")],
+                    [faq(card_text="①：効果甲。", supplement=line)])
+                self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+
+    def test_conflicting_kinds_for_one_clause_are_not_applied(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。",
+                 supplement="【①の効果について】\n"
+                            "■モンスターゾーンで発動できる起動効果です。\n"
+                            "■モンスターゾーンで適用する永続効果です。")])
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+        self.assertEqual([r["id"] for r in report["kind_conflicts"]], [1000])
+
+
+class TestNonEffectAttestation(unittest.TestCase):
+    """「〜は効果として扱いません」是效果外文本的官方明示。"""
+
+    def test_quote_header_on_the_preamble_upgrades_it_to_official(self):
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。\n①：效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。①：効果甲。",
+                 supplement="【『このカードは通常召喚できない』について】\n"
+                            "■効果として扱いません。")])
+        preamble = clauses_of(entries, 1000)[0]
+        self.assertEqual(preamble["kind"], "效果外文本")
+        self.assertEqual(preamble["source"], "official")
+        self.assertEqual(report["official_coverage"]["non_effect"], 1)
+
+    def test_attestation_pointing_outside_the_preamble_is_reported_only(self):
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。\n①：效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。①：効果甲。",
+                 supplement="■『①：効果甲。』は効果として扱いません。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual(clauses[0]["source"], "rule")
+        self.assertIsNone(clauses[1]["kind"])
+        self.assertEqual(
+            [r["id"] for r in report["non_effect_outside_preamble"]], [1000])
+
+
+class TestBulletSubEffects(unittest.TestCase):
+    """官方以【●の効果について】系列標頭描述的子效果拆成獨立效果句。"""
+
+    SUPPLEMENT = ("【①の効果について】\n"
+                  "■１ターンに１度、２つの●のうちいずれかを発動できます。\n\n"
+                  "【１つ目の●について】\n"
+                  "■モンスターゾーンで発動できる起動効果です。\n\n"
+                  "【２つ目の●について】\n"
+                  "■モンスターゾーンで適用する永続効果です。")
+    DESC = "①：可以發動1個以下效果。\n●選項甲。\n●選項乙。"
+    CARD_TEXT = "①：以下の効果を１つ発動できる。●選択肢甲。●選択肢乙。"
+
+    def test_bullets_become_their_own_clauses_with_their_own_kinds(self):
+        entries, report = build_tag_cards(
+            [card(desc=self.DESC)],
+            [faq(card_text=self.CARD_TEXT, supplement=self.SUPPLEMENT)])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①", "①-●1", "①-●2"])
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "啟動效果", "永續效果"])
+        self.assertEqual([c["text_zh"] for c in clauses],
+                         ["①：可以發動1個以下效果。", "●選項甲。", "●選項乙。"])
+        self.assertEqual([c["text_ja"] for c in clauses],
+                         ["①：以下の効果を１つ発動できる。", "●選択肢甲。",
+                          "●選択肢乙。"])
+        self.assertEqual(report["bullet_clauses"], 2)
+
+    def test_labelled_bullet_header_targets_the_matching_bullet(self):
+        entries, _ = build_tag_cards(
+            [card(desc="①：擲1次硬幣。\n●正面:效果甲。\n●反面:效果乙。")],
+            [faq(card_text="①：コイントスを１回行う。●表：効果甲。●裏：効果乙。",
+                 supplement="【『●裏』の効果について】\n"
+                            "■モンスターゾーンで適用する永続効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses],
+                         ["①", "①-●1", "①-●2"])
+        self.assertEqual([c["kind"] for c in clauses], [None, None, "永續效果"])
+
+    def test_sole_bullet_header_targets_the_only_bullet(self):
+        entries, _ = build_tag_cards(
+            [card(desc="①：以對手怪獸為對象發動。此卡得到以下效果。\n"
+                       "●只要此卡在怪獸區域存在,對象怪獸不能攻擊。")],
+            [faq(card_text="①：相手モンスター１体を対象として発動する。"
+                           "このカードは以下の効果を得る。"
+                           "●このカードがモンスターゾーンに存在する限り、"
+                           "対象のモンスターは攻撃できない。",
+                 supplement="【●の効果について】\n"
+                            "■モンスターゾーンで適用する永続効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①", "①-●1"])
+        self.assertEqual(clauses[1]["kind"], "永續效果")
+
+    def test_bullets_are_not_split_without_official_bullet_headers(self):
+        entries, report = build_tag_cards(
+            [card(desc=self.DESC)],
+            [faq(card_text=self.CARD_TEXT,
+                 supplement="【①の効果について】\n■１ターンに１度発動できます。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①"])
+        self.assertEqual(report["bullet_clauses"], 0)
+
+    def test_bullet_counts_that_disagree_across_languages_are_not_split(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：可以發動1個以下效果。\n●選項甲。")],
+            [faq(card_text=self.CARD_TEXT, supplement=self.SUPPLEMENT)],)
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)],
+                         ["①"])
+        self.assertEqual([r["id"] for r in report["bullet_split_mismatch"]],
+                         [1000])
+
+    def test_split_bullets_remain_contiguous_substrings(self):
+        cards = [card(desc=self.DESC)]
+        faqs = [faq(card_text=self.CARD_TEXT, supplement=self.SUPPLEMENT)]
+        entries, report = build_tag_cards(cards, faqs)
+        for clause in clauses_of(entries, 1000):
+            self.assertIn(clause["text_zh"], cards[0]["desc"])
+            self.assertIn(clause["text_ja"], faqs[0]["card_text"])
+        self.assertEqual(report["substring_violations"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

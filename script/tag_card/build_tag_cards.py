@@ -1,5 +1,8 @@
 """建置效果標記表的 CLI 薄殼:卡片總表 + 補足情報 → tagcard 管線 → tag_cards.json。
 
+`--attribution-lists` 會把報告的三份人工清單(歸屬由判定決定、引號對不上、
+明示句只提別卡名)完整寫成 JSON,方便逐條抽查。
+
 用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
     python script/tag_card/build_tag_cards.py
     python script/tag_card/build_tag_cards.py --out 別處/tag_cards.json
@@ -18,6 +21,22 @@ DEFAULT_FAQ_INFO = os.path.join(ROOT, "data", "sources", "faq_info.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "data", "tag_cards.json")
 
 LIST_PREVIEW = 20  # 清單過長時只印前幾筆,完整內容看輸出檔
+
+# 五種對位方式(spec 的階梯一~五)加上效果外文本的官方明示
+LADDER_LABELS = (
+    ("header", "標頭對位【①の効果について】"),
+    ("seq", "序號引用對位『①』"),
+    ("quote", "原文引用對位『效果原文』"),
+    ("name_single", "卡名限定 + 單效果卡"),
+    ("single", "無歸屬標記 + 單效果卡"),
+    ("non_effect", "效果外文本(効果として扱いません)"),
+)
+# 需要人工看的三份清單(票03 驗收項目)
+ATTRIBUTION_LISTS = (
+    ("attribution_deferred", "歸屬由判定決定"),
+    ("quote_unmatched", "引號對不回本卡卡文"),
+    ("other_card_only", "明示句只提到別張卡名"),
+)
 
 
 def load_json(path):
@@ -61,6 +80,32 @@ def print_report(report, file=sys.stdout):
         rows = report[key]
         p(f"{label}: {len(rows)} 筆 {rows[:LIST_PREVIEW]}")
     p(f"繁中兩條切割規則不一致(必須為 0): {report['zh_cut_rule_disagree']}")
+
+    coverage = report["official_coverage"]
+    effects = report["clauses"] - report["preambles"]
+    kinds = report["official_clauses"] - coverage["non_effect"]
+    p("")
+    p(f"官方明示: {report['official_clauses']} 條 "
+      f"(效果類型 {kinds} / {effects} = {100 * kinds / max(effects, 1):.1f}%)")
+    for key, label in LADDER_LABELS:
+        p(f"  {label}: {coverage[key]}")
+    p("效果類型分布:")
+    for kind, count in report["kind_counts"].items():
+        p(f"  {kind}: {count}")
+    p(f"● 子效果拆出: {report['bullet_clauses']} 條,"
+      f"繁中/日文 ● 數量不一致未拆: {len(report['bullet_split_mismatch'])} 段")
+
+    for key, label in ATTRIBUTION_LISTS:
+        p(f"{label}: {len(report[key])} 筆")
+    for key, label in (("seq_missing", "序號引用對不到編號(必須為 0)"),
+                       ("header_index_missing", "標頭指名的編號卡文沒有"),
+                       ("quote_ambiguous", "引號同時命中多個編號區段"),
+                       ("kind_conflicts", "同一效果句被官方寫成兩種類型"),
+                       ("kind_ambiguous", "同一行寫出多種類型"),
+                       ("non_effect_outside_preamble", "效果外明示不在前言段")):
+        rows = report[key]
+        p(f"{label}: {len(rows)} 筆 {[r['id'] for r in rows[:LIST_PREVIEW]]}")
+
     if report["unsupported_inputs"]:
         p(f"本票尚未支援的輸入(已忽略): {report['unsupported_inputs']}")
 
@@ -73,6 +118,8 @@ def main(argv=None):
                         help="補足情報 JSON (預設 data/sources/faq_info.json)")
     parser.add_argument("--out", default=DEFAULT_OUTPUT,
                         help="輸出 JSON 路徑 (預設 data/tag_cards.json)")
+    parser.add_argument("--attribution-lists",
+                        help="把三份人工清單完整寫成 JSON 的路徑")
     args = parser.parse_args(argv)
 
     entries, report = build_tag_cards(load_json(args.cards),
@@ -81,6 +128,13 @@ def main(argv=None):
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_tag_cards(entries))
+
+    if args.attribution_lists:
+        lists = {key: report[key] for key, _ in ATTRIBUTION_LISTS}
+        with open(args.attribution_lists, "w", encoding="utf-8",
+                  newline="\n") as f:
+            json.dump(lists, f, ensure_ascii=False, indent=2)
+            f.write("\n")
 
     print_report(report)
     print(f"已寫出 {args.out}")

@@ -5,16 +5,19 @@
 純函式,不碰網路與檔案系統。詞彙見 CONTEXT.md:效果標記表、效果句、效果類型、
 效果外文本、必發/選發。
 
-本票(02)只做拆句骨架:kind 除了位置規則產出的前言段(效果外文本)以外一律 None。
-官方明示(票03)、必發/選發(票04)、既有標記表與判定結果的合併(票05/08)另票處理。
+拆句與官方明示(票02/03)已實作;必發/選發(票04)、既有標記表與判定結果的合併
+(票05/08)另票處理。
 """
 import hashlib
 import json
 import re
 
-# 效果編號字元。官方目前最多用到⑤,多留幾個位以防新卡。
-NUMERALS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫"
+import official
+from official import INDEX_PREAMBLE, KIND_NON_EFFECT, NUMERALS
+
+# NUMERALS:效果編號字元。官方目前最多用到⑤,official 多留幾個位以防新卡。
 FULLWIDTH_COLON = "："
+BULLET = "●"
 
 # 卡片總表 type 位元(與 script/card_list/cardlist.py 同一套)
 TYPE_MONSTER = 0x1
@@ -28,7 +31,6 @@ TYPE_LINK = 0x4000000
 # 這些怪獸的卡文第一行是素材指定(卡文的硬性寫作慣例)
 MATERIAL_TYPES = TYPE_FUSION | TYPE_RITUAL | TYPE_SYNCHRO | TYPE_XYZ | TYPE_LINK
 
-KIND_NON_EFFECT = "效果外文本"
 ROLE_MATERIAL = "素材指定"
 ROLE_SUMMON = "召喚條件"
 ROLE_USAGE = "使用次數限制"
@@ -38,7 +40,6 @@ CONFIDENCE_LOW = "low"
 
 SECTION_MAIN = "main"
 SECTION_PENDULUM = "pendulum"
-INDEX_PREAMBLE = "0"
 INDEX_UNNUMBERED = "1"
 
 HEAD_PENDULUM = "【靈擺效果】"
@@ -205,6 +206,69 @@ def _slice(text, span):
     return "" if span is None else text[span[0]:span[1]]
 
 
+# ---------------------------------------------------------------- ● 子效果
+
+def _bullet_parts(text):
+    """文字 → (第一個 ● 之前的段落, [● 分項, ...]);兩者都已去首尾空白。"""
+    positions = [i for i, ch in enumerate(text) if ch == BULLET]
+    if not positions:
+        return text.strip(), []
+    bounds = list(zip(positions, positions[1:] + [len(text)]))
+    return text[:positions[0]].strip(), [text[s:e].strip() for s, e in bounds]
+
+
+def _split_bullets(cid, section, clauses, supplement, report):
+    """官方以【●…について】解說子效果時,把 ● 分項拆成獨立效果句。
+
+    只在官方確實這樣解說時才拆——沒有官方標頭的 ● 只是同一個效果的選項列舉,
+    拆了反而製造出官方沒有認可的效果句。繁中與日文的 ● 數量不一致時不拆。
+    """
+    if not official.bullet_specs(supplement):
+        return clauses
+    split = []
+    for clause in clauses:
+        both = clause["text_zh"] + clause["text_ja"]
+        if clause["index"] == INDEX_PREAMBLE or BULLET not in both:
+            split.append(clause)
+            continue
+        zh_head, zh_bullets = _bullet_parts(clause["text_zh"])
+        if clause["text_ja"]:
+            ja_head, ja_bullets = _bullet_parts(clause["text_ja"])
+        else:
+            ja_head, ja_bullets = "", [""] * len(zh_bullets)
+        if len(ja_bullets) != len(zh_bullets):
+            report["bullet_split_mismatch"].append(
+                {"id": cid, "section": section, "index": clause["index"]})
+            split.append(clause)
+            continue
+        confidence = clause["confidence"]
+        if zh_head or ja_head:
+            split.append(_clause(clause["index"], section, zh_head, ja_head,
+                                 confidence))
+        for pos, (zh, ja) in enumerate(zip(zh_bullets, ja_bullets), start=1):
+            split.append(_clause(f"{clause['index']}-{BULLET}{pos}", section,
+                                 zh, ja, confidence))
+        report["bullet_clauses"] += len(zh_bullets)
+    return split
+
+
+# ---------------------------------------------------------------- 官方明示
+
+def _apply_attestations(cid, section, clauses, name_ja, supplement, report):
+    """官方明示的效果類型寫進效果句;歸屬不確定的只進報告,不猜測。"""
+    assignments, notes = official.attest(name_ja, supplement, clauses)
+    by_index = {clause["index"]: clause for clause in clauses}
+    for index, (kind, ladder) in assignments.items():
+        clause = by_index[index]
+        clause["kind"] = kind
+        clause["source"] = official.SOURCE_OFFICIAL
+        report["official_clauses"] += 1
+        report["official_coverage"][ladder] += 1
+    for key, rows in notes.items():
+        for row in rows:
+            report[key].append({"id": cid, "section": section, **row})
+
+
 def _new_report():
     return {
         "cards": 0,
@@ -230,14 +294,21 @@ def _new_report():
         "substring_violations": [],
         "zh_cut_rule_disagree": 0,
         "unsupported_inputs": [],
+        "official_clauses": 0,
+        "official_coverage": {ladder: 0 for ladder in official.LADDERS},
+        "kind_counts": {kind: 0 for kind in official.KINDS},
+        "bullet_clauses": 0,
+        "bullet_split_mismatch": [],
+        **{key: [] for key in official.NOTE_KEYS},
     }
 
 
-def _build_section(card, section, zh_text, ja_text, has_supplement, report):
+def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
+                   report):
     """單一段落 → 效果句清單。繁中負責拆句,日文靠編號序列對位。"""
     cid = card["id"]
     ctype = card.get("type", 0)
-    confidence = CONFIDENCE_HIGH if has_supplement else CONFIDENCE_LOW
+    confidence = CONFIDENCE_HIGH if supplement else CONFIDENCE_LOW
     zh_pre, zh_nums, zh_all = _segments(zh_text)
     ja_pre, ja_nums, ja_all = _segments(ja_text)
 
@@ -297,6 +368,8 @@ def _build_section(card, section, zh_text, ja_text, has_supplement, report):
             _slice(ja_text, ja_all) if aligned else "", confidence))
         report["pending_split"].append({"id": cid, "section": section})
 
+    clauses = _split_bullets(cid, section, clauses, supplement, report)
+    _apply_attestations(cid, section, clauses, name_ja, supplement, report)
     return clauses
 
 
@@ -308,8 +381,8 @@ def _dedupe_indexes(cid, clauses, report):
         if key not in seen:
             seen.add(key)
             continue
-        report["duplicate_index"].append(
-            {"id": cid, "section": clause["section"], "index": clause["index"]})
+        report["duplicate_index"].append({
+            "id": cid, "section": clause["section"], "index": clause["index"]})
         suffix = 2
         while (clause["section"], f"{clause['index']}-{suffix}") in seen:
             suffix += 1
@@ -362,9 +435,10 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
             SECTION_PENDULUM: faq.get("pen_effect") or "",
         }
         supplement_by_section = {
-            SECTION_MAIN: bool(faq.get("supplement")),
-            SECTION_PENDULUM: bool(faq.get("pen_supplement")),
+            SECTION_MAIN: faq.get("supplement") or "",
+            SECTION_PENDULUM: faq.get("pen_supplement") or "",
         }
+        name_ja = faq.get("name_ja") or card.get("name_ja") or ""
 
         sections, flavor_dropped = _zh_sections(stripped)
         if flavor_dropped:
@@ -393,11 +467,14 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
                 report["zh_cut_rule_disagree"] += 1
             clauses.extend(_build_section(
                 card, section, text, ja_by_section[section],
-                supplement_by_section[section], report))
+                supplement_by_section[section], name_ja, report))
         _dedupe_indexes(cid, clauses, report)
         _check_substrings(cid, clauses, desc, ja_by_section, report)
         if any(c["confidence"] == CONFIDENCE_LOW for c in clauses):
             report["low_confidence"].append(cid)
+        for clause in clauses:
+            if clause["kind"] is not None:
+                report["kind_counts"][clause["kind"]] += 1
         report["clauses"] += len(clauses)
         entries.append({"id": cid, "clauses": clauses})
 

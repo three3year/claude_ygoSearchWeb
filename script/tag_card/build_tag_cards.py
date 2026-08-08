@@ -21,6 +21,7 @@ DEFAULT_FAQ_INFO = os.path.join(ROOT, "data", "sources", "faq_info.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "data", "tag_cards.json")
 
 LIST_PREVIEW = 20  # 清單過長時只印前幾筆,完整內容看輸出檔
+OPTIONAL_THRESHOLD = 0.98  # 必發/選發規則層的獨立驗證門檻(票04)
 
 # 五種對位方式(spec 的階梯一~五)加上效果外文本的官方明示
 LADDER_LABELS = (
@@ -42,6 +43,42 @@ ATTRIBUTION_LISTS = (
 def load_json(path):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def print_optional(report, file=sys.stdout):
+    """必發/選發那一層與它的獨立驗證。"""
+    p = lambda *a: print(*a, file=file)  # noqa: E731
+    validation = report["optional_validation"]
+    p("")
+    p(f"必發/選發: 官方明示 {report['optional_official']} 條、"
+      f"規則 {report['optional_rule']} 條、"
+      f"留待判定 {len(report['optional_pending'])} 條")
+    for value, count in report["optional_counts"].items():
+        p(f"  {value}: {count}")
+    p(f"官方說必發但類型未定(不寫值): {report['mandatory_kind_unknown']} 條")
+    p(f"官方說必發但類型不發動(必須為 0): "
+      f"{len(report['mandatory_other_kind'])} 條")
+    p(f"optional 落在不該有值的類型上(必須為 0): "
+      f"{len(report['optional_on_wrong_kind'])} 條")
+    p(f"歸屬不確定的必發明示: {len(report['mandatory_deferred'])} 筆")
+
+    rate = validation["agree"] / max(validation["predicted"], 1)
+    verdict = "PASS" if rate >= OPTIONAL_THRESHOLD else "FAIL"
+    p(f"獨立驗證(官方明示的必發 {validation['attested']} 條遮答案跑規則): "
+      f"{validation['agree']}/{validation['predicted']} = {100 * rate:.1f}% "
+      f"[{verdict} 門檻 {100 * OPTIONAL_THRESHOLD:.0f}%]")
+    p(f"  規則無法預測而排除於分母: 未拆句 {validation['unsplit']}、"
+      f"無日文卡文 {validation['no_text']}、"
+      f"找不到發動子句 {validation['no_activation']}")
+    disagree = validation["disagree"]
+    # 未達門檻時列出全部,達標時只留樣本——不一致的句型是修規則的唯一線索
+    full = verdict == "FAIL"
+    shown = disagree if full else disagree[:LIST_PREVIEW]
+    p(f"  不一致 {len(disagree)} 條"
+      f"{'(全列)' if full else f'(前 {len(shown)} 條)'}:")
+    for row in shown:
+        p(f"    id={row['id']} section={row['section']} index={row['index']} "
+          f"規則={row['predicted']} 發動子句={row['activation']}")
 
 
 def print_report(report, file=sys.stdout):
@@ -94,6 +131,8 @@ def print_report(report, file=sys.stdout):
         p(f"  {kind}: {count}")
     p(f"● 子效果拆出: {report['bullet_clauses']} 條,"
       f"繁中/日文 ● 數量不一致未拆: {len(report['bullet_split_mismatch'])} 段")
+
+    print_optional(report, file=file)
 
     for key, label in ATTRIBUTION_LISTS:
         p(f"{label}: {len(report[key])} 筆")

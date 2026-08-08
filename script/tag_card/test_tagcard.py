@@ -473,6 +473,18 @@ class TestSequenceReference(unittest.TestCase):
         self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "誘發效果(1速)")
         self.assertEqual(report["seq_missing"], [])
 
+    def test_only_the_first_reference_in_a_line_decides_attribution(self):
+        """後面的『①』是解說時提到的另一個效果,不得被複製上主語的判定。"""
+        entries, _ = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="■『②』はフィールドで発動する誘発効果です。"
+                            "（自身の『①』の効果を発動した場合に、"
+                            "必ず発動する効果です。）")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses], [None, "誘發效果(1速)"])
+        self.assertEqual([c["optional"] for c in clauses], [None, "必發"])
+
 
 class TestQuoteReference(unittest.TestCase):
     """階梯三:『效果原文』引用比對回日文卡文的編號區段。"""
@@ -523,6 +535,17 @@ class TestQuoteReference(unittest.TestCase):
                          [None, None])
         self.assertEqual([row["id"] for row in report["quote_ambiguous"]],
                          [1000])
+
+    def test_only_the_first_quote_in_a_line_decides_attribution(self):
+        entries, _ = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="■『②：効果乙。』のモンスター効果は誘発効果です。"
+                            "『①：効果甲。』の効果を発動した場合に"
+                            "必ず発動する効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses], [None, "誘發效果(1速)"])
+        self.assertEqual([c["optional"] for c in clauses], [None, "必發"])
 
 
 class TestCardNameLimited(unittest.TestCase):
@@ -778,6 +801,254 @@ class TestBulletSubEffects(unittest.TestCase):
             self.assertIn(clause["text_zh"], cards[0]["desc"])
             self.assertIn(clause["text_ja"], faqs[0]["card_text"])
         self.assertEqual(report["substring_violations"], [])
+
+
+class TestMandatoryAttestation(unittest.TestCase):
+    """官方明示「必ず発動する効果です」→ 必發,優先於任何規則。"""
+
+    TRIGGER_HEADER = ("【①の効果について】\n"
+                      "■モンスターゾーンで発動する誘発効果です。")
+
+    def test_official_mandatory_beats_the_dekiru_rule(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：可以發動。從卡組抽1張卡。")],
+            [faq(card_text="①：このカードが墓地へ送られた場合に発動できる。"
+                           "デッキから１枚ドローする。",
+                 supplement=self.TRIGGER_HEADER + "（必ず発動する効果です。）")])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["kind"], "誘發效果(1速)")
+        self.assertEqual(clause["optional"], "必發")
+        self.assertEqual(report["optional_official"], 1)
+
+    def test_masu_form_is_also_a_mandatory_attestation(self):
+        """官方寫過「必ず発動する効果です」與「必ず発動します」兩種。"""
+        entries, _ = build_tag_cards(
+            [card(desc="①：可以發動。從卡組抽1張卡。")],
+            [faq(card_text="①：このカードが墓地へ送られた場合に発動できる。"
+                           "デッキから１枚ドローする。",
+                 supplement=self.TRIGGER_HEADER
+                            + "\n■条件を満たした場合に必ず発動します。")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["optional"], "必發")
+
+    def test_mandatory_without_a_kind_leaves_optional_for_judgment(self):
+        """官方只寫必發、沒寫類型時不寫值——必發/選發只在兩種類型上有值。"""
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。",
+                 supplement="■このカードがリバースした場合に"
+                            "必ず発動する効果です。")])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertIsNone(clause["kind"])
+        self.assertIsNone(clause["optional"])
+        self.assertEqual(report["mandatory_kind_unknown"], 1)
+
+    def test_mandatory_line_on_a_multi_clause_card_defers_attribution(self):
+        """歸屬不確定的必發明示自成一份清單,不混進票03 的類型清單。"""
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="■このカードがリバースした場合に"
+                            "必ず発動する効果です。")])
+        self.assertEqual([c["optional"] for c in clauses_of(entries, 1000)],
+                         [None, None])
+        self.assertEqual([(r["id"], r["note"], r["reason"])
+                          for r in report["mandatory_deferred"]],
+                         [(1000, "attribution_deferred", "無歸屬標記")])
+        self.assertEqual(report["attribution_deferred"], [])
+
+    def test_forbidden_phrase_still_blocks_a_mandatory_judgment(self):
+        """「効果ではありません」的禁令對必發明示同樣有效,規則層照常接手。"""
+        entries, _ = build_tag_cards(
+            [card(desc="①：可以發動。")],
+            [faq(card_text="①：１ターンに１度、発動できる。",
+                 supplement=self.TRIGGER_HEADER
+                            + "\n■必ず発動する効果ではありません。")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["optional"], "選發")
+
+
+class TestOptionalRule(unittest.TestCase):
+    """日文發動子句的「できる」規則(官方沒明示時的第二層)。"""
+
+    TRIGGER_HEADER = ("【①の効果について】\n"
+                      "■モンスターゾーンで発動する誘発効果です。")
+
+    def optional_of(self, card_text, desc="①：效果甲。", supplement=None):
+        entries, report = build_tag_cards(
+            [card(desc=desc)],
+            [faq(card_text=card_text,
+                 supplement=supplement or self.TRIGGER_HEADER)])
+        return clauses_of(entries, 1000), report
+
+    def test_activation_clause_ending_in_dekiru_is_optional(self):
+        clauses, report = self.optional_of(
+            "①：このカードが墓地へ送られた場合に発動できる。"
+            "デッキから１枚ドローする。")
+        self.assertEqual(clauses[0]["optional"], "選發")
+        self.assertEqual(report["optional_rule"], 1)
+
+    def test_activation_clause_not_ending_in_dekiru_is_mandatory(self):
+        clauses, _ = self.optional_of(
+            "①：自分エンドフェイズに発動する。フィールドのカード１枚を"
+            "持ち主の手札に戻す。")
+        self.assertEqual(clauses[0]["optional"], "必發")
+
+    def test_dekimasu_ending_is_also_optional(self):
+        clauses, _ = self.optional_of("①：１ターンに１度、発動できます。")
+        self.assertEqual(clauses[0]["optional"], "選發")
+
+    def test_completed_event_keeps_dekiru_inside_its_only_sentence(self):
+        """「…時,可以」型:できる 在唯一那句上,屬於發動子句。"""
+        clauses, _ = self.optional_of(
+            "①：このカードが召喚に成功した時、相手に"
+            "１０００ダメージを与える事ができる。")
+        self.assertEqual(clauses[0]["optional"], "選發")
+
+    def test_dekinai_in_the_resolution_is_not_an_activation_ending(self):
+        clauses, _ = self.optional_of(
+            "①：相手が魔法カードを発動した時に発動する。その発動を無効にする。"
+            "このターン、このカードは攻撃できない。")
+        self.assertEqual(clauses[0]["optional"], "必發")
+
+    def test_trailing_parenthetical_does_not_hide_the_ending(self):
+        """官方把補述寫在發動子句句尾的括號裡,可否仍在括號之前。"""
+        clauses, _ = self.optional_of(
+            "①：通常魔法カードが発動した時に発動できる（同一チェーン上では"
+            "１度まで）。そのカードを除外する。")
+        self.assertEqual(clauses[0]["optional"], "選發")
+
+    def test_period_inside_a_parenthetical_is_not_the_sentence_end(self):
+        clauses, _ = self.optional_of(
+            "①：自分フィールドのモンスター１体を対象として発動できる"
+            "（この効果は１ターンに１度しか使えない。）。"
+            "そのモンスターを破壊する。")
+        self.assertEqual(clauses[0]["optional"], "選發")
+
+    def test_lead_in_sentence_without_an_activation_is_left_for_judgment(self):
+        """「②：…は以下の効果を得る。●…」的領起句不是發動子句。"""
+        clauses, report = self.optional_of(
+            "①：このカードと相互リンクしているモンスターの数によって"
+            "以下の効果を得る。\n●１体以上：攻撃宣言時に発動する。")
+        self.assertIsNone(clauses[0]["optional"])
+        self.assertEqual([(r["id"], r["reason"])
+                          for r in report["optional_pending"]],
+                         [(1000, "找不到發動子句")])
+
+    def test_scan_stops_at_the_clause_boundary(self):
+        """日文卡文整段不換行時,①的掃描不得咬到②的「発動できる」。"""
+        entries, _ = build_tag_cards(
+            [card(desc="①：發動。\n②：可以發動。")],
+            [faq(card_text="①：自分エンドフェイズに発動する。"
+                           "フィールドのカード１枚を持ち主の手札に戻す。"
+                           "②：１ターンに１度、手札を１枚捨てて発動できる。"
+                           "デッキから１枚ドローする。",
+                 supplement="【①の効果について】\n"
+                            "■モンスターゾーンで発動する誘発効果です。\n"
+                            "【②の効果について】\n"
+                            "■モンスターゾーンで発動する誘発効果です。")])
+        self.assertEqual([c["optional"] for c in clauses_of(entries, 1000)],
+                         ["必發", "選發"])
+
+    def test_only_the_two_activated_kinds_get_a_value(self):
+        supplements = {
+            "永續效果": "■モンスターゾーンで適用する永続効果です。",
+            "啟動效果": "■モンスターゾーンで発動できる起動効果です。",
+            "誘發即時效果(2速)": "■手札で発動できる誘発即時効果です。",
+            "無種類效果": "■起動効果・誘発効果・誘発即時効果・永続効果の"
+                          "いずれにも分類されない効果です。",
+        }
+        for kind, line in supplements.items():
+            with self.subTest(kind=kind):
+                clauses, report = self.optional_of(
+                    "①：１ターンに１度、発動できる。デッキから１枚ドローする。",
+                    supplement="【①の効果について】\n" + line)
+                self.assertEqual(clauses[0]["kind"], kind)
+                if kind == "誘發即時效果(2速)":
+                    self.assertEqual(clauses[0]["optional"], "選發")
+                else:
+                    self.assertIsNone(clauses[0]["optional"])
+                self.assertEqual(report["optional_on_wrong_kind"], [])
+
+    def test_non_effect_preamble_never_gets_a_value(self):
+        clauses, _ = self.optional_of(
+            "このカード名の①の効果は１ターンに１度しか使用できない。"
+            "①：１ターンに１度、発動できる。デッキから１枚ドローする。",
+            desc="這個卡名的①效果1回合只能使用1次。\n①：效果甲。")
+        self.assertEqual(clauses[0]["kind"], "效果外文本")
+        self.assertIsNone(clauses[0]["optional"])
+
+    def test_missing_japanese_text_leaves_optional_for_judgment(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="",
+                 supplement="■モンスターゾーンで発動する誘発効果です。")])
+        self.assertIsNone(clauses_of(entries, 1000)[0]["optional"])
+        self.assertEqual([(r["id"], r["index"])
+                          for r in report["optional_pending"]], [(1000, "①")])
+
+    def test_unsplit_old_style_text_is_left_for_judgment(self):
+        """舊式無編號卡文還沒依語意拆開,第一句不保證是發動子句。"""
+        entries, report = build_tag_cards(
+            [card(desc="這張卡被送去墓地時可以發動。從卡組抽1張卡。")],
+            [faq(card_text="このカードが墓地へ送られた場合に発動できる。"
+                           "デッキから１枚ドローする。",
+                 supplement="■モンスターゾーンで発動する誘発効果です。")])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["kind"], "誘發效果(1速)")
+        self.assertIsNone(clause["optional"])
+        self.assertEqual([(r["id"], r["reason"])
+                          for r in report["optional_pending"]],
+                         [(1000, "未拆句")])
+
+
+class TestOptionalValidation(unittest.TestCase):
+    """用官方明示的必發當獨立驗證集,遮住答案跑規則再對答案。"""
+
+    MANDATORY = ("【①の効果について】\n"
+                 "■モンスターゾーンで発動する誘発効果です。"
+                 "（必ず発動する効果です。）")
+
+    def build_two(self):
+        return build_tag_cards(
+            [card(cid=1000, desc="①：效果甲。"),
+             card(cid=2000, desc="①：效果乙。")],
+            [faq(password=1000,
+                 card_text="①：自分エンドフェイズに発動する。"
+                           "フィールドのカード１枚を持ち主の手札に戻す。",
+                 supplement=self.MANDATORY),
+             faq(password=2000,
+                 card_text="①：１ターンに１度、発動できる。"
+                           "デッキから１枚ドローする。",
+                 supplement=self.MANDATORY)])
+
+    def test_rate_counts_only_clauses_the_rule_could_predict(self):
+        _, report = self.build_two()
+        validation = report["optional_validation"]
+        self.assertEqual(validation["attested"], 2)
+        self.assertEqual(validation["predicted"], 2)
+        self.assertEqual(validation["agree"], 1)
+
+    def test_every_disagreement_is_listed_with_its_activation_clause(self):
+        _, report = self.build_two()
+        disagree = report["optional_validation"]["disagree"]
+        self.assertEqual([(r["id"], r["predicted"]) for r in disagree],
+                         [(2000, "選發")])
+        self.assertEqual(disagree[0]["activation"], "１ターンに１度、発動できる")
+
+    def test_official_answer_wins_even_where_the_rule_disagrees(self):
+        entries, _ = self.build_two()
+        self.assertEqual(clauses_of(entries, 2000)[0]["optional"], "必發")
+
+    def test_unsplit_clauses_are_excluded_from_the_denominator(self):
+        _, report = build_tag_cards(
+            [card(desc="這張卡被送去墓地時發動。從卡組抽1張卡。")],
+            [faq(card_text="このカードが墓地へ送られた場合に発動できる。"
+                           "デッキから１枚ドローする。",
+                 supplement="■モンスターゾーンで発動する誘発効果です。"
+                            "（必ず発動する効果です。）")])
+        validation = report["optional_validation"]
+        self.assertEqual(validation["attested"], 1)
+        self.assertEqual(validation["predicted"], 0)
+        self.assertEqual(validation["unsplit"], 1)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@
 純函式,不碰網路與檔案系統。詞彙見 CONTEXT.md:效果標記表、效果句、效果類型、
 效果外文本、必發/選發。
 
-拆句與官方明示(票02/03)已實作;必發/選發(票04)、既有標記表與判定結果的合併
+拆句、官方明示與必發/選發(票02/03/04)已實作;既有標記表與判定結果的合併
 (票05/08)另票處理。
 """
 import hashlib
@@ -13,7 +13,9 @@ import json
 import re
 
 import official
-from official import INDEX_PREAMBLE, KIND_NON_EFFECT, NUMERALS
+from official import (INDEX_PREAMBLE, KIND_NON_EFFECT, KIND_QUICK,
+                      KIND_TRIGGER, NUMERALS, OPTIONAL_MANDATORY,
+                      OPTIONAL_OPTIONAL)
 
 # NUMERALS:效果編號字元。官方目前最多用到⑤,official 多留幾個位以防新卡。
 FULLWIDTH_COLON = "："
@@ -41,6 +43,9 @@ CONFIDENCE_LOW = "low"
 SECTION_MAIN = "main"
 SECTION_PENDULUM = "pendulum"
 INDEX_UNNUMBERED = "1"
+
+# 只有這兩類寫必發/選發:啟動效果本就由玩家主動開啟,其餘三類不發動
+ACTIVATED_KINDS = (KIND_QUICK, KIND_TRIGGER)
 
 HEAD_PENDULUM = "【靈擺效果】"
 HEAD_MONSTER_RE = re.compile(r"【怪獸(效果|敘述|描述)】")
@@ -255,8 +260,12 @@ def _split_bullets(cid, section, clauses, supplement, report):
 # ---------------------------------------------------------------- 官方明示
 
 def _apply_attestations(cid, section, clauses, name_ja, supplement, report):
-    """官方明示的效果類型寫進效果句;歸屬不確定的只進報告,不猜測。"""
-    assignments, notes = official.attest(name_ja, supplement, clauses)
+    """官方明示的效果類型寫進效果句;歸屬不確定的只進報告,不猜測。
+
+    回傳官方寫了「必ず発動」的效果句 index 集合,交給必發/選發那一層使用。
+    """
+    assignments, mandatory, notes = official.attest(name_ja, supplement,
+                                                    clauses)
     by_index = {clause["index"]: clause for clause in clauses}
     for index, (kind, ladder) in assignments.items():
         clause = by_index[index]
@@ -267,6 +276,133 @@ def _apply_attestations(cid, section, clauses, name_ja, supplement, report):
     for key, rows in notes.items():
         for row in rows:
             report[key].append({"id": cid, "section": section, **row})
+    return set(mandatory)
+
+
+# ---------------------------------------------------------------- 必發/選發
+
+# 發動子句的結尾。日文卡文的硬性寫作慣例:能不能發動寫在發動子句的句尾。
+_OPTIONAL_ENDINGS = ("できる", "できます")
+_ACTIVATION_MARK = "発動"
+# 規則判不出的三種原因,報告的驗證集分別計數
+_UNPREDICTED_KEYS = {"未拆句": "unsplit", "無日文卡文": "no_text",
+                     "找不到發動子句": "no_activation"}
+_PAREN_OPEN = "（("
+_PAREN_CLOSE = "）)"
+# 發動子句末尾的補述(「〜発動できる(同一チェーン上では１度まで)。」)
+_TRAILING_PAREN_RE = re.compile(r"[（(][^（()）]*[）)]\s*$")
+
+
+def _first_sentence(text):
+    """第一個**不在括號內**的句號之前的文字。
+
+    官方把補述寫在發動子句的句尾括號裡,而括號內常自帶句號
+    (「〜発動できる(この効果は１ターンに１度しか使えない。)。」),
+    直接切第一個「。」會把發動子句斷在括號中間。
+    """
+    depth = 0
+    for pos, ch in enumerate(text):
+        if ch in _PAREN_OPEN:
+            depth += 1
+        elif ch in _PAREN_CLOSE:
+            depth = max(depth - 1, 0)
+        elif ch == "。" and depth == 0:
+            return text[:pos]
+    return text
+
+
+def _activation_clause(text_ja):
+    """效果句的日文原文 → 發動子句(到第一個句號為止);抓不到時回 None。
+
+    掃描起點是這一句自己的開頭、終點是第一個句號。效果句在拆句時已經切開,
+    掃描因此天然停在效果句邊界內,不會咬到下一個編號效果的「発動できる」——
+    官方日文卡文整段不換行(`①：…。②：…。`)時這是唯一的防線。
+
+    句尾的括號補述要剝掉再看結尾:「〜発動できる(同一チェーン上では１度まで)」
+    的可否仍寫在括號之前。
+    """
+    text = text_ja.strip()
+    if text[:1] in NUMERALS:
+        text = text[1:].lstrip("：:").strip()
+    elif text[:1] == BULLET:
+        text = text[1:].strip()
+    head = _first_sentence(text).strip()
+    while True:
+        stripped = _TRAILING_PAREN_RE.sub("", head).strip()
+        if stripped == head:
+            return head or None
+        head = stripped
+
+
+def _optional_by_rule(clause, unsplit):
+    """效果句 → (必發/選發, 發動子句);規則判不出時回 (None, 原因)。
+
+    舊式無編號卡文還沒依語意拆開,第一句常是素材指定或召喚條件而不是發動子句
+    (實測這樣硬掃會把官方明示為必發的 79 條標成選發),因此整團留待判定。
+
+    第一句既沒有「できる」也沒提到発動時(「②：…は以下の効果を得る。●…」這種
+    領起句)不算發動子句——真正的發動寫在後面的 ● 分項裡,推定必發會錯。
+    """
+    if clause["index"] in unsplit:
+        return None, "未拆句"
+    if not clause["text_ja"]:
+        return None, "無日文卡文"
+    activation = _activation_clause(clause["text_ja"])
+    if activation is None:
+        return None, "找不到發動子句"
+    if activation.endswith(_OPTIONAL_ENDINGS):
+        return OPTIONAL_OPTIONAL, activation
+    if _ACTIVATION_MARK not in activation:
+        return None, "找不到發動子句"
+    return OPTIONAL_MANDATORY, activation
+
+
+def _apply_optional(cid, section, clauses, attested, unsplit, report):
+    """必發/選發三層:官方明示 → 日文發動子句規則 → 留 null 待判。
+
+    官方明示的那批同時當獨立驗證集:遮住答案跑一次規則,一致率進報告。
+    """
+    for clause in clauses:
+        predicted, detail = _optional_by_rule(clause, unsplit)
+        is_attested = clause["index"] in attested
+        if is_attested:
+            _validate_optional(cid, section, clause, predicted, detail, report)
+        if clause["kind"] not in ACTIVATED_KINDS:
+            # 官方說必發、但類型還沒定(或定成不發動的類型)時一律不寫值——
+            # 必發/選發的值域規則優先,類型定案後重跑會自然補上
+            if is_attested and clause["kind"] is None:
+                report["mandatory_kind_unknown"] += 1
+            elif is_attested:
+                report["mandatory_other_kind"].append(
+                    {"id": cid, "section": section, "index": clause["index"],
+                     "kind": clause["kind"]})
+            continue
+        if is_attested:
+            clause["optional"] = OPTIONAL_MANDATORY
+            report["optional_official"] += 1
+        elif predicted is not None:
+            clause["optional"] = predicted
+            report["optional_rule"] += 1
+        else:
+            report["optional_pending"].append(
+                {"id": cid, "section": section, "index": clause["index"],
+                 "reason": detail})
+
+
+def _validate_optional(cid, section, clause, predicted, detail, report):
+    """官方說必發的效果句 → 遮住答案跑規則,記一致率與所有不一致的條目。"""
+    validation = report["optional_validation"]
+    validation["attested"] += 1
+    if predicted is None:
+        validation[_UNPREDICTED_KEYS[detail]] += 1
+        return
+    validation["predicted"] += 1
+    if predicted == OPTIONAL_MANDATORY:
+        validation["agree"] += 1
+    else:
+        validation["disagree"].append(
+            {"id": cid, "section": section, "index": clause["index"],
+             "predicted": predicted, "activation": detail})
 
 
 def _new_report():
@@ -297,6 +433,17 @@ def _new_report():
         "official_clauses": 0,
         "official_coverage": {ladder: 0 for ladder in official.LADDERS},
         "kind_counts": {kind: 0 for kind in official.KINDS},
+        "optional_counts": {OPTIONAL_MANDATORY: 0, OPTIONAL_OPTIONAL: 0,
+                            "null": 0},
+        "optional_official": 0,
+        "optional_rule": 0,
+        "optional_pending": [],
+        "optional_on_wrong_kind": [],
+        "mandatory_kind_unknown": 0,
+        "mandatory_other_kind": [],
+        "optional_validation": {
+            "attested": 0, "predicted": 0, "agree": 0, "disagree": [],
+            **{key: 0 for key in _UNPREDICTED_KEYS.values()}},
         "bullet_clauses": 0,
         "bullet_split_mismatch": [],
         **{key: [] for key in official.NOTE_KEYS},
@@ -361,15 +508,19 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
         clauses.append(_clause(labels[pos], section, _slice(zh_text, span),
                                _slice(ja_text, ja_span), confidence))
 
+    unsplit = set()
     if zh_all is not None:
         # 無編號舊式卡文:先當單一效果句,語意拆分留給判定票(票08)
         clauses.append(_clause(
             INDEX_UNNUMBERED, section, _slice(zh_text, zh_all),
             _slice(ja_text, ja_all) if aligned else "", confidence))
         report["pending_split"].append({"id": cid, "section": section})
+        unsplit.add(INDEX_UNNUMBERED)
 
     clauses = _split_bullets(cid, section, clauses, supplement, report)
-    _apply_attestations(cid, section, clauses, name_ja, supplement, report)
+    attested = _apply_attestations(cid, section, clauses, name_ja, supplement,
+                                   report)
+    _apply_optional(cid, section, clauses, attested, unsplit, report)
     return clauses
 
 
@@ -475,6 +626,12 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
         for clause in clauses:
             if clause["kind"] is not None:
                 report["kind_counts"][clause["kind"]] += 1
+            report["optional_counts"][clause["optional"] or "null"] += 1
+            if (clause["optional"] is not None
+                    and clause["kind"] not in ACTIVATED_KINDS):
+                report["optional_on_wrong_kind"].append(
+                    {"id": cid, "section": clause["section"],
+                     "index": clause["index"]})
         report["clauses"] += len(clauses)
         entries.append({"id": cid, "clauses": clauses})
 

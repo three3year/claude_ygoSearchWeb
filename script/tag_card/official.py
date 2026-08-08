@@ -1,6 +1,7 @@
 """補足情報的官方明示抽取與歸屬判定。
 
-回答兩件事:官方寫下的效果類型是什麼、它講的是哪一個效果句。
+回答三件事:官方寫下的效果類型是什麼、它有沒有寫這個效果必發、它講的是哪一個
+效果句。
 歸屬的統一原則是**證據唯一且明確才自動套用**——引號對不回本卡、同時命中多個
 效果段、明示句只提到別張卡、卡名限定卻是多效果卡,一律不回傳判定,改記進註記
 交由後續判定,絕不猜測。
@@ -25,6 +26,10 @@ KINDS = (KIND_NON_EFFECT, KIND_UNCLASSIFIED, KIND_CONTINUOUS, KIND_QUICK,
 
 SOURCE_OFFICIAL = "official"
 
+# 必發/選發的兩個值(CONTEXT.md 定義);官方明示只講得出必發那一邊
+OPTIONAL_MANDATORY = "必發"
+OPTIONAL_OPTIONAL = "選發"
+
 # 五種對位方式(spec 的階梯一~五)加上效果外文本的官方明示
 LADDER_HEADER = "header"
 LADDER_SEQ = "seq"
@@ -38,7 +43,7 @@ LADDERS = (LADDER_HEADER, LADDER_SEQ, LADDER_QUOTE, LADDER_NAME_SINGLE,
 NOTE_KEYS = ("seq_missing", "header_index_missing", "quote_unmatched",
              "quote_ambiguous", "attribution_deferred", "other_card_only",
              "kind_conflicts", "kind_ambiguous",
-             "non_effect_outside_preamble")
+             "non_effect_outside_preamble", "mandatory_deferred")
 
 # 官方類型詞。「誘発即時効果」必須排在「誘発効果」之前才不會被前綴吃掉。
 _KIND_BY_WORD = {
@@ -55,6 +60,9 @@ _UNCLASSIFIED_MARK = "分類されない"
 # 「対象を取る効果ではありません」這類限定否定與效果分類無關,絕不可作為判定依據
 _FORBIDDEN_MARK = "効果ではありません"
 _NON_EFFECT_MARK = "効果として扱いません"
+# 必發的官方明示。實測 1,526 行全是「必ず発動する効果です」「必ず発動します」
+# 「必ず発動し、〜」三種肯定寫法,沒有一行是否定,所以認前綴就夠。
+_MANDATORY_MARK = "必ず発動"
 
 _HEADER_RE = re.compile(r"^【([^】]*)】", re.M)
 _INDEX_HEADER_RE = re.compile(
@@ -152,6 +160,16 @@ def _line_kinds(line):
     return kinds
 
 
+def _line_mandatory(line):
+    """一行明示 → 它有沒有寫「必ず発動」(必發)。
+
+    與 _line_kinds 同樣逐句判斷,好讓「必ず発動する効果ではありません」這種
+    禁用句型同樣不產生判定。
+    """
+    return any(_MANDATORY_MARK in sentence and _FORBIDDEN_MARK not in sentence
+               for sentence in line.split("。"))
+
+
 # ---------------------------------------------------------------- 歸屬對位
 
 def _numbered(effects):
@@ -221,24 +239,38 @@ def _resolve_header(header, effects):
 # ---------------------------------------------------------------- 接縫
 
 def attest(name_ja, supplement, clauses):
-    """補足情報 + 某段落的效果句 → ({index: (效果類型, 對位方式)}, 註記)。
+    """補足情報 + 某段落的效果句 → (類型判定, 必發判定, 註記)。
+
+    類型判定為 {index: (效果類型, 對位方式)},必發判定為 {index: 對位方式}——
+    官方寫下「必ず発動」的效果句。兩者共用同一套歸屬對位。
 
     clauses 需含 index / text_ja;index 為 "0" 者視為前言段(效果外文本)。
-    註記的每一項都是「官方寫了類型但歸屬不確定」或「明示句不可採用」的理由,
+    註記的每一項都是「官方寫了判定但歸屬不確定」或「明示句不可採用」的理由,
     由呼叫端補上卡片密碼後放進報告。
     """
     notes = {key: [] for key in NOTE_KEYS}
     assignments = {}
+    mandatory = {}
     if not supplement:
-        return assignments, notes
+        return assignments, mandatory, notes
 
     effects = [c for c in clauses if c["index"] != INDEX_PREAMBLE]
     preamble = next((c for c in clauses if c["index"] == INDEX_PREAMBLE), None)
     own_name = _normalise(name_ja)
     conflicting = set()
+    # 只寫必發而沒寫類型的明示句另立一份清單,不去動票03 那幾份類型清單的筆數
+    kindless = False
 
-    def assign(index, kind, ladder, line):
-        if index in conflicting:
+    def note(key, row):
+        if kindless:
+            notes["mandatory_deferred"].append({"note": key, **row})
+        else:
+            notes[key].append(row)
+
+    def assign(index, kind, ladder, line, is_mandatory=False):
+        if is_mandatory:
+            mandatory.setdefault(index, ladder)
+        if kind is None or index in conflicting:
             return
         current = assignments.get(index)
         if current is None:
@@ -250,54 +282,62 @@ def attest(name_ja, supplement, clauses):
                 {"index": index, "kinds": sorted([current[0], kind]),
                  "line": line})
 
-    def attribute(line, kind):
-        """無標頭的明示句 → 依階梯二~五對位;任何歧義都只記註記。"""
-        sequence = list(dict.fromkeys(_SEQ_QUOTE_RE.findall(line)))
+    def attribute(line, kind, is_mandatory):
+        """無標頭的明示句 → 依階梯二~五對位;任何歧義都只記註記。
+
+        一行只由**第一個**『』引用決定歸屬。日文的硬性寫作慣例是主語在前
+        (「『②』は…誘発効果です。(自身の『①』の効果で…必ず発動する効果です。)」),
+        後面的引用是為了解說而提到的另一個效果;逐一套用會把主語的判定複製到
+        被提及的效果上(實測 92 行,無一例外)。
+        """
+        sequence = _SEQ_QUOTE_RE.findall(line)
         if sequence:
-            for index in sequence:
-                if any(c["index"] == index for c in effects):
-                    assign(index, kind, LADDER_SEQ, line)
-                elif len(effects) == 1 and not _numbered(effects):
-                    # 舊式無編號卡文,官方仍以『①』稱呼那唯一的效果
-                    assign(effects[0]["index"], kind, LADDER_SEQ, line)
-                else:
-                    notes["seq_missing"].append({"index": index})
+            index = sequence[0]
+            if any(c["index"] == index for c in effects):
+                assign(index, kind, LADDER_SEQ, line, is_mandatory)
+            elif len(effects) == 1 and not _numbered(effects):
+                # 舊式無編號卡文,官方仍以『①』稱呼那唯一的效果
+                assign(effects[0]["index"], kind, LADDER_SEQ, line,
+                       is_mandatory)
+            else:
+                note("seq_missing", {"index": index})
             return
         quotes = [q for q in _QUOTE_RE.findall(line)
                   if not _is_sequence_ref(q)]
         if quotes:
             if not _numbered(effects):
                 # 舊式無編號卡文還沒依語意拆開,引用指向的是這一團的某一部分
-                notes["attribution_deferred"].append(
-                    {"kind": kind, "reason": "無編號卡文待拆", "line": line})
+                note("attribution_deferred",
+                     {"kind": kind, "reason": "無編號卡文待拆", "line": line})
                 return
-            for quoted in quotes:
-                hits = _match_quote(quoted, effects)
-                if len(hits) == 1:
-                    assign(hits[0], kind, LADDER_QUOTE, line)
-                elif not hits:
-                    notes["quote_unmatched"].append(
-                        {"kind": kind, "quote": quoted})
-                else:
-                    notes["quote_ambiguous"].append(
-                        {"kind": kind, "quote": quoted, "hits": hits})
+            quoted = quotes[0]
+            hits = _match_quote(quoted, effects)
+            if len(hits) == 1:
+                assign(hits[0], kind, LADDER_QUOTE, line, is_mandatory)
+            elif not hits:
+                note("quote_unmatched", {"kind": kind, "quote": quoted})
+            else:
+                note("quote_ambiguous",
+                     {"kind": kind, "quote": quoted, "hits": hits})
             return
         names = _NAME_RE.findall(line)
         if names:
             if own_name and any(_normalise(n) == own_name for n in names):
-                apply_to_sole_effect(kind, LADDER_NAME_SINGLE, line, "卡名限定")
+                apply_to_sole_effect(kind, LADDER_NAME_SINGLE, line, "卡名限定",
+                                     is_mandatory)
             else:
                 # 補足情報為了解說而引用他卡效果文,不得污染本卡的判定
-                notes["other_card_only"].append({"kind": kind, "line": line})
+                note("other_card_only", {"kind": kind, "line": line})
             return
-        apply_to_sole_effect(kind, LADDER_SINGLE, line, "無歸屬標記")
+        apply_to_sole_effect(kind, LADDER_SINGLE, line, "無歸屬標記",
+                             is_mandatory)
 
-    def apply_to_sole_effect(kind, ladder, line, reason):
+    def apply_to_sole_effect(kind, ladder, line, reason, is_mandatory):
         if len(effects) == 1:
-            assign(effects[0]["index"], kind, ladder, line)
+            assign(effects[0]["index"], kind, ladder, line, is_mandatory)
         else:
-            notes["attribution_deferred"].append(
-                {"kind": kind, "reason": reason, "line": line})
+            note("attribution_deferred",
+                 {"kind": kind, "reason": reason, "line": line})
 
     def non_effect(line, header):
         """「〜は効果として扱いません」:指向前言段才自動套用,否則只進報告。"""
@@ -326,22 +366,25 @@ def attest(name_ja, supplement, clauses):
                 non_effect(line, header)
                 continue
             kinds = _line_kinds(line)
-            if not kinds:
-                continue
             if len(kinds) > 1:
+                # 一句話交代兩個子效果時,必發講的是哪一個同樣無從得知
                 notes["kind_ambiguous"].append(
                     {"kinds": sorted(kinds), "line": line})
                 continue
-            kind = kinds.pop()
+            is_mandatory = _line_mandatory(line)
+            if not kinds and not is_mandatory:
+                continue
+            kind = kinds.pop() if kinds else None
+            kindless = kind is None
             if status == "index":
-                assign(target, kind, LADDER_HEADER, line)
+                assign(target, kind, LADDER_HEADER, line, is_mandatory)
             elif status == "missing":
-                notes["header_index_missing"].append({"index": target})
+                note("header_index_missing", {"index": target})
             elif status == "unresolved":
-                notes["attribution_deferred"].append(
-                    {"kind": kind, "line": line,
-                     "reason": "無編號卡文待拆" if not _numbered(effects)
-                     else "標頭對不出標的"})
+                note("attribution_deferred",
+                     {"kind": kind, "line": line,
+                      "reason": "無編號卡文待拆" if not _numbered(effects)
+                      else "標頭對不出標的"})
             else:
-                attribute(line, kind)
-    return assignments, notes
+                attribute(line, kind, is_mandatory)
+    return assignments, mandatory, notes

@@ -7,9 +7,10 @@
 """
 import unittest
 
-from faqgap import (build_cid_to_password, diff_cid_mapping,
-                    extract_konami_ids, find_missing_cards,
-                    format_gap_report, split_alt_artwork_changes)
+from faqgap import (apply_cid_overrides, build_cid_to_password,
+                    diff_cid_mapping, extract_konami_ids, find_missing_cards,
+                    format_gap_report, parse_cid_overrides,
+                    split_alt_artwork_changes)
 
 
 def card(id_, ot=1, alt_ids=(), name_zh="卡", name_ja="カード"):
@@ -120,6 +121,31 @@ class TestDiffCidMapping(unittest.TestCase):
     def test_lists_sorted(self):
         d = diff_cid_mapping({}, {3: 3, 1: 1, 2: 2})
         self.assertEqual(d["added"], [1, 2, 3])
+
+
+class TestCidOverrides(unittest.TestCase):
+    """ygoprodeck 查不到 konami_id 的卡,靠人工查證的 cid 對應補上。"""
+
+    def test_parses_string_keys_to_ints(self):
+        data = {"note": "說明", "cid_to_password": {"23363": 89813287}}
+        self.assertEqual(parse_cid_overrides(data), {23363: 89813287})
+
+    def test_missing_section_yields_empty(self):
+        self.assertEqual(parse_cid_overrides({}), {})
+        self.assertEqual(parse_cid_overrides(None), {})
+
+    def test_override_adds_cid_absent_from_dumps(self):
+        self.assertEqual(apply_cid_overrides({1: 111}, {2: 222}),
+                         {1: 111, 2: 222})
+
+    def test_override_wins_over_dump(self):
+        # 人工查證優先於 dump——會用到覆寫,就表示 dump 的資料有問題
+        self.assertEqual(apply_cid_overrides({1: 111}, {1: 999}), {1: 999})
+
+    def test_original_mapping_not_mutated(self):
+        mapping = {1: 111}
+        apply_cid_overrides(mapping, {2: 222})
+        self.assertEqual(mapping, {1: 111})
 
 
 class TestSplitAltArtworkChanges(unittest.TestCase):

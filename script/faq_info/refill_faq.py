@@ -18,9 +18,10 @@ import sys
 import time
 
 import build_faq_info
-from build_faq_info import load_cid_to_password
+from build_faq_info import load_cid_overrides, load_cid_to_password
 from faqfetch import fetch_faq_page, fetch_ygopro_dump, sleep_between
-from faqgap import (DEFAULT_CACHE, build_cid_to_password, diff_cid_mapping,
+from faqgap import (DEFAULT_CACHE, DEFAULT_CID_OVERRIDES,
+                    build_cid_to_password, diff_cid_mapping,
                     extract_konami_ids, find_missing_cards, format_gap_report,
                     split_alt_artwork_changes)
 
@@ -116,6 +117,9 @@ def main(argv=None):
                         help="卡片總表路徑 (預設 data/cards.json)")
     parser.add_argument("--faq-json", default=DEFAULT_FAQ_JSON,
                         help="整合 JSON 路徑 (預設 data/sources/faq_info.json)")
+    parser.add_argument("--cid-overrides", default=DEFAULT_CID_OVERRIDES,
+                        help="人工查證的 cid→卡片密碼 覆寫檔 "
+                             "(預設 data/cid_overrides.json)")
     parser.add_argument("--dry-run", action="store_true",
                         help="只盤點缺口並列出,不連網、不寫檔")
     parser.add_argument("--offline", action="store_true",
@@ -181,10 +185,17 @@ def main(argv=None):
         print(f"新 dump 已存為 {path}(不覆蓋既有檔)")
         password_to_cid = extract_konami_ids(dump)
 
+    # 人工查證的覆寫優先:ygoprodeck 查不到的卡只能靠它取得 cid
+    overrides = load_cid_overrides(args.cid_overrides)
+    if overrides:
+        print(f"套用人工 cid 覆寫: {len(overrides)} 筆")
+        password_to_cid.update({pw: cid for cid, pw in overrides.items()})
+
     targets, unresolved = resolve_targets(missing, password_to_cid)
-    print(f"取得 cid: {len(targets)} 張;取不到 konami_id: {len(unresolved)} 張")
+    print(f"取得 cid: {len(targets)} 張;取不到 cid: {len(unresolved)} 張")
     for card in unresolved:
-        print(f"  {card['id']} {card['name_ja']}(無 konami_id,略過)")
+        print(f"  {card['id']} {card['name_ja']}"
+              f"(ygoprodeck 無 konami_id 且無人工覆寫,略過)")
     if args.limit:
         targets = targets[:args.limit]
         print(f"--limit {args.limit}:本次只補爬 {len(targets)} 張")
@@ -194,7 +205,8 @@ def main(argv=None):
     print(f"補爬完成: 寫入 {len(written)} 頁、失敗 {len(failed)} 頁")
 
     print("重建 faq_info.json …")
-    build_faq_info.main(["--cache", args.cache, "--out", args.faq_json])
+    build_faq_info.main(["--cache", args.cache, "--out", args.faq_json,
+                         "--cid-overrides", args.cid_overrides])
 
     ok, bad = verify(args.faq_json, missing)
     print(f"驗收: {len(ok)}/{len(missing)} 張待補卡拿得到 card_text 且對得上密碼")

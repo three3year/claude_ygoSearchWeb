@@ -47,6 +47,11 @@ python script/faq_info/recrawl_faq.py --sample 20
 `update_cards.py` 每次更新完會順帶對帳並回報缺口,但**不會自動補爬** —— 補爬要對官方站
 發數十次請求,由人決定何時執行。
 
+補爬靠 ygoprodeck 的 `konami_id` 把卡片密碼換成 cid。少數卡 ygoprodeck 查不到(未收錄、
+或 `konami_id` 為 null),此時把人工查證的對應寫進 `data/cid_overrides.json`(入版控)即可,
+不需改程式:開 `https://www.db.yugioh-card.com/yugiohdb/faq_search.action?ope=4&cid=<cid>`
+確認卡名相符後加一筆,再跑 `refill_faq.py --offline`。
+
 ## 目錄
 
 | 位置 | 內容 |
@@ -62,6 +67,7 @@ python script/faq_info/recrawl_faq.py --sample 20
 | `script/faq_info/refill_faq.py` | 補齊缺漏卡的快取(更新 dump → 補爬 → 重建 → 驗收) |
 | `script/faq_info/recrawl_faq.py` | 抽樣重爬殼(確認快取是否過舊) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
+| `data/cid_overrides.json` | 人工查證的 cid→卡片密碼 對應(ygoprodeck 查不到的卡) |
 | `data/sources/` | 來源檔暫存,含 `faq_info.json`(不入版控) |
 | `../data_ygoFaqCache/_cache` | 官方 Q&A 快取(repo 外,約 1.1GB) |
 | `web/` | 查卡網站(後續階段) |

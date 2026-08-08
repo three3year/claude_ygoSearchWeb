@@ -15,6 +15,9 @@ ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_CACHE = os.path.normpath(
     os.path.join(ROOT, "..", "data_ygoFaqCache", "_cache"))
+# 人工查證的 cid 對應放在 repo 內(入版控):它是查來的知識,不是抓來的資料,
+# 不該跟著快取一起被重建掉。
+DEFAULT_CID_OVERRIDES = os.path.join(ROOT, "data", "cid_overrides.json")
 
 # TCG 限定卡(ot=2)在 KONAMI 日文資料庫沒有頁面,結構性不可能有補足情報,
 # 因此不列入缺口。ot=1(OCG 限定)與 ot=3(兩者)都有日文頁。
@@ -62,6 +65,27 @@ def build_cid_to_password(dumps):
         for password, kid in extract_konami_ids(dump).items():
             mapping.setdefault(kid, password)
     return mapping
+
+
+def parse_cid_overrides(data):
+    """讀人工維護的 cid 覆寫檔內容 → {cid: 卡片密碼};格式不符時回傳空表。
+
+    檔案格式:{"note": "...", "cid_to_password": {"<cid>": <卡片密碼>}}。
+    JSON 的鍵一律是字串,這裡轉回 int 以便與 dump 建出的對應表合併。
+    """
+    if not isinstance(data, dict):
+        return {}
+    return {int(cid): int(password)
+            for cid, password in (data.get("cid_to_password") or {}).items()}
+
+
+def apply_cid_overrides(mapping, overrides):
+    """把人工覆寫套到 dump 建出的對應表上(覆寫優先),回傳新表不改原表。
+
+    覆寫優先於 dump:會需要人工補這一筆,就表示 dump 對這個 cid 沒有資料
+    或資料有問題,人工查證的結果比較可信。
+    """
+    return {**mapping, **overrides}
 
 
 def diff_cid_mapping(old, new):

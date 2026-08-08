@@ -1,0 +1,7 @@
+{
+  "note": "人工查證的 cid→卡片密碼 對應。用於 ygoprodeck 查不到 konami_id 的卡(該卡未收錄、或收錄了但 konami_id 為 null),否則官方 Q&A 資料抓回來也接不上卡片總表。鍵為 cid,值為卡片密碼。加入前請開 https://www.db.yugioh-card.com/yugiohdb/faq_search.action?ope=4&cid=<cid> 確認卡名相符。",
+  "cid_to_password": {
+    "23363": 89813287,
+    "23428": 42026772
+  }
+}

@@ -12,7 +12,8 @@ import re
 import sys
 
 from faqinfo import extract_faq_info
-from faqgap import DEFAULT_CACHE, build_cid_to_password
+from faqgap import (DEFAULT_CACHE, DEFAULT_CID_OVERRIDES, apply_cid_overrides,
+                    build_cid_to_password, parse_cid_overrides)
 
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,9 +40,19 @@ def iter_dumps(cache_dir):
             yield json.load(f)
 
 
-def load_cid_to_password(cache_dir):
-    """由快取目錄的 ygoprodeck 資料檔建 cid(konami_id)→卡片密碼 對應表。"""
-    return build_cid_to_password(iter_dumps(cache_dir))
+def load_cid_overrides(path=DEFAULT_CID_OVERRIDES):
+    """讀人工查證的 cid→卡片密碼 覆寫檔;檔案不存在時回傳空表。"""
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return parse_cid_overrides(json.load(f))
+
+
+def load_cid_to_password(cache_dir, overrides_path=DEFAULT_CID_OVERRIDES):
+    """由快取目錄的 ygoprodeck 資料檔建 cid(konami_id)→卡片密碼 對應表,
+    再套上人工查證的覆寫。"""
+    return apply_cid_overrides(build_cid_to_password(iter_dumps(cache_dir)),
+                               load_cid_overrides(overrides_path))
 
 
 def print_report(report, file=sys.stdout):
@@ -69,9 +80,12 @@ def main(argv=None):
                         help=f"官方 Q&A 快取目錄 (預設 {DEFAULT_CACHE})")
     parser.add_argument("--out", default=DEFAULT_OUTPUT,
                         help="輸出 JSON 路徑 (預設 data/sources/faq_info.json)")
+    parser.add_argument("--cid-overrides", default=DEFAULT_CID_OVERRIDES,
+                        help="人工查證的 cid→卡片密碼 覆寫檔 "
+                             "(預設 data/cid_overrides.json)")
     args = parser.parse_args(argv)
 
-    cid_to_password = load_cid_to_password(args.cache)
+    cid_to_password = load_cid_to_password(args.cache, args.cid_overrides)
     entries, report = extract_faq_info(
         iter_cache_pages(args.cache), cid_to_password=cid_to_password)
 

@@ -41,6 +41,19 @@ def clauses_of(entries, cid):
     raise AssertionError(f"標記表沒有 {cid}")
 
 
+def mark(entries, cid, index, **fields):
+    """把既有標記表的某一行改成使用者手工修正(或前一票判定)後的樣子。
+
+    既有標記表的 fixture 一律由「先建一次再改幾行」產生,text_hash 因此自然
+    與重跑時算出來的一致——不必在測試裡複製雜湊邏輯。
+    """
+    for clause in clauses_of(entries, cid):
+        if clause["index"] == index:
+            clause.update(fields)
+            return clause
+    raise AssertionError(f"{cid} 沒有 index={index} 的效果句")
+
+
 class TestNumberedSplitting(unittest.TestCase):
     """有編號卡文的拆句與繁中/日文對位。"""
 
@@ -63,12 +76,13 @@ class TestNumberedSplitting(unittest.TestCase):
         clause = clauses_of(entries, 1000)[0]
         self.assertEqual(list(clause), [
             "index", "section", "text_zh", "text_ja", "text_hash", "kind",
-            "optional", "role", "source", "rule_predicted", "confidence",
-            "tags"])
+            "optional", "role", "source", "needs_review", "rule_predicted",
+            "confidence", "tags"])
         self.assertIsNone(clause["kind"])
         self.assertIsNone(clause["optional"])
         self.assertIsNone(clause["role"])
         self.assertIsNone(clause["source"])
+        self.assertFalse(clause["needs_review"])
         self.assertIsNone(clause["rule_predicted"])
         self.assertEqual(clause["tags"], [])
 
@@ -383,10 +397,10 @@ class TestAggregation(unittest.TestCase):
         self.assertEqual(report["cards"], 3)
 
     def test_unsupported_inputs_are_reported_not_silently_ignored(self):
+        """既有標記表已於票05 實作,判定結果仍留給票08。"""
         _, report = build_tag_cards([card(desc="①：效果甲。")], [],
                                     existing=[], judgments=[])
-        self.assertEqual(report["unsupported_inputs"],
-                         ["existing", "judgments"])
+        self.assertEqual(report["unsupported_inputs"], ["judgments"])
 
 
 class TestOfficialHeaderAttestation(unittest.TestCase):
@@ -1049,6 +1063,332 @@ class TestOptionalValidation(unittest.TestCase):
         self.assertEqual(validation["attested"], 1)
         self.assertEqual(validation["predicted"], 0)
         self.assertEqual(validation["unsplit"], 1)
+
+
+class TestExistingSheetMerge(unittest.TestCase):
+    """重跑保留語意:既有標記表以 (卡片密碼, section, index) 對應回來。"""
+
+    CARD = card(desc="①：效果甲。\n②：效果乙。")
+    PLAIN = faq(card_text="①：効果甲。②：効果乙。")
+    ATTESTED = faq(card_text="①：効果甲。②：効果乙。",
+                   supplement="【①の効果について】\n"
+                              "■モンスターゾーンで発動できる起動効果です。")
+    # ①的日文卡文被勘誤:身分改變,雜湊隨之改變
+    ERRATA = faq(card_text="①：効果甲、その後１枚ドローする。②：効果乙。")
+
+    def first_build(self, faqs=None):
+        entries, _ = build_tag_cards([self.CARD], faqs or [self.PLAIN])
+        return entries
+
+    def rerun(self, existing, faqs=None):
+        return build_tag_cards([self.CARD], faqs or [self.PLAIN],
+                               existing=existing)
+
+    def test_existing_judgment_is_reused_when_the_hash_matches(self):
+        existing = self.first_build()
+        mark(existing, 1000, "①", kind="永續效果", source="llm")
+        entries, report = self.rerun(existing)
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "llm"))
+        self.assertFalse(clause["needs_review"])
+        self.assertEqual(report["preserved_judgments"], 1)
+
+    def test_judgment_is_matched_by_password_section_index(self):
+        """同一個 index 在別張卡、別個 section 上不得互相污染。"""
+        cards = [card(1000, desc="①：效果甲。"),
+                 card(2000, desc="【靈擺效果】\n①：靈擺甲。\n【怪獸效果】\n①：怪獸甲。",
+                      ctype=TYPE_PENDULUM_EFFECT)]
+        faqs = [faq(1000, card_text="①：効果甲。"),
+                faq(2000, card_text="①：モンスター甲。",
+                    pen_effect="①：ペンデュラム甲。")]
+        existing, _ = build_tag_cards(cards, faqs)
+        mark(existing, 2000, "①", kind="永續效果", source="manual")  # pendulum 在前
+        entries, _ = build_tag_cards(cards, faqs, existing=existing)
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+        self.assertEqual([(c["section"], c["kind"])
+                          for c in clauses_of(entries, 2000)],
+                         [("pendulum", "永續效果"), ("main", None)])
+
+    def test_manual_row_survives_a_conflicting_official_attestation(self):
+        existing = self.first_build()
+        mark(existing, 1000, "①", kind="永續效果", source="manual")
+        entries, report = self.rerun(existing, [self.ATTESTED])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "manual"))
+        self.assertEqual([(r["id"], r["existing"], r["official"])
+                          for r in report["late_official_conflicts"]],
+                         [(1000, "永續效果", "啟動效果")])
+
+    def test_manual_row_agreeing_with_official_keeps_its_provenance(self):
+        existing = self.first_build()
+        mark(existing, 1000, "①", kind="啟動效果", source="manual")
+        entries, report = self.rerun(existing, [self.ATTESTED])
+        self.assertEqual(clauses_of(entries, 1000)[0]["source"], "manual")
+        self.assertEqual(report["late_official_conflicts"], [])
+
+    def test_official_row_survives_when_the_attestation_disappears(self):
+        existing = self.first_build([self.ATTESTED])
+        entries, _ = self.rerun(existing)
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("啟動效果", "official"))
+
+    def test_row_never_judged_is_processed_normally(self):
+        """source 為 null 的行沒有什麼要保留的,照常吃本次的判定。"""
+        existing = self.first_build()
+        entries, report = self.rerun(existing, [self.ATTESTED])
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "啟動效果")
+        self.assertEqual(report["preserved_judgments"], 0)
+
+    def test_first_build_and_rerun_take_the_same_path(self):
+        existing = self.first_build([self.ATTESTED])
+        entries, report = self.rerun(existing, [self.ATTESTED])
+        self.assertEqual(entries, existing)
+        self.assertEqual(report["needs_review"], [])
+        self.assertEqual(report["late_official_conflicts"], [])
+
+
+class TestHashChangeReview(unittest.TestCase):
+    """雜湊變動:不覆蓋,標記待複查並列進報告。"""
+
+    CARD = TestExistingSheetMerge.CARD
+    PLAIN = TestExistingSheetMerge.PLAIN
+    ERRATA = TestExistingSheetMerge.ERRATA
+
+    def judged_sheet(self, source="manual"):
+        entries, _ = build_tag_cards([self.CARD], [self.PLAIN])
+        mark(entries, 1000, "①", kind="永續效果", source=source)
+        return entries
+
+    def test_changed_hash_keeps_the_judgment_and_flags_review(self):
+        entries, report = build_tag_cards([self.CARD], [self.ERRATA],
+                                          existing=self.judged_sheet())
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["text_ja"], "①：効果甲、その後１枚ドローする。")
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "manual"))
+        self.assertTrue(clause["needs_review"])
+        self.assertEqual([(r["id"], r["index"], r["hash_changed"])
+                          for r in report["needs_review"]],
+                         [(1000, "①", True)])
+
+    def test_unchanged_rows_are_not_flagged(self):
+        _, report = build_tag_cards([self.CARD], [self.ERRATA],
+                                    existing=self.judged_sheet())
+        self.assertEqual([r["index"] for r in report["needs_review"]], ["①"])
+
+    def test_review_flag_persists_until_the_user_clears_it(self):
+        flagged, _ = build_tag_cards([self.CARD], [self.ERRATA],
+                                     existing=self.judged_sheet())
+        entries, report = build_tag_cards([self.CARD], [self.ERRATA],
+                                          existing=flagged)
+        self.assertTrue(clauses_of(entries, 1000)[0]["needs_review"])
+        self.assertEqual([(r["index"], r["hash_changed"])
+                          for r in report["needs_review"]], [("①", False)])
+
+    def test_clearing_the_flag_sticks(self):
+        flagged, _ = build_tag_cards([self.CARD], [self.ERRATA],
+                                     existing=self.judged_sheet())
+        mark(flagged, 1000, "①", needs_review=False)
+        entries, report = build_tag_cards([self.CARD], [self.ERRATA],
+                                          existing=flagged)
+        self.assertFalse(clauses_of(entries, 1000)[0]["needs_review"])
+        self.assertEqual(report["needs_review"], [])
+
+    def test_unjudged_row_whose_text_changed_is_simply_rebuilt(self):
+        """沒有判定可保留的行不必待複查——重跑本來就會給它新的文本。"""
+        existing, _ = build_tag_cards([self.CARD], [self.PLAIN])
+        entries, report = build_tag_cards([self.CARD], [self.ERRATA],
+                                          existing=existing)
+        self.assertFalse(clauses_of(entries, 1000)[0]["needs_review"])
+        self.assertEqual(report["needs_review"], [])
+
+
+class TestLateOfficialAttestation(unittest.TestCase):
+    """遲到的官方明示:不沿用而是比對(補足情報是會成長的來源)。"""
+
+    CARD = TestExistingSheetMerge.CARD
+    PLAIN = TestExistingSheetMerge.PLAIN
+    ATTESTED = TestExistingSheetMerge.ATTESTED
+    TRIGGER = faq(card_text="①：効果甲。②：効果乙。",
+                  supplement="【①の効果について】\n"
+                             "■モンスターゾーンで発動する誘発効果です。")
+
+    def rerun_with(self, kind, source, **fields):
+        existing, _ = build_tag_cards([self.CARD], [self.PLAIN])
+        mark(existing, 1000, "①", kind=kind, source=source, **fields)
+        return build_tag_cards([self.CARD], [self.ATTESTED], existing=existing)
+
+    def test_agreement_upgrades_the_source_to_official(self):
+        entries, report = self.rerun_with("啟動效果", "llm")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("啟動效果", "official"))
+        self.assertEqual(report["late_official_upgrades"], 1)
+        self.assertEqual(report["late_official_conflicts"], [])
+
+    def test_llm_then_rule_is_upgraded_the_same_way(self):
+        entries, _ = self.rerun_with("啟動效果", "llm_then_rule")
+        self.assertEqual(clauses_of(entries, 1000)[0]["source"], "official")
+
+    def test_disagreement_keeps_the_existing_judgment(self):
+        entries, report = self.rerun_with("永續效果", "llm")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "llm"))
+        self.assertEqual([(r["id"], r["index"], r["existing"], r["official"],
+                           r["source"])
+                          for r in report["late_official_conflicts"]],
+                         [(1000, "①", "永續效果", "啟動效果", "llm")])
+        self.assertEqual(report["late_official_upgrades"], 0)
+
+    def test_upgrading_keeps_the_existing_tags(self):
+        """tags 不是官方明示決定的欄位,升級不得把它洗掉。"""
+        entries, _ = self.rerun_with("啟動效果", "llm", tags=["從牌組特招"])
+        self.assertEqual(clauses_of(entries, 1000)[0]["tags"], ["從牌組特招"])
+
+    def test_upgrading_keeps_an_optional_this_run_cannot_produce(self):
+        """規則層算不出來的欄位不得在升級時被洗成 null。"""
+        rebuilt, _ = build_tag_cards([self.CARD], [self.TRIGGER])
+        self.assertIsNone(clauses_of(rebuilt, 1000)[0]["optional"])
+
+        existing, _ = build_tag_cards([self.CARD], [self.PLAIN])
+        mark(existing, 1000, "①", kind="誘發效果(1速)", optional="必發",
+             source="llm")
+        entries, _ = build_tag_cards([self.CARD], [self.TRIGGER],
+                                     existing=existing)
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["source"], clause["optional"]),
+                         ("official", "必發"))
+
+    def test_upgraded_row_does_not_count_as_a_preserved_judgment(self):
+        """升為 official 的行吃的是本次的判定,不算「沿用既有判定」。"""
+        _, report = self.rerun_with("啟動效果", "llm")
+        self.assertEqual(report["preserved_judgments"], 0)
+        _, report = self.rerun_with("永續效果", "llm")
+        self.assertEqual(report["preserved_judgments"], 1)
+
+    def test_late_mandatory_attestation_reaches_the_upgraded_row(self):
+        existing, _ = build_tag_cards([self.CARD], [self.PLAIN])
+        mark(existing, 1000, "①", kind="誘發效果(1速)", source="llm")
+        entries, _ = build_tag_cards(
+            [self.CARD],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="【①の効果について】\n"
+                            "■モンスターゾーンで発動する誘発効果です。"
+                            "（必ず発動する効果です。）")],
+            existing=existing)
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["source"], clause["optional"]),
+                         ("official", "必發"))
+
+
+class TestRuleLayerRecompute(unittest.TestCase):
+    """source=rule 是當前規則層的純函式輸出,規則改了就該重算並列出差異。"""
+
+    CARD = card(desc="這個卡名的①效果1回合只能使用1次。\n①：效果甲。")
+    FAQ = faq(card_text="このカード名の①の効果は１ターンに１度しか使用できない。"
+                        "①：効果甲。")
+
+    def test_rule_row_is_recomputed_and_its_change_reported(self):
+        existing, _ = build_tag_cards([self.CARD], [self.FAQ])
+        mark(existing, 1000, "0", role="召喚條件")  # 假裝上一版規則層判成這樣
+        entries, report = build_tag_cards([self.CARD], [self.FAQ],
+                                          existing=existing)
+        preamble = clauses_of(entries, 1000)[0]
+        self.assertEqual(preamble["role"], "使用次數限制")
+        self.assertEqual([(r["id"], r["index"], r["existing"], r["rebuilt"])
+                          for r in report["rule_changed"]],
+                         [(1000, "0", "效果外文本/召喚條件",
+                           "效果外文本/使用次數限制")])
+
+    def test_unchanged_rule_row_is_not_listed(self):
+        existing, _ = build_tag_cards([self.CARD], [self.FAQ])
+        _, report = build_tag_cards([self.CARD], [self.FAQ], existing=existing)
+        self.assertEqual(report["rule_changed"], [])
+
+
+class TestOrphanedJudgments(unittest.TestCase):
+    """拆句法變動讓某一行消失時,那行的判定不得靜靜蒸發。"""
+
+    THREE = card(desc="①：效果甲。\n②：效果乙。\n③：效果丙。")
+    THREE_FAQ = faq(card_text="①：効果甲。②：効果乙。③：効果丙。")
+
+    def test_judgment_with_no_matching_row_is_reported(self):
+        existing, _ = build_tag_cards([self.THREE], [self.THREE_FAQ])
+        mark(existing, 1000, "③", kind="永續效果", source="manual")
+        _, report = build_tag_cards([TestExistingSheetMerge.CARD],
+                                    [TestExistingSheetMerge.PLAIN],
+                                    existing=existing)
+        self.assertEqual([(r["id"], r["index"], r["source"], r["kind"])
+                          for r in report["orphaned_judgments"]],
+                         [(1000, "③", "manual", "永續效果")])
+
+    def test_unjudged_disappearing_row_is_not_reported(self):
+        existing, _ = build_tag_cards([self.THREE], [self.THREE_FAQ])
+        _, report = build_tag_cards([TestExistingSheetMerge.CARD],
+                                    [TestExistingSheetMerge.PLAIN],
+                                    existing=existing)
+        self.assertEqual(report["orphaned_judgments"], [])
+
+
+class TestMergeReport(unittest.TestCase):
+
+    CARD = card(desc="這個卡名的①效果1回合只能使用1次。\n①：效果甲。\n②：效果乙。")
+    FAQ = faq(card_text="このカード名の①の効果は１ターンに１度しか使用できない。"
+                        "①：効果甲。②：効果乙。",
+              supplement="【①の効果について】\n"
+                         "■モンスターゾーンで発動できる起動効果です。")
+
+    def test_report_counts_every_source_value(self):
+        existing, _ = build_tag_cards([self.CARD], [self.FAQ])
+        mark(existing, 1000, "②", kind="永續效果", source="manual")
+        _, report = build_tag_cards([self.CARD], [self.FAQ], existing=existing)
+        self.assertEqual(report["source_counts"],
+                         {"official": 1, "rule": 1, "llm": 0,
+                          "llm_then_rule": 0, "manual": 1, "null": 0})
+
+    def test_first_build_counts_sources_too(self):
+        _, report = build_tag_cards([self.CARD], [self.FAQ])
+        self.assertEqual(report["source_counts"]["null"], 1)
+        self.assertEqual(report["preserved_judgments"], 0)
+
+
+class TestRerunEndToEnd(unittest.TestCase):
+    """票面的端到端場景。"""
+
+    CARD = card(desc="①：效果甲。\n②：效果乙。")
+    FAQ = faq(card_text="①：効果甲。②：効果乙。",
+              supplement="【①の効果について】\n"
+                         "■モンスターゾーンで発動できる起動効果です。")
+    ERRATA = faq(card_text="①：効果甲、その後１枚ドローする。②：効果乙。",
+                 supplement="【①の効果について】\n"
+                            "■モンスターゾーンで発動できる起動効果です。")
+
+    def test_manual_fix_survives_a_rerun_then_errata_flags_review(self):
+        first, _ = build_tag_cards([self.CARD], [self.FAQ])
+        self.assertEqual(clauses_of(first, 1000)[0]["kind"], "啟動效果")
+
+        # 使用者把①改成別的類型並標 manual
+        mark(first, 1000, "①", kind="誘發即時效果(2速)", source="manual")
+        second, report = build_tag_cards([self.CARD], [self.FAQ],
+                                         existing=first)
+        clause = clauses_of(second, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("誘發即時效果(2速)", "manual"))
+        self.assertFalse(clause["needs_review"])
+
+        # 來源卡文改了 → 雜湊變動 → 待複查,原判定保留
+        third, report = build_tag_cards([self.CARD], [self.ERRATA],
+                                        existing=second)
+        clause = clauses_of(third, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("誘發即時效果(2速)", "manual"))
+        self.assertTrue(clause["needs_review"])
+        self.assertEqual([(r["id"], r["index"])
+                          for r in report["needs_review"]], [(1000, "①")])
 
 
 if __name__ == "__main__":

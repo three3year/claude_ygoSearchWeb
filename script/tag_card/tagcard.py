@@ -5,8 +5,8 @@
 純函式,不碰網路與檔案系統。詞彙見 CONTEXT.md:效果標記表、效果句、效果類型、
 效果外文本、必發/選發。
 
-拆句、官方明示與必發/選發(票02/03/04)已實作;既有標記表與判定結果的合併
-(票05/08)另票處理。
+拆句、官方明示、必發/選發與既有標記表的合併(票02/03/04/05)已實作;判定結果的
+合併(票08)另票處理。
 """
 import hashlib
 import json
@@ -37,6 +37,11 @@ ROLE_MATERIAL = "素材指定"
 ROLE_SUMMON = "召喚條件"
 ROLE_USAGE = "使用次數限制"
 SOURCE_RULE = "rule"
+SOURCE_LLM = "llm"
+SOURCE_LLM_THEN_RULE = "llm_then_rule"
+SOURCE_MANUAL = "manual"
+SOURCES = (official.SOURCE_OFFICIAL, SOURCE_RULE, SOURCE_LLM,
+           SOURCE_LLM_THEN_RULE, SOURCE_MANUAL)
 CONFIDENCE_HIGH = "high"
 CONFIDENCE_LOW = "low"
 
@@ -55,8 +60,8 @@ FLAVOR_HEADS = ("敘述", "描述")
 FOOTNOTE_RE = re.compile(r"\n\n※[^\n]*$")
 
 CLAUSE_FIELDS = ("index", "section", "text_zh", "text_ja", "text_hash", "kind",
-                 "optional", "role", "source", "rule_predicted", "confidence",
-                 "tags")
+                 "optional", "role", "source", "needs_review", "rule_predicted",
+                 "confidence", "tags")
 
 
 # ---------------------------------------------------------------- 拆句
@@ -201,6 +206,7 @@ def _clause(index, section, text_zh, text_ja, confidence,
         "optional": None,
         "role": role,
         "source": source,
+        "needs_review": False,
         "rule_predicted": None,
         "confidence": confidence,
         "tags": [],
@@ -405,6 +411,135 @@ def _validate_optional(cid, section, clause, predicted, detail, report):
              "predicted": predicted, "activation": detail})
 
 
+# ---------------------------------------------------------------- 重跑合併
+
+# 判定一次就算數的來源:人工修正、官方權威、判定票的產出。rule 不在其中——
+# 它是當前規則層對當前文本的純函式輸出,規則改了就該重算(Story 49)。
+PRESERVED_SOURCES = (SOURCE_MANUAL, official.SOURCE_OFFICIAL, SOURCE_LLM,
+                     SOURCE_LLM_THEN_RULE)
+# 沿用既有行時整組帶過來的判定欄位
+JUDGED_FIELDS = ("kind", "optional", "role", "source", "tags")
+# 官方明示能決定的欄位(tags 不在其列)
+ATTESTED_FIELDS = ("kind", "optional", "role", "source")
+
+
+def _index_existing(existing):
+    """既有標記表 → {(卡片密碼, section, index): 效果句}。"""
+    index = {}
+    for entry in existing or ():
+        for clause in entry.get("clauses", ()):
+            index[(entry["id"], clause["section"], clause["index"])] = clause
+    return index
+
+
+def _judgment(clause):
+    return tuple(clause.get(field) for field in ("kind", "optional", "role"))
+
+
+def _judgment_text(clause):
+    """判定的可讀摘要,給報告的差異列用(如「效果外文本/召喚條件」)。"""
+    return "/".join(part for part in
+                    (clause.get("kind") or "—", clause.get("role"),
+                     clause.get("optional")) if part)
+
+
+def _merge_row(cid, clause, **extra):
+    return {"id": cid, "section": clause["section"], "index": clause["index"],
+            **extra}
+
+
+def _apply_late_attestation(cid, merged, fresh, prior, report):
+    """遲到的官方明示:不沿用而是比對;回傳是否升為 official。
+
+    補足情報是會成長的來源(官方替舊卡補寫、新卡的 Q&A 頁面陸續出現),因此
+    既有判定碰上新出現的官方明示時,比對本身就是一次免費的準確率驗證。
+    一致則 `source` 升為 official;不一致則保留原判定並列進衝突清單。
+    人工修正即使一致也保留 manual 的來歷——那是使用者看過這一行的證據。
+    """
+    if prior["kind"] is not None and prior["kind"] != fresh["kind"]:
+        report["late_official_conflicts"].append(_merge_row(
+            cid, fresh, existing=prior["kind"], official=fresh["kind"],
+            source=prior["source"]))
+        return False
+    if prior["source"] == SOURCE_MANUAL:
+        return False
+    for field in ATTESTED_FIELDS:
+        # 類型既已確認一致,這一行整組改吃本次的官方+規則結果;但本次算不出來的
+        # 欄位(如規則抓不到發動子句的 optional)不把既有的值洗成 null
+        if fresh[field] is not None or merged[field] is None:
+            merged[field] = fresh[field]
+    report["late_official_upgrades"] += 1
+    return True
+
+
+def _merge_clause(cid, fresh, prior, report):
+    """本次重跑的效果句 + 既有標記表的同一行 → 寫進標記表的那一行。
+
+    首次建置時 prior 一律是 None,與重跑走同一條路徑。文本欄位(text_zh /
+    text_ja / text_hash)與規則層欄位(rule_predicted / confidence)永遠取本次
+    的值——它們是來源資料的投影,不是判定。
+    """
+    prior_source = prior.get("source") if prior else None
+    if prior_source not in PRESERVED_SOURCES:
+        if prior_source == SOURCE_RULE and _judgment(fresh) != _judgment(prior):
+            report["rule_changed"].append(_merge_row(
+                cid, fresh, existing=_judgment_text(prior),
+                rebuilt=_judgment_text(fresh)))
+        return fresh
+
+    if (prior_source == official.SOURCE_OFFICIAL
+            and fresh["source"] == official.SOURCE_OFFICIAL):
+        # 官方改了自己的裁定:兩邊同權威,以最新的來源資料為準
+        if _judgment(fresh) != _judgment(prior):
+            report["official_changed"].append(_merge_row(
+                cid, fresh, existing=_judgment_text(prior),
+                official=_judgment_text(fresh)))
+        return fresh
+
+    merged = dict(fresh)
+    for field in JUDGED_FIELDS:
+        merged[field] = prior.get(field, fresh[field])
+    merged["needs_review"] = bool(prior.get("needs_review"))
+    upgraded = (fresh["source"] == official.SOURCE_OFFICIAL
+                and _apply_late_attestation(cid, merged, fresh, prior, report))
+    if not upgraded:
+        report["preserved_judgments"] += 1
+
+    hash_changed = fresh["text_hash"] != prior.get("text_hash")
+    if hash_changed:
+        # 這一行的身分已經改變,但判定是使用者/官方/判定票的成果,不覆蓋
+        merged["needs_review"] = True
+    if merged["needs_review"]:
+        report["needs_review"].append(_merge_row(
+            cid, merged, source=merged["source"], kind=merged["kind"],
+            hash_changed=hash_changed))
+    return merged
+
+
+def _merge_clauses(cid, clauses, existing_index, matched, report):
+    merged = []
+    for clause in clauses:
+        key = (cid, clause["section"], clause["index"])
+        if key in existing_index:
+            matched.add(key)
+        merged.append(_merge_clause(cid, clause, existing_index.get(key),
+                                    report))
+    return merged
+
+
+def _report_orphans(existing_index, matched, report):
+    """既有標記表裡對不到任何一行的判定——拆句法變動時使用者的修正會落在這裡。"""
+    for key, clause in existing_index.items():
+        if key in matched or clause.get("source") not in PRESERVED_SOURCES:
+            continue
+        cid, section, index = key
+        report["orphaned_judgments"].append(
+            {"id": cid, "section": section, "index": index,
+             "source": clause["source"], "kind": clause.get("kind")})
+    report["orphaned_judgments"].sort(
+        key=lambda row: (row["id"], row["section"], row["index"]))
+
+
 def _new_report():
     return {
         "cards": 0,
@@ -446,6 +581,14 @@ def _new_report():
             **{key: 0 for key in _UNPREDICTED_KEYS.values()}},
         "bullet_clauses": 0,
         "bullet_split_mismatch": [],
+        "source_counts": {**{source: 0 for source in SOURCES}, "null": 0},
+        "preserved_judgments": 0,
+        "needs_review": [],
+        "late_official_upgrades": 0,
+        "late_official_conflicts": [],
+        "official_changed": [],
+        "rule_changed": [],
+        "orphaned_judgments": [],
         **{key: [] for key in official.NOTE_KEYS},
     }
 
@@ -558,14 +701,16 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
     cards: 卡片總表條目(需 id / desc / type)。
     faq_entries: 補足情報條目(需 password,取 card_text / supplement /
         pen_effect / pen_supplement)。
-    existing / judgments: 既有標記表與判定結果。本票尚未實作合併(票05/08),
-        傳入時列進報告的 unsupported_inputs 而不靜靜忽略。
+    existing: 既有標記表(上一次的輸出)。以 (卡片密碼, section, index) 對應回
+        既有行,保留已判定的成果;首次建置傳 None,兩者走同一條路徑。
+    judgments: 判定結果。本票尚未實作合併(票08),傳入時列進報告的
+        unsupported_inputs 而不靜靜忽略。
     """
     report = _new_report()
-    if existing is not None:
-        report["unsupported_inputs"].append("existing")
     if judgments is not None:
         report["unsupported_inputs"].append("judgments")
+    existing_index = _index_existing(existing)
+    matched = set()
 
     faq_by_password = {e["password"]: e for e in faq_entries
                        if e.get("password") is not None}
@@ -620,6 +765,7 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
                 card, section, text, ja_by_section[section],
                 supplement_by_section[section], name_ja, report))
         _dedupe_indexes(cid, clauses, report)
+        clauses = _merge_clauses(cid, clauses, existing_index, matched, report)
         _check_substrings(cid, clauses, desc, ja_by_section, report)
         if any(c["confidence"] == CONFIDENCE_LOW for c in clauses):
             report["low_confidence"].append(cid)
@@ -627,6 +773,7 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
             if clause["kind"] is not None:
                 report["kind_counts"][clause["kind"]] += 1
             report["optional_counts"][clause["optional"] or "null"] += 1
+            report["source_counts"][clause["source"] or "null"] += 1
             if (clause["optional"] is not None
                     and clause["kind"] not in ACTIVATED_KINDS):
                 report["optional_on_wrong_kind"].append(
@@ -635,6 +782,7 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
         report["clauses"] += len(clauses)
         entries.append({"id": cid, "clauses": clauses})
 
+    _report_orphans(existing_index, matched, report)
     report["no_japanese_text"].sort()
     report["low_confidence"].sort()
     return entries, report

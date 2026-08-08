@@ -1,5 +1,9 @@
 """建置效果標記表的 CLI 薄殼:卡片總表 + 補足情報 → tagcard 管線 → tag_cards.json。
 
+效果標記表是**來源檔而非建置產物**(ADR-0001):輸出檔若已存在就當作既有標記表
+餵回管線,人工修正與已判定的行因此活過每一次重跑。要完全重建請加
+`--ignore-existing`——那會丟掉檔案裡所有 manual / official / llm 的判定。
+
 `--attribution-lists` 會把報告的三份人工清單(歸屬由判定決定、引號對不上、
 明示句只提別卡名)完整寫成 JSON,方便逐條抽查。
 
@@ -81,6 +85,30 @@ def print_optional(report, file=sys.stdout):
           f"規則={row['predicted']} 發動子句={row['activation']}")
 
 
+def print_merge(report, file=sys.stdout):
+    """與既有標記表合併的結果:哪些判定被保留、哪些需要人工回頭看。"""
+    p = lambda *a: print(*a, file=file)  # noqa: E731
+    p("")
+    p("判定來源分布(本次寫出的標記表):")
+    for source, count in report["source_counts"].items():
+        p(f"  {source}: {count}")
+    p(f"沿用既有判定: {report['preserved_judgments']} 條")
+    p(f"遲到的官方明示升為 official: {report['late_official_upgrades']} 條")
+
+    for key, label in (("needs_review", "待複查(雜湊變動或尚未清旗標)"),
+                       ("late_official_conflicts", "遲到的官方明示與既有判定不一致"),
+                       ("orphaned_judgments", "既有判定對不到任何一行"),
+                       ("official_changed", "官方改了自己的裁定(已採新值)"),
+                       ("rule_changed", "規則層重算後與既有不同")):
+        rows = report[key]
+        p(f"{label}: {len(rows)} 筆")
+        for row in rows[:LIST_PREVIEW]:
+            extra = " ".join(f"{k}={v}" for k, v in row.items()
+                             if k not in ("id", "section", "index"))
+            p(f"  id={row['id']} section={row['section']} "
+              f"index={row['index']} {extra}")
+
+
 def print_report(report, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p(f"卡片: {report['cards']} 張,效果句: {report['clauses']} 條")
@@ -134,6 +162,8 @@ def print_report(report, file=sys.stdout):
 
     print_optional(report, file=file)
 
+    print_merge(report, file=file)
+
     for key, label in ATTRIBUTION_LISTS:
         p(f"{label}: {len(report[key])} 筆")
     for key, label in (("seq_missing", "序號引用對不到編號(必須為 0)"),
@@ -159,10 +189,18 @@ def main(argv=None):
                         help="輸出 JSON 路徑 (預設 data/tag_cards.json)")
     parser.add_argument("--attribution-lists",
                         help="把三份人工清單完整寫成 JSON 的路徑")
+    parser.add_argument("--ignore-existing", action="store_true",
+                        help="不讀既有標記表,從零重建(會丟掉既有判定)")
     args = parser.parse_args(argv)
 
+    existing = None
+    if not args.ignore_existing and os.path.exists(args.out):
+        existing = load_json(args.out)
+        print(f"既有標記表: {args.out}({len(existing)} 張卡)")
+
     entries, report = build_tag_cards(load_json(args.cards),
-                                      load_json(args.faq_info))
+                                      load_json(args.faq_info),
+                                      existing=existing)
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8", newline="\n") as f:

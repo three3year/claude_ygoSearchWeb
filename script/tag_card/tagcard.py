@@ -767,6 +767,10 @@ def _report_judgment_orphans(entries, judgments, report):
 # 它是當前規則層對當前文本的純函式輸出,規則改了就該重算(Story 49)。
 PRESERVED_SOURCES = (SOURCE_MANUAL, official.SOURCE_OFFICIAL, SOURCE_LLM,
                      SOURCE_LLM_THEN_RULE)
+# 改判(結果檔逐行帶 `rejudge`)動得了的來源。ADR-0002 的「判定一次就算數」講的是
+# **重跑不覆蓋**,不是「判錯了也不能改」;規範改版後回頭修判定要一張自己的票,而
+# 官方明示與人工修正的權威高於判定票,改判動不了它們(票52)。
+REJUDGEABLE_SOURCES = (SOURCE_LLM, SOURCE_LLM_THEN_RULE)
 # 沿用既有行時整組帶過來的判定欄位
 JUDGED_FIELDS = ("kind", "optional", "role", "source", "tags")
 # 官方明示能決定的欄位(tags 不在其列)
@@ -822,7 +826,8 @@ def _apply_late_attestation(cid, merged, fresh, prior, report):
     return True
 
 
-def _merge_clause(cid, fresh, prior, official_optional, report):
+def _merge_clause(cid, fresh, prior, official_optional, report,
+                  rejudge=False):
     """本次重跑的效果句 + 既有標記表的同一行 → 寫進標記表的那一行。
 
     首次建置時 prior 一律是 None,與重跑走同一條路徑。文本欄位(text_zh /
@@ -830,6 +835,7 @@ def _merge_clause(cid, fresh, prior, official_optional, report):
     的值——它們是來源資料的投影,不是判定。
 
     `official_optional` 是本次由[[官方明示]]寫出[[必發/選發]]的 `(section, index)`。
+    `rejudge` 是結果檔在這一行寫了改判旗標,見 `REJUDGEABLE_SOURCES`。
     """
     prior_source = prior.get("source") if prior else None
     if prior_source not in PRESERVED_SOURCES:
@@ -858,7 +864,25 @@ def _merge_clause(cid, fresh, prior, official_optional, report):
                 official=_judgment_text(merged)))
         return merged
 
-    if fresh["source"] == SOURCE_LLM and _judgment(fresh) != _judgment(prior):
+    if rejudge and fresh["source"] == SOURCE_LLM:
+        # 改判票:這一行的既有判定是要被換掉的東西,不是要被保留的東西。值本來就
+        # 相同時什麼都不做也不報告——改判票與其他票一樣要能單獨重跑(Story 39)
+        changed = _judgment(fresh) != _judgment(prior)
+        row = _merge_row(cid, fresh, existing=_judgment_text(prior),
+                         judged=_judgment_text(fresh), source=prior_source)
+        if prior_source in REJUDGEABLE_SOURCES:
+            if changed:
+                report["judgment_rejudged"].append(row)
+            # [[效果 Tag]]是另一條軸,不隨效果類型改判而消失
+            return {**fresh, "tags": prior.get("tags", fresh["tags"])}
+        if changed:
+            # 官方明示與人工修正改判動不了,而且默默擋掉會讓改判票以為改上去了。
+            # 這一行接下來照既有那一行保留,底下的 judgment_overridden 不必再說
+            # 一次同一件事
+            report["judgment_rejudge_refused"].append(row)
+
+    if (fresh["source"] == SOURCE_LLM and not rejudge
+            and _judgment(fresh) != _judgment(prior)):
         # 本次的判定被既有那一行擋下來(ADR-0002:判定一次就算數)。要是判定票是
         # 回頭重判的,靜靜擋掉會讓人以為改上去了,所以這一筆必須看得見
         report["judgment_overridden"].append(_merge_row(
@@ -888,14 +912,16 @@ def _merge_clause(cid, fresh, prior, official_optional, report):
 
 
 def _merge_clauses(cid, clauses, existing_index, matched, official_optional,
-                   report):
+                   judgments, report):
     merged = []
     for clause in clauses:
         key = (cid, clause["section"], clause["index"])
         if key in existing_index:
             matched.add(key)
+        rejudge = bool((judgments.get(key) or {}).get("rejudge"))
         merged.append(_merge_clause(cid, clause, existing_index.get(key),
-                                    official_optional, report))
+                                    official_optional, report,
+                                    rejudge=rejudge))
     return merged
 
 
@@ -1076,6 +1102,8 @@ def _new_report():
         "judgment_vs_rule": [],
         "judgment_optional_dropped": [],
         "judgment_overridden": [],
+        "judgment_rejudged": [],
+        "judgment_rejudge_refused": [],
         "judgment_orphans": [],
         "official_clauses": 0,
         "official_coverage": {ladder: 0 for ladder in official.LADDERS},
@@ -1352,7 +1380,7 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
             for clause in clauses:
                 clause["needs_review"] = True
         clauses = _merge_clauses(cid, clauses, existing_index, matched,
-                                 official_optional, report)
+                                 official_optional, judgment_index, report)
         _check_substrings(cid, clauses, desc, ja_by_section, report)
         if any(c["confidence"] == CONFIDENCE_LOW for c in clauses):
             report["low_confidence"].append(cid)

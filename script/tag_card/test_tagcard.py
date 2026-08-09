@@ -2999,6 +2999,127 @@ class TestJudgmentMerge(unittest.TestCase):
         self.assertEqual(report["rule_upgrades"], 8)
 
 
+class TestRejudgement(unittest.TestCase):
+    """改判:規範改版後回頭修既有判定,逐行帶 `rejudge` 旗標(票52)。
+
+    ADR-0002 的「判定一次就算數」說的是**重跑不覆蓋**,不是「判錯了也不能改」。
+    改判要一張自己的票、一行一個旗標,而且動不了比判定更高權威的來源。
+    """
+
+    ATTESTED = "■モンスターゾーンで適用する永続効果です。"
+
+    def rows(self, kind, rejudge=True):
+        row = {"index": "①", "kind": kind}
+        if rejudge:
+            row["rejudge"] = True
+        return [{"id": 1000, "section": "main", "clauses": [row]}]
+
+    def build(self, rows, existing=None, supplement="■なにかの説明。"):
+        return build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。", supplement=supplement)],
+            existing=existing, judgments=rows)
+
+    def judged_sheet(self, kind="無種類效果", source=None):
+        """前一票判過的標記表。source 給值時改寫來源(manual / llm_then_rule)。"""
+        entries, _ = self.build(self.rows(kind, rejudge=False))
+        if source is not None:
+            mark(entries, 1000, "①", source=source)
+        return entries
+
+    def attested_sheet(self):
+        """官方明示定案的標記表(沒有判定票插手)。"""
+        entries, _ = self.build([], supplement=self.ATTESTED)
+        return entries
+
+    def test_rejudge_overwrites_an_existing_llm_row(self):
+        existing = self.judged_sheet()
+        entries, report = self.build(self.rows("永續效果"), existing=existing)
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "llm"))
+        self.assertFalse(clause["needs_review"])
+        self.assertEqual([(r["id"], r["index"], r["existing"], r["judged"])
+                          for r in report["judgment_rejudged"]],
+                         [(1000, "①", "無種類效果", "永續效果")])
+        self.assertEqual(report["judgment_overridden"], [])
+
+    def test_a_judgment_without_the_flag_still_loses_to_the_existing_row(self):
+        """沒有旗標就是一般判定票:既有那一行照舊擋下來(ADR-0002)。"""
+        existing = self.judged_sheet()
+        entries, report = self.build(self.rows("永續效果", rejudge=False),
+                                     existing=existing)
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "無種類效果")
+        self.assertEqual(report["judgment_rejudged"], [])
+        self.assertEqual(len(report["judgment_overridden"]), 1)
+
+    def test_rejudge_also_reaches_a_double_checked_row(self):
+        existing = self.judged_sheet(source="llm_then_rule")
+        entries, report = self.build(self.rows("永續效果"), existing=existing)
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "永續效果")
+        self.assertEqual([r["source"] for r in report["judgment_rejudged"]],
+                         ["llm_then_rule"])
+
+    def test_rejudge_refuses_to_touch_a_manual_row(self):
+        """人工修正是使用者看過這一行的證據,權威高於改判票。"""
+        existing = self.judged_sheet(source="manual")
+        entries, report = self.build(self.rows("永續效果"), existing=existing)
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("無種類效果", "manual"))
+        self.assertEqual([(r["id"], r["index"], r["source"])
+                          for r in report["judgment_rejudge_refused"]],
+                         [(1000, "①", "manual")])
+        self.assertEqual(report["judgment_rejudged"], [])
+
+    def test_rejudge_keeps_the_tags_of_the_row_it_replaces(self):
+        """[[效果 Tag]]是另一條軸,不隨效果類型改判而消失。"""
+        existing = self.judged_sheet()
+        mark(existing, 1000, "①", tags=["破壞魔法陷阱"])
+        entries, _ = self.build(self.rows("永續效果"), existing=existing)
+        self.assertEqual(clauses_of(entries, 1000)[0]["tags"], ["破壞魔法陷阱"])
+
+    def test_a_refused_rejudge_is_reported_once_not_twice(self):
+        existing = self.judged_sheet(source="manual")
+        _, report = self.build(self.rows("永續效果"), existing=existing)
+        self.assertEqual(len(report["judgment_rejudge_refused"]), 1)
+        self.assertEqual(report["judgment_overridden"], [])
+
+    def test_a_refused_rejudge_that_changes_nothing_is_not_reported(self):
+        """碰不到的來源本來就寫著同一個答案時,改判票是空操作而不是失敗。"""
+        existing = self.judged_sheet(source="manual")
+        _, report = self.build(self.rows("無種類效果"), existing=existing)
+        self.assertEqual(report["judgment_rejudge_refused"], [])
+
+    def test_rejudge_refuses_to_touch_an_official_row(self):
+        existing = self.attested_sheet()
+        self.assertEqual(clauses_of(existing, 1000)[0]["source"], "official")
+        entries, report = self.build(self.rows("啟動效果"), existing=existing,
+                                     supplement=self.ATTESTED)
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "official"))
+        self.assertEqual([(r["id"], r["index"], r["source"])
+                          for r in report["judgment_rejudge_refused"]],
+                         [(1000, "①", "official")])
+
+    def test_rerunning_the_same_rejudgement_changes_and_reports_nothing(self):
+        """改判票與其他票一樣要能單獨重跑(Story 39),第二次是空操作。"""
+        existing = self.judged_sheet()
+        applied, _ = self.build(self.rows("永續效果"), existing=existing)
+        entries, report = self.build(self.rows("永續效果"), existing=applied)
+        self.assertEqual(entries, applied)
+        self.assertEqual(report["judgment_rejudged"], [])
+        self.assertEqual(report["judgment_rejudge_refused"], [])
+
+    def test_rejudge_leaves_a_never_judged_row_to_the_normal_path(self):
+        """改判標的必須是既有判定;沒有既有判定時它就只是一般判定。"""
+        entries, report = self.build(self.rows("永續效果"))
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "永續效果")
+        self.assertEqual(report["judgment_rejudged"], [])
+        self.assertEqual(report["judgment_clauses"], 1)
+
+
 class TestJudgmentAfterSplit(unittest.TestCase):
     """拆句表與判定結果在同一次呼叫裡:先拆句,再抽官方明示,最後合併判定。"""
 

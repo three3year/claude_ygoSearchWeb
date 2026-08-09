@@ -16,9 +16,15 @@
 批號由 `--start` 給:待判集合一票比一票小(判完就不再出現),所以「第幾批」不是算得
 出來的,每票報自己的批號,檔名才不會互相蓋掉。
 
+第三種批次不排票、由票逐條指名:`--rejudge` 的**改判批次**(票52)。規範改版後回頭
+修既有判定時,標的是已經判過的效果句,`collect()` 那條路(只認 `kind` 為 null 的待判
+行)看不到它們,所以另走 `write_rejudge_batch()`。
+
 用法:
     python script/tag_card/make_batches.py --dry-run        # 只點數,不寫檔
     python script/tag_card/make_batches.py --series split --limit 1 --start 2
+    python script/tag_card/make_batches.py --rejudge 1200843:main:2 \\
+        --name fix-52
 """
 import argparse
 import os
@@ -36,10 +42,15 @@ DEFAULT_BATCH_DIR = os.path.join(ROOT, ".scratch", "tag-card", "batches")
 
 SERIES_KIND = "kind"
 SERIES_SPLIT = "split"
+# 「改判」不是排票排得到的系列:它的標的是**已經判過**的效果句,由規範改版後的
+# 一張改判票逐條指名(票52)。因此沒有批量、沒有批號,一次一個檔。
+SERIES_FIX = "fix"
 _ONLY_RE = re.compile(r"^\d+(,\d+)*$")
+_REJUDGE_RE = re.compile(r"^(\d+):(main|pendulum):([^,:]+)$")
 # 每批卡數。「要拆+判」的輸出多一份拆點,單卡成本約兩倍,所以放得少。
 BATCH_SIZE = {SERIES_KIND: 300, SERIES_SPLIT: 200}
-SERIES_LABEL = {SERIES_KIND: "只判類型", SERIES_SPLIT: "要拆+判"}
+SERIES_LABEL = {SERIES_KIND: "只判類型", SERIES_SPLIT: "要拆+判",
+                SERIES_FIX: "改判"}
 
 
 def pending_clauses(entry):
@@ -58,9 +69,14 @@ def quote_hints(supplement, text_ja):
     return hints
 
 
-def card_payload(entry, card, faq, blobs):
-    """一張待判卡的完整上下文:卡文兩側 + 不裁剪的補足情報 + 待判效果句。"""
-    clauses = pending_clauses(entry)
+def clause_row(clause):
+    return {"index": clause["index"], "section": clause["section"],
+            "text_zh": clause["text_zh"], "text_ja": clause["text_ja"],
+            "rule_predicted": clause["rule_predicted"]}
+
+
+def card_context(entry, card, faq):
+    """一張卡的完整上下文:卡文兩側 + 不裁剪的補足情報。效果句由呼叫端填。"""
     payload = {
         "id": entry["id"],
         "name_zh": card.get("name_zh"),
@@ -71,16 +87,20 @@ def card_payload(entry, card, faq, blobs):
         "card_text_zh": card.get("desc") or "",
         "card_text_ja": faq.get("card_text") or "",
         "supplement": faq.get("supplement") or "",
-        "clauses": [{"index": c["index"], "section": c["section"],
-                     "text_zh": c["text_zh"], "text_ja": c["text_ja"],
-                     "rule_predicted": c["rule_predicted"]}
-                    for c in clauses],
+        "clauses": [],
     }
     if faq.get("pen_effect") or faq.get("pen_supplement"):
         payload["pendulum"] = {
             "card_text_ja": faq.get("pen_effect") or "",
             "supplement": faq.get("pen_supplement") or "",
         }
+    return payload
+
+
+def card_payload(entry, card, faq, blobs):
+    """一張待判卡的上下文 + 待判效果句(+ 要拆的整團)。"""
+    payload = card_context(entry, card, faq)
+    payload["clauses"] = [clause_row(c) for c in pending_clauses(entry)]
     # 拆句標的的原文取自待拆清單那一份**整團**,不取標記表上那一行——● 子效果
     # 可能已經把那一行切掉一塊,照它拆會在雜湊與覆蓋兩道驗證同時失敗(票13)
     targets = []
@@ -96,6 +116,50 @@ def card_payload(entry, card, faq, blobs):
     if targets:
         payload["split_targets"] = targets
     return payload
+
+
+def parse_rejudge(spec):
+    """`密碼:section:index,…` → [(密碼, section, index), …];寫壞時回 None。"""
+    keys = []
+    for item in spec.split(","):
+        match = _REJUDGE_RE.match(item.strip())
+        if match is None:
+            return None
+        keys.append((int(match.group(1)), match.group(2), match.group(3)))
+    return keys
+
+
+def rejudge_payloads(entries, cards, faqs, keys):
+    """指名的效果句 → 改判批次的卡片酬載;對不上時回 (None, 理由)。
+
+    標的必須是**已經判過**的效果句:改判是換掉一個判定,還沒判的那一行走的是
+    正常排票(判了才有東西可換)。批次帶上這一行現在的判定與來源,改判票才知道
+    自己要動的是什麼、以及那一行動不動得了(官方明示與人工修正動不了,票52)。
+    """
+    by_id = {card["id"]: card for card in cards}
+    faq_by_id = {e["password"]: e for e in faqs if e.get("password")}
+    clause_index = {(entry["id"], clause["section"], clause["index"]):
+                    (entry, clause)
+                    for entry in entries for clause in entry["clauses"]}
+    payloads = {}
+    for key in keys:
+        found = clause_index.get(key)
+        if found is None:
+            return None, f"{key} 不是標記表上的效果句"
+        entry, clause = found
+        if clause["kind"] is None:
+            return None, f"{key} 還沒判過,改判無從換起(走正常排票)"
+        payload = payloads.get(entry["id"])
+        if payload is None:
+            payload = card_context(entry, by_id.get(entry["id"], {}),
+                                   faq_by_id.get(entry["id"], {}))
+            payloads[entry["id"]] = payload
+        payload["clauses"].append({
+            **clause_row(clause), "rejudge": True,
+            "current": {"kind": clause["kind"], "optional": clause["optional"],
+                        "role": clause["role"], "source": clause["source"]},
+        })
+    return [payloads[cid] for cid in sorted(payloads)], None
 
 
 def collect(entries, report, cards, faqs):
@@ -138,6 +202,10 @@ RESULT_FORMAT = {
     "兩側語序不一致": "繁中與日文把同一批句子排成不同順序時,clauses 照繁中順序"
                 "列、另給 ja_order(段落位置的排列)說明日文怎麼讀;index 仍照"
                 "日文的序號給,官方的『①』對的是日文那一側(規範 §8 判準11)。",
+    "改判": "批次檔的效果句寫了 rejudge 的(改判批次),結果檔那一行也要寫 "
+          "rejudge: true,否則既有判定會照 ADR-0002 擋下來、改判等於沒做;"
+          "反過來,批次沒標的效果句不准自己寫這個旗標。current 是那一行現在的"
+          "判定,改判後仍相同也照樣寫回來(空操作,不報錯)。",
     "範例": [
         {"id": 12345, "section": "main", "split": True,
          "clauses": [
@@ -169,7 +237,8 @@ RESULT_FORMAT = {
 
 def write_batch(path, name, series, number, remaining, payload):
     # `remaining` 是**產生這一批的當下**這個系列還剩幾批,不是「總共幾批」——
-    # 待判集合一票比一票小,總數是個會過期的數字
+    # 待判集合一票比一票小,總數是個會過期的數字。改判批次兩者皆為 None:
+    # 它由票逐條指名,沒有批量也沒有下一批
     body = {
         "batch": name,
         "series": series,
@@ -183,6 +252,40 @@ def write_batch(path, name, series, number, remaining, payload):
         "entries": payload,
     }
     dump_json(path, body)
+
+
+def write_rejudge_batch(entries, cards, faqs, args):
+    """`--rejudge` 那條路:一張改判票、一個檔,標的由票逐條指名。
+
+    不走 `collect()`——那一支只認**待判**的效果句(`kind` 為 null),而改判的標的
+    恰恰是已經判過的那些行。
+    """
+    if not args.name:
+        print("--rejudge 要配 --name:改判批次不屬於任何一個排票系列,"
+              "沒有算得出來的檔名")
+        return 1
+    if args.only or args.series or args.limit is not None:
+        # 排票用的旗標在這條路上一個都不生效,靜靜忽略會讓人以為篩過了
+        print("--rejudge 是逐條指名的,不能配 --only / --series / --limit")
+        return 1
+    keys = parse_rejudge(args.rejudge)
+    if keys is None:
+        print("--rejudge 只吃逗號分隔的 <卡片密碼>:<section>:<index>")
+        return 1
+    payload, problem = rejudge_payloads(entries, cards, faqs, keys)
+    if problem is not None:
+        print(problem)
+        return 1
+    clauses = sum(len(c["clauses"]) for c in payload)
+    print(f"{SERIES_LABEL[SERIES_FIX]}({SERIES_FIX}): {len(payload)} 張卡 / "
+          f"{clauses} 條改判標的")
+    if args.dry_run:
+        return 0
+    os.makedirs(args.out_dir, exist_ok=True)
+    path = os.path.join(args.out_dir, f"{args.name}.json")
+    write_batch(path, args.name, SERIES_FIX, None, None, payload)
+    print(f"  已寫出 {path}")
+    return 0
 
 
 def main(argv=None):
@@ -207,6 +310,10 @@ def main(argv=None):
                                        "無遺漏地判完全部,不要拿它來挑卡")
     parser.add_argument("--name", help="檔名(預設 <系列>-<批號>)。"
                                        "補判批次取個自己的名字,才不會蓋掉正式排票的檔")
+    parser.add_argument("--rejudge",
+                        help="改判批次:逗號分隔的 <卡片密碼>:<section>:<index>,"
+                             "標的必須是已經判過的效果句。規範改版後回頭修既有"
+                             "判定用,要配 --name 自己取檔名")
     parser.add_argument("--dry-run", action="store_true",
                         help="只點數,不寫檔")
     args = parser.parse_args(argv)
@@ -216,6 +323,9 @@ def main(argv=None):
     entries, report = build_tag_cards(cards, faqs,
                                       existing=load_optional(args.sheet),
                                       splits=load_optional(args.splits))
+
+    if args.rejudge is not None:
+        return write_rejudge_batch(entries, cards, faqs, args)
 
     series = collect(entries, report, cards, faqs)
     wanted = args.series or [SERIES_SPLIT, SERIES_KIND]

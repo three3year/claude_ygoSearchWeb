@@ -23,6 +23,12 @@
 繁中與日文把同一批句子排成不同順序時,`clauses` 照**繁中**順序列,另給一個
 `ja_order`(段落位置的排列)說明**日文**怎麼讀;`index` 仍照日文的序號給(票51)。
 
+**改判票**(`make_batches.py --rejudge` 產生的批次)的結果檔多一個逐行旗標
+`"rejudge": true`:那一行的既有判定是要被換掉的東西,不是要被保留的東西(票52)。
+沒寫旗標的話 ADR-0002 的「判定一次就算數」會照舊擋下來,改判等於沒做,所以批次檔
+標了改判的效果句、結果檔卻沒寫旗標時整批不寫入。官方明示與人工修正的權威高於改判
+票,改判動不了它們——碰到了同樣整批不寫入。
+
 三道關卡,任何一道不過就整批不寫入(`--force` 可強行寫,但那等於把失敗藏起來):
 
 1. **集合一致性自檢** —— 結果檔涵蓋的效果句與拆句標的必須與批次檔完全相同,
@@ -67,6 +73,28 @@ def batch_expectations(batch):
                        for c in entry["clauses"]
                        if c["section"] not in split_sections)
     return targets, clauses
+
+
+def rejudge_problems(batch, result):
+    """改判旗標的兩個方向都要對得上批次檔(票52)。
+
+    漏寫旗標的話既有判定會照 ADR-0002 擋下來,改判等於沒做而且看起來成功了;
+    反過來,結果檔自己多寫一個旗標就等於一般判定票能偷偷覆寫既有判定,而改判
+    照 ADR-0002 的修訂要有一張自己的票。
+
+    掃的是結果檔的**每一個**段落,拆句標的也算——那種段落的 `clauses` 同樣帶
+    類型與必發/選發(`_index_judgments` 不分段落種類),旗標寫在那裡照樣生效。
+    """
+    want = {(entry["id"], c["section"], c["index"])
+            for entry in batch["entries"] for c in entry["clauses"]
+            if c.get("rejudge")}
+    got = {(record["id"], record["section"], row["index"])
+           for record in result for row in record.get("clauses", ())
+           if row.get("rejudge")}
+    return ([f"改判標的 {key} 的結果沒寫 rejudge: true"
+             for key in sorted(want - got)]
+            + [f"{key} 不是這一批的改判標的,結果卻寫了 rejudge: true"
+               for key in sorted(got - want)])
 
 
 def result_coverage(result):
@@ -160,6 +188,9 @@ def applied_problems(report, records):
                 problems.append(f"{key}: {row}")
     for row in report["judgment_orphans"]:
         problems.append(f"judgment_orphans: {row}")
+    for row in report["judgment_rejudge_refused"]:
+        # 官方明示與人工修正的權威高於改判票,那一行沒動——不能當成改成功了
+        problems.append(f"judgment_rejudge_refused: {row}")
     return problems
 
 
@@ -187,7 +218,7 @@ def main(argv=None):
     existing = load_optional(args.sheet)
     splits = load_optional(args.splits, missing=[])
 
-    problems = set_problems(batch, result)
+    problems = set_problems(batch, result) + rejudge_problems(batch, result)
 
     # 先照既有的拆句表跑一次,好拿到整團現在的原文——拆句表的雜湊對著它算,
     # 判定票寫結果檔時看到的也是它
@@ -205,9 +236,13 @@ def main(argv=None):
     print(f"結果檔 {len(result)} 段落:拆句 {len(records)} 筆、"
           f"拆不出來 {len(skipped)} 筆、"
           f"判定 {report['judgment_clauses']} 條寫入、"
-          f"官方接手 {report['judgment_confirmed_by_official']} 條")
+          f"官方接手 {report['judgment_confirmed_by_official']} 條、"
+          f"改判 {len(report['judgment_rejudged'])} 條")
     for key, note in skipped:
         print(f"  拆不出來 {key}: {note}")
+    for row in report["judgment_rejudged"]:
+        print(f"  改判 ({row['id']}, {row['section']}, {row['index']}): "
+              f"{row['existing']} → {row['judged']}(原 {row['source']})")
     print(f"關卡: {len(problems)} 個問題")
     for problem in problems:
         print(f"  {problem}")

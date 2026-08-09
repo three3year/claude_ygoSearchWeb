@@ -80,6 +80,9 @@ def print_judgments(report, file=sys.stdout):
             ("judgment_vs_rule", "與位置規則結論不同(未覆蓋)"),
             ("judgment_optional_dropped", "類型不承載必發/選發(已丟棄)"),
             ("judgment_overridden", "既有判定擋下本次判定(判定一次就算數)"),
+            ("judgment_rejudged", "改判票換掉的既有判定"),
+            ("judgment_rejudge_refused",
+             "改判動不了的來源(官方明示/人工修正,必須為 0)"),
             ("judgment_orphans", "結果檔對不到任何一行(必須為 0)")):
         rows = report[key]
         p(f"  {label}: {len(rows)} 筆")

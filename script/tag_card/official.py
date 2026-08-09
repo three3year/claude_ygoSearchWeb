@@ -18,6 +18,7 @@ NUMERALS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫"
 INDEX_PREAMBLE = "0"
 # 舊式無編號卡文在依語意拆開之前的整團(拆句骨架給的唯一 index)
 INDEX_UNNUMBERED = "1"
+BULLET = "●"
 
 # 效果類型的六種固定值(CONTEXT.md 定義,「(2速)」「(1速)」是名稱的一部分)
 KIND_NON_EFFECT = "效果外文本"
@@ -81,6 +82,10 @@ _PAREN_CLOSE = "）)"
 # 必發的官方明示。實測 1,526 行全是「必ず発動する効果です」「必ず発動します」
 # 「必ず発動し、〜」三種肯定寫法,沒有一行是否定,所以認前綴就夠。
 _MANDATORY_MARK = "必ず発動"
+# 賦予型領起句:「〜は以下の効果を得る。●…」。領起句只是把一組效果賦予別的東西,
+# 自己不發動也不形成連鎖(官方對 89355716 寫得很白:「『②：…以下の効果を得る』
+# 効果はチェーンブロックの作られない効果です」),`●` 才是被賦予的效果。
+_GRANT_LEAD_RE = re.compile(r"以下の効果を得る。?\s*$")
 
 _HEADER_RE = re.compile(r"^【([^】]*)】", re.M)
 _INDEX_HEADER_RE = re.compile(
@@ -240,6 +245,38 @@ def _seq_target(index, effects, unsplit):
     return ordinal if any(c["index"] == ordinal for c in effects) else None
 
 
+def _grant_leads(effects):
+    """效果句清單 → {index: (領起句, 整段)},只收「賦予型領起句 + 未拆的 ●」。
+
+    兩份文字都已正規化,拿來回答「官方這一句講的是領起句還是 `●`」——`●` 拆成
+    獨立效果句之後領起句那一行就不含 `●`,這裡自然收不到它,判定隨即恢復正常。
+    """
+    leads = {}
+    for clause in effects:
+        text = clause["text_ja"] or ""
+        if BULLET not in text:
+            continue
+        head = text.split(BULLET)[0]
+        if _GRANT_LEAD_RE.search(head.strip()):
+            leads[clause["index"]] = (_normalise(head), _normalise(text))
+    return leads
+
+
+def _quotes_the_lead(lead, quoted):
+    """官方的 『原文』 引用是不是從領起句開始。
+
+    是,才代表這一句講的是領起句(或連 `●` 一起講的整段);從 `●` 開始的引用
+    講的是那個子效果,而子效果還不是效果句,套到領起句上就是把只描述其中一段的
+    明示放大成整段的判定(晴れの天気模様 89355716:領起句不形成連鎖,官方給的
+    2 速是 `●` 的)。
+    """
+    if not quoted:
+        return False
+    head, body = lead
+    position = body.find(_normalise(quoted))
+    return 0 <= position < len(head)
+
+
 def _match_quote(quoted, effects):
     """『效果原文』→ 命中的效果句 index 清單(正規化後的子字串比對)。
 
@@ -272,29 +309,31 @@ def _resolve_bullet(spec, effects):
 
 
 def _resolve_header(header, effects, attributable):
-    """標頭 → (效果句 index, 狀態)。
+    """標頭 → (效果句 index, 狀態, 對位用的引用)。
 
     狀態 `missing` 表示標頭指名了一個卡文沒有的編號;`unresolved` 表示標頭存在
-    但對不出唯一標的——兩者都不產生判定。
+    但對不出唯一標的——兩者都不產生判定。第三個回傳值只有引號標頭有,底下的
+    明示句要靠它才分得出官方講的是領起句還是 `●`。
     """
     match = _INDEX_HEADER_RE.match(header)
     if match is not None:
         index = match.group(1)
         if any(c["index"] == index for c in effects):
-            return index, "index"
-        return index, "missing"
+            return index, "index", None
+        return index, "missing", None
 
     spec = _bullet_spec(header)
     if spec is not None:
         index = _resolve_bullet(spec, effects)
-        return (index, "index") if index is not None else (None, "unresolved")
+        return ((index, "index", None) if index is not None
+                else (None, "unresolved", None))
 
     # 引號標頭本身就是歸屬標記,比照階梯三對位回效果句
     for quoted in quotes(header):
         hits = _match_quote(quoted, attributable)
         if len(hits) == 1:
-            return hits[0], "index"
-    return None, "unresolved"
+            return hits[0], "index", quoted
+    return None, "unresolved", None
 
 
 # ---------------------------------------------------------------- 接縫
@@ -321,6 +360,7 @@ def attest(name_ja, supplement, clauses, unsplit=()):
     preambles = [c for c in clauses if _is_preamble(c["index"])]
     # 對得出歸屬的效果句:未拆的整團只是骨架的暫代值,不算數
     attributable = [c for c in effects if c["index"] not in unsplit]
+    grant_leads = _grant_leads(effects)
     own_name = _normalise(name_ja)
     conflicting = set()
     # 只寫必發而沒寫類型的明示句另立一份清單,不去動票03 那幾份類型清單的筆數
@@ -332,7 +372,13 @@ def attest(name_ja, supplement, clauses, unsplit=()):
         else:
             notes[key].append(row)
 
-    def assign(index, kind, ladder, line, is_mandatory=False):
+    def assign(index, kind, ladder, line, is_mandatory=False, quoted=None):
+        lead = grant_leads.get(index)
+        if lead is not None and not _quotes_the_lead(lead, quoted):
+            # 領起句不發動,而 `●` 還沒拆開:官方講的是哪一邊沒有證據可分
+            note("attribution_deferred",
+                 {"kind": kind, "reason": "● 子效果待拆", "line": line})
+            return
         if is_mandatory:
             mandatory.setdefault(index, ladder)
         if kind is None or index in conflicting:
@@ -373,7 +419,7 @@ def attest(name_ja, supplement, clauses, unsplit=()):
             quoted = quoted_lines[0]
             hits = _match_quote(quoted, attributable)
             if len(hits) == 1:
-                assign(hits[0], kind, LADDER_QUOTE, line, is_mandatory)
+                assign(hits[0], kind, LADDER_QUOTE, line, is_mandatory, quoted)
             elif not hits:
                 note("quote_unmatched", {"kind": kind, "quote": quoted})
             else:
@@ -426,7 +472,7 @@ def attest(name_ja, supplement, clauses, unsplit=()):
             {"line": line, "header": header})
 
     for header, body in _blocks(supplement):
-        target, status = (None, "none") if not header \
+        target, status, header_quote = (None, "none", None) if not header \
             else _resolve_header(header, effects, attributable)
         for raw in body.split("\n"):
             line = raw.strip()
@@ -447,7 +493,8 @@ def attest(name_ja, supplement, clauses, unsplit=()):
             kind = kinds.pop() if kinds else None
             kindless = kind is None
             if status == "index":
-                assign(target, kind, LADDER_HEADER, line, is_mandatory)
+                assign(target, kind, LADDER_HEADER, line, is_mandatory,
+                       header_quote)
             elif status == "missing":
                 note("header_index_missing", {"index": target})
             elif status == "unresolved":

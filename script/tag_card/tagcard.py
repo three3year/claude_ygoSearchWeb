@@ -16,13 +16,13 @@ from collections import Counter
 
 import official
 import rules
-from official import (INDEX_PREAMBLE, INDEX_UNNUMBERED, KIND_NON_EFFECT,
-                      KIND_QUICK, KIND_TRIGGER, NUMERALS, OPTIONAL_MANDATORY,
-                      OPTIONAL_OPTIONAL)
+from official import (BULLET, INDEX_PREAMBLE, INDEX_UNNUMBERED,
+                      KIND_NON_EFFECT, KIND_QUICK, KIND_TRIGGER, NUMERALS,
+                      OPTIONAL_MANDATORY, OPTIONAL_OPTIONAL)
 
 # NUMERALS:效果編號字元。官方目前最多用到⑤,official 多留幾個位以防新卡。
+# BULLET:● 子效果的記號,拆句與歸屬對位都要認它,定義放在 official 一份。
 FULLWIDTH_COLON = "："
-BULLET = "●"
 
 # 卡片總表 type 位元(與 script/card_list/cardlist.py 同一套)
 TYPE_MONSTER = 0x1

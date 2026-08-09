@@ -975,6 +975,111 @@ class TestBulletSubEffects(unittest.TestCase):
         self.assertEqual(report["substring_violations"], [])
 
 
+class TestGrantLeadWithUnsplitBullets(unittest.TestCase):
+    """領起句「〜は以下の効果を得る。●…」不發動,官方給的類型多半是 ● 的。
+
+    領起句只是把一組效果賦予別的東西,自己不形成連鎖;`●` 才是被賦予的效果。
+    `●` 還沒拆開之前兩者併在同一個效果句裡,官方明示講的是哪一邊要看證據——
+    引用從領起句開始才算講的是這一段,其餘一律留待判定。
+    """
+
+    # 晴れの天気模様(89355716)②的實例:官方給的 2 速是 `●` 的,領起句自己
+    # 在同一份補足裡被寫成「チェーンブロックの作られない効果」
+    DESC = ("②：與此卡同縱列的我方主要怪獸區域的「天氣」效果怪獸得到以下效果。\n"
+            "●將此卡除外,以我方場上1隻怪獸為對象發動。")
+    CARD_TEXT = ("②：このカードと同じ縦列の自分のメインモンスターゾーンに存在する"
+                 "「天気」効果モンスターは以下の効果を得る。"
+                 "●このカードを除外し、自分フィールドのモンスター１体を対象として"
+                 "発動できる。")
+
+    def _build(self, supplement, desc=None, card_text=None):
+        return build_tag_cards(
+            [card(desc=desc or self.DESC)],
+            [faq(card_text=card_text or self.CARD_TEXT, supplement=supplement)])
+
+    def test_a_quote_starting_at_the_bullet_defers(self):
+        entries, report = self._build(
+            "■『●このカードを除外し、自分フィールドのモンスター１体を対象として"
+            "発動できる』効果は誘発即時効果です。")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertIsNone(clause["kind"])
+        self.assertIsNone(clause["source"])
+        self.assertEqual(report["official_coverage"]["quote"], 0)
+        self.assertEqual([(r["id"], r["kind"], r["reason"])
+                          for r in report["attribution_deferred"]],
+                         [(1000, "誘發即時效果(2速)", "● 子效果待拆")])
+
+    def test_a_bare_bullet_quote_defers(self):
+        """官方以『●』代稱子效果(大融合 7614732)時同樣沒指到領起句。"""
+        entries, report = self._build(
+            "■『●』は、この効果で特殊召喚したモンスターが得る永続効果です。")
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+        self.assertEqual([r["reason"] for r in report["attribution_deferred"]],
+                         ["● 子效果待拆"])
+
+    def test_a_header_without_a_quote_defers(self):
+        """【②の効果について】指的是整個編號效果,分不出領起句與 ●。"""
+        entries, report = self._build(
+            "【②の効果について】\n■モンスターゾーンで発動できる誘発即時効果です。")
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+        self.assertEqual(report["official_coverage"]["header"], 0)
+        self.assertEqual([r["reason"] for r in report["attribution_deferred"]],
+                         ["● 子效果待拆"])
+
+    def test_a_quote_starting_in_the_lead_still_applies(self):
+        """官方連領起句一起引用(RR－スカル・イーグル 45184165)時證據是明確的。"""
+        entries, report = self._build(
+            "■『②：このカードと同じ縦列の自分のメインモンスターゾーンに存在する"
+            "「天気」効果モンスターは以下の効果を得る。●このカードを除外し』"
+            "モンスター効果は、起動効果・誘発効果・誘発即時効果・永続効果の"
+            "いずれにも分類されない効果です。")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["kind"], "無種類效果")
+        self.assertEqual(report["official_coverage"]["quote"], 1)
+        self.assertEqual(report["attribution_deferred"], [])
+
+    def test_bullets_that_are_options_of_one_activation_are_untouched(self):
+        """領起句自己就寫了發動時,`●` 只是選項列舉,官方的類型是整段的。"""
+        entries, report = build_tag_cards(
+            [card(desc="①：以下效果從1個選擇發動。\n●效果甲。\n●效果乙。")],
+            [faq(card_text="①：以下の効果から１つを選択して発動できる。"
+                           "●効果甲。●効果乙。",
+                 supplement="■『●効果甲』はフィールドで発動できる起動効果です。")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "啟動效果")
+        self.assertEqual(report["attribution_deferred"], [])
+
+    def test_a_mandatory_line_defers_too(self):
+        """必發明示與類型明示共用同一套歸屬對位,排除條件也必須一起生效。"""
+        entries, report = self._build(
+            "■『●このカードを除外し、自分フィールドのモンスター１体を対象として"
+            "発動できる』効果は誘発効果です。必ず発動します。")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertIsNone(clause["kind"])
+        self.assertIsNone(clause["optional"])
+        self.assertEqual([r["reason"] for r in report["attribution_deferred"]],
+                         ["● 子效果待拆"])
+
+    def test_splitting_the_bullets_out_restores_the_attestation(self):
+        """官方以【●…について】解說時 ● 已拆成獨立效果句,領起句不再含 ●。"""
+        entries, report = self._build(
+            "【●の効果について】\n■モンスターゾーンで発動できる誘発即時効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["②", "②-●1"])
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "誘發即時效果(2速)"])
+        self.assertEqual(report["attribution_deferred"], [])
+
+    def test_a_lead_without_bullets_is_not_affected(self):
+        """條件是「● 還沒拆開」,沒有 ● 的賦予句照常走五階梯。"""
+        entries, report = build_tag_cards(
+            [card(desc="②：我方場上的怪獸得到以下效果:攻擊力上升500。")],
+            [faq(card_text="②：自分フィールドのモンスターは以下の効果を得る。"
+                           "攻撃力は５００アップする。",
+                 supplement="■モンスターゾーンで適用する永続効果です。")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "永續效果")
+        self.assertEqual(report["attribution_deferred"], [])
+
+
 class TestMandatoryAttestation(unittest.TestCase):
     """官方明示「必ず発動する効果です」→ 必發,優先於任何規則。"""
 
@@ -1096,10 +1201,17 @@ class TestOptionalRule(unittest.TestCase):
         self.assertEqual(clauses[0]["optional"], "選發")
 
     def test_lead_in_sentence_without_an_activation_is_left_for_judgment(self):
-        """「②：…は以下の効果を得る。●…」的領起句不是發動子句。"""
+        """「②：…は以下の効果を得る。●…」的領起句不是發動子句。
+
+        明示句得**引用領起句**才進得了必發/選發那一層:`●` 未拆時,不指名領起句
+        的官方類型會先被歸屬那一關擋掉(見 TestGrantLeadWithUnsplitBullets)。
+        """
         clauses, report = self.optional_of(
             "①：このカードと相互リンクしているモンスターの数によって"
-            "以下の効果を得る。\n●１体以上：攻撃宣言時に発動する。")
+            "以下の効果を得る。\n●１体以上：攻撃宣言時に発動する。",
+            supplement="■『①：このカードと相互リンクしているモンスターの数に"
+                       "よって以下の効果を得る』モンスター効果は、"
+                       "モンスターゾーンで発動する誘発効果です。")
         self.assertIsNone(clauses[0]["optional"])
         self.assertEqual([(r["id"], r["reason"])
                           for r in report["optional_pending"]],

@@ -33,8 +33,29 @@ TYPE_SYNCHRO = 0x2000
 TYPE_XYZ = 0x800000
 TYPE_PENDULUM = 0x1000000
 TYPE_LINK = 0x4000000
+TYPE_SPELL = 0x2
+TYPE_TRAP = 0x4
+TYPE_QUICKPLAY = 0x10000
+TYPE_CONTINUOUS = 0x20000
+TYPE_EQUIP = 0x40000
+TYPE_FIELD = 0x80000
+TYPE_COUNTER = 0x100000
 # 這些怪獸的卡文第一行是素材指定(卡文的硬性寫作慣例)
 MATERIAL_TYPES = TYPE_FUSION | TYPE_RITUAL | TYPE_SYNCHRO | TYPE_XYZ | TYPE_LINK
+
+# [[卡片種類]]的細分。一列 = (魔法或陷阱的位元, 細分位元→名稱, 沒有細分位元時的名稱);
+# 細分位元的順序即優先序,先命中的先算。
+CARD_TYPE_TABLE = (
+    (TYPE_SPELL,
+     ((TYPE_QUICKPLAY, "速攻魔法"), (TYPE_RITUAL, "儀式魔法"),
+      (TYPE_CONTINUOUS, "永續魔法"), (TYPE_EQUIP, "裝備魔法"),
+      (TYPE_FIELD, "場地魔法")),
+     "通常魔法"),
+    (TYPE_TRAP,
+     ((TYPE_COUNTER, "反擊陷阱"), (TYPE_CONTINUOUS, "永續陷阱")),
+     "通常陷阱"),
+)
+
 
 ROLE_MATERIAL = "素材指定"
 ROLE_SUMMON = "召喚條件"
@@ -64,6 +85,22 @@ FOOTNOTE_RE = re.compile(r"\n\n※[^\n]*$")
 CLAUSE_FIELDS = ("index", "section", "text_zh", "text_ja", "text_hash", "kind",
                  "optional", "role", "source", "needs_review", "rule_predicted",
                  "confidence", "tags")
+
+
+def card_type_label(ctype):
+    """卡片總表的 type 位元 → [[卡片種類]]的名稱;認不出來時回 None。
+
+    判定規範 §5.8 的「這張卡本身的發動」由卡片種類決定[[效果類型]],而**卡文分不
+    出來**——通常魔法與速攻魔法的卡文寫法完全一樣,判定票只讀批次檔的話沒有別的
+    來源。怪獸不細分:§5.8 只問是不是魔法・陷阱卡。
+    """
+    if ctype & TYPE_MONSTER:
+        return "怪獸"
+    for bit, subtypes, plain in CARD_TYPE_TABLE:
+        if ctype & bit:
+            return next((label for mask, label in subtypes if ctype & mask),
+                        plain)
+    return None
 
 
 # ---------------------------------------------------------------- 拆句
@@ -551,7 +588,11 @@ def _apply_optional(cid, section, clauses, attested, unsplit, judged, report):
     """必發/選發四層:官方明示 → 判定結果 → 日文發動子句規則 → 留 null 待判。
 
     官方明示的那批同時當獨立驗證集:遮住答案跑一次規則,一致率進報告。
+
+    回傳**官方寫的那一批**的 `(section, index)`。重跑合併要靠它分辨這一格是官方
+    的裁定還是規則層對當前文本的猜測——猜測可以重算,裁定不行(見 `_merge_clause`)。
     """
+    official_optional = set()
     for clause in clauses:
         predicted, detail = _optional_by_rule(clause, unsplit)
         is_attested = clause["index"] in attested
@@ -574,6 +615,7 @@ def _apply_optional(cid, section, clauses, attested, unsplit, judged, report):
             continue
         if is_attested:
             clause["optional"] = OPTIONAL_MANDATORY
+            official_optional.add((section, clause["index"]))
             report["optional_official"] += 1
         elif judged.get(clause["index"]):
             clause["optional"] = judged[clause["index"]]
@@ -585,6 +627,7 @@ def _apply_optional(cid, section, clauses, attested, unsplit, judged, report):
             report["optional_pending"].append(
                 {"id": cid, "section": section, "index": clause["index"],
                  "reason": detail})
+    return official_optional
 
 
 def _validate_optional(cid, section, clause, predicted, detail, report):
@@ -637,9 +680,12 @@ def _apply_judgments(cid, section, clauses, judgments, report):
                 clause["source"] = SOURCE_LLM
                 clause["needs_review"] = True
                 report["judgment_clauses"] += 1
-                judged[clause["index"]] = row.get("optional")
             else:
                 report["judgment_confirmed_by_official"] += 1
+            # 兩道階梯各走各的:官方接手了[[效果類型]]不代表它也寫了[[必發/選發]]。
+            # 舊式卡文常是「官方只給類型、卡文又沒有發動子句」,綁在一起會把判定者
+            # 填的那一格連帶丟掉——票18 實測 200 張裡 20 條被留成 null
+            judged[clause["index"]] = row.get("optional")
             continue
         if clause["kind"] is not None:
             if row.get("kind") != clause["kind"]:
@@ -729,12 +775,14 @@ def _apply_late_attestation(cid, merged, fresh, prior, report):
     return True
 
 
-def _merge_clause(cid, fresh, prior, report):
+def _merge_clause(cid, fresh, prior, official_optional, report):
     """本次重跑的效果句 + 既有標記表的同一行 → 寫進標記表的那一行。
 
     首次建置時 prior 一律是 None,與重跑走同一條路徑。文本欄位(text_zh /
     text_ja / text_hash)與規則層欄位(rule_predicted / confidence)永遠取本次
     的值——它們是來源資料的投影,不是判定。
+
+    `official_optional` 是本次由[[官方明示]]寫出[[必發/選發]]的 `(section, index)`。
     """
     prior_source = prior.get("source") if prior else None
     if prior_source not in PRESERVED_SOURCES:
@@ -746,12 +794,22 @@ def _merge_clause(cid, fresh, prior, report):
 
     if (prior_source == official.SOURCE_OFFICIAL
             and fresh["source"] == official.SOURCE_OFFICIAL):
-        # 官方改了自己的裁定:兩邊同權威,以最新的來源資料為準
-        if _judgment(fresh) != _judgment(prior):
+        # 官方改了自己的裁定:兩邊同權威,以最新的來源資料為準。但**只管官方這次
+        # 真的寫了的欄位**——官方多半只寫[[效果類型]]不寫[[必發/選發]],那一格是
+        # 判定票依 §4 階梯二填的,本次算出來的是[[規則層]]對當前文本的猜測。整行
+        # 換掉會把判定翻掉、還冒充成官方改了裁定(票18 實測一次重跑翻掉 22 條)
+        merged = dict(fresh)
+        for field in ATTESTED_FIELDS:
+            if fresh[field] is None and prior.get(field) is not None:
+                merged[field] = prior[field]
+        if ((fresh["section"], fresh["index"]) not in official_optional
+                and prior.get("optional") is not None):
+            merged["optional"] = prior["optional"]
+        if _judgment(merged) != _judgment(prior):
             report["official_changed"].append(_merge_row(
                 cid, fresh, existing=_judgment_text(prior),
-                official=_judgment_text(fresh)))
-        return fresh
+                official=_judgment_text(merged)))
+        return merged
 
     if fresh["source"] == SOURCE_LLM and _judgment(fresh) != _judgment(prior):
         # 本次的判定被既有那一行擋下來(ADR-0002:判定一次就算數)。要是判定票是
@@ -782,14 +840,15 @@ def _merge_clause(cid, fresh, prior, report):
     return merged
 
 
-def _merge_clauses(cid, clauses, existing_index, matched, report):
+def _merge_clauses(cid, clauses, existing_index, matched, official_optional,
+                   report):
     merged = []
     for clause in clauses:
         key = (cid, clause["section"], clause["index"])
         if key in existing_index:
             matched.add(key)
         merged.append(_merge_clause(cid, clause, existing_index.get(key),
-                                    report))
+                                    official_optional, report))
     return merged
 
 
@@ -1033,7 +1092,7 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
         if ja_text.strip():
             report["empty_section_with_japanese"].append(
                 {"id": cid, "section": section})
-        return []
+        return [], set()
 
     # 對位:編號數量相同才逐段配對,任何不一致都不猜測
     aligned = bool(ja_text.strip()) and len(zh_nums) == len(ja_nums)
@@ -1109,8 +1168,9 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
     attested = _apply_attestations(cid, section, clauses, name_ja, supplement,
                                    unsplit, split_indexes, report)
     judged = _apply_judgments(cid, section, clauses, judgments, report)
-    _apply_optional(cid, section, clauses, attested, unsplit, judged, report)
-    return clauses
+    official_optional = _apply_optional(cid, section, clauses, attested,
+                                        unsplit, judged, report)
+    return clauses, official_optional
 
 
 def _dedupe_indexes(cid, clauses, report):
@@ -1229,19 +1289,23 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
             continue
 
         clauses = []
+        official_optional = set()
         for section, text in sections:
             if _line_start_cut_points(text) != _cut_points(text):
                 report["zh_cut_rule_disagree"] += 1
-            clauses.extend(_build_section(
+            built, attested_optional = _build_section(
                 card, section, text, ja_by_section[section],
                 supplement_by_section[section], name_ja,
-                split_index.get((cid, section)), judgment_index, report))
+                split_index.get((cid, section)), judgment_index, report)
+            clauses.extend(built)
+            official_optional |= attested_optional
         _dedupe_indexes(cid, clauses, report)
         if any(clause["needs_review"] for clause in clauses):
             # 判定與官方明示打架時最可能是拆錯,整張卡都要看而不只是那一行
             for clause in clauses:
                 clause["needs_review"] = True
-        clauses = _merge_clauses(cid, clauses, existing_index, matched, report)
+        clauses = _merge_clauses(cid, clauses, existing_index, matched,
+                                 official_optional, report)
         _check_substrings(cid, clauses, desc, ja_by_section, report)
         if any(c["confidence"] == CONFIDENCE_LOW for c in clauses):
             report["low_confidence"].append(cid)

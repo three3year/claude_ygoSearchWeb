@@ -6,14 +6,22 @@
 import unittest
 
 import rules
-from tagcard import build_tag_cards, split_hash
+from tagcard import build_tag_cards, card_type_label, split_hash
 
 TYPE_NORMAL_MONSTER = 0x11       # 怪獸 + 通常
 TYPE_EFFECT_MONSTER = 0x21       # 怪獸 + 效果
 TYPE_PENDULUM_EFFECT = 0x1000021  # 怪獸 + 效果 + 靈擺
 TYPE_PENDULUM_NORMAL = 0x1000011  # 怪獸 + 通常 + 靈擺
 TYPE_FUSION_MONSTER = 0x61       # 怪獸 + 效果 + 融合
-TYPE_SPELL = 0x2
+TYPE_SPELL = 0x2                 # 魔法(沒有細分位元 = 通常魔法)
+TYPE_QUICKPLAY_SPELL = 0x10002   # 魔法 + 速攻
+TYPE_CONTINUOUS_SPELL = 0x20002  # 魔法 + 永續
+TYPE_EQUIP_SPELL = 0x40002       # 魔法 + 裝備
+TYPE_FIELD_SPELL = 0x80002       # 魔法 + 場地
+TYPE_RITUAL_SPELL = 0x82         # 魔法 + 儀式
+TYPE_TRAP = 0x4                  # 陷阱(沒有細分位元 = 通常陷阱)
+TYPE_CONTINUOUS_TRAP = 0x20004   # 陷阱 + 永續
+TYPE_COUNTER_TRAP = 0x100004     # 陷阱 + 反擊
 
 
 def card(cid=1000, desc="", ctype=TYPE_EFFECT_MONSTER, name_zh="測試卡",
@@ -1788,6 +1796,67 @@ class TestExistingSheetMerge(unittest.TestCase):
         self.assertEqual(report["needs_review"], [])
         self.assertEqual(report["late_official_conflicts"], [])
 
+    # 卡文的發動子句不以「できる」結尾 → [[規則層]]會預測必發;而補足情報只寫了
+    # [[效果類型]],沒寫「必ず発動」——[[必發/選發]]那一格因此是判定票填的
+    MANDATORY_LOOKING = card(desc="①：此卡送去墓地的場合發動。抽1張卡。")
+    TRIGGER_ATTESTED = faq(
+        card_text="①：このカードが墓地へ送られた場合に発動する。"
+                  "デッキから１枚ドローする。",
+        supplement="■墓地で発動する誘発効果です。")
+
+    def judged_optional_sheet(self, optional="選發"):
+        """官方給類型、判定票給必發/選發的一行(舊式卡文的常態)。"""
+        entries, _ = build_tag_cards(
+            [self.MANDATORY_LOOKING], [self.TRIGGER_ATTESTED],
+            judgments=[{"id": 1000, "section": "main",
+                        "clauses": [{"index": "①", "kind": "誘發效果(1速)",
+                                     "optional": optional}]}])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["source"], clause["optional"]),
+                         ("official", optional))
+        return entries
+
+    def test_the_rule_layer_does_not_overwrite_a_judged_optional_on_rerun(self):
+        """[[規則層]]的必發/選發是對當前文本的猜測,不得洗掉判定票的決定。
+
+        規則層看發動子句的句尾:不以「できる」結尾就推定必發。魔法・陷阱卡「這張卡
+        本身的發動」與 `〜する事で` 代價句型正是它會猜錯的兩族(§4、§5.8),判定票
+        覆寫成選發之後,重跑不能又把它翻回去(票18 實測 2 條)。
+        """
+        entries, report = build_tag_cards(
+            [self.MANDATORY_LOOKING], [self.TRIGGER_ATTESTED],
+            existing=self.judged_optional_sheet())
+        self.assertEqual(clauses_of(entries, 1000)[0]["optional"], "選發")
+        self.assertEqual(report["official_changed"], [])
+
+    def test_an_official_mandatory_attestation_still_wins_on_rerun(self):
+        """官方後來寫了「必ず発動」時照樣以官方為準,而且要看得見。"""
+        attested = faq(card_text=self.TRIGGER_ATTESTED["card_text"],
+                       supplement="■墓地で発動する誘発効果です。"
+                                  "(必ず発動する効果です。)")
+        entries, report = build_tag_cards(
+            [self.MANDATORY_LOOKING], [attested],
+            existing=self.judged_optional_sheet())
+        self.assertEqual(clauses_of(entries, 1000)[0]["optional"], "必發")
+        self.assertEqual([(r["id"], r["existing"], r["official"])
+                          for r in report["official_changed"]],
+                         [(1000, "誘發效果(1速)/選發", "誘發效果(1速)/必發")])
+
+    def test_rerunning_an_official_row_keeps_a_value_official_never_wrote(self):
+        """官方明示只管它自己寫得出來的欄位。
+
+        官方寫了[[效果類型]]、沒寫[[必發/選發]]時,那一格是判定票填的(§4 階梯二)。
+        重跑時把整行換成本次算出來的官方結果會把它洗成 null,而且會冒充成
+        「官方改了自己的裁定」——票18 實測一次重跑掉 22 條。
+        """
+        existing = self.first_build([self.ATTESTED])
+        mark(existing, 1000, "①", optional="選發")
+        entries, report = self.rerun(existing, [self.ATTESTED])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"], clause["optional"]),
+                         ("啟動效果", "official", "選發"))
+        self.assertEqual(report["official_changed"], [])
+
 
 class TestHashChangeReview(unittest.TestCase):
     """雜湊變動:不覆蓋,標記待複查並列進報告。"""
@@ -2682,6 +2751,23 @@ class TestJudgmentMerge(unittest.TestCase):
         self.assertEqual(report["optional_llm"], 1)
         self.assertEqual(report["optional_rule"], 0)
 
+    def test_official_taking_the_kind_still_leaves_the_judged_optional(self):
+        """兩道階梯各走各的:官方接手[[效果類型]]不代表它也給了[[必發/選發]]。
+
+        官方明示只寫類型、卡文又沒有發動子句時(舊式卡文的常態),兩道階梯綁在一起
+        會把判定者填的必發/選發連帶丟掉——票18 實測 200 張裡 20 條。
+        """
+        entries, report = self.build(
+            [{"index": "①", "kind": "誘發效果(1速)", "optional": "必發"}],
+            card_text="①：このカードが墓地へ送られた時、デッキから１枚ドローする。",
+            supplement="■墓地で発動する誘発効果です。")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("誘發效果(1速)", "official"))
+        self.assertEqual(clause["optional"], "必發")
+        self.assertEqual(report["judgment_confirmed_by_official"], 1)
+        self.assertEqual(report["optional_llm"], 1)
+
     def test_optional_is_dropped_when_the_kind_cannot_carry_it(self):
         """值域規則優先:只有誘發即時與誘發兩類寫必發/選發。"""
         entries, report = self.build(
@@ -2796,6 +2882,36 @@ class TestJudgmentAfterSplit(unittest.TestCase):
         self.assertEqual(clauses_of(entries, 1000)[1]["source"], "official")
         self.assertEqual(report["split_new_official"], 1)
         self.assertEqual(report["judgment_confirmed_by_official"], 1)
+
+
+class TestCardTypeLabel(unittest.TestCase):
+    """[[卡片種類]]的名稱。判定者要靠它走 §5.8——魔法・陷阱卡「這張卡本身的發動」
+    的[[效果類型]]由卡片種類決定,而通常魔法與速攻魔法的卡文分不出來。"""
+
+    def test_spell_subtypes_each_have_their_own_name(self):
+        for ctype, expected in ((TYPE_SPELL, "通常魔法"),
+                                (TYPE_QUICKPLAY_SPELL, "速攻魔法"),
+                                (TYPE_CONTINUOUS_SPELL, "永續魔法"),
+                                (TYPE_EQUIP_SPELL, "裝備魔法"),
+                                (TYPE_FIELD_SPELL, "場地魔法"),
+                                (TYPE_RITUAL_SPELL, "儀式魔法")):
+            with self.subTest(expected=expected):
+                self.assertEqual(card_type_label(ctype), expected)
+
+    def test_trap_subtypes_each_have_their_own_name(self):
+        for ctype, expected in ((TYPE_TRAP, "通常陷阱"),
+                                (TYPE_CONTINUOUS_TRAP, "永續陷阱"),
+                                (TYPE_COUNTER_TRAP, "反擊陷阱")):
+            with self.subTest(expected=expected):
+                self.assertEqual(card_type_label(ctype), expected)
+
+    def test_monsters_are_just_monsters(self):
+        """§5.8 只問「是不是魔法・陷阱卡」,怪獸的細分對判定沒有作用。"""
+        self.assertEqual(card_type_label(TYPE_EFFECT_MONSTER), "怪獸")
+        self.assertEqual(card_type_label(TYPE_PENDULUM_EFFECT), "怪獸")
+
+    def test_unknown_bits_yield_no_label_rather_than_a_wrong_one(self):
+        self.assertIsNone(card_type_label(0))
 
 
 if __name__ == "__main__":

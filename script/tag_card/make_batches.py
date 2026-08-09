@@ -29,7 +29,7 @@ from official import INDEX_UNNUMBERED
 from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_SPLITS,
                    DEFAULT_TAG_CARDS, ROOT, dump_json, load_json,
                    load_optional)
-from tagcard import SECTION_PENDULUM, build_tag_cards
+from tagcard import SECTION_PENDULUM, build_tag_cards, card_type_label
 
 DEFAULT_BATCH_DIR = os.path.join(ROOT, ".scratch", "tag-card", "batches")
 
@@ -63,6 +63,9 @@ def card_payload(entry, card, faq, blobs):
         "id": entry["id"],
         "name_zh": card.get("name_zh"),
         "name_ja": card.get("name_ja") or faq.get("name_ja"),
+        # 規範 §5.8 的「這張卡本身的發動」由[[卡片種類]]決定,而通常魔法與速攻魔法
+        # 的卡文寫法一樣——不附上種類,判定者只讀批次檔就走不完那一節
+        "card_type": card_type_label(card.get("type", 0)),
         "card_text_zh": card.get("desc") or "",
         "card_text_ja": faq.get("card_text") or "",
         "supplement": faq.get("supplement") or "",

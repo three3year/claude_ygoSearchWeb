@@ -13,15 +13,19 @@
 
 補足情報**不裁剪**、原文照抄:批次檔要自足到判定票不必回頭查任何其他來源。
 
+批號由 `--start` 給:待判集合一票比一票小(判完就不再出現),所以「第幾批」不是算得
+出來的,每票報自己的批號,檔名才不會互相蓋掉。
+
 用法:
     python script/tag_card/make_batches.py --dry-run        # 只點數,不寫檔
-    python script/tag_card/make_batches.py --series split --limit 1
+    python script/tag_card/make_batches.py --series split --limit 1 --start 2
 """
 import argparse
 import os
 import sys
 
 import official
+from official import INDEX_UNNUMBERED
 from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_SPLITS,
                    DEFAULT_TAG_CARDS, ROOT, dump_json, load_json,
                    load_optional)
@@ -52,7 +56,7 @@ def quote_hints(supplement, text_ja):
     return hints
 
 
-def card_payload(entry, card, faq, unsplit_sections):
+def card_payload(entry, card, faq, blobs):
     """一張待判卡的完整上下文:卡文兩側 + 不裁剪的補足情報 + 待判效果句。"""
     clauses = pending_clauses(entry)
     payload = {
@@ -72,17 +76,17 @@ def card_payload(entry, card, faq, unsplit_sections):
             "card_text_ja": faq.get("pen_effect") or "",
             "supplement": faq.get("pen_supplement") or "",
         }
+    # 拆句標的的原文取自待拆清單那一份**整團**,不取標記表上那一行——● 子效果
+    # 可能已經把那一行切掉一塊,照它拆會在雜湊與覆蓋兩道驗證同時失敗(票13)
     targets = []
-    for clause in clauses:
-        if clause["section"] not in unsplit_sections:
-            continue
+    for blob in blobs:
         supplement = (faq.get("pen_supplement")
-                      if clause["section"] == SECTION_PENDULUM
+                      if blob["section"] == SECTION_PENDULUM
                       else faq.get("supplement")) or ""
         targets.append({
-            "section": clause["section"], "index": clause["index"],
-            "text_zh": clause["text_zh"], "text_ja": clause["text_ja"],
-            "quote_hints": quote_hints(supplement, clause["text_ja"]),
+            "section": blob["section"], "index": INDEX_UNNUMBERED,
+            "text_zh": blob["text_zh"], "text_ja": blob["text_ja"],
+            "quote_hints": quote_hints(supplement, blob["text_ja"]),
         })
     if targets:
         payload["split_targets"] = targets
@@ -93,17 +97,17 @@ def collect(entries, report, cards, faqs):
     """→ {系列: [卡片酬載, ...]},依卡片密碼升冪。"""
     by_id = {card["id"]: card for card in cards}
     faq_by_id = {e["password"]: e for e in faqs if e.get("password")}
-    unsplit_by_id = {}
+    blobs_by_id = {}
     for row in report["pending_split"]:
-        unsplit_by_id.setdefault(row["id"], set()).add(row["section"])
+        blobs_by_id.setdefault(row["id"], []).append(row)
     series = {SERIES_KIND: [], SERIES_SPLIT: []}
     for entry in sorted(entries, key=lambda e: e["id"]):
         if not pending_clauses(entry):
             continue
-        unsplit = unsplit_by_id.get(entry["id"], set())
+        blobs = blobs_by_id.get(entry["id"], [])
         payload = card_payload(entry, by_id.get(entry["id"], {}),
-                               faq_by_id.get(entry["id"], {}), unsplit)
-        series[SERIES_SPLIT if unsplit else SERIES_KIND].append(payload)
+                               faq_by_id.get(entry["id"], {}), blobs)
+        series[SERIES_SPLIT if blobs else SERIES_KIND].append(payload)
     return series
 
 
@@ -132,13 +136,15 @@ RESULT_FORMAT = {
 }
 
 
-def write_batch(path, name, series, number, total, payload):
+def write_batch(path, name, series, number, remaining, payload):
+    # `remaining` 是**產生這一批的當下**這個系列還剩幾批,不是「總共幾批」——
+    # 待判集合一票比一票小,總數是個會過期的數字
     body = {
         "batch": name,
         "series": series,
         "series_label": SERIES_LABEL[series],
         "number": number,
-        "of": total,
+        "remaining_batches": remaining,
         "cards": len(payload),
         "clauses": sum(len(c["clauses"]) for c in payload),
         "guide": "docs/effect_kind_guide.md",
@@ -161,6 +167,10 @@ def main(argv=None):
                         help="只寫這個系列,可重複;預設兩個都寫")
     parser.add_argument("--limit", type=int,
                         help="每個系列只寫前 N 批(試點用)")
+    parser.add_argument("--start", type=int, default=1,
+                        help="第一個檔案的批號。每票只生自己那一批,而批次是"
+                             "即時產生的(待判集合一票比一票小),所以批號由票"
+                             "自己給,檔名才不會互相蓋掉")
     parser.add_argument("--dry-run", action="store_true",
                         help="只點數,不寫檔")
     args = parser.parse_args(argv)
@@ -178,15 +188,16 @@ def main(argv=None):
 
     for name in (SERIES_SPLIT, SERIES_KIND):
         payloads = series[name]
-        groups = batches_of(payloads, BATCH_SIZE[name])
         clauses = sum(len(c["clauses"]) for c in payloads)
+        groups = batches_of(payloads, BATCH_SIZE[name])
         print(f"{SERIES_LABEL[name]}({name}): {len(payloads)} 張卡 / "
               f"{clauses} 條待判效果句 → {len(groups)} 批,"
               f"每批 {BATCH_SIZE[name]} 張")
         if args.dry_run or name not in wanted:
             continue
         limit = len(groups) if args.limit is None else args.limit
-        for number, group in enumerate(groups[:limit], start=1):
+        for offset, group in enumerate(groups[:limit]):
+            number = args.start + offset
             batch = f"{name}-{number:02d}"
             path = os.path.join(args.out_dir, f"{batch}.json")
             write_batch(path, batch, name, number, len(groups), group)
@@ -194,7 +205,7 @@ def main(argv=None):
                   f"{sum(len(c['clauses']) for c in group)} 條)")
         if limit < len(groups):
             print(f"  其餘 {len(groups) - limit} 批未產生"
-                  f"(試點跑完再生,票08)")
+                  f"(下一票開始時再生,吃得到最新的規則層)")
     return 0
 
 

@@ -17,7 +17,8 @@
     ]
 
 `split: true` 的段落會拿 `text_zh` / `text_ja` 去拆句表;沒有這個旗標的只吃
-`kind` / `optional` / `role`。拆不出來或判不出來的留空並寫 `note`,不猜。
+`kind` / `optional` / `role`。拆不出來或判不出來的留空並寫 `note`,不猜——
+`clauses` 給空陣列即為「這一團拆不出來」,那一段不寫進拆句表,下一票會再出現一次。
 
 三道關卡,任何一道不過就整批不寫入(`--force` 可強行寫,但那等於把失敗藏起來):
 
@@ -37,11 +38,10 @@ import os
 import sys
 
 from build_tag_cards import print_report, write_rules_doc
-from official import INDEX_UNNUMBERED
 from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_RULES_DOC,
                    DEFAULT_SPLITS, DEFAULT_TAG_CARDS, dump_json, load_json,
                    load_optional)
-from tagcard import build_tag_cards, serialize_tag_cards, split_hash
+from tagcard import build_tag_cards, serialize_tag_cards
 
 # 套用時被管線擋下來的理由;新加的拆句紀錄一筆都不該落在這些清單裡
 SPLIT_FAILURES = ("split_malformed", "split_stale", "split_coverage_failed",
@@ -93,21 +93,24 @@ def set_problems(batch, result):
     return problems
 
 
-def blob_index(entries, report):
-    """{(卡片密碼, section): 未拆整團的那一行},拆句表的雜湊對著它算。"""
-    unsplit = {(row["id"], row["section"]) for row in report["pending_split"]}
-    blobs = {}
-    for entry in entries:
-        for clause in entry["clauses"]:
-            key = (entry["id"], clause["section"])
-            if key in unsplit and clause["index"] == INDEX_UNNUMBERED:
-                blobs[key] = clause
-    return blobs
+def blob_index(report):
+    """{(卡片密碼, section): 未拆整團的兩側原文與雜湊}。
+
+    取自報告的待拆清單而不是標記表上那一行——● 子效果可能已經把那一行切掉一塊,
+    而拆句表要對的是整團(票13)。批次檔給判定者看的也是同一份。
+    """
+    return {(row["id"], row["section"]): row
+            for row in report["pending_split"]}
 
 
 def split_records(result, blobs, ticket):
-    """結果檔的拆點 → 拆句表紀錄;對不到未拆整團的段落列成問題。"""
+    """結果檔的拆點 → 拆句表紀錄;對不到未拆整團的段落列成問題。
+
+    `clauses` 空的那一種是判定者的「拆不出來」,照票面留空並記理由,不寫進拆句表
+    ——那一張卡下一票會原封不動再出現一次。
+    """
     records = []
+    skipped = []
     problems = []
     for record in result:
         if not record.get("split"):
@@ -116,16 +119,21 @@ def split_records(result, blobs, ticket):
         if blob is None:
             problems.append(f"{key_of(record)} 不是未拆的整團,無從套用拆點")
             continue
+        if not record.get("clauses"):
+            if not record.get("note"):
+                problems.append(f"{key_of(record)} 沒有拆點也沒有留下理由")
+            skipped.append((key_of(record), record.get("note") or ""))
+            continue
         segments = [{"index": row["index"], "text_zh": row.get("text_zh", ""),
                      "text_ja": row.get("text_ja", "")}
-                    for row in record.get("clauses", ())]
+                    for row in record["clauses"]]
         records.append({
             "id": record["id"], "section": record["section"],
             "ticket": ticket,
-            "text_hash": split_hash(blob["text_zh"], blob["text_ja"]),
+            "text_hash": blob["text_hash"],
             "segments": segments,
         })
-    return records, problems
+    return records, skipped, problems
 
 
 def merged_splits(existing, records):
@@ -176,10 +184,10 @@ def main(argv=None):
 
     # 先照既有的拆句表跑一次,好拿到整團現在的原文——拆句表的雜湊對著它算,
     # 判定票寫結果檔時看到的也是它
-    entries, report = build_tag_cards(cards, faqs, existing=existing,
-                                      splits=splits)
-    records, blob_problems = split_records(result, blob_index(entries, report),
-                                           args.ticket)
+    _entries, report = build_tag_cards(cards, faqs, existing=existing,
+                                       splits=splits)
+    records, skipped, blob_problems = split_records(
+        result, blob_index(report), args.ticket)
     problems += blob_problems
     updated = merged_splits(splits, records)
 
@@ -188,8 +196,11 @@ def main(argv=None):
     problems += applied_problems(report, records)
 
     print(f"結果檔 {len(result)} 段落:拆句 {len(records)} 筆、"
+          f"拆不出來 {len(skipped)} 筆、"
           f"判定 {report['judgment_clauses']} 條寫入、"
           f"官方接手 {report['judgment_confirmed_by_official']} 條")
+    for key, note in skipped:
+        print(f"  拆不出來 {key}: {note}")
     print(f"關卡: {len(problems)} 個問題")
     for problem in problems:
         print(f"  {problem}")

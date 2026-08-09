@@ -227,8 +227,8 @@ class TestUnnumbered(unittest.TestCase):
         self.assertEqual(clauses[0]["index"], "1")
         self.assertIsNone(clauses[0]["kind"])
         self.assertIsNone(clauses[0]["source"])
-        self.assertEqual(report["pending_split"],
-                         [{"id": 1000, "section": "main"}])
+        self.assertEqual([(row["id"], row["section"])
+                          for row in report["pending_split"]], [(1000, "main")])
 
 
 class TestPendulum(unittest.TestCase):
@@ -2432,6 +2432,35 @@ class TestSplitPreservesTheFirstIndex(unittest.TestCase):
         self.assertEqual(report["orphaned_judgments"], [])
 
 
+class TestPendingSplitCarriesTheBlob(unittest.TestCase):
+    """待拆清單帶著整團的兩側原文與雜湊——判定票看到的必須就是驗證會對的那一份。
+
+    否則批次檔只能拿標記表上那一行的文字當拆句標的,而 ● 已經把它切掉一塊了
+    (票13 實測 5 張):判定者照那一份拆,雜湊與覆蓋兩道驗證必然雙雙失敗。
+    """
+
+    def test_row_carries_both_sides_and_the_hash(self):
+        _entries, report = build_tag_cards(*old_card())
+        self.assertEqual(report["pending_split"], [{
+            "id": 1000, "section": "main", "text_zh": OLD_ZH,
+            "text_ja": OLD_JA, "text_hash": split_hash(OLD_ZH, OLD_JA)}])
+
+    def test_a_blob_whose_bullets_were_carved_off_still_reports_the_whole_blob(
+            self):
+        desc = OLD_ZH + "可以發動1個以下效果。\n●選項甲。\n●選項乙。"
+        card_text = OLD_JA + "以下の効果を１つ発動できる。●選択肢甲。●選択肢乙。"
+        supplement = ("【１つ目の●について】\n"
+                      "■モンスターゾーンで発動できる起動効果です。\n\n"
+                      "【２つ目の●について】\n"
+                      "■モンスターゾーンで適用する永続効果です。")
+        _entries, report = build_tag_cards(
+            [card(desc=desc)],
+            [faq(card_text=card_text, supplement=supplement)])
+        self.assertEqual(report["pending_split"], [{
+            "id": 1000, "section": "main", "text_zh": desc,
+            "text_ja": card_text, "text_hash": split_hash(desc, card_text)}])
+
+
 class TestSplitValidation(unittest.TestCase):
     """三道驗證,任何一道失敗即整筆不寫入、退回整團(ADR-0003)。"""
 
@@ -2444,8 +2473,8 @@ class TestSplitValidation(unittest.TestCase):
         self.assertEqual([c["index"] for c in clauses], ["1"])
         self.assertEqual(clauses[0]["text_zh"], OLD_ZH)
         self.assertEqual(report["split_records"], 0)
-        self.assertEqual(report["pending_split"],
-                         [{"id": 1000, "section": "main"}])
+        self.assertEqual([(row["id"], row["section"])
+                          for row in report["pending_split"]], [(1000, "main")])
 
     def test_a_dropped_sentence_fails_the_coverage_check(self):
         """「連續子字串」擋得住竄改但擋不住漏掉,漏掉是判定者的沉默失效模式。"""

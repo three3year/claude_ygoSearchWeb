@@ -1086,9 +1086,14 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
         segments = None if split is None else _apply_split(
             cid, section, split, blob, ctype, supplement, report)
         if segments is None:
-            # 無編號舊式卡文還沒拆:整團先當單一效果句,語意拆分交給判定者
+            # 無編號舊式卡文還沒拆:整團先當單一效果句,語意拆分交給判定者。
+            # 待拆清單帶著整團的兩側原文與雜湊,因為 ● 待會可能把這一行切掉一塊
+            # ——批次檔要給判定者看的、與拆句表要對的,都是這裡這一份整團
             clauses.append(blob)
-            report["pending_split"].append({"id": cid, "section": section})
+            report["pending_split"].append(
+                {"id": cid, "section": section, "text_zh": blob["text_zh"],
+                 "text_ja": blob["text_ja"],
+                 "text_hash": split_hash(blob["text_zh"], blob["text_ja"])})
             unsplit.add(INDEX_UNNUMBERED)
         else:
             clauses.extend(segments)

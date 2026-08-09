@@ -538,6 +538,20 @@ def _apply_attestations(cid, section, clauses, name_ja, supplement, unsplit,
 # 發動子句的結尾。日文卡文的硬性寫作慣例:能不能發動寫在發動子句的句尾。
 _OPTIONAL_ENDINGS = ("できる", "できます")
 _ACTIVATION_MARK = "発動"
+# 舊式的代價句型「〜する事で、…する。」:發動子句不以「できる」結尾,句尾規則因此
+# 推定必發,但那個「事で」正是「付這個代價就可以」的意思(繁中一律譯作「可以藉由
+# …」),一律選發。規範 §4 第三層。
+#
+# 條件是「發動子句裡有〈辭書形〉事で」,兩件事都**不**要求:
+# 逗號——「〜送る事で「ホルスの黒炎竜 LV８」１体を…」(11224103)後面直接接引號;
+# 發動子句不含「発動」——「相手が…効果を発動した時、このカードをリリースする事で
+# …」(7841112)的「発動」是觸發事件裡的,不是這一句自己的可否。
+#
+# 但**「た事で」不算**:那是「因為發生了這件事」而不是「付這個代價就可以」,官方
+# 對它判必發(`装備モンスターがフィールドから離れた事でこのカードが墓地へ送られた
+# 場合に発動する`,51686645 / 90673413)。少了這道排除,官方明示的必發獨立驗證會從
+# 847/848 掉到 845/848。
+_COST_PARTICLE_RE = re.compile(r"(?<!た)事で")
 # 規則判不出的三種原因,報告的驗證集分別計數
 _UNPREDICTED_KEYS = {"未拆句": "unsplit", "無日文卡文": "no_text",
                      "找不到發動子句": "no_activation"}
@@ -596,6 +610,10 @@ def _optional_by_rule(clause, unsplit):
 
     第一句既沒有「できる」也沒提到発動時(「②：…は以下の効果を得る。●…」這種
     領起句)不算發動子句——真正的發動寫在後面的 ● 分項裡,推定必發會錯。
+
+    代價句型「〜する事で、…」在「できる」之後、其餘兩條之前結算:它一樣不以
+    「できる」結尾,句尾規則會推定必發或乾脆認不出發動子句,而「事で」已經寫明了
+    「付這個代價就可以」(票19,§4 第三層)。
     """
     if clause["index"] in unsplit:
         return None, "未拆句"
@@ -605,6 +623,8 @@ def _optional_by_rule(clause, unsplit):
     if activation is None:
         return None, "找不到發動子句"
     if activation.endswith(_OPTIONAL_ENDINGS):
+        return OPTIONAL_OPTIONAL, activation
+    if _COST_PARTICLE_RE.search(activation):
         return OPTIONAL_OPTIONAL, activation
     if _ACTIVATION_MARK not in activation:
         return None, "找不到發動子句"

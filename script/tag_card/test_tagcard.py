@@ -1590,6 +1590,53 @@ class TestOptionalRule(unittest.TestCase):
                           for r in report["optional_pending"]],
                          [(1000, "找不到發動子句")])
 
+    def test_cost_particle_without_dekiru_is_optional(self):
+        """舊式代價句型「〜する事で、…する。」→ 選發(規範 §4 第三層)。
+
+        句尾規則對這一族要嘛認不出發動子句、要嘛推定必發,而「事で」已經寫明了
+        「付這個代價就可以」。票19 全表量到 0 條反例後登記。
+        """
+        clauses, report = self.optional_of(
+            "①：このカードをデッキに戻す事で、デッキからモンスター１体を"
+            "特殊召喚する。")
+        self.assertEqual(clauses[0]["optional"], "選發")
+        self.assertEqual(report["optional_rule"], 1)
+
+    def test_cost_particle_needs_no_comma_after_it(self):
+        """「〜送る事で「〈卡名〉」１体を…」後面直接接引號,一樣是代價句型。"""
+        clauses, _ = self.optional_of(
+            "①：このカードを墓地へ送る事で「效果甲」１体を手札に加える。")
+        self.assertEqual(clauses[0]["optional"], "選發")
+
+    def test_cost_particle_wins_over_the_mandatory_default(self):
+        """發動子句裡的「発動」是**觸發事件**時,不得因此推定必發。
+
+        「相手が…効果を発動した時、このカードをリリースする事で…」講的是對手發動了
+        什麼,不是這一句自己的可否;可否寫在「事で」上(救世星龍 7841112)。
+        """
+        clauses, _ = self.optional_of(
+            "①：相手が魔法カードを発動した時、このカードをリリースする事で"
+            "その発動を無効にする。")
+        self.assertEqual(clauses[0]["optional"], "選發")
+
+    def test_past_tense_koto_de_is_not_the_cost_particle(self):
+        """「〜た事で」是「因為發生了這件事」,不是「付這個代價就可以」→ 必發。
+
+        官方對這一族判必發(`装備モンスターがフィールドから離れた事でこのカードが
+        墓地へ送られた場合に発動する`,51686645)。
+        """
+        clauses, _ = self.optional_of(
+            "①：装備モンスターがフィールドから離れた事でこのカードが墓地へ"
+            "送られた場合に発動する。デッキから１枚ドローする。")
+        self.assertEqual(clauses[0]["optional"], "必發")
+
+    def test_dekiru_ending_still_wins_over_the_cost_particle(self):
+        """句尾「できる」是更強的訊號,順序不能顛倒(兩者結論相同,只驗順序)。"""
+        clauses, report = self.optional_of(
+            "①：手札を１枚捨てる事で発動できる。デッキから１枚ドローする。")
+        self.assertEqual(clauses[0]["optional"], "選發")
+        self.assertEqual(report["optional_rule"], 1)
+
     def test_scan_stops_at_the_clause_boundary(self):
         """日文卡文整段不換行時,①的掃描不得咬到②的「発動できる」。"""
         entries, _ = build_tag_cards(

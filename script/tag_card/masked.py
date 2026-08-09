@@ -218,7 +218,15 @@ def _key(row):
 
 
 def _answer_key(entries):
-    return {(entry["id"], clause["section"], clause["index"]): clause["kind"]
+    """標記表 → {(卡片密碼, section, index): 官方類型 or None}。
+
+    鍵收全部的行,值只認 `source: "official"`。兩件事因此分得開:鍵不在裡面代表
+    那一行整個不見了(樣本過期),鍵在但值是 None 代表那一行**現在沒有官方答案**
+    ——可能是官方明示被撤回,也可能是判定票後來把類型填了上去。後者尤其不能當
+    標準答案:那是判定者自己的產出,拿它對答案等於讓判定者跟自己對。
+    """
+    return {(entry["id"], clause["section"], clause["index"]):
+            clause["kind"] if clause["source"] == SOURCE_OFFICIAL else None
             for entry in entries for clause in entry["clauses"]}
 
 
@@ -247,9 +255,9 @@ def score_masked(entries, sample, answers, ambiguous=(), pipeline=()):
 
       stale     —— `(卡片密碼, section, index)` 在標記表裡整個不見了。結構對不上,
                    判不通過,該重抽。
-      withdrawn —— key 還在,但官方類型被撤回(`kind` 不在值域內)。這是資料的正常
-                   演進(票11 把未拆整團的官方明示撤掉就撤了 1,146 條),不判不通過,
-                   只是那一條沒有標準答案可對。
+      withdrawn —— key 還在,但那一行**現在沒有官方答案**:官方明示被撤回(票11 撤掉
+                   未拆整團的就撤了 1,146 條),或判定票後來把類型填了上去。都是資料
+                   的正常演進,不判不通過,只是那一條沒有標準答案可對。
 
     判定者仍然可以對 withdrawn 的行作答——那些行當初確實在樣本裡,答了不算多判、
     不答也不算漏判。

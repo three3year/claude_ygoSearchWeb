@@ -370,6 +370,31 @@ class ScoringTest(unittest.TestCase):
         self.assertEqual(report["stale"], [])    # key 還在,不是樣本過期
         self.assertTrue(report["passed"])
 
+    def test_判定填回來的類型不是標準答案(self):
+        """票11 撤掉的官方明示,票13 拆完會以 llm 填回來。
+
+        那是判定者自己的產出——拿它當標準答案等於讓判定者跟自己對答案,分數會
+        虛高。標準答案只認 source: "official"(見 sample_masked)。
+        """
+        entries, sample = self.fixture(KIND_TRIGGER, KIND_TRIGGER)
+        judged = entries[1]["clauses"][0]
+        judged["kind"], judged["source"] = KIND_CONTINUOUS, "llm"
+        report = masked.score_masked(entries, sample,
+                                     [answer(sample[0], KIND_TRIGGER)])
+        self.assertEqual(len(report["withdrawn"]), 1)
+        self.assertEqual(report["per_kind"][KIND_TRIGGER]["scored"], 1)
+        self.assertNotIn(KIND_CONTINUOUS, report["per_kind"])
+        self.assertEqual(report["stale"], [])
+        self.assertTrue(report["passed"])
+
+    def test_雙重確認的行仍然不是標準答案(self):
+        """llm_then_rule 是判定 + 規則,兩個都不是官方。"""
+        entries, sample = self.fixture(KIND_TRIGGER)
+        entries[0]["clauses"][0]["source"] = "llm_then_rule"
+        report = masked.score_masked(entries, sample, [])
+        self.assertEqual(len(report["withdrawn"]), 1)
+        self.assertEqual(report["missing"], [])
+
     def test_答了官方答案已撤回的行不算多判(self):
         entries, sample = self.fixture(KIND_TRIGGER, KIND_TRIGGER)
         entries[1]["clauses"][0]["kind"] = None

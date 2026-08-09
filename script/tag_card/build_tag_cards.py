@@ -4,6 +4,10 @@
 餵回管線,人工修正與已判定的行因此活過每一次重跑。要完全重建請加
 `--ignore-existing`——那會丟掉檔案裡所有 manual / official / llm 的判定。
 
+[[拆句表]] `data/clause_splits.json` 同樣是來源檔(ADR-0003),存在就自動讀進來把
+舊式無編號的整團切開。`--judgments` 可再餵一份判定結果檔,把類型合併進標記表——
+兩者由 `merge_judgments.py` 依判定票的結果檔產生,這裡只負責讀。
+
 順帶把效果類型規則清單回寫 `docs/effect_kind_rules.md`:規則的定義寫在
 `script/tag_card/rules.py`,但覆蓋條數與對官方明示的一致率一律由這一次的全表
 統計算出來後填進去,不靠人工計數(票06)。`--rules-doc` 可改路徑。
@@ -29,6 +33,7 @@ ROOT = os.path.dirname(
 DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_FAQ_INFO = os.path.join(ROOT, "data", "sources", "faq_info.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "data", "tag_cards.json")
+DEFAULT_SPLITS = os.path.join(ROOT, "data", "clause_splits.json")
 DEFAULT_RULES_DOC = os.path.join(ROOT, "docs", "effect_kind_rules.md")
 
 LIST_PREVIEW = 20  # 清單過長時只印前幾筆,完整內容看輸出檔
@@ -55,6 +60,49 @@ ATTRIBUTION_LISTS = (
 def load_json(path):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def load_optional(path, missing=None):
+    """來源檔還不存在時不是錯誤——拆句表與標記表都是一票一票長出來的。"""
+    return load_json(path) if os.path.exists(path) else missing
+
+
+def print_splits(report, file=sys.stdout):
+    """拆句表:套用了幾筆、拆出多少條,以及三道驗證各自的失敗筆數。"""
+    p = lambda *a: print(*a, file=file)  # noqa: E731
+    p("")
+    p(f"拆句表: 套用 {report['split_records']} 筆,"
+      f"拆出效果句 {report['split_clauses']} 條,"
+      f"因拆句新取得官方明示 {report['split_new_official']} 條")
+    for key, label in (
+            ("split_coverage_failed", "驗證一・無遺漏覆蓋不成立"),
+            ("split_quote_violations", "驗證二・官方引用被拆點切開(必須為 0)"),
+            ("split_stale", "驗證三・卡文已變動,退回整團"),
+            ("split_malformed", "紀錄結構不合法(index 或雜湊)"),
+            ("split_unused", "有紀錄但該段不是未拆的整團")):
+        rows = report[key]
+        p(f"  {label}: {len(rows)} 筆 {[r['id'] for r in rows[:LIST_PREVIEW]]}")
+
+
+def print_judgments(report, file=sys.stdout):
+    """判定結果合併:寫進去幾條、官方接手幾條,以及每一種沒寫進去的理由。"""
+    p = lambda *a: print(*a, file=file)  # noqa: E731
+    p("")
+    p(f"判定結果: 寫入 {report['judgment_clauses']} 條,"
+      f"與官方明示一致而留 official {report['judgment_confirmed_by_official']} 條,"
+      f"判定給的必發/選發 {report['optional_llm']} 條")
+    for key, label in (
+            ("judgment_blank", "判定者留空未判"),
+            ("judgment_vs_rule", "與位置規則結論不同(未覆蓋)"),
+            ("judgment_optional_dropped", "類型不承載必發/選發(已丟棄)"),
+            ("judgment_overridden", "既有判定擋下本次判定(判定一次就算數)"),
+            ("judgment_orphans", "結果檔對不到任何一行(必須為 0)")):
+        rows = report[key]
+        p(f"  {label}: {len(rows)} 筆")
+        for row in rows[:LIST_PREVIEW]:
+            extra = " ".join(f"{k}={v}" for k, v in row.items()
+                             if k not in ("id", "section", "index"))
+            p(clause_line(row, extra, indent="    "))
 
 
 def print_optional(report, file=sys.stdout):
@@ -360,9 +408,13 @@ def print_report(report, digest_changed=False, file=sys.stdout):
     p(f"● 子效果拆出: {report['bullet_clauses']} 條,"
       f"繁中/日文 ● 數量不一致未拆: {len(report['bullet_split_mismatch'])} 段")
 
+    print_splits(report, file=file)
+
     print_optional(report, file=file)
 
     print_rules(report, digest_changed, file=file)
+
+    print_judgments(report, file=file)
 
     print_merge(report, file=file)
 
@@ -377,9 +429,6 @@ def print_report(report, digest_changed=False, file=sys.stdout):
         rows = report[key]
         p(f"{label}: {len(rows)} 筆 {[r['id'] for r in rows[:LIST_PREVIEW]]}")
 
-    if report["unsupported_inputs"]:
-        p(f"本票尚未支援的輸入(已忽略): {report['unsupported_inputs']}")
-
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="建置效果標記表(拆句骨架)")
@@ -389,6 +438,11 @@ def main(argv=None):
                         help="補足情報 JSON (預設 data/sources/faq_info.json)")
     parser.add_argument("--out", default=DEFAULT_OUTPUT,
                         help="輸出 JSON 路徑 (預設 data/tag_cards.json)")
+    parser.add_argument("--splits", default=DEFAULT_SPLITS,
+                        help="拆句表 JSON (預設 data/clause_splits.json;"
+                             "檔案不存在就當作全部未拆)")
+    parser.add_argument("--judgments", action="append", default=[],
+                        help="判定結果 JSON,可重複指定")
     parser.add_argument("--rules-doc", default=DEFAULT_RULES_DOC,
                         help="效果類型規則清單的回寫路徑 "
                              "(預設 docs/effect_kind_rules.md)")
@@ -403,9 +457,18 @@ def main(argv=None):
         existing = load_json(args.out)
         print(f"既有標記表: {args.out}({len(existing)} 張卡)")
 
+    splits = load_optional(args.splits)
+    if splits:
+        print(f"拆句表: {args.splits}({len(splits)} 筆)")
+    judgments = [record for path in args.judgments
+                 for record in load_json(path)]
+    if judgments:
+        print(f"判定結果: {len(args.judgments)} 檔 / {len(judgments)} 張卡")
+
     entries, report = build_tag_cards(load_json(args.cards),
                                       load_json(args.faq_info),
-                                      existing=existing)
+                                      existing=existing, judgments=judgments,
+                                      splits=splits)
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8", newline="\n") as f:

@@ -105,6 +105,16 @@ def _normalise(text):
     return _NOISE_RE.sub("", folded.translate(_DASH_MAP))
 
 
+def normalise(text):
+    """比對用的正規化。拆句表的引用交叉驗證要與這裡用同一把尺。"""
+    return _normalise(text)
+
+
+def quotes(text):
+    """補足情報裡的 『原文』 引用(排除 『①』 這種純序號引用)。"""
+    return [q for q in _QUOTE_RE.findall(text or "") if not _is_sequence_ref(q)]
+
+
 def _is_non_effect_line(line):
     """這一行有沒有在括弧之外寫下效果外文本的明示。"""
     depth = 0
@@ -201,20 +211,41 @@ def _line_mandatory(line):
 
 # ---------------------------------------------------------------- 歸屬對位
 
+def _is_preamble(index):
+    """效果外文本段?舊式卡拆出第二段以上的效果外文本是 "0-2" / "0-3"。"""
+    return index == INDEX_PREAMBLE or index.startswith(INDEX_PREAMBLE + "-")
+
+
 def _numbered(effects):
-    """有編號的效果句(含 ● 子效果)。原文引用只對位得到「編號區段」。"""
+    """有編號的效果句(含 ● 子效果)。用來分辨新式卡文與舊式無編號卡文。"""
     return [c for c in effects if c["index"][:1] in NUMERALS]
 
 
+def _seq_target(index, effects, unsplit):
+    """『①』→ 效果句 index;對不到時回 None。
+
+    官方對舊式無編號卡文仍以①②稱呼,[[拆句表]]拆出來的段就是它指的那幾段
+    (index 規則:效果句為 "1" / "2" / "3")。整團還沒拆時整團就是官方口中的那一個。
+    """
+    if any(c["index"] == index for c in effects):
+        return index
+    if _numbered(effects):
+        return None  # 有編號卡文卻指名不存在的編號:對不到就是對不到
+    if len(effects) == 1 and effects[0]["index"] in unsplit:
+        return effects[0]["index"]
+    ordinal = str(NUMERALS.index(index) + 1)
+    return ordinal if any(c["index"] == ordinal for c in effects) else None
+
+
 def _match_quote(quoted, effects):
-    """『效果原文』→ 命中的編號效果句 index 清單(正規化後的子字串比對)。
+    """『效果原文』→ 命中的效果句 index 清單(正規化後的子字串比對)。
 
     引號可能是原文的截斷,因此用子字串而非全等;命中多個即為歧義,由呼叫端處理。
     """
     needle = _normalise(quoted)
     if not needle:
         return []
-    return [clause["index"] for clause in _numbered(effects)
+    return [clause["index"] for clause in effects
             if needle in _normalise(clause["text_ja"])]
 
 
@@ -237,7 +268,7 @@ def _resolve_bullet(spec, effects):
     return bullets[0]["index"] if len(bullets) == 1 else None
 
 
-def _resolve_header(header, effects):
+def _resolve_header(header, effects, attributable):
     """標頭 → (效果句 index, 狀態)。
 
     狀態 `missing` 表示標頭指名了一個卡文沒有的編號;`unresolved` 表示標頭存在
@@ -255,11 +286,9 @@ def _resolve_header(header, effects):
         index = _resolve_bullet(spec, effects)
         return (index, "index") if index is not None else (None, "unresolved")
 
-    # 引號標頭本身就是歸屬標記,比照階梯三對位回編號區段
-    for quoted in _QUOTE_RE.findall(header):
-        if _is_sequence_ref(quoted):
-            continue
-        hits = _match_quote(quoted, effects)
+    # 引號標頭本身就是歸屬標記,比照階梯三對位回效果句
+    for quoted in quotes(header):
+        hits = _match_quote(quoted, attributable)
         if len(hits) == 1:
             return hits[0], "index"
     return None, "unresolved"
@@ -267,13 +296,15 @@ def _resolve_header(header, effects):
 
 # ---------------------------------------------------------------- 接縫
 
-def attest(name_ja, supplement, clauses):
+def attest(name_ja, supplement, clauses, unsplit=()):
     """補足情報 + 某段落的效果句 → (類型判定, 必發判定, 註記)。
 
     類型判定為 {index: (效果類型, 對位方式)},必發判定為 {index: 對位方式}——
     官方寫下「必ず発動」的效果句。兩者共用同一套歸屬對位。
 
-    clauses 需含 index / text_ja;index 為 "0" 者視為前言段(效果外文本)。
+    clauses 需含 index / text_ja;index 為 "0" / "0-2" 者視為效果外文本段。
+    unsplit 是骨架算出來的「還沒依語意拆開的舊式整團」index 集合:它們不是已經
+    成立的效果句,不得作為歸屬對位的標的(票11)。
     註記的每一項都是「官方寫了判定但歸屬不確定」或「明示句不可採用」的理由,
     由呼叫端補上卡片密碼後放進報告。
     """
@@ -283,8 +314,10 @@ def attest(name_ja, supplement, clauses):
     if not supplement:
         return assignments, mandatory, notes
 
-    effects = [c for c in clauses if c["index"] != INDEX_PREAMBLE]
-    preamble = next((c for c in clauses if c["index"] == INDEX_PREAMBLE), None)
+    effects = [c for c in clauses if not _is_preamble(c["index"])]
+    preambles = [c for c in clauses if _is_preamble(c["index"])]
+    # 對得出歸屬的效果句:未拆的整團只是骨架的暫代值,不算數
+    attributable = [c for c in effects if c["index"] not in unsplit]
     own_name = _normalise(name_ja)
     conflicting = set()
     # 只寫必發而沒寫類型的明示句另立一份清單,不去動票03 那幾份類型清單的筆數
@@ -321,26 +354,21 @@ def attest(name_ja, supplement, clauses):
         """
         sequence = _SEQ_QUOTE_RE.findall(line)
         if sequence:
-            index = sequence[0]
-            if any(c["index"] == index for c in effects):
-                assign(index, kind, LADDER_SEQ, line, is_mandatory)
-            elif len(effects) == 1 and not _numbered(effects):
-                # 舊式無編號卡文,官方仍以『①』稱呼那唯一的效果
-                assign(effects[0]["index"], kind, LADDER_SEQ, line,
-                       is_mandatory)
+            target = _seq_target(sequence[0], effects, unsplit)
+            if target is not None:
+                assign(target, kind, LADDER_SEQ, line, is_mandatory)
             else:
-                note("seq_missing", {"index": index})
+                note("seq_missing", {"index": sequence[0]})
             return
-        quotes = [q for q in _QUOTE_RE.findall(line)
-                  if not _is_sequence_ref(q)]
-        if quotes:
-            if not _numbered(effects):
+        quoted_lines = quotes(line)
+        if quoted_lines:
+            if not attributable:
                 # 舊式無編號卡文還沒依語意拆開,引用指向的是這一團的某一部分
                 note("attribution_deferred",
                      {"kind": kind, "reason": "無編號卡文待拆", "line": line})
                 return
-            quoted = quotes[0]
-            hits = _match_quote(quoted, effects)
+            quoted = quoted_lines[0]
+            hits = _match_quote(quoted, attributable)
             if len(hits) == 1:
                 assign(hits[0], kind, LADDER_QUOTE, line, is_mandatory)
             elif not hits:
@@ -373,26 +401,22 @@ def attest(name_ja, supplement, clauses):
         if len(effects) != 1:
             note("attribution_deferred",
                  {"kind": kind, "reason": reason, "line": line})
-        elif effects[0]["index"] == INDEX_UNNUMBERED:
+        elif effects[0]["index"] in unsplit:
             note("attribution_deferred",
                  {"kind": kind, "reason": "無編號卡文待拆", "line": line})
         else:
             assign(effects[0]["index"], kind, ladder, line, is_mandatory)
 
     def non_effect(line, header):
-        """效果外文本的明示:指向前言段才自動套用,否則只進報告。
+        """效果外文本的明示:指向效果外文本段才自動套用,否則只進報告。
 
         八種變體走的是同一條路徑——寫法不同不代表證據更強。
         """
-        targets = [q for q in _QUOTE_RE.findall(line)
-                   if not _is_sequence_ref(q)]
-        if not targets and header:
-            targets = [q for q in _QUOTE_RE.findall(header)
-                       if not _is_sequence_ref(q)]
-        if preamble is not None:
-            body = _normalise(preamble["text_ja"])
+        targets = quotes(line) or (quotes(header) if header else [])
+        for segment in preambles:
+            body = _normalise(segment["text_ja"])
             if body and any(_normalise(t) in body for t in targets):
-                assign(INDEX_PREAMBLE, KIND_NON_EFFECT, LADDER_NON_EFFECT,
+                assign(segment["index"], KIND_NON_EFFECT, LADDER_NON_EFFECT,
                        line)
                 return
         notes["non_effect_outside_preamble"].append(
@@ -400,7 +424,7 @@ def attest(name_ja, supplement, clauses):
 
     for header, body in _blocks(supplement):
         target, status = (None, "none") if not header \
-            else _resolve_header(header, effects)
+            else _resolve_header(header, effects, attributable)
         for raw in body.split("\n"):
             line = raw.strip()
             if not line:
@@ -426,7 +450,7 @@ def attest(name_ja, supplement, clauses):
             elif status == "unresolved":
                 note("attribution_deferred",
                      {"kind": kind, "line": line,
-                      "reason": "無編號卡文待拆" if not _numbered(effects)
+                      "reason": "無編號卡文待拆" if not attributable
                       else "標頭對不出標的"})
             else:
                 attribute(line, kind, is_mandatory)

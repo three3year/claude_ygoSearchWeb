@@ -1,12 +1,13 @@
 """效果標記表管線:卡片總表 + 補足情報 → 效果標記表(拆句骨架)。
 
-單一接縫:build_tag_cards(卡片總表條目, 補足情報條目[, 既有標記表, 判定結果])
-    → (entries, report)
+單一接縫:build_tag_cards(卡片總表條目, 補足情報條目[, 既有標記表, 判定結果,
+    拆句表]) → (entries, report)
 純函式,不碰網路與檔案系統。詞彙見 CONTEXT.md:效果標記表、效果句、效果類型、
-效果外文本、必發/選發。
+效果外文本、必發/選發、拆句表。
 
-拆句、官方明示、必發/選發、既有標記表的合併與效果類型規則層的影子預測
-(票02/03/04/05/06)已實作;判定結果的合併(票08)另票處理。
+三個選用參數的生效時機不同,順序是本模組的骨幹(ADR-0003):
+    拆句表 → 官方明示抽取 → 必發/選發 → 判定結果 → 既有標記表 → 影子預測
+拆句表決定效果句的**集合**、判定結果決定效果句上的**值**。
 """
 import hashlib
 import json
@@ -264,15 +265,144 @@ def _split_bullets(cid, section, clauses, supplement, report):
     return split
 
 
+# ---------------------------------------------------------------- 拆句表
+
+# 拆出來的段落 index:效果外文本段 "0" / "0-2" / "0-3",效果句 "1" / "2" / "3"。
+# "1" 沿用整團現在的 index,只有一段效果句的卡拆完後 index 不變、不製造孤兒。
+_SPLIT_INDEX_RE = re.compile(r"^(?:0(?:-[2-9][0-9]*)?|[1-9][0-9]*)$")
+_SPLIT_HASH_SEP = "\x1f"
+
+
+def split_hash(text_zh, text_ja):
+    """拆句當時的卡文雜湊(兩側一起算)。
+
+    對「偵測變動」是冗餘的——無遺漏覆蓋等式已經涵蓋任何一個字元的變動。留著是為了
+    **診斷**:出事時能一眼看出這筆拆點是對著哪一版卡文切的(ADR-0003)。
+    寫拆句表的程式與讀拆句表的骨架共用這一支,兩邊不會各算各的。
+    """
+    body = f"{text_zh}{_SPLIT_HASH_SEP}{text_ja}"
+    return hashlib.sha1(body.encode("utf-8")).hexdigest()[:16]
+
+
+def _index_splits(splits):
+    """拆句表 → {(卡片密碼, section): 紀錄}。"""
+    return {(record["id"], record["section"]): record
+            for record in splits or ()}
+
+
+def _condense(text):
+    """去掉全部空白 → (壓縮後的文字, 每個字元在原文的位移)。"""
+    kept = [(ch, pos) for pos, ch in enumerate(text) if not ch.isspace()]
+    return "".join(ch for ch, _ in kept), [pos for _, pos in kept]
+
+
+def _cover_spans(text, parts):
+    """段落原文子字串 → 各段在原文的 span;串接對不上原文時回 None。
+
+    **驗證一・無遺漏覆蓋**:比對忽略空白,但切出來的一律是原文的連續子字串。
+    「連續子字串」擋得住竄改卻擋不住漏掉,而漏掉是判定者唯一的沉默失效模式。
+    """
+    body, offsets = _condense(text)
+    condensed = [_condense(part)[0] for part in parts]
+    if "".join(condensed) != body:
+        return None
+    sizes = [len(part) for part in condensed]
+    spans = []
+    start = 0
+    for size in sizes:
+        spans.append((offsets[start], offsets[start + size - 1] + 1)
+                     if size else None)
+        start += size
+    return spans
+
+
+def _quotes_cut_apart(text_ja, spans, supplement):
+    """**驗證二・引用交叉驗證**:被拆點切成兩半的官方 『原文』 引用。
+
+    不需要標準答案就能自動檢查——引用橫跨拆點,就證明那兩段是同一個效果句。
+    """
+    if not text_ja:
+        return []
+    body = official.normalise(text_ja)
+    segments = [official.normalise(_slice(text_ja, span)) for span in spans]
+    cut = []
+    for quoted in official.quotes(supplement):
+        needle = official.normalise(quoted)
+        if needle and needle in body and not any(needle in segment
+                                                 for segment in segments):
+            cut.append(quoted)
+    return cut
+
+
+def _validate_split(record, blob, supplement):
+    """拆句表的一筆 → ({側: 各段 span}, None) 或 (None, 不能用的理由)。
+
+    順序即優先序:結構不合法 → 卡文已變動 → 覆蓋不成立 → 引用被切開。**驗證三・
+    卡文變動即失效**走的是前兩道,一律退回整團而不保留舊拆點——保留失效的斷言會讓
+    歸屬階梯在假前提上開火,那正是票11 的錯誤。
+    """
+    segments = record.get("segments") or ()
+    indexes = [segment.get("index") for segment in segments]
+    if (not segments or not record.get("text_hash")
+            or len(set(indexes)) != len(indexes)
+            or any(not _SPLIT_INDEX_RE.match(index or "")
+                   for index in indexes)):
+        return None, ("split_malformed", {})
+    if record["text_hash"] != split_hash(blob["text_zh"], blob["text_ja"]):
+        return None, ("split_stale", {})
+    spans = {}
+    for side in ("zh", "ja"):
+        spans[side] = _cover_spans(
+            blob[f"text_{side}"],
+            [segment.get(f"text_{side}", "") for segment in segments])
+        if spans[side] is None:
+            return None, ("split_coverage_failed", {"side": side})
+    cut = _quotes_cut_apart(blob["text_ja"], spans["ja"], supplement)
+    if cut:
+        return None, ("split_quote_violations", {"quotes": cut})
+    return spans, None
+
+
+def _apply_split(cid, section, record, blob, ctype, supplement, report):
+    """拆句表的一筆 → 切開整團的效果句;任一道驗證不成立時回 None(退回整團)。"""
+    spans, problem = _validate_split(record, blob, supplement)
+    if problem is not None:
+        key, extra = problem
+        report[key].append({"id": cid, "section": section, **extra})
+        return None
+
+    clauses = []
+    for segment, zh_span, ja_span in zip(record["segments"], spans["zh"],
+                                         spans["ja"]):
+        index = segment["index"]
+        text_zh = _slice(blob["text_zh"], zh_span)
+        text_ja = _slice(blob["text_ja"], ja_span)
+        if index.startswith(INDEX_PREAMBLE):
+            # 效果外文本段走的是前言段那條位置規則,不送判定
+            role = _preamble_role(text_zh, ctype)
+            clauses.append(_clause(index, section, text_zh, text_ja,
+                                   blob["confidence"], kind=KIND_NON_EFFECT,
+                                   role=role, source=SOURCE_RULE))
+            report["preambles"] += 1
+            report["role_counts"][role or "null"] += 1
+        else:
+            clauses.append(_clause(index, section, text_zh, text_ja,
+                                   blob["confidence"]))
+            report["split_clauses"] += 1
+    report["split_records"] += 1
+    return clauses
+
+
 # ---------------------------------------------------------------- 官方明示
 
-def _apply_attestations(cid, section, clauses, name_ja, supplement, report):
+def _apply_attestations(cid, section, clauses, name_ja, supplement, unsplit,
+                        split_indexes, report):
     """官方明示的效果類型寫進效果句;歸屬不確定的只進報告,不猜測。
 
     回傳官方寫了「必ず発動」的效果句 index 集合,交給必發/選發那一層使用。
     """
     assignments, mandatory, notes = official.attest(name_ja, supplement,
-                                                    clauses)
+                                                    clauses, unsplit)
     by_index = {clause["index"]: clause for clause in clauses}
     for index, (kind, ladder) in assignments.items():
         clause = by_index[index]
@@ -280,6 +410,9 @@ def _apply_attestations(cid, section, clauses, name_ja, supplement, report):
         clause["source"] = official.SOURCE_OFFICIAL
         report["official_clauses"] += 1
         report["official_coverage"][ladder] += 1
+        if index in split_indexes:
+            # 票11 撤掉的那 1,146 條裡「其實是對的」那一部分從這裡回來
+            report["split_new_official"] += 1
     for key, rows in notes.items():
         for row in rows:
             report[key].append({"id": cid, "section": section, **row})
@@ -364,8 +497,8 @@ def _optional_by_rule(clause, unsplit):
     return OPTIONAL_MANDATORY, activation
 
 
-def _apply_optional(cid, section, clauses, attested, unsplit, report):
-    """必發/選發三層:官方明示 → 日文發動子句規則 → 留 null 待判。
+def _apply_optional(cid, section, clauses, attested, unsplit, judged, report):
+    """必發/選發四層:官方明示 → 判定結果 → 日文發動子句規則 → 留 null 待判。
 
     官方明示的那批同時當獨立驗證集:遮住答案跑一次規則,一致率進報告。
     """
@@ -383,10 +516,18 @@ def _apply_optional(cid, section, clauses, attested, unsplit, report):
                 report["mandatory_other_kind"].append(
                     {"id": cid, "section": section, "index": clause["index"],
                      "kind": clause["kind"]})
+            if judged.get(clause["index"]):
+                report["judgment_optional_dropped"].append(
+                    {"id": cid, "section": section, "index": clause["index"],
+                     "kind": clause["kind"],
+                     "optional": judged[clause["index"]]})
             continue
         if is_attested:
             clause["optional"] = OPTIONAL_MANDATORY
             report["optional_official"] += 1
+        elif judged.get(clause["index"]):
+            clause["optional"] = judged[clause["index"]]
+            report["optional_llm"] += 1
         elif predicted is not None:
             clause["optional"] = predicted
             report["optional_rule"] += 1
@@ -410,6 +551,71 @@ def _validate_optional(cid, section, clause, predicted, detail, report):
         validation["disagree"].append(
             {"id": cid, "section": section, "index": clause["index"],
              "predicted": predicted, "activation": detail})
+
+
+# ---------------------------------------------------------------- 判定結果
+
+def _index_judgments(judgments):
+    """判定結果檔 → {(卡片密碼, section, index): 那一行的判定}。"""
+    rows = {}
+    for record in judgments or ():
+        for row in record.get("clauses", ()):
+            rows[(record["id"], record["section"], row["index"])] = row
+    return rows
+
+
+def _apply_judgments(cid, section, clauses, judgments, report):
+    """判定結果 → 效果句上的 kind / role;回傳 {index: 判定給的必發/選發}。
+
+    官方明示高於判定:一致時留 official(這一行不占 ADR-0002 的判定額度),不一致
+    時保留判定並把這一行標 needs_review——呼叫端會把整張卡一起標,因為這條路徑上
+    不一致的最可能成因是拆錯而不是判錯,只標一行會讓人去看錯的東西。
+
+    位置規則已經定案的效果外文本段不被判定覆蓋,結論不同時只進報告。
+    """
+    judged = {}
+    for clause in clauses:
+        row = judgments.get((cid, section, clause["index"]))
+        if row is None:
+            continue
+        if clause["source"] == official.SOURCE_OFFICIAL:
+            if row.get("kind") and row["kind"] != clause["kind"]:
+                report["late_official_conflicts"].append(_merge_row(
+                    cid, clause, existing=row["kind"],
+                    official=clause["kind"], source=SOURCE_LLM))
+                clause["kind"] = row["kind"]
+                clause["source"] = SOURCE_LLM
+                clause["needs_review"] = True
+                report["judgment_clauses"] += 1
+                judged[clause["index"]] = row.get("optional")
+            else:
+                report["judgment_confirmed_by_official"] += 1
+            continue
+        if clause["kind"] is not None:
+            if row.get("kind") != clause["kind"]:
+                report["judgment_vs_rule"].append(_merge_row(
+                    cid, clause, existing=clause["kind"],
+                    judged=row.get("kind")))
+            continue
+        if not row.get("kind"):
+            report["judgment_blank"].append(_merge_row(
+                cid, clause, note=row.get("note") or ""))
+            continue
+        clause["kind"] = row["kind"]
+        clause["role"] = row.get("role")
+        clause["source"] = SOURCE_LLM
+        report["judgment_clauses"] += 1
+        judged[clause["index"]] = row.get("optional")
+    return judged
+
+
+def _report_judgment_orphans(entries, judgments, report):
+    """結果檔涵蓋的效果句集合必須與標記表對得上;多出來的一筆就是判錯批次。"""
+    present = {(entry["id"], clause["section"], clause["index"])
+               for entry in entries for clause in entry["clauses"]}
+    report["judgment_orphans"] = [
+        {"id": cid, "section": section, "index": index}
+        for cid, section, index in sorted(set(judgments) - present)]
 
 
 # ---------------------------------------------------------------- 重跑合併
@@ -497,10 +703,19 @@ def _merge_clause(cid, fresh, prior, report):
                 official=_judgment_text(fresh)))
         return fresh
 
+    if fresh["source"] == SOURCE_LLM and _judgment(fresh) != _judgment(prior):
+        # 本次的判定被既有那一行擋下來(ADR-0002:判定一次就算數)。要是判定票是
+        # 回頭重判的,靜靜擋掉會讓人以為改上去了,所以這一筆必須看得見
+        report["judgment_overridden"].append(_merge_row(
+            cid, fresh, existing=_judgment_text(prior),
+            judged=_judgment_text(fresh), source=prior["source"]))
+
     merged = dict(fresh)
     for field in JUDGED_FIELDS:
         merged[field] = prior.get(field, fresh[field])
-    merged["needs_review"] = bool(prior.get("needs_review"))
+    # 本次才標上的旗標(判定與官方明示打架)不會被既有那一行的乾淨狀態洗掉
+    merged["needs_review"] = bool(prior.get("needs_review")
+                                  or fresh["needs_review"])
     upgraded = (fresh["source"] == official.SOURCE_OFFICIAL
                 and _apply_late_attestation(cid, merged, fresh, prior, report))
     if not upgraded:
@@ -691,13 +906,28 @@ def _new_report():
         "duplicate_index": [],
         "substring_violations": [],
         "zh_cut_rule_disagree": 0,
-        "unsupported_inputs": [],
+        "split_records": 0,
+        "split_clauses": 0,
+        "split_new_official": 0,
+        "split_malformed": [],
+        "split_stale": [],
+        "split_coverage_failed": [],
+        "split_quote_violations": [],
+        "split_unused": [],
+        "judgment_clauses": 0,
+        "judgment_confirmed_by_official": 0,
+        "judgment_blank": [],
+        "judgment_vs_rule": [],
+        "judgment_optional_dropped": [],
+        "judgment_overridden": [],
+        "judgment_orphans": [],
         "official_clauses": 0,
         "official_coverage": {ladder: 0 for ladder in official.LADDERS},
         "kind_counts": {kind: 0 for kind in official.KINDS},
         "optional_counts": {OPTIONAL_MANDATORY: 0, OPTIONAL_OPTIONAL: 0,
                             "null": 0},
         "optional_official": 0,
+        "optional_llm": 0,
         "optional_rule": 0,
         "optional_pending": [],
         "optional_on_wrong_kind": [],
@@ -734,8 +964,12 @@ def _new_report():
 
 
 def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
-                   report):
-    """單一段落 → 效果句清單。繁中負責拆句,日文靠編號序列對位。"""
+                   split, judgments, report):
+    """單一段落 → 效果句清單。繁中負責拆句,日文靠編號序列對位。
+
+    split 是這一段的[[拆句表]]紀錄(沒有則為 None),judgments 是全表的判定結果
+    索引。兩者的生效時機夾著官方明示的抽取:拆句在前,判定在後(ADR-0003)。
+    """
     cid = card["id"]
     ctype = card.get("type", 0)
     confidence = CONFIDENCE_HIGH if supplement else CONFIDENCE_LOW
@@ -792,18 +1026,32 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
                                _slice(ja_text, ja_span), confidence))
 
     unsplit = set()
+    split_indexes = set()
     if zh_all is not None:
-        # 無編號舊式卡文:先當單一效果句,語意拆分留給判定票(票08)
-        clauses.append(_clause(
-            INDEX_UNNUMBERED, section, _slice(zh_text, zh_all),
-            _slice(ja_text, ja_all) if aligned else "", confidence))
-        report["pending_split"].append({"id": cid, "section": section})
-        unsplit.add(INDEX_UNNUMBERED)
+        blob = _clause(INDEX_UNNUMBERED, section, _slice(zh_text, zh_all),
+                       _slice(ja_text, ja_all) if aligned else "", confidence)
+        segments = None if split is None else _apply_split(
+            cid, section, split, blob, ctype, supplement, report)
+        if segments is None:
+            # 無編號舊式卡文還沒拆:整團先當單一效果句,語意拆分交給判定者
+            clauses.append(blob)
+            report["pending_split"].append({"id": cid, "section": section})
+            unsplit.add(INDEX_UNNUMBERED)
+        else:
+            clauses.extend(segments)
+            split_indexes = {clause["index"] for clause in segments}
+    elif split is not None:
+        report["split_unused"].append({"id": cid, "section": section})
 
     clauses = _split_bullets(cid, section, clauses, supplement, report)
+    if split_indexes:
+        # 整團是這一段唯一的效果句(無編號才會有整團),所以拆完之後這一段的每一行
+        # 都出自拆句表——● 又把某一段拆得更細時,新的 index 也算在內
+        split_indexes = {clause["index"] for clause in clauses}
     attested = _apply_attestations(cid, section, clauses, name_ja, supplement,
-                                   report)
-    _apply_optional(cid, section, clauses, attested, unsplit, report)
+                                   unsplit, split_indexes, report)
+    judged = _apply_judgments(cid, section, clauses, judgments, report)
+    _apply_optional(cid, section, clauses, attested, unsplit, judged, report)
     return clauses
 
 
@@ -855,7 +1103,8 @@ def _count_clauses(entries, report):
         report["clauses"] += len(entry["clauses"])
 
 
-def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
+def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
+                    splits=None):
     """卡片總表 + 補足情報 → (效果標記表條目, 報告)。
 
     cards: 卡片總表條目(需 id / desc / type)。
@@ -865,13 +1114,15 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
         既有行,保留已判定的成果;首次建置傳 None,兩者走同一條路徑。
         效果類型規則層的影子預測在合併之後才跑,因此既有判定與本次規則的比對
         (升為 llm_then_rule、或列進衝突清單)看的是合併後的那一行。
-    judgments: 判定結果。本票尚未實作合併(票08),傳入時列進報告的
-        unsupported_inputs 而不靜靜忽略。
+    judgments: 判定結果,一卡一物件、內含 clauses。決定效果句上的**值**
+        (kind / optional / role),在官方明示抽取**之後**合併。
+    splits: 拆句表,一張卡一筆、鍵為 (卡片密碼, section)。決定效果句的**集合**,
+        在官方明示抽取**之前**生效——拆完才對得出歸屬(ADR-0003)。
     """
     report = _new_report()
-    if judgments is not None:
-        report["unsupported_inputs"].append("judgments")
     existing_index = _index_existing(existing)
+    split_index = _index_splits(splits)
+    judgment_index = _index_judgments(judgments)
     matched = set()
 
     faq_by_password = {e["password"]: e for e in faq_entries
@@ -925,8 +1176,13 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
                 report["zh_cut_rule_disagree"] += 1
             clauses.extend(_build_section(
                 card, section, text, ja_by_section[section],
-                supplement_by_section[section], name_ja, report))
+                supplement_by_section[section], name_ja,
+                split_index.get((cid, section)), judgment_index, report))
         _dedupe_indexes(cid, clauses, report)
+        if any(clause["needs_review"] for clause in clauses):
+            # 判定與官方明示打架時最可能是拆錯,整張卡都要看而不只是那一行
+            for clause in clauses:
+                clause["needs_review"] = True
         clauses = _merge_clauses(cid, clauses, existing_index, matched, report)
         _check_substrings(cid, clauses, desc, ja_by_section, report)
         if any(c["confidence"] == CONFIDENCE_LOW for c in clauses):
@@ -934,6 +1190,7 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None):
         entries.append({"id": cid, "clauses": clauses})
 
     _report_orphans(existing_index, matched, report)
+    _report_judgment_orphans(entries, judgment_index, report)
     _apply_rules(entries, existing_index, report)
     _count_clauses(entries, report)
     report["no_japanese_text"].sort()

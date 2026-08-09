@@ -1,12 +1,12 @@
 """效果標記表管線測試(拆句骨架)。
 
-接縫:tagcard.build_tag_cards(卡片總表條目, 補足情報條目) → (entries, report)。
-fixture 於測試內程式化建立,不碰網路與真實資料檔。
+接縫:tagcard.build_tag_cards(卡片總表條目, 補足情報條目[, 既有標記表, 判定結果,
+拆句表]) → (entries, report)。fixture 於測試內程式化建立,不碰網路與真實資料檔。
 """
 import unittest
 
 import rules
-from tagcard import build_tag_cards
+from tagcard import build_tag_cards, split_hash
 
 TYPE_NORMAL_MONSTER = 0x11       # 怪獸 + 通常
 TYPE_EFFECT_MONSTER = 0x21       # 怪獸 + 效果
@@ -397,11 +397,11 @@ class TestAggregation(unittest.TestCase):
         self.assertEqual([e["id"] for e in entries], [1000, 2000, 3000])
         self.assertEqual(report["cards"], 3)
 
-    def test_unsupported_inputs_are_reported_not_silently_ignored(self):
-        """既有標記表已於票05 實作,判定結果仍留給票08。"""
+    def test_every_optional_input_is_accepted(self):
+        """既有標記表、判定結果、拆句表三個參數都已實作(票05 / 票08)。"""
         _, report = build_tag_cards([card(desc="①：效果甲。")], [],
-                                    existing=[], judgments=[])
-        self.assertEqual(report["unsupported_inputs"], ["judgments"])
+                                    existing=[], judgments=[], splits=[])
+        self.assertEqual(report["cards"], 1)
 
 
 class TestOfficialHeaderAttestation(unittest.TestCase):
@@ -1816,6 +1816,480 @@ class TestRuleRegistry(unittest.TestCase):
                                 r"甲|乙", "票06"),)
         self.assertEqual(rules.digest(base), rules.digest(same))
         self.assertNotEqual(rules.digest(base), rules.digest(widened))
+
+
+# ---------------------------------------------------------------- 拆句表
+
+# 舊式無編號卡文:前半是召喚條件(效果外文本),後半才是效果句
+OLD_ZH_HEAD = "此卡不能通常召喚。將我方場上1隻怪獸解放才能特殊召喚。"
+OLD_ZH_TAIL = "1回合1次，可以破壞對手場上1張卡。"
+OLD_JA_HEAD = ("このカードは通常召喚できない。"
+               "自分フィールドのモンスター１体をリリースした場合に特殊召喚できる。")
+OLD_JA_TAIL = "１ターンに１度、相手フィールドのカード１枚を破壊できる。"
+OLD_ZH = OLD_ZH_HEAD + OLD_ZH_TAIL
+OLD_JA = OLD_JA_HEAD + OLD_JA_TAIL
+
+
+def segment(index, text_zh, text_ja):
+    return {"index": index, "text_zh": text_zh, "text_ja": text_ja}
+
+
+def split(segments, cid=1000, section="main", text_zh=OLD_ZH, text_ja=OLD_JA,
+          ticket="票13", text_hash=None):
+    """拆句表的一筆。雜湊由拆句當時的卡文算出來,與骨架用的是同一支函式。"""
+    return {"id": cid, "section": section, "ticket": ticket,
+            "text_hash": text_hash or split_hash(text_zh, text_ja),
+            "segments": segments}
+
+
+def two_segments():
+    return [segment("0", OLD_ZH_HEAD, OLD_JA_HEAD),
+            segment("1", OLD_ZH_TAIL, OLD_JA_TAIL)]
+
+
+def old_card(desc=OLD_ZH, card_text=OLD_JA, supplement=None):
+    return [card(desc=desc)], [faq(card_text=card_text, supplement=supplement)]
+
+
+class TestClauseSplits(unittest.TestCase):
+    """拆句表把舊式無編號的整團切開;拆點是來源檔,不由規則產生(ADR-0003)。"""
+
+    def build(self, splits, supplement=None, desc=OLD_ZH, card_text=OLD_JA):
+        cards, faqs = old_card(desc, card_text, supplement)
+        return build_tag_cards(cards, faqs, splits=splits)
+
+    def test_blob_is_cut_into_the_recorded_segments(self):
+        entries, report = self.build([split(two_segments())])
+        self.assertEqual(
+            [(c["index"], c["text_zh"], c["text_ja"])
+             for c in clauses_of(entries, 1000)],
+            [("0", OLD_ZH_HEAD, OLD_JA_HEAD), ("1", OLD_ZH_TAIL, OLD_JA_TAIL)])
+        self.assertEqual(report["split_records"], 1)
+        self.assertEqual(report["split_clauses"], 1)
+        self.assertEqual(report["pending_split"], [])
+
+    def test_non_effect_segment_is_typed_by_the_position_rule(self):
+        """拆出來的效果外文本段走的是前言段那條位置規則,不是判定。"""
+        entries, report = self.build([split(two_segments())])
+        preamble = clauses_of(entries, 1000)[0]
+        self.assertEqual((preamble["kind"], preamble["role"],
+                          preamble["source"]), ("效果外文本", "召喚條件", "rule"))
+        self.assertEqual(report["preambles"], 1)
+        self.assertEqual(report["role_counts"]["召喚條件"], 1)
+
+    def test_effect_segment_is_still_left_for_judgment(self):
+        entries, _ = self.build([split(two_segments())])
+        clause = clauses_of(entries, 1000)[1]
+        self.assertIsNone(clause["kind"])
+        self.assertIsNone(clause["source"])
+
+    def test_a_second_non_effect_segment_uses_a_suffixed_index(self):
+        """59 張同時含召喚條件與使用次數限制,一個 "0" 不夠。"""
+        zh = ("此卡不能通常召喚。", "這個卡名的效果1回合只能使用1次。",
+              "1回合1次，可以破壞對手場上1張卡。")
+        ja = ("このカードは通常召喚できない。",
+              "このカード名の効果は１ターンに１度しか使用できない。",
+              "１ターンに１度、相手フィールドのカード１枚を破壊できる。")
+        record = split([segment("0", zh[0], ja[0]),
+                        segment("0-2", zh[1], ja[1]),
+                        segment("1", zh[2], ja[2])],
+                       text_zh="".join(zh), text_ja="".join(ja))
+        entries, report = self.build([record], desc="".join(zh),
+                                     card_text="".join(ja))
+        self.assertEqual([(c["index"], c["kind"], c["role"])
+                          for c in clauses_of(entries, 1000)],
+                         [("0", "效果外文本", "召喚條件"),
+                          ("0-2", "效果外文本", "使用次數限制"),
+                          ("1", None, None)])
+        self.assertEqual(report["split_clauses"], 1)
+
+    def test_segments_are_contiguous_substrings_of_the_card_text(self):
+        """比對忽略空白,但切出來的一律是原文的連續子字串。"""
+        entries, report = self.build(
+            [split(two_segments(), text_zh=f"{OLD_ZH_HEAD}\n{OLD_ZH_TAIL}",
+                   text_ja=f"{OLD_JA_HEAD}\n{OLD_JA_TAIL}")],
+            desc=f"{OLD_ZH_HEAD}\n{OLD_ZH_TAIL}",
+            card_text=f"{OLD_JA_HEAD}\n{OLD_JA_TAIL}")
+        self.assertEqual([c["text_zh"] for c in clauses_of(entries, 1000)],
+                         [OLD_ZH_HEAD, OLD_ZH_TAIL])
+        self.assertEqual(report["substring_violations"], [])
+
+    def test_a_record_for_a_numbered_card_is_reported_as_unused(self):
+        entries, report = self.build([split(two_segments())],
+                                     desc="①：效果甲。", card_text="①：効果甲。")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)], ["①"])
+        self.assertEqual(report["split_unused"],
+                         [{"id": 1000, "section": "main"}])
+
+
+class TestSplitPreservesTheFirstIndex(unittest.TestCase):
+    """`"1"` 沿用整團現在的 index,重跑合併因此對得回去、不製造孤兒。"""
+
+    def blob_judged_as(self, kind):
+        entries, _ = build_tag_cards(*old_card())
+        mark(entries, 1000, "1", kind=kind, source="llm")
+        return entries
+
+    def rerun(self, existing, segments):
+        cards, faqs = old_card()
+        return build_tag_cards(cards, faqs, existing=existing,
+                               splits=[split(segments)])
+
+    def test_a_one_segment_split_changes_nothing_about_the_row(self):
+        existing = self.blob_judged_as("啟動效果")
+        entries, report = self.rerun(existing, [segment("1", OLD_ZH, OLD_JA)])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["index"], clause["kind"], clause["source"]),
+                         ("1", "啟動效果", "llm"))
+        self.assertFalse(clause["needs_review"])
+        self.assertEqual(report["orphaned_judgments"], [])
+
+    def test_the_first_effect_segment_inherits_the_blob_judgment(self):
+        existing = self.blob_judged_as("啟動效果")
+        entries, report = self.rerun(existing, two_segments())
+        clause = clauses_of(entries, 1000)[1]
+        self.assertEqual((clause["index"], clause["kind"], clause["source"]),
+                         ("1", "啟動效果", "llm"))
+        # 這一行的身分變了(整團 → 只剩後半),判定保留但要人回頭看
+        self.assertTrue(clause["needs_review"])
+        self.assertEqual(report["orphaned_judgments"], [])
+
+
+class TestSplitValidation(unittest.TestCase):
+    """三道驗證,任何一道失敗即整筆不寫入、退回整團(ADR-0003)。"""
+
+    def build(self, record, supplement=None, desc=OLD_ZH, card_text=OLD_JA):
+        cards, faqs = old_card(desc, card_text, supplement)
+        return build_tag_cards(cards, faqs, splits=[record])
+
+    def assert_fell_back_to_the_blob(self, entries, report):
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["1"])
+        self.assertEqual(clauses[0]["text_zh"], OLD_ZH)
+        self.assertEqual(report["split_records"], 0)
+        self.assertEqual(report["pending_split"],
+                         [{"id": 1000, "section": "main"}])
+
+    def test_a_dropped_sentence_fails_the_coverage_check(self):
+        """「連續子字串」擋得住竄改但擋不住漏掉,漏掉是判定者的沉默失效模式。"""
+        entries, report = self.build(
+            split([segment("1", OLD_ZH_TAIL, OLD_JA_TAIL)]))
+        self.assert_fell_back_to_the_blob(entries, report)
+        self.assertEqual([(r["id"], r["side"])
+                          for r in report["split_coverage_failed"]],
+                         [(1000, "zh")])
+
+    def test_a_japanese_side_that_does_not_cover_also_fails(self):
+        """兩側各驗一次——489 張兩側句數不一致,只驗一側等於沒驗。"""
+        entries, report = self.build(
+            split([segment("0", OLD_ZH_HEAD, OLD_JA_HEAD),
+                   segment("1", OLD_ZH_TAIL, "")]))
+        self.assert_fell_back_to_the_blob(entries, report)
+        self.assertEqual([(r["id"], r["side"])
+                          for r in report["split_coverage_failed"]],
+                         [(1000, "ja")])
+
+    def test_an_official_quote_cut_in_half_fails(self):
+        """官方 『原文』 引用橫跨拆點就是拆錯,不需要標準答案就查得出來。"""
+        entries, report = self.build(
+            split(two_segments()),
+            supplement="■『特殊召喚できる。１ターンに１度』について。")
+        self.assert_fell_back_to_the_blob(entries, report)
+        self.assertEqual([(r["id"], r["quotes"])
+                          for r in report["split_quote_violations"]],
+                         [(1000, ["特殊召喚できる。１ターンに１度"])])
+
+    def test_a_quote_inside_one_segment_is_not_a_violation(self):
+        entries, report = self.build(
+            split(two_segments()),
+            supplement="■『相手フィールドのカード１枚を破壊できる』について。")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)],
+                         ["0", "1"])
+        self.assertEqual(report["split_quote_violations"], [])
+
+    def test_a_quote_belonging_to_another_card_is_not_a_violation(self):
+        entries, report = self.build(
+            split(two_segments()),
+            supplement="■『別のカードの効果テキスト』について。")
+        self.assertEqual(report["split_quote_violations"], [])
+
+    def test_errata_invalidates_the_whole_record(self):
+        """卡文變動即失效:退回整團,不保留舊拆點(票11 的錯誤不再犯)。"""
+        errata_zh = OLD_ZH.replace("1張卡", "2張卡")
+        errata_ja = OLD_JA.replace("１枚を破壊", "２枚を破壊")
+        entries, report = self.build(split(two_segments()), desc=errata_zh,
+                                     card_text=errata_ja)
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["1"])
+        self.assertEqual(clauses[0]["text_zh"], errata_zh)
+        self.assertEqual(report["split_stale"],
+                         [{"id": 1000, "section": "main"}])
+        self.assertEqual(report["split_coverage_failed"], [])
+
+    def test_a_hash_that_does_not_match_is_stale_even_if_the_text_covers(self):
+        entries, report = self.build(
+            split(two_segments(), text_hash="0000000000000000"))
+        self.assert_fell_back_to_the_blob(entries, report)
+        self.assertEqual(report["split_stale"],
+                         [{"id": 1000, "section": "main"}])
+
+    def test_a_duplicate_or_unknown_index_is_malformed(self):
+        for segments in ([segment("1", OLD_ZH_HEAD, OLD_JA_HEAD),
+                          segment("1", OLD_ZH_TAIL, OLD_JA_TAIL)],
+                         [segment("①", OLD_ZH_HEAD, OLD_JA_HEAD),
+                          segment("2", OLD_ZH_TAIL, OLD_JA_TAIL)],
+                         []):
+            with self.subTest(segments=segments):
+                entries, report = self.build(split(segments))
+                self.assert_fell_back_to_the_blob(entries, report)
+                self.assertEqual(report["split_malformed"],
+                                 [{"id": 1000, "section": "main"}])
+
+    def test_a_record_without_a_hash_is_malformed(self):
+        record = split(two_segments())
+        del record["text_hash"]
+        entries, report = self.build(record)
+        self.assert_fell_back_to_the_blob(entries, report)
+        self.assertEqual(report["split_malformed"],
+                         [{"id": 1000, "section": "main"}])
+
+
+class TestSplitEnablesAttestation(unittest.TestCase):
+    """有拆句表紀錄本身就是「這張卡有幾個效果句」的斷言,歸屬階梯據此開火。"""
+
+    def build(self, supplement, segments=None):
+        cards, faqs = old_card(supplement=supplement)
+        return build_tag_cards(cards, faqs,
+                               splits=[split(segments or two_segments())])
+
+    def test_the_sole_effect_segment_lets_the_single_clause_ladder_fire(self):
+        entries, report = self.build("■モンスターゾーンで適用する永続効果です。")
+        clause = clauses_of(entries, 1000)[1]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "official"))
+        self.assertEqual(report["official_coverage"]["single"], 1)
+        self.assertEqual(report["attribution_deferred"], [])
+        self.assertEqual(report["split_new_official"], 1)
+
+    def test_a_non_effect_segment_does_not_count_as_a_second_effect(self):
+        _, report = self.build("■「テストカード」の効果は起動効果です。")
+        self.assertEqual(report["official_coverage"]["name_single"], 1)
+
+    def test_a_quote_reaches_the_segment_it_names(self):
+        entries, report = self.build(
+            f"■『{OLD_JA_TAIL}』の効果は起動効果です。")
+        self.assertEqual(clauses_of(entries, 1000)[1]["kind"], "啟動效果")
+        self.assertEqual(report["official_coverage"]["quote"], 1)
+
+    def test_a_sequence_reference_maps_onto_the_split_segments(self):
+        """官方對舊式卡仍以①②稱呼,拆出來的 "1" / "2" 就是它指的那幾段。"""
+        entries, report = self.build(
+            "■『②』の効果は起動効果です。",
+            segments=[segment("1", OLD_ZH_HEAD, OLD_JA_HEAD),
+                      segment("2", OLD_ZH_TAIL, OLD_JA_TAIL)])
+        clauses = clauses_of(entries, 1000)
+        self.assertIsNone(clauses[0]["kind"])
+        self.assertEqual(clauses[1]["kind"], "啟動效果")
+        self.assertEqual(report["official_coverage"]["seq"], 1)
+        self.assertEqual(report["seq_missing"], [])
+
+    def test_the_optional_rule_runs_on_the_segments_too(self):
+        """未拆整團的第一句常是召喚條件而不是發動子句,拆完才輪得到規則。"""
+        entries, _ = self.build("■『②』の効果は誘発即時効果です。",
+                                segments=[segment("1", OLD_ZH_HEAD, OLD_JA_HEAD),
+                                          segment("2", OLD_ZH_TAIL, OLD_JA_TAIL)])
+        self.assertEqual(clauses_of(entries, 1000)[1]["optional"], "選發")
+
+    def test_an_unsplit_blob_is_still_excluded(self):
+        cards, faqs = old_card(supplement="■モンスターゾーンで適用する永続効果です。")
+        entries, report = build_tag_cards(cards, faqs)
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+        self.assertEqual(report["official_coverage"]["single"], 0)
+        self.assertEqual(report["split_new_official"], 0)
+
+
+# ---------------------------------------------------------------- 判定結果
+
+class TestJudgmentMerge(unittest.TestCase):
+    """判定結果決定效果句上的**值**(拆句表決定集合,ADR-0003)。"""
+
+    def judge(self, clauses, cid=1000, section="main"):
+        return [{"id": cid, "section": section, "clauses": clauses}]
+
+    def build(self, rows, desc="①：效果甲。", card_text="①：効果甲。",
+              supplement="■なにかの説明。", existing=None):
+        return build_tag_cards(
+            [card(desc=desc)],
+            [faq(card_text=card_text, supplement=supplement)],
+            existing=existing, judgments=self.judge(rows))
+
+    def test_judgment_fills_kind_optional_and_role(self):
+        entries, report = self.build(
+            [{"index": "①", "kind": "誘發效果(1速)", "optional": "必發"}])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["optional"], clause["source"]),
+                         ("誘發效果(1速)", "必發", "llm"))
+        self.assertEqual(report["judgment_clauses"], 1)
+        self.assertEqual(report["source_counts"]["llm"], 1)
+
+    def test_confidence_follows_the_supplement_not_the_judgment(self):
+        for supplement, expected in (("■なにかの説明。", "high"), (None, "low")):
+            with self.subTest(expected=expected):
+                entries, _ = self.build([{"index": "①", "kind": "啟動效果"}],
+                                        supplement=supplement)
+                self.assertEqual(clauses_of(entries, 1000)[0]["confidence"],
+                                 expected)
+
+    def test_official_agreement_keeps_the_official_provenance(self):
+        """官方權威高於判定,一致時不降級——這一行也不占 ADR-0002 的判定額度。"""
+        entries, report = self.build(
+            [{"index": "①", "kind": "永續效果"}],
+            supplement="■モンスターゾーンで適用する永続効果です。")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("永續效果", "official"))
+        self.assertEqual(report["judgment_confirmed_by_official"], 1)
+        self.assertEqual(report["late_official_conflicts"], [])
+
+    def test_official_disagreement_keeps_the_judgment_and_flags_the_card(self):
+        """不一致的最可能成因是拆錯而不是判錯,只標一行會讓人去看錯的東西。"""
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。\n②：効果乙。",
+                 supplement="【①の効果について】\n■永続効果です。")],
+            judgments=self.judge([{"index": "①", "kind": "啟動效果"}]))
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual((clauses[0]["kind"], clauses[0]["source"]),
+                         ("啟動效果", "llm"))
+        self.assertTrue(all(c["needs_review"] for c in clauses))
+        self.assertEqual([(r["id"], r["index"], r["existing"], r["official"])
+                          for r in report["late_official_conflicts"]],
+                         [(1000, "①", "啟動效果", "永續效果")])
+
+    def test_judgment_optional_beats_the_rule(self):
+        """必發/選發四層:官方明示 → 判定 → 日文發動子句規則 → 留 null。"""
+        entries, report = self.build(
+            [{"index": "①", "kind": "誘發效果(1速)", "optional": "必發"}],
+            card_text="①：このカードが墓地へ送られた場合に発動できる。"
+                      "デッキから１枚ドローする。")
+        self.assertEqual(clauses_of(entries, 1000)[0]["optional"], "必發")
+        self.assertEqual(report["optional_llm"], 1)
+        self.assertEqual(report["optional_rule"], 0)
+
+    def test_optional_is_dropped_when_the_kind_cannot_carry_it(self):
+        """值域規則優先:只有誘發即時與誘發兩類寫必發/選發。"""
+        entries, report = self.build(
+            [{"index": "①", "kind": "永續效果", "optional": "選發"}])
+        self.assertIsNone(clauses_of(entries, 1000)[0]["optional"])
+        self.assertEqual([(r["id"], r["index"], r["optional"])
+                          for r in report["judgment_optional_dropped"]],
+                         [(1000, "①", "選發")])
+        self.assertEqual(report["optional_on_wrong_kind"], [])
+
+    def test_a_row_matching_no_clause_is_reported(self):
+        """集合一致性:結果檔多出一筆就是判定者跑錯批次,不能靜靜吞掉。"""
+        _, report = self.build([{"index": "②", "kind": "啟動效果"}])
+        self.assertEqual(report["judgment_orphans"],
+                         [{"id": 1000, "section": "main", "index": "②"}])
+
+    def test_a_row_left_blank_by_the_judge_is_reported_not_written(self):
+        entries, report = self.build(
+            [{"index": "①", "kind": None, "note": "判不出來"}])
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+        self.assertEqual([(r["id"], r["index"], r["note"])
+                          for r in report["judgment_blank"]],
+                         [(1000, "①", "判不出來")])
+
+    def test_the_position_rule_is_not_overwritten_by_a_judgment(self):
+        """前言段的效果外文本由位置規則決定,判定只在結論不同時進報告。"""
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。\n①：效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。\n①：効果甲。")],
+            judgments=self.judge([{"index": "0", "kind": "永續效果"}]))
+        preamble = clauses_of(entries, 1000)[0]
+        self.assertEqual((preamble["kind"], preamble["source"]),
+                         ("效果外文本", "rule"))
+        self.assertEqual([(r["id"], r["index"], r["judged"])
+                          for r in report["judgment_vs_rule"]],
+                         [(1000, "0", "永續效果")])
+
+    def test_a_judged_row_survives_the_next_rerun(self):
+        entries, _ = self.build([{"index": "①", "kind": "啟動效果"}])
+        rebuilt, report = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。", supplement="■なにかの説明。")],
+            existing=entries)
+        clause = clauses_of(rebuilt, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("啟動效果", "llm"))
+        self.assertEqual(report["preserved_judgments"], 1)
+
+    def test_a_rejudgement_blocked_by_the_existing_row_is_reported(self):
+        """判定一次就算數(ADR-0002),但擋掉這件事不能靜靜發生。"""
+        entries, _ = self.build([{"index": "①", "kind": "啟動效果"}])
+        _, report = self.build([{"index": "①", "kind": "永續效果"}],
+                               existing=entries)
+        self.assertEqual([(r["id"], r["index"], r["existing"], r["judged"])
+                          for r in report["judgment_overridden"]],
+                         [(1000, "①", "啟動效果", "永續效果")])
+
+    def test_repeating_the_same_judgment_is_not_reported(self):
+        entries, _ = self.build([{"index": "①", "kind": "啟動效果"}])
+        _, report = self.build([{"index": "①", "kind": "啟動效果"}],
+                               existing=entries)
+        self.assertEqual(report["judgment_overridden"], [])
+
+    def test_a_judgment_agreeing_with_the_shadow_becomes_a_double_check(self):
+        """判定票的產出才是 ADR-0002 說的獨立對照,升級在同一次呼叫裡就成立。"""
+        zh, ja = TestShadowPrediction.ZH, TestShadowPrediction.JA
+        judgments = [{"id": 1000 + i, "section": "main",
+                      "clauses": [{"index": "①",
+                                   "kind": TestShadowPrediction.PREDICTED}]}
+                     for i in range(8)]
+        entries, report = build_tag_cards(
+            [card(1000 + i, desc=zh) for i in range(8)],
+            [faq(1000 + i, card_text=ja) for i in range(8)],
+            judgments=judgments)
+        self.assertEqual(clauses_of(entries, 1000)[0]["source"],
+                         "llm_then_rule")
+        self.assertEqual(report["rule_upgrades"], 8)
+
+
+class TestJudgmentAfterSplit(unittest.TestCase):
+    """拆句表與判定結果在同一次呼叫裡:先拆句,再抽官方明示,最後合併判定。"""
+
+    def build(self, supplement=None, rows=(), segments=None):
+        cards, faqs = old_card(supplement=supplement)
+        return build_tag_cards(
+            cards, faqs, splits=[split(segments or two_segments())],
+            judgments=[{"id": 1000, "section": "main", "clauses": list(rows)}])
+
+    def test_the_judgment_lands_on_the_segment_the_split_created(self):
+        entries, report = self.build(rows=[{"index": "1", "kind": "啟動效果"}])
+        clause = clauses_of(entries, 1000)[1]
+        self.assertEqual((clause["index"], clause["kind"], clause["source"]),
+                         ("1", "啟動效果", "llm"))
+        self.assertEqual(report["judgment_orphans"], [])
+
+    def test_a_split_that_failed_leaves_the_judgment_without_a_home(self):
+        """拆句沒生效時判定的 index 對不到任何一行,必須是報告裡看得見的失敗。"""
+        cards, faqs = old_card()
+        _, report = build_tag_cards(
+            cards, faqs,
+            splits=[split([segment("1", OLD_ZH_TAIL, OLD_JA_TAIL)])],
+            judgments=[{"id": 1000, "section": "main",
+                        "clauses": [{"index": "2", "kind": "啟動效果"}]}])
+        self.assertEqual(len(report["split_coverage_failed"]), 1)
+        self.assertEqual(report["judgment_orphans"],
+                         [{"id": 1000, "section": "main", "index": "2"}])
+
+    def test_official_regained_by_the_split_outranks_the_judgment(self):
+        entries, report = self.build(
+            supplement="■モンスターゾーンで適用する永続効果です。",
+            rows=[{"index": "1", "kind": "永續效果"}])
+        self.assertEqual(clauses_of(entries, 1000)[1]["source"], "official")
+        self.assertEqual(report["split_new_official"], 1)
+        self.assertEqual(report["judgment_confirmed_by_official"], 1)
 
 
 if __name__ == "__main__":

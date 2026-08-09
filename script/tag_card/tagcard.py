@@ -219,76 +219,10 @@ def _slice(text, span):
     return "" if span is None else text[span[0]:span[1]]
 
 
-# ---------------------------------------------------------------- ● 子效果
+# ------------------------------------------------------------ 拆句的共用驗證
 
-def _bullet_parts(text):
-    """文字 → (第一個 ● 之前的段落, [● 分項, ...]);兩者都已去首尾空白。"""
-    positions = [i for i, ch in enumerate(text) if ch == BULLET]
-    if not positions:
-        return text.strip(), []
-    bounds = list(zip(positions, positions[1:] + [len(text)]))
-    return text[:positions[0]].strip(), [text[s:e].strip() for s, e in bounds]
-
-
-def _split_bullets(cid, section, clauses, supplement, report):
-    """官方以【●…について】解說子效果時,把 ● 分項拆成獨立效果句。
-
-    只在官方確實這樣解說時才拆——沒有官方標頭的 ● 只是同一個效果的選項列舉,
-    拆了反而製造出官方沒有認可的效果句。繁中與日文的 ● 數量不一致時不拆。
-    """
-    if not official.bullet_specs(supplement):
-        return clauses
-    split = []
-    for clause in clauses:
-        both = clause["text_zh"] + clause["text_ja"]
-        if clause["index"] == INDEX_PREAMBLE or BULLET not in both:
-            split.append(clause)
-            continue
-        zh_head, zh_bullets = _bullet_parts(clause["text_zh"])
-        if clause["text_ja"]:
-            ja_head, ja_bullets = _bullet_parts(clause["text_ja"])
-        else:
-            ja_head, ja_bullets = "", [""] * len(zh_bullets)
-        if len(ja_bullets) != len(zh_bullets):
-            report["bullet_split_mismatch"].append(
-                {"id": cid, "section": section, "index": clause["index"]})
-            split.append(clause)
-            continue
-        confidence = clause["confidence"]
-        if zh_head or ja_head:
-            split.append(_clause(clause["index"], section, zh_head, ja_head,
-                                 confidence))
-        for pos, (zh, ja) in enumerate(zip(zh_bullets, ja_bullets), start=1):
-            split.append(_clause(f"{clause['index']}-{BULLET}{pos}", section,
-                                 zh, ja, confidence))
-        report["bullet_clauses"] += len(zh_bullets)
-    return split
-
-
-# ---------------------------------------------------------------- 拆句表
-
-# 拆出來的段落 index:效果外文本段 "0" / "0-2" / "0-3",效果句 "1" / "2" / "3"。
-# "1" 沿用整團現在的 index,只有一段效果句的卡拆完後 index 不變、不製造孤兒。
-_SPLIT_INDEX_RE = re.compile(r"^(?:0(?:-[2-9][0-9]*)?|[1-9][0-9]*)$")
-_SPLIT_HASH_SEP = "\x1f"
-
-
-def split_hash(text_zh, text_ja):
-    """拆句當時的卡文雜湊(兩側一起算)。
-
-    對「偵測變動」是冗餘的——無遺漏覆蓋等式已經涵蓋任何一個字元的變動。留著是為了
-    **診斷**:出事時能一眼看出這筆拆點是對著哪一版卡文切的(ADR-0003)。
-    寫拆句表的程式與讀拆句表的骨架共用這一支,兩邊不會各算各的。
-    """
-    body = f"{text_zh}{_SPLIT_HASH_SEP}{text_ja}"
-    return hashlib.sha1(body.encode("utf-8")).hexdigest()[:16]
-
-
-def _index_splits(splits):
-    """拆句表 → {(卡片密碼, section): 紀錄}。"""
-    return {(record["id"], record["section"]): record
-            for record in splits or ()}
-
+# ● 分項與[[拆句表]]兩條拆句路徑共用同一套檢查:切出來的段落串接後必須等於
+# 原文,而官方 『原文』 引用不得被拆點切開。兩者都不需要標準答案就能自動檢查。
 
 def _condense(text):
     """去掉全部空白 → (壓縮後的文字, 每個字元在原文的位移)。"""
@@ -332,6 +266,122 @@ def _quotes_cut_apart(text_ja, spans, supplement):
                                                  for segment in segments):
             cut.append(quoted)
     return cut
+
+
+# ---------------------------------------------------------------- ● 子效果
+
+def _bullet_parts(text):
+    """文字 → (第一個 ● 之前的段落, [● 分項, ...]);兩者都已去首尾空白。"""
+    positions = [i for i, ch in enumerate(text) if ch == BULLET]
+    if not positions:
+        return text.strip(), []
+    bounds = list(zip(positions, positions[1:] + [len(text)]))
+    return text[:positions[0]].strip(), [text[s:e].strip() for s, e in bounds]
+
+
+def _bullet_authorised(clause, supplement, headers):
+    """官方認可這一段的 ● 是獨立子效果嗎?兩種依據,證據強度相同。
+
+    官方都是拿整個 `●` 當一個東西在講:`【●…について】` 標頭(票03),或行內
+    `『●…』` 引用逐項給裁定(票16)。後者只對**賦予型領起句**開火——領起句自己
+    就寫了發動時 `●` 只是同一個發動的選項列舉,拆了反而製造出官方沒有認可的
+    效果句,而票14 實測那一族的官方類型本來就是對的。
+    """
+    if headers:
+        return True
+    return (official.grant_lead(clause["text_ja"]) is not None
+            and bool(official.quoted_bullets(supplement, clause["text_ja"])))
+
+
+def _bullet_pieces(cid, section, clause, supplement, headers, report):
+    """一個效果句 → 拆開的 ● 分項;沒有依據或驗證不成立時回 None(不拆)。
+
+    拆之前兩道驗證比照[[拆句表]]:分項串接後必須等於原文(`_cover_spans`,同時
+    讓每一段都從原文切片,連續子字串因此是結構上的保證),官方 `『原文』` 引用
+    不得被 ● 拆點切開——引用橫跨拆點就證明那兩段是同一個效果句(ADR-0003)。
+    """
+    both = clause["text_zh"] + clause["text_ja"]
+    if clause["index"] == INDEX_PREAMBLE or BULLET not in both:
+        return None
+    if not _bullet_authorised(clause, supplement, headers):
+        return None
+
+    row = {"id": cid, "section": section, "index": clause["index"]}
+    zh_head, zh_bullets = _bullet_parts(clause["text_zh"])
+    if clause["text_ja"]:
+        ja_head, ja_bullets = _bullet_parts(clause["text_ja"])
+    else:
+        ja_head, ja_bullets = "", [""] * len(zh_bullets)
+    if len(ja_bullets) != len(zh_bullets):
+        report["bullet_split_mismatch"].append(row)
+        return None
+    zh_spans = _cover_spans(clause["text_zh"], [zh_head, *zh_bullets])
+    ja_spans = (_cover_spans(clause["text_ja"], [ja_head, *ja_bullets])
+                if clause["text_ja"] else [None] * (len(ja_bullets) + 1))
+    if zh_spans is None or ja_spans is None:
+        report["bullet_coverage_failed"].append(
+            {**row, "side": "zh" if zh_spans is None else "ja"})
+        return None
+    cut = _quotes_cut_apart(clause["text_ja"], ja_spans, supplement)
+    if cut:
+        report["bullet_quote_violations"].append({**row, "quotes": cut})
+        return None
+
+    def piece(index, pos):
+        return _clause(index, section, _slice(clause["text_zh"], zh_spans[pos]),
+                       _slice(clause["text_ja"], ja_spans[pos]),
+                       clause["confidence"])
+
+    pieces = []
+    if zh_head or ja_head:
+        pieces.append(piece(clause["index"], 0))
+    for pos in range(1, len(zh_spans)):
+        pieces.append(piece(f"{clause['index']}-{BULLET}{pos}", pos))
+    report["bullet_clauses"] += len(zh_bullets)
+    if not headers:
+        # 兩道驗證都過了才算數,計數放在這裡才對得上實際拆出來的段
+        report["bullet_quote_splits"] += 1
+    return pieces
+
+
+def _split_bullets(cid, section, clauses, supplement, report):
+    """官方認可 ● 是獨立子效果時,把 ● 分項拆成獨立效果句。
+
+    沒有依據的 ● 只是同一個效果的選項列舉,拆了反而製造出官方沒有認可的效果句;
+    繁中與日文的 ● 數量不一致時同樣不拆。
+    """
+    headers = bool(official.bullet_specs(supplement))
+    split = []
+    for clause in clauses:
+        pieces = _bullet_pieces(cid, section, clause, supplement, headers,
+                                report)
+        split.extend(pieces if pieces is not None else [clause])
+    return split
+
+
+# ---------------------------------------------------------------- 拆句表
+
+# 拆出來的段落 index:效果外文本段 "0" / "0-2" / "0-3",效果句 "1" / "2" / "3"。
+# "1" 沿用整團現在的 index,只有一段效果句的卡拆完後 index 不變、不製造孤兒。
+_SPLIT_INDEX_RE = re.compile(r"^(?:0(?:-[2-9][0-9]*)?|[1-9][0-9]*)$")
+_SPLIT_HASH_SEP = "\x1f"
+
+
+def split_hash(text_zh, text_ja):
+    """拆句當時的卡文雜湊(兩側一起算)。
+
+    對「偵測變動」是冗餘的——無遺漏覆蓋等式已經涵蓋任何一個字元的變動。留著是為了
+    **診斷**:出事時能一眼看出這筆拆點是對著哪一版卡文切的(ADR-0003)。
+    寫拆句表的程式與讀拆句表的骨架共用這一支,兩邊不會各算各的。
+    """
+    body = f"{text_zh}{_SPLIT_HASH_SEP}{text_ja}"
+    return hashlib.sha1(body.encode("utf-8")).hexdigest()[:16]
+
+
+def _index_splits(splits):
+    """拆句表 → {(卡片密碼, section): 紀錄}。"""
+    return {(record["id"], record["section"]): record
+            for record in splits or ()}
 
 
 def _validate_split(record, blob, supplement):
@@ -937,7 +987,10 @@ def _new_report():
             "attested": 0, "predicted": 0, "agree": 0, "disagree": [],
             **{key: 0 for key in _UNPREDICTED_KEYS.values()}},
         "bullet_clauses": 0,
+        "bullet_quote_splits": 0,
         "bullet_split_mismatch": [],
+        "bullet_coverage_failed": [],
+        "bullet_quote_violations": [],
         "source_counts": {**{source: 0 for source in SOURCES}, "null": 0},
         "preserved_judgments": 0,
         "needs_review": [],

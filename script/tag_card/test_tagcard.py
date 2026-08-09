@@ -723,6 +723,24 @@ class TestUnsplitOldStyleAttribution(unittest.TestCase):
         self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "誘發效果(1速)")
         self.assertEqual(report["official_coverage"]["seq"], 1)
 
+    def test_a_quote_pointing_at_the_unsplit_blob_defers_not_unmatched(self):
+        """引用指的是整團裡的一段:那是「待拆」而不是「引號對不回本卡卡文」。
+
+        `●` 拆出去之後整團的頭仍然是未拆的,對得出歸屬的效果句於是不再是空的
+        ——但引用照樣落在那個頭上,它只是還沒被切開,不是官方引用了別張卡。
+        """
+        entries, report = build_tag_cards(
+            [card(desc=self.DESC + "\n●選項甲。")],
+            [faq(card_text=self.CARD_TEXT + "●選択肢甲。",
+                 supplement="■『１ターンに１度、自分フィールド上の水属性"
+                            "モンスター１体をリリースする事で』"
+                            "は起動効果です。\n"
+                            "【●の効果について】\n■永続効果です。")])
+        self.assertEqual(report["quote_unmatched"], [])
+        self.assertEqual([(r["kind"], r["reason"])
+                          for r in report["attribution_deferred"]],
+                         [("啟動效果", "無編號卡文待拆")])
+
 
 class TestNegationAndForbiddenPhrases(unittest.TestCase):
 
@@ -800,10 +818,10 @@ class TestNonEffectAttestation(unittest.TestCase):
         self.assertEqual(preamble["source"], "official")
         self.assertEqual(report["official_coverage"]["non_effect"], 1)
 
-    def test_attestation_pointing_outside_the_preamble_is_reported_only(self):
+    def test_attestation_covering_only_part_of_a_clause_is_reported_only(self):
         entries, report = build_tag_cards(
-            [card(desc="此卡不能通常召喚。\n①：效果甲。")],
-            [faq(card_text="このカードは通常召喚できない。①：効果甲。",
+            [card(desc="此卡不能通常召喚。\n①：效果甲。效果乙。")],
+            [faq(card_text="このカードは通常召喚できない。①：効果甲。効果乙。",
                  supplement="■『①：効果甲。』は効果として扱いません。")])
         clauses = clauses_of(entries, 1000)
         self.assertEqual(clauses[0]["source"], "rule")
@@ -831,11 +849,11 @@ class TestNonEffectAttestation(unittest.TestCase):
                 self.assertEqual(preamble["source"], "official")
                 self.assertEqual(report["official_coverage"]["non_effect"], 1)
 
-    def test_variant_pointing_outside_the_preamble_is_reported_only(self):
+    def test_variant_covering_only_part_of_a_clause_is_reported_only(self):
         """變體與既有寫法走完全相同的歸屬路徑,不因為是新寫法就放寬。"""
         entries, report = build_tag_cards(
-            [card(desc="此卡不能通常召喚。\n①：效果甲。")],
-            [faq(card_text="このカードは通常召喚できない。①：効果甲。",
+            [card(desc="此卡不能通常召喚。\n①：效果甲。效果乙。")],
+            [faq(card_text="このカードは通常召喚できない。①：効果甲。効果乙。",
                  supplement="■『①：効果甲。』そのものは効果の扱いでは"
                             "ありません。")])
         clauses = clauses_of(entries, 1000)
@@ -1040,6 +1058,8 @@ class TestTrailingHeader(unittest.TestCase):
         """CNo.104 仮面魔踏士アンブラル(49456901)②:2 速是 `●` 的,不是②的。
 
         行尾的【『●』の効果について】既是拆句依據也是歸屬標記,兩邊一起恢復。
+        `●` 拆走之後領起句剩自己一段,官方那句「そのものは効果として扱いません」
+        涵蓋的正是這一段,於是它也拿到了類型(票16)。
         """
         entries, report = build_tag_cards(
             [card(desc="①：效果甲。\n"
@@ -1057,7 +1077,7 @@ class TestTrailingHeader(unittest.TestCase):
         clauses = clauses_of(entries, 1000)
         self.assertEqual([c["index"] for c in clauses], ["①", "②", "②-●1"])
         self.assertEqual([c["kind"] for c in clauses],
-                         [None, None, "誘發即時效果(2速)"])
+                         [None, "效果外文本", "誘發即時效果(2速)"])
         self.assertEqual(report["attribution_deferred"], [])
 
 
@@ -1082,26 +1102,6 @@ class TestGrantLeadWithUnsplitBullets(unittest.TestCase):
         return build_tag_cards(
             [card(desc=desc or self.DESC)],
             [faq(card_text=card_text or self.CARD_TEXT, supplement=supplement)])
-
-    def test_a_quote_starting_at_the_bullet_defers(self):
-        entries, report = self._build(
-            "■『●このカードを除外し、自分フィールドのモンスター１体を対象として"
-            "発動できる』効果は誘発即時効果です。")
-        clause = clauses_of(entries, 1000)[0]
-        self.assertIsNone(clause["kind"])
-        self.assertIsNone(clause["source"])
-        self.assertEqual(report["official_coverage"]["quote"], 0)
-        self.assertEqual([(r["id"], r["kind"], r["reason"])
-                          for r in report["attribution_deferred"]],
-                         [(1000, "誘發即時效果(2速)", "● 子效果待拆")])
-
-    def test_a_bare_bullet_quote_defers(self):
-        """官方以『●』代稱子效果(大融合 7614732)時同樣沒指到領起句。"""
-        entries, report = self._build(
-            "■『●』は、この効果で特殊召喚したモンスターが得る永続効果です。")
-        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
-        self.assertEqual([r["reason"] for r in report["attribution_deferred"]],
-                         ["● 子效果待拆"])
 
     def test_a_header_without_a_quote_defers(self):
         """【②の効果について】指的是整個編號效果,分不出領起句與 ●。"""
@@ -1134,11 +1134,11 @@ class TestGrantLeadWithUnsplitBullets(unittest.TestCase):
         self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "啟動效果")
         self.assertEqual(report["attribution_deferred"], [])
 
-    def test_a_mandatory_line_defers_too(self):
+    def test_a_mandatory_header_line_defers_too(self):
         """必發明示與類型明示共用同一套歸屬對位,排除條件也必須一起生效。"""
         entries, report = self._build(
-            "■『●このカードを除外し、自分フィールドのモンスター１体を対象として"
-            "発動できる』効果は誘発効果です。必ず発動します。")
+            "【②の効果について】\n"
+            "■モンスターゾーンで発動できる誘発効果です。必ず発動します。")
         clause = clauses_of(entries, 1000)[0]
         self.assertIsNone(clause["kind"])
         self.assertIsNone(clause["optional"])
@@ -1164,6 +1164,285 @@ class TestGrantLeadWithUnsplitBullets(unittest.TestCase):
                  supplement="■モンスターゾーンで適用する永続効果です。")])
         self.assertEqual(clauses_of(entries, 1000)[0]["kind"], "永續效果")
         self.assertEqual(report["attribution_deferred"], [])
+
+
+class TestInlineBulletQuoteSplitting(unittest.TestCase):
+    """票16:官方以行內 `『●…』` 引用逐項給裁定,就是認可 ● 是獨立子效果。
+
+    官方常常不開 `【●…について】` 標頭,改成在行內引用 `『●…』` 再說它的類型
+    ——兩者是同一件事(官方拿整個 ● 當一個東西在講),拆句因此認第二種依據。
+    只在**賦予型領起句**這一族開火:領起句自己就寫了發動時 `●` 只是同一個發動
+    的選項列舉,票14 實測那一族的官方類型是對的。
+    """
+
+    # 晴れの天気模様(89355716)②:領起句不形成連鎖,2 速是 `●` 的
+    DESC = ("②：與此卡同縱列的「天氣」效果怪獸得到以下效果。\n"
+            "●將此卡除外發動。\n"
+            "●只要此卡在場上存在,對方不能發動效果。")
+    CARD_TEXT = ("②：このカードと同じ縦列の「天気」効果モンスターは"
+                 "以下の効果を得る。"
+                 "●このカードを除外して発動できる。"
+                 "●このカードがフィールドに存在する限り、"
+                 "相手は効果を発動できない。")
+
+    def _build(self, supplement, desc=None, card_text=None):
+        return build_tag_cards(
+            [card(desc=desc or self.DESC)],
+            [faq(card_text=card_text or self.CARD_TEXT, supplement=supplement)])
+
+    def test_inline_bullet_quotes_split_the_bullets_out(self):
+        entries, report = self._build(
+            "■『●このカードを除外して発動できる』効果は誘発即時効果です。\n"
+            "■『●このカードがフィールドに存在する限り、相手は効果を発動できない』"
+            "効果は永続効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses],
+                         ["②", "②-●1", "②-●2"])
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "誘發即時效果(2速)", "永續效果"])
+        self.assertEqual(report["bullet_clauses"], 2)
+        self.assertEqual(report["bullet_quote_splits"], 1)
+        self.assertEqual(report["attribution_deferred"], [])
+
+    def test_a_bare_bullet_quote_is_evidence_too(self):
+        """官方以『●』代稱子效果(大融合 7614732)也是拿它當一個東西在講。"""
+        entries, report = self._build(
+            "■同一チェーン上で２つ以上の『●』の効果の発動条件を満たした場合、"
+            "そのそれぞれの『●』を同一チェーン上で発動できます。")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)],
+                         ["②", "②-●1", "②-●2"])
+        self.assertEqual(report["bullet_quote_splits"], 1)
+
+    def test_a_quote_that_does_not_start_at_a_bullet_is_no_evidence(self):
+        """從句中截斷的引用只是一句話的片段,不是子效果的邊界(ADR-0003)。"""
+        entries, report = self._build(
+            "■『相手は効果を発動できない』というのは、"
+            "効果の発動そのものができないという意味です。")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)],
+                         ["②"])
+        self.assertEqual(report["bullet_quote_splits"], 0)
+
+    def test_an_activating_lead_is_not_split_by_a_bullet_quote(self):
+        """票14 回歸:領起句自己就寫了發動時,官方的類型是整段的。"""
+        entries, report = build_tag_cards(
+            [card(desc="①：以下效果從1個選擇發動。\n●效果甲。\n●效果乙。")],
+            [faq(card_text="①：以下の効果から１つを選択して発動できる。"
+                           "●効果甲。●効果乙。",
+                 supplement="■『●効果甲』はフィールドで発動できる起動効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①"])
+        self.assertEqual(clauses[0]["kind"], "啟動效果")
+        self.assertEqual(report["bullet_quote_splits"], 0)
+
+    def test_a_quote_spanning_the_cut_blocks_the_split(self):
+        """驗證二:官方自己的引用橫跨 ● 拆點,就證明那兩段是同一個效果句。
+
+        RR－スカル・イーグル(45184165)②:官方的引用從領起句一路引到 `●`,
+        講的是整段——這種卡不拆,類型照樣落在整段上。
+        """
+        entries, report = self._build(
+            "■『②：このカードと同じ縦列の「天気」効果モンスターは"
+            "以下の効果を得る。●このカードを除外して発動できる』モンスター効果は、"
+            "起動効果・誘発効果・誘発即時効果・永続効果のいずれにも"
+            "分類されない効果です。\n"
+            "■『●このカードを除外して発動できる』効果は誘発即時効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["②"])
+        self.assertEqual(clauses[0]["kind"], "無種類效果")
+        self.assertEqual([(r["id"], r["quotes"])
+                          for r in report["bullet_quote_violations"]],
+                         [(1000, ["②：このカードと同じ縦列の「天気」効果モンスター"
+                                  "は以下の効果を得る。●このカードを除外して"
+                                  "発動できる"])])
+
+    def test_split_bullets_remain_contiguous_substrings(self):
+        """驗證一:分項串接後等於原文,每一段都是原文的連續子字串。"""
+        cards = [card(desc=self.DESC)]
+        faqs = [faq(card_text=self.CARD_TEXT,
+                    supplement="■『●このカードを除外して発動できる』効果は"
+                               "誘発即時効果です。")]
+        entries, report = build_tag_cards(cards, faqs)
+        for clause in clauses_of(entries, 1000):
+            self.assertIn(clause["text_zh"], cards[0]["desc"])
+            self.assertIn(clause["text_ja"], faqs[0]["card_text"])
+        self.assertEqual(report["substring_violations"], [])
+        self.assertEqual(report["bullet_coverage_failed"], [])
+
+    def test_bullet_counts_that_disagree_across_languages_are_not_split(self):
+        entries, report = self._build(
+            "■『●このカードを除外して発動できる』効果は誘発即時効果です。",
+            desc="②：與此卡同縱列的「天氣」效果怪獸得到以下效果。\n●將此卡除外發動。")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)],
+                         ["②"])
+        self.assertEqual([r["id"] for r in report["bullet_split_mismatch"]],
+                         [1000])
+
+    def test_the_mandatory_attestation_lands_on_the_bullet(self):
+        """必發明示與類型明示共用同一套歸屬對位,拆完之後一起落到 ● 上。"""
+        entries, _ = self._build(
+            "■『●このカードを除外して発動できる』効果は誘発効果です。"
+            "必ず発動します。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "誘發效果(1速)", None])
+        self.assertEqual([c["optional"] for c in clauses],
+                         [None, "必發", None])
+
+
+class TestSequenceReferenceToABullet(unittest.TestCase):
+    """票16:`『②』の『●…』` 指的是子效果,不是編號效果本身。
+
+    序號引用只說了哪一個編號,`●` 拆開之後光靠它就不夠了——把 `●` 的類型套回
+    編號效果的領起句正是票14 治的那個病,只是這一次是序號階梯犯的。
+    """
+
+    DESC = ("②：以此卡為素材X召喚的怪獸得到以下效果。\n"
+            "●甲:攻擊力上升500。\n●乙:守備力上升500。")
+    CARD_TEXT = ("②：このカードを素材としてX召喚したモンスターは"
+                 "以下の効果を得る。"
+                 "●甲：攻撃力は５００アップする。"
+                 "●乙：守備力は５００アップする。")
+    EVIDENCE = "■『●甲：攻撃力は５００アップする』効果は永続効果です。\n"
+
+    def _build(self, supplement):
+        return build_tag_cards(
+            [card(desc=self.DESC)],
+            [faq(card_text=self.CARD_TEXT,
+                 supplement=self.EVIDENCE + supplement)])
+
+    def test_a_sequence_ref_qualified_by_a_bullet_targets_the_bullet(self):
+        entries, report = self._build(
+            "■『②』の『●乙：守備力は５００アップする』は永続効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses],
+                         ["②", "②-●1", "②-●2"])
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "永續效果", "永續效果"])
+        self.assertEqual(report["kind_conflicts"], [])
+
+    def test_a_bullet_only_named_inside_a_parenthetical_is_not_the_subject(self):
+        """『②』は…です。(…『●』…) 的主語是②,括弧裡的 `●` 只是解說時的指代。"""
+        entries, _ = self._build(
+            "■『②』は起動効果・誘発効果・誘発即時効果・永続効果の"
+            "いずれにも分類されない効果です。"
+            "（このカードを素材としてX召喚したモンスターが『●』の効果を得ます。）")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses],
+                         ["無種類效果", "永續效果", None])
+
+    def test_an_unresolvable_bullet_reference_defers(self):
+        """官方以『●』代稱但這個編號效果有兩個 `●`:指的是哪一個沒有證據。"""
+        entries, report = self._build("■『②』の『●』は永続効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "永續效果", None])
+        self.assertEqual([(r["quote"], r["hits"])
+                          for r in report["quote_ambiguous"]],
+                         [("●", ["②-●1", "②-●2"])])
+
+    def test_a_bullet_reference_with_the_bullets_unsplit_stays_on_the_clause(
+            self):
+        """`●` 還沒拆開時標的仍是整個編號效果,交給票14 那道閘門處理。
+
+        領起句自己就寫了發動,`●` 因此不拆(票14);那一族的 `●` 只是同一個發動
+        的選項列舉,官方的類型本來就是整段的。
+        """
+        entries, report = build_tag_cards(
+            [card(desc="①：以下效果從1個選擇發動。\n●甲:抽1張卡。\n●乙:回復500。")],
+            [faq(card_text="①：以下の効果から１つを選択して発動できる。"
+                           "●甲：１枚ドローする。●乙：５００回復する。",
+                 supplement="■『①』の『●乙：５００回復する』は起動効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①"])
+        self.assertEqual(clauses[0]["kind"], "啟動效果")
+        self.assertEqual(report["attribution_deferred"], [])
+
+    def test_a_bullet_reference_under_a_grant_lead_still_defers(self):
+        """賦予型領起句不發動,`●` 又還沒拆開:官方講的是哪一邊沒有證據可分。
+
+        引用不是卡文的子字串(官方改寫過)因此不構成拆句依據,`●` 留在原地。
+        """
+        entries, report = build_tag_cards(
+            [card(desc="①：我方怪獸得到以下效果。\n●甲:攻擊力上升。\n●乙:守備力上升。")],
+            [faq(card_text="①：自分のモンスターは以下の効果を得る。"
+                           "●甲：攻撃力アップ。●乙：守備力アップ。",
+                 supplement="【①の効果について】\n"
+                            "■『●乙の効果』は永続効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①"])
+        self.assertIsNone(clauses[0]["kind"])
+        self.assertEqual([r["reason"] for r in report["attribution_deferred"]],
+                         ["● 子效果待拆"])
+
+    def test_a_header_qualified_by_a_bullet_targets_the_bullet(self):
+        """標頭同樣只說得出哪一個編號效果(降雷皇ハモン 73104892 ①)。"""
+        entries, report = self._build(
+            "【②の効果について】\n"
+            "■この効果で得た『●乙：守備力は５００アップする』の効果は"
+            "永続効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "永續效果", "永續效果"])
+        self.assertEqual(report["kind_conflicts"], [])
+
+
+class TestNonEffectOnAWholeClause(unittest.TestCase):
+    """票16:效果外明示的引用涵蓋整個效果句時就自動套用,涵蓋一部分只報告。
+
+    領起句拆出 ● 之後自己還是沒有類型,而官方對這一族常寫
+    `『②：…以下の効果を得る』は効果の扱いではありません`——引用涵蓋的正是拆完
+    的那一段,對位沒有任何歧義可言,再交給判定只是浪費額度。
+    """
+
+    DESC = "①：此卡依表示形式得到以下效果。\n●攻擊表示:效果甲。\n●守備表示:效果乙。"
+    CARD_TEXT = ("①：このカードは表示形式によって以下の効果を得る。"
+                 "●攻撃表示：効果甲。●守備表示：効果乙。")
+    NON_EFFECT = ("■『①：このカードは表示形式によって以下の効果を得る』"
+                  "は効果の扱いではありません。")
+
+    def _build(self, supplement):
+        return build_tag_cards(
+            [card(desc=self.DESC)],
+            [faq(card_text=self.CARD_TEXT, supplement=supplement)])
+
+    def test_a_split_lead_takes_the_non_effect_attestation(self):
+        entries, report = self._build(
+            self.NON_EFFECT
+            + "\n■『●攻撃表示：効果甲』効果は永続効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses],
+                         ["①", "①-●1", "①-●2"])
+        self.assertEqual([c["kind"] for c in clauses],
+                         ["效果外文本", "永續效果", None])
+        self.assertEqual(clauses[0]["source"], "official")
+        self.assertEqual(report["official_coverage"]["non_effect"], 1)
+        self.assertEqual(report["non_effect_outside_preamble"], [])
+
+    def test_an_unsplit_clause_only_gets_the_report(self):
+        """符文眼靈擺龍(1516510):官方說領起句不是效果,但 `●` 還沒拆開。
+
+        整段套上效果外文本會把 `●` 的效果一起吃掉,所以引用涵蓋不到整段時
+        照舊只進報告。
+        """
+        entries, report = self._build(self.NON_EFFECT)
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①"])
+        self.assertIsNone(clauses[0]["kind"])
+        self.assertEqual(
+            [r["id"] for r in report["non_effect_outside_preamble"]], [1000])
+
+    def test_the_preamble_still_matches_on_any_substring(self):
+        """前言段整段都是效果外文本,引用命中其中一句就指得回同一段(票10)。"""
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。此卡不能特殊召喚。\n①：效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。"
+                           "このカードは特殊召喚できない。①：効果甲。",
+                 supplement="■『このカードは通常召喚できない』"
+                            "は効果として扱いません。")])
+        preamble = clauses_of(entries, 1000)[0]
+        self.assertEqual(preamble["kind"], "效果外文本")
+        self.assertEqual(preamble["source"], "official")
+        self.assertEqual(report["non_effect_outside_preamble"], [])
 
 
 class TestMandatoryAttestation(unittest.TestCase):

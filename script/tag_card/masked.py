@@ -218,17 +218,19 @@ def _key(row):
     return (row["id"], row["section"], row["index"])
 
 
-def _answer_key(entries):
-    """標記表 → {(卡片密碼, section, index): 官方類型 or None}。
-
-    鍵收全部的行,值只認 `source: "official"`。兩件事因此分得開:鍵不在裡面代表
-    那一行整個不見了(樣本過期),鍵在但值是 None 代表那一行**現在沒有官方答案**
-    ——可能是官方明示被撤回,也可能是判定票後來把類型填了上去。後者尤其不能當
-    標準答案:那是判定者自己的產出,拿它對答案等於讓判定者跟自己對。
-    """
-    return {(entry["id"], clause["section"], clause["index"]):
-            clause["kind"] if clause["source"] == SOURCE_OFFICIAL else None
+def _clauses_by_key(entries):
+    """標記表 → {(卡片密碼, section, index): 效果句}。"""
+    return {(entry["id"], clause["section"], clause["index"]): clause
             for entry in entries for clause in entry["clauses"]}
+
+
+def _official_kind(clause):
+    """這一行**現在**的官方答案;沒有則 None。
+
+    只認 `source: "official"`。判定票填上去的類型不能當標準答案——那是判定者
+    自己的產出,拿它對答案等於讓判定者跟自己對。
+    """
+    return clause["kind"] if clause["source"] == SOURCE_OFFICIAL else None
 
 
 def _identity(key):
@@ -251,26 +253,35 @@ def score_masked(entries, sample, answers, ambiguous=(), pipeline=()):
     六類的定義,管線缺陷改的是程式。超過 PIPELINE_CAP 條就該先修管線再測判定。
     兩個桶的清單、「不在樣本內」與上限都各報各的,見 BUCKET_CAPS。
 
-    樣本檔是先產出、後判定的,中間標記表可能已經重跑過。漂移分兩種,都排除於分母
+    樣本檔是先產出、後判定的,中間標記表可能已經重跑過。漂移分三種,都排除於分母
     之外但下場不同:
 
-      stale     —— `(卡片密碼, section, index)` 在標記表裡整個不見了。結構對不上,
-                   判不通過,該重抽。
-      withdrawn —— key 還在,但那一行**現在沒有官方答案**:官方明示被撤回(票11 撤掉
+      stale     —— 那一行已經**不是樣本裡的那一行**:`(卡片密碼, section, index)`
+                   在標記表裡整個不見了,或鍵還在但日文原文變了(票16 把 `●` 拆
+                   出去之後母句只剩領起句)。結構對不上,判不通過,該重抽——拿舊
+                   答案對新句子會把管線的改動記成判定錯誤。
+      withdrawn —— 同一行,但那一行**現在沒有官方答案**:官方明示被撤回(票11 撤掉
                    未拆整團的就撤了 1,146 條),或判定票後來把類型填了上去。都是資料
                    的正常演進,不判不通過,只是那一條沒有標準答案可對。
 
-    判定者仍然可以對 withdrawn 的行作答——那些行當初確實在樣本裡,答了不算多判、
+    判定者仍然可以對這兩種行作答——那些行當初確實在樣本裡,答了不算多判、
     不答也不算漏判。
     """
-    official = _answer_key(entries)
-    stale = [_identity(_key(row)) for row in sample
-             if _key(row) not in official]
-    present = [_key(row) for row in sample if _key(row) in official]
+    clauses = _clauses_by_key(entries)
+    official = {key: _official_kind(clause)
+                for key, clause in clauses.items()}
+    stale, present = [], []
+    for row in sample:
+        key = _key(row)
+        clause = clauses.get(key)
+        if clause is None or row["text_ja"] != clause["text_ja"]:
+            stale.append(_identity(key))
+        else:
+            present.append(key)
+    in_sample = {_key(row) for row in sample if _key(row) in clauses}
     withdrawn = [_identity(key) for key in present
                  if official[key] not in KINDS]
     sample_keys = [key for key in present if official[key] in KINDS]
-    in_sample = set(present)
     text_by_key = {_key(row): row for row in sample}
 
     answered, extra, invalid = {}, [], []

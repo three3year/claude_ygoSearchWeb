@@ -359,6 +359,23 @@ class ScoringTest(unittest.TestCase):
         self.assertEqual(report["missing"], [])
         self.assertFalse(report["passed"])
 
+    def test_日文原文變了的樣本行進stale且不計入分母(self):
+        """票16:拆句把 `●` 切出去之後,母句剩下的已經不是判定者看過的那一段。
+
+        鍵還在,但那一行的身分變了——拿舊答案對新句子會把管線的改動記成判定
+        錯誤,那是最難察覺的一種假訊號。
+        """
+        entries, sample = self.fixture(KIND_TRIGGER, KIND_TRIGGER)
+        entries[1]["clauses"][0]["text_ja"] += "●子效果。"
+        report = masked.score_masked(entries, sample,
+                                     [answer(sample[0], KIND_TRIGGER),
+                                      answer(sample[1], KIND_CONTINUOUS)])
+        self.assertEqual(len(report["stale"]), 1)
+        self.assertEqual(report["per_kind"][KIND_TRIGGER]["scored"], 1)
+        self.assertEqual(report["errors"], [])  # 不記成判定錯誤
+        self.assertEqual(report["extra"], [])   # 答了不算多判
+        self.assertFalse(report["passed"])
+
     def test_官方答案被撤回的樣本行不計入分母也不判不通過(self):
         entries, sample = self.fixture(KIND_TRIGGER, KIND_TRIGGER)
         entries[1]["clauses"][0]["kind"] = None  # 票11 撤掉未拆整團的官方明示

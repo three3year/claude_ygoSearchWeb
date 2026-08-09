@@ -131,8 +131,12 @@ def quotes(text):
     return [q for q in _QUOTE_RE.findall(text or "") if not _is_sequence_ref(q)]
 
 
-def _is_non_effect_line(line):
-    """這一行有沒有在括弧之外寫下效果外文本的明示。"""
+def _outside_parens(line):
+    """一行明示 → 括弧之外的部分。
+
+    官方把補述寫在句尾括弧裡,那裡面的話是限定否定或解說時的指代,不是這一句
+    在講的事——效果外文本的明示與 `『●』` 指名都靠這一點分辨主語。
+    """
     depth = 0
     outside = []
     for ch in line:
@@ -142,7 +146,31 @@ def _is_non_effect_line(line):
             depth = max(depth - 1, 0)
         elif not depth:
             outside.append(ch)
-    return bool(NON_EFFECT_RE.search("".join(outside)))
+    return "".join(outside)
+
+
+def _is_non_effect_line(line):
+    """這一行有沒有在括弧之外寫下效果外文本的明示。"""
+    return bool(NON_EFFECT_RE.search(_outside_parens(line)))
+
+
+def _bullet_subject(line):
+    """這一行是不是在講某個 `●` 子效果 → 那個 `『●…』` 引用;不是則 None。
+
+    官方寫 `『②』の『●…』は永続効果です` 時,序號只說了在哪一個編號效果底下,
+    真正的標的是 `●`——把它套回編號效果的領起句就是票14 治的那個病。
+
+    兩道限制,兩種不是主語的 `●` 因此都不算數:
+    只認括弧之外的引用——`『②』は…です。（…『●』の効果を得ます。）` 的主語是②,
+    括弧裡的 `●` 只是解說時的指代(實測這兩種形狀各佔一半);而且只認**第一個**
+    非序號引用,與 attribute() 的歸屬規則同一條——後面的引用是為了解說而提到的
+    另一個效果。
+    """
+    for quoted in _QUOTE_RE.findall(_outside_parens(line)):
+        if _is_sequence_ref(quoted):
+            continue
+        return quoted if _normalise(quoted).startswith(BULLET) else None
+    return None
 
 
 def _is_sequence_ref(quoted):
@@ -257,21 +285,49 @@ def _seq_target(index, effects, unsplit):
     return ordinal if any(c["index"] == ordinal for c in effects) else None
 
 
-def _grant_leads(effects):
-    """效果句清單 → {index: (領起句, 整段)},只收「賦予型領起句 + 未拆的 ●」。
+def grant_lead(text_ja):
+    """「〜は以下の効果を得る。●…」→ (領起句, 整段) 正規化後;不是這一族回 None。
 
     兩份文字都已正規化,拿來回答「官方這一句講的是領起句還是 `●`」——`●` 拆成
     獨立效果句之後領起句那一行就不含 `●`,這裡自然收不到它,判定隨即恢復正常。
+    拆句要不要認行內 `『●…』` 引用看的是同一族(票16),所以兩邊共用這一支。
     """
+    text = text_ja or ""
+    if BULLET not in text:
+        return None
+    head = text.split(BULLET)[0]
+    if not _GRANT_LEAD_RE.search(head.strip()):
+        return None
+    return _normalise(head), _normalise(text)
+
+
+def _grant_leads(effects):
+    """效果句清單 → {index: (領起句, 整段)},只收「賦予型領起句 + 未拆的 ●」。"""
     leads = {}
     for clause in effects:
-        text = clause["text_ja"] or ""
-        if BULLET not in text:
-            continue
-        head = text.split(BULLET)[0]
-        if _GRANT_LEAD_RE.search(head.strip()):
-            leads[clause["index"]] = (_normalise(head), _normalise(text))
+        lead = grant_lead(clause["text_ja"])
+        if lead is not None:
+            leads[clause["index"]] = lead
     return leads
+
+
+def quoted_bullets(supplement, text_ja):
+    """官方以行內 `『●…』` 引用這一段的 ● 子效果 → 那些引用。
+
+    引用**從 `●` 起頭**才算數:官方是拿整個 `●` 當一個東西在講,與
+    `【●…について】` 標頭是同一種依據,只是不開標頭(實測 150 / 156 條賦予型
+    領起句有這種引用)。從句中截斷的引用只是一句話的片段、不是子效果的邊界
+    (ADR-0003),不得當作拆句的授權。
+    """
+    body = _normalise(text_ja)
+    if not body:
+        return []
+    hits = []
+    for quoted in quotes(supplement):
+        needle = _normalise(quoted)
+        if needle.startswith(BULLET) and needle in body:
+            hits.append(quoted)
+    return hits
 
 
 def _quotes_the_lead(lead, quoted):
@@ -287,6 +343,28 @@ def _quotes_the_lead(lead, quoted):
     head, body = lead
     position = body.find(_normalise(quoted))
     return 0 <= position < len(head)
+
+
+# 引用常常從編號之後才開始(官方寫『このカードは〜』而卡文是『②：このカードは〜』)。
+# 正規化把「②：」折成半形的「2:」,⑩ 折成兩位數,所以編號前綴最長是三個字元。
+_INDEX_PREFIX_RE = re.compile(r"^\d{0,2}[:：]?$")
+
+
+def _covers_whole_clause(text_ja, quoted):
+    """官方的 `『原文』` 引用涵蓋整個效果句嗎?前面最多剩編號、後面最多剩句號。
+
+    涵蓋一部分時不算數——官方常常只說**領起句**不是效果(符文眼靈擺龍
+    1516510),那一句涵蓋不到整段,套上去會把 `●` 的效果一起吃掉。
+    """
+    body = _normalise(text_ja)
+    needle = _normalise(quoted)
+    if not body or not needle:
+        return False
+    position = body.find(needle)
+    if position < 0:
+        return False
+    return (bool(_INDEX_PREFIX_RE.match(body[:position]))
+            and body[position + len(needle):] in ("", "。"))
 
 
 def _match_quote(quoted, effects):
@@ -372,6 +450,7 @@ def attest(name_ja, supplement, clauses, unsplit=()):
     preambles = [c for c in clauses if _is_preamble(c["index"])]
     # 對得出歸屬的效果句:未拆的整團只是骨架的暫代值,不算數
     attributable = [c for c in effects if c["index"] not in unsplit]
+    unattributable = [c for c in effects if c["index"] in unsplit]
     grant_leads = _grant_leads(effects)
     own_name = _normalise(name_ja)
     conflicting = set()
@@ -416,10 +495,10 @@ def attest(name_ja, supplement, clauses, unsplit=()):
         sequence = _SEQ_QUOTE_RE.findall(line)
         if sequence:
             target = _seq_target(sequence[0], effects, unsplit)
-            if target is not None:
-                assign(target, kind, LADDER_SEQ, line, is_mandatory)
-            else:
+            if target is None:
                 note("seq_missing", {"index": sequence[0]})
+                return
+            assign_to_index(target, kind, LADDER_SEQ, line, is_mandatory)
             return
         quoted_lines = quotes(line)
         if quoted_lines:
@@ -429,14 +508,14 @@ def attest(name_ja, supplement, clauses, unsplit=()):
                      {"kind": kind, "reason": "無編號卡文待拆", "line": line})
                 return
             quoted = quoted_lines[0]
-            hits = _match_quote(quoted, attributable)
-            if len(hits) == 1:
-                assign(hits[0], kind, LADDER_QUOTE, line, is_mandatory, quoted)
-            elif not hits:
-                note("quote_unmatched", {"kind": kind, "quote": quoted})
-            else:
-                note("quote_ambiguous",
-                     {"kind": kind, "quote": quoted, "hits": hits})
+            if not _match_quote(quoted, attributable) \
+                    and _match_quote(quoted, unattributable):
+                # 引用落在還沒拆開的那一團裡:是待拆,不是官方引用了別張卡
+                note("attribution_deferred",
+                     {"kind": kind, "reason": "無編號卡文待拆", "line": line})
+                return
+            assign_to_match(quoted, attributable, kind, LADDER_QUOTE, line,
+                            is_mandatory)
             return
         names = _NAME_RE.findall(line)
         if names:
@@ -449,6 +528,38 @@ def attest(name_ja, supplement, clauses, unsplit=()):
             return
         apply_to_sole_effect(kind, LADDER_SINGLE, line, "無歸屬標記",
                              is_mandatory)
+
+    def assign_to_index(target, kind, ladder, line, is_mandatory,
+                        header_quote=None):
+        """標頭或序號指名了一個編號效果 → 套用;那一行另外指名 `●` 時改指子效果。
+
+        標頭與序號都只說得出「哪一個編號效果」,`●` 拆開之後光靠它就不夠了
+        (`■『②』の『●』は永続効果です`:標的是那個 `●`,套回領起句就是票14 治的
+        那個病)。`●` 還沒拆開時標的仍是整個編號效果,交給 assign 那道閘門處理:
+        賦予型領起句會擋下來,領起句自己就寫了發動的那一族則照常套用——那一族的
+        `●` 只是同一個發動的選項列舉,官方的類型本來就是整段的。
+        """
+        quoted = _bullet_subject(line)
+        if quoted is None:
+            assign(target, kind, ladder, line, is_mandatory, header_quote)
+            return
+        bullets = [c for c in attributable
+                   if c["index"].startswith(f"{target}-{BULLET}")]
+        if bullets:
+            assign_to_match(quoted, bullets, kind, ladder, line, is_mandatory)
+        else:
+            assign(target, kind, ladder, line, is_mandatory, quoted)
+
+    def assign_to_match(quoted, candidates, kind, ladder, line, is_mandatory):
+        """`『原文』` 引用 → 命中的那一個效果句;命中不唯一時只記註記,不猜測。"""
+        hits = _match_quote(quoted, candidates)
+        if len(hits) == 1:
+            assign(hits[0], kind, ladder, line, is_mandatory, quoted)
+        elif hits:
+            note("quote_ambiguous",
+                 {"kind": kind, "quote": quoted, "hits": hits})
+        else:
+            note("quote_unmatched", {"kind": kind, "quote": quoted})
 
     def apply_to_sole_effect(kind, ladder, line, reason, is_mandatory):
         """階梯四、五:這張卡只有一個效果句時整卡套用。
@@ -469,9 +580,12 @@ def attest(name_ja, supplement, clauses, unsplit=()):
             assign(effects[0]["index"], kind, ladder, line, is_mandatory)
 
     def non_effect(line, header):
-        """效果外文本的明示:指向效果外文本段才自動套用,否則只進報告。
+        """效果外文本的明示:指到一整段才自動套用,否則只進報告。
 
-        八種變體走的是同一條路徑——寫法不同不代表證據更強。
+        八種變體走的是同一條路徑——寫法不同不代表證據更強。兩種標的的門檻不同,
+        因為「指到一整段」這件事在兩邊長得不一樣:前言段整段都是效果外文本,
+        引用命中它的任何一句都指得回同一段(票10);效果句則要求引用**涵蓋整句**
+        ——官方常常只說領起句不是效果,而領起句是效果句的一部分。
         """
         targets = quotes(line) or (quotes(header) if header else [])
         for segment in preambles:
@@ -479,6 +593,14 @@ def attest(name_ja, supplement, clauses, unsplit=()):
             if body and any(_normalise(t) in body for t in targets):
                 assign(segment["index"], KIND_NON_EFFECT, LADDER_NON_EFFECT,
                        line)
+                return
+        for clause in attributable:
+            covering = next((t for t in targets
+                             if _covers_whole_clause(clause["text_ja"], t)),
+                            None)
+            if covering is not None:
+                assign(clause["index"], KIND_NON_EFFECT, LADDER_NON_EFFECT,
+                       line, quoted=covering)
                 return
         notes["non_effect_outside_preamble"].append(
             {"line": line, "header": header})
@@ -505,8 +627,8 @@ def attest(name_ja, supplement, clauses, unsplit=()):
             kind = kinds.pop() if kinds else None
             kindless = kind is None
             if status == "index":
-                assign(target, kind, LADDER_HEADER, line, is_mandatory,
-                       header_quote)
+                assign_to_index(target, kind, LADDER_HEADER, line,
+                                is_mandatory, header_quote)
             elif status == "missing":
                 note("header_index_missing", {"index": target})
             elif status == "unresolved":

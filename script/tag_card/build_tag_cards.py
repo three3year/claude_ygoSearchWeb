@@ -389,8 +389,16 @@ def print_report(report, digest_changed=False, file=sys.stdout):
     p("效果類型分布:")
     for kind, count in report["kind_counts"].items():
         p(f"  {kind}: {count}")
-    p(f"● 子效果拆出: {report['bullet_clauses']} 條,"
-      f"繁中/日文 ● 數量不一致未拆: {len(report['bullet_split_mismatch'])} 段")
+    p(f"● 子效果拆出: {report['bullet_clauses']} 條"
+      f",拆開的母句 {report['bullet_quote_splits']} 段由行內『●…』引用授權、"
+      f"其餘由【●…について】標頭")
+    for key, label in (
+            ("bullet_split_mismatch", "繁中/日文 ● 數量不一致,未拆"),
+            ("bullet_coverage_failed", "驗證一・● 分項串接不等於原文(必須為 0)"),
+            ("bullet_quote_violations", "驗證二・官方引用橫跨 ● 拆點,未拆")):
+        rows = report[key]
+        p(f"  {label}: {len(rows)} 段 "
+          f"{[r['id'] for r in rows[:LIST_PREVIEW]]}")
 
     print_splits(report, file=file)
 

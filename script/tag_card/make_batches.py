@@ -22,6 +22,7 @@
 """
 import argparse
 import os
+import re
 import sys
 
 import official
@@ -35,6 +36,7 @@ DEFAULT_BATCH_DIR = os.path.join(ROOT, ".scratch", "tag-card", "batches")
 
 SERIES_KIND = "kind"
 SERIES_SPLIT = "split"
+_ONLY_RE = re.compile(r"^\d+(,\d+)*$")
 # 每批卡數。「要拆+判」的輸出多一份拆點,單卡成本約兩倍,所以放得少。
 BATCH_SIZE = {SERIES_KIND: 300, SERIES_SPLIT: 200}
 SERIES_LABEL = {SERIES_KIND: "只判類型", SERIES_SPLIT: "要拆+判"}
@@ -119,11 +121,23 @@ def batches_of(payloads, size):
             for start in range(0, len(payloads), size)]
 
 
+def _file_count(series, wanted, limit):
+    """這一次會寫出幾個檔案。`--name` 只能用在剛好一個的時候。"""
+    total = 0
+    for name in wanted:
+        groups = batches_of(series[name], BATCH_SIZE[name])
+        total += len(groups) if limit is None else min(limit, len(groups))
+    return total
+
+
 # 判定票只讀規範與批次檔,所以結果檔的格式得寫在批次檔裡(spec Story 36)
 RESULT_FORMAT = {
     "說明": "一卡一段落一物件。split_targets 的段落要拆句,寫 split: true 與"
             "每段的原文子字串;其餘只填 kind / optional / role。"
             "拆不出來或判不出來的留空並寫 note,不猜。",
+    "兩側語序不一致": "繁中與日文把同一批句子排成不同順序時,clauses 照繁中順序"
+                "列、另給 ja_order(段落位置的排列)說明日文怎麼讀;index 仍照"
+                "日文的序號給,官方的『①』對的是日文那一側(規範 §8 判準11)。",
     "範例": [
         {"id": 12345, "section": "main", "split": True,
          "clauses": [
@@ -135,6 +149,20 @@ RESULT_FORMAT = {
         {"id": 67890, "section": "main",
          "clauses": [{"index": "①", "kind": "誘發效果(1速)",
                       "optional": "必發", "role": None, "note": ""}]},
+        {"id": 24680, "section": "main", "split": True, "ja_order": [1, 2, 0],
+         "_說明": "日文讀 ①②③,繁中把 ③ 搬到最前面。clauses 照繁中順序列,"
+                "ja_order 說明日文從第 2 段讀起(=[1, 2, 0]);"
+                "index 照日文的序號給,所以是 3、1、2——這一例的日文③剛好是"
+                "效果外文本,index 因此寫 0(判準5:效果外文本段一律 0)。",
+         "clauses": [
+             {"index": "0", "text_zh": "（繁中第一段 = 日文③,效果外文本）",
+              "text_ja": "（日文第三句）"},
+             {"index": "1", "text_zh": "（繁中第二段 = 日文①）",
+              "text_ja": "（日文第一句）",
+              "kind": "誘發即時效果(2速)", "optional": "選發", "role": None},
+             {"index": "2", "text_zh": "（繁中第三段 = 日文②）",
+              "text_ja": "（日文第二句）",
+              "kind": "永續效果", "optional": None, "role": None}]},
     ],
 }
 
@@ -174,6 +202,11 @@ def main(argv=None):
                         help="第一個檔案的批號。每票只生自己那一批,而批次是"
                              "即時產生的(待判集合一票比一票小),所以批號由票"
                              "自己給,檔名才不會互相蓋掉")
+    parser.add_argument("--only", help="只放這幾張卡(逗號分隔的卡片密碼)。"
+                                       "回頭補判先前留空的卡用——正式排票要的是"
+                                       "無遺漏地判完全部,不要拿它來挑卡")
+    parser.add_argument("--name", help="檔名(預設 <系列>-<批號>)。"
+                                       "補判批次取個自己的名字,才不會蓋掉正式排票的檔")
     parser.add_argument("--dry-run", action="store_true",
                         help="只點數,不寫檔")
     args = parser.parse_args(argv)
@@ -186,6 +219,23 @@ def main(argv=None):
 
     series = collect(entries, report, cards, faqs)
     wanted = args.series or [SERIES_SPLIT, SERIES_KIND]
+    if args.only is not None:
+        if not _ONLY_RE.match(args.only):
+            print("--only 只吃逗號分隔的卡片密碼")
+            return 1
+        only = {int(cid) for cid in args.only.split(",")}
+        series = {name: [p for p in payloads if p["id"] in only]
+                  for name, payloads in series.items()}
+        found = {p["id"] for name in wanted for p in series[name]}
+        if only - found:
+            print(f"--only 指名的 {sorted(only - found)} 不在待判集合裡"
+                  f"(或不屬於 {wanted})")
+            return 1
+    if args.name and _file_count(series, wanted, args.limit) > 1:
+        # `--name` 是給補判批次取名用的,一次只寫一檔;會寫出多檔時取同一個名字
+        # 等於自己蓋掉自己,那正是這個旗標要避免的事
+        print("--name 只能用在只寫出一個檔案的時候,請加上 --only 或 --limit 1")
+        return 1
     if not args.dry_run:
         os.makedirs(args.out_dir, exist_ok=True)
 
@@ -201,7 +251,7 @@ def main(argv=None):
         limit = len(groups) if args.limit is None else args.limit
         for offset, group in enumerate(groups[:limit]):
             number = args.start + offset
-            batch = f"{name}-{number:02d}"
+            batch = args.name or f"{name}-{number:02d}"
             path = os.path.join(args.out_dir, f"{batch}.json")
             write_batch(path, batch, name, number, len(groups), group)
             print(f"  已寫出 {path}({len(group)} 張 / "

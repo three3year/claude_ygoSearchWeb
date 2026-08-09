@@ -2381,11 +2381,14 @@ def segment(index, text_zh, text_ja):
 
 
 def split(segments, cid=1000, section="main", text_zh=OLD_ZH, text_ja=OLD_JA,
-          ticket="票13", text_hash=None):
+          ticket="票13", text_hash=None, ja_order=None):
     """拆句表的一筆。雜湊由拆句當時的卡文算出來,與骨架用的是同一支函式。"""
-    return {"id": cid, "section": section, "ticket": ticket,
-            "text_hash": text_hash or split_hash(text_zh, text_ja),
-            "segments": segments}
+    record = {"id": cid, "section": section, "ticket": ticket,
+              "text_hash": text_hash or split_hash(text_zh, text_ja),
+              "segments": segments}
+    if ja_order is not None:
+        record["ja_order"] = ja_order
+    return record
 
 
 def two_segments():
@@ -2466,6 +2469,108 @@ class TestClauseSplits(unittest.TestCase):
         self.assertEqual([c["index"] for c in clauses_of(entries, 1000)], ["①"])
         self.assertEqual(report["split_unused"],
                          [{"id": 1000, "section": "main"}])
+
+
+class TestCrossOrderedSplits(unittest.TestCase):
+    """繁中與日文把同一批句子排成不同順序的卡(票51)。
+
+    `segments` 照**繁中**順序列(網站給人看的是繁中),`ja_order` 給出**日文**的
+    閱讀順序,`index` 照**日文**的序號給(官方用①②③稱呼舊式卡文,`_seq_target`
+    是拿 index 字串對位)。實例:一族の掟 296499 把日文的維持代價句搬到繁中最前面。
+    """
+
+    # 日文 ①宣言 → ②不能攻擊宣言 → ③維持代價;繁中把 ③ 搬到最前面
+    JA = ("発動時に１種類の種族を宣言する。",
+          "その種族のモンスターは攻撃宣言ができない。",
+          "自分のスタンバイフェイズ毎にモンスター１体を生け贄に捧げなければ"
+          "このカードを破壊する。")
+    ZH = ("此卡的控制者在每次我方準備階段解放1隻怪獸，或不解放讓此卡破壞。",
+          "宣言1個種族可以發動此卡。",
+          "那個種族的怪獸不能攻擊宣言。")
+    ZH_TEXT = "\n".join(ZH)
+    JA_TEXT = "".join(JA)
+    # 繁中順序:維持代價(日文第 3 句) → 宣言(第 1) → 攻擊宣言(第 2)
+    SEGMENTS = [segment("0", ZH[0], JA[2]),
+                segment("1", ZH[1], JA[0]),
+                segment("2", ZH[2], JA[1])]
+    JA_ORDER = [1, 2, 0]
+
+    def build(self, record, supplement=None):
+        cards, faqs = old_card(self.ZH_TEXT, self.JA_TEXT, supplement)
+        return build_tag_cards(cards, faqs, splits=[record])
+
+    def record(self, **kwargs):
+        kwargs.setdefault("segments", self.SEGMENTS)
+        kwargs.setdefault("ja_order", self.JA_ORDER)
+        return split(text_zh=self.ZH_TEXT, text_ja=self.JA_TEXT,
+                     ticket="票51", **kwargs)
+
+    def test_each_side_is_covered_in_its_own_reading_order(self):
+        entries, report = self.build(self.record())
+        self.assertEqual(
+            [(c["index"], c["text_zh"], c["text_ja"])
+             for c in clauses_of(entries, 1000)],
+            [("0", self.ZH[0], self.JA[2]),
+             ("1", self.ZH[1], self.JA[0]),
+             ("2", self.ZH[2], self.JA[1])])
+        self.assertEqual(report["split_coverage_failed"], [])
+        self.assertEqual(report["pending_split"], [])
+
+    def test_the_official_sequence_reference_follows_the_japanese_index(self):
+        """官方說『①』指的是日文的第一句,不是繁中列在最前面的那一段。"""
+        entries, _ = self.build(
+            self.record(),
+            supplement="■『①』はフィールドで発動する誘発効果です。")
+        by_index = {c["index"]: c for c in clauses_of(entries, 1000)}
+        self.assertEqual(by_index["1"]["text_ja"], self.JA[0])
+        self.assertEqual((by_index["1"]["kind"], by_index["1"]["source"]),
+                         ("誘發效果(1速)", "official"))
+        self.assertIsNone(by_index["2"]["kind"])
+
+    def test_a_quote_cut_apart_by_the_reordered_split_is_still_caught(self):
+        """驗證二只問「引用有沒有完整落在某一段裡」,與段落順序無關。"""
+        quote = self.JA[0] + self.JA[1]
+        _, report = self.build(self.record(), supplement=f"■『{quote}』効果です。")
+        self.assertEqual([r["id"] for r in report["split_quote_violations"]],
+                         [1000])
+        self.assertEqual(len(report["pending_split"]), 1)
+
+    def test_a_japanese_order_that_leaves_a_gap_fails_coverage(self):
+        """日文那一側照樣要無遺漏覆蓋,排列對了不代表段落切對了。"""
+        broken = [segment("0", self.ZH[0], self.JA[2]),
+                  segment("1", self.ZH[1], self.JA[0]),
+                  segment("2", self.ZH[2], "")]
+        _, report = self.build(self.record(segments=broken))
+        self.assertEqual([(r["id"], r["side"])
+                          for r in report["split_coverage_failed"]],
+                         [(1000, "ja")])
+
+    def test_a_ja_order_that_is_not_a_permutation_is_malformed(self):
+        # 結果檔是人寫的 JSON,型別也可能是壞的("1" 而不是 1);拒收不是拋例外
+        for bad in ([0, 1], [0, 1, 1], [0, 1, 3], "abc", [0, "1", 2],
+                    [0, 1, None], [0, 1, True]):
+            with self.subTest(ja_order=bad):
+                _, report = self.build(self.record(ja_order=bad))
+                self.assertEqual([r["id"] for r in report["split_malformed"]],
+                                 [1000])
+
+    def test_without_ja_order_the_two_sides_stay_positionally_paired(self):
+        """既有 395 筆都沒有這個欄位,行為必須一個字都不變。"""
+        cards, faqs = old_card()
+        entries, report = build_tag_cards(cards, faqs,
+                                          splits=[split(two_segments())])
+        self.assertEqual(
+            [(c["text_zh"], c["text_ja"]) for c in clauses_of(entries, 1000)],
+            [(OLD_ZH_HEAD, OLD_JA_HEAD), (OLD_ZH_TAIL, OLD_JA_TAIL)])
+        self.assertEqual(report["split_coverage_failed"], [])
+
+    def test_an_identity_ja_order_is_the_same_as_omitting_it(self):
+        cards, faqs = old_card()
+        entries, _ = build_tag_cards(
+            cards, faqs, splits=[split(two_segments(), ja_order=[0, 1])])
+        self.assertEqual(
+            [(c["text_zh"], c["text_ja"]) for c in clauses_of(entries, 1000)],
+            [(OLD_ZH_HEAD, OLD_JA_HEAD), (OLD_ZH_TAIL, OLD_JA_TAIL)])
 
 
 class TestSplitPreservesTheFirstIndex(unittest.TestCase):

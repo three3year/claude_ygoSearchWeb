@@ -20,6 +20,9 @@
 `kind` / `optional` / `role`。拆不出來或判不出來的留空並寫 `note`,不猜——
 `clauses` 給空陣列即為「這一團拆不出來」,那一段不寫進拆句表,下一票會再出現一次。
 
+繁中與日文把同一批句子排成不同順序時,`clauses` 照**繁中**順序列,另給一個
+`ja_order`(段落位置的排列)說明**日文**怎麼讀;`index` 仍照日文的序號給(票51)。
+
 三道關卡,任何一道不過就整批不寫入(`--force` 可強行寫,但那等於把失敗藏起來):
 
 1. **集合一致性自檢** —— 結果檔涵蓋的效果句與拆句標的必須與批次檔完全相同,
@@ -127,12 +130,16 @@ def split_records(result, blobs, ticket):
         segments = [{"index": row["index"], "text_zh": row.get("text_zh", ""),
                      "text_ja": row.get("text_ja", "")}
                     for row in record["clauses"]]
-        records.append({
+        split = {
             "id": record["id"], "section": record["section"],
             "ticket": ticket,
             "text_hash": blob["text_hash"],
             "segments": segments,
-        })
+        }
+        if record.get("ja_order") is not None:
+            # 兩側語序不一致的卡:段落照繁中順序列,日文那一側怎麼讀另外記(票51)
+            split["ja_order"] = record["ja_order"]
+        records.append(split)
     return records, skipped, problems
 
 

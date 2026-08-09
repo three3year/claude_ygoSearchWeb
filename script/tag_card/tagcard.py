@@ -421,29 +421,56 @@ def _index_splits(splits):
             for record in splits or ()}
 
 
+def _ja_order(record, count):
+    """日文的閱讀順序(段落位置的排列);不是合法排列時回 None。
+
+    `segments` 照**繁中**順序列,兩側語序不一致的卡因此需要另記日文那一側怎麼讀
+    (票51)。沒有這個欄位就是恆等排列——既有紀錄一個字都不用改。
+    """
+    order = record.get("ja_order")
+    if order is None:
+        return list(range(count))
+    # 結果檔是人寫的 JSON,型別也可能是壞的("1" 而不是 1、true 而不是 1),
+    # 所以先逐項驗型別再驗排列——直接 sorted() 混型別的清單會拋例外而不是拒收
+    if not isinstance(order, list) or any(
+            type(pos) is not int for pos in order):
+        return None
+    return order if sorted(order) == list(range(count)) else None
+
+
 def _validate_split(record, blob, supplement):
     """拆句表的一筆 → ({側: 各段 span}, None) 或 (None, 不能用的理由)。
 
     順序即優先序:結構不合法 → 卡文已變動 → 覆蓋不成立 → 引用被切開。**驗證三・
     卡文變動即失效**走的是前兩道,一律退回整團而不保留舊拆點——保留失效的斷言會讓
     歸屬階梯在假前提上開火,那正是票11 的錯誤。
+
+    回傳的 span 一律照 `segments` 的順序(繁中順序)。日文那一側只在**驗覆蓋時**
+    照 `ja_order` 排——無遺漏覆蓋問的是「照這一側的閱讀順序串接起來等不等於原文」,
+    而呼叫端要的是「第 i 段的兩側各在哪裡」,兩者的順序不同(票51)。
     """
     segments = record.get("segments") or ()
     indexes = [segment.get("index") for segment in segments]
-    if (not segments or not record.get("text_hash")
+    order = _ja_order(record, len(segments))
+    if (not segments or not record.get("text_hash") or order is None
             or len(set(indexes)) != len(indexes)
             or any(not _SPLIT_INDEX_RE.match(index or "")
                    for index in indexes)):
         return None, ("split_malformed", {})
     if record["text_hash"] != split_hash(blob["text_zh"], blob["text_ja"]):
         return None, ("split_stale", {})
+
     spans = {}
-    for side in ("zh", "ja"):
-        spans[side] = _cover_spans(
+    for side, reading in (("zh", range(len(segments))), ("ja", order)):
+        covered = _cover_spans(
             blob[f"text_{side}"],
-            [segment.get(f"text_{side}", "") for segment in segments])
-        if spans[side] is None:
+            [segments[pos].get(f"text_{side}", "") for pos in reading])
+        if covered is None:
             return None, ("split_coverage_failed", {"side": side})
+        spans[side] = [None] * len(segments)
+        for span, pos in zip(covered, reading):
+            spans[side][pos] = span
+    # 引用交叉驗證只問「引用有沒有完整落在某一段裡」,與段落順序無關
     cut = _quotes_cut_apart(blob["text_ja"], spans["ja"], supplement)
     if cut:
         return None, ("split_quote_violations", {"quotes": cut})

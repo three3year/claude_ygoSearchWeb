@@ -33,14 +33,14 @@
         --batch .scratch/tag-card/batches/split-01.json --ticket 票13
 """
 import argparse
-import json
 import os
 import sys
 
-from build_tag_cards import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_OUTPUT,
-                             DEFAULT_RULES_DOC, DEFAULT_SPLITS, load_json,
-                             load_optional, print_report, write_rules_doc)
+from build_tag_cards import print_report, write_rules_doc
 from official import INDEX_UNNUMBERED
+from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_RULES_DOC,
+                   DEFAULT_SPLITS, DEFAULT_TAG_CARDS, dump_json, load_json,
+                   load_optional)
 from tagcard import build_tag_cards, serialize_tag_cards, split_hash
 
 # 套用時被管線擋下來的理由;新加的拆句紀錄一筆都不該落在這些清單裡
@@ -148,13 +148,6 @@ def applied_problems(report, records):
     return problems
 
 
-def write_json(path, payload):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-
-
 def main(argv=None):
     parser = argparse.ArgumentParser(description="合併判定票的結果檔")
     parser.add_argument("--result", required=True, help="判定票的結果檔")
@@ -163,7 +156,7 @@ def main(argv=None):
                         help="判定票號,寫進拆句表的每一筆")
     parser.add_argument("--cards", default=DEFAULT_CARDS)
     parser.add_argument("--faq-info", default=DEFAULT_FAQ_INFO)
-    parser.add_argument("--sheet", default=DEFAULT_OUTPUT)
+    parser.add_argument("--sheet", default=DEFAULT_TAG_CARDS)
     parser.add_argument("--splits", default=DEFAULT_SPLITS)
     parser.add_argument("--rules-doc", default=DEFAULT_RULES_DOC)
     parser.add_argument("--dry-run", action="store_true",
@@ -209,7 +202,7 @@ def main(argv=None):
         print("--dry-run:未寫入任何檔案。")
         return 0
 
-    write_json(args.splits, updated)
+    dump_json(args.splits, updated)
     os.makedirs(os.path.dirname(args.sheet), exist_ok=True)
     with open(args.sheet, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_tag_cards(entries))

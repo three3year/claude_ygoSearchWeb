@@ -26,15 +26,9 @@ import re
 import sys
 
 import rules
+from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_RULES_DOC,
+                   DEFAULT_SPLITS, DEFAULT_TAG_CARDS, load_json, load_optional)
 from tagcard import build_tag_cards, serialize_tag_cards
-
-ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
-DEFAULT_FAQ_INFO = os.path.join(ROOT, "data", "sources", "faq_info.json")
-DEFAULT_OUTPUT = os.path.join(ROOT, "data", "tag_cards.json")
-DEFAULT_SPLITS = os.path.join(ROOT, "data", "clause_splits.json")
-DEFAULT_RULES_DOC = os.path.join(ROOT, "docs", "effect_kind_rules.md")
 
 LIST_PREVIEW = 20  # 清單過長時只印前幾筆,完整內容看輸出檔
 OPTIONAL_THRESHOLD = 0.98  # 必發/選發規則層的獨立驗證門檻(票04)
@@ -55,16 +49,6 @@ ATTRIBUTION_LISTS = (
     ("quote_unmatched", "引號對不回本卡卡文"),
     ("other_card_only", "明示句只提到別張卡名"),
 )
-
-
-def load_json(path):
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def load_optional(path, missing=None):
-    """來源檔還不存在時不是錯誤——拆句表與標記表都是一票一票長出來的。"""
-    return load_json(path) if os.path.exists(path) else missing
 
 
 def print_splits(report, file=sys.stdout):
@@ -436,7 +420,7 @@ def main(argv=None):
                         help="卡片總表 JSON (預設 data/cards.json)")
     parser.add_argument("--faq-info", default=DEFAULT_FAQ_INFO,
                         help="補足情報 JSON (預設 data/sources/faq_info.json)")
-    parser.add_argument("--out", default=DEFAULT_OUTPUT,
+    parser.add_argument("--out", default=DEFAULT_TAG_CARDS,
                         help="輸出 JSON 路徑 (預設 data/tag_cards.json)")
     parser.add_argument("--splits", default=DEFAULT_SPLITS,
                         help="拆句表 JSON (預設 data/clause_splits.json;"

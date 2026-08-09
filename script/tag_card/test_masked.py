@@ -2,7 +2,7 @@
 
 兩個接縫:
   masked.sample_masked(標記表, 卡片總表, 補足情報, ...) → (樣本, 報告)
-  masked.score_masked(標記表, 樣本, 判定, 已知歧義) → 報告
+  masked.score_masked(標記表, 樣本, 判定[, 已知歧義, 管線缺陷]) → 報告
 
 fixture 於測試內程式化建立,不碰網路與真實資料檔(與 test_tagcard.py 同規)。
 """

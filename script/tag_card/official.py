@@ -6,7 +6,10 @@
 效果段、明示句只提到別張卡、卡名限定卻是多效果卡,一律不回傳判定,改記進註記
 交由後續判定,絕不猜測。
 
-給 tagcard.build_tag_cards 用,不是對外接縫。詞彙見 CONTEXT.md。
+不是對外接縫,對外的只有 tagcard.build_tag_cards 與 masked 那一對。這裡也放兩樣
+姊妹模組共用的東西:`NON_EFFECT_RE`(遮蔽測試要遮掉的效果外文本明示,八種變體與
+抽取器認同一條才不會漏遮)與 `normalise` / `quotes`(拆句表的引用交叉驗證要與歸屬
+對位用同一把尺)。共用的是判準本身,不是判定流程。詞彙見 CONTEXT.md。
 """
 import re
 import unicodedata

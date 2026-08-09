@@ -18,13 +18,13 @@
     python script/tag_card/make_batches.py --series split --limit 1
 """
 import argparse
-import json
 import os
 import sys
 
 import official
-from build_tag_cards import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_OUTPUT,
-                             DEFAULT_SPLITS, ROOT, load_json, load_optional)
+from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_SPLITS,
+                   DEFAULT_TAG_CARDS, ROOT, dump_json, load_json,
+                   load_optional)
 from tagcard import SECTION_PENDULUM, build_tag_cards
 
 DEFAULT_BATCH_DIR = os.path.join(ROOT, ".scratch", "tag-card", "batches")
@@ -145,16 +145,14 @@ def write_batch(path, name, series, number, total, payload):
         "result_format": RESULT_FORMAT,
         "entries": payload,
     }
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(body, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+    dump_json(path, body)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="產生判定批次檔")
     parser.add_argument("--cards", default=DEFAULT_CARDS)
     parser.add_argument("--faq-info", default=DEFAULT_FAQ_INFO)
-    parser.add_argument("--sheet", default=DEFAULT_OUTPUT,
+    parser.add_argument("--sheet", default=DEFAULT_TAG_CARDS,
                         help="既有效果標記表 (預設 data/tag_cards.json)")
     parser.add_argument("--splits", default=DEFAULT_SPLITS)
     parser.add_argument("--out-dir", default=DEFAULT_BATCH_DIR)

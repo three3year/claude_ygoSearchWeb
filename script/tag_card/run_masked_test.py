@@ -19,18 +19,14 @@
 判定的邏輯全在 masked.py 的兩個純函式裡,這裡只讀檔、寫檔、印報告。
 """
 import argparse
-import json
 import os
 import sys
 
 import masked
+from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_TAG_CARDS, ROOT,
+                   dump_json, load_json, load_optional)
 
-ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 WORKDIR = os.path.join(ROOT, ".scratch", "tag-card", "masked-test")
-DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
-DEFAULT_FAQ_INFO = os.path.join(ROOT, "data", "sources", "faq_info.json")
-DEFAULT_TAG_CARDS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_SAMPLE = os.path.join(WORKDIR, "sample.json")
 DEFAULT_ANSWERS = os.path.join(WORKDIR, "answers.json")
 DEFAULT_AMBIGUOUS = os.path.join(WORKDIR, "ambiguous.json")
@@ -43,20 +39,6 @@ LIST_PREVIEW = 40
 BUCKETS = {"ambiguous": "歧義", "pipeline": "管線缺陷"}
 BUCKET_NOTES = {"ambiguous": "已知歧義(不計入分母)",
                 "pipeline": "管線缺陷(標準答案本身是錯的,不計入分母)"}
-
-
-def load_json(path, default=None):
-    if default is not None and not os.path.exists(path):
-        return default
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def dump_json(path, payload):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-        f.write("\n")
 
 
 def print_sample_report(report, file=sys.stdout):
@@ -162,8 +144,8 @@ def cmd_score(args):
     report = masked.score_masked(load_json(args.tag_cards),
                                  load_json(args.sample),
                                  load_json(args.answers),
-                                 load_json(args.ambiguous, default=[]),
-                                 load_json(args.pipeline, default=[]))
+                                 load_optional(args.ambiguous, missing=[]),
+                                 load_optional(args.pipeline, missing=[]))
     print_score_report(report)
     if args.report:
         with open(args.report, "w", encoding="utf-8", newline="\n") as f:

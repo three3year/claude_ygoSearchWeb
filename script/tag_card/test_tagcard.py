@@ -975,6 +975,92 @@ class TestBulletSubEffects(unittest.TestCase):
         self.assertEqual(report["substring_violations"], [])
 
 
+class TestTrailingHeader(unittest.TestCase):
+    """票15:黏在行尾的【…】標頭一樣是新段的開始。
+
+    官方偶爾把下一段的標頭接在前一行的尾巴。抽取器只認行首標頭時,那一行之後的
+    明示會繼續算在**上一個**編號底下,類型因此掛錯效果句。
+    """
+
+    DESC = "①：效果甲。\n②：效果乙。\n③：效果丙。"
+    CARD_TEXT = "①：効果甲。②：効果乙。③：効果丙。"
+
+    def _build(self, supplement):
+        return build_tag_cards(
+            [card(desc=self.DESC)],
+            [faq(card_text=self.CARD_TEXT, supplement=supplement)])
+
+    def test_a_kind_after_a_trailing_header_belongs_to_the_new_index(self):
+        """黎明の堕天使ルシフェル(4167084):③的標頭黏在②那一行的尾巴。
+
+        前半句自己就是一句類型明示,它講的仍是②;行尾標頭只切開它自己。
+        """
+        entries, report = self._build(
+            "【②の効果について】\n"
+            "■モンスターゾーンで適用される永続効果です。【③の効果について】\n"
+            "■モンスターゾーンで発動できる誘発即時効果です。")
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, "永續效果", "誘發即時效果(2速)"])
+        self.assertEqual(report["official_coverage"]["header"], 2)
+
+    def test_a_mandatory_after_a_trailing_header_belongs_to_the_new_index(self):
+        """始祖の守護者ティラス(31386180):必發明示走同一套歸屬對位。"""
+        entries, _ = self._build(
+            "【②の効果について】\n"
+            "■モンスターゾーンで発動する誘発効果です。\n"
+            "■このカードが戦闘を行ったバトルフェイズ終了時に1度、"
+            "必ず発動する効果です。【③の効果について】\n"
+            "■モンスターゾーンで発動する誘発効果です。\n"
+            "■自分のエンドフェイズ毎に1度、必ず発動する効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "誘發效果(1速)", "誘發效果(1速)"])
+        self.assertEqual([c["optional"] for c in clauses],
+                         [None, "必發", "必發"])
+
+    def test_a_header_in_the_middle_of_a_line_is_not_a_header(self):
+        """オーディンの眼(88069166):【カードの発動】是強調而不是標頭。"""
+        entries, report = self._build(
+            "【②の効果について】\n"
+            "■効果の発動を伴わない【カードの発動】だけであれば、"
+            "モンスターゾーンで適用する永続効果です。")
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         [None, "永續效果", None])
+        self.assertEqual(report["official_coverage"]["header"], 1)
+
+    def test_a_trailing_header_after_a_bullet_marker_is_still_a_header(self):
+        """希望皇オノマトピア(8512558):行尾標頭前面只剩一個「■」也照切。"""
+        entries, _ = self._build(
+            "■効果として扱いません。【①の効果について】\n"
+            "■モンスターゾーンで発動できる起動効果です。")
+        self.assertEqual([c["kind"] for c in clauses_of(entries, 1000)],
+                         ["啟動效果", None, None])
+
+    def test_a_trailing_bullet_header_reaches_the_bullet_splitter(self):
+        """CNo.104 仮面魔踏士アンブラル(49456901)②:2 速是 `●` 的,不是②的。
+
+        行尾的【『●』の効果について】既是拆句依據也是歸屬標記,兩邊一起恢復。
+        """
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n"
+                       "②：此卡以「甲」為X素材時,得到以下效果。\n"
+                       "●1回合1次,可以發動。")],
+            [faq(card_text="①：効果甲。"
+                           "②：このカードが「甲」をX素材としている場合、"
+                           "以下の効果を得る。"
+                           "●１ターンに１度、発動できる。",
+                 supplement="【②の効果について】\n"
+                            "■『このカードが「甲」をX素材としている場合、"
+                            "以下の効果を得る』そのものは効果として扱いません。"
+                            "【『●』の効果について】\n"
+                            "■モンスターゾーンで発動できる誘発即時効果です。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①", "②", "②-●1"])
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, None, "誘發即時效果(2速)"])
+        self.assertEqual(report["attribution_deferred"], [])
+
+
 class TestGrantLeadWithUnsplitBullets(unittest.TestCase):
     """領起句「〜は以下の効果を得る。●…」不發動,官方給的類型多半是 ● 的。
 

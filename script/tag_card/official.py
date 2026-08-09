@@ -88,6 +88,14 @@ _MANDATORY_MARK = "必ず発動"
 _GRANT_LEAD_RE = re.compile(r"以下の効果を得る。?\s*$")
 
 _HEADER_RE = re.compile(r"^【([^】]*)】", re.M)
+# 黏在行尾的標頭:官方偶爾把下一段的標頭接在前一行的尾巴,先切成獨立的一行再走
+# 歸屬階梯。不切的話那一行之後的明示會繼續算在**上一個**編號底下(CNo.104 仮面
+# 魔踏士アンブラル 49456901:官方在同一行裡先說②的領起句不是效果,再切到 `●`,
+# `●` 的 2 速因此掛給了②)。
+# 只認**行尾**:行中間的【…】是強調而不是標頭(オーディンの眼 88069166
+# 「効果の発動を伴わない【カードの発動】だけであれば〜」),切開它會把一句話
+# 劈成兩半又多生一個對不到標的的段。實測行尾 15 行、行中 1 行。
+_TRAILING_HEADER_RE = re.compile(r"(?<=.)(【[^】]*】)[ 　\t]*$", re.M)
 _INDEX_HEADER_RE = re.compile(
     rf"^([{NUMERALS}])[のに]?(?:モンスター|ペンデュラム)?の?効果について$")
 _BULLET_HEADER_RE = re.compile(
@@ -144,7 +152,11 @@ def _is_sequence_ref(quoted):
 # ---------------------------------------------------------------- 補足情報結構
 
 def _blocks(text):
-    """補足情報 → [(標頭內文 or None, 區塊內文), ...]。第一個標頭之前為 None。"""
+    """補足情報 → [(標頭內文 or None, 區塊內文), ...]。第一個標頭之前為 None。
+
+    標頭一律是新段的開始,黏在行尾的先切成獨立的一行才數。
+    """
+    text = _TRAILING_HEADER_RE.sub(r"\n\1", text or "")
     blocks = []
     header = None
     pos = 0
@@ -166,7 +178,7 @@ def bullet_specs(text):
     「官方以●分項描述的子效果拆成獨立效果句」)。
     """
     specs = []
-    for header, _ in _blocks(text or ""):
+    for header, _ in _blocks(text):
         spec = _bullet_spec(header)
         if spec is not None:
             specs.append(spec)

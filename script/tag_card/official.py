@@ -67,7 +67,7 @@ _FORBIDDEN_MARK = "効果ではありません"
 # の扱いではありません」)講的是別件事,不得混入。
 # 「効果の扱いではありません」與禁用句型「効果ではありません」只差三個字,兩者
 # 互不包含,禁令因此不會被這組變體打穿。
-_NON_EFFECT_RE = re.compile(
+NON_EFFECT_RE = re.compile(
     r"効果(?:としては?|としての|の)"
     r"(?:扱いません|扱われません|扱いではありません|扱いにはなりません)")
 # 括弧內的否定不算。官方把「不算哪一種效果」的補述寫在句尾括弧裡,那是限定否定
@@ -126,7 +126,7 @@ def _is_non_effect_line(line):
             depth = max(depth - 1, 0)
         elif not depth:
             outside.append(ch)
-    return bool(_NON_EFFECT_RE.search("".join(outside)))
+    return bool(NON_EFFECT_RE.search("".join(outside)))
 
 
 def _is_sequence_ref(quoted):

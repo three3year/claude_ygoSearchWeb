@@ -3,6 +3,9 @@
     # 一、抽樣:從標記表的官方明示分層抽 300 條,遮掉補足情報裡的類型結論
     python script/tag_card/run_masked_test.py sample
 
+    #    多輪測試時用 --exclude 指向先前輪次的樣本檔,讓各輪互斥(以卡為單位);
+    #    --exclude-id 再排掉判定者在別處看過官方答案的卡。
+
     # 二、判定者只讀 sample.json 與 docs/effect_kind_guide.md,把判定寫成
     #     answers.json:[{"id":…, "section":…, "index":…, "kind":…}, …]
     #     判不出來的 kind 填 null(留空,不猜)。
@@ -31,8 +34,15 @@ DEFAULT_TAG_CARDS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_SAMPLE = os.path.join(WORKDIR, "sample.json")
 DEFAULT_ANSWERS = os.path.join(WORKDIR, "answers.json")
 DEFAULT_AMBIGUOUS = os.path.join(WORKDIR, "ambiguous.json")
+DEFAULT_PIPELINE = os.path.join(WORKDIR, "pipeline.json")
 
 LIST_PREVIEW = 40
+
+# 兩個「排除於分母」的桶各報各的(masked.BUCKET_CAPS)。短名給自檢那一行,
+# 長名給清單的標題。
+BUCKETS = {"ambiguous": "歧義", "pipeline": "管線缺陷"}
+BUCKET_NOTES = {"ambiguous": "已知歧義(不計入分母)",
+                "pipeline": "管線缺陷(標準答案本身是錯的,不計入分母)"}
 
 
 def load_json(path, default=None):
@@ -52,36 +62,48 @@ def dump_json(path, payload):
 def print_sample_report(report, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p(f"樣本 {report['size']} 條(種子 {report['seed']})")
+    if report["size"] != report["requested_size"]:
+        p(f"  ※ 要的是 {report['requested_size']} 條,但每類下限 "
+          f"{report['per_kind_min']} 優先——逐類別的分母不為了湊總數被砍")
     p("逐類別:")
     for kind in masked.KINDS:
         p(f"  {kind:<14} 母體 {report['population'][kind]:>6} "
           f"配額 {report['quota'][kind]:>4} 抽出 {report['taken'][kind]:>4}")
     if report["shortfall"]:
         p(f"母體不足下限、全取的類別: {report['shortfall']}")
+    if report["excluded_ids"]:
+        p(f"整張排除的卡: {report['excluded_ids']} 張")
 
 
 def print_score_report(report, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
+    unknown = report["unknown"]
     p(f"樣本 {report['size']} 條,判定集合自檢: "
       f"對不回標記表 {len(report['stale'])}、"
+      f"官方答案已撤回 {len(report['withdrawn'])}、"
       f"漏判 {len(report['missing'])}、多判 {len(report['extra'])}、"
       f"值域外 {len(report['invalid'])}、"
-      f"歧義不在樣本內 {len(report['ambiguous_unknown'])}")
+      + "、".join(f"{BUCKETS[name]}不在樣本內 {len(rows)}"
+                  for name, rows in unknown.items()))
     for key, label in (("stale", "對不回標記表(樣本過期,請重抽)"),
+                       ("withdrawn", "官方答案已撤回(不計入分母)"),
                        ("missing", "漏判"), ("extra", "多判"),
-                       ("invalid", "值域外的類型"),
-                       ("ambiguous_unknown", "歧義不在樣本內")):
+                       ("invalid", "值域外的類型")):
         for row in report[key][:LIST_PREVIEW]:
             p(f"  {label}: id={row['id']} section={row['section']} "
               f"index={row['index']}")
+    for name, rows in unknown.items():
+        for row in rows[:LIST_PREVIEW]:
+            p(f"  {BUCKETS[name]}不在樣本內: id={row['id']} "
+              f"section={row['section']} index={row['index']}")
 
-    ambiguous = report["ambiguous"]
-    p(f"已知歧義(不計入分母): {len(ambiguous)} 條 "
-      f"[上限 {masked.AMBIGUOUS_CAP}"
-      f"{',已超過' if report['ambiguous_over_cap'] else ''}]")
-    for row in ambiguous:
-        p(f"  id={row['id']} section={row['section']} index={row['index']} "
-          f"{row['reason']}")
+    for name, label in BUCKET_NOTES.items():
+        rows = report[name]
+        p(f"{label}: {len(rows)} 條 [上限 {masked.BUCKET_CAPS[name]}"
+          f"{',已超過' if report['over_cap'][name] else ''}]")
+        for row in rows:
+            p(f"  id={row['id']} section={row['section']} "
+              f"index={row['index']} {row['reason']}")
 
     p("")
     p(f"逐類別 recall(門檻 {100 * masked.RECALL_THRESHOLD:.0f}%):")
@@ -93,7 +115,8 @@ def print_score_report(report, file=sys.stdout):
         rate_text = "—" if rate is None else f"{100 * rate:.1f}%"
         p(f"  {kind:<14} {stats['correct']:>3}/{stats['scored']:<3} "
           f"= {rate_text:>6} [{verdict}] "
-          f"(抽出 {stats['total']}、歧義排除 {stats['ambiguous']})")
+          f"(抽出 {stats['total']}、歧義排除 {stats['ambiguous']}、"
+          f"管線排除 {stats['pipeline']})")
     overall = report["overall"]
     accuracy = "—" if overall["accuracy"] is None \
         else f"{100 * overall['accuracy']:.1f}%"
@@ -111,11 +134,24 @@ def print_score_report(report, file=sys.stdout):
     p(f"→ {'PASS' if report['passed'] else 'FAIL'}")
 
 
+def excluded_ids(args):
+    """--exclude 的樣本檔 + --exclude-id → 整張不抽的卡片密碼。
+
+    以卡為單位:先前輪次抽過的卡整張排掉,同一張卡的補足情報才不會在下一輪
+    以「看過的情報」身分回來。
+    """
+    ids = set(args.exclude_id or [])
+    for path in args.exclude or []:
+        ids |= {row["id"] for row in load_json(path)}
+    return ids
+
+
 def cmd_sample(args):
     entries = load_json(args.tag_cards)
     sample, report = masked.sample_masked(
         entries, load_json(args.cards), load_json(args.faq_info),
-        size=args.size, per_kind_min=args.per_kind_min, seed=args.seed)
+        size=args.size, per_kind_min=args.per_kind_min, seed=args.seed,
+        exclude_ids=excluded_ids(args))
     dump_json(args.sample, sample)
     print_sample_report(report)
     print(f"已寫出 {args.sample}")
@@ -126,7 +162,8 @@ def cmd_score(args):
     report = masked.score_masked(load_json(args.tag_cards),
                                  load_json(args.sample),
                                  load_json(args.answers),
-                                 load_json(args.ambiguous, default=[]))
+                                 load_json(args.ambiguous, default=[]),
+                                 load_json(args.pipeline, default=[]))
     print_score_report(report)
     if args.report:
         with open(args.report, "w", encoding="utf-8", newline="\n") as f:
@@ -152,6 +189,10 @@ def main(argv=None):
     build.add_argument("--per-kind-min", type=int,
                        default=masked.DEFAULT_PER_KIND_MIN)
     build.add_argument("--seed", type=int, default=masked.DEFAULT_SEED)
+    build.add_argument("--exclude", nargs="*",
+                       help="先前輪次的樣本檔;裡面出現過的卡整張不抽")
+    build.add_argument("--exclude-id", nargs="*", type=int,
+                       help="額外整張不抽的卡片密碼")
     build.set_defaults(func=cmd_sample)
 
     score = sub.add_parser("score", help="對答案並印出逐類別 recall 報告")
@@ -159,6 +200,8 @@ def main(argv=None):
                        help="判定結果 JSON")
     score.add_argument("--ambiguous", default=DEFAULT_AMBIGUOUS,
                        help="已知歧義清單 JSON(不存在時視為空)")
+    score.add_argument("--pipeline", default=DEFAULT_PIPELINE,
+                       help="管線缺陷清單 JSON(標準答案本身是錯的;不存在時視為空)")
     score.add_argument("--report", help="把報告另存一份純文字的路徑")
     score.set_defaults(func=cmd_score)
 

@@ -20,7 +20,7 @@
 import random
 import re
 
-from official import KINDS
+from official import KINDS, NON_EFFECT_RE
 
 DEFAULT_SIZE = 300
 DEFAULT_PER_KIND_MIN = 40
@@ -35,6 +35,13 @@ RECALL_THRESHOLD = 1.0
 # 已知歧義的上限。超過代表六類邊界的定義本身有問題,該回頭改 CONTEXT.md 而不是
 # 繼續重跑(票07)。
 AMBIGUOUS_CAP = 5
+# 管線缺陷(錯不在判定而在抽取/歸屬,標準答案本身是錯的)的上限。超過代表該先修
+# 管線再測判定(票07 第二期)。與歧義分開記——兩者的成因與修法都不同。
+PIPELINE_CAP = 5
+# 兩個「排除於分母」的桶。分開記到底:各自的清單、各自的「不在樣本內」、各自的
+# 上限——把管線缺陷的超限印成歧義超限,會讓分流的人去改錯地方。
+# 上限是**單次執行**的,跨輪次的累計要自己在票裡記。
+BUCKET_CAPS = {"ambiguous": AMBIGUOUS_CAP, "pipeline": PIPELINE_CAP}
 
 # 樣本檔的欄位。答案(kind / optional / source / rule_predicted)一律不在其中。
 SAMPLE_FIELDS = ("id", "section", "index", "name_zh", "name_ja",
@@ -42,8 +49,12 @@ SAMPLE_FIELDS = ("id", "section", "index", "name_zh", "name_ja",
 
 # 補足情報裡會直接講出答案的句型,整句遮掉。
 # 「効果ではありません」不必單獨列——那個句型裡的類型詞已經被類型詞本身命中。
+# 效果外文本的明示不寫在這裡:官方有八種等義變體,共用抽取器的 NON_EFFECT_RE
+# 才不會像票07 第二期輪 4 那樣漏遮 18 行的官方答案(當時只認八種裡的一種)。
+# 共用的只有那條正規表示式:抽取器還要求明示出現在**括弧之外**才採用,遮蔽這邊
+# 不加這個限制——括弧裡的一樣講出了答案,寧可多遮。
 _CONCLUSION_MARKS = ("誘発即時効果", "誘発効果", "起動効果", "永続効果",
-                     "分類されない", "効果として扱いません", "必ず発動")
+                     "分類されない", "必ず発動")
 
 _HEADER_PREFIX_RE = re.compile(r"^【[^】]*】")
 _SENTENCE_RE = re.compile(r"[^。]*。|[^。]+$")
@@ -52,6 +63,12 @@ _RESIDUE_RE = re.compile(r"^[\s。、，,・…（）()「」『』■\-—]*$")
 
 
 # ---------------------------------------------------------------- 遮蔽
+
+def _is_conclusion(sentence):
+    """這一句有沒有直接講出答案。"""
+    return (any(mark in sentence for mark in _CONCLUSION_MARKS)
+            or bool(NON_EFFECT_RE.search(sentence)))
+
 
 def _tidy(text):
     """句子被遮掉後可能留下沒有開頭的右括號(官方把補述寫在括號裡)。"""
@@ -71,7 +88,7 @@ def _mask_line(line):
     match = _HEADER_PREFIX_RE.match(line)
     header, body = (match.group(0), line[match.end():]) if match else ("", line)
     kept = "".join(sentence for sentence in _SENTENCE_RE.findall(body)
-                   if not any(mark in sentence for mark in _CONCLUSION_MARKS))
+                   if not _is_conclusion(sentence))
     kept = _tidy(kept)
     if _RESIDUE_RE.match(kept):
         kept = ""
@@ -116,10 +133,17 @@ def _quotas(population, size, per_kind_min):
     return quota
 
 
-def _candidates(entries):
-    """標記表 → 可以當標準答案的效果句(官方明示且類型在值域內)。"""
+def _candidates(entries, exclude_ids=()):
+    """標記表 → 可以當標準答案的效果句(官方明示且類型在值域內)。
+
+    exclude_ids 整張卡排掉:先前輪次抽過的卡,以及判定者在別處看過官方答案的卡。
+    排除的粒度是**卡**而不是效果句——同一張卡的[[補足情報]]是共用的,判過 ① 之後
+    再抽到 ② 等於帶著看過的情報作答。
+    """
+    excluded = set(exclude_ids)
     return [(entry["id"], clause) for entry in sorted(entries,
                                                       key=lambda e: e["id"])
+            if entry["id"] not in excluded
             for clause in entry["clauses"]
             if clause["source"] == SOURCE_OFFICIAL and clause["kind"] in KINDS]
 
@@ -140,14 +164,22 @@ def _row(cid, clause, card, faq):
 
 
 def sample_masked(entries, cards, faq_entries, size=DEFAULT_SIZE,
-                  per_kind_min=DEFAULT_PER_KIND_MIN, seed=DEFAULT_SEED):
+                  per_kind_min=DEFAULT_PER_KIND_MIN, seed=DEFAULT_SEED,
+                  exclude_ids=()):
     """標記表 + 卡片總表 + 補足情報 → (遮蔽樣本, 抽樣報告)。
 
     只抽 `source: "official"` 的效果句——標準答案是官方寫的,不是推論來的。
     六種類型分層,每類至少 per_kind_min 條,母體不足的類別全取並列進 shortfall。
+
+    exclude_ids 的那些卡整張不抽(見 `_candidates`)。多輪測試靠它讓各輪樣本互斥
+    ——重疊的行在後面幾輪等於送分,曲線會虛高。
+
+    每類下限優先於 size:`per_kind_min * 6 > size` 時抽出來的會比 size 多,報告的
+    `requested_size` 與 `size` 因此不相等。門檻是逐類別 recall,小類別的分母不能為了
+    湊總數被砍掉。
     """
     by_kind = {kind: [] for kind in KINDS}
-    for cid, clause in _candidates(entries):
+    for cid, clause in _candidates(entries, exclude_ids):
         by_kind[clause["kind"]].append((cid, clause))
     population = {kind: len(rows) for kind, rows in by_kind.items()}
     quota = _quotas(population, size, per_kind_min)
@@ -165,6 +197,8 @@ def sample_masked(entries, cards, faq_entries, size=DEFAULT_SIZE,
                    faq_by_id.get(cid, {})) for cid, clause in picked]
     report = {
         "size": len(sample),
+        "requested_size": size,
+        "per_kind_min": per_kind_min,
         "population": population,
         "quota": quota,
         "taken": {kind: sum(1 for cid, clause in picked
@@ -172,6 +206,7 @@ def sample_masked(entries, cards, faq_entries, size=DEFAULT_SIZE,
         "shortfall": [kind for kind in KINDS
                       if population[kind] < per_kind_min],
         "seed": seed,
+        "excluded_ids": len(set(exclude_ids)),
     }
     return sample, report
 
@@ -192,7 +227,7 @@ def _identity(key):
     return {"id": cid, "section": section, "index": index}
 
 
-def score_masked(entries, sample, answers, ambiguous=()):
+def score_masked(entries, sample, answers, ambiguous=(), pipeline=()):
     """標記表 + 樣本 + 判定 → 逐類別 recall 報告。
 
     標準答案現場從標記表查回來,樣本檔不帶答案。判定的集合必須與樣本完全一致
@@ -202,14 +237,31 @@ def score_masked(entries, sample, answers, ambiguous=()):
     ambiguous 是[[已知歧義清單]]:官方文本本身歧義的條目不計入分母,但超過
     AMBIGUOUS_CAP 條就代表六類邊界的定義有問題,直接判不通過。
 
-    樣本檔是先產出、後判定的,中間標記表可能已經重跑過。對不回標記表的樣本行
-    列進 stale 並排除於分母之外——那代表這份樣本過期了,該重抽而不是硬算分數。
+    pipeline 是[[管線缺陷]]:標準答案本身是錯的(抽取器或歸屬階梯把別的效果句的
+    類型套了上來),同樣不計入分母。與歧義分兩個桶,因為修法完全不同——歧義改的是
+    六類的定義,管線缺陷改的是程式。超過 PIPELINE_CAP 條就該先修管線再測判定。
+    兩個桶的清單、「不在樣本內」與上限都各報各的,見 BUCKET_CAPS。
+
+    樣本檔是先產出、後判定的,中間標記表可能已經重跑過。漂移分兩種,都排除於分母
+    之外但下場不同:
+
+      stale     —— `(卡片密碼, section, index)` 在標記表裡整個不見了。結構對不上,
+                   判不通過,該重抽。
+      withdrawn —— key 還在,但官方類型被撤回(`kind` 不在值域內)。這是資料的正常
+                   演進(票11 把未拆整團的官方明示撤掉就撤了 1,146 條),不判不通過,
+                   只是那一條沒有標準答案可對。
+
+    判定者仍然可以對 withdrawn 的行作答——那些行當初確實在樣本裡,答了不算多判、
+    不答也不算漏判。
     """
     official = _answer_key(entries)
     stale = [_identity(_key(row)) for row in sample
              if _key(row) not in official]
-    sample_keys = [_key(row) for row in sample if _key(row) in official]
-    in_sample = set(sample_keys)
+    present = [_key(row) for row in sample if _key(row) in official]
+    withdrawn = [_identity(key) for key in present
+                 if official[key] not in KINDS]
+    sample_keys = [key for key in present if official[key] in KINDS]
+    in_sample = set(present)
     text_by_key = {_key(row): row for row in sample}
 
     answered, extra, invalid = {}, [], []
@@ -226,14 +278,16 @@ def score_masked(entries, sample, answers, ambiguous=()):
     invalid_keys = {(row["id"], row["section"], row["index"]) for row in invalid}
     missing = [_identity(key) for key in sample_keys if key not in answered]
 
-    skipped = {}
-    ambiguous_unknown = []
-    for row in ambiguous:
-        key = _key(row)
-        if key in in_sample:
-            skipped[key] = row.get("reason", "")
-        else:
-            ambiguous_unknown.append(_identity(key))
+    excluded = {name: {} for name in BUCKET_CAPS}
+    unknown = {name: [] for name in BUCKET_CAPS}
+    for name, rows_in in (("ambiguous", ambiguous), ("pipeline", pipeline)):
+        for row in rows_in:
+            key = _key(row)
+            if key in in_sample:
+                excluded[name][key] = row.get("reason", "")
+            else:
+                unknown[name].append(_identity(key))
+    skipped, defective = excluded["ambiguous"], excluded["pipeline"]
 
     per_kind = {}
     errors, blank = [], []
@@ -241,10 +295,14 @@ def score_masked(entries, sample, answers, ambiguous=()):
     for key in sample_keys:
         kind = official[key]
         stats = per_kind.setdefault(kind, {"total": 0, "ambiguous": 0,
+                                           "pipeline": 0,
                                            "scored": 0, "correct": 0})
         stats["total"] += 1
         if key in skipped:
             stats["ambiguous"] += 1
+            continue
+        if key in defective:
+            stats["pipeline"] += 1
             continue
         given = answered.get(key)
         stats["scored"] += 1
@@ -263,22 +321,26 @@ def score_masked(entries, sample, answers, ambiguous=()):
         stats["recall"] = stats["correct"] / stats["scored"] \
             if stats["scored"] else None
 
-    over_cap = len(skipped) > AMBIGUOUS_CAP
-    consistent = not (missing or extra or invalid or ambiguous_unknown or stale)
-    passed = (consistent and not over_cap and bool(per_kind)
+    over_cap = {name: len(excluded[name]) > cap
+                for name, cap in BUCKET_CAPS.items()}
+    consistent = not (missing or extra or invalid or stale
+                      or any(unknown.values()))
+    passed = (consistent and not any(over_cap.values()) and bool(per_kind)
               and all(stats["recall"] is not None
                       and stats["recall"] >= RECALL_THRESHOLD
                       for stats in per_kind.values()))
     return {
         "size": len(sample),
         "stale": stale,
+        "withdrawn": withdrawn,
         "missing": missing,
         "extra": extra,
         "invalid": invalid,
-        "ambiguous": [{**_identity(key), "reason": reason}
-                      for key, reason in sorted(skipped.items())],
-        "ambiguous_unknown": ambiguous_unknown,
-        "ambiguous_over_cap": over_cap,
+        **{name: [{**_identity(key), "reason": reason}
+                  for key, reason in sorted(rows.items())]
+           for name, rows in excluded.items()},
+        "unknown": unknown,
+        "over_cap": over_cap,
         "per_kind": per_kind,
         "overall": {"scored": scored, "correct": correct,
                     "accuracy": correct / scored if scored else None},

@@ -1,0 +1,2162 @@
+[
+  {
+    "id": 10000,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 64865,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 402568,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 1269512,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 1498449,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 1686814,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 2530830,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 2602411,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 3019642,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 3078576,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 3486020,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 3643300,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 3779662,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 4280258,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 4545683,
+    "section": "main",
+    "index": "③",
+    "kind": "永續效果"
+  },
+  {
+    "id": 4632019,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 4997565,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 5325155,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 5414777,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 5969957,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 5998840,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 7093411,
+    "section": "main",
+    "index": "②",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 7540107,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 7594154,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 7634581,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 8170654,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 8310162,
+    "section": "main",
+    "index": "③",
+    "kind": "永續效果"
+  },
+  {
+    "id": 8454126,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 8633261,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 8700633,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 8910240,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 8963089,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 9433350,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 9608555,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 9794980,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 9940036,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 10000080,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 10002346,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 10118318,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 10960419,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 11738489,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 12067160,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 12171659,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 13298352,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 13521194,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 13683298,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 13744068,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 13893596,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 14357527,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 14457896,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 14732294,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 14763299,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 15079028,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 15464375,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 15808381,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 16589042,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 16802689,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 17185260,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 17739335,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 17857780,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 17994645,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 18321034,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 18621798,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 18847598,
+    "section": "main",
+    "index": "④",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 18993198,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 19000848,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 19000848,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 19369609,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 20281581,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 20403123,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 20654247,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 21140872,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 21522601,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 21565445,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 21790410,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 21858819,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 22420202,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 22804410,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 22996376,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 22996376,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 23116808,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 23288411,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 23384666,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 24079759,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 24151924,
+    "section": "main",
+    "index": "④",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 24550676,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 24634594,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 24689197,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 24731391,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 25191307,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 25449584,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 25524823,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 25524823,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 27480536,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 27483935,
+    "section": "main",
+    "index": "③",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 28190303,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 28297833,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 28331069,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 28642461,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 28669235,
+    "section": "main",
+    "index": "③-●1",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 28711704,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 29107423,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 29353756,
+    "section": "main",
+    "index": "②",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 29432356,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 29439831,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 30068120,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 30100551,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 30163008,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 30998403,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 31114334,
+    "section": "main",
+    "index": "②",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 31322640,
+    "section": "main",
+    "index": "②-●1",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 31801517,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 31829185,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 32491822,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 32762201,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 32787239,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 33008376,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 33015627,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 33022867,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 33245030,
+    "section": "main",
+    "index": "②",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 33750025,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 34172284,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 34492631,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 34528176,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 34566435,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 34923554,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 34966096,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 35058857,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 35058857,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 35103106,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 35330871,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 35334193,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 35911108,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 35952884,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 35989913,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 36733451,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 36974120,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 37092104,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 37092104,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 37119142,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 37752990,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 38356857,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 38572779,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 39000945,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 39354437,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 39357122,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 40140448,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 40216089,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 40428851,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 41002238,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 41516133,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 41578483,
+    "section": "main",
+    "index": "③",
+    "kind": "永續效果"
+  },
+  {
+    "id": 41659072,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 42009836,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 42090294,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 42302563,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 42517468,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 43138260,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 43886072,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 44250812,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 44874522,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 44956694,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 45005708,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 45037489,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 45112597,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 45538320,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 46014517,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 46412900,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 47028805,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 47363932,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 47606319,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 47664723,
+    "section": "main",
+    "index": "①-●1",
+    "kind": "永續效果"
+  },
+  {
+    "id": 47674738,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 47946130,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 48048590,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 48171151,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 48214588,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 48348921,
+    "section": "main",
+    "index": "②-●2",
+    "kind": "永續效果"
+  },
+  {
+    "id": 48461764,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 49003716,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 49181828,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 49456901,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 49678559,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 49721904,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 49930315,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 50123605,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 50251045,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 50354944,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 50548657,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 50690129,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 50725996,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 50855622,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 51316684,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 51391183,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 51476410,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 51543904,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 51578214,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 51618973,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 52068432,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 52698008,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 53842431,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 53904087,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 53950487,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 53982768,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 54143349,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 54446813,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 54498517,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 54507222,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 54725177,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 54772065,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 55168550,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 55285840,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 55920742,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 56209279,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 56346071,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 57707471,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 57774843,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 57793869,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 57940938,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 58054262,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 58293343,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 58699500,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 58901502,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 58938528,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 59120809,
+    "section": "main",
+    "index": "③",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 59712426,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 59765225,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 60037599,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 60222213,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 60516416,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 60666820,
+    "section": "main",
+    "index": "②",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 61320914,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 61775475,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 61777313,
+    "section": "main",
+    "index": "0",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 62070231,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 62777823,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 63261835,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 64635042,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 65193366,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 65325949,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 66362965,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 66664203,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 67748760,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 67886895,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 67985943,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 68059897,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 68078978,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 68231287,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 68304193,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 68756810,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 69072185,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 69488544,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 69884162,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 70155677,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 70335319,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 70514456,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 71410542,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 71456737,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 71625222,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 72162751,
+    "section": "main",
+    "index": "①-●1",
+    "kind": "永續效果"
+  },
+  {
+    "id": 72270339,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 72283691,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 72291078,
+    "section": "main",
+    "index": "③",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 72309040,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 72566043,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 72632190,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 73079836,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 73421698,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 73452089,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 73602965,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 73887236,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 74586817,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 74615388,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 76830505,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 77202120,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 77656797,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 77679716,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 78364470,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 78579058,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 78579058,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 78751195,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 78868119,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 79130389,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 79229522,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 79234734,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 79491903,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 80073414,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 80433039,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 80764541,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 80831552,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 80993256,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 81003500,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 81471108,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 81599449,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 81866673,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 81945676,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 82085295,
+    "section": "main",
+    "index": "③",
+    "kind": "永續效果"
+  },
+  {
+    "id": 82135803,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 82370493,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 82434071,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 82699999,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 82744076,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 82962242,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 83257450,
+    "section": "main",
+    "index": "④",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 83743222,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 84330567,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 84366728,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 84565800,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 85034450,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 85991529,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 86221741,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 86401517,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 87003671,
+    "section": "main",
+    "index": "③",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 87514539,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 88106656,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 88544390,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 89477759,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 90036274,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 90243945,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 90303227,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 90303227,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 90307498,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 90361010,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 91283212,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 91646304,
+    "section": "main",
+    "index": "②",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 91697229,
+    "section": "main",
+    "index": "③",
+    "kind": "永續效果"
+  },
+  {
+    "id": 91812341,
+    "section": "main",
+    "index": "③",
+    "kind": "永續效果"
+  },
+  {
+    "id": 92248362,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 92345028,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 92607427,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 92652813,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 92693205,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 92770064,
+    "section": "main",
+    "index": "③",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 93170499,
+    "section": "main",
+    "index": "①",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 93192592,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 93449450,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 94136469,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 94503794,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 94535485,
+    "section": "main",
+    "index": "①",
+    "kind": "永續效果"
+  },
+  {
+    "id": 94568601,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 94730900,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 94784213,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 94942656,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 95091919,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 95209656,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 95401059,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 95685352,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 95886782,
+    "section": "main",
+    "index": "②",
+    "kind": "啟動效果"
+  },
+  {
+    "id": 95923441,
+    "section": "main",
+    "index": "②",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 96030710,
+    "section": "main",
+    "index": "②",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 96381979,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發效果(1速)"
+  },
+  {
+    "id": 97682931,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 97750534,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 97946536,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 98127546,
+    "section": "main",
+    "index": "③",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 98630720,
+    "section": "main",
+    "index": "②",
+    "kind": "永續效果"
+  },
+  {
+    "id": 98937206,
+    "section": "main",
+    "index": "①",
+    "kind": "無種類效果"
+  },
+  {
+    "id": 99267150,
+    "section": "main",
+    "index": "0",
+    "kind": "效果外文本"
+  },
+  {
+    "id": 99748883,
+    "section": "main",
+    "index": "①",
+    "kind": "誘發即時效果(2速)"
+  },
+  {
+    "id": 99946920,
+    "section": "main",
+    "index": "③",
+    "kind": "無種類效果"
+  }
+]

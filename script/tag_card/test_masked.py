@@ -116,6 +116,46 @@ class SamplingTest(unittest.TestCase):
         self.assertEqual(len(sample), 5)
         self.assertEqual(report["size"], 5)
 
+    def test_每類下限的總和超過size時下限優先(self):
+        entries, cards, faqs = population(
+            (KIND_TRIGGER, 50), (KIND_IGNITION, 50))
+        sample, report = masked.sample_masked(entries, cards, faqs, size=30,
+                                              per_kind_min=20, seed=SEED)
+        self.assertEqual(len(sample), 40)  # 逐類別的分母不為了湊總數被砍
+        self.assertEqual(report["requested_size"], 30)
+        self.assertEqual(report["per_kind_min"], 20)
+
+    def test_排除的卡整張不抽(self):
+        entries, cards, faqs = population((KIND_TRIGGER, 10))
+        sample, report = masked.sample_masked(
+            entries, cards, faqs, size=10, per_kind_min=1, seed=SEED,
+            exclude_ids=[1000, 1001, 1002])
+        self.assertEqual(len(sample), 7)
+        self.assertEqual(report["population"][KIND_TRIGGER], 7)
+        self.assertEqual(report["excluded_ids"], 3)
+        self.assertNotIn(1000, [row["id"] for row in sample])
+
+    def test_排除是整張卡而不是單一效果句(self):
+        entries = [entry(1000, [clause(index="①"), clause(index="②")]),
+                   entry(1001, [clause(index="①")])]
+        cards = [card(1000), card(1001)]
+        faqs = [faq(1000), faq(1001)]
+        sample, _ = masked.sample_masked(entries, cards, faqs, size=10,
+                                         per_kind_min=1, seed=SEED,
+                                         exclude_ids=[1000])
+        self.assertEqual([row["id"] for row in sample], [1001])
+
+    def test_先前輪次的樣本排掉之後兩輪互斥(self):
+        entries, cards, faqs = population((KIND_TRIGGER, 40))
+        first, _ = masked.sample_masked(entries, cards, faqs, size=10,
+                                        per_kind_min=1, seed=SEED)
+        second, _ = masked.sample_masked(
+            entries, cards, faqs, size=10, per_kind_min=1, seed=SEED,
+            exclude_ids=[row["id"] for row in first])
+        self.assertEqual(len(second), 10)
+        self.assertEqual(set(key(r) for r in first)
+                         & set(key(r) for r in second), set())
+
     def test_同一組輸入與種子抽出同一份樣本(self):
         entries, cards, faqs = population(
             (KIND_TRIGGER, 50), (KIND_IGNITION, 50))
@@ -179,6 +219,20 @@ class MaskingTest(unittest.TestCase):
 
     def test_效果外文本的官方明示消失(self):
         self.assertEqual(self.mask("■効果として扱いません。"), "")
+
+    def test_效果外文本的八種變體都消失(self):
+        """票10 認的八種等義寫法,遮蔽也要全認——只認一種等於漏遮官方答案。"""
+        for tail in ("効果として扱いません", "効果として扱われません",
+                     "効果としては扱いません", "効果としては扱われません",
+                     "効果としての扱いではありません", "効果としての扱いません",
+                     "効果の扱いではありません", "効果の扱いにはなりません"):
+            self.assertEqual(self.mask(f"■『①：〜』は{tail}。"), "", tail)
+
+    def test_效果後面夾了別的詞的不算結論句(self):
+        """『効果で破壊された扱いにはなりません』講的是別件事,不得遮掉。"""
+        for line in ("■このカードは効果で破壊された扱いにはなりません。",
+                     "■このダメージは効果ダメージの扱いではありません。"):
+            self.assertEqual(self.mask(line), line)
 
     def test_必發明示消失(self):
         self.assertEqual(self.mask("■必ず発動する効果です。"), "")
@@ -305,6 +359,27 @@ class ScoringTest(unittest.TestCase):
         self.assertEqual(report["missing"], [])
         self.assertFalse(report["passed"])
 
+    def test_官方答案被撤回的樣本行不計入分母也不判不通過(self):
+        entries, sample = self.fixture(KIND_TRIGGER, KIND_TRIGGER)
+        entries[1]["clauses"][0]["kind"] = None  # 票11 撤掉未拆整團的官方明示
+        report = masked.score_masked(entries, sample,
+                                     [answer(sample[0], KIND_TRIGGER)])
+        self.assertEqual(len(report["withdrawn"]), 1)
+        self.assertEqual(report["per_kind"][KIND_TRIGGER]["scored"], 1)
+        self.assertEqual(report["missing"], [])  # 撤回的行不答不算漏判
+        self.assertEqual(report["stale"], [])    # key 還在,不是樣本過期
+        self.assertTrue(report["passed"])
+
+    def test_答了官方答案已撤回的行不算多判(self):
+        entries, sample = self.fixture(KIND_TRIGGER, KIND_TRIGGER)
+        entries[1]["clauses"][0]["kind"] = None
+        answers = [answer(sample[0], KIND_TRIGGER),
+                   answer(sample[1], KIND_CONTINUOUS)]
+        report = masked.score_masked(entries, sample, answers)
+        self.assertEqual(report["extra"], [])
+        self.assertEqual(report["overall"]["scored"], 1)
+        self.assertTrue(report["passed"])
+
     def test_已知歧義不計入分母(self):
         entries, sample = self.fixture(KIND_TRIGGER, KIND_TRIGGER)
         answers = [answer(sample[0], KIND_TRIGGER),
@@ -317,6 +392,29 @@ class ScoringTest(unittest.TestCase):
         self.assertEqual(report["errors"], [])
         self.assertTrue(report["passed"])
 
+    def test_管線缺陷不計入分母且與歧義分開記(self):
+        entries, sample = self.fixture(KIND_TRIGGER, KIND_TRIGGER)
+        answers = [answer(sample[0], KIND_TRIGGER),
+                   answer(sample[1], KIND_CONTINUOUS)]
+        pipeline = [{"id": sample[1]["id"], "section": "main", "index": "①",
+                     "reason": "官方類型講的是還沒拆開的子效果"}]
+        report = masked.score_masked(entries, sample, answers, (), pipeline)
+        self.assertEqual(len(report["pipeline"]), 1)
+        self.assertEqual(report["ambiguous"], [])  # 兩個桶不混
+        self.assertEqual(report["per_kind"][KIND_TRIGGER]["scored"], 1)
+        self.assertEqual(report["per_kind"][KIND_TRIGGER]["pipeline"], 1)
+        self.assertEqual(report["errors"], [])
+        self.assertTrue(report["passed"])
+
+    def test_管線缺陷超過上限時停下(self):
+        kinds = [KIND_TRIGGER] * 7
+        entries, sample = self.fixture(*kinds)
+        answers = [answer(row, KIND_TRIGGER) for row in sample]
+        pipeline = [{"id": row["id"], "section": "main", "index": "①",
+                     "reason": "管線"} for row in sample[:6]]
+        report = masked.score_masked(entries, sample, answers, (), pipeline)
+        self.assertFalse(report["passed"])
+
     def test_已知歧義超過上限時停下(self):
         kinds = [KIND_TRIGGER] * 7
         entries, sample = self.fixture(*kinds)
@@ -324,8 +422,18 @@ class ScoringTest(unittest.TestCase):
         ambiguous = [{"id": row["id"], "section": "main", "index": "①",
                       "reason": "歧義"} for row in sample[:6]]
         report = masked.score_masked(entries, sample, answers, ambiguous)
-        self.assertTrue(report["ambiguous_over_cap"])
+        self.assertTrue(report["over_cap"]["ambiguous"])
         self.assertFalse(report["passed"])
+
+    def test_兩個桶的上限各報各的(self):
+        """歧義 0 條的一輪不該因為管線超限而被印成歧義超限。"""
+        entries, sample = self.fixture(*([KIND_TRIGGER] * 7))
+        answers = [answer(row, KIND_TRIGGER) for row in sample]
+        pipeline = [{"id": row["id"], "section": "main", "index": "①",
+                     "reason": "管線"} for row in sample[:6]]
+        report = masked.score_masked(entries, sample, answers, (), pipeline)
+        self.assertTrue(report["over_cap"]["pipeline"])
+        self.assertFalse(report["over_cap"]["ambiguous"])
 
     def test_不在樣本內的已知歧義進報告(self):
         entries, sample = self.fixture(KIND_TRIGGER)
@@ -334,7 +442,20 @@ class ScoringTest(unittest.TestCase):
         report = masked.score_masked(entries, sample,
                                      [answer(sample[0], KIND_TRIGGER)],
                                      ambiguous)
-        self.assertEqual(len(report["ambiguous_unknown"]), 1)
+        self.assertEqual(len(report["unknown"]["ambiguous"]), 1)
+        self.assertEqual(report["unknown"]["pipeline"], [])
+        self.assertFalse(report["passed"])
+
+    def test_不在樣本內的管線缺陷歸管線那一桶(self):
+        """管線缺陷與歧義分開記,報成「歧義不在樣本內」會誤導分流。"""
+        entries, sample = self.fixture(KIND_TRIGGER)
+        pipeline = [{"id": 4242, "section": "main", "index": "①",
+                     "reason": "管線"}]
+        report = masked.score_masked(entries, sample,
+                                     [answer(sample[0], KIND_TRIGGER)],
+                                     (), pipeline)
+        self.assertEqual(len(report["unknown"]["pipeline"]), 1)
+        self.assertEqual(report["unknown"]["ambiguous"], [])
         self.assertFalse(report["passed"])
 
     def test_總體準確率照算但不影響通過與否(self):

@@ -18,7 +18,7 @@ import official
 import rules
 from official import (BULLET, INDEX_PREAMBLE, INDEX_UNNUMBERED,
                       KIND_NON_EFFECT, KIND_QUICK, KIND_TRIGGER, NUMERALS,
-                      OPTIONAL_MANDATORY, OPTIONAL_OPTIONAL)
+                      OPTIONAL_MANDATORY, OPTIONAL_OPTIONAL, SPELLTRAP_KINDS)
 
 # NUMERALS:效果編號字元。官方目前最多用到⑤,official 多留幾個位以防新卡。
 # BULLET:● 子效果的記號,拆句與歸屬對位都要認它,定義放在 official 一份。
@@ -74,6 +74,10 @@ SECTION_PENDULUM = "pendulum"
 
 # 只有這兩類寫必發/選發:啟動效果本就由玩家主動開啟,其餘三類不發動
 ACTIVATED_KINDS = (KIND_QUICK, KIND_TRIGGER)
+# [[魔陷卡效果]]的行也可以帶必發/選發,但只在**有觸發事件的發動句**上(ADR-0004):
+# 卡本身要不要發動永遠是玩家的選擇,寫「選發」是廢話;墓地/場上被動觸發的那族
+# 才有強制與否的資訊。這組值因此只吃官方明示與判定,不用規則補值。
+OPTIONAL_KINDS = ACTIVATED_KINDS + SPELLTRAP_KINDS
 
 HEAD_PENDULUM = "【靈擺效果】"
 HEAD_MONSTER_RE = re.compile(r"【怪獸(效果|敘述|描述)】")
@@ -645,6 +649,18 @@ def _apply_optional(cid, section, clauses, attested, unsplit, judged, report):
         is_attested = clause["index"] in attested
         if is_attested:
             _validate_optional(cid, section, clause, predicted, detail, report)
+        if clause["kind"] in SPELLTRAP_KINDS:
+            # [[魔陷卡效果]]的必發/選發只在有觸發事件的發動句上有意義,而規則層的
+            # 發動子句掃描分不出「卡本身發動」與「觸發型」——所以只吃官方明示與
+            # 判定,不用規則補值,也不列待判:空著就是「這一句不帶此屬性」
+            if is_attested:
+                clause["optional"] = OPTIONAL_MANDATORY
+                official_optional.add((section, clause["index"]))
+                report["optional_official"] += 1
+            elif judged.get(clause["index"]):
+                clause["optional"] = judged[clause["index"]]
+                report["optional_llm"] += 1
+            continue
         if clause["kind"] not in ACTIVATED_KINDS:
             # 官方說必發、但類型還沒定(或定成不發動的類型)時一律不寫值——
             # 必發/選發的值域規則優先,類型定案後重跑會自然補上
@@ -977,6 +993,11 @@ def _compare_prediction(cid, clause, rule_ids, report):
         return
     if kind is None:
         return  # 尚未判定:只留影子預測,類型仍等判定票決定(ADR-0002)
+    if kind in SPELLTRAP_KINDS:
+        # 規則層歸納的是怪獸效果的六類;判成[[魔陷卡效果]]的行不在其管轄範圍,
+        # 影子預測留著(換規範前的痕跡)但不比對、不升級(ADR-0004)
+        report["rule_spelltrap_skipped"] += 1
+        return
     if kind != predicted:
         report["rule_conflicts"].append(_rule_row(
             cid, clause, rule_ids, existing=kind, predicted=predicted,
@@ -1105,9 +1126,11 @@ def _new_report():
         "judgment_rejudged": [],
         "judgment_rejudge_refused": [],
         "judgment_orphans": [],
+        "rule_spelltrap_skipped": 0,
         "official_clauses": 0,
         "official_coverage": {ladder: 0 for ladder in official.LADDERS},
-        "kind_counts": {kind: 0 for kind in official.KINDS},
+        "kind_counts": {kind: 0
+                        for kind in official.KINDS + official.SPELLTRAP_KINDS},
         "optional_counts": {OPTIONAL_MANDATORY: 0, OPTIONAL_OPTIONAL: 0,
                             "null": 0},
         "optional_official": 0,
@@ -1289,7 +1312,7 @@ def _count_clauses(entries, report):
             report["optional_counts"][clause["optional"] or "null"] += 1
             report["source_counts"][clause["source"] or "null"] += 1
             if (clause["optional"] is not None
-                    and clause["kind"] not in ACTIVATED_KINDS):
+                    and clause["kind"] not in OPTIONAL_KINDS):
                 report["optional_on_wrong_kind"].append(
                     {"id": entry["id"], "section": clause["section"],
                      "index": clause["index"]})

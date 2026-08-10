@@ -20,7 +20,8 @@ INDEX_PREAMBLE = "0"
 INDEX_UNNUMBERED = "1"
 BULLET = "●"
 
-# 效果類型的六種固定值(CONTEXT.md 定義,「(2速)」「(1速)」是名稱的一部分)
+# 效果類型的六種怪獸側固定值(CONTEXT.md 定義,「(2速)」「(1速)」是名稱的一部分)。
+# 官方的類型詞只用在**以怪獸身分運作**的效果上,官方明示抽取也只認這六種。
 KIND_NON_EFFECT = "效果外文本"
 KIND_UNCLASSIFIED = "無種類效果"
 KIND_CONTINUOUS = "永續效果"
@@ -29,6 +30,15 @@ KIND_TRIGGER = "誘發效果(1速)"
 KIND_IGNITION = "啟動效果"
 KINDS = (KIND_NON_EFFECT, KIND_UNCLASSIFIED, KIND_CONTINUOUS, KIND_QUICK,
          KIND_TRIGGER, KIND_IGNITION)
+
+# 魔陷卡效果的九種值(ADR-0004):**以魔法/陷阱卡身分運作**的效果句不適用上面的
+# 分類,只有由[[卡片種類]]決定的咒語速度,值因此以卡片種類命名。判準是運作身分
+# 而不是印刷卡種——怪獸卡「當作永續陷阱卡的場合」的效果句同樣判「永續陷阱卡
+# 效果」。這九種值不會出現在官方明示裡(官方對這些效果句不給類型詞),抽取器
+# 永遠不產出它們,值只來自判定票。
+SPELLTRAP_KINDS = ("通常魔法卡效果", "速攻魔法卡效果", "儀式魔法卡效果",
+                   "永續魔法卡效果", "裝備魔法卡效果", "場地魔法卡效果",
+                   "通常陷阱卡效果", "永續陷阱卡效果", "反擊陷阱卡效果")
 
 SOURCE_OFFICIAL = "official"
 

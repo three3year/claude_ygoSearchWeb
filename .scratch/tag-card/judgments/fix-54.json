@@ -1,0 +1,4433 @@
+[
+ {
+  "id": 27551,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "4",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 41777,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 191749,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 242146,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 259314,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 296499,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 403847,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 473469,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 596051,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 847915,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 904185,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 917796,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 967928,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 981540,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 983995,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1036974,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1082946,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1127737,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1200843,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1435851,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1539051,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1557499,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1644289,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1669772,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1689516,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1801154,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1802450,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1804528,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1834107,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1896112,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1918087,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1965724,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 1969506,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2047519,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2084239,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2122975,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2130625,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2148918,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2370081,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2371506,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2561846,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2779999,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2833249,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2903036,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 2924048,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3027001,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3055837,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3129635,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3136426,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3146695,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3149764,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3160805,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3280747,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3682106,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3701074,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3868277,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3891471,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "4",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 3972721,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4168871,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4215636,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4230620,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4259068,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4357063,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4446672,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4466015,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4483989,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4542651,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4545854,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4587638,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4638410,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4857085,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 4869446,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5183693,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5325424,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5338223,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5371656,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5494820,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5556668,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5562461,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5577649,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5606466,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5609226,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5616412,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5703682,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5728014,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5914184,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5915629,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5973663,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 5990062,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6112401,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6137095,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6148016,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6178850,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6260554,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6430659,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6459419,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6691855,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6713443,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6733059,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6799227,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6850209,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 6859683,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7030340,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7076131,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7092142,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7153114,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7165085,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7405310,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7512044,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7565547,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7617062,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7617253,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7625614,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7672244,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7817703,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7935043,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8057630,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8251996,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8279188,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8316565,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8323633,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8339504,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8414337,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8628798,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8632967,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8698851,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8719957,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8730435,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8951260,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 8964854,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9059700,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9074847,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9145181,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9201964,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9236985,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "儀式魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9267769,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9354555,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9373534,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9576193,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9744376,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9780364,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9831539,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9845733,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "儀式魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9999961,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10035717,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10069180,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10080320,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10248192,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10275411,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10352095,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10489311,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10537981,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10651797,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10667321,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10759529,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10925955,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11047543,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11102908,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11221418,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11224934,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11228035,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11264180,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11373345,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11471117,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11501629,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11593137,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11596936,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11741041,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11813722,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11913700,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11925569,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11961740,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11975962,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12174035,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12183332,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12197543,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12216615,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12253117,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12324546,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12470447,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12503902,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12735388,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12863633,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12940613,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12986778,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 13032689,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 13166204,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 13166648,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 13210191,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 13438207,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 13626450,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 13629812,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 13685271,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 13997673,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 14154221,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 14318794,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 14464864,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 14507213,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 14550855,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 14613029,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 14730606,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 14772491,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15052462,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15083728,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15103313,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15259703,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15286412,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15294090,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15305240,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15313433,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15471265,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15552258,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15629801,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15684835,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 15854426,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16067089,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16227556,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16272453,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16308000,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16430187,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16437822,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16550875,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16616620,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16674846,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16678947,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16708652,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16762927,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 16970158,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 18271561,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 18658572,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 18752938,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 18937875,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 19059929,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 19596712,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 22628574,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 22702055,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 24668830,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 25050038,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 25407406,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 26022485,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 26647858,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 27967615,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 29228350,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 30600344,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 31423101,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 33950246,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 35183853,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 35762283,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 38275183,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 38430673,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 40279770,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 40703222,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 41142615,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 41182875,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "儀式魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 43841694,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 44762290,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 46337945,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 47274077,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 48445393,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 49833312,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 52140003,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 52971944,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 55136228,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 56339050,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 56641453,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 56948373,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 58621589,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 60080151,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 60369732,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "儀式魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 60519422,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 62472614,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 63227401,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 63789924,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 65196094,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 65396880,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 65824822,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 66526672,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 68392533,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 68400115,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 69176131,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 70342110,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 72575145,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 73866096,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 74741494,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 76137276,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 77910045,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 78586116,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 81601517,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 82828051,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 83682725,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 85446833,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 88279736,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 88289295,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 88369727,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 89181369,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 90200789,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 91468551,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 91623717,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 94374859,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 96355986,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 96631852,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "1",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "2",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "3",
+    "rejudge": true,
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ }
+]

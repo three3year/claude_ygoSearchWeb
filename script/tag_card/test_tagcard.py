@@ -924,6 +924,51 @@ class TestSpellTrapKindAttestation(unittest.TestCase):
             [["永續效果", "裝備魔法卡效果"]])
 
 
+class TestPendulumSpellKind(unittest.TestCase):
+    """第十六值「靈擺魔法卡效果」(ADR-0005,票57)。
+
+    P 區的卡官方規則是「魔法カード扱い」,靈擺欄的效果句依運作身分判準
+    (ADR-0004)不走六類;官方對靈擺效果零類型詞也零句式,值只來自判定,
+    不進官方明示的對應表。行為與其他魔陷卡效果值一致:必發/選發只吃官方
+    明示與判定、規則層不管轄。
+    """
+
+    PENDULUM_CARD = card(
+        desc="【靈擺效果】\n①：以被除外的1隻我方怪獸為對象可以發動。"
+             "那隻怪獸加入手牌。\n【怪獸效果】\n①：怪獸甲。",
+        ctype=TYPE_PENDULUM_EFFECT)
+    PENDULUM_FAQ = faq(
+        card_text="①：モンスター甲。",
+        pen_effect="①：除外されている自分のモンスター１体を対象として"
+                   "発動できる。そのモンスターを手札に加える。",
+        pen_supplement="■なにかの説明。")
+
+    def build(self, row):
+        judgments = [{"id": 1000, "section": "pendulum",
+                      "clauses": [{"index": "①", **row}]}]
+        return build_tag_cards([self.PENDULUM_CARD], [self.PENDULUM_FAQ],
+                               judgments=judgments)
+
+    def test_a_judged_pendulum_clause_takes_the_sixteenth_value(self):
+        entries, report = self.build({"kind": "靈擺魔法卡效果"})
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["section"], clause["kind"], clause["source"]),
+                         ("pendulum", "靈擺魔法卡效果", "llm"))
+        self.assertEqual(report["kind_counts"]["靈擺魔法卡效果"], 1)
+
+    def test_the_rule_does_not_fill_optional_on_a_pendulum_kind_row(self):
+        """卡文有發動子句,但這一族的必發/選發只吃官方明示與判定(ADR-0004)。"""
+        entries, report = self.build({"kind": "靈擺魔法卡效果"})
+        self.assertIsNone(clauses_of(entries, 1000)[0]["optional"])
+        self.assertEqual(report["optional_rule"], 0)
+
+    def test_a_judged_optional_on_a_pendulum_kind_row_is_kept(self):
+        entries, report = self.build({"kind": "靈擺魔法卡效果",
+                                      "optional": "必發"})
+        self.assertEqual(clauses_of(entries, 1000)[0]["optional"], "必發")
+        self.assertEqual(report["optional_llm"], 1)
+
+
 class TestNonEffectAttestation(unittest.TestCase):
     """「〜は効果として扱いません」是效果外文本的官方明示。"""
 
@@ -2398,6 +2443,18 @@ class TestShadowPrediction(unittest.TestCase):
         self.assertEqual((row["attested"], row["agree"], row["disagree"]),
                          (0, 0, 0))
         self.assertEqual(report["rule_official_disagree"], [])
+        self.assertEqual(report["rule_spelltrap_skipped"], 8)
+
+    def test_a_pendulum_kind_row_is_out_of_the_rule_layers_scope(self):
+        """判成靈擺魔法卡效果的行同樣不比對、不升級(ADR-0005,票57)。"""
+        entries, report = self.build(
+            8, self.judged(8, "靈擺魔法卡效果", "llm"))
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("靈擺魔法卡效果", "llm"))
+        self.assertEqual(clause["rule_predicted"], self.PREDICTED)
+        self.assertEqual(report["rule_upgrades"], 0)
+        self.assertEqual(report["rule_conflicts"], [])
         self.assertEqual(report["rule_spelltrap_skipped"], 8)
 
     def test_first_build_lists_every_prediction_as_a_change(self):

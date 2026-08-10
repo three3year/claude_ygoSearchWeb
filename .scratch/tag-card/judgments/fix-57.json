@@ -1,0 +1,38 @@
+[
+  {
+    "id": 11067666,
+    "section": "pendulum",
+    "clauses": [
+      {
+        "index": "①",
+        "kind": "靈擺魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true,
+        "note": "官方靈擺補足:チェーンブロックの作られない効果です——不發動的適用型,必發/選發留空(ADR-0005)"
+      }
+    ]
+  },
+  {
+    "id": 28151978,
+    "section": "pendulum",
+    "clauses": [
+      {
+        "index": "①",
+        "kind": "靈擺魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true,
+        "note": "官方靈擺補足:チェーンブロックの作られない効果です——持續適用段,必發/選發留空(ADR-0005)"
+      },
+      {
+        "index": "②",
+        "kind": "靈擺魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true,
+        "note": "官方靈擺補足:自分メインフェイズにのみ発動する事ができます——P 區玩家主動的效果發動,無觸發事件,必發/選發留空(ADR-0005)"
+      }
+    ]
+  }
+]

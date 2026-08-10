@@ -34,8 +34,8 @@ KINDS = (KIND_NON_EFFECT, KIND_UNCLASSIFIED, KIND_CONTINUOUS, KIND_QUICK,
 # 魔陷卡效果的九種值(ADR-0004):**以魔法/陷阱卡身分運作**的效果句不適用上面的
 # 分類,只有由[[卡片種類]]決定的咒語速度,值因此以卡片種類命名。判準是運作身分
 # 而不是印刷卡種——怪獸卡「當作永續陷阱卡的場合」的效果句同樣判「永續陷阱卡
-# 效果」。這九種值不會出現在官方明示裡(官方對這些效果句不給類型詞),抽取器
-# 永遠不產出它們,值只來自判定票。
+# 效果」。官方對這些效果句不給類型詞,但會以「〜カードの効果として+肯定述語」
+# 寫下運作身分(票56),那是十五值制下的官方明示,見 _SPELLTRAP_KIND_BY_WORD。
 SPELLTRAP_KINDS = ("通常魔法卡效果", "速攻魔法卡效果", "儀式魔法卡效果",
                    "永續魔法卡效果", "裝備魔法卡效果", "場地魔法卡效果",
                    "通常陷阱卡效果", "永續陷阱卡效果", "反擊陷阱卡效果")
@@ -70,6 +70,28 @@ _KIND_BY_WORD = {
 }
 _KIND_WORD_RE = re.compile("(" + "|".join(_KIND_BY_WORD) + ")")
 _KIND_RE = re.compile("(" + "|".join(_KIND_BY_WORD) + ")です")
+# 魔陷卡效果的官方明示(票56):「〜カードの効果として+肯定述語」寫下的是這個
+# 效果句**運作時的身分**(実測 89 行:装備魔法 73/永続罠 9/永続魔法 7)。只認寫出
+# [[卡片種類]]全名的——光寫大類的「魔法/罠カードの効果として」(実測 44 行)對不出
+# 九值中的哪一個,不產生判定。述語用白名單(実測 扱います 57/適用されます 20/
+# 扱われます 9/適用します・発動します・発動・処理を行います 各 1),否定形
+# (扱いません/扱われません)自然不命中,而且那兩種本來就是 NON_EFFECT_RE 的變體,
+# 在進到類型判定之前就走了效果外文本那條路。
+_SPELLTRAP_KIND_BY_WORD = {
+    "通常魔法": "通常魔法卡效果",
+    "速攻魔法": "速攻魔法卡效果",
+    "儀式魔法": "儀式魔法卡效果",
+    "永続魔法": "永續魔法卡效果",
+    "装備魔法": "裝備魔法卡效果",
+    "フィールド魔法": "場地魔法卡效果",
+    "通常罠": "通常陷阱卡效果",
+    "永続罠": "永續陷阱卡效果",
+    "カウンター罠": "反擊陷阱卡效果",
+}
+_SPELLTRAP_KIND_RE = re.compile(
+    "(" + "|".join(_SPELLTRAP_KIND_BY_WORD) + r")カードの効果として")
+_SPELLTRAP_PREDICATES = ("扱います", "扱われます", "適用されます", "適用します",
+                         "発動します", "処理を行います")
 # 否定句優先:這句話會列舉其他四個類型詞,不得因此多重命中。
 # 官方寫過「いずれにも」與「どれにも」兩種,都是同一件事。
 _UNCLASSIFIED_MARK = "分類されない"
@@ -242,6 +264,9 @@ def _line_kinds(line):
     逐句判斷:含「分類されない」者只算無種類效果(否定句優先),含
     「効果ではありません」的句子直接跳過(禁用句型),同一句列舉兩個以上類型詞的
     也跳過——官方在一句裡分別交代兩個子效果時,無從得知「です」收尾的是哪一個。
+
+    「〜カードの効果として+肯定述語」是[[魔陷卡效果]]那一側的明示(票56),與
+    六類的類型詞各收各的;同一行兩側都出現時集合大於一,由呼叫端當歧義處理。
     """
     kinds = set()
     for sentence in line.split("。"):
@@ -250,6 +275,10 @@ def _line_kinds(line):
         if _UNCLASSIFIED_MARK in sentence:
             kinds.add(KIND_UNCLASSIFIED)
             continue
+        for match in _SPELLTRAP_KIND_RE.finditer(sentence):
+            tail = sentence[match.end():]
+            if any(predicate in tail for predicate in _SPELLTRAP_PREDICATES):
+                kinds.add(_SPELLTRAP_KIND_BY_WORD[match.group(1)])
         if len({m.group(1) for m in _KIND_WORD_RE.finditer(sentence)}) > 1:
             continue
         for match in _KIND_RE.finditer(sentence):

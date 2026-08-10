@@ -812,6 +812,118 @@ class TestNegationAndForbiddenPhrases(unittest.TestCase):
         self.assertEqual([r["id"] for r in report["kind_conflicts"]], [1000])
 
 
+class TestSpellTrapKindAttestation(unittest.TestCase):
+    """「〜カードの効果として+肯定述語」是[[魔陷卡效果]]的官方明示(票56)。
+
+    判準是運作身分(ADR-0004):怪獸卡在裝備/魔陷狀態中運作的效果句,官方以
+    「装備魔法カードの効果として扱います」這一族句式給裁定。歸屬走既有階梯,
+    值只認寫出[[卡片種類]]全名的——光寫大類的「魔法カードの効果として」對不出
+    九值中的哪一個。
+    """
+
+    def test_typed_phrase_under_header_reaches_its_clause(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="【②の効果について】\n"
+                            "■装備魔法カードの効果として扱います。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "裝備魔法卡效果"])
+        self.assertEqual(clauses[1]["source"], "official")
+        self.assertEqual(report["official_coverage"]["header"], 1)
+        self.assertEqual(report["kind_counts"]["裝備魔法卡效果"], 1)
+
+    def test_each_card_type_word_maps_to_its_own_value(self):
+        pairs = (("通常魔法", "通常魔法卡效果"), ("速攻魔法", "速攻魔法卡效果"),
+                 ("儀式魔法", "儀式魔法卡效果"), ("永続魔法", "永續魔法卡效果"),
+                 ("装備魔法", "裝備魔法卡效果"),
+                 ("フィールド魔法", "場地魔法卡效果"),
+                 ("通常罠", "通常陷阱卡效果"), ("永続罠", "永續陷阱卡效果"),
+                 ("カウンター罠", "反擊陷阱卡效果"))
+        for word, kind in pairs:
+            with self.subTest(word=word):
+                entries, _ = build_tag_cards(
+                    [card(desc="①：效果甲。")],
+                    [faq(card_text="①：効果甲。",
+                         supplement=f"■{word}カードの効果として扱います。")])
+                clause = clauses_of(entries, 1000)[0]
+                self.assertEqual((clause["kind"], clause["source"]),
+                                 (kind, "official"))
+
+    def test_affirmative_predicate_variants_all_count(self):
+        """實測的六種肯定述語(扱います 57/適用されます 20/扱われます 9/其餘各 1)。"""
+        for predicate in ("扱います", "扱われます", "適用されます", "適用します",
+                          "発動します", "発動・処理を行います"):
+            with self.subTest(predicate=predicate):
+                entries, _ = build_tag_cards(
+                    [card(desc="①：效果甲。")],
+                    [faq(card_text="①：効果甲。",
+                         supplement="■永続罠カードの効果として"
+                                    f"{predicate}。")])
+                self.assertEqual(clauses_of(entries, 1000)[0]["kind"],
+                                 "永續陷阱卡效果")
+
+    def test_the_phrase_inside_parentheses_still_counts(self):
+        """官方常把身分裁定寫在句尾括弧裡(千年原人 38775407 那一族)。"""
+        entries, _ = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="【②の効果について】\n"
+                            "■自分メインフェイズに発動できます。"
+                            "(スペルスピード１の永続魔法カードの効果として"
+                            "扱います。)")])
+        self.assertEqual(clauses_of(entries, 1000)[1]["kind"],
+                         "永續魔法卡效果")
+
+    def test_a_quote_decides_the_attribution_as_usual(self):
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。\n②：效果乙。")],
+            [faq(card_text="①：効果甲。②：効果乙。",
+                 supplement="■『効果乙』の効果は装備魔法カードの効果として"
+                            "扱います。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "裝備魔法卡效果"])
+        self.assertEqual(report["official_coverage"]["quote"], 1)
+
+    def test_a_bare_spell_or_trap_word_assigns_nothing(self):
+        """光寫大類的句子(實測 44 行)與解說他卡能力的句子都不產生判定。"""
+        for line in ("■魔法カードの効果として扱われます。",
+                     "■この効果は罠カードの効果として扱われます。",
+                     "■該当するモンスターが魔法・罠カードの効果として"
+                     "発動・適用可能な効果を持っている場合、この効果によって"
+                     "無効化されることはありません。"):
+            with self.subTest(line=line):
+                entries, _ = build_tag_cards(
+                    [card(desc="①：效果甲。")],
+                    [faq(card_text="①：効果甲。", supplement=line)])
+                self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+
+    def test_a_negated_or_predicateless_phrase_assigns_nothing(self):
+        for line in ("■装備魔法カードの効果として扱いません。",
+                     "■永続罠カードの効果としては扱われません。",
+                     "■装備魔法カードの効果として発動する場合、その処理は"
+                     "行われません。"):
+            with self.subTest(line=line):
+                entries, _ = build_tag_cards(
+                    [card(desc="①：效果甲。")],
+                    [faq(card_text="①：効果甲。", supplement=line)])
+                self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+
+    def test_a_monster_kind_and_a_spelltrap_kind_in_one_line_is_ambiguous(self):
+        """同一行同時給了怪獸側類型與魔陷側身分:無從得知官方定的是哪一個。"""
+        entries, report = build_tag_cards(
+            [card(desc="①：效果甲。")],
+            [faq(card_text="①：効果甲。",
+                 supplement="■モンスターゾーンで適用する永続効果です。"
+                            "（装備魔法カードの効果として扱われます。）")])
+        self.assertIsNone(clauses_of(entries, 1000)[0]["kind"])
+        self.assertEqual(
+            [r["kinds"] for r in report["kind_ambiguous"]],
+            [["永續效果", "裝備魔法卡效果"]])
+
+
 class TestNonEffectAttestation(unittest.TestCase):
     """「〜は効果として扱いません」是效果外文本的官方明示。"""
 
@@ -2273,6 +2385,20 @@ class TestShadowPrediction(unittest.TestCase):
             [(r["id"], r["official"], r["predicted"])
              for r in report["rule_official_disagree"][:1]],
             [(1000, "永續效果", self.PREDICTED)])
+
+    def test_an_official_spelltrap_kind_is_out_of_the_rule_layers_scope(self):
+        """官方明示的魔陷卡效果行不當驗證集、也不列不一致(ADR-0004,票56)。"""
+        entries, report = self.build(
+            8, supplement="■装備魔法カードの効果として扱います。")
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual((clause["kind"], clause["source"]),
+                         ("裝備魔法卡效果", "official"))
+        self.assertEqual(clause["rule_predicted"], self.PREDICTED)
+        row = self.rule_row(report, "R1")
+        self.assertEqual((row["attested"], row["agree"], row["disagree"]),
+                         (0, 0, 0))
+        self.assertEqual(report["rule_official_disagree"], [])
+        self.assertEqual(report["rule_spelltrap_skipped"], 8)
 
     def test_first_build_lists_every_prediction_as_a_change(self):
         _, report = self.build(8)

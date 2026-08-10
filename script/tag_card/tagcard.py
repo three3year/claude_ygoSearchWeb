@@ -982,6 +982,12 @@ def _compare_prediction(cid, clause, rule_ids, report):
     """
     predicted = clause["rule_predicted"]
     kind, source = clause["kind"], clause["source"]
+    if kind in SPELLTRAP_KINDS:
+        # 規則層歸納的是怪獸效果的六類;判成[[魔陷卡效果]]的行不在其管轄範圍,
+        # 影子預測留著(換規範前的痕跡)但不比對、不升級(ADR-0004)。官方明示
+        # 也寫得出這一族的值(票56),所以這道範圍閘門在官方分支之前
+        report["rule_spelltrap_skipped"] += 1
+        return
     if source == official.SOURCE_OFFICIAL:
         for rule_id in rule_ids:
             counts = report["rule_validation"][rule_id]
@@ -993,11 +999,6 @@ def _compare_prediction(cid, clause, rule_ids, report):
         return
     if kind is None:
         return  # 尚未判定:只留影子預測,類型仍等判定票決定(ADR-0002)
-    if kind in SPELLTRAP_KINDS:
-        # 規則層歸納的是怪獸效果的六類;判成[[魔陷卡效果]]的行不在其管轄範圍,
-        # 影子預測留著(換規範前的痕跡)但不比對、不升級(ADR-0004)
-        report["rule_spelltrap_skipped"] += 1
-        return
     if kind != predicted:
         report["rule_conflicts"].append(_rule_row(
             cid, clause, rule_ids, existing=kind, predicted=predicted,

@@ -1,0 +1,241 @@
+[
+  {
+    "id": 2461031,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 4266839,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": "必發",
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 6330307,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": "選發",
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 7369217,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 11678191,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 12927849,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": "選發",
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 12965761,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": "必發",
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 14235211,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 19086954,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 21977828,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 29071332,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": "必發",
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 31768112,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": "必發",
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  },
+  {
+    "id": 48568432,
+    "section": "main",
+    "clauses": [
+      {
+        "index": "2",
+        "kind": "裝備魔法卡效果",
+        "optional": "必發",
+        "role": null,
+        "rejudge": true
+      },
+      {
+        "index": "3",
+        "kind": "裝備魔法卡效果",
+        "optional": null,
+        "role": null,
+        "rejudge": true
+      }
+    ]
+  }
+]

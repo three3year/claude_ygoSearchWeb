@@ -16,8 +16,8 @@
 import hashlib
 import re
 
-from official import (KIND_CONTINUOUS, KIND_IGNITION, KIND_QUICK, KIND_TRIGGER,
-                      KIND_UNCLASSIFIED, KINDS)
+from official import (KIND_CONTINUOUS, KIND_IGNITION, KIND_NON_EFFECT,
+                      KIND_QUICK, KIND_TRIGGER, KIND_UNCLASSIFIED, KINDS)
 
 # 覆蓋不足這個條數的規則不進規則層——過擬合的單卡特例不得偽裝成通則(Story 46)
 MIN_COVERAGE = 8
@@ -96,10 +96,16 @@ RULES = (
            exclude=_ACTIVATES + "|" + _EVENT),
     define("R7", KIND_CONTINUOUS, SCOPE_CLAUSE,
            "效果句是單一句子、含「(フィールド|モンスターゾーン)…存在する限り」,"
-           "且不含「発動」「として扱う」「フェイズ」「事ができる」與任何觸發事件",
+           "且不含「発動」「として扱う」「フェイズ」「事ができる」"
+           "「以下の効果を得る」與任何觸發事件",
            r"^[^。]*(フィールド|モンスターゾーン)[^。]*存在する限り[^。]*。?$",
            "票06",
-           exclude=_ACTIVATES + r"|として扱う|フェイズ|事ができる|" + _EVENT),
+           exclude=_ACTIVATES + r"|として扱う|フェイズ|事ができる"
+                   r"|以下の効果を得る|" + _EVENT,
+           changes=({"reason": CHANGE_OVERLAP, "ticket": "票22",
+                     "note": "與 R13 在存在する限り+以下の効果を得る的單句領起句"
+                             "上重疊且結論不同;官方對那一族 3 筆全判效果外文本"
+                             "(15419596/34244455/69058960),R7 排除領起句。"},)),
     define("R8", KIND_CONTINUOUS, SCOPE_CLAUSE,
            "效果句含「効果を受けない」,且不含「発動」「として扱う」、素材/召喚時的"
            "一次性限定(「素材とした」「召喚に成功したターン」「リリースした」)"
@@ -132,6 +138,15 @@ RULES = (
            "且不含「発動」與「存在する限り」",
            r"フィールドから離れた場合に除外される", "票19",
            exclude=_ACTIVATES + r"|存在する限り"),
+    # R13 是 §5.5 分界四旁的「自己得到型」純領起句:單一句子、主語このカード自己、
+    # 以「以下の効果を得る」收尾且沒有發動子句。票22 全表量測:官方給過答案的
+    # 41/41 全是「効果の扱いではありません」,無一判成其他類型。多句的效果句
+    # (發動子句在前、得る收尾)不在此列——單句限定就是為了排除它們。
+    define("R13", KIND_NON_EFFECT, SCOPE_CLAUSE,
+           "效果句是單一句子的自己得到型領起句「このカードは…以下の効果を得る。」,"
+           "且不含「発動」與任何觸發事件",
+           r"^[^。]*このカードは[^。]*以下の効果を得る。?$", "票22",
+           exclude=_ACTIVATES + "|" + _EVENT),
 )
 
 

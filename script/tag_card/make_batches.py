@@ -36,7 +36,8 @@ from official import INDEX_UNNUMBERED
 from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_SPLITS,
                    DEFAULT_TAG_CARDS, ROOT, dump_json, load_json,
                    load_optional)
-from tagcard import SECTION_PENDULUM, build_tag_cards, card_type_label
+from tagcard import (FOOTNOTE_RE, SECTION_PENDULUM, build_tag_cards,
+                     card_type_label)
 
 DEFAULT_BATCH_DIR = os.path.join(ROOT, ".scratch", "tag-card", "batches")
 
@@ -84,7 +85,9 @@ def card_context(entry, card, faq):
         # 規範 §5.8 的「這張卡本身的發動」由[[卡片種類]]決定,而通常魔法與速攻魔法
         # 的卡文寫法一樣——不附上種類,判定者只讀批次檔就走不完那一節
         "card_type": card_type_label(card.get("type", 0)),
-        "card_text_zh": card.get("desc") or "",
+        # 尾端的 ※ 別名譯註照管線剝除:card_text_zh 必須與拆句標的的整團原文
+        # 一致,否則判定者照它抄段落會在覆蓋驗證上失敗(票21 的 20349913)
+        "card_text_zh": FOOTNOTE_RE.sub("", card.get("desc") or ""),
         "card_text_ja": faq.get("card_text") or "",
         "supplement": faq.get("supplement") or "",
         "clauses": [],
@@ -198,7 +201,9 @@ def _file_count(series, wanted, limit):
 RESULT_FORMAT = {
     "說明": "一卡一段落一物件。split_targets 的段落要拆句,寫 split: true 與"
             "每段的原文子字串;其餘只填 kind / optional / role。"
-            "拆不出來或判不出來的留空並寫 note,不猜。",
+            "拆不出來或判不出來的留空並寫 note,不猜。"
+            "note 只在 kind 留空時被合併程序讀取;寫在已判行上的 note 只留在"
+            "結果檔當稽核軌跡,不進標記表與報告。",
     "兩側語序不一致": "繁中與日文把同一批句子排成不同順序時,clauses 照繁中順序"
                 "列、另給 ja_order(段落位置的排列)說明日文怎麼讀;index 仍照"
                 "日文的序號給,官方的『①』對的是日文那一側(規範 §8 判準11)。",

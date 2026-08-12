@@ -373,6 +373,48 @@ def quoted_bullets(supplement, text_ja):
     return hits
 
 
+def bullets_typed_apart(supplement, text_ja):
+    """官方把**這一段的** `●` 判成兩種以上的類型嗎?(票58 的拆句依據)
+
+    官方偶爾不開 `【●…について】` 標頭、也不引用 `●` 的原文,而是用序數指名:
+    `■１つ目の『●』はフィールドで発動できる誘発効果です。`(電子變形龍
+    3657444)。指名的方式雖然不同,官方**逐項給類型**這件事本身就是最強的
+    「這些 `●` 是各自獨立的子效果」的證據——比 票16 那條行內引用授權更強。
+
+    只在**類型不只一種**時回傳 True,理由是自我限制:官方只給一種時整段判那一
+    種就對了(`quoted_bullets` 那一族的既有行為,不動它);兩種以上時不拆就一定
+    有一半是錯的——一條效果句只有一個類型欄位,查詢層也就定位不到那一半。條件
+    因此只在「不拆必錯」的地方開火,不會生出官方沒有認可的效果句。
+
+    三道限制,少了任何一道都會誤開火:
+
+    - 看的是**主語是 `●` 的行**(`_bullet_subject`,與歸屬那一側同一把尺),
+      「這一句在講整個編號效果」或「括弧裡順帶提到 `●`」都不算數。
+    - 引用的原文必須落在**這一段**裡。官方寫的是 `『●…』` 全文引用時,不同
+      類型很可能分屬**不同的效果句**(神竜－エクセリオン 10032958 已由拆句表
+      拆成三段,每段一個 `●`、各自一個類型);拿卡層級的集合去判會把那些段落
+      再切一次,把官方明示變成孤兒。光禿禿的 `『●』` 沒有可比對的原文,只能靠
+      下面那一道擋。
+    - 這一段要有**兩個以上的 `●`**。一個 `●` 的段落容不下兩種類型,官方講的
+      必然是別段的。
+    """
+    body = _normalise(text_ja)
+    if body.count(BULLET) < 2:
+        return False
+    kinds = set()
+    for _header, block in _blocks(supplement or ""):
+        for raw in block.split("\n"):
+            line = raw.strip()
+            quoted = _bullet_subject(line) if line else None
+            if quoted is None:
+                continue
+            needle = _normalise(quoted)
+            if needle != BULLET and needle not in body:
+                continue
+            kinds |= _line_kinds(line)
+    return len(kinds) > 1
+
+
 def _quotes_the_lead(lead, quoted):
     """官方的 『原文』 引用是不是從領起句開始。
 

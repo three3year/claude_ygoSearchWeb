@@ -1158,6 +1158,59 @@ class TestBulletSubEffects(unittest.TestCase):
         self.assertEqual(report["substring_violations"], [])
 
 
+class TestBulletsTypedApart(unittest.TestCase):
+    """票58:官方逐項把 `●` 判成不同類型時,那一段的 `●` 拆成獨立效果句。
+
+    不拆的話一條效果句只有一個類型欄位,官方給的另一種必然掉在地上,查詢層也就
+    定位不到那一半(電子變形龍 3657444:誘発効果 + 起動効果 ×2)。條件只在
+    「不拆必錯」時開火——官方只給一種時整段判那一種就對了,照舊不拆。
+    """
+
+    DESC = "①：以下效果從1個選擇發動。\n●效果甲。\n●效果乙。"
+    CARD_TEXT = "①：以下の効果から１つを選択して発動できる。●効果甲。●効果乙。"
+
+    def _build(self, supplement):
+        return build_tag_cards(
+            [card(desc=self.DESC)],
+            [faq(card_text=self.CARD_TEXT, supplement=supplement)])
+
+    def test_two_kinds_across_bullets_split_the_clause(self):
+        entries, report = self._build(
+            "■１つ目の『●』はフィールドで発動できる誘発効果です。\n"
+            "■２つ目の『●』はフィールドで発動できる起動効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①", "①-●1", "①-●2"])
+        self.assertEqual([c["text_ja"] for c in clauses],
+                         ["①：以下の効果から１つを選択して発動できる。",
+                          "●効果甲。", "●効果乙。"])
+        self.assertEqual(report["bullet_clauses"], 2)
+
+    def test_one_kind_across_bullets_leaves_the_clause_whole(self):
+        """官方只給一種類型時整段判那一種,不製造官方沒有認可的效果句。"""
+        entries, report = self._build(
+            "■１つ目の『●』はフィールドで発動できる起動効果です。\n"
+            "■２つ目の『●』はフィールドで発動できる起動効果です。")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)], ["①"])
+        self.assertEqual(report["bullet_clauses"], 0)
+
+    def test_a_quote_spanning_the_bullets_still_blocks_the_split(self):
+        """ADR-0003 的驗證二照樣先跑:引用橫跨拆點就證明那是同一個效果句。"""
+        entries, report = self._build(
+            "■『●効果甲。●効果乙』はフィールドで発動できる誘発効果です。\n"
+            "■２つ目の『●』はフィールドで発動できる起動効果です。")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)], ["①"])
+        self.assertEqual([r["id"] for r in report["bullet_quote_violations"]],
+                         [1000])
+
+    def test_kinds_only_count_when_the_bullet_is_the_subject(self):
+        """括弧裡順帶提到 `●` 不算數,與歸屬那一側同一把尺。"""
+        entries, report = self._build(
+            "■『①』はフィールドで発動できる起動効果です。"
+            "（『●』の効果は誘発効果です。）")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)], ["①"])
+        self.assertEqual(report["bullet_clauses"], 0)
+
+
 class TestTrailingHeader(unittest.TestCase):
     """票15:黏在行尾的【…】標頭一樣是新段的開始。
 

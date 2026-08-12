@@ -1690,6 +1690,38 @@ class TestMandatoryAttestation(unittest.TestCase):
                             + "\n■条件を満たした場合に必ず発動します。")])
         self.assertEqual(clauses_of(entries, 1000)[0]["optional"], "必發")
 
+    def test_mandatory_inside_full_width_quotes_is_a_quoted_term(self):
+        """全形雙引號裡的「必ず発動する効果」是官方引述的概念,不是本行的結論。
+
+        救世星龍 7841112:官方在解說「被複製的效果」怎麼運作,整句的結論
+        (「発動するかどうかは任意です」)恰好相反。§6/§7 同一條道理。
+        """
+        entries, report = build_tag_cards(
+            [card(desc="①：1回合1次，可以選擇對手場上的1隻怪獸，那個效果無效。")],
+            [faq(card_text="①：１ターンに１度、相手フィールドのモンスター１体を"
+                           "選択し、その効果を無効にできる。",
+                 supplement="【①の効果について】\n"
+                            "■モンスターゾーンで発動できる起動効果です。\n"
+                            "■無効にしたモンスターのテキストに、"
+                            "”条件を満たした際に必ず発動する効果”が"
+                            "記されている場合でも、このカードがその効果を"
+                            "発動するかどうかは任意です。")])
+        clause = clauses_of(entries, 1000)[0]
+        self.assertEqual(clause["kind"], "啟動效果")
+        self.assertIsNone(clause["optional"])
+        self.assertEqual(report["mandatory_other_kind"], [])
+
+    def test_mandatory_outside_the_quotes_still_counts(self):
+        """剝的只有引號裡的字:同一行引號外的必發明示照舊算數。"""
+        entries, _ = build_tag_cards(
+            [card(desc="①：可以發動。從卡組抽1張卡。")],
+            [faq(card_text="①：このカードが墓地へ送られた場合に発動できる。"
+                           "デッキから１枚ドローする。",
+                 supplement=self.TRIGGER_HEADER
+                            + "\n■”そのような効果”が記されている場合でも、"
+                              "この効果は必ず発動します。")])
+        self.assertEqual(clauses_of(entries, 1000)[0]["optional"], "必發")
+
     def test_mandatory_without_a_kind_leaves_optional_for_judgment(self):
         """官方只寫必發、沒寫類型時不寫值——必發/選發只在兩種類型上有值。"""
         entries, report = build_tag_cards(

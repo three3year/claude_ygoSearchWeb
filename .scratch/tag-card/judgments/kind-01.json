@@ -1,0 +1,5295 @@
+[
+ {
+  "id": 483,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動,照卡片種類填值(ADR-0004/§5.8);不填必發/選發(§4)。"
+   }
+  ]
+ },
+ {
+  "id": 41546,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果句一律靈擺魔法卡效果(ADR-0005);P 區玩家主動的效果發動(自分メインフェイズに発動できる)無觸發事件,留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 50755,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動,照卡片種類填值(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 56889,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動,照卡片種類填值(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的破壞替代;官方寫墓地で適用できるチェーンブロックの作られない効果,不發動→必發/選發留空(§4)。"
+   }
+  ]
+ },
+ {
+  "id": 59080,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(領起句 + ● 選一發動),照卡片種類填值。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次卡發動的 ● 選項,魔法卡身分運作(§2.7)。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 96540,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 98905,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 111280,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句是列舉型(数によって以下の効果を適用する),官方對整段只給一次發動的解說,不拆(§8 判準9)。"
+   }
+  ]
+ },
+ {
+  "id": 126218,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 164710,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、連時點都沒寫→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 197042,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 212652,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 213326,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 269012,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段(官方:チェーンブロックの作られない効果),不發動→留空。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=戰鬥破壞送墓;官方明示「条件を満たした場合に必ず発動する効果です」→必發(§4 第一層)。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡被效果破壞送墓;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 269510,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "列舉型領起句(以下の効果を適用する)+ 兩個 ● 同屬一段(§8 判準9,管線未授權拆);官方對 ● 都寫チェーンブロックの作られない効果,整段持續適用,不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 276357,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動(非卡發動,官方另立チェーンブロック),觸發事件=靈魂怪獸回手牌;句尾発動できる→選發。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手怪獸的攻擊宣言時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 295517,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   }
+  ]
+ },
+ {
+  "id": 303660,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備卡的持續適用段,照卡片種類填值(§5.2/ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "官方寫チェーンブロックの作られない効果——不發動,必發/選發留空;身分仍是裝備魔法卡。"
+   }
+  ]
+ },
+ {
+  "id": 313513,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 327051,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的破壞替代(官方:チェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 365213,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理,照卡片種類填值;不填必發/選發。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=同步怪獸被特殊召喚;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 368382,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果句(ADR-0005);官方寫チェーンブロックの作られない効果,不發動→必發/選發留空。"
+   }
+  ]
+ },
+ {
+  "id": 402416,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "賦予型領起句,但官方自己稱它『以下の効果を得る』効果(【①の効果について】■モンスターに適用される効果です),不是効果の扱いではありません那一族(§8 判準9 票35);它是這張速攻魔法自己的效果→照卡片種類填值。兩個 ● 已由官方明示接手。"
+   }
+  ]
+ },
+ {
+  "id": 433377,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方「雷盟」卡效果破壞了卡;句尾発動できる→選發。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動但只寫主要階段,不算觸發事件→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "③",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件同①;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 458748,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 575512,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=「PSY骨架」怪獸被特殊召喚;句尾発動できる→選發。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=戰鬥的傷害步驟開始時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 613496,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 653675,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=我方同步怪獸被戰鬥破壞;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 674561,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 675319,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的破壞替代(官方:チェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 691925,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 703897,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(官方:このカードの発動時の効果処理),不填必發/選發(§4)。"
+   },
+   {
+    "index": "②",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、連時點都沒寫→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 712559,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=「亞馬遜」怪獸被破壞送墓時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 720147,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 786906,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 799183,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(官方:カードの発動時の効果処理);不填必發/選發。"
+   },
+   {
+    "index": "②",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價(去除魔力計數器)、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 811734,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句寫明 ● 是同一次發動的二選一(§8 判準9),整段一個類型。"
+   }
+  ]
+ },
+ {
+  "id": 844056,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 847217,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備卡的持續適用段(官方:チェーンブロックの作られない効果)。"
+   },
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分メインフェイズに発動できます——只寫主要階段,不算觸發事件→留空(§5.8 第三列)。● 子效果已由官方明示接手誘發即時效果。"
+   }
+  ]
+ },
+ {
+  "id": 856784,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 879958,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "陷阱卡自己變成裝備卡,身分不變、照印刷卡種填(§5.8 陷阱自我裝備族);這一段是卡本身的發動,不填必發/選發。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無事件(官方另寫只能主要階段1發動)→留空(§5.8 第三/四列)。"
+   }
+  ]
+ },
+ {
+  "id": 885016,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分のメインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的破壞替代(官方:チェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 897409,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理,照卡片種類填值;不填必發/選發。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=「銀河眼光子龍」被特殊召喚;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 911883,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 975299,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "④",
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=「巨大戰艦」怪獸被召喚/特殊召喚;官方明示「必ず発動する効果です」→必發(§4 第一層)。"
+   }
+  ]
+ },
+ {
+  "id": 1003840,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分のメインフェイズにのみ発動→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手回合我方特殊召喚同步怪獸;官方明示「必ず発動する効果になります」→必發。"
+   }
+  ]
+ },
+ {
+  "id": 1005587,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1033312,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1041278,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1050355,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段(官方:チェーンブロックの作られない効果)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=結束階段到來(固定階段算事件,§5.8 第二列);句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1050684,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1061200,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=此卡被效果破壞;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1073952,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1118137,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "裝備狀態中的效果發動(官方:チェーンブロックの作られる効果),觸發事件=裝備怪獸戰鬥的攻擊宣言時;句尾発動する→必發(§4 第二層)。"
+   },
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備卡的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "破壞替代(官方:チェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 1122030,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,無觸發事件也無時點→留空(§5.8 第四列)。"
+   },
+   {
+    "index": "③",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "破壞替代(官方:チェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 1149109,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   }
+  ]
+ },
+ {
+  "id": 1154611,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=陷阱卡發動時;句尾発動できる→選發。本段是陷阱在墓地的發動(變成怪獸是它的處理內容),仍照卡片種類填值。"
+   }
+  ]
+ },
+ {
+  "id": 1157683,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動;領起句寫明 ● 是同一次發動的二選一(§8 判準9);無觸發事件也無時點→必發/選發留空。"
+   }
+  ]
+ },
+ {
+  "id": 1186447,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果句(ADR-0005);官方寫ペンデュラムゾーンで適用できるチェーンブロックの作られない効果,不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 1187243,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備卡的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動;領起句是列舉型(レベル・ランクによって以下の効果を発動できる),整段一個類型(§8 判準9);無觸發事件也無時點→留空。"
+   },
+   {
+    "index": "③",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 1197847,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備卡的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=裝備怪獸戰鬥的戰鬥階段結束時;官方另寫「任意に発動する事ができる効果です」→選發(§4 第一層)。"
+   }
+  ]
+ },
+ {
+  "id": 1218214,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,官方寫自分のメインフェイズにのみ発動→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 1224927,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1225009,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "②-●1",
+    "kind": "誘發效果(1速)",
+    "optional": "選發",
+    "role": null,
+    "note": "怪獸卡。② 官方明示誘発効果,這個 ● 是 ② 同一次發動的後續處理(官方:ドローする処理と『●』の処理…同時には行われません),不是另一個發動,類型與必發/選發跟著 ②(發動子句在 ②,句尾発動できる→選發)。"
+   }
+  ]
+ },
+ {
+  "id": 1248895,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1259814,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,無觸發事件也無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 1259915,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=對手結束階段到來(固定階段算事件);句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1264319,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 1280391,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "③",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡被送去墓地;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1295111,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方怪獸戰鬥的傷害計算時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1329620,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "反擊陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡被效果送去墓地;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1344018,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,無觸發事件也無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 1353770,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 1372887,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1463589,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手發動場上怪獸的效果時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1475311,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1490690,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手發動效果時;句尾発動できる→選發。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡從手牌/場上送去墓地;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1516510,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null,
+    "note": "怪獸卡。賦予型領起句與兩個 ● 同在一條效果句裡(官方沒開 ● 標頭、行內也沒有 『●…』 引用,管線不拆)。官方對兩部分各給一個答案:領起句『…以下の効果を得る』そのものは効果の扱いではありません、『この効果で得る２つの効果はいずれもモンスターゾーンで適用する永続効果です』。整條的實質內容是那兩個持續適用的 ●,判永續效果;判成效果外文本會把兩個真效果藏起來。"
+   }
+  ]
+ },
+ {
+  "id": 1580833,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果句(ADR-0005);官方寫チェーンブロックの作られない効果,破壞替代不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 1595137,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "②-●1",
+    "kind": "誘發效果(1速)",
+    "optional": "選發",
+    "role": null,
+    "note": "怪獸卡。② 官方明示誘発効果,兩個 ● 是同一次發動依所在處決定的處理內容(官方:この効果がどこで発動したのかによって『●』の効果が決定します),類型與必發/選發跟著 ②(句尾発動できる→選發)。"
+   },
+   {
+    "index": "②-●2",
+    "kind": "誘發效果(1速)",
+    "optional": "選發",
+    "role": null,
+    "note": "同上(墓地側的 ●)。"
+   }
+  ]
+ },
+ {
+  "id": 1607603,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句寫明 ● 是同一次發動的二選一(§8 判準9)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次卡發動的 ● 選項,魔陷卡身分運作(§2.7)。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 1637760,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1683982,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方爬蟲類族怪獸被戰鬥破壞/送去墓地;句尾発動できる→選發。"
+   },
+   {
+    "index": "③",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "被破壞的此卡發動,觸發事件=此卡被破壞;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1712616,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "反擊陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=我方結束階段到來(固定階段);句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 1759808,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1781310,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句寫明 ● 是同一次發動的四選一(§8 判準9)。"
+   }
+  ]
+ },
+ {
+  "id": 1784686,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1825445,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,無觸發事件也無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 1845204,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 1942635,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=「王戰」效果怪獸被戰鬥破壞;官方明示「必ず発動する効果です」→必發(§4 第一層)。"
+   }
+  ]
+ },
+ {
+  "id": 1984618,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2006591,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,發動子句只有狀態條件、無觸發事件也無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 2055403,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2099841,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2106266,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分のメインフェイズに、任意に発動する事ができる効果——只寫主要階段、沒有觸發事件,照 §5.8 第三列留空;「任意に」講的是任意性,補不出這一格該不該填。"
+   }
+  ]
+ },
+ {
+  "id": 2116237,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=對手從額外牌組特殊召喚;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2144946,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方「F.A.」怪獸被戰鬥破壞;官方另寫「任意に発動する事ができる効果です」→選發。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=此卡被效果破壞;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2204140,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2254222,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果發動(官方:ペンデュラムゾーンで発動できるチェーンブロックの作られる効果);P 區玩家主動、無觸發事件→留空(§2.7 靈擺同一套)。"
+   }
+  ]
+ },
+ {
+  "id": 2263869,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2266498,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2287848,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 2295440,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2295831,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(公開手牌後於主要階段1發動),不填必發/選發。"
+   }
+  ]
+ },
+ {
+  "id": 2314238,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2339825,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "反擊陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=同步怪獸被除外;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2344618,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方融合召喚「月光」怪獸;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2359348,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2362787,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2364438,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2372506,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2376209,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=陷阱卡發動時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2390019,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 2434862,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,只有狀態條件與代價、無觸發事件也無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 2501624,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "②",
+    "kind": "誘發效果(1速)",
+    "optional": "選發",
+    "role": null,
+    "note": "怪獸卡。官方寫【②の効果について】■モンスターゾーンで発動できる誘発効果です;補足把 ③ 的標頭也寫成【②の効果について】(同一標頭出現兩次、結論不同),抽取器對不出唯一標的才留到本票。句尾発動できる→選發。"
+   },
+   {
+    "index": "③",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null,
+    "note": "同上那組重複標頭的第二塊(■モンスターゾーンで適用する永続効果です)講的是 ③ 的攻擊力上升;句子本身也是場上的持續適用,判永續效果。"
+   }
+  ]
+ },
+ {
+  "id": 2507443,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句寫明 ● 是同一次發動的二選一(§8 判準9)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次卡發動的 ● 選項。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次卡發動的 ● 選項。"
+   },
+   {
+    "index": "②",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,只寫主要階段→留空(§5.8 第三列);官方另寫スペルスピード１の効果です,與速攻魔法的墓地效果 1 速一致(§2.7)。"
+   }
+  ]
+ },
+ {
+  "id": 2542230,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;陷阱卡自己變成裝備卡,身分不變照印刷卡種填(§5.8)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備狀態中的持續適用段;官方沒寫「装備魔法カードの効果として」,照陷阱自我裝備族判(§5.8),不發動→留空。"
+   },
+   {
+    "index": "③",
+    "kind": "通常陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡被送去墓地那回合的結束階段;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2547033,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手發動陷阱卡時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2572890,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句寫明 ● 是同一次發動的二選一(§8 判準9)。"
+   }
+  ]
+ },
+ {
+  "id": 2602411,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "怪獸卡,但這一段是此卡被當作裝備卡裝備中運作的持續適用段;官方寫「装備魔法カード扱いの効果です（チェーンブロックの作られない効果です）」——與 §5.8 的裝備狀態邊界同一件事,判裝備魔法卡效果,不發動→留空。"
+   },
+   {
+    "index": "③",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上的裝備狀態中效果發動(官方:装備魔法カード扱いの効果です、自分のメインフェイズのみ発動する事ができます)——只寫主要階段→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 2606417,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=雙方準備階段到來(固定階段算事件,§5.8 第二列);句尾発動する→必發(§4 第二層)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手怪獸攻擊的傷害計算時/對手怪獸效果發動時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2625939,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2674965,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方永續陷阱卡在怪獸區發動效果;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2729965,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2759860,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分のメインフェイズでのみ発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方結束階段到來(固定階段);句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2783661,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2819435,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方通常怪獸召喚/特殊召喚成功;官方明示「必ず発動する効果です」→必發(§4 第一層)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手發動魔法/陷阱/怪獸效果;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2896663,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "④",
+    "kind": "裝備魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "怪獸卡,但這一段是 ③ 把此卡當裝備卡裝上去之後、裝備狀態中的發動(官方:装備されているこのカードが発動できるチェーンブロックの作られる効果;卡文主語是「装備モンスター」,§5.2 表示此卡是裝備卡)→裝備魔法卡效果(§5.8);觸發事件=裝備怪獸戰鬥破壞怪獸時,句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2906939,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=場上有卡被覆蓋;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 2926176,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2930675,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   }
+  ]
+ },
+ {
+  "id": 2971446,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 2978414,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①-●1",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "怪獸卡。① 官方明示起動効果、且寫明「この効果を発動する際に●を１つ選択し、その●の効果として発動します」——● 是同一次發動的選項,類型跟著 ①;啟動效果不填必發/選發(§4)。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   },
+   {
+    "index": "①-●3",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 2992036,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,只有狀態條件與代價、無觸發事件也無時點→留空(§5.8 第四列);官方寫「自分・相手ターンに、任意に発動する事ができる効果」講的是時點與任意性。"
+   }
+  ]
+ },
+ {
+  "id": 2994495,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3048768,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的持續適用段(官方:ペンデュラムゾーンで適用するチェーンブロックの作られない効果)→留空。"
+   },
+   {
+    "index": "②",
+    "kind": "靈擺魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "靈擺欄的效果發動,觸發事件=對手怪獸的攻擊宣言時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 3055018,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方結束階段到來(固定階段);句尾発動できる→選發。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "此卡被破壞/除外後發動,觸發事件=被破壞或被除外;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 3064783,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "②",
+    "kind": "無種類效果",
+    "optional": null,
+    "role": null,
+    "note": "怪獸卡。補足把這一段的標頭寫成【③の効果について】(卡只有①②,是官方標錯),內容是『起動効果・誘発効果・誘発即時効果・永続効果のいずれにも分類されない効果です』;句子本身也是「此卡自己當素材時的視為」,§5.5 分界六同判無種類效果。"
+   }
+  ]
+ },
+ {
+  "id": 3103067,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句寫明 ● 是同一次發動的二選一(§8 判準9)。"
+   }
+  ]
+ },
+ {
+  "id": 3105404,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 3113667,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方機械族闇屬性怪獸破壞場上的卡;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 3129133,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=怪獸從墓地加入手牌;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 3129527,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;尾端的破壞替代句是本效果特殊召喚的衍生物的後續處理(官方另開標頭解說但仍在①之內),整段照卡片種類填值。"
+   }
+  ]
+ },
+ {
+  "id": 3167439,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的破壞替代(官方:チェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 3171055,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3211439,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3244563,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3259760,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3285551,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3298689,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,只寫主要階段→留空(§5.8 第三列);官方另寫この効果のスペルスピードは１です,與速攻魔法的墓地效果 1 速一致。"
+   }
+  ]
+ },
+ {
+  "id": 3376703,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "②-●1",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null,
+    "note": "怪獸卡。② 官方明示「モンスターゾーンで発動する誘発効果です/必ず発動する効果です」,兩個 ● 是同一次發動擲硬幣後的處理內容,類型與必發/選發跟著 ②。"
+   },
+   {
+    "index": "②-●2",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null,
+    "note": "同上(硬幣反面的 ●)。"
+   }
+  ]
+ },
+ {
+  "id": 3441553,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句寫明 ● 是同一次發動的三選一(§8 判準9)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次卡發動的 ● 選項。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   },
+   {
+    "index": "①-●3",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 3461403,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=雙方結束階段到來(固定階段);句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 3492538,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備卡的持續適用段(§5.2/ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3493058,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句是列舉型(出た目の効果を適用する),整段一個類型(§8 判準9)。"
+   }
+  ]
+ },
+ {
+  "id": 3496543,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句寫明 ● 是同一次發動的二選一(§8 判準9)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次卡發動的 ● 選項。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   },
+   {
+    "index": "②",
+    "kind": "速攻魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡為了發動怪獸效果被送去墓地;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 3519195,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 3567660,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3574681,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備魔法卡本身的發動,照卡片種類填值;不填必發/選發(§4)。"
+   }
+  ]
+ },
+ {
+  "id": 3576031,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=雙方結束階段到來(固定階段);句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 3594985,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果發動(官方:ペンデュラムゾーンで発動できるチェーンブロックの作られる効果);只有狀態條件、無觸發事件→留空。"
+   }
+  ]
+ },
+ {
+  "id": 3611830,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果發動;官方寫自分のメインフェイズにのみ発動する事ができる効果→只寫主要階段、無觸發事件,留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 3657444,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": null,
+    "optional": null,
+    "role": null,
+    "note": "怪獸卡,判不出來(留空待審)。領起句是列舉型(以下の効果から１つを選択して発動できる),管線不拆 ●(官方沒開【…『●』について】標頭,只有行內 ■ 逐項解說);但官方對三個 ● 給了**兩種**類型:１つ目=誘発効果、２つ目/３つ目=起動効果。一條效果句只能有一個類型(判準4),而這一票不能改效果句邊界,猜任何一邊都會讓另一邊變成錯資料 → 照 §9 留空。"
+   }
+  ]
+ },
+ {
+  "id": 3659803,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3693034,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,只有狀態條件與代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 3734202,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,純代價、無觸發事件也無時點→留空(§5.8 第四列)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   },
+   {
+    "index": "③",
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡被送去墓地;官方明示「必ず発動する効果です」→必發。"
+   }
+  ]
+ },
+ {
+  "id": 3752422,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果發動;官方寫自分メインフェイズにのみ発動できます→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 3819470,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 3875465,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方「機塊」連結怪獸連結召喚成功;官方另寫「任意に発動する事ができる効果です」→選發。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=雙方怪獸的攻擊宣言時;官方同寫任意に発動→選發。"
+   }
+  ]
+ },
+ {
+  "id": 4008212,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 4017398,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,只有狀態條件與代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 4031928,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4059313,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(選一隻「拉的翼神龍」賦予效果);賦予型領起句與三個 ● 同在一條效果句裡(領起句後面多一句『このカードの発動と効果は無効化されない』,管線的行內引用授權不成立、不拆)。三個 ● 是**怪獸**得到的效果(官方:永続効果/誘発効果/誘発効果),不是這張速攻魔法自己的效果;整條的領起側就是卡發動,照卡片種類填值,必發/選發留空。"
+   }
+  ]
+ },
+ {
+  "id": 4063756,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①-●2",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null,
+    "note": "怪獸卡(連結)。補足的標頭寫成【②の効果について】(卡只有①,官方標錯),內容『モンスターゾーンで適用する永続効果です』講的就是這個 ●;句子本身也是場上的持續適用(不受對手發動的效果影響)。"
+   },
+   {
+    "index": "①-●3",
+    "kind": "誘發即時效果(2速)",
+    "optional": "選發",
+    "role": null,
+    "note": "同一組標頭的第三塊【③の効果について】■モンスターゾーンで発動できる誘発即時効果です;卡文寫「相手ターンに１度、発動できる」也是 2 速的正字標記,句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 4064256,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   }
+  ]
+ },
+ {
+  "id": 4064925,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分のメインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②-●1",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "② 同一次發動所適用的內容(官方:チェーンブロックの作られない効果),仍是這張永續魔法自己的效果;不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 4072687,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4079728,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "②-●1",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "怪獸卡。② 官方明示起動効果,三個 ● 只是它處理時可挑選的怪獸類別列舉(官方:いずれかの『●』に該当するモンスター１体を…),類型跟著 ②;啟動效果不填必發/選發。"
+   },
+   {
+    "index": "②-●2",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   },
+   {
+    "index": "②-●3",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 4081825,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4149689,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   }
+  ]
+ },
+ {
+  "id": 4160316,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "速攻魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=我方「百夫長」同步怪獸被特殊召喚;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 4178474,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4206964,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4227096,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4239451,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果發動;官方寫自分メインフェイズでのみ発動する事ができます→只寫主要階段,留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 4333086,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4341721,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004);本卡無補足情報。"
+   }
+  ]
+ },
+ {
+  "id": 4398189,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,無觸發事件也無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 4408198,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4433488,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(有觸發事件也不填必發/選發:發不發動一張卡是玩家的選擇,§4)。"
+   }
+  ]
+ },
+ {
+  "id": 4440873,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "反擊陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4450854,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4538826,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果發動;官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 4575541,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,只寫主要階段→留空(§5.8 第三列);官方另寫スペルスピード１の効果です,與速攻魔法的墓地效果 1 速一致。"
+   }
+  ]
+ },
+ {
+  "id": 4582942,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句是列舉型(以下の効果から１つを選んで適用する),整段同屬一次卡發動(§8 判準9)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次卡發動的 ● 選項。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 4599182,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=我方「無限地獄」怪獸離場/被戰鬥破壞;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 4606229,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4614116,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備卡的持續適用段(§5.2/ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4663194,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫(此卡發動那回合的)主要階段→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方特殊召喚等級8以上的「D-HERO」怪獸;官方明示「必ず発動する効果です」→必發。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "此卡被破壞後發動,觸發事件=此卡被破壞;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 4682617,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4731783,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①-●1",
+    "kind": "誘發即時效果(2速)",
+    "optional": "選發",
+    "role": null,
+    "note": "怪獸卡。① 官方明示誘発即時効果、且寫明「●を１つ選択し、その●の効果として発動します」——● 是同一次發動的選項,類型跟著 ①;句尾発動できる→選發。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "誘發即時效果(2速)",
+    "optional": "選發",
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 4740489,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=戰鬥沒破壞對手怪獸的傷害步驟結束時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 4810585,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手戰鬥階段開始時(固定時點);句尾発動できる→選發。"
+   },
+   {
+    "index": "③",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=對手怪獸的攻擊宣言時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 4820694,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方結束階段到來(固定階段);句尾発動できる→選發(官方也寫任意で発動できます)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方準備階段到來;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 4825390,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4836680,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果發動(官方:ペンデュラムゾーンで発動できるチェーンブロックの作られる効果);無觸發事件也無時點→留空。"
+   }
+  ]
+ },
+ {
+  "id": 4841383,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列);領起句寫明 ● 是同一次發動的二選一。"
+   },
+   {
+    "index": "②-●1",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次效果發動的 ● 選項。"
+   },
+   {
+    "index": "②-●2",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 4861205,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 4904633,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡被效果送去墓地;句尾発動できる→選發。(① 那一段是變成怪獸後的效果,官方已明示永続効果,不在本批。)"
+   }
+  ]
+ },
+ {
+  "id": 4909946,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "③",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 4923662,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 4931121,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5026221,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫階段(主要階段與對手戰鬥階段)、沒有觸發事件→留空(§5.8 第三列的道理)。"
+   }
+  ]
+ },
+ {
+  "id": 5037726,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5050644,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只有狀態條件、無觸發事件也無時點→留空(§5.8 第四列)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方「芬芳」怪獸被破壞送墓;官方明示「必ず発動する効果です」→必發。"
+   }
+  ]
+ },
+ {
+  "id": 5052212,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5063379,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手怪獸的攻擊宣言時;句尾発動できる→選發。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=結束階段到來(固定階段);句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 5067884,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的破壞替代(官方:チェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 5109321,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的破壞替代(官方:チェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 5121528,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "②-●1",
+    "kind": "誘發即時效果(2速)",
+    "optional": "選發",
+    "role": null,
+    "note": "怪獸卡。② 官方明示誘発即時効果、且寫明「●を１つ選択し、その●の効果として発動します」;句尾発動できる→選發。"
+   },
+   {
+    "index": "②-●2",
+    "kind": "誘發即時效果(2速)",
+    "optional": "選發",
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 5125629,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5133471,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 5148778,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的持續適用段(官方:ペンデュラムゾーンのこのカードが適用するチェーンブロックの作られない効果)→留空。"
+   }
+  ]
+ },
+ {
+  "id": 5153769,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5168381,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5208118,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=雙方準備階段到來(固定階段);官方明示「必ず発動する効果です」→必發。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,無觸發事件也無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 5253985,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;尾端的 ● 是本次發動的後續適用內容,同一段。"
+   }
+  ]
+ },
+ {
+  "id": 5255013,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   }
+  ]
+ },
+ {
+  "id": 5288597,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5318639,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5376159,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=我方同步召喚龍族闇屬性同步怪獸;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 5380979,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=我方通常陷阱卡的效果讓怪獸離場;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 5399521,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的持續適用段(官方:ペンデュラムゾーンで適用するチェーンブロックの作られない効果)→留空。"
+   },
+   {
+    "index": "②",
+    "kind": "靈擺魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "靈擺欄的效果發動,觸發事件=我方結束階段到來(固定階段);句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 5414777,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=怪獸被攻擊表示特殊召喚;官方明示「必ず発動する効果です」→必發。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=雙方結束階段到來;官方同樣明示必ず発動→必發。"
+   }
+  ]
+ },
+ {
+  "id": 5431722,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "① 同一次發動的後續適用內容(官方另開【●の効果について】解說)。"
+   }
+  ]
+ },
+ {
+  "id": 5439384,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5466615,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方「突變魔」怪獸戰鬥破壞對手怪獸;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 5479217,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5574510,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,無觸發事件也無時點→留空(§5.8 第四列);領起句是骰子型列舉(出た目によって以下の効果を適用する)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次效果發動的骰子結果分項。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 5605529,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句是列舉型(以下の効果から１つを選んで適用する)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次卡發動的 ● 選項。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 5611760,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 5641251,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手怪獸的直接攻擊宣言時;句尾発動できる→選發。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方「F.A.」怪獸戰鬥的傷害計算前;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 5650082,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5672432,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(有觸發事件也不填必發/選發,§4)。"
+   }
+  ]
+ },
+ {
+  "id": 5697558,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=對手怪獸的攻擊宣言時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 5758500,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5772618,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①-●1",
+    "kind": "誘發效果(1速)",
+    "optional": "選發",
+    "role": null,
+    "note": "怪獸卡。① 官方明示誘発効果、且寫明「●を１つ選択し、その●の効果として発動します」;句尾発動できる→選發。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "誘發效果(1速)",
+    "optional": "選發",
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 5779502,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   }
+  ]
+ },
+ {
+  "id": 5786513,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "速攻魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=我方怪獸戰鬥的傷害計算時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 5795882,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,純代價、無觸發事件也無時點→留空(§5.8 第四列)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方「吸血鬼」怪獸給予戰鬥傷害;官方明示「必ず発動します」→必發。"
+   }
+  ]
+ },
+ {
+  "id": 5795980,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,只寫主要階段→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 5832914,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5833312,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "領起句(依場上怪獸種族得到以下效果);官方沒說它不是效果,照 ADR-0004 填卡片種類,不發動→留空。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動(官方:フィールドゾーンのこのカードが発動できるチェーンブロックの作られる効果),觸發事件=我方發動陷阱卡;句尾発動できる→選發。"
+   },
+   {
+    "index": "①-●2",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "同上,觸發事件=我方發動魔法卡。"
+   },
+   {
+    "index": "①-●3",
+    "kind": "場地魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "同上,觸發事件=我方發動怪獸的效果。"
+   }
+  ]
+ },
+ {
+  "id": 5851097,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=卡片從牌組/場上送去我方墓地;官方明示「必ず発動する効果です」→必發。"
+   }
+  ]
+ },
+ {
+  "id": 5941982,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,只寫「自分ターンに」+純代價、沒有觸發事件也沒有階段→留空(§5.8 第三/四列)。"
+   }
+  ]
+ },
+ {
+  "id": 5972394,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5993144,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 5997110,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "靈擺欄的效果發動(官方:ペンデュラムゾーンで発動できるチェーンブロックの作られる効果),觸發事件=我方靈擺召喚「DDD」怪獸;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6004133,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6075533,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理;領起句是列舉型(種類によって以下の効果を適用する)。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=對手發動以我方「冰結界」同步怪獸為對象的效果;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6077601,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6089145,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   }
+  ]
+ },
+ {
+  "id": 6153210,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "① 同一次發動的後續適用內容。"
+   }
+  ]
+ },
+ {
+  "id": 6172122,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6186304,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段(領起句 + 三個 ● 同一段,官方對整段只給一句チェーンブロックの作られない効果);不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 6203182,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備魔法卡本身的發動(官方:このカードの発動時の効果処理)。"
+   },
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備卡的持續適用段(§5.2)。"
+   },
+   {
+    "index": "③",
+    "kind": "裝備魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=裝備怪獸成為素材使此卡被送去墓地;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6214163,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   }
+  ]
+ },
+ {
+  "id": 6218704,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果發動(官方:ペンデュラムゾーンで発動するチェーンブロックの作られる効果);只有狀態條件、無觸發事件→留空。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "① 同一次發動的後續適用內容。"
+   }
+  ]
+ },
+ {
+  "id": 6278008,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;領起句是列舉型(戻したモンスターの種類によって…),整段同一次發動。"
+   }
+  ]
+ },
+ {
+  "id": 6283472,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的持續適用段(官方:チェーンブロックの作られない効果)→留空。"
+   }
+  ]
+ },
+ {
+  "id": 6309986,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6325660,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6343408,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6351147,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 6357341,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6374519,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(有觸發事件也不填必發/選發,§4)。"
+   }
+  ]
+ },
+ {
+  "id": 6387204,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "③-●1",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "怪獸卡(超量)。官方明示『●』は…フィールドで発動できる起動効果です;啟動效果不填必發/選發(§4)。"
+   }
+  ]
+ },
+ {
+  "id": 6390406,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6417578,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "速攻魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6471156,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,純代價、無觸發事件也無時點→留空(§5.8 第四列)。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方「奇巧人偶」怪獸被破壞送墓;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6494106,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6498706,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6500778,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分メインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②-●1",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同一次效果發動的 ● 選項。"
+   },
+   {
+    "index": "②-●2",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "同上。"
+   }
+  ]
+ },
+ {
+  "id": 6540606,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6547248,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=雙方準備階段到來(固定階段);句尾発動できる→選發。"
+   },
+   {
+    "index": "②",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=我方上級召喚怪獸;句尾発動できる→選發。"
+   },
+   {
+    "index": "③",
+    "kind": "永續陷阱卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡從場上以外送去墓地;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6552971,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ },
+ {
+  "id": 6556178,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "裝備魔法卡本身的發動(官方:このカードの発動時の効果です)。"
+   },
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=裝備怪獸被破壞使此卡送去墓地;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6589707,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "③",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "被破壞的此卡發動,觸發事件=此卡被對手的效果破壞;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6595475,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動;● 只是可加入手牌的怪獸類別列舉,同一段。"
+   }
+  ]
+ },
+ {
+  "id": 6636319,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①-●1",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "怪獸卡(連結)。① 官方明示起動効果,這個 ● 是 ① 發動後那一回合持續適用的內容(官方:ドローする際にチェーンブロックは作られません),類型跟著 ①;啟動效果不填必發/選發(§4)。"
+   }
+  ]
+ },
+ {
+  "id": 6763530,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   },
+   {
+    "index": "①-●1",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "① 同一次發動的後續適用內容。"
+   }
+  ]
+ },
+ {
+  "id": 6767771,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=場上有怪獸召喚/特殊召喚;句尾発動できる→選發。"
+   },
+   {
+    "index": "②",
+    "kind": "永續魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "墓地的效果發動,觸發事件=此卡被效果送去墓地;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6795211,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,官方寫自分のメインフェイズにのみ発動する事ができます→留空(§5.8 第三列)。"
+   }
+  ]
+ },
+ {
+  "id": 6798031,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的持續適用段。"
+   },
+   {
+    "index": "②",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的效果發動,無觸發事件也無時點→留空(§5.8 第四列)。"
+   },
+   {
+    "index": "③",
+    "kind": "場地魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "場上的適用段(官方:適用できるチェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 6812770,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的效果發動;官方寫自分のメインフェイズに発動できます→留空(§5.8 第三列)。"
+   },
+   {
+    "index": "②",
+    "kind": "靈擺魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "靈擺欄的效果發動,觸發事件=我方額外牌組有卡加入;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6830480,
+  "section": "pendulum",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "靈擺魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "靈擺欄的持續適用段(官方:チェーンブロックは作られません)→留空。"
+   },
+   {
+    "index": "②",
+    "kind": "靈擺魔法卡效果",
+    "optional": "選發",
+    "role": null,
+    "note": "靈擺欄的效果發動,觸發事件=我方「忍者」怪獸的攻擊宣言時;句尾発動できる→選發。"
+   }
+  ]
+ },
+ {
+  "id": 6853254,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的破壞替代(官方:チェーンブロックの作られない効果),不發動→留空。"
+   }
+  ]
+ },
+ {
+  "id": 6890729,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡發動時的效果處理。"
+   },
+   {
+    "index": "②",
+    "kind": "通常陷阱卡效果",
+    "optional": null,
+    "role": null,
+    "note": "墓地的效果發動,純代價、無時點→留空(§5.8 第四列)。"
+   }
+  ]
+ },
+ {
+  "id": 6909330,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "場地魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "場上的效果發動,觸發事件=只有1隻低攻擊力怪獸被召喚/反轉召喚/特殊召喚;官方明示「必ず発動する効果です」→必發。"
+   }
+  ]
+ },
+ {
+  "id": 6958551,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "通常魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "卡本身的發動(ADR-0004)。"
+   }
+  ]
+ }
+]

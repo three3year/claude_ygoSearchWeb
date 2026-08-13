@@ -975,6 +975,26 @@ def _rule_targets(entries):
                 yield entry["id"], clause
 
 
+def _bullet_leads(entries):
+    """{(卡片密碼, section, ● 子效果 index): 領起句的日文原文}。
+
+    `●` 拆成獨立效果句之後,「這個 `●` 底下的發動寫在哪裡」只有領起句那一行答得
+    出來,而規則層一次只看一條效果句(票61)。領起句不存在時記空字串——「看不到
+    領起句」與「這一行不是 `●` 子效果」是兩件事,帶 lead 前提的規則要分得出來。
+    """
+    leads = {}
+    for entry in entries:
+        by_index = {(c["section"], c["index"]): c for c in entry["clauses"]}
+        for clause in entry["clauses"]:
+            head, sep, _ = clause["index"].partition(f"-{BULLET}")
+            if not sep:
+                continue
+            lead = by_index.get((clause["section"], head))
+            leads[(entry["id"], clause["section"], clause["index"])] = (
+                lead["text_ja"] if lead else "")
+    return leads
+
+
 def _rule_row(cid, clause, rule_ids, **extra):
     return {"id": cid, "section": clause["section"], "index": clause["index"],
             "rules": rule_ids, **extra}
@@ -1044,12 +1064,13 @@ def _apply_rules(entries, existing_index, report):
     """
     report["rules_problems"] = rules.problems()
     registry = [] if report["rules_problems"] else rules.active()
+    leads = _bullet_leads(entries)
     targets = []
     for cid, clause in _rule_targets(entries):
-        prior = existing_index.get((cid, clause["section"], clause["index"]))
-        targets.append((cid, clause, prior, rules.matching(
+        key = (cid, clause["section"], clause["index"])
+        targets.append((cid, clause, existing_index.get(key), rules.matching(
             clause["text_ja"], _activation_clause(clause["text_ja"]),
-            registry)))
+            registry, leads.get(key))))
 
     report["rule_targets"] = len(targets)
     coverage = Counter()
@@ -1076,6 +1097,11 @@ def _apply_rules(entries, existing_index, report):
     report["rule_below_threshold"] = [
         row["id"] for row in report["rules"]
         if not row["merged_into"] and not row["applied"]]
+    # 分母下限只問上工中的規則:被合併或覆蓋不足的那些本來就不寫影子預測,
+    # 沒有驗證基礎也影響不到任何一行(票12)
+    report["rule_below_attested"] = [
+        row["id"] for row in report["rules"]
+        if row["applied"] and row["attested"] < rules.MIN_ATTESTED]
 
 
 def _registry_row(rule, coverage, applied, report):
@@ -1176,6 +1202,7 @@ def _new_report():
         "rule_overlaps": [],
         "rule_prediction_changed": [],
         "rule_below_threshold": [],
+        "rule_below_attested": [],
         "rule_validation": {},
         **{key: [] for key in official.NOTE_KEYS},
     }

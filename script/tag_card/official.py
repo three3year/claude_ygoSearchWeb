@@ -142,8 +142,13 @@ _HEADER_RE = re.compile(r"^【([^】]*)】", re.M)
 _TRAILING_HEADER_RE = re.compile(r"(?<=.)(【[^】]*】)[ 　\t]*$", re.M)
 _INDEX_HEADER_RE = re.compile(
     rf"^([{NUMERALS}])[のに]?(?:モンスター|ペンデュラム)?の?効果について$")
+# 標頭前面可以再掛一個編號前綴:`【①の『●３つ』の効果について】`(守星騎士 托勒密
+# 18326736)。官方用它逐項給了兩種類型,認不得標頭就整段不拆、一條效果句放不下
+# 兩個類型(票60)。前綴只說了在哪一個編號效果底下,對位仍照 label / ordinal 走
+# ——`_resolve_bullet` 本來就要求全部的 `●` 出自同一個編號效果。
 _BULLET_HEADER_RE = re.compile(
-    r"^(?:(?P<ordinal>[１-９1-9①-⑩])つ目の)?"
+    rf"^(?:[{NUMERALS}]の)?"
+    r"(?:(?P<ordinal>[１-９1-9①-⑩])つ目の)?"
     r"(?:『(?P<label>●[^』]*)』|(?P<bare>●))"
     r"[のな]?(?:効果|処理)?について$")
 _SEQ_QUOTE_RE = re.compile(rf"『([{NUMERALS}])』")
@@ -153,6 +158,17 @@ _NAME_RE = re.compile(r"「([^」]*)」")
 _ORDINALS = {c: i + 1 for i, c in enumerate("１２３４５６７８９")}
 _ORDINALS.update({c: i + 1 for i, c in enumerate("123456789")})
 _ORDINALS.update({c: i + 1 for i, c in enumerate(NUMERALS)})
+
+# 行內 `『●…』` 引用的範圍修飾(票17)。官方光寫 `『●』` 時歸屬對不出唯一標的,
+# 但其中兩種寫法官方**自己說了範圍**,那兩種不該跟著一起丟掉。
+# 序數:`Ｎつ目の『●』` —— 修飾詞緊貼在引用之前才算數。
+_BULLET_ORDINAL_RE = re.compile(f"([{''.join(_ORDINALS)}])つ目の$")
+# 全稱:`いずれの/どちらの/Ｎつ(以上)?の『●』`(前)與 `『●』…いずれも/どちらも`(後)。
+# 「１つ目の」不會被 `[２-９2-9]つの` 收到,兩種寫法因此不會互相打架。
+_BULLET_ALL_RE = re.compile(
+    r"(?:いずれの|どちらの|どの|全ての|すべての|[２-９2-9]つ(?:以上)?の)$")
+# 全稱寫在後面時只認**同一句話**裡的(官方寫「『●』の効果はいずれも、…です」)
+_BULLET_ALL_TAIL_RE = re.compile(r"^[^。]{0,20}?(?:いずれも|どちらも)")
 
 # 比對前的正規化。官方在補足情報裡重打卡名與卡文,寬窄形、長音記號與中黑點常與
 # 來源資料不同(「バグマンＹ」「ユニオン・キャリア―」),不正規化會把本卡誤判成別卡。
@@ -199,7 +215,12 @@ def _is_non_effect_line(line):
 
 
 def _bullet_subject(line):
-    """這一行是不是在講某個 `●` 子效果 → 那個 `『●…』` 引用;不是則 None。
+    """這一行是不是在講某個 `●` 子效果 → 那個 `『●…』` 引用;不是則 None。"""
+    return _bullet_reference(line)[0]
+
+
+def _bullet_reference(line):
+    """這一行講的 `『●…』` 引用與官方替它寫下的**範圍**;不是則 (None, None)。
 
     官方寫 `『②』の『●…』は永続効果です` 時,序號只說了在哪一個編號效果底下,
     真正的標的是 `●`——把它套回編號效果的領起句就是票14 治的那個病。
@@ -209,11 +230,34 @@ def _bullet_subject(line):
     括弧裡的 `●` 只是解說時的指代(實測這兩種形狀各佔一半);而且只認**第一個**
     非序號引用,與 attribute() 的歸屬規則同一條——後面的引用是為了解說而提到的
     另一個效果。
+
+    範圍是官方自己說了「是哪一個 `●`」的那些寫法(票17):`("ordinal", N)` 指名
+    第 N 個、`("all", None)` 指名全部、None 代表官方沒說——沒說就是沒說,呼叫端
+    照原文比對,對不出唯一標的就進引號歧義報告,不猜。
     """
-    for quoted in _QUOTE_RE.findall(_outside_parens(line)):
+    body = _outside_parens(line)
+    for match in _QUOTE_RE.finditer(body):
+        quoted = match.group(1)
         if _is_sequence_ref(quoted):
             continue
-        return quoted if _normalise(quoted).startswith(BULLET) else None
+        if not _normalise(quoted).startswith(BULLET):
+            return None, None
+        return quoted, _bullet_scope(body, match)
+    return None, None
+
+
+def _bullet_scope(body, match):
+    """一行明示裡 `『●…』` 引用的前後文 → 官方寫下的範圍;沒寫時回 None。
+
+    序數(`Ｎつ目の『●』`)沿用 `【Ｎつ目の●について】` 標頭那一套序數表——同一件
+    事官方寫在標頭或寫在行內,證據強度相同,不該只認一種。
+    """
+    before, after = body[:match.start()], body[match.end():]
+    ordinal = _BULLET_ORDINAL_RE.search(before)
+    if ordinal is not None:
+        return ("ordinal", _ORDINALS[ordinal.group(1)])
+    if _BULLET_ALL_RE.search(before) or _BULLET_ALL_TAIL_RE.match(after):
+        return ("all", None)
     return None
 
 
@@ -474,13 +518,30 @@ def _match_quote(quoted, effects):
             if needle in _normalise(clause["text_ja"])]
 
 
+def _bullet_group(effects):
+    """效果句清單 → 同一個編號效果底下的 ● 子效果;對不出唯一一組時回 []。
+
+    ● 散落在多個編號效果裡時,序數與全稱都無從得知官方講的是哪一組。標頭
+    (`_resolve_bullet`)與行內引用(票17)問的是同一件事,共用這一支。
+    """
+    bullets = [c for c in effects if f"-{BULLET}" in c["index"]]
+    if len({c["index"].split(f"-{BULLET}")[0] for c in bullets}) > 1:
+        return []
+    return bullets
+
+
+def _scoped_bullets(scope, bullets):
+    """官方寫下的範圍 + 一組 ● 子效果 → 標的清單;範圍落空時回 None。"""
+    form, value = scope
+    if form == "all":
+        return bullets
+    return [bullets[value - 1]] if value <= len(bullets) else None
+
+
 def _resolve_bullet(spec, effects):
     """【●…について】標頭 → 子效果句的 index;對不出唯一標的時回 None。"""
-    bullets = [c for c in effects if "-●" in c["index"]]
+    bullets = _bullet_group(effects)
     if not bullets:
-        return None
-    if len({c["index"].split("-●")[0] for c in bullets}) > 1:
-        # ● 散落在多個編號效果裡,序數標頭無從得知是哪一組
         return None
     form, value = spec
     if form == "ordinal":
@@ -602,6 +663,12 @@ def attest(name_ja, supplement, clauses, unsplit=()):
                 note("attribution_deferred",
                      {"kind": kind, "reason": "無編號卡文待拆", "line": line})
                 return
+            bullet, scope = _bullet_reference(line)
+            if scope is not None and _bullet_group(attributable):
+                # 官方沒開標頭、也沒寫序號,但自己說了是哪一個 `●`(票17)
+                assign_to_bullets(bullet, scope, _bullet_group(attributable),
+                                  kind, LADDER_QUOTE, line, is_mandatory)
+                return
             quoted = quoted_lines[0]
             if not _match_quote(quoted, attributable) \
                     and _match_quote(quoted, unattributable):
@@ -634,16 +701,37 @@ def attest(name_ja, supplement, clauses, unsplit=()):
         賦予型領起句會擋下來,領起句自己就寫了發動的那一族則照常套用——那一族的
         `●` 只是同一個發動的選項列舉,官方的類型本來就是整段的。
         """
-        quoted = _bullet_subject(line)
+        quoted, scope = _bullet_reference(line)
         if quoted is None:
             assign(target, kind, ladder, line, is_mandatory, header_quote)
             return
         bullets = [c for c in attributable
                    if c["index"].startswith(f"{target}-{BULLET}")]
         if bullets:
-            assign_to_match(quoted, bullets, kind, ladder, line, is_mandatory)
+            assign_to_bullets(quoted, scope, bullets, kind, ladder, line,
+                              is_mandatory)
         else:
             assign(target, kind, ladder, line, is_mandatory, quoted)
+
+    def assign_to_bullets(quoted, scope, bullets, kind, ladder, line,
+                          is_mandatory):
+        """行內 `『●…』` → 標的 ● 子效果;官方寫了範圍就照範圍套(票17)。
+
+        官方寫「いずれも」「２つの」時講的是這一組全部的 `●`,寫「Ｎつ目の」時
+        講的是第 N 個——兩種都是官方**自己說了範圍**,與 `【Ｎつ目の●について】`
+        標頭同一種證據。範圍落空(指名的第 N 個不存在)時不退回原文比對:那會拿
+        另一個 `●` 頂替官方指名的那一個,寧可進報告。
+        """
+        if scope is None:
+            assign_to_match(quoted, bullets, kind, ladder, line, is_mandatory)
+            return
+        targets = _scoped_bullets(scope, bullets)
+        if targets is None:
+            note("quote_ambiguous", {"kind": kind, "quote": quoted,
+                                     "hits": [c["index"] for c in bullets]})
+            return
+        for clause in targets:
+            assign(clause["index"], kind, ladder, line, is_mandatory, quoted)
 
     def assign_to_match(quoted, candidates, kind, ladder, line, is_mandatory):
         """`『原文』` 引用 → 命中的那一個效果句;命中不唯一時只記註記,不猜測。"""

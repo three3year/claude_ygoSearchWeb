@@ -156,11 +156,19 @@ def verdict_of(rate, threshold):
     return "PASS" if rate >= threshold else "FAIL"
 
 
-def rule_verdict(row):
-    """一條規則對官方明示的一致率與判讀。沒有官方明示可對照時不給判讀。"""
-    if not row["attested"]:
+def rule_verdict(row, thin=()):
+    """一條規則對官方明示的一致率與判讀。沒有官方明示可對照時不給判讀。
+
+    `thin` 是報告算出來的分母不足清單(`rule_below_attested`)。分母不足時判讀是
+    「不足」而不是 PASS(票12):1/1 的一致率與 86/86 印出來一模一樣,而分母會
+    因為資料層的正當演進(票11 撤掉錯誤套用的官方明示)塌掉。判讀欄與收斂條件
+    第四項讀同一份清單,兩邊不會各算各的。
+    """
+    if not row["applied"]:
         return None, "—"
-    rate = row["agree"] / row["attested"]
+    rate = row["agree"] / row["attested"] if row["attested"] else None
+    if row["id"] in thin:
+        return rate, "不足"
     return rate, verdict_of(rate, rules.AGREEMENT_THRESHOLD)
 
 
@@ -202,7 +210,7 @@ def print_rules(report, digest_changed, file=sys.stdout):
       f"{100 * rate:.1f}% [{verdict_of(rate, rules.AGREEMENT_THRESHOLD)} "
       f"門檻 {100 * rules.AGREEMENT_THRESHOLD:.0f}%]")
     for row in report["rules"]:
-        row_rate, row_verdict = rule_verdict(row)
+        row_rate, row_verdict = rule_verdict(row, report["rule_below_attested"])
         rate_text = "—" if row_rate is None else f"{100 * row_rate:.1f}%"
         p(f"  {row['id']:>4} {row['kind']:<12} 覆蓋 {row['coverage']:>5} "
           f"官方 {row['attested']:>5} 一致 {rate_text:>6} [{row_verdict}] "
@@ -227,12 +235,15 @@ def print_rules(report, digest_changed, file=sys.stdout):
                            f"source={row['source']}"))
 
     below = report["rule_below_threshold"]
+    thin = report["rule_below_attested"]
     p("收斂條件:")
     p(f"  規則清單本輪有異動: {'是' if digest_changed else '否'}")
     p(f"  每條規則覆蓋 ≥ {rules.MIN_COVERAGE}: "
       f"{'否 ' + str(below) if below else '是'}")
     p(f"  衝突清單為空: {'是' if not conflicts else '否'}")
-    converged = not digest_changed and not below and not conflicts
+    p(f"  每條生效規則的官方明示分母 ≥ {rules.MIN_ATTESTED}: "
+      f"{'否 ' + str(thin) if thin else '是'}")
+    converged = not digest_changed and not below and not conflicts and not thin
     p(f"  → {'已收斂' if converged else '未收斂'}")
 
 
@@ -285,11 +296,15 @@ def rules_doc_validation(report):
         "——那會把問題藏起來;它會一直標成 FAIL,直到判別條件收緊或使用者判定"
         "官方那一行是特例。",
         "",
+        f"官方明示少於 {rules.MIN_ATTESTED} 條的規則判讀為「不足」而不是 PASS"
+        "——一致率的分母太小時,那個百分比不是證據(票12)。分母不足同樣不停用"
+        "規則,理由與未達門檻時相同。",
+        "",
         "| 編號 | 官方明示條數 | 一致 | 不一致 | 一致率 | 判讀 |",
         "|---|---|---|---|---|---|",
     ]
     for row in report["rules"]:
-        rate, verdict = rule_verdict(row)
+        rate, verdict = rule_verdict(row, report["rule_below_attested"])
         rate_text = "—" if rate is None else f"{100 * rate:.1f}%"
         lines.append(f"| {row['id']} | {row['attested']} | {row['agree']} | "
                      f"{row['disagree']} | {rate_text} | {verdict} |")

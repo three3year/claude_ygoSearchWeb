@@ -1158,6 +1158,58 @@ class TestBulletSubEffects(unittest.TestCase):
         self.assertEqual(report["substring_violations"], [])
 
 
+class TestIndexPrefixedBulletHeader(unittest.TestCase):
+    """票60:`【①の『●３つ』の効果について】` 這種帶編號前綴的標頭要認得。
+
+    官方用它逐項給了兩種類型,認不得標頭就整段不拆,而一條效果句只有一個 `kind`
+    欄位——填哪一個都會讓另一個從查詢層消失(守星騎士 托勒密 18326736)。
+    前綴只說了在哪一個編號效果底下,對位仍照 label / ordinal 走。
+    """
+
+    DESC = ("①：可以依照以下數量去除此卡的超量素材，發動那個效果。\n"
+            "●3個:從額外牌組特殊召喚。\n●7個:跳過對手的下個回合。")
+    CARD_TEXT = ("①：このカードのX素材を以下の数だけ取り除き、その効果を"
+                 "発動できる。"
+                 "●３つ：EXデッキから特殊召喚する。"
+                 "●７つ：次の相手ターンをスキップする。")
+
+    def build(self, supplement):
+        return build_tag_cards([card(desc=self.DESC)],
+                               [faq(card_text=self.CARD_TEXT,
+                                    supplement=supplement)])
+
+    def test_an_index_prefixed_header_splits_and_types_each_bullet(self):
+        entries, report = self.build(
+            "【①の『●３つ』の効果について】\n"
+            "■モンスターゾーンで発動できる誘発即時効果です。\n\n"
+            "【①の『●７つ』の効果について】\n"
+            "■モンスターゾーンで発動できる起動効果です。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses],
+                         ["①", "①-●1", "①-●2"])
+        self.assertEqual([c["kind"] for c in clauses],
+                         [None, "誘發即時效果(2速)", "啟動效果"])
+        self.assertEqual(report["kind_conflicts"], [])
+
+    def test_the_header_alone_splits_even_without_a_kind_below_it(self):
+        """拆句的依據是標頭本身,類型另算(§8 判準17)。"""
+        entries, _ = self.build("【①の『●３つ』の効果について】\n"
+                                "■ダメージステップ中には発動できません。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses],
+                         ["①", "①-●1", "①-●2"])
+        self.assertEqual([c["kind"] for c in clauses], [None, None, None])
+
+    def test_a_quote_across_the_bullet_cut_still_blocks_the_split(self):
+        """引用橫跨拆點就證明那兩段是同一個效果句,標頭再明確也不拆。"""
+        entries, report = self.build(
+            "【①の『●３つ』の効果について】\n"
+            "■『●３つ：EXデッキから特殊召喚する。●７つ：』の処理は同時です。")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)], ["①"])
+        self.assertEqual([r["id"] for r in report["bullet_quote_violations"]],
+                         [1000])
+
+
 class TestBulletsTypedApart(unittest.TestCase):
     """票58:官方逐項把 `●` 判成不同類型時,那一段的 `●` 拆成獨立效果句。
 
@@ -1602,6 +1654,76 @@ class TestSequenceReferenceToABullet(unittest.TestCase):
         self.assertEqual([c["kind"] for c in clauses],
                          [None, "永續效果", "永續效果"])
         self.assertEqual(report["kind_conflicts"], [])
+
+
+class TestBulletReferenceScope(unittest.TestCase):
+    """票17:官方以 `『●』` 代稱子效果、但自己說了範圍時,照範圍套。
+
+    序數(`Ｎつ目の『●』`)與全稱(`いずれも`、`Ｎつの`)都是官方講清楚了的裁定,
+    與 `【Ｎつ目の●について】` 標頭同一種證據,不該因為寫在行內就被丟掉。其餘
+    光禿禿的 `『●』` 維持歸入引號歧義報告——官方沒說就是沒說,不猜。
+    """
+
+    DESC = ("①：我方怪獸得到以下效果。\n●甲:攻擊力上升500。\n"
+            "●乙:守備力上升500。\n●丙:不會被戰鬥破壞。")
+    CARD_TEXT = ("①：自分のモンスターは以下の効果を得る。"
+                 "●甲：攻撃力は５００アップする。"
+                 "●乙：守備力は５００アップする。"
+                 "●丙：戦闘では破壊されない。")
+
+    def build(self, supplement):
+        return build_tag_cards([card(desc=self.DESC)],
+                               [faq(card_text=self.CARD_TEXT,
+                                    supplement=supplement)])
+
+    def kinds(self, entries):
+        return [c["kind"] for c in clauses_of(entries, 1000)]
+
+    def test_a_universal_marker_after_the_quote_covers_every_bullet(self):
+        entries, report = self.build("■『●』の効果はいずれも永続効果です。")
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)],
+                         ["①", "①-●1", "①-●2", "①-●3"])
+        self.assertEqual(self.kinds(entries),
+                         [None, "永續效果", "永續效果", "永續效果"])
+        self.assertEqual(report["quote_ambiguous"], [])
+
+    def test_a_counted_marker_before_the_quote_covers_every_bullet(self):
+        entries, report = self.build("■３つの『●』は永続効果です。")
+        self.assertEqual(self.kinds(entries),
+                         [None, "永續效果", "永續效果", "永續效果"])
+        self.assertEqual(report["quote_ambiguous"], [])
+
+    def test_an_ordinal_marker_targets_that_one_bullet(self):
+        entries, report = self.build(
+            "■１つ目の『●』は永続効果です。\n"
+            "■３つ目の『●』は起動効果です。")
+        self.assertEqual(self.kinds(entries),
+                         [None, "永續效果", None, "啟動效果"])
+        self.assertEqual(report["quote_ambiguous"], [])
+
+    def test_a_sequence_ref_plus_an_ordinal_targets_that_one_bullet(self):
+        entries, _ = self.build("■『①』の２つ目の『●』は永続効果です。")
+        self.assertEqual(self.kinds(entries), [None, None, "永續效果", None])
+
+    def test_a_header_plus_a_universal_marker_covers_every_bullet(self):
+        entries, _ = self.build("【①の効果について】\n"
+                                "■『●』の効果はいずれも起動効果です。")
+        self.assertEqual(self.kinds(entries),
+                         [None, "啟動效果", "啟動效果", "啟動效果"])
+
+    def test_a_bare_bullet_reference_is_still_ambiguous(self):
+        """官方沒說是哪一個時放寬不得誤套——這一行照舊只進報告。"""
+        entries, report = self.build("■『●』は永続効果です。")
+        self.assertEqual(self.kinds(entries), [None, None, None, None])
+        self.assertEqual([(r["quote"], r["hits"])
+                          for r in report["quote_ambiguous"]],
+                         [("●", ["①-●1", "①-●2", "①-●3"])])
+
+    def test_an_ordinal_that_overshoots_is_not_swapped_for_another_bullet(self):
+        """指名的第 N 個不存在:寧可進報告,也不拿另一個 `●` 頂替。"""
+        entries, report = self.build("■４つ目の『●』は永続効果です。")
+        self.assertEqual(self.kinds(entries), [None, None, None, None])
+        self.assertEqual([r["quote"] for r in report["quote_ambiguous"]], ["●"])
 
 
 class TestNonEffectOnAWholeClause(unittest.TestCase):
@@ -2581,6 +2703,133 @@ class TestShadowPrediction(unittest.TestCase):
             [(1000, ["R1", "R4"], ["啟動效果", self.PREDICTED])])
 
 
+class TestBulletLeadPrecondition(unittest.TestCase):
+    """票61:`●` 選項是不是永續效果由領起句決定,不是由 `●` 自己決定。
+
+    同一句「このカードは直接攻撃できる」放在純賦予型領起句底下是永續效果、放在
+    「発動できる。以下の効果から１つを選び」底下卻繼承領起句的類型——`●` 的原文
+    一個字都不差。R17 因此只在單一句子的純賦予型領起句底下開火(規則層一次只看
+    一條效果句,兩種都可能時不猜)。
+    """
+
+    # 標頭只是拆句授權,底下那一行沒有類型詞,不會順帶產生官方明示
+    SPLIT_HEADER = "【１つ目の●について】\n■ダメージステップでも適用します。"
+    GRANT_ZH = ("①：此卡依表示形式得到以下效果。\n●攻擊表示:此卡可以直接攻擊。\n"
+                "●守備表示:此卡不會被戰鬥破壞。")
+    GRANT_JA = ("①：このカードは表示形式によって以下の効果を得る。"
+                "●攻撃表示：このカードは直接攻撃できる。"
+                "●守備表示：このカードは戦闘では破壊されない。")
+    ACTIVATED_ZH = ("①：解放我方1隻怪獸發動。從以下效果選1個直到回合結束時適用。\n"
+                    "●此卡可以直接攻擊。\n●對手不能發動魔法與陷阱區域的卡的效果。")
+    ACTIVATED_JA = ("①：このカード以外の自分フィールドのモンスター１体を"
+                    "リリースして発動できる。以下の効果から１つを選び、"
+                    "ターン終了時まで適用する。"
+                    "●このカードは直接攻撃できる。"
+                    "●相手は魔法＆罠ゾーンのカードの効果を発動できない。")
+    PLAIN_ZH = "①：此卡可以直接攻擊。"
+    PLAIN_JA = "①：このカードは直接攻撃できる。"
+
+    def build(self):
+        """八張純賦予 + 八張發動型領起句:R17 的覆蓋因此夠它上工。"""
+        cards, faqs = [], []
+        for base, zh, ja in ((1000, self.GRANT_ZH, self.GRANT_JA),
+                             (2000, self.ACTIVATED_ZH, self.ACTIVATED_JA)):
+            for i in range(8):
+                cards.append(card(base + i, desc=zh))
+                faqs.append(faq(base + i, card_text=ja,
+                                supplement=self.SPLIT_HEADER))
+        return build_tag_cards(cards, faqs)
+
+    def rule_row(self, report, rule_id):
+        return next(row for row in report["rules"] if row["id"] == rule_id)
+
+    def test_a_bullet_under_a_pure_grant_lead_still_gets_the_prediction(self):
+        entries, report = self.build()
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses],
+                         ["①", "①-●1", "①-●2"])
+        self.assertEqual(clauses[1]["rule_predicted"], "永續效果")
+        self.assertEqual(self.rule_row(report, "R17")["coverage"], 8)
+
+    def test_a_bullet_under_an_activating_lead_gets_no_prediction(self):
+        entries, _ = self.build()
+        self.assertIsNone(clauses_of(entries, 2000)[1]["rule_predicted"])
+
+    def test_a_clause_that_is_not_a_bullet_is_unaffected(self):
+        """前提只加在 `●` 子效果上,R17 原本的覆蓋不受波及。"""
+        cards = [card(1000 + i, desc=self.GRANT_ZH) for i in range(8)]
+        faqs = [faq(1000 + i, card_text=self.GRANT_JA,
+                    supplement=self.SPLIT_HEADER) for i in range(8)]
+        cards.append(card(3000, desc=self.PLAIN_ZH))
+        faqs.append(faq(3000, card_text=self.PLAIN_JA))
+        entries, report = build_tag_cards(cards, faqs)
+        self.assertEqual(clauses_of(entries, 3000)[0]["rule_predicted"],
+                         "永續效果")
+        self.assertEqual(self.rule_row(report, "R17")["coverage"], 9)
+
+    def test_a_bullet_without_a_lead_gets_no_prediction(self):
+        """看不到領起句就不猜:那與「領起句是純賦予」不是同一件事。"""
+        zh = "●甲:此卡可以直接攻擊。\n●乙:此卡不會被戰鬥破壞。"
+        ja = ("●甲：このカードは直接攻撃できる。"
+              "●乙：このカードは戦闘では破壊されない。")
+        cards = [card(1000 + i, desc=self.GRANT_ZH) for i in range(8)]
+        faqs = [faq(1000 + i, card_text=self.GRANT_JA,
+                    supplement=self.SPLIT_HEADER) for i in range(8)]
+        cards.append(card(3000, desc=zh))
+        faqs.append(faq(3000, card_text=ja, supplement=self.SPLIT_HEADER))
+        entries, _ = build_tag_cards(cards, faqs)
+        clauses = clauses_of(entries, 3000)
+        self.assertEqual([c["index"] for c in clauses], ["1-●1", "1-●2"])
+        self.assertIsNone(clauses[0]["rule_predicted"])
+
+
+class TestValidationDenominator(unittest.TestCase):
+    """規則層的獨立驗證有**分母**下限:1/1 的一致率不是證據(票12)。
+
+    分母不足的規則進 `rule_below_attested`,判讀欄與收斂條件第四項都讀那一份
+    清單。分母不足**不停用規則**——停用會把問題藏起來,與一致率未達門檻時同理。
+    """
+
+    ZH = "①：此卡被送去墓地的場合發動。從牌組抽1張卡。"
+    JA = "①：このカードが墓地へ送られた場合に発動する。デッキから１枚ドローする。"
+    ATTESTATION = "■モンスターゾーンで発動する誘発効果です。"
+
+    def build(self, count, attested):
+        """count 張命中 R1,其中前 attested 張帶官方明示(= 驗證集的分母)。"""
+        cards = [card(1000 + i, desc=self.ZH) for i in range(count)]
+        faqs = [faq(1000 + i, card_text=self.JA,
+                    supplement=self.ATTESTATION if i < attested else None)
+                for i in range(count)]
+        return build_tag_cards(cards, faqs)
+
+    def rule_row(self, report, rule_id):
+        return next(row for row in report["rules"] if row["id"] == rule_id)
+
+    def test_a_thin_validation_set_is_flagged(self):
+        _, report = self.build(12, rules.MIN_ATTESTED - 1)
+        self.assertEqual(self.rule_row(report, "R1")["attested"],
+                         rules.MIN_ATTESTED - 1)
+        self.assertIn("R1", report["rule_below_attested"])
+
+    def test_a_thin_validation_set_does_not_disable_the_rule(self):
+        entries, report = self.build(12, rules.MIN_ATTESTED - 1)
+        self.assertTrue(self.rule_row(report, "R1")["applied"])
+        self.assertEqual(clauses_of(entries, 1011)[0]["rule_predicted"],
+                         "誘發效果(1速)")
+
+    def test_a_full_validation_set_behaves_as_before(self):
+        _, report = self.build(12, rules.MIN_ATTESTED)
+        self.assertEqual(self.rule_row(report, "R1")["attested"],
+                         rules.MIN_ATTESTED)
+        self.assertEqual(report["rule_below_attested"], [])
+
+    def test_a_rule_that_never_ran_is_not_asked_about_its_denominator(self):
+        """覆蓋不足的規則本來就不寫影子預測,分母是 0 也無所謂。"""
+        _, report = self.build(rules.MIN_COVERAGE - 1, 0)
+        self.assertIn("R1", report["rule_below_threshold"])
+        self.assertEqual(report["rule_below_attested"], [])
+
+
 class TestRuleLayerScope(unittest.TestCase):
     """規則層只管效果句;前言段的類型由位置規則決定,不歸規則層。"""
 
@@ -2675,8 +2924,11 @@ class TestRuleRegistry(unittest.TestCase):
                              "票06"),)
         widened = (rules.define("R1", "永續效果", rules.SCOPE_CLAUSE, "甲",
                                 r"甲|乙", "票06"),)
+        gated = (rules.define("R1", "永續效果", rules.SCOPE_CLAUSE, "甲", r"甲",
+                              "票06", lead=r"丙"),)
         self.assertEqual(rules.digest(base), rules.digest(same))
         self.assertNotEqual(rules.digest(base), rules.digest(widened))
+        self.assertNotEqual(rules.digest(base), rules.digest(gated))
 
 
 # ---------------------------------------------------------------- 拆句表

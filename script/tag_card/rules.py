@@ -24,6 +24,12 @@ MIN_COVERAGE = 8
 # 規則對官方明示的一致率門檻。低於門檻不自動停用(那會把問題藏起來),而是在報告
 # 裡標 FAIL 並列出全部不一致,由使用者決定收緊條件還是留著。
 AGREEMENT_THRESHOLD = 0.99
+# 一致率的**分母**下限:官方明示少於這個條數的規則,一致率不算證據(票12)。
+# 1/1 的 100% 與 86/86 的 100% 印出來一模一樣,而票11 撤掉錯誤套用的官方明示時
+# R2 的分母正是從 71 掉到 1,照樣印 PASS。量級取與覆蓋下限相同——現況全表最小
+# 分母是 10,設在這裡攔不到任何現有規則,買的是封版之後無人看管時仍會出聲的斷言。
+# 分母不足**不停用規則**,理由與一致率未達門檻時相同:停用會把問題藏起來。
+MIN_ATTESTED = 8
 
 # 判別條件掃描的範圍
 SCOPE_ACTIVATION = "發動子句"
@@ -50,8 +56,13 @@ _ACTIVATES = r"発動"
 
 
 def define(rid, kind, scope, condition, pattern, ticket, exclude=None,
-           changes=(), merged_into=None):
-    """一條規則。pattern/exclude 是判別條件的機器形式,condition 是它的人話。
+           lead=None, changes=(), merged_into=None):
+    """一條規則。pattern/exclude/lead 是判別條件的機器形式,condition 是它的人話。
+
+    `lead` 是**給 `●` 子效果加的前提**:效果句是 `●` 子效果時,它的[[領起句]]要
+    符合這個樣式規則才開火;不是 `●` 子效果的行不受影響(票61)。有些類型不由
+    效果句自己決定而由領起句決定,而規則層一次只看一條效果句——這個欄位是唯一
+    的例外出口,加它的理由要與收緊判別條件一樣寫進變更記錄。
 
     新增規則就是在 RULES 裡多寫一次 define();合併舊規則則是給舊條補上
     merged_into 與一筆 CHANGE_MERGE 變更記錄,不刪行。
@@ -64,6 +75,7 @@ def define(rid, kind, scope, condition, pattern, ticket, exclude=None,
         "ticket": ticket,
         "pattern": re.compile(pattern),
         "exclude": re.compile(exclude) if exclude else None,
+        "lead": re.compile(lead) if lead else None,
         "changes": tuple(changes),
         "merged_into": merged_into,
     }
@@ -201,10 +213,25 @@ RULES = (
     define("R17", KIND_CONTINUOUS, SCOPE_CLAUSE,
            "效果句含直接攻擊的許可或限制「直接攻撃」,且不含「発動」「リバース」、"
            "召喚時的一次性限定「召喚に成功したターン」、自我特殊召喚程序"
-           "「手札から特殊召喚」與任何觸發事件",
+           "「手札から特殊召喚」與任何觸發事件;效果句是 ● 子效果時,另要求領起句"
+           "是單一句子的純賦予「…以下の効果を得る。」",
            r"直接攻撃", "票36",
            exclude=_ACTIVATES + r"|リバース|召喚に成功したターン"
-                   r"|手札から特殊召喚|" + _EVENT),
+                   r"|手札から特殊召喚|" + _EVENT,
+           lead=r"^[^。]*以下の効果を得る。?$",
+           changes=({"reason": CHANGE_TOO_BROAD, "ticket": "票61",
+                     "note": "「直接攻撃」寫在 ● 選項裡時,那個 ● 是不是永續效果"
+                             "由領起句決定而不是由它自己決定:領起句自己就寫了"
+                             "發動(或先做了別的事)時 ● 只是同一次發動的選項"
+                             "列舉,類型繼承領起句。全表 3 筆 rule_llm_conflict "
+                             "(13857930 1-●2 / 17732278 ①-●2 / 40227329 ①-●1)"
+                             "全出自這一族,判定者把同一次發動的選項標成同一個"
+                             "類型是對的,不走改判。新增 lead 前提:● 的領起句要"
+                             "是單一句子的純賦予型才開火——單句限定的理由與 R13 "
+                             "同一條(多做一件事的領起句自己就是效果)。代價是 "
+                             "43803845 ②-●2 這種兩句式賦予領起句的 ● 一併退出"
+                             "(官方明示永續效果、規則本來也對),覆蓋 160→152、"
+                             "官方明示 134→133。"},)),
 )
 
 
@@ -224,21 +251,27 @@ def merged_groups(rules=RULES):
     return groups
 
 
-def hits(rule, text_ja, activation):
+def hits(rule, text_ja, activation, lead=None):
     """這條規則命中這個效果句嗎?
 
     掃描範圍由 scope 決定:發動子句範圍的規則講的是「這一句怎麼發動」,整句範圍的
     規則講的是「這一句在做什麼」。排除條件一律看整句——排除的目的是擋掉整句裡的
     反證(觸發事件、「として扱う」),只看發動子句會漏掉寫在處理段的那些。
+
+    `lead` 是這一行的[[領起句]]日文原文:不是 `●` 子效果時為 None(規則不問),
+    是 `●` 子效果但領起句不存在時為空字串(帶 lead 前提的規則因此不開火)。
     """
     text = activation if rule["scope"] == SCOPE_ACTIVATION else text_ja
     if not text or not rule["pattern"].search(text):
         return False
-    return not (rule["exclude"] is not None and rule["exclude"].search(text_ja))
+    if rule["exclude"] is not None and rule["exclude"].search(text_ja):
+        return False
+    return not (rule["lead"] is not None and lead is not None
+                and not rule["lead"].search(lead))
 
 
-def matching(text_ja, activation, rules):
-    return [rule for rule in rules if hits(rule, text_ja, activation)]
+def matching(text_ja, activation, rules, lead=None):
+    return [rule for rule in rules if hits(rule, text_ja, activation, lead)]
 
 
 # ---------------------------------------------------------------- 規則清單自檢
@@ -297,6 +330,7 @@ def digest(rules=RULES):
             rule["id"], rule["kind"], rule["scope"], rule["condition"],
             rule["pattern"].pattern,
             rule["exclude"].pattern if rule["exclude"] else "",
+            rule["lead"].pattern if rule["lead"] else "",
             rule["ticket"], rule["merged_into"] or "",
             ";".join(f"{c.get('ticket')}:{c.get('reason')}:{c.get('note')}"
                      for c in rule["changes"]))))

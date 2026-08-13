@@ -183,6 +183,75 @@ class CardListTest(unittest.TestCase):
         self.assertEqual(link["link_marker"], 0b100101010)
         self.assertIsNone(link["def"])
 
+    def test_non_monster_has_no_monster_params(self):
+        """大類非怪獸的卡不帶怪獸參數;系列碼不受影響。
+
+        伯吉斯異獸 林喬利蟲(通常陷阱)在 cdb 裡帶著完整的種族/屬性/等級/攻守,
+        但那是它變成怪獸之後的形態、寫在效果文的括號裡,不是卡片的參數。
+        setcode 是卡面上真的有的系列碼,不在閘門範圍內。
+        """
+        zh = self.cdb("zh.cdb", [{
+            "id": 1154611, "name": "伯吉斯異獸 林喬利蟲",
+            "desc": "此卡變成通常怪獸(水族、水、等級2、攻1200/守0)特殊召喚。",
+            "type": 0x4,  # 通常陷阱
+            "race": 64, "attribute": 2, "level": 2, "atk": 1200, "def": 0,
+            "setcode": 0xd4,
+        }])
+        cards, _ = build_card_list(zh)
+        card = cards[0]
+        self.assertEqual(card["race"], 0)
+        self.assertEqual(card["attribute"], 0)
+        self.assertEqual(card["level"], 0)
+        self.assertIsNone(card["atk"])
+        self.assertIsNone(card["def"])
+        self.assertEqual(card["scale"], 0)
+        self.assertEqual(card["link_marker"], 0)
+        self.assertEqual(card["setcode"], 0xd4)   # 系列碼保留
+        self.assertEqual(card["desc"],
+                         "此卡變成通常怪獸(水族、水、等級2、攻1200/守0)特殊召喚。")
+
+    def test_trap_monster_family_leaves_no_residue(self):
+        """罠モンスター回歸:cdb 帶完整怪獸參數的魔陷卡,五個欄位一張不留殘值。
+
+        這批在「有值就寫」的實作下最容易悄悄長回來,因此整批逐張斷言。
+        鏡像的沼澤人與量子貓的種族/屬性由玩家在結算時宣言,cdb 那兩欄本來就空著
+        ——cdb 的 race 描述的是特召後的形態,形態不固定時它就空著。
+        """
+        zh = self.cdb("zh.cdb", [
+            {"id": 1154611, "name": "伯吉斯異獸 林喬利蟲", "type": 0x4,
+             "race": 64, "attribute": 2, "level": 2, "atk": 1200, "def": 0},
+            {"id": 50277973, "name": "鏡像的沼澤人", "type": 0x20004,
+             "race": 0, "attribute": 0, "level": 4, "atk": 1800, "def": 1000},
+            {"id": 87772572, "name": "量子貓", "type": 0x20004,
+             "race": 0, "attribute": 0, "level": 4, "atk": 0, "def": 2200},
+            {"id": 67287533, "name": "死亡訊息「A」", "type": 0x20002,
+             "race": 8, "attribute": 32, "level": 1, "atk": 0, "def": 0},
+        ])
+        cards, _ = build_card_list(zh)
+        self.assertEqual(len(cards), 4)
+        for card in cards:
+            self.assertEqual(
+                (card["race"], card["attribute"], card["level"],
+                 card["atk"], card["def"], card["scale"], card["link_marker"]),
+                (0, 0, 0, None, None, 0, 0), card["name_zh"])
+
+    def test_report_monster_invariant(self):
+        """建置報告輸出「大類是怪獸 ⟺ 有種族與屬性」的檢查結果與清空筆數。"""
+        zh = self.cdb("zh.cdb", [
+            {"id": 63028558, "name": "青眼白龍", "type": 0x11, "level": 8,
+             "race": 0x2000, "attribute": 0x20, "atk": 3000, "def": 2500},
+            {"id": 1154611, "name": "伯吉斯異獸 林喬利蟲", "type": 0x4,
+             "race": 64, "attribute": 2, "level": 2, "atk": 1200},
+            {"id": 55144522, "name": "強欲之壺", "type": 0x2},  # 本來就沒殘值
+        ])
+        _, report = build_card_list(zh)
+        self.assertEqual(report["monster_invariant"], {
+            "monsters": 1,
+            "monster_missing_race_or_attribute": [],
+            "non_monster_with_monster_params": [],
+        })
+        self.assertEqual(report["cleared_monster_params"], 1)
+
     def test_serialization_stable(self):
         """一卡一行的 JSON;同輸入兩次執行輸出逐位元組相同,且可 round-trip。"""
         import json

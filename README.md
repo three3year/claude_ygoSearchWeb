@@ -127,6 +127,12 @@ python script/tag_card/run_masked_test.py score
 `md_rarity`(Master Duel 稀有度 N/R/SR/UR,未實裝為空字串)、
 `genesys_points`(Genesys 點數,未列點為 0)。
 
+**欄位只在卡片真的有那個參數時才填**:大類非怪獸的卡 `race`/`attribute`/`level` 為 0、
+`atk`/`def` 為 null(cdb 為 79 張陷阱怪獸存著完整的怪獸參數,但那是它變成怪獸之後
+的形態、寫在效果文的括號裡,不是卡片的參數),Link 怪的 `def` 為 null,`scale` 只在
+靈擺卡填、`link_marker` 只在 Link 怪填。`setcode` 不在此列——系列碼是卡面上真的有的
+東西。建置報告會驗「大類是怪獸 ⟺ 有種族與屬性」這道不變式。
+
 ## tag_cards.json 欄位
 
 一卡一物件,`id` + `clauses`(純通常怪獸為空陣列);穩定鍵為

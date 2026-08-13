@@ -15,6 +15,27 @@ ROOT = os.path.dirname(
 DEFAULT_OUTPUT = os.path.join(ROOT, "data", "cards.json")
 
 
+def print_monster_invariant(report, p):
+    """大類閘門的成果:清空了幾張,以及不變式兩個方向的檢查結果。
+
+    違反者逐張列出——這道不變式一旦破了,下游拿「有種族」判怪獸就會出錯,
+    而那是無聲的錯誤結果。
+    """
+    inv = report["monster_invariant"]
+    p(f"非怪獸清空怪獸參數: {report['cleared_monster_params']} 張"
+      "(陷阱怪獸等,cdb 存的是它變成怪獸之後的形態)")
+    missing = inv["monster_missing_race_or_attribute"]
+    extra = inv["non_monster_with_monster_params"]
+    status = "成立" if not missing and not extra else "**不成立**"
+    p(f"不變式「大類是怪獸 ⟺ 有種族與屬性」: {status}"
+      f"(怪獸 {inv['monsters']} 張、缺種族或屬性 {len(missing)} 張、"
+      f"非怪獸殘留參數 {len(extra)} 張)")
+    for cid in missing:
+        p(f"  怪獸卻缺種族或屬性 id={cid}")
+    for cid in extra:
+        p(f"  非怪獸卻有怪獸參數 id={cid}")
+
+
 def print_report(report, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p(f"收錄: {report['included']} 張")
@@ -22,6 +43,7 @@ def print_report(report, file=sys.stdout):
     p(f"排除: 無正式密碼(先行卡) {excluded['no_password']} 筆、"
       f"衍生物 {excluded['token']} 筆")
     p(f"異圖合併: {report['merged_alt']} 筆")
+    print_monster_invariant(report, p)
     for lang, label in (("ja", "日文"), ("en", "英文")):
         cov = report.get("name_coverage", {}).get(lang)
         if cov:

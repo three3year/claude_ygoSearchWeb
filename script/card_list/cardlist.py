@@ -7,9 +7,17 @@
 import json
 import sqlite3
 
+TYPE_MONSTER = 0x1     # 大類怪獸位元(相對於魔法 0x2、陷阱 0x4)
 TYPE_PENDULUM = 0x1000000
 TYPE_LINK = 0x4000000  # Link 怪獸位元;勿與 TYPE_TOKEN 混用
 TYPE_TOKEN = 0x4000    # 衍生物位元
+
+# 大類非怪獸的卡沒有怪獸參數。cdb 為 79 張罠モンスター(如伯吉斯異獸、死亡訊息)
+# 存著完整的 race/attribute/level/atk/def,但那是它「變成怪獸之後」的形態、寫在
+# 效果文的括號裡而不是印在卡面上,是給遊戲引擎用的。決定性證據是鏡像的沼澤人
+# 50277973 與量子貓 87772572:種族與屬性由玩家結算時宣言,cdb 那兩欄因此空著。
+# 留著這些值等於要每個消費端各自記得過濾一次,漏掉就是無聲的錯誤結果。
+MONSTER_PARAMS = ("race", "attribute", "level", "atk", "def")
 
 
 def _read_cdb(path):
@@ -27,7 +35,10 @@ def _read_cdb(path):
 def _make_card(row):
     (cid, ot, alias, setcode, ctype, atk, def_, level, race, attribute,
      name, desc) = row
+    is_monster = bool(ctype & TYPE_MONSTER)
     is_link = bool(ctype & TYPE_LINK)
+    # 大類閘門(見 MONSTER_PARAMS):與「連結怪獸沒有守備欄」、「scale 只在靈擺卡填」
+    # 同一條原則——欄位只在卡片真的有那個參數時才填。setcode 不在閘門內。
     return {
         "id": cid,
         "alt_ids": [],
@@ -36,11 +47,11 @@ def _make_card(row):
         "name_en": "",
         "desc": desc,
         "type": ctype,
-        "atk": atk,
-        "def": None if is_link else def_,
-        "level": level & 0xff,
-        "race": race,
-        "attribute": attribute,
+        "atk": atk if is_monster else None,
+        "def": None if (is_link or not is_monster) else def_,
+        "level": level & 0xff if is_monster else 0,
+        "race": race if is_monster else 0,
+        "attribute": attribute if is_monster else 0,
         "scale": (level >> 24) & 0xff if ctype & TYPE_PENDULUM else 0,
         "link_marker": def_ if is_link else 0,
         "setcode": setcode,
@@ -171,6 +182,31 @@ def _fill_genesys_points(cards, path):
     return listed
 
 
+def _has_stale_monster_params(row):
+    """cdb 這一列是否「大類非怪獸卻帶怪獸參數」——大類閘門清掉的就是這些值。"""
+    ctype, atk, def_, level, race, attribute = row[4:10]
+    if ctype & TYPE_MONSTER:
+        return False
+    return any((race, attribute, level & 0xff, atk, def_))
+
+
+def _check_monster_invariant(cards):
+    """驗「大類是怪獸 ⟺ 有種族與屬性」,兩個方向各自列出違反者(預期皆空)。
+
+    → 方向靠來源資料成立(9,280 張怪獸無一缺種族或屬性),
+    ← 方向靠大類閘門成立。任一邊非空即代表下游不能再用「有種族」判怪獸。
+    """
+    monsters = [c for c in cards if c["type"] & TYPE_MONSTER]
+    return {
+        "monsters": len(monsters),
+        "monster_missing_race_or_attribute": [
+            c["id"] for c in monsters if not c["race"] or not c["attribute"]],
+        "non_monster_with_monster_params": [
+            c["id"] for c in cards if not c["type"] & TYPE_MONSTER
+            and any(c[f] for f in MONSTER_PARAMS)],
+    }
+
+
 def _diff_cards(existing, cards):
     """比對既有總表與新總表 → 變動報告(不處理刪除:官方卡不會消失)。"""
     old_by_id = {c["id"]: c for c in existing}
@@ -191,6 +227,7 @@ def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
                     genesys_path=None, existing=None):
     excluded = {"no_password": 0, "token": 0}
     entries = {}
+    stale = set()
     for row in _read_cdb(zh_path):
         card = _make_card(row)
         if card["id"] >= MAX_PASSWORD:
@@ -199,6 +236,8 @@ def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
         if card["type"] & TYPE_TOKEN:
             excluded["token"] += 1
             continue
+        if _has_stale_monster_params(row):
+            stale.add(card["id"])
         entries[card["id"]] = (card, row[2])
     cards, merged, exceptions = _merge_alt_arts(entries)
     cards.sort(key=lambda c: c["id"])
@@ -206,6 +245,8 @@ def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
         "included": len(cards),
         "excluded": excluded,
         "merged_alt": merged,
+        "cleared_monster_params": sum(1 for c in cards if c["id"] in stale),
+        "monster_invariant": _check_monster_invariant(cards),
         "alias_exceptions": exceptions,
     }
     if ja_path is not None or en_path is not None:

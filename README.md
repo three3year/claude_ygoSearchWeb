@@ -34,9 +34,11 @@ python -m unittest discover -s script/card_list
 python -m unittest discover -s script/faq_info
 python -m unittest discover -s script/tag_card
 python -m unittest discover -s script/web
+node --test                       # 前端查詢引擎(node 內建,零 npm 依賴)
 ```
 
 僅需 Python 3 標準庫,無安裝依賴;預設路徑以 repo 根為準,任意位置執行皆可。
+前端測試同樣零安裝:`node:test` + `node:vm`,不進 `package.json`、不裝任何套件。
 
 ### 官方 Q&A 補足情報
 
@@ -136,6 +138,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/web/vocab.py` | 值域正典(cdb 位元/整數/中文 → 短碼 → 中文 + 宣告序)+ 自檢接縫 |
 | `script/web/webindex.py` | 前端索引管線(純函式):總表 + 標記表 → 索引 + 一致性檢查報告 |
 | `script/web/build_index.py` | 建置 CLI 薄殼(讀檔 → 寫 web/data.js → 印報告 → 依 problems 定 exit code) |
+| `script/web/frontend_harness.js` | 接縫 3 的沙箱載入器(`node:vm` 依 index.html 的順序載入真實前端程式碼) |
+| `script/web/engine.test.js` | 前端查詢引擎的接縫測試(`node:test`,合成資料集) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
 | `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |
 | `data/clause_splits.json` | 拆句表:舊式無編號卡文的效果句邊界(入版控的來源檔) |
@@ -147,7 +151,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `../data_ygoFaqCache/_cache` | 官方 Q&A 快取(repo 外,約 1.1GB) |
 | `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |
 | `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` |
-| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`render`(卡片呈現、異圖切換與分頁)、`main`(主流程) |
+| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`render`(卡片呈現、異圖切換與分頁)、`main`(主流程) |
 
 ## cards.json 欄位
 
@@ -179,6 +183,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 ## 後續階段(未實作)
 
 效果 Tag 管線的後半(效果句分群 → 分類表定稿 → 逐句填 `tags`);
-查卡網站的四條搜尋軸(卡名 / 效果文 / 卡片參數 / 效果類型)、排序、網址狀態與部署形態
-——規格與票券見 `.scratch/search-web/`,目前完成的是票 01(值域正典與最小索引)
-與票 02(完整卡片呈現:卡圖、異圖切換、怪獸參數、靈擺分區、效果外文本樣式)。
+查卡網站剩下的三條搜尋軸(效果文 / 卡片參數 / 效果類型)、排序、網址狀態與部署形態
+——規格與票券見 `.scratch/search-web/`,目前完成的是票 01(值域正典與最小索引)、
+票 02(完整卡片呈現:卡圖、異圖切換、怪獸參數、靈擺分區、效果外文本樣式)
+與票 03(搜尋骨架與卡名軸:左側常駐條件側欄 + 中/日/英卡名 + 卡片密碼 + `%` 萬用字元)。

@@ -27,13 +27,16 @@ const MAT_KINDS = ['ritual', 'fusion', 'synchro', 'xyz', 'link'];
 /* 呈現狀態:與資料無關的兩件事。唯一的擁有者是這個模組。 */
 const state = { page: 1, perPage: 50 };
 
-/* 上一次要顯示的卡片清單——render() 由此重繪,但沒有人從外面寫入它 */
-let lastCards = [];
+/* 上一次的查詢產物——換頁與換每頁筆數由此重繪,但沒有人從外面寫入它。
+   形狀就是接縫 3 的回傳值 `{ cards: [{ card, rows }] }`:`rows`(命中的效果句
+   索引)是票04 的標亮與票06 的句層耦合要畫的東西,呈現層照著它畫就好。 */
+let lastResult = { cards: [] };
 
-function render(cards = lastCards) {
-  lastCards = cards;
+function render(result = lastResult) {
+  lastResult = result;
+  const entries = result.cards;
   const per = state.perPage;
-  const total = cards.length;
+  const total = entries.length;
   const pages = Math.max(1, Math.ceil(total / per));
   const page = Math.min(Math.max(1, state.page), pages);
   state.page = page;
@@ -41,8 +44,8 @@ function render(cards = lastCards) {
     ? `共 ${total} 張，第 ${page}/${pages} 頁`
     : '沒有符合條件的卡片';
 
-  const slice = cards.slice((page - 1) * per, page * per);
-  $('results').innerHTML = slice.map(cardHtml).join('');
+  const slice = entries.slice((page - 1) * per, page * per);
+  $('results').innerHTML = slice.map(e => cardHtml(e.card)).join('');
   renderPager('pagerTop', pages, page);
   renderPager('pagerBottom', pages, page);
 }

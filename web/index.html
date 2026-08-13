@@ -7,35 +7,64 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app">
-  <header>
-    <h1>遊戲王卡片查詢</h1>
-    <span class="db-info" id="dbInfo"></span>
-  </header>
+<header>
+  <h1>遊戲王卡片查詢</h1>
+  <span class="db-info" id="dbInfo"></span>
+</header>
 
-  <div class="actions">
-    <span class="result-info" id="resultInfo"></span>
-    <span class="spacer"></span>
-    <label class="per-page">每頁
-      <select id="perPage">
-        <option value="50">50</option>
-        <option value="100">100</option>
-        <option value="200">200</option>
-        <option value="500">500</option>
-      </select>
-      筆</label>
-  </div>
+<div class="layout">
+  <!-- 左側常駐條件側欄:邊看結果邊調條件,不必來回捲動。
+       後面幾張票的條件軸(效果文、卡片參數、效果類型)各自往這裡加一段。 -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-actions">
+      <button type="button" id="btnSearch" class="primary">搜尋</button>
+      <button type="button" id="btnClear">清除條件</button>
+    </div>
 
-  <div class="pager" id="pagerTop"></div>
-  <div id="results"></div>
-  <div class="pager" id="pagerBottom"></div>
+    <div class="crit">
+      <div class="field">
+        <span class="field-label">卡名關鍵字</span>
+        <div class="name-row">
+          <!-- 語言三態循環鈕:中 → 日 → 英 → 中。標籤與比對語言由 query.js 一處
+               決定,HTML 只給起始態。 -->
+          <button type="button" id="fNameLang" class="lang-cycle" data-v="zh"
+                  title="切換卡名比對語言">中</button>
+          <input type="text" id="fName"
+                 placeholder="卡名或卡片密碼；% 為萬用字元（青眼%龍）">
+        </div>
+        <p class="field-hint">純數字也比對卡片密碼與異圖密碼</p>
+      </div>
+    </div>
+  </aside>
+
+  <main class="results-area">
+    <div class="actions">
+      <span class="result-info" id="resultInfo"></span>
+      <span class="spacer"></span>
+      <label class="per-page">每頁
+        <select id="perPage">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+        </select>
+        筆</label>
+    </div>
+
+    <div class="pager" id="pagerTop"></div>
+    <div id="results"></div>
+    <div class="pager" id="pagerBottom"></div>
+  </main>
 </div>
 
 <!-- 零建置協定(ADR-0007):沒有 bundler、沒有 ES modules,<script> 依序載入,
      模組是掛在全域的 IIFE 閉包。索引是 window.CARD_DATA=… 的 .js 而不是 .json,
-     因為 file:// 下 fetch 會被 CORS 擋而 <script src> 不會。 -->
+     因為 file:// 下 fetch 會被 CORS 擋而 <script src> 不會。
+     順序即相依:資料 → 工具 → 引擎 → 輸入 → 呈現 → 主流程。 -->
 <script src="data.js"></script>
 <script src="js/util.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/query.js"></script>
 <script src="js/render.js"></script>
 <script src="js/main.js"></script>
 </body>

@@ -28,11 +28,59 @@ body {
   line-height: 1.6;
 }
 
-.app { max-width: 1100px; margin: 0 auto; padding: 16px 20px 60px; }
-
-header { display: flex; align-items: baseline; gap: 14px; padding: 6px 0 14px; }
+header {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  max-width: 1280px; margin: 0 auto; padding: 16px 20px 12px;
+}
 header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .db-info { color: var(--muted); font-size: 12px; }
+
+/* ─── 版面:左側常駐條件側欄 + 右側結果區 ──────────────────
+   側欄 sticky 而不是隨頁面捲走:邊看結果邊調條件才不必來回捲動。
+   minmax(0, 1fr) 而不是 1fr——grid 項目的預設最小寬度是內容寬,
+   卡文長的那幾張會把結果區撐寬、整頁跟著橫向捲。 */
+.layout {
+  max-width: 1280px; margin: 0 auto; padding: 0 20px 60px;
+  display: grid; grid-template-columns: 268px minmax(0, 1fr);
+  gap: 20px; align-items: start;
+}
+
+.sidebar {
+  position: sticky; top: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px;
+  max-height: calc(100vh - 28px); overflow-y: auto;
+}
+.sidebar-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+.sidebar-actions button {
+  flex: 1; padding: 7px 10px; font-size: 13px; cursor: pointer;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text);
+}
+.sidebar-actions button:hover { border-color: var(--accent); }
+.sidebar-actions button.primary {
+  background: var(--accent); border-color: var(--accent);
+  color: #06131f; font-weight: bold;
+}
+.sidebar-actions button.primary:hover { filter: brightness(1.1); }
+
+.crit .field { margin-bottom: 12px; }
+.field-label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+.field-hint { color: var(--muted); font-size: 11px; margin-top: 4px; opacity: .75; }
+.name-row { display: flex; gap: 6px; }
+.name-row input { flex: 1; min-width: 0; }
+.sidebar input[type="text"] {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); padding: 6px 8px; font-size: 13px; font-family: inherit;
+}
+.sidebar input[type="text"]:focus { outline: none; border-color: var(--accent); }
+/* 語言三態循環鈕:中 → 日 → 英 → 中。鈕面永遠寫著目前比對的是哪一種卡名 */
+.lang-cycle {
+  flex: none; width: 34px; cursor: pointer;
+  background: var(--surface2); border: 1px solid var(--accent-dim);
+  border-radius: 6px; color: var(--accent); font-size: 13px; font-family: inherit;
+}
+.lang-cycle:hover { border-color: var(--accent); }
 
 /* ─── Actions & Pager ─────────────────────────────────────── */
 .actions {
@@ -188,8 +236,16 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   margin: 2px 0; padding: 0 8px;
 }
 
+@media (max-width: 900px) {
+  header { padding: 12px 12px 8px; }
+  /* 窄螢幕:側欄改成結果區上方的一段(收合成可摺疊區是票09) */
+  .layout {
+    grid-template-columns: minmax(0, 1fr); padding: 0 12px 40px; gap: 12px;
+  }
+  .sidebar { position: static; max-height: none; }
+}
+
 @media (max-width: 720px) {
-  .app { padding: 12px 12px 40px; }
   header { flex-direction: column; gap: 2px; }
   /* 窄螢幕:卡圖改成置頂單欄(完整的手機版面是票09) */
   .card { flex-direction: column; align-items: center; }

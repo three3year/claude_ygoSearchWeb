@@ -21,7 +21,7 @@
 import random
 import re
 
-from official import KINDS, NON_EFFECT_RE
+from official import INDEX_PREAMBLE, KINDS, NON_EFFECT_RE
 
 DEFAULT_SIZE = 300
 DEFAULT_PER_KIND_MIN = 40
@@ -45,8 +45,12 @@ PIPELINE_CAP = 5
 BUCKET_CAPS = {"ambiguous": AMBIGUOUS_CAP, "pipeline": PIPELINE_CAP}
 
 # 樣本檔的欄位。答案(kind / optional / source / rule_predicted)一律不在其中。
+# `preamble` 是同卡同 section 的前言段(`INDEX_PREAMBLE`)日文原文。規範 §5.6
+# 閘門二第三種(跨回合許可寫在前言段並點名編號)要判定者讀得到它,樣本只帶自己
+# 那一行時那條規則無從套用——票62 的重判輪就是這樣把 94997874 ② 判錯的。前言段
+# 是卡文不是[[補足情報]],不遮蔽:它從不寫類型結論句。
 SAMPLE_FIELDS = ("id", "section", "index", "name_zh", "name_ja",
-                 "text_zh", "text_ja", "supplement")
+                 "text_zh", "text_ja", "preamble", "supplement")
 
 # 補足情報裡會直接講出答案的句型,整句遮掉。
 # 「効果ではありません」不必單獨列——那個句型裡的類型詞已經被類型詞本身命中。
@@ -149,7 +153,18 @@ def _candidates(entries, exclude_ids=()):
             if clause["source"] == SOURCE_OFFICIAL and clause["kind"] in KINDS]
 
 
-def _row(cid, clause, card, faq):
+def _preamble(entry, clause):
+    """同卡同 section 的前言段日文原文;本身就是前言段、或沒有前言段時回空字串。"""
+    if clause["index"] == INDEX_PREAMBLE:
+        return ""
+    for other in entry.get("clauses", ()):
+        if (other["section"] == clause["section"]
+                and other["index"] == INDEX_PREAMBLE):
+            return other["text_ja"] or ""
+    return ""
+
+
+def _row(cid, clause, card, faq, entry):
     supplement = faq.get("pen_supplement" if clause["section"]
                          == SECTION_PENDULUM else "supplement")
     return {
@@ -160,6 +175,7 @@ def _row(cid, clause, card, faq):
         "name_ja": faq.get("name_ja") or card.get("name_ja") or "",
         "text_zh": clause["text_zh"],
         "text_ja": clause["text_ja"],
+        "preamble": _preamble(entry, clause),
         "supplement": mask_supplement(supplement),
     }
 
@@ -186,6 +202,7 @@ def sample_masked(entries, cards, faq_entries, size=DEFAULT_SIZE,
     quota = _quotas(population, size, per_kind_min)
 
     cards_by_id = {card["id"]: card for card in cards}
+    entries_by_id = {entry["id"]: entry for entry in entries}
     faq_by_id = {faq["password"]: faq for faq in faq_entries
                  if faq.get("password") is not None}
     rng = random.Random(seed)
@@ -195,7 +212,8 @@ def sample_masked(entries, cards, faq_entries, size=DEFAULT_SIZE,
     picked.sort(key=lambda row: (row[0], row[1]["section"], row[1]["index"]))
 
     sample = [_row(cid, clause, cards_by_id.get(cid, {}),
-                   faq_by_id.get(cid, {})) for cid, clause in picked]
+                   faq_by_id.get(cid, {}), entries_by_id.get(cid, {}))
+              for cid, clause in picked]
     report = {
         "size": len(sample),
         "requested_size": size,

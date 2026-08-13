@@ -189,6 +189,35 @@ class SamplingTest(unittest.TestCase):
         self.assertEqual(sample[0]["text_zh"], "繁中文")
         self.assertEqual(sample[0]["text_ja"], "日本文")
 
+    def test_樣本帶同卡同段的前言段(self):
+        """§5.6 閘門二第三種:跨回合許可可能只寫在前言段,樣本要帶得過去。"""
+        entries = [entry(1000, [
+            clause(index="0", kind=KIND_NON_EFFECT, text_ja="前言段の日本文"),
+            clause(index="②", text_ja="②：日本文"),
+        ])]
+        sample, _ = masked.sample_masked(entries, [card(1000)], [], size=2,
+                                         per_kind_min=1, seed=SEED)
+        rows = {row["index"]: row for row in sample}
+        self.assertEqual(rows["②"]["preamble"], "前言段の日本文")
+        self.assertEqual(rows["0"]["preamble"], "")
+
+    def test_沒有前言段時留空(self):
+        entries = [entry(1000, [clause(index="②")])]
+        sample, _ = masked.sample_masked(entries, [card(1000)], [], size=1,
+                                         per_kind_min=1, seed=SEED)
+        self.assertEqual(sample[0]["preamble"], "")
+
+    def test_前言段不跨段落取(self):
+        """靈擺段的行不會拿到怪獸段的前言段。"""
+        entries = [entry(1000, [
+            clause(index="0", kind=KIND_NON_EFFECT, text_ja="怪獸段の前言"),
+            clause(index="①", section="pendulum", text_ja="P①：日本文"),
+        ])]
+        sample, _ = masked.sample_masked(entries, [card(1000)], [], size=2,
+                                         per_kind_min=1, seed=SEED)
+        rows = {(row["section"], row["index"]): row for row in sample}
+        self.assertEqual(rows[("pendulum", "①")]["preamble"], "")
+
     def test_靈擺段取靈擺補足情報(self):
         entries = [entry(1000, [clause(section="pendulum")])]
         faqs = [faq(1000, supplement="■怪獸段的補足。",

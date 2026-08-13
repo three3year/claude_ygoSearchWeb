@@ -1721,6 +1721,13 @@ class TestBulletReferenceScope(unittest.TestCase):
                           for r in report["quote_ambiguous"]],
                          [("●", ["①-●1", "①-●2", "①-●3"])])
 
+    def test_a_quote_carrying_the_original_text_wins_over_a_scope_word(self):
+        """引用帶了原文時原文比對更強,範圍詞不搶標的。"""
+        entries, report = self.build(
+            "■２つの『●乙：守備力は５００アップする』は永続効果です。")
+        self.assertEqual(self.kinds(entries), [None, None, "永續效果", None])
+        self.assertEqual(report["quote_ambiguous"], [])
+
     def test_an_ordinal_that_overshoots_is_not_swapped_for_another_bullet(self):
         """指名的第 N 個不存在:寧可進報告,也不拿另一個 `●` 頂替。"""
         entries, report = self.build("■４つ目の『●』は永続効果です。")

@@ -242,16 +242,21 @@ def _bullet_reference(line):
             continue
         if not _normalise(quoted).startswith(BULLET):
             return None, None
-        return quoted, _bullet_scope(body, match)
+        return quoted, _bullet_scope(body, match, quoted)
     return None, None
 
 
-def _bullet_scope(body, match):
+def _bullet_scope(body, match, quoted):
     """一行明示裡 `『●…』` 引用的前後文 → 官方寫下的範圍;沒寫時回 None。
 
     序數(`Ｎつ目の『●』`)沿用 `【Ｎつ目の●について】` 標頭那一套序數表——同一件
     事官方寫在標頭或寫在行內,證據強度相同,不該只認一種。
+
+    **只問光禿禿的 `『●』`**:引用帶了原文時原文比對本身就是更強的證據,範圍詞
+    只會跟它搶標的(全表 251 行 `●` 主語裡帶原文的 219 行都由原文對得回去)。
     """
+    if _normalise(quoted) != BULLET:
+        return None
     before, after = body[:match.start()], body[match.end():]
     ordinal = _BULLET_ORDINAL_RE.search(before)
     if ordinal is not None:
@@ -664,10 +669,11 @@ def attest(name_ja, supplement, clauses, unsplit=()):
                      {"kind": kind, "reason": "無編號卡文待拆", "line": line})
                 return
             bullet, scope = _bullet_reference(line)
-            if scope is not None and _bullet_group(attributable):
+            bullets = _bullet_group(attributable) if scope is not None else []
+            if bullets:
                 # 官方沒開標頭、也沒寫序號,但自己說了是哪一個 `●`(票17)
-                assign_to_bullets(bullet, scope, _bullet_group(attributable),
-                                  kind, LADDER_QUOTE, line, is_mandatory)
+                assign_to_bullets(bullet, scope, bullets, kind, LADDER_QUOTE,
+                                  line, is_mandatory)
                 return
             quoted = quoted_lines[0]
             if not _match_quote(quoted, attributable) \

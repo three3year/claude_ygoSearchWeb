@@ -13,6 +13,10 @@ import vocab
 from webindex import build_index, serialize_index
 
 MONSTER = 0x21          # 怪獸 + 效果
+MONSTER_LINK = 0x4000021
+MONSTER_PEND = 0x1000021
+MONSTER_XYZ = 0x800021
+MONSTER_FUSION = 0x40021
 SPELL_QUICK = 0x10002   # 速攻魔法
 TRAP = 0x4              # 通常陷阱
 
@@ -22,7 +26,11 @@ def card(cid, **kw):
 
     非怪獸自動清空怪獸參數(比照 `cards.json` 的大類閘門,card-list 票07),
     測試明寫的值仍然優先——不變式那一條要故意違反閘門。
+
+    守備寫成 `def_`:`def` 是保留字,當不了關鍵字參數。
     """
+    if "def_" in kw:
+        kw["def"] = kw.pop("def_")
     base = {"id": cid, "alt_ids": [], "name_zh": f"卡{cid}", "name_ja": "",
             "name_en": "", "desc": "", "type": MONSTER, "atk": 1000,
             "def": 1000, "level": 4, "race": 0x2000, "attribute": 0x20,
@@ -59,7 +67,9 @@ class EntryTest(unittest.TestCase):
                        clause("②：那樣。", kind="誘發效果(1速)", index="②"))]
         index, report = build_index(cards, tags)
         entry = index["cards"][0]
-        self.assertEqual(list(entry), ["id", "n", "nj", "ne", "c", "tx", "k"])
+        self.assertEqual(list(entry), [
+            "id", "n", "nj", "ne", "c", "s", "at", "r", "lv", "atk", "df",
+            "ot", "tx", "k"])
         self.assertEqual(entry["id"], 63028558)
         self.assertEqual(entry["n"], "青眼白龍")
         self.assertEqual(entry["nj"], "青眼の白龍")
@@ -113,6 +123,181 @@ class EntryTest(unittest.TestCase):
         tags = [tagged(30), tagged(10), tagged(20)]
         index, _ = build_index(cards, tags)
         self.assertEqual([c["id"] for c in index["cards"]], [10, 20, 30])
+
+
+class CardFaceTest(unittest.TestCase):
+    """卡面欄位:呈現層要畫出一張卡需要的東西(票02)。"""
+
+    def test_monster_params_are_short_codes(self):
+        cards = [card(1, type=MONSTER_XYZ, race=0x2000, attribute=0x20,
+                      level=8, atk=3000, def_=2500)]
+        entry = build_index(cards, [tagged(1)])[0]["cards"][0]
+        self.assertEqual(entry["s"], ["effect", "xyz"])
+        self.assertEqual(entry["at"], "dark")
+        self.assertEqual(entry["r"], "dragon")
+        self.assertEqual(entry["lv"], 8)
+        self.assertEqual(entry["atk"], 3000)
+        self.assertEqual(entry["df"], 2500)
+
+    def test_link_monster_has_lk_and_markers_but_no_level_or_def(self):
+        """cdb 把連結值存在 `level`,而連結怪獸沒有守備欄——不是 `?`,是沒有。"""
+        cards = [card(1, type=MONSTER_LINK, level=3, def_=None,
+                      link_marker=0x8 | 0x20 | 0x2)]
+        entry = build_index(cards, [tagged(1)])[0]["cards"][0]
+        self.assertEqual(entry["lk"], 3)
+        # 宣告序 = 九宮格讀法(左上到右下),呈現層直接照序擺格子
+        self.assertEqual(entry["lm"], ["L", "R", "B"])
+        self.assertNotIn("lv", entry)
+        self.assertNotIn("df", entry)
+
+    def test_pendulum_scale_zero_is_kept(self):
+        """刻度 0 是真的刻度(28 張),省略它等於把它畫成沒有靈擺欄。"""
+        cards = [card(1, type=MONSTER_PEND, scale=0),
+                 card(2, type=MONSTER_PEND, scale=13),
+                 card(3, type=MONSTER)]
+        index, _ = build_index(cards, [tagged(1), tagged(2), tagged(3)])
+        first, second, third = index["cards"]
+        self.assertEqual(first["sc"], 0)
+        self.assertEqual(second["sc"], 13)
+        self.assertNotIn("sc", third)
+
+    def test_unknown_atk_is_distinguishable_from_zero(self):
+        """攻守 `?` 與 0 是不同的東西,範圍條件不得把 `?` 當 0(票05)。"""
+        cards = [card(1, atk=-2, def_=-2), card(2, atk=0, def_=0)]
+        index, _ = build_index(cards, [tagged(1), tagged(2)])
+        unknown, zero = index["cards"]
+        self.assertEqual((unknown["atk"], unknown["df"]), (-2, -2))
+        self.assertEqual((zero["atk"], zero["df"]), (0, 0))
+
+    def test_non_monster_has_no_monster_params(self):
+        """罠モンスター那 79 張的清理在來源層;索引這一側連欄位都不該有。"""
+        cards = [card(1, type=SPELL_QUICK), card(2, type=TRAP)]
+        index, _ = build_index(cards, [tagged(1), tagged(2)])
+        for entry in index["cards"]:
+            for key in ("at", "r", "lv", "lk", "sc", "lm", "atk", "df"):
+                self.assertNotIn(key, entry)
+        self.assertEqual(index["cards"][0]["s"], ["quick"])
+        self.assertEqual(index["cards"][1]["s"], ["normal"])
+
+    def test_printing_fields(self):
+        cards = [card(1, ot=1, md_rarity="UR", genesys_points=40),
+                 card(2, ot=3, md_rarity="", genesys_points=0)]
+        index, _ = build_index(cards, [tagged(1), tagged(2)])
+        first, second = index["cards"]
+        self.assertEqual((first["ot"], first["ra"], first["gy"]),
+                         ("o", "UR", 40))
+        self.assertEqual(second["ot"], "b")
+        # MD 未實裝的 416 張與 0 點不是值域成員,是「沒有這個參數」
+        self.assertNotIn("ra", second)
+        self.assertNotIn("gy", second)
+
+    def test_alt_ids_become_al(self):
+        cards = [card(46986414, alt_ids=[46986415, 46986430]), card(2)]
+        index, _ = build_index(cards, [tagged(46986414), tagged(2)])
+        with_alt = next(c for c in index["cards"] if c["id"] == 46986414)
+        without = next(c for c in index["cards"] if c["id"] == 2)
+        self.assertEqual(with_alt["al"], [46986415, 46986430])
+        self.assertNotIn("al", without)
+
+    def test_token_subtype_has_no_button_so_the_build_fails(self):
+        """[[衍生物]]登記在正典裡但不做成按鈕:短碼進了索引就該倒。
+
+        這是 ADR-0008 說的「換個地方發生的同一個失效模式」——值域登記了碼卻沒做
+        成按鈕,那批卡在畫面上點不出來,與漏一個碼一樣是無聲消失。
+        """
+        cards = [card(1, type=MONSTER | 0x4000)]
+        _, report = build_index(cards, [tagged(1)])
+        self.assertEqual(report["checks"]["unknown_values"],
+                         [{"id": 1, "field": "s", "code": "token",
+                           "reason": "短碼不在按鈕清單"}])
+        self.assertTrue(report["problems"])
+
+
+class AliasTest(unittest.TestCase):
+    """`※` 別名(117 張)是另一種中文譯名,不是卡文的一部分。
+
+    抽出來進 `ax`,顯示在副標而不是卡文裡。容易寫成「顯示時再剝掉」——那樣
+    卡名搜尋(票03 要比對別名)就得自己再剝一次,兩處剝法遲早不一致。
+    """
+
+    def test_alias_is_extracted_into_ax_and_not_left_in_the_text(self):
+        cards = [card(1, desc="①：這樣。\n\n※另一個譯名")]
+        tags = [tagged(1, clause("①：這樣。"))]
+        index, report = build_index(cards, tags)
+        entry = index["cards"][0]
+        self.assertEqual(entry["ax"], "另一個譯名")
+        self.assertEqual(entry["tx"], ["①：這樣。"])
+        for text in entry["tx"]:
+            self.assertNotIn("※", text)
+        self.assertEqual(report["problems"], [])
+
+    def test_alias_does_not_leak_into_the_flavor_text(self):
+        """沒有效果句的卡:故事文進 `d`,別名仍然走 `ax`。"""
+        cards = [card(1, type=0x11, desc="一隻傳說中的龍。\n\n※另一個譯名")]
+        entry = build_index([cards[0]], [tagged(1)])[0]["cards"][0]
+        self.assertEqual(entry["d"], "一隻傳說中的龍。")
+        self.assertEqual(entry["ax"], "另一個譯名")
+
+    def test_card_without_alias_has_no_ax(self):
+        cards = [card(1, desc="①：這樣。")]
+        entry = build_index(cards, [tagged(1, clause("①：這樣。"))])[0]["cards"][0]
+        self.assertNotIn("ax", entry)
+
+    def test_alias_mark_inside_a_clause_is_not_an_alias(self):
+        """行內的 `※` 不是別名——別名是卡文末尾自成一行的那一段。"""
+        cards = [card(1, desc="①：這樣※那樣。")]
+        entry = build_index(cards, [tagged(1, clause("①：這樣※那樣。"))])[0]["cards"][0]
+        self.assertNotIn("ax", entry)
+
+    def test_alias_shaped_gap_that_is_not_extracted_fails_the_build(self):
+        """缺口分類器認得、抽取器抽不到 → 那段文字三處都沒有,建置要倒。
+
+        兩邊對「別名長什麼樣」的定義漂開時的形狀:覆蓋檢查看到 `※` 開頭就放行,
+        而 `ax` 是空的,那一段就從畫面上無聲消失了。
+        """
+        cards = [card(1, desc="①：這樣。※沒有換行的一段")]
+        _, report = build_index(cards, [tagged(1, clause("①：這樣。"))])
+        self.assertEqual(report["checks"]["alias_gap_not_extracted"], [1])
+        self.assertTrue(report["problems"])
+
+
+class ClauseArrayTest(unittest.TestCase):
+    """`tx` / `k` / `ro` / `pz` 的同索引對齊——呈現層照索引取值。"""
+
+    def test_role_codes_align_with_tx(self):
+        desc = "「素材A」＋「素材B」\n這個卡名的①效果1回合只能使用1次。\n①：這樣。"
+        cards = [card(1, type=MONSTER_FUSION, desc=desc)]
+        tags = [tagged(1,
+                       clause("「素材A」＋「素材B」", kind="效果外文本",
+                              index="0", role="素材指定"),
+                       clause("這個卡名的①效果1回合只能使用1次。",
+                              kind="效果外文本", index="0",
+                              role="使用次數限制"),
+                       clause("①：這樣。"))]
+        index, report = build_index(cards, tags)
+        entry = index["cards"][0]
+        self.assertEqual(entry["ro"], ["mat", "limit", ""])
+        self.assertEqual(len(entry["ro"]), len(entry["tx"]))
+        self.assertEqual(report["problems"], [])
+
+    def test_ro_is_omitted_when_no_clause_carries_a_role(self):
+        cards = [card(1, desc="①：這樣。")]
+        entry = build_index(cards, [tagged(1, clause("①：這樣。"))])[0]["cards"][0]
+        self.assertNotIn("ro", entry)
+
+    def test_pz_marks_the_pendulum_clauses(self):
+        desc = "【靈擺效果】\n①：這樣。\n【怪獸效果】\n②：那樣。"
+        cards = [card(1, type=MONSTER_PEND, desc=desc, scale=4)]
+        tags = [tagged(1, clause("①：這樣。", kind="靈擺魔法卡效果",
+                                 section="pendulum"),
+                       clause("②：那樣。", index="②"))]
+        entry = build_index(cards, tags)[0]["cards"][0]
+        self.assertEqual(entry["pz"], [0])
+
+    def test_pz_is_omitted_on_non_pendulum_cards(self):
+        cards = [card(1, desc="①：這樣。")]
+        entry = build_index(cards, [tagged(1, clause("①：這樣。"))])[0]["cards"][0]
+        self.assertNotIn("pz", entry)
 
 
 class CoverageCheckTest(unittest.TestCase):

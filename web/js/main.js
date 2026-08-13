@@ -17,6 +17,7 @@ function init() {
     View.setPerPage(+e.target.value);   // 換每頁筆數會回到第 1 頁
     View.render();
   });
+  View.initAltArt();
   View.render(DB);
 }
 

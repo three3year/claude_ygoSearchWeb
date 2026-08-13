@@ -22,8 +22,21 @@ function zhTable(name) {
   ((VOCAB[name] || {}).items || []).forEach(e => { table[e.code] = e.zh; });
   return table;
 }
+function codesOf(name) {
+  return ((VOCAB[name] || {}).items || []).map(e => e.code);
+}
 const CAT_ZH = zhTable('cat');
 const KIND_ZH = zhTable('kind');
+const ATTR_ZH = zhTable('attr');
+const RACE_ZH = zhTable('race');
+const ROLE_ZH = zhTable('role');
+const OT_ZH = zhTable('ot');
+/* 連結標記的中文就是箭頭字元(↖↑↗…),宣告序就是九宮格由左上到右下的讀法 */
+const LM_ZH = zhTable('lm');
+const LM_CODES = codesOf('lm');
+/* 子類型一側一份:同一個碼在怪獸側是儀式怪獸、在魔法側是儀式魔法,
+   讀哪一份由卡片的大類決定(CONTEXT.md「卡片子類型」) */
+const SUB_ZH = { m: zhTable('sub_m'), s: zhTable('sub_s'), t: zhTable('sub_t') };
 
 const $ = id => document.getElementById(id);
 
@@ -35,7 +48,14 @@ function esc(s) {
 /* 卡片密碼顯示時補零成 8 位(卡面左下角就是 8 位數) */
 const pad8 = id => String(id).padStart(8, '0');
 
+/* 密碼 → 卡片。異圖切換要從點下去的那張卡取回異圖清單,線性掃 14,207 筆
+   在每次點擊上都做一遍是沒必要的浪費。 */
+const INDEX = new Map(DB.map(c => [c.id, c]));
+const byId = id => INDEX.get(+id);
+
   return Object.freeze({
-    DB, META, VOCAB, CAT_ZH, KIND_ZH, zhTable, $, esc, pad8,
+    DB, META, VOCAB,
+    CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OT_ZH, LM_ZH, LM_CODES, SUB_ZH,
+    zhTable, $, esc, pad8, byId,
   });
 })();

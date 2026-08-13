@@ -20,9 +20,16 @@ import re
 import vocab
 
 TYPE_MONSTER = 0x1
+TYPE_PENDULUM = 0x1000000
+TYPE_LINK = 0x4000000
 # 不變式的欄位清單。故意不 import cardlist 的 MONSTER_PARAMS:這道斷言是
 # card-list 票07 的閘門退化時的防線,兩邊共用一份常數的話就會一起走鐘。
 MONSTER_PARAMS = ("race", "attribute", "level", "atk", "def")
+
+# 攻守的 `?`(攻 83 張、守 54 張)。cdb 的哨兵值原樣帶進索引:`?` 與 0 是不同的
+# 東西,範圍條件不得把 `?` 當 0 納入(票05)。連結怪獸沒有守備欄,那是「沒有這個
+# 參數」而不是 `?`,由下面的欄位閘門省略掉。
+UNKNOWN_STAT = -2
 
 # 效果句串接後與卡文的兩種已知缺口(spec「卡文的組裝」)。第三種即建置失敗——
 # 那代表拆句或卡文出了預期外的變化。
@@ -34,11 +41,27 @@ ALIAS_MARK = "※"
 GAP_HEADER = "header"
 GAP_ALIAS = "alias"
 
+# `※` 別名(117 張):卡文末尾自成一行的另一種中文譯名。抽出來進 `ax`,不留在
+# 卡文裡——它不是效果文,而且卡名搜尋要比對它(票03)。行內的 `※` 不算:別名的
+# 形狀是「換行 + ※ + 一行到底」。
+ALIAS_RE = re.compile(r"\n[ \t]*" + ALIAS_MARK + r"[ \t]*([^\n" + ALIAS_MARK
+                      + r"]+?)[ \t]*\Z")
+
+PENDULUM_SECTION = "pendulum"
+
 # 索引欄位 → 值域(是不是陣列)。「索引出現正典沒有的值即建置失敗」這道檢查照這張
-# 表走,後面的票補欄位時在這裡加一行就自動被蓋到。
+# 表走,後面的票補欄位時在這裡加一行就自動被蓋到。子類型的值域名是 None:它由卡片
+# 的大類決定(`0x80` 在怪獸側是儀式怪獸、在魔法側是儀式魔法,一側一份)。
 CODED_FIELDS = (
     ("c", vocab.CAT, False),
+    ("s", None, True),
+    ("at", vocab.ATTR, False),
+    ("r", vocab.RACE, False),
+    ("lm", vocab.LINK_MARKER, True),
+    ("ra", vocab.RARITY, False),
+    ("ot", vocab.OT, False),
     ("k", vocab.KIND, True),
+    ("ro", vocab.ROLE, True),
 )
 
 _WS = re.compile(r"\s+")
@@ -47,6 +70,14 @@ _WS = re.compile(r"\s+")
 def _norm(text):
     """覆蓋檢查用的正規化:忽略空白(卡文的換行不屬於任何效果句)。"""
     return _WS.sub("", text)
+
+
+def _split_alias(desc):
+    """卡文 → (去掉別名的卡文, 別名或空字串)。"""
+    match = ALIAS_RE.search(desc)
+    if not match:
+        return desc, ""
+    return desc[:match.start()], match.group(1)
 
 
 def _flavor(desc, has_clauses):
@@ -60,6 +91,44 @@ def _flavor(desc, has_clauses):
     return desc.strip() if not has_clauses else ""
 
 
+def _coded(unknown, field, domain, value):
+    """來源值 → 短碼,對不到就記進 unknown。空值回傳 None(呼叫端省略欄位)。"""
+    code = vocab.code_of(domain, value)
+    if code is None and value:
+        unknown.append({"field": field, "value": value,
+                        "reason": "來源值對不到短碼"})
+    return code
+
+
+def _monster_face(card, out):
+    """怪獸的卡面參數。
+
+    **欄位的有無由大類與子類型決定,不由值決定**:攻 0 與刻度 0 是真的值(刻度 0
+    有 28 張),而連結怪獸的守備是「沒有這個欄位」。反過來說,非怪獸一律不帶這五個
+    參數——罠モンスター的種族是它變成怪獸之後的形態,不是卡片的參數。這是索引的
+    形狀決定;來源層真的漏出參數時由 `_monster_invariant` 吵著讓建置失敗,不是靠
+    這裡靜靜濾掉(清理在 card-list 票07)。
+    """
+    unknown = []
+    if not card["type"] & TYPE_MONSTER:
+        return unknown
+    out["at"] = _coded(unknown, "at", vocab.ATTR, card["attribute"])
+    out["r"] = _coded(unknown, "r", vocab.RACE, card["race"])
+    if card["type"] & TYPE_LINK:
+        # cdb 把連結值存在 `level` 欄(實測 468 張全等於連結標記的數量)
+        out["lk"] = card["level"]
+        out["lm"] = list(vocab.bitmask_codes(vocab.LINK_MARKER,
+                                             card["link_marker"]))
+    else:
+        out["lv"] = card["level"]
+    if card["type"] & TYPE_PENDULUM:
+        out["sc"] = card["scale"]
+    out["atk"] = card["atk"]
+    if not card["type"] & TYPE_LINK:
+        out["df"] = card["def"]
+    return unknown
+
+
 def _entry(card, clauses):
     """一張卡 → (索引條目, 對不到短碼的來源值清單)。
 
@@ -69,32 +138,46 @@ def _entry(card, clauses):
     連一顆按鈕都對不到,進了索引也是搜不到的死資料。呼叫端會讓它落進「卡片總表有
     卡而索引沒有」那一道檢查,建置因此失敗——這正是 Story 60 要擋的形狀。
     """
-    cat, _subs = vocab.subtypes(card["type"])
+    cat, subs = vocab.subtypes(card["type"])
     if not cat:
         return None, []
     unknown = []
-    out = {"id": card["id"], "n": card["name_zh"]}
+    desc, alias = _split_alias(card["desc"])
+    out = {"id": card["id"]}
+    if card["alt_ids"]:
+        out["al"] = list(card["alt_ids"])
+    out["n"] = card["name_zh"]
     if card["name_ja"]:
         out["nj"] = card["name_ja"]
     if card["name_en"]:
         out["ne"] = card["name_en"]
+    if alias:
+        out["ax"] = alias
     out["c"] = cat
+    out["s"] = list(subs)
+    unknown.extend(_monster_face(card, out))
+    out["ra"] = _coded(unknown, "ra", vocab.RARITY, card["md_rarity"])
+    out["ot"] = _coded(unknown, "ot", vocab.OT, card["ot"])
+    if card["genesys_points"]:
+        out["gy"] = card["genesys_points"]
     if clauses:
         out["tx"] = [cl["text_zh"] for cl in clauses]
-        out["k"] = []
-        for clause in clauses:
-            kind = clause.get("kind")
-            code = vocab.code_of(vocab.KIND, kind)
-            if code is None and kind:
-                unknown.append({"field": "k", "value": kind,
-                                "reason": "來源值對不到短碼"})
-            # 對不到時留空字串佔位:建置已經因為檢查失敗,佔位只是讓 `tx` / `k`
-            # 保持同索引,好讓報告指得出是哪一句。
-            out["k"].append(code or "")
-    flavor = _flavor(card["desc"], bool(clauses))
+        # 對不到時留空字串佔位:建置已經因為檢查失敗,佔位只是讓 `tx` / `k` / `ro`
+        # 保持同索引,好讓報告指得出是哪一句。
+        out["k"] = [_coded(unknown, "k", vocab.KIND, cl.get("kind")) or ""
+                    for cl in clauses]
+        roles = [_coded(unknown, "ro", vocab.ROLE, cl.get("role")) or ""
+                 for cl in clauses]
+        if any(roles):
+            out["ro"] = roles
+        pz = [i for i, cl in enumerate(clauses)
+              if cl.get("section") == PENDULUM_SECTION]
+        if pz:
+            out["pz"] = pz
+    flavor = _flavor(desc, bool(clauses))
     if flavor:
         out["d"] = flavor
-    return out, unknown
+    return {k: v for k, v in out.items() if v is not None}, unknown
 
 
 def _coverage(desc, pieces):
@@ -168,6 +251,7 @@ def _unexported_codes(index_cards, exported):
             value = card.get(field)
             if value is None:
                 continue
+            domain = domain or vocab.SUB[card["c"]]
             for code in (value if is_list else [value]):
                 if code and code not in buttons.get(domain, ()):
                     unknown.append({"id": card["id"], "field": field,
@@ -232,6 +316,7 @@ def _summarise_problems(report):
         ("效果句串接後出現已知兩種以外的覆蓋缺口", checks["coverage_gaps"]),
         ("效果句在卡文裡找不到", checks["clauses_not_in_desc"]),
         ("type 出現值域正典沒解釋的位元", checks["unexplained_type_bits"]),
+        ("※ 別名的缺口與抽取結果對不上", checks["alias_gap_not_extracted"]),
         ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
         ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
     )
@@ -251,7 +336,8 @@ def build_index(cards, tag_cards, built_at="", sources=None):
     checks = {"missing_cards": [], "duplicate_ids": [],
               "cards_without_clause_entry": [], "unknown_values": [],
               "clauses_without_kind": [], "coverage_gaps": [],
-              "clauses_not_in_desc": [], "unexplained_type_bits": []}
+              "clauses_not_in_desc": [], "unexplained_type_bits": [],
+              "alias_gap_not_extracted": []}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
     entries = {}
     clause_total = 0
@@ -283,6 +369,10 @@ def build_index(cards, tag_cards, built_at="", sources=None):
                 known_gaps[kind] += 1
             else:
                 checks["coverage_gaps"].append({"id": cid, "gap": gap})
+        # 缺口分類器認得的別名,抽取器必須也抽得到。兩邊的形狀定義漂開的話,那一段
+        # 文字就 `tx`、`ax`、`d` 三處都沒有——放它過去等於在覆蓋檢查上開一個洞。
+        if any(_classify_gap(g) == GAP_ALIAS for g in gaps) != ("ax" in entry):
+            checks["alias_gap_not_extracted"].append(cid)
         for piece in unmatched:
             checks["clauses_not_in_desc"].append({"id": cid, "text": piece})
         bits = vocab.unexplained_type_bits(card["type"])

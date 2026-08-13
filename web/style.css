@@ -74,12 +74,66 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;
+  display: flex; gap: 14px; align-items: flex-start;
 }
+.card-pic { flex: none; width: 180px; }
+.card-img {
+  width: 180px; height: 262px; object-fit: cover;
+  border-radius: 6px; background: var(--surface2);
+}
+/* 異圖切換:只有 342 張有異圖的卡會長出這一列 */
+.alt-nav {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 4px; color: var(--muted); font-size: 12px;
+}
+.alt-nav button {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 3px 9px;
+}
+.alt-nav button:hover { border-color: var(--accent); color: var(--accent); }
+.alt-n { font-family: monospace; }
+
+.card-body { flex: 1; min-width: 0; }
 .card-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.card-name { font-size: 16px; font-weight: bold; color: var(--accent); }
+.card-name {
+  font-size: 16px; font-weight: bold; color: var(--accent);
+  text-decoration: none;
+}
+.card-name:hover { text-decoration: underline; }
 .card-id { color: var(--muted); font-size: 11px; font-family: monospace; }
-.card-cat { color: var(--gold); font-size: 12px; }
 .card-names { color: var(--muted); font-size: 11px; margin-top: 1px; }
+.card-rarity {
+  color: #fff; border-radius: 4px; font-size: 10px; font-weight: bold;
+  padding: 1px 6px; border: 1px solid var(--border);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .4);
+}
+.card-rarity.ra-UR { background: linear-gradient(135deg, #d92ffb, #53b5fb); border: none; }
+.card-rarity.ra-SR { background: linear-gradient(135deg, #ff5d01, #ff9f01); border: none; }
+.card-rarity.ra-R  { background: linear-gradient(135deg, #1f18c3, #007fff); border: none; }
+.card-rarity.ra-N  { background: linear-gradient(135deg, #3d3737, #adadab); border: none; }
+
+.card-print { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+.card-gy { color: var(--accent); font-size: 11px; }
+.card-ot {
+  color: var(--gold); font-size: 10.5px; padding: 0 6px;
+  border: 1px solid var(--gold); border-radius: 4px;
+}
+
+.card-meta {
+  color: var(--gold); font-size: 12px; margin: 10px 0 12px;
+  display: flex; align-items: flex-start; gap: 16px;
+}
+.meta-lines > div { line-height: 1.5; }
+.lm-grid {
+  display: grid; grid-template-columns: repeat(3, 16px);
+  grid-auto-rows: 16px; text-align: center; line-height: 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 2px;
+}
+.lm-grid i { font-style: normal; color: var(--border); font-size: 12px; }
+.lm-grid i.on { color: var(--accent); font-weight: bold; }
+.lm-grid b { color: var(--gold); font-size: 11px; }
 
 .card-text { margin-top: 8px; }
 .card-text .eff {
@@ -91,6 +145,8 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 /* 純通常怪獸的故事文:不是效果,淡化 */
 .card-text .eff.flavor { font-style: italic; color: var(--muted); }
+/* 空的靈擺欄(16 張):標頭底下真的沒有東西,寫出來才不會看起來像漏掉 */
+.card-text .eff.empty { color: var(--muted); opacity: .6; }
 /* 效果類型:碼 → 中文由 window.VOCAB 對照(值域正典住建置期,ADR-0008) */
 .eff-kind {
   display: inline-block; margin-right: 8px; padding: 0 6px;
@@ -99,7 +155,44 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   vertical-align: 1px;
 }
 
+/* ─── 效果外文本的三種弱化樣式 ────────────────────────────
+   素材指定 / 召喚條件 / 使用次數限制:一眼分得出哪幾行根本不是效果。
+   三種各有形狀而不是統一淡化——它們在卡面上本來就長得不一樣。 */
+.card-text .eff.role-mat {
+  width: fit-content; max-width: 100%;
+  border: 1px solid var(--gold); border-radius: 6px;
+  padding: 2px 10px; margin-bottom: 8px; opacity: .95;
+  box-shadow: inset 0 0 8px rgba(232, 185, 63, .28);
+}
+/* 素材指定行依召喚法上色(沿用 oldProject 的 mat-* 手法) */
+.card-text .eff.mat-ritual  { border-color: #5e83bf; box-shadow: inset 0 0 8px rgba(94, 131, 191, .35); }
+.card-text .eff.mat-fusion  { border-color: #893f9c; box-shadow: inset 0 0 8px rgba(137, 63, 156, .45); }
+.card-text .eff.mat-synchro { border-color: #f6f2f3; box-shadow: inset 0 0 8px rgba(246, 242, 243, .28); }
+.card-text .eff.mat-xyz     { border-color: #384045; box-shadow: inset 0 0 8px rgba(120, 136, 146, .40); }
+.card-text .eff.mat-link    { border-color: #436aa7; box-shadow: inset 0 0 8px rgba(67, 106, 167, .40); }
+.card-text .eff.role-cond {
+  color: var(--muted); border-left: 3px dashed var(--accent-dim);
+}
+.card-text .eff.role-limit { color: var(--muted); font-size: 12.5px; }
+.card-text .eff.role-limit .eff-kind,
+.card-text .eff.role-cond .eff-kind { opacity: .8; }
+
+/* ─── 靈擺分區 ────────────────────────────────────────────
+   兩段各自從 ① 開始編號,沒有標頭與分隔線會看起來像同一串 */
+.pend-divider {
+  border: none; border-top: 1px solid var(--gold);
+  opacity: .45; margin: 6px 0;
+}
+.eff-group-label {
+  color: var(--gold); font-size: 12px; font-weight: bold;
+  margin: 2px 0; padding: 0 8px;
+}
+
 @media (max-width: 720px) {
   .app { padding: 12px 12px 40px; }
   header { flex-direction: column; gap: 2px; }
+  /* 窄螢幕:卡圖改成置頂單欄(完整的手機版面是票09) */
+  .card { flex-direction: column; align-items: center; }
+  .card-pic { width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .card-body { width: 100%; }
 }

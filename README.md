@@ -147,7 +147,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `../data_ygoFaqCache/_cache` | 官方 Q&A 快取(repo 外,約 1.1GB) |
 | `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |
 | `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` |
-| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`render`(呈現與分頁)、`main`(主流程) |
+| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`render`(卡片呈現、異圖切換與分頁)、`main`(主流程) |
 
 ## cards.json 欄位
 
@@ -180,4 +180,5 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 
 效果 Tag 管線的後半(效果句分群 → 分類表定稿 → 逐句填 `tags`);
 查卡網站的四條搜尋軸(卡名 / 效果文 / 卡片參數 / 效果類型)、排序、網址狀態與部署形態
-——規格與票券見 `.scratch/search-web/`,目前完成的是票 01(值域正典與最小索引)。
+——規格與票券見 `.scratch/search-web/`,目前完成的是票 01(值域正典與最小索引)
+與票 02(完整卡片呈現:卡圖、異圖切換、怪獸參數、靈擺分區、效果外文本樣式)。

@@ -1,10 +1,17 @@
-# ygoSearchWeb — 卡片總表
+# ygoSearchWeb — 卡片總表與效果標記表
 
-遊戲王 OCG 自建查卡網站的資料基礎。本階段產出**卡片總表** `cards.json`:
+遊戲王 OCG 自建查卡網站的資料基礎,目前有兩份資料:
+
+**卡片總表** `cards.json`:
 繁中卡文(salix5/cdb)+ 日/英卡名(mycard/ygopro-database)+ MD 稀有度(masterduelmeta)
 + Genesys 點數(YGOPRODeck),
 以卡片密碼對齊整合,只收錄有正式 8 位數密碼的已發售實卡(排除先行卡與衍生物),
 同名異圖卡合併為主卡一筆。
+
+**效果標記表** `tag_cards.json`:把每張卡的效果文拆成效果句,逐句標上效果類型
+(十六種固定值)與必發/選發,是進階查詢(「找出所有有誘發即時效果的卡」)的核心依據。
+判定分三層權威——官方補足情報的明示 > 規則層 > 逐條判定;規則只寫影子預測不決定值,
+每一條都以官方明示獨立驗證(ADR-0002)。
 
 領域詞彙見 [CONTEXT.md](CONTEXT.md);規格與票券見 `.scratch/card-list/`。
 
@@ -23,6 +30,7 @@ python script/card_list/build_cards.py --zh data/sources/cards.cdb --ja data/sou
 # 測試(不連網)
 python -m unittest discover -s script/card_list
 python -m unittest discover -s script/faq_info
+python -m unittest discover -s script/tag_card
 ```
 
 僅需 Python 3 標準庫,無安裝依賴;預設路徑以 repo 根為準,任意位置執行皆可。
@@ -52,6 +60,30 @@ python script/faq_info/recrawl_faq.py --sample 20
 不需改程式:開 `https://www.db.yugioh-card.com/yugiohdb/faq_search.action?ope=4&cid=<cid>`
 確認卡名相符後加一筆,再跑 `refill_faq.py --offline`。
 
+### 效果標記表
+
+```bash
+# 建置:卡片總表 + 補足情報 + 拆句表 + 既有標記表 → data/tag_cards.json
+#       順帶回寫規則清單 docs/effect_kind_rules.md
+python script/tag_card/build_tag_cards.py
+
+# 定版驗收:全表完整性檢查 + 收斂條件 + 定版報告(不寫任何檔)
+python script/tag_card/seal_report.py
+
+# 差值更新:產生待判批次 → 判定票寫結果檔 → 合併回兩份來源檔
+python script/tag_card/make_batches.py --dry-run
+python script/tag_card/merge_judgments.py --result <結果檔> --batch <批次檔> --ticket <票號>
+
+# 遮蔽測試:抽樣 → 判定者作答 → 對答案(量化判定準確率)
+python script/tag_card/run_masked_test.py sample
+python script/tag_card/run_masked_test.py score
+```
+
+`data/tag_cards.json` 與 `data/clause_splits.json` 是**來源檔而非建置產物**
+(ADR-0001 / ADR-0003):人工修正直接改檔並標 `manual`,重跑永不覆蓋;
+判定與拆句的成果同樣活過每一次重跑,只有 `rule` 那一種來源會重算。
+判定規範見 `docs/effect_kind_guide.md`,規則清單 `docs/effect_kind_rules.md` 由建置流程產生。
+
 ## 目錄
 
 | 位置 | 內容 |
@@ -66,9 +98,24 @@ python script/faq_info/recrawl_faq.py --sample 20
 | `script/faq_info/build_faq_info.py` | 抽取 CLI 薄殼(掃快取 → 寫 faq_info.json) |
 | `script/faq_info/refill_faq.py` | 補齊缺漏卡的快取(更新 dump → 補爬 → 重建 → 驗收) |
 | `script/faq_info/recrawl_faq.py` | 抽樣重爬殼(確認快取是否過舊) |
+| `script/tag_card/tagcard.py` | 效果標記表管線(純函式):卡片總表 + 補足情報 + 拆句表 + 判定結果 → 標記表 + 報告 |
+| `script/tag_card/official.py` | 官方明示的抽取與歸屬對位(五道階梯) |
+| `script/tag_card/rules.py` | 效果類型規則層的規則登記處(只寫影子預測) |
+| `script/tag_card/masked.py` | 遮蔽測試的兩個接縫(抽樣 / 對答案) |
+| `script/tag_card/build_tag_cards.py` | 建置 CLI 薄殼(寫 tag_cards.json + 回寫規則清單) |
+| `script/tag_card/seal_report.py` | 定版驗收殼(完整性檢查 + 收斂條件 + 定版報告) |
+| `script/tag_card/make_batches.py` | 待判批次殼(排票 / 補判 / 改判三種批次) |
+| `script/tag_card/merge_judgments.py` | 判定結果合併殼(結果檔 → 拆句表 + 標記表) |
+| `script/tag_card/run_masked_test.py` | 遮蔽測試殼(抽樣 / 對答案) |
+| `script/tag_card/check_split_rule.py` | 拆句判準的交叉驗證器(新判準會不會切開官方引用) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
+| `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |
+| `data/clause_splits.json` | 拆句表:舊式無編號卡文的效果句邊界(入版控的來源檔) |
 | `data/cid_overrides.json` | 人工查證的 cid→卡片密碼 對應(ygoprodeck 查不到的卡) |
 | `data/sources/` | 來源檔暫存,含 `faq_info.json`(不入版控) |
+| `docs/effect_kind_guide.md` | 效果類型的判定規範(所有判定票的共同 prompt) |
+| `docs/effect_kind_rules.md` | 規則清單(建置流程產生,不要手改) |
+| `docs/adr/` | 最難反轉的決定 |
 | `../data_ygoFaqCache/_cache` | 官方 Q&A 快取(repo 外,約 1.1GB) |
 | `web/` | 查卡網站(後續階段) |
 
@@ -80,6 +127,20 @@ python script/faq_info/recrawl_faq.py --sample 20
 `md_rarity`(Master Duel 稀有度 N/R/SR/UR,未實裝為空字串)、
 `genesys_points`(Genesys 點數,未列點為 0)。
 
+## tag_cards.json 欄位
+
+一卡一物件,`id` + `clauses`(純通常怪獸為空陣列);穩定鍵為
+`(卡片密碼, section, index)`。每個效果句:
+
+`index`(`"0"`=效果外文本段、`"①"`~=原文編號、`"①-●1"`=● 子效果、`"1"`~=舊式卡文的序位)、
+`section`(`main` / `pendulum`)、`text_zh` / `text_ja`(卡文的連續子字串,不改寫)、
+`text_hash`(身分變動偵測)、`kind`(十六種效果類型)、`optional`(`必發` / `選發` / `null`)、
+`role`(效果外文本的子分類:素材指定 / 召喚條件 / 使用次數限制)、
+`source`(`official` / `rule` / `llm` / `llm_then_rule` / `manual`)、
+`needs_review`、`rule_predicted`(影子預測,不參與 `kind`)、`confidence`、
+`tags`(預留給分類表,目前一律為空)。
+
 ## 後續階段(未實作)
 
-效果 Tag 管線(拆效果句 → 分群 → LLM 貼標)、靜態查卡網站(進階查詢器)。
+效果 Tag 管線的後半(效果句分群 → 分類表定稿 → 逐句填 `tags`)、
+靜態查卡網站(進階查詢器)。

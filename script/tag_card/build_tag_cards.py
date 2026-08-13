@@ -396,7 +396,10 @@ def print_report(report, digest_changed=False, file=sys.stdout):
                        ("header_without_pendulum_bit", "有靈擺標頭但無靈擺位元"),
                        ("normal_with_numerals", "通常怪獸卡文含編號"),
                        ("duplicate_index", "index 撞號(已加尾碼)"),
-                       ("substring_violations", "非連續子字串(必須為 0)")):
+                       ("substring_violations", "非連續子字串(必須為 0)"),
+                       ("kind_missing", "kind 仍為 null(定版時必須為 0)"),
+                       ("role_on_wrong_kind",
+                        "role 落在非效果外文本(必須為 0)")):
         rows = report[key]
         p(f"{label}: {len(rows)} 筆 {rows[:LIST_PREVIEW]}")
     p(f"繁中兩條切割規則不一致(必須為 0): {report['zh_cut_rule_disagree']}")

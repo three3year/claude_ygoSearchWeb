@@ -1178,7 +1178,9 @@ def _new_report():
         "optional_llm": 0,
         "optional_rule": 0,
         "optional_pending": [],
+        "kind_missing": [],
         "optional_on_wrong_kind": [],
+        "role_on_wrong_kind": [],
         "mandatory_kind_unknown": 0,
         "mandatory_other_kind": [],
         "optional_validation": {
@@ -1358,11 +1360,18 @@ def _count_clauses(entries, report):
                 report["kind_counts"][clause["kind"]] += 1
             report["optional_counts"][clause["optional"] or "null"] += 1
             report["source_counts"][clause["source"] or "null"] += 1
+            key = {"id": entry["id"], "section": clause["section"],
+                   "index": clause["index"]}
+            if clause["kind"] is None:
+                # 還沒判的效果句。定版時必須是空的——「已處理且確實沒有效果」由
+                # 純通常怪獸的空 clauses 表達,不是由 kind 留 null 表達(票09)
+                report["kind_missing"].append(key)
             if (clause["optional"] is not None
                     and clause["kind"] not in OPTIONAL_KINDS):
-                report["optional_on_wrong_kind"].append(
-                    {"id": entry["id"], "section": clause["section"],
-                     "index": clause["index"]})
+                report["optional_on_wrong_kind"].append(key)
+            if clause["role"] is not None and clause["kind"] != KIND_NON_EFFECT:
+                # role 是效果外文本的子分類,別的類型上有值就是填錯欄位
+                report["role_on_wrong_kind"].append(key)
         report["clauses"] += len(entry["clauses"])
 
 

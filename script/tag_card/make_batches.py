@@ -166,7 +166,14 @@ def rejudge_payloads(entries, cards, faqs, keys):
 
 
 def collect(entries, report, cards, faqs):
-    """→ {系列: [卡片酬載, ...]},依卡片密碼升冪。"""
+    """→ {系列: [卡片酬載, ...]},依卡片密碼升冪。
+
+    「有沒有待判的效果句」不是唯一的入選條件:**未拆的整團就算類型已經有了也要排**
+    ——官方以 `『①』` 指名整團時它會拿到 `official` 的類型(spec 的階梯二對未拆整團
+    照樣開火),`pending_clauses` 因此看不到它,那張卡就再也進不了拆句批次(票09 在
+    23927567 幸運を告げるフクロウ 上發現這個缺口,全表僅此一張)。拆句與判類型是
+    兩件事,入選條件要各問各的。
+    """
     by_id = {card["id"]: card for card in cards}
     faq_by_id = {e["password"]: e for e in faqs if e.get("password")}
     blobs_by_id = {}
@@ -174,9 +181,9 @@ def collect(entries, report, cards, faqs):
         blobs_by_id.setdefault(row["id"], []).append(row)
     series = {SERIES_KIND: [], SERIES_SPLIT: []}
     for entry in sorted(entries, key=lambda e: e["id"]):
-        if not pending_clauses(entry):
-            continue
         blobs = blobs_by_id.get(entry["id"], [])
+        if not pending_clauses(entry) and not blobs:
+            continue
         payload = card_payload(entry, by_id.get(entry["id"], {}),
                                faq_by_id.get(entry["id"], {}), blobs)
         series[SERIES_SPLIT if blobs else SERIES_KIND].append(payload)

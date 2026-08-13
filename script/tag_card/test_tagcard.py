@@ -334,6 +334,48 @@ class TestSubstringInvariant(unittest.TestCase):
         self.assertEqual(report["substring_violations"], [])
 
 
+class TestFieldDomainInvariants(unittest.TestCase):
+    """欄位值域的三道全表不變式(票09 的完整性檢查)。
+
+    `optional_on_wrong_kind` 早就在,另外兩道原本只能靠人工掃檔:定版要斷言的是
+    「全表沒有殘留的 `kind: null`」與「`role` 只出現在效果外文本」,那是資料的
+    性質而不是薄殼的性質,所以與它同住在報告裡。
+    """
+
+    def test_an_unjudged_clause_is_listed_as_a_missing_kind(self):
+        _, report = build_tag_cards([card(desc="①：效果甲。")],
+                                    [faq(card_text="①：効果甲。")])
+        self.assertEqual(report["kind_missing"],
+                         [{"id": 1000, "section": "main", "index": "①"}])
+
+    def test_a_fully_judged_table_has_no_missing_kind(self):
+        """純通常怪獸的空 `clauses` 不是殘留——那一張卡根本沒有效果句。"""
+        _, report = build_tag_cards(
+            [card(1000, desc="①：效果甲。"),
+             card(2000, desc="以高攻擊力著稱的傳說之龍。", ctype=TYPE_NORMAL_MONSTER)],
+            [faq(1000, card_text="①：効果甲。"), faq(2000, card_text="伝説の竜。")],
+            judgments=[{"id": 1000, "section": "main",
+                        "clauses": [{"index": "①", "kind": "啟動效果"}]}])
+        self.assertEqual(report["kind_missing"], [])
+
+    def test_a_role_outside_non_effect_text_is_reported(self):
+        """`role` 是效果外文本的子分類,掛在別的類型上就是判定者填錯欄位。"""
+        _, report = build_tag_cards(
+            [card(desc="①：效果甲。")], [faq(card_text="①：効果甲。")],
+            judgments=[{"id": 1000, "section": "main",
+                        "clauses": [{"index": "①", "kind": "啟動效果",
+                                     "role": "素材指定"}]}])
+        self.assertEqual(report["role_on_wrong_kind"],
+                         [{"id": 1000, "section": "main", "index": "①"}])
+
+    def test_a_role_on_the_preamble_is_not_reported(self):
+        _, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。\n①：效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。\n①：効果甲。")])
+        self.assertEqual(report["role_counts"]["召喚條件"], 1)
+        self.assertEqual(report["role_on_wrong_kind"], [])
+
+
 class TestNumeralAlignment(unittest.TestCase):
 
     def test_count_mismatch_leaves_japanese_empty_and_reports(self):

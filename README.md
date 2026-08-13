@@ -1,6 +1,7 @@
-# ygoSearchWeb — 卡片總表與效果標記表
+# ygoSearchWeb — 卡片總表、效果標記表與查卡網站
 
-遊戲王 OCG 自建查卡網站的資料基礎,目前有兩份資料:
+遊戲王 OCG 自建查卡網站。網站在 `web/`(零建置純靜態,雙擊 `index.html` 就會跑),
+資料基礎是兩份自持的資料:
 
 **卡片總表** `cards.json`:
 繁中卡文(salix5/cdb)+ 日/英卡名(mycard/ygopro-database)+ MD 稀有度(masterduelmeta)
@@ -13,7 +14,8 @@
 判定分三層權威——官方補足情報的明示 > 規則層 > 逐條判定;規則只寫影子預測不決定值,
 每一條都以官方明示獨立驗證(ADR-0002)。
 
-領域詞彙見 [CONTEXT.md](CONTEXT.md);規格與票券見 `.scratch/card-list/`。
+領域詞彙見 [CONTEXT.md](CONTEXT.md);規格與票券見 `.scratch/card-list/` 與
+`.scratch/search-web/`。
 
 ## 使用
 
@@ -31,6 +33,7 @@ python script/card_list/build_cards.py --zh data/sources/cards.cdb --ja data/sou
 python -m unittest discover -s script/card_list
 python -m unittest discover -s script/faq_info
 python -m unittest discover -s script/tag_card
+python -m unittest discover -s script/web
 ```
 
 僅需 Python 3 標準庫,無安裝依賴;預設路徑以 repo 根為準,任意位置執行皆可。
@@ -84,6 +87,28 @@ python script/tag_card/run_masked_test.py score
 判定與拆句的成果同樣活過每一次重跑,只有 `rule` 那一種來源會重算。
 判定規範見 `docs/effect_kind_guide.md`,規則清單 `docs/effect_kind_rules.md` 由建置流程產生。
 
+### 查卡網站
+
+```bash
+# 建置前端索引:卡片總表 + 效果標記表 → web/data.js + 報告
+python script/web/build_index.py
+
+# 只跑檢查與報告,不動 data.js
+python script/web/build_index.py --no-write
+```
+
+網站是**零建置的純靜態站**(ADR-0007):沒有 npm、沒有 bundler、沒有框架、沒有 ES modules。
+雙擊 `web/index.html` 就會跑,不需要起本機 server——索引因此是 `window.CARD_DATA=…` 的
+`.js` 而不是 `.json`(`file://` 下 `fetch` 會被 CORS 擋而 `<script src>` 不會)。
+
+cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/vocab.py`(ADR-0008),值域與
+中文表隨索引輸出成 `window.VOCAB`,**HTML 不寫死任何選項**。索引裡出現正典沒有的值、正典
+沒解釋的 `type` 位元、效果句缺效果類型、效果句串接後出現已知兩種以外的覆蓋缺口,
+一律**建置失敗**——把「漏一個碼、某批卡無聲消失」換成吵鬧的失效。
+
+`web/data.js` 是**入版控的建置產物**(GitHub Pages 直接吃 repo 內容,產物不進版控就沒有站),
+一卡一行、git diff 可讀;同一份輸入兩次建置逐位元組相同。
+
 ## 目錄
 
 | 位置 | 內容 |
@@ -108,6 +133,9 @@ python script/tag_card/run_masked_test.py score
 | `script/tag_card/merge_judgments.py` | 判定結果合併殼(結果檔 → 拆句表 + 標記表) |
 | `script/tag_card/run_masked_test.py` | 遮蔽測試殼(抽樣 / 對答案) |
 | `script/tag_card/check_split_rule.py` | 拆句判準的交叉驗證器(新判準會不會切開官方引用) |
+| `script/web/vocab.py` | 值域正典(cdb 位元/整數/中文 → 短碼 → 中文 + 宣告序)+ 自檢接縫 |
+| `script/web/webindex.py` | 前端索引管線(純函式):總表 + 標記表 → 索引 + 一致性檢查報告 |
+| `script/web/build_index.py` | 建置 CLI 薄殼(讀檔 → 寫 web/data.js → 印報告 → 依 problems 定 exit code) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
 | `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |
 | `data/clause_splits.json` | 拆句表:舊式無編號卡文的效果句邊界(入版控的來源檔) |
@@ -117,7 +145,9 @@ python script/tag_card/run_masked_test.py score
 | `docs/effect_kind_rules.md` | 規則清單(建置流程產生,不要手改) |
 | `docs/adr/` | 最難反轉的決定 |
 | `../data_ygoFaqCache/_cache` | 官方 Q&A 快取(repo 外,約 1.1GB) |
-| `web/` | 查卡網站(後續階段) |
+| `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |
+| `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` |
+| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`render`(呈現與分頁)、`main`(主流程) |
 
 ## cards.json 欄位
 
@@ -148,5 +178,6 @@ python script/tag_card/run_masked_test.py score
 
 ## 後續階段(未實作)
 
-效果 Tag 管線的後半(效果句分群 → 分類表定稿 → 逐句填 `tags`)、
-靜態查卡網站(進階查詢器)。
+效果 Tag 管線的後半(效果句分群 → 分類表定稿 → 逐句填 `tags`);
+查卡網站的四條搜尋軸(卡名 / 效果文 / 卡片參數 / 效果類型)、排序、網址狀態與部署形態
+——規格與票券見 `.scratch/search-web/`,目前完成的是票 01(值域正典與最小索引)。

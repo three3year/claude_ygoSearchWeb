@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>遊戲王卡片查詢</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>遊戲王卡片查詢</h1>
+    <span class="db-info" id="dbInfo"></span>
+  </header>
+
+  <div class="actions">
+    <span class="result-info" id="resultInfo"></span>
+    <span class="spacer"></span>
+    <label class="per-page">每頁
+      <select id="perPage">
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+        <option value="500">500</option>
+      </select>
+      筆</label>
+  </div>
+
+  <div class="pager" id="pagerTop"></div>
+  <div id="results"></div>
+  <div class="pager" id="pagerBottom"></div>
+</div>
+
+<!-- 零建置協定(ADR-0007):沒有 bundler、沒有 ES modules,<script> 依序載入,
+     模組是掛在全域的 IIFE 閉包。索引是 window.CARD_DATA=… 的 .js 而不是 .json,
+     因為 file:// 下 fetch 會被 CORS 擋而 <script src> 不會。 -->
+<script src="data.js"></script>
+<script src="js/util.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+"""前端索引的建置管線。
+
+單一接縫:`build_index(卡片總表條目, 效果標記表條目) → (index, report)`。純函式;
+讀檔、寫 `web/data.js`、印報告都在這個模組之外(CLI 薄殼)。
+
+索引是查卡網站唯一讀的資料檔,形態是 `window.CARD_DATA=…` 的 `.js` 而不是 `.json`
+——`file://` 下 `fetch` 會被 CORS 擋而 `<script src>` 不會(ADR-0007)。
+
+**四道一致性檢查長在 report 裡**,不另開接縫(與 tag_card 把驗收條件放進
+`build_tag_cards` 的 report 同一個結構):卡片總表有卡而索引沒有、索引出現正典沒有
+的值、效果句缺效果類型、效果句串接後出現已知兩種以外的覆蓋缺口。加上兩道同族的:
+`type` 出現正典沒解釋的位元、不變式「大類是怪獸 ⟺ 有種族與屬性」。全部匯總進
+`report["problems"]`,非空即建置失敗——把沉默的失效換成吵鬧的失效(ADR-0008)。
+
+詞彙見 CONTEXT.md:前端索引、值域正典、效果句、效果類型、同名異圖卡。
+"""
+import json
+import re
+
+import vocab
+
+TYPE_MONSTER = 0x1
+# 不變式的欄位清單。故意不 import cardlist 的 MONSTER_PARAMS:這道斷言是
+# card-list 票07 的閘門退化時的防線,兩邊共用一份常數的話就會一起走鐘。
+MONSTER_PARAMS = ("race", "attribute", "level", "atk", "def")
+
+# 效果句串接後與卡文的兩種已知缺口(spec「卡文的組裝」)。第三種即建置失敗——
+# 那代表拆句或卡文出了預期外的變化。
+#   1. 段落標頭:靈擺卡的【靈擺效果】/【怪獸效果】,與靈擺通常怪獸的【怪獸敘述】
+#   2. `※` 別名:117 張卡文末尾的另一種中文譯名
+FLAVOR_HEADER = "【怪獸敘述】"
+SECTION_HEADERS = ("【靈擺效果】", "【怪獸效果】", FLAVOR_HEADER)
+ALIAS_MARK = "※"
+GAP_HEADER = "header"
+GAP_ALIAS = "alias"
+
+# 索引欄位 → 值域(是不是陣列)。「索引出現正典沒有的值即建置失敗」這道檢查照這張
+# 表走,後面的票補欄位時在這裡加一行就自動被蓋到。
+CODED_FIELDS = (
+    ("c", vocab.CAT, False),
+    ("k", vocab.KIND, True),
+)
+
+_WS = re.compile(r"\s+")
+
+
+def _norm(text):
+    """覆蓋檢查用的正規化:忽略空白(卡文的換行不屬於任何效果句)。"""
+    return _WS.sub("", text)
+
+
+def _flavor(desc, has_clauses):
+    """故事文:沒有效果句的 689 張純通常怪獸,與靈擺通常怪獸的【怪獸敘述】段。
+
+    抽出來當 `d` 而不是留在卡文裡不管,是為了讓覆蓋檢查只剩兩種已知缺口——
+    故事文有實際文字,放它過去等於在檢查上開一個吃掉真文字的洞。
+    """
+    if FLAVOR_HEADER in desc:
+        return desc.split(FLAVOR_HEADER, 1)[1].strip()
+    return desc.strip() if not has_clauses else ""
+
+
+def _entry(card, clauses):
+    """一張卡 → (索引條目, 對不到短碼的來源值清單)。
+
+    鍵序固定;空值一律省略而不是寫 null(gzip 便宜得多)。
+
+    大類解不出來(`type` 沒有怪獸/魔法/陷阱位元,或同時有兩個)時條目為 None:那張卡
+    連一顆按鈕都對不到,進了索引也是搜不到的死資料。呼叫端會讓它落進「卡片總表有
+    卡而索引沒有」那一道檢查,建置因此失敗——這正是 Story 60 要擋的形狀。
+    """
+    cat, _subs = vocab.subtypes(card["type"])
+    if not cat:
+        return None, []
+    unknown = []
+    out = {"id": card["id"], "n": card["name_zh"]}
+    if card["name_ja"]:
+        out["nj"] = card["name_ja"]
+    if card["name_en"]:
+        out["ne"] = card["name_en"]
+    out["c"] = cat
+    if clauses:
+        out["tx"] = [cl["text_zh"] for cl in clauses]
+        out["k"] = []
+        for clause in clauses:
+            kind = clause.get("kind")
+            code = vocab.code_of(vocab.KIND, kind)
+            if code is None and kind:
+                unknown.append({"field": "k", "value": kind,
+                                "reason": "來源值對不到短碼"})
+            # 對不到時留空字串佔位:建置已經因為檢查失敗,佔位只是讓 `tx` / `k`
+            # 保持同索引,好讓報告指得出是哪一句。
+            out["k"].append(code or "")
+    flavor = _flavor(card["desc"], bool(clauses))
+    if flavor:
+        out["d"] = flavor
+    return out, unknown
+
+
+def _coverage(desc, pieces):
+    """效果句(加故事文)串接後對卡文的覆蓋。→ (缺口清單, 對不上的片段清單)。
+
+    效果句的 `text_zh` 是卡文的連續子字串,依序往後找;找不到代表拆句與卡文對不
+    上(卡文變動而拆句沒跟上就是這個形狀)。
+    """
+    text = _norm(desc)
+    pos = 0
+    gaps, unmatched = [], []
+    for piece in pieces:
+        needle = _norm(piece)
+        if not needle:
+            continue
+        found = text.find(needle, pos)
+        if found < 0:
+            unmatched.append(piece)
+            continue
+        if found > pos:
+            gaps.append(text[pos:found])
+        pos = found + len(needle)
+    if pos < len(text):
+        gaps.append(text[pos:])
+    return gaps, unmatched
+
+
+def _classify_gap(gap):
+    """缺口分類;認不出來回傳空字串(→ 建置失敗)。"""
+    rest = gap
+    for header in SECTION_HEADERS:
+        rest = rest.replace(header, "")
+    if not rest:
+        return GAP_HEADER
+    if rest.startswith(ALIAS_MARK):
+        return GAP_ALIAS
+    return ""
+
+
+def _monster_invariant(cards):
+    """不變式「大類是怪獸 ⟺ 有種族與屬性」的雙向檢查。
+
+    → 靠來源資料成立(9,280 張怪獸無一缺種族或屬性),← 靠[[卡片總表]]的大類閘門
+    成立。任一邊非空即代表搜尋與呈現不能再以大類決定要不要顯示怪獸參數:
+    罠モンスター的種族是它變成怪獸之後的形態,不是卡片的參數(card-list 票07)。
+    """
+    monsters = [c for c in cards if c["type"] & TYPE_MONSTER]
+    return {
+        "monsters": len(monsters),
+        "monster_missing_race_or_attribute": [
+            c["id"] for c in monsters if not c["race"] or not c["attribute"]],
+        "non_monster_with_monster_params": [
+            c["id"] for c in cards if not c["type"] & TYPE_MONSTER
+            and any(c[f] for f in MONSTER_PARAMS)],
+    }
+
+
+def _unexported_codes(index_cards, exported):
+    """索引的短碼有沒有出現在 `window.VOCAB` 的按鈕清單裡。
+
+    這是「索引出現正典沒有的值」的另一半:值域登記了碼卻沒做成按鈕(不可篩選、
+    或漏排進分組)時,那批卡在畫面上點不出來——與漏一個碼的失效模式一模一樣,
+    只是換了個地方發生,所以 ADR-0008 要求「正典住建置期」與「按鈕由正典生成」
+    必須一起成立。空短碼不算:那是缺效果類型那一道檢查的事。
+    """
+    buttons = {name: {item["code"] for item in dom["items"]}
+               for name, dom in exported.items()}
+    unknown = []
+    for card in index_cards:
+        for field, domain, is_list in CODED_FIELDS:
+            value = card.get(field)
+            if value is None:
+                continue
+            for code in (value if is_list else [value]):
+                if code and code not in buttons.get(domain, ()):
+                    unknown.append({"id": card["id"], "field": field,
+                                    "code": code,
+                                    "reason": "短碼不在按鈕清單"})
+    return unknown
+
+
+def _census(cards, clauses_by_id):
+    """每一個值域的成員數與對應卡數(Story 58)。
+
+    某個值突然掉到 0 就看得見——這是「值域漏一碼、某批卡無聲消失」的另一面:
+    碼還在但沒有卡對得上,一樣是壞了。`no_value` 記的是沒有這個參數的卡數
+    (非怪獸沒有屬性、MD 未實裝沒有稀有度),它們不是值域成員。
+    """
+    counts = {name: dict.fromkeys(vocab.codes(name), 0)
+              for name in vocab.DOMAINS}
+    no_value = dict.fromkeys(vocab.DOMAINS, 0)
+    for card in cards:
+        cat, subs = vocab.subtypes(card["type"])
+        if cat:
+            counts[vocab.CAT][cat] += 1
+            for code in subs:
+                counts[vocab.SUB[cat]][code] += 1
+        else:
+            no_value[vocab.CAT] += 1
+        for name, field in ((vocab.ATTR, "attribute"), (vocab.RACE, "race"),
+                            (vocab.RARITY, "md_rarity"), (vocab.OT, "ot")):
+            code = vocab.code_of(name, card[field])
+            if code:
+                counts[name][code] += 1
+            else:
+                no_value[name] += 1
+        markers = vocab.bitmask_codes(vocab.LINK_MARKER, card["link_marker"])
+        for code in markers:
+            counts[vocab.LINK_MARKER][code] += 1
+        if not markers:
+            no_value[vocab.LINK_MARKER] += 1
+        for clause in clauses_by_id.get(card["id"]) or ():
+            for name, field in ((vocab.KIND, "kind"),
+                                (vocab.OPTIONAL, "optional"),
+                                (vocab.ROLE, "role")):
+                code = vocab.code_of(name, clause.get(field))
+                if code:
+                    counts[name][code] += 1
+                else:
+                    no_value[name] += 1
+    return {"counts": counts, "no_value": no_value}
+
+
+def _summarise_problems(report):
+    """報告 → 問題清單。非空即建置失敗;CLI 薄殼照這一份決定 exit code。"""
+    checks = report["checks"]
+    found = list(report["vocab"]["problems"])
+    inv = report["monster_invariant"]
+    pairs = (
+        ("卡片總表有卡而索引沒有", checks["missing_cards"]),
+        ("卡片密碼重複導致索引掉卡", checks["duplicate_ids"]),
+        ("卡片沒有效果標記表條目", checks["cards_without_clause_entry"]),
+        ("索引出現值域正典沒有的值", checks["unknown_values"]),
+        ("效果句缺效果類型", checks["clauses_without_kind"]),
+        ("效果句串接後出現已知兩種以外的覆蓋缺口", checks["coverage_gaps"]),
+        ("效果句在卡文裡找不到", checks["clauses_not_in_desc"]),
+        ("type 出現值域正典沒解釋的位元", checks["unexplained_type_bits"]),
+        ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
+        ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
+    )
+    for label, items in pairs:
+        if items:
+            found.append(f"{label}: {len(items)} 筆")
+    return found
+
+
+def build_index(cards, tag_cards, built_at="", sources=None):
+    """[[卡片總表]]條目 + [[效果標記表]]條目 → (index, report)。
+
+    `built_at` 與 `sources`(來源檔雜湊)由呼叫端給:讀時鐘與讀檔都是薄殼的事,
+    純函式不碰,同一份輸入因此兩次建置產物逐位元組相同。
+    """
+    clauses_by_id = {t["id"]: t.get("clauses") or [] for t in tag_cards}
+    checks = {"missing_cards": [], "duplicate_ids": [],
+              "cards_without_clause_entry": [], "unknown_values": [],
+              "clauses_without_kind": [], "coverage_gaps": [],
+              "clauses_not_in_desc": [], "unexplained_type_bits": []}
+    known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
+    entries = {}
+    clause_total = 0
+    for card in cards:
+        cid = card["id"]
+        clauses = clauses_by_id.get(cid)
+        if clauses is None:
+            checks["cards_without_clause_entry"].append(cid)
+            clauses = []
+        entry, unknown = _entry(card, clauses)
+        if entry is None:
+            continue  # 大類解不出來,由 missing_cards 那一道報上去
+        if cid in entries:
+            checks["duplicate_ids"].append(cid)
+        entries[cid] = entry
+        clause_total += len(clauses)
+        checks["unknown_values"].extend(dict(u, id=cid) for u in unknown)
+        for i, clause in enumerate(clauses):
+            if not clause.get("kind"):
+                checks["clauses_without_kind"].append(
+                    {"id": cid, "index": clause.get("index", i)})
+        pieces = list(entry.get("tx", []))
+        if entry.get("d"):
+            pieces.append(entry["d"])
+        gaps, unmatched = _coverage(card["desc"], pieces)
+        for gap in gaps:
+            kind = _classify_gap(gap)
+            if kind:
+                known_gaps[kind] += 1
+            else:
+                checks["coverage_gaps"].append({"id": cid, "gap": gap})
+        for piece in unmatched:
+            checks["clauses_not_in_desc"].append({"id": cid, "text": piece})
+        bits = vocab.unexplained_type_bits(card["type"])
+        if bits:
+            checks["unexplained_type_bits"].append({"id": cid,
+                                                    "bits": f"{bits:#x}"})
+    index_cards = [entries[cid] for cid in sorted(entries)]
+    exported = vocab.export()
+    checks["missing_cards"] = sorted({c["id"] for c in cards} - set(entries))
+    checks["unknown_values"].extend(_unexported_codes(index_cards, exported))
+    index = {
+        "cards": index_cards,
+        "vocab": exported,
+        "meta": {
+            "built_at": built_at,
+            "cards": len(index_cards),
+            "clauses": clause_total,
+            "vocab_digest": vocab.digest(),
+            "sources": dict(sources or {}),
+        },
+    }
+    report = {
+        "cards": len(index_cards),
+        "clauses": clause_total,
+        "vocab": {"digest": vocab.digest(), "problems": vocab.problems(),
+                  "sizes": {name: len(vocab.codes(name))
+                            for name in vocab.DOMAINS}},
+        "census": _census(cards, clauses_by_id),
+        "known_gaps": known_gaps,
+        "checks": checks,
+        "monster_invariant": _monster_invariant(cards),
+    }
+    report["problems"] = _summarise_problems(report)
+    return index, report
+
+
+def serialize_index(index):
+    """索引 → `web/data.js` 的文字。
+
+    一卡一行、值域一行、META 一鍵一行:`data.js` 入版控(GitHub Pages 直接吃 repo
+    內容),而這個 repo 的每一份資料都刻意做成 diff 可讀。卡片那一段用最省的分隔
+    符——7.8 MB 裡有 14,207 行,每行省下的空白會被乘上一萬四千倍。
+    """
+    dump = lambda o: json.dumps(  # noqa: E731
+        o, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    cards = ",\n".join(
+        json.dumps(c, ensure_ascii=False, separators=(",", ":"))
+        for c in index["cards"])
+    vocab_lines = ",\n".join(f"{json.dumps(k)}:{dump(v)}"
+                             for k, v in sorted(index["vocab"].items()))
+    meta_lines = ",\n".join(f"{json.dumps(k)}:{dump(v)}"
+                            for k, v in sorted(index["meta"].items()))
+    return ("window.CARD_DATA=[\n" + cards + "\n];\n"
+            "window.VOCAB={\n" + vocab_lines + "\n};\n"
+            "window.META={\n" + meta_lines + "\n};\n")

@@ -371,8 +371,13 @@ def print_report(report, digest_changed=False, file=sys.stdout):
     p(f"別名註記(※)已從卡文尾端剝除: {report['footnote_stripped']} 張")
     p(f"無編號待拆: {len(report['pending_split'])} 段")
     p(f"confidence=low(該段無官方補足): {len(report['low_confidence'])} 張")
-    p(f"無日文卡文: {len(report['no_japanese_text'])} 張 "
-      f"{report['no_japanese_text'][:LIST_PREVIEW]}")
+    # 這一批不是待處理狀態而是已知的永久形態:全部是 ot=2 的 TCG 限定卡,
+    # 從未在 OCG 發行,官方日文卡文與補足情報永遠不會出現(ADR-0006)。判定基礎
+    # 因此是繁中卡文,這些行沒有官方明示、也沒有影子預測,confidence 一律低。
+    p(f"無官方日文文本(改以繁中卡文判定,ADR-0006): "
+      f"{len(report['no_japanese_text'])} 張 / "
+      f"{report['zh_judged_clauses']} 條效果句")
+    p(f"  {report['no_japanese_text']}")
 
     p(f"繁中/日文編號數量不一致: {len(report['numeral_mismatch'])} 段")
     for row in report["numeral_mismatch"]:

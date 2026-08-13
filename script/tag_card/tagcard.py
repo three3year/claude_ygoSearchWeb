@@ -230,11 +230,17 @@ def _preamble_role(text, ctype):
 
 # ---------------------------------------------------------------- 效果句
 
-def _text_hash(text_ja):
-    """日文原文的雜湊(身分變動偵測用);無日文原文時為 None。"""
-    if not text_ja:
+def _text_hash(text_ja, text_zh):
+    """**判定基礎文本**的雜湊(身分變動偵測用);兩側都空時為 None。
+
+    絕大多數卡的判定基礎是日文原文。無官方日文文本的那批(TCG 限定卡,ADR-0006)
+    以繁中卡文為判定基礎,雜湊就跟著判定基礎走——寫成日文的雜湊會讓那批行永遠
+    是 None,繁中卡文改了也沒有人會知道。
+    """
+    body = text_ja or text_zh
+    if not body:
         return None
-    return hashlib.sha1(text_ja.encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha1(body.encode("utf-8")).hexdigest()[:16]
 
 
 def _clause(index, section, text_zh, text_ja, confidence,
@@ -244,7 +250,7 @@ def _clause(index, section, text_zh, text_ja, confidence,
         "section": section,
         "text_zh": text_zh,
         "text_ja": text_ja,
-        "text_hash": _text_hash(text_ja),
+        "text_hash": _text_hash(text_ja, text_zh),
         "kind": kind,
         "optional": None,
         "role": role,
@@ -1135,6 +1141,7 @@ def _new_report():
         "numeral_relabelled": [],
         "preamble_one_sided": [],
         "no_japanese_text": [],
+        "zh_judged_clauses": 0,
         "empty_section_with_japanese": [],
         "low_confidence": [],
         "pendulum_bit_without_header": [],
@@ -1340,7 +1347,12 @@ def _count_clauses(entries, report):
     規則層會把比對一致的 `llm` 行升成 `llm_then_rule`,所以來源分布必須等它跑完
     才數,否則報告印的是升級前的數字。
     """
+    zh_judged = set(report["no_japanese_text"])
     for entry in entries:
+        if entry["id"] in zh_judged:
+            # 無官方日文文本那批的效果句數(ADR-0006):判定基礎是繁中卡文,
+            # 沒有官方明示也沒有影子預測,票09 的定版報告要單獨列出來
+            report["zh_judged_clauses"] += len(entry["clauses"])
         for clause in entry["clauses"]:
             if clause["kind"] is not None:
                 report["kind_counts"][clause["kind"]] += 1

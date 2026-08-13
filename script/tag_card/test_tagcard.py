@@ -358,13 +358,15 @@ class TestNumeralAlignment(unittest.TestCase):
                            "zh": "①②②", "ja": "①②③"}])
 
     def test_missing_japanese_text_leaves_japanese_empty(self):
+        """日文那一側留空,雜湊改跟著判定基礎(=繁中卡文)走,ADR-0006。"""
         entries, report = build_tag_cards(
             [card(desc="①：效果甲。")], [])
         clauses = clauses_of(entries, 1000)
         self.assertEqual(clauses[0]["text_ja"], "")
-        self.assertIsNone(clauses[0]["text_hash"])
+        self.assertIsNotNone(clauses[0]["text_hash"])
         self.assertEqual(clauses[0]["confidence"], "low")
         self.assertEqual(report["no_japanese_text"], [1000])
+        self.assertEqual(report["zh_judged_clauses"], 1)
 
 
 class TestHashAndConfidence(unittest.TestCase):
@@ -3299,6 +3301,87 @@ class TestSplitValidation(unittest.TestCase):
         self.assert_fell_back_to_the_blob(entries, report)
         self.assertEqual(report["split_malformed"],
                          [{"id": 1000, "section": "main"}])
+
+
+class TestChineseOnlySplit(unittest.TestCase):
+    """票55 / ADR-0006:無官方日文文本的卡走繁中單側拆句與繁中判定。
+
+    那 17 張全部是 `ot=2` 的 TCG 限定卡,KONAMI 日文資料庫沒有它們的頁面,日文
+    卡文與[[補足情報]]永遠不會出現。拆句表因此容納「段落只記繁中原文、日文側
+    留空」的形態:無遺漏覆蓋只驗繁中側,引用交叉驗證因為沒有補足情報而自動略過,
+    `text_hash` 改以繁中計算——繁中卡文變動時整筆仍失效並退回未拆狀態。
+    """
+
+    ZH_HEAD = "此卡不能通常召喚。將我方場上1隻怪獸解放才能特殊召喚。"
+    ZH_TAIL = "1回合1次，可以破壞對手場上1張卡。"
+    ZH = ZH_HEAD + ZH_TAIL
+
+    def segments(self):
+        return [segment("0", self.ZH_HEAD, ""), segment("1", self.ZH_TAIL, "")]
+
+    def record(self, text_zh=None):
+        return split(self.segments(), text_zh=text_zh or self.ZH, text_ja="",
+                     ticket="票55")
+
+    def build(self, desc=None, record=None):
+        """沒有補足情報條目 = 這張卡在官方 Q&A 快取裡一筆都沒有。"""
+        return build_tag_cards([card(desc=desc or self.ZH)], [],
+                               splits=[record or self.record()])
+
+    def test_a_chinese_only_record_splits_into_several_clauses(self):
+        entries, report = self.build()
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0", "1"])
+        self.assertEqual([c["text_zh"] for c in clauses],
+                         [self.ZH_HEAD, self.ZH_TAIL])
+        self.assertEqual([c["text_ja"] for c in clauses], ["", ""])
+        self.assertEqual(report["split_records"], 1)
+        self.assertEqual(report["split_coverage_failed"], [])
+        self.assertEqual(report["pending_split"], [])
+
+    def test_coverage_is_only_checked_on_the_chinese_side(self):
+        """缺日文的事實不該讓一筆結構正確的拆句紀錄失效。"""
+        _, report = self.build()
+        self.assertEqual(report["split_coverage_failed"], [])
+        _, missing = self.build(
+            record=split([segment("1", self.ZH_TAIL, "")], text_zh=self.ZH,
+                         text_ja="", ticket="票55"))
+        self.assertEqual([(r["id"], r["side"])
+                          for r in missing["split_coverage_failed"]],
+                         [(1000, "zh")])
+
+    def test_the_hash_follows_the_chinese_text(self):
+        """雜湊跟著判定基礎走:同一句繁中相同、不同則不同。"""
+        same, _ = self.build()
+        other, _ = build_tag_cards(
+            [card(desc=self.ZH_HEAD + "1回合1次，可以破壞對手場上2張卡。")], [],
+            splits=[split([segment("0", self.ZH_HEAD, ""),
+                           segment("1", "1回合1次，可以破壞對手場上2張卡。", "")],
+                          text_zh=self.ZH_HEAD
+                          + "1回合1次，可以破壞對手場上2張卡。",
+                          text_ja="", ticket="票55")])
+        head, tail = clauses_of(same, 1000)
+        other_head, other_tail = clauses_of(other, 1000)
+        self.assertIsNotNone(tail["text_hash"])
+        self.assertEqual(head["text_hash"], other_head["text_hash"])
+        self.assertNotEqual(tail["text_hash"], other_tail["text_hash"])
+
+    def test_a_chinese_errata_invalidates_the_record(self):
+        errata = self.ZH.replace("1張卡", "2張卡")
+        entries, report = self.build(desc=errata)
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)], ["1"])
+        self.assertEqual(report["split_stale"],
+                         [{"id": 1000, "section": "main"}])
+        self.assertEqual([(r["id"], r["section"])
+                          for r in report["pending_split"]], [(1000, "main")])
+
+    def test_these_rows_get_no_shadow_prediction_and_low_confidence(self):
+        entries, report = self.build()
+        effect = clauses_of(entries, 1000)[1]
+        self.assertIsNone(effect["rule_predicted"])
+        self.assertEqual(effect["confidence"], "low")
+        self.assertEqual(report["no_japanese_text"], [1000])
+        self.assertEqual(report["zh_judged_clauses"], 2)
 
 
 class TestSplitEnablesAttestation(unittest.TestCase):

@@ -78,21 +78,23 @@ _CAT = domain("大類", SRC_BITMASK, (
 # 同時對到怪獸側與魔法側兩個成員,位元重疊檢查就得為此開例外。
 # 魔法/陷阱的「通常」在 cdb 裡沒有位元(通常魔法 type 就只有 0x2),由 fallback
 # 表示「其他子類型位元都沒中」。
+# 中文名以**繁中卡文的用詞**為準(同步/協調/聯合,不是同調/調整/同盟):使用者在
+# 同一個畫面上讀卡文也讀按鈕,兩邊用不同的詞指同一件事會看起來像兩件事。
 _SUB_M = domain("怪獸子類型", SRC_BITMASK, (
     entry("normal", "通常", 0x10),
     entry("effect", "效果", 0x20),
     entry("fusion", "融合", 0x40),
     entry("ritual", "儀式", 0x80),
-    entry("synchro", "同調", 0x2000),
+    entry("synchro", "同步", 0x2000),
     entry("xyz", "超量", 0x800000),
     entry("pendulum", "靈擺", 0x1000000),
     entry("link", "連結", 0x4000000),
-    entry("tuner", "調整", 0x1000),
+    entry("tuner", "協調", 0x1000),
     entry("flip", "反轉", 0x200000),
     entry("spsummon", "特殊召喚", 0x2000000),
     entry("dual", "二重", 0x800),
     entry("spirit", "靈魂", 0x200),
-    entry("union", "同盟", 0x400),
+    entry("union", "聯合", 0x400),
     entry("toon", "卡通", 0x400000),
     # [[衍生物]]:卡片總表不收錄(0 張),登記位元但不做按鈕
     entry("token", "衍生物", 0x4000, filterable=False),

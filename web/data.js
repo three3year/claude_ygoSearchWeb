@@ -14217,14 +14217,14 @@ window.VOCAB={
 "race":{"items":[{"code":"warrior","zh":"戰士族"},{"code":"spellcaster","zh":"魔法使族"},{"code":"fairy","zh":"天使族"},{"code":"fiend","zh":"惡魔族"},{"code":"zombie","zh":"不死族"},{"code":"machine","zh":"機械族"},{"code":"aqua","zh":"水族"},{"code":"pyro","zh":"炎族"},{"code":"rock","zh":"岩石族"},{"code":"winged_beast","zh":"鳥獸族"},{"code":"plant","zh":"植物族"},{"code":"insect","zh":"昆蟲族"},{"code":"thunder","zh":"雷族"},{"code":"dragon","zh":"龍族"},{"code":"beast","zh":"獸族"},{"code":"beast_warrior","zh":"獸戰士族"},{"code":"dinosaur","zh":"恐龍族"},{"code":"fish","zh":"魚族"},{"code":"sea_serpent","zh":"海龍族"},{"code":"reptile","zh":"爬蟲類族"},{"code":"psychic","zh":"超能族"},{"code":"divine_beast","zh":"幻神獸族"},{"code":"creator_god","zh":"創造神族"},{"code":"wyrm","zh":"幻龍族"},{"code":"cyberse","zh":"電子界族"},{"code":"illusion","zh":"幻想魔族"}],"zh":"種族"},
 "rarity":{"items":[{"code":"N","zh":"N"},{"code":"R","zh":"R"},{"code":"SR","zh":"SR"},{"code":"UR","zh":"UR"}],"zh":"MD 稀有度"},
 "role":{"items":[{"code":"mat","zh":"素材指定"},{"code":"cond","zh":"召喚條件"},{"code":"limit","zh":"使用次數限制"}],"zh":"效果外文本種別"},
-"sub_m":{"groups":[{"codes":["normal","effect","fusion","ritual","synchro","xyz","pendulum","link"],"zh":"卡框"},{"codes":["tuner","flip","spsummon","dual","spirit","union","toon"],"zh":"能力"}],"items":[{"code":"normal","zh":"通常"},{"code":"effect","zh":"效果"},{"code":"fusion","zh":"融合"},{"code":"ritual","zh":"儀式"},{"code":"synchro","zh":"同調"},{"code":"xyz","zh":"超量"},{"code":"pendulum","zh":"靈擺"},{"code":"link","zh":"連結"},{"code":"tuner","zh":"調整"},{"code":"flip","zh":"反轉"},{"code":"spsummon","zh":"特殊召喚"},{"code":"dual","zh":"二重"},{"code":"spirit","zh":"靈魂"},{"code":"union","zh":"同盟"},{"code":"toon","zh":"卡通"}],"zh":"怪獸子類型"},
+"sub_m":{"groups":[{"codes":["normal","effect","fusion","ritual","synchro","xyz","pendulum","link"],"zh":"卡框"},{"codes":["tuner","flip","spsummon","dual","spirit","union","toon"],"zh":"能力"}],"items":[{"code":"normal","zh":"通常"},{"code":"effect","zh":"效果"},{"code":"fusion","zh":"融合"},{"code":"ritual","zh":"儀式"},{"code":"synchro","zh":"同步"},{"code":"xyz","zh":"超量"},{"code":"pendulum","zh":"靈擺"},{"code":"link","zh":"連結"},{"code":"tuner","zh":"協調"},{"code":"flip","zh":"反轉"},{"code":"spsummon","zh":"特殊召喚"},{"code":"dual","zh":"二重"},{"code":"spirit","zh":"靈魂"},{"code":"union","zh":"聯合"},{"code":"toon","zh":"卡通"}],"zh":"怪獸子類型"},
 "sub_s":{"items":[{"code":"normal","zh":"通常"},{"code":"quick","zh":"速攻"},{"code":"continuous","zh":"永續"},{"code":"equip","zh":"裝備"},{"code":"field","zh":"場地"},{"code":"ritual","zh":"儀式"}],"zh":"魔法子類型"},
 "sub_t":{"items":[{"code":"normal","zh":"通常"},{"code":"continuous","zh":"永續"},{"code":"counter","zh":"反擊"}],"zh":"陷阱子類型"}
 };
 window.META={
-"built_at":"2026-08-13T20:49:31+0800",
+"built_at":"2026-08-13T21:15:14+0800",
 "cards":14207,
 "clauses":32637,
 "sources":{"cards.json":"0d9ed638204298ce","tag_cards.json":"3b6caee7e5d0d787"},
-"vocab_digest":"02c8fdab8158e9cb"
+"vocab_digest":"f4ff56103c06f829"
 };

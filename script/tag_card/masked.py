@@ -45,7 +45,7 @@ PIPELINE_CAP = 5
 BUCKET_CAPS = {"ambiguous": AMBIGUOUS_CAP, "pipeline": PIPELINE_CAP}
 
 # 樣本檔的欄位。答案(kind / optional / source / rule_predicted)一律不在其中。
-# `preamble` 是同卡同 section 的前言段(`INDEX_PREAMBLE`)日文原文。規範 §5.6
+# `preamble` 是同卡同 section 的全部前言列(`_is_preamble`)日文原文串接。規範 §5.6
 # 閘門二第三種(跨回合許可寫在前言段並點名編號)要判定者讀得到它,樣本只帶自己
 # 那一行時那條規則無從套用——票62 的重判輪就是這樣把 94997874 ② 判錯的。前言段
 # 是卡文不是[[補足情報]],不遮蔽:它從不寫類型結論句。

@@ -374,6 +374,11 @@ def print_report(report, digest_changed=False, file=sys.stdout):
     p(f"  退回不拆: {len(fallbacks)} 段")
     for row in fallbacks[:LIST_PREVIEW]:
         p(f"    id={row['id']} section={row['section']} 原因={row['reason']}")
+    mismatches = report["numbered_linebreak_mismatch"]
+    p(f"編號句內部換行差異(純排版,資訊清單,不動資料): {len(mismatches)} 句")
+    for row in mismatches:
+        p(f"  id={row['id']} section={row['section']} index={row['index']} "
+          f"zh {row['zh_lines']} 行 / ja {row['ja_lines']} 行")
     p(f"別名註記(※)已從卡文尾端剝除: {report['footnote_stripped']} 張")
     p(f"無編號待拆: {len(report['pending_split'])} 段")
     p(f"confidence=low(該段無官方補足): {len(report['low_confidence'])} 張")

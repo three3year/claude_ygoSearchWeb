@@ -395,6 +395,17 @@ class TestPreambleSplit(unittest.TestCase):
         self.assertEqual([c["source"] for c in clauses[:2]], ["rule", "rule"])
         self.assertEqual(report["preamble_split_fallbacks"], [])
 
+    def test_numbered_clause_linebreak_mismatch_is_informational_only(self):
+        """編號句內部換行差異只列資訊清單,不動資料(票67)。"""
+        entries, report = build_tag_cards(
+            [card(desc="①:可以選1個發動。\n●選項甲。\n●選項乙。")],
+            [faq(card_text="①:1つを選んで発動できる。●選択肢甲。●選択肢乙。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["①"])
+        self.assertEqual(report["numbered_linebreak_mismatch"],
+                         [{"id": 1000, "section": "main", "index": "①",
+                           "zh_lines": 3, "ja_lines": 1}])
+
     def test_split_preamble_rows_are_not_rule_layer_targets(self):
         """前言段的類型由位置規則決定,拆出的細段同樣不歸規則層管。"""
         entries, report = build_tag_cards(

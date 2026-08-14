@@ -1281,6 +1281,7 @@ def _new_report():
         "preamble_splits": 0,
         "preamble_split_clauses": 0,
         "preamble_split_fallbacks": [],
+        "numbered_linebreak_mismatch": [],
         "pending_split": [],
         "numeral_mismatch": [],
         "numeral_relabelled": [],
@@ -1438,8 +1439,17 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
 
     for pos, (_, span) in enumerate(zh_nums):
         ja_span = ja_nums[pos][1] if aligned else None
-        clauses.append(_clause(labels[pos], section, _slice(zh_text, span),
-                               _slice(ja_text, ja_span), confidence))
+        text_zh = _slice(zh_text, span)
+        text_ja = _slice(ja_text, ja_span)
+        if text_ja and text_zh.count("\n") != text_ja.count("\n"):
+            # 編號句內部的換行差異是純排版(● 拆分走 `●` 字元不讀換行),只留
+            # 一次性資訊清單、不動資料(ADR-0009)
+            report["numbered_linebreak_mismatch"].append(
+                {"id": cid, "section": section, "index": labels[pos],
+                 "zh_lines": text_zh.count("\n") + 1,
+                 "ja_lines": text_ja.count("\n") + 1})
+        clauses.append(_clause(labels[pos], section, text_zh, text_ja,
+                               confidence))
 
     unsplit = set()
     split_indexes = set()

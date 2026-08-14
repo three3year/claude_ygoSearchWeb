@@ -58,6 +58,7 @@ def print_checks(report, p, limit=20):
         ("cards_without_clause_entry", "卡片沒有效果標記表條目"),
         ("unknown_values", "索引出現值域正典沒有的值"),
         ("clauses_without_kind", "效果句缺效果類型"),
+        ("optional_on_non_carrier", "必發/選發出現在不承載的效果類型上"),
         ("coverage_gaps", "覆蓋缺口(已知兩種以外)"),
         ("clauses_not_in_desc", "效果句在卡文裡找不到"),
         ("unexplained_type_bits", "type 有值域正典沒解釋的位元"),

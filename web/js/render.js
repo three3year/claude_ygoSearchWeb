@@ -14,8 +14,8 @@
 'use strict';
 
 const View = (() => {
-const { CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OT_ZH, LM_ZH, LM_CODES,
-        SUB_ZH, $, esc, pad8, byId } = Util;
+const { CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH, LM_ZH,
+        LM_CODES, SUB_ZH, $, esc, pad8, byId } = Util;
 
 /* 卡圖:salix5/query-data 的 CDN,檔名就是不補零的卡片密碼 */
 const PIC = 'https://cdn.jsdelivr.net/gh/salix5/query-data@master/pics/';
@@ -32,20 +32,34 @@ const state = { page: 1, perPage: 50 };
    效果句索引,`marks` 是生效中的句層條件。呈現層照著它畫,不自己再判一次命中。 */
 let lastResult = { cards: [], marks: [] };
 
-/* 命中原因寫在 badge 上的名字。目前只有效果文關鍵字一種句層條件。 */
-const MARK_ZH = { text: '效果文' };
+/* 命中原因 → badge 上的文字。效果文寫的是條件本身(關鍵字對每一行都一樣),
+   [[效果類型]]與[[必發/選發]]寫的是**這一行自己的值**——多條件並用時 badge 就是
+   「這一行為什麼被選中」的答案,而那個答案逐行不同:效果類型選了誘發即時+誘發
+   兩顆時,命中的兩行寫的不是同一個詞。 */
+const MARK_ZH = {
+  text: () => '效果文',
+  kind: (c, i) => KIND_ZH[(c.k || [])[i]],
+  opt: (c, i) => OPT_ZH[(c.o || [])[i]],
+};
 
-/* 句層條件 → 畫命中行要的兩樣東西:關鍵字的比對段(行內上色用)與 badge 的文字。
+/* 句層條件 → 畫命中行要的兩樣東西:關鍵字的比對段(行內上色用)與生效中的條件。
    沒有句層條件時是 null,`effHtml` 因此連問都不必問。
    **比對段取自引擎導出的 likeParts**:呈現層自己再寫一份切法就會漂開,而漂開的
    形狀是「這一行被標亮了但沒有一個字上色」。 */
 function highlight(marks) {
   if (!marks || !marks.length) return null;
   const text = marks.find(m => m.type === 'text');
-  return {
-    parts: text ? Engine.likeParts(text.value) : [],
-    badge: marks.map(m => MARK_ZH[m.type]).join('・'),
-  };
+  return { parts: text ? Engine.likeParts(text.value) : [], marks };
+}
+
+/* 沒有值的條件不寫進 badge:「排除必發」命中的那一句可能根本不承載這個屬性,
+   那時寫得出來的只有其餘條件。
+   認不得的條件退回寫短碼而不是讓整個結果區炸掉:引擎多一種句層條件而這裡忘了
+   跟上時,壞掉的該是一個 badge 的字面,不是整頁卡片(那次例外會讓 innerHTML
+   從頭到尾沒設成,畫面停在上一次的結果上——最難察覺的那種壞法)。 */
+function badgeText(marks, c, i) {
+  return marks.map(m => (MARK_ZH[m.type] || (() => m.type))(c, i))
+    .filter(Boolean).join('・');
 }
 
 function render(result = lastResult) {
@@ -212,8 +226,9 @@ function effHtml(c, text, i, rows, hl) {
   const hit = !!rows && rows.indexOf(i) >= 0;
   const ranges = hit && hl && hl.parts.length
     ? Engine.likeRanges(text, hl.parts) : null;
+  const badge = hit ? badgeText(hl.marks, c, i) : '';
   return `<p class="eff${roleClass(c, role)}${hit ? ' hit' : ''}" data-ei="${i}">${
-    hit ? `<span class="eff-hit">${esc(hl.badge)}</span>` : ''}${
+    badge ? `<span class="eff-hit">${esc(badge)}</span>` : ''}${
     lineHtml(text, ranges)}${
     label ? `<span class="eff-kind">${esc(label)}</span>` : ''}</p>`;
 }

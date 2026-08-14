@@ -11,8 +11,13 @@
  *
  * 條件分兩層:
  * - **卡層**(卡名、卡片密碼、卡片參數)—— 整張卡通過或不通過。
- * - **句層**(效果文關鍵字)—— 逐[[效果句]]獨立比對,一張卡只要存在一個效果句
- *   滿足全部句層條件即命中,那一句進 `rows`。
+ * - **句層**(效果文關鍵字、[[效果類型]]、[[必發/選發]])—— 逐[[效果句]]獨立
+ *   比對,一張卡只要存在一個效果句滿足**全部**句層條件即命中,那一句進 `rows`。
+ *
+ * 句層條件之間取**效果句層級的交集**(票06):一張卡的 ① 是誘發即時但不含關鍵字、
+ * ② 含關鍵字但是啟動效果,**不算命中**。使用者問的是「一個會做某件事的誘發即時
+ * 效果」,而不是「這張卡某處有這四個字、另一處有個誘發即時」——這是本站與一般
+ * 查卡站的分水嶺,而一般查卡站做不到是因為它們沒有效果句層級的結構。
  */
 'use strict';
 
@@ -157,16 +162,38 @@ function paramHit(c, q) {
     && unknownHit(c.df, q.dfq);
 }
 
-/* 句層條件:**逐[[效果句]]獨立比對**。「墓地%手牌」只在同一個效果裡同時出現才算
-   命中,而不是散落在兩個無關的效果——這是這個站與一般查卡站的分水嶺,而一般查卡
-   站做不到是因為它們沒有效果句層級的結構。
-   回傳命中的效果句索引;一句都沒中即這張卡不命中。 */
-function clauseRows(c, parts) {
+/* 一句的短碼,包成 triHit 吃的陣列形狀。沒有值的句子是空陣列——**「不承載」不是
+   一個值**:22,942 個效果句不承載[[必發/選發]],它們不該被「必發」命中,也不該被
+   「排除必發」排掉(排除的是必發,不是「沒有這個屬性」)。 */
+function codeAt(arr, i) {
+  const code = arr && arr[i];
+  return code ? [code] : [];
+}
+
+/* 空的條件物件等於沒設。這一層在句層特別要緊:記成「有設」的話,一張卡會單純
+   因為**有效果句**就整批被標亮,而使用者一顆鈕都沒點。 */
+function sel(o) {
+  return o && Object.keys(o).length ? o : null;
+}
+
+/* 句層條件:**逐[[效果句]]獨立比對,而且是同一句**。「墓地%手牌」只在同一個效果裡
+   同時出現才算命中;效果文關鍵字與[[效果類型]]/[[必發/選發]]並用時同樣要落在同一句。
+   回傳命中的效果句索引;一句都沒中即這張卡不命中。
+   三態排除在這一層的語意是**這一句不是那個類型**,而不是「這張卡沒有那種句子」
+   ——同一顆鈕在同一個軸上不能有兩種語意,而句層的單位是句。 */
+function clauseRows(c, parts, kindSel, optSel) {
   const tx = c.tx || [];
   const rows = [];
   for (let i = 0; i < tx.length; i++) {
-    if (c.ro && c.ro[i] === ROLE_MAT) continue;
-    if (likeMatch(tx[i], parts)) rows.push(i);
+    if (kindSel && !triHit(codeAt(c.k, i), kindSel)) continue;
+    if (optSel && !triHit(codeAt(c.o, i), optSel)) continue;
+    if (parts.length) {
+      // 不掃素材指定行是**關鍵字**的規則,不是「素材行不存在」:找效果外文本的
+      // 人照樣看得到它,被淹掉的只有關鍵字搜尋(見上方 ROLE_MAT)
+      if (c.ro && c.ro[i] === ROLE_MAT) continue;
+      if (!likeMatch(tx[i], parts)) continue;
+    }
+    rows.push(i);
   }
   return rows;
 }
@@ -176,7 +203,8 @@ function clauseRows(c, parts) {
  * 回傳 { cards: [{ card, rows }], marks } ——
  *   `rows` 是該卡命中的效果句索引陣列,沒有任何句層條件時為 null。
  *   `marks` 是生效中的句層條件,呈現層照它寫命中行的 badge:每一個 row 都滿足
- *   全部句層條件,所以命中原因對整批 rows 是同一組,不必逐行再記一次。
+ *   **全部**句層條件(那正是句層耦合的定義),所以「因為哪些條件而中」對整批
+ *   rows 是同一組,不必逐行再記一次。
  *
  * 軸間 AND:每個軸各自否決,全部通過才進結果。
  */
@@ -189,7 +217,14 @@ function runQuery(db, q) {
   const codeOk = DIGITS.test(code);
   const text = term(q.text);
   const textParts = likeParts(text);
-  const marks = textParts.length ? [{ type: 'text', value: text }] : [];
+  const kindSel = sel(q.kind);
+  const optSel = sel(q.opt);
+  // 生效中的句層條件。效果文帶關鍵字本身(每一行都一樣),效果類型與必發/選發
+  // 只報「這個條件生效中」——badge 上寫的是**那一行自己的值**,而那逐行不同。
+  const marks = [];
+  if (textParts.length) marks.push({ type: 'text', value: text });
+  if (kindSel) marks.push({ type: 'kind' });
+  if (optSel) marks.push({ type: 'opt' });
   const cards = [];
   for (const c of db) {
     if (name && !nameHit(c, name, q.nameLang)) continue;
@@ -197,7 +232,7 @@ function runQuery(db, q) {
     if (!paramHit(c, q)) continue;
     let rows = null;
     if (marks.length) {
-      rows = clauseRows(c, textParts);
+      rows = clauseRows(c, textParts, kindSel, optSel);
       if (!rows.length) continue;
     }
     cards.push({ card: c, rows });

@@ -262,7 +262,65 @@ class AliasTest(unittest.TestCase):
 
 
 class ClauseArrayTest(unittest.TestCase):
-    """`tx` / `k` / `ro` / `pz` 的同索引對齊——呈現層照索引取值。"""
+    """`tx` / `k` / `o` / `ro` / `pz` 的同索引對齊——呈現層照索引取值。"""
+
+    def test_optional_codes_align_with_tx(self):
+        """[[必發/選發]]逐句進 `o`,不承載的句子留空字串佔位。
+
+        佔位而不是壓縮成「只記承載的那幾句」:`tx` / `k` / `o` / `ro` 是同索引
+        的四個陣列,壓縮之後第 2 個 `o` 對到的是第幾句就得再記一份對照。
+        """
+        desc = "①：這樣。②：那樣。③：又一樣。"
+        cards = [card(1, desc=desc)]
+        tags = [tagged(1,
+                       clause("①：這樣。", kind="誘發即時效果(2速)",
+                              optional="必發"),
+                       clause("②：那樣。", kind="誘發效果(1速)", index="②",
+                              optional="選發"),
+                       clause("③：又一樣。", kind="啟動效果", index="③"))]
+        index, report = build_index(cards, tags)
+        entry = index["cards"][0]
+        self.assertEqual(entry["o"], ["m", "o", ""])
+        self.assertEqual(len(entry["o"]), len(entry["tx"]))
+        self.assertEqual(report["problems"], [])
+
+    def test_o_is_omitted_when_no_clause_carries_it(self):
+        """22,942 個效果句不承載這個屬性,空陣列一律省略(gzip 便宜得多)。"""
+        cards = [card(1, desc="①：這樣。")]
+        entry = build_index(cards, [tagged(1, clause("①：這樣。"))])[0]["cards"][0]
+        self.assertNotIn("o", entry)
+
+    def test_optional_outside_the_canon_fails_the_build(self):
+        cards = [card(1, desc="①：這樣。")]
+        tags = [tagged(1, clause("①：這樣。", kind="誘發效果(1速)",
+                                 optional="看心情"))]
+        _, report = build_index(cards, tags)
+        self.assertEqual(report["checks"]["unknown_values"],
+                         [{"id": 1, "field": "o", "value": "看心情",
+                           "reason": "來源值對不到短碼"}])
+        self.assertTrue(report["problems"])
+
+    def test_optional_on_a_non_carrier_kind_fails_the_build(self):
+        """永續效果帶著「必發」= 一個永遠零結果的條件在等著使用者設出來。
+
+        搜尋介面照正典的承載關係決定「必發/選發」出不出得來(Story 25),而這道
+        檢查守的是反方向:標記表哪天把值貼到不承載的類型上,要在建置期吵。
+        """
+        cards = [card(1, desc="①：這樣。")]
+        tags = [tagged(1, clause("①：這樣。", kind="永續效果",
+                                 optional="必發"))]
+        _, report = build_index(cards, tags)
+        self.assertEqual(report["checks"]["optional_on_non_carrier"],
+                         [{"id": 1, "index": "①", "kind": "c", "o": "m"}])
+        self.assertTrue(report["problems"])
+
+    def test_optional_on_a_carrier_kind_passes(self):
+        cards = [card(1, type=TRAP, desc="①：這樣。")]
+        tags = [tagged(1, clause("①：這樣。", kind="通常陷阱卡效果",
+                                 optional="必發"))]
+        _, report = build_index(cards, tags)
+        self.assertEqual(report["checks"]["optional_on_non_carrier"], [])
+        self.assertEqual(report["problems"], [])
 
     def test_role_codes_align_with_tx(self):
         desc = "「素材A」＋「素材B」\n這個卡名的①效果1回合只能使用1次。\n①：這樣。"

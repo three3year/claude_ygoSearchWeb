@@ -61,6 +61,7 @@ CODED_FIELDS = (
     ("ra", vocab.RARITY, False),
     ("ot", vocab.OT, False),
     ("k", vocab.KIND, True),
+    ("o", vocab.OPTIONAL, True),
     ("ro", vocab.ROLE, True),
 )
 
@@ -166,6 +167,12 @@ def _entry(card, clauses):
         # 保持同索引,好讓報告指得出是哪一句。
         out["k"] = [_coded(unknown, "k", vocab.KIND, cl.get("kind")) or ""
                     for cl in clauses]
+        # 22,942 個效果句不承載[[必發/選發]];空字串佔位讓 `tx` / `k` / `o` / `ro`
+        # 保持同索引,整批都空時整個欄位省略(空值省略而不是寫 null)
+        opts = [_coded(unknown, "o", vocab.OPTIONAL, cl.get("optional")) or ""
+                for cl in clauses]
+        if any(opts):
+            out["o"] = opts
         roles = [_coded(unknown, "ro", vocab.ROLE, cl.get("role")) or ""
                  for cl in clauses]
         if any(roles):
@@ -313,6 +320,8 @@ def _summarise_problems(report):
         ("卡片沒有效果標記表條目", checks["cards_without_clause_entry"]),
         ("索引出現值域正典沒有的值", checks["unknown_values"]),
         ("效果句缺效果類型", checks["clauses_without_kind"]),
+        ("必發/選發出現在不承載的效果類型上",
+         checks["optional_on_non_carrier"]),
         ("效果句串接後出現已知兩種以外的覆蓋缺口", checks["coverage_gaps"]),
         ("效果句在卡文裡找不到", checks["clauses_not_in_desc"]),
         ("type 出現值域正典沒解釋的位元", checks["unexplained_type_bits"]),
@@ -337,8 +346,9 @@ def build_index(cards, tag_cards, built_at="", sources=None):
               "cards_without_clause_entry": [], "unknown_values": [],
               "clauses_without_kind": [], "coverage_gaps": [],
               "clauses_not_in_desc": [], "unexplained_type_bits": [],
-              "alias_gap_not_extracted": []}
+              "alias_gap_not_extracted": [], "optional_on_non_carrier": []}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
+    carriers = set(vocab.carriers(vocab.OPTIONAL))
     entries = {}
     clause_total = 0
     for card in cards:
@@ -355,10 +365,17 @@ def build_index(cards, tag_cards, built_at="", sources=None):
         entries[cid] = entry
         clause_total += len(clauses)
         checks["unknown_values"].extend(dict(u, id=cid) for u in unknown)
+        opts = entry.get("o") or ()
         for i, clause in enumerate(clauses):
             if not clause.get("kind"):
                 checks["clauses_without_kind"].append(
                     {"id": cid, "index": clause.get("index", i)})
+            # 不承載[[必發/選發]]的效果類型帶著值 = 一個永遠零結果的條件在等著
+            # 使用者設出來(搜尋介面照正典的承載關係決定條件出不出得來,Story 25)
+            if opts and opts[i] and entry["k"][i] not in carriers:
+                checks["optional_on_non_carrier"].append(
+                    {"id": cid, "index": clause.get("index", i),
+                     "kind": entry["k"][i], "o": opts[i]})
         pieces = list(entry.get("tx", []))
         if entry.get("d"):
             pieces.append(entry["d"])

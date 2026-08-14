@@ -50,18 +50,23 @@ def entry(code, zh, src=None, filterable=True):
     return {"code": code, "zh": zh, "src": src, "filter": filterable}
 
 
-def domain(zh, src_kind, entries, groups=(), fallback=None):
+def domain(zh, src_kind, entries, groups=(), fallback=None, carriers=()):
     """一個值域。entries 的順序就是宣告序:按鈕順序與排序比較序共用它。
 
     groups 是按鈕分組((組名, 成員碼...)),分組必須恰好蓋過全部可篩選成員——
     漏一個成員就是漏一顆按鈕,而那與漏一個碼的失效模式一模一樣(ADR-0008)。
+
+    carriers 是「這個值域的值只出現在 [[效果類型]]的哪些成員上」(目前只有
+    [[必發/選發]]有這種關係)。宣告在正典而不是在前端,理由與其他值域一樣:
+    抄第二份就會漂移,而漂移的形狀是一組條件安靜地不出現。
     """
     if src_kind == SRC_TEXT:
         entries = tuple(
             e if e["src"] is not None else dict(e, src=e["zh"])
             for e in entries)
     return {"zh": zh, "src_kind": src_kind, "entries": tuple(entries),
-            "groups": tuple(groups), "fallback": fallback}
+            "groups": tuple(groups), "fallback": fallback,
+            "carriers": tuple(carriers)}
 
 
 # ── 卡片種類大類 ─────────────────────────────────────────────
@@ -183,10 +188,18 @@ _KIND = domain("效果類型", SRC_TEXT, (
     ("魔陷卡效果", ("sn", "sq", "sr", "sc", "se", "sf", "sp", "tn", "tc",
                     "tk")),
 ))
+# [[必發/選發]]只長在**有觸發事件的發動句**上:誘發即時效果(2速)、誘發效果(1速)
+# 與[[魔陷卡效果]]十值。啟動效果與魔陷卡本身的發動本就由玩家主動選擇開啟(不記值),
+# 永續效果、無種類效果、效果外文本則根本不發動(CONTEXT.md「必發/選發」)。
+# 這條關係兩個方向都有人用:搜尋介面照它決定「必發/選發」那一組條件出不出得來
+# (Story 25——「永續效果是必發」是一個永遠零結果的條件,不該設得出來),建置期
+# 照它擋下標記表把值貼到不承載的類型上。抄在前端一份的話,某天多一個承載型的
+# 效果類型時那一組會安靜地不出現——與漏一個碼同一個失效模式(ADR-0008)。
 _OPTIONAL = domain("必發/選發", SRC_TEXT, (
     entry("m", "必發"),
     entry("o", "選發"),
-))
+), carriers=("q", "t", "sn", "sq", "sr", "sc", "se", "sf", "sp", "tn", "tc",
+             "tk"))
 _ROLE = domain("效果外文本種別", SRC_TEXT, (
     entry("mat", "素材指定"),
     entry("cond", "召喚條件"),
@@ -247,6 +260,11 @@ def entries(name, domains=None):
 
 def codes(name, domains=None):
     return tuple(e["code"] for e in entries(name, domains))
+
+
+def carriers(name, domains=None):
+    """承載這個值域的[[效果類型]]短碼(沒有這種關係的值域是空的)。"""
+    return (domains or DOMAINS)[name]["carriers"]
 
 
 def zh(name, code, domains=None):
@@ -347,7 +365,21 @@ def problems(domains=None):
         if dom["fallback"] and dom["fallback"] not in seen_code:
             found.append(f"{name}: fallback {dom['fallback']!r} 不是成員")
         found.extend(_group_problems(name, dom))
+        found.extend(_carrier_problems(name, dom, domains))
     return found
+
+
+def _carrier_problems(name, dom, domains):
+    """承載者必須是[[效果類型]]的成員:對不到 = 一條永遠不生效的規則。
+
+    寫壞的兩個下場都糟:搜尋介面照它決定條件出不出得來(碼對不上就永遠不出來),
+    建置期照它擋資料(碼對不上就永遠不擋)。
+    """
+    if not dom["carriers"]:
+        return []
+    kinds = codes(KIND, domains) if KIND in domains else ()
+    return [f"{name}: 承載者 {code!r} 不是效果類型的成員"
+            for code in dom["carriers"] if code not in kinds]
 
 
 def _group_problems(name, dom):
@@ -389,6 +421,8 @@ def export(domains=None):
         if dom["groups"]:
             out[name]["groups"] = [{"zh": label, "codes": list(group)}
                                    for label, group in dom["groups"]]
+        if dom["carriers"]:
+            out[name]["carriers"] = list(dom["carriers"])
     return out
 
 

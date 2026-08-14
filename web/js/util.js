@@ -30,6 +30,7 @@ const KIND_ZH = zhTable('kind');
 const ATTR_ZH = zhTable('attr');
 const RACE_ZH = zhTable('race');
 const ROLE_ZH = zhTable('role');
+const OPT_ZH = zhTable('optional');
 const OT_ZH = zhTable('ot');
 /* 連結標記的中文就是箭頭字元(↖↑↗…),宣告序就是九宮格由左上到右下的讀法 */
 const LM_ZH = zhTable('lm');
@@ -55,7 +56,8 @@ const byId = id => INDEX.get(+id);
 
   return Object.freeze({
     DB, META, VOCAB,
-    CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OT_ZH, LM_ZH, LM_CODES, SUB_ZH,
+    CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH, LM_ZH, LM_CODES,
+    SUB_ZH,
     zhTable, $, esc, pad8, byId,
   });
 })();

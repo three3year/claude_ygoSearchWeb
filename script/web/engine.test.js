@@ -123,6 +123,28 @@ const CARDS = [
          '這個卡名的①效果1回合只能使用1次。', '①：這張卡攻擊力上升500。'],
     k: ['x', 'x', 'x', 'c'], ro: ['mat', 'cond', 'limit', ''],
   },
+
+  // 票06 的核心對照組:① 是誘發即時但不含關鍵字、② 含關鍵字但是啟動效果。
+  // 整段卡文比對的話這張會中,句層耦合則不中——這正是分水嶺。
+  {
+    id: 20110, n: '耦合異句樣本卡', c: 'm', s: ['effect'],
+    at: 'water', r: 'fiend', lv: 5, atk: 1800, df: 2200,
+    tx: ['①：對手把卡發動時可以發動。', '②：把對手場上1張卡除外。'],
+    k: ['q', 'i'], o: ['o', ''],
+  },
+  // 同一句同時滿足:命中,而且命中效果句索引指向那一句
+  {
+    id: 20111, n: '耦合同句樣本卡', c: 'm', s: ['effect'],
+    at: 'water', r: 'fiend', lv: 5, atk: 1800, df: 2200,
+    tx: ['①：對手把卡發動時，把對手場上1張卡除外。'],
+    k: ['q'], o: ['o'],
+  },
+  // 必發與選發各一句(通常陷阱卡效果承載這個屬性)
+  {
+    id: 20112, n: '必發樣本卡', c: 't', s: ['normal'],
+    tx: ['①：這張卡被破壞的場合必須發動。', '②：這張卡發動後可以追加處理。'],
+    k: ['tn', 'tn'], o: ['m', 'o'],
+  },
 ];
 
 const item = (code, zh) => ({ code, zh });
@@ -156,7 +178,13 @@ const VOCAB = {
                   item('q', '誘發即時效果(2速)'), item('t', '誘發效果(1速)'),
                   item('i', '啟動效果'), item('sn', '通常魔法卡效果'),
                   item('sr', '儀式魔法卡效果'), item('sp', '靈擺魔法卡效果'),
-                  item('tn', '通常陷阱卡效果'), item('tc', '永續陷阱卡效果')] },
+                  item('tn', '通常陷阱卡效果'), item('tc', '永續陷阱卡效果')],
+          groups: [{ zh: '怪獸側', codes: ['x', 'c', 'q', 't', 'i'] },
+                   { zh: '魔陷卡效果', codes: ['sn', 'sr', 'sp', 'tn', 'tc'] }] },
+  // 承載關係住在值域正典(CONTEXT.md「必發/選發」):只有誘發即時(2速)、
+  // 誘發(1速)與魔陷卡效果十值承載,永續效果與啟動效果不承載
+  optional: { zh: '必發/選發', items: [item('m', '必發'), item('o', '選發')],
+              carriers: ['q', 't', 'sn', 'sr', 'sp', 'tn', 'tc'] },
   role: { zh: '效果外文本種別',
           items: [item('mat', '素材指定'), item('cond', '召喚條件'),
                   item('limit', '使用次數限制')] },
@@ -369,8 +397,8 @@ test('效果文軸與卡層軸並用是 AND', () => {
 /* ── 卡片參數軸:三態(票05) ──────────────────────────── */
 
 const MONSTERS = [46986414, 89631139, 23995346, 2511, 84013237,
-                  20101, 20102, 20103, 20105, 20109];
-const NON_MONSTERS = [483, 10000, 20104, 20106, 20107, 20108];
+                  20101, 20102, 20103, 20105, 20109, 20110, 20111];
+const NON_MONSTERS = [483, 10000, 20104, 20106, 20107, 20108, 20112];
 
 test('三態的三種狀態各自的結果', () => {
   assert.deepStrictEqual(ids({}), ALL);                    // 未選
@@ -383,12 +411,12 @@ test('三態的三種狀態各自的結果', () => {
 test('同一軸同時包含與排除時排除優先', () => {
   // 子類型是多值的,同一張卡可以同時中包含與排除——那時以排除為準
   assert.deepStrictEqual(ids({ sub: { 'm:effect': 1 } }),
-                         [2511, 20101, 20102, 20103, 20105, 20109]);
+                         [2511, 20101, 20102, 20103, 20105, 20109, 20110, 20111]);
   assert.deepStrictEqual(ids({ sub: { 'm:effect': 1, 'm:link': -1 } }),
-                         [2511, 20102, 20103, 20105, 20109]);
+                         [2511, 20102, 20103, 20105, 20109, 20110, 20111]);
   // 排除寫在包含前面或後面都一樣(不能只在寫法順序上成立)
   assert.deepStrictEqual(ids({ sub: { 'm:link': -1, 'm:effect': 1 } }),
-                         [2511, 20102, 20103, 20105, 20109]);
+                         [2511, 20102, 20103, 20105, 20109, 20110, 20111]);
 });
 
 test('軸內 OR、軸間 AND', () => {
@@ -497,6 +525,96 @@ test('參數軸與關鍵字軸並用是 AND', () => {
                          [23995346]);
 });
 
+/* ── 效果類型與必發/選發軸(票06) ──────────────────────
+   [[效果標記表]]花了 20 多張判定票判出來的效果類型,到這一票才有使用者。
+   句層耦合是這一段的核心:效果文關鍵字與效果類型**必須命中同一個效果句**。 */
+
+test('效果類型可篩選,軸內 OR、軸間 AND、三態排除', () => {
+  assert.deepStrictEqual(ids({ kind: { q: 1 } }), [2511, 20110, 20111]);
+  assert.deepStrictEqual(ids({ kind: { sr: 1 } }), [20106]);
+  assert.deepStrictEqual(ids({ kind: { sr: 1, tc: 1 } }), [20104, 20106]);
+  // 排除是**這一句不是那個類型**,不是「這張卡沒有那個類型的句子」——句層條件的
+  // 排除同樣落在效果句上,否則同一個軸會有兩種語意
+  assert.deepStrictEqual(ids({ kind: { i: -1 } }).includes(20103), false);
+  assert.deepStrictEqual(ids({ kind: { i: -1 } }).includes(20110), true);
+  // 空的條件物件等於沒設
+  assert.deepStrictEqual(ids({ kind: {} }), ALL);
+});
+
+test('效果類型的命中效果句索引指向那一句', () => {
+  assert.deepStrictEqual(rowsOf({ kind: { q: 1 } }, 2511), [1]);
+  assert.deepStrictEqual(rowsOf({ kind: { i: 1 } }, 20110), [1]);
+  assert.deepStrictEqual(rowsOf({ kind: { tn: 1 } }, 20112), [0, 1]);
+  // 沒有效果句的純通常怪獸不被效果類型條件命中(故事文不是效果)
+  assert.deepStrictEqual(ids({ kind: { x: 1 } }).includes(46986414), false);
+});
+
+test('句層耦合:效果文關鍵字與效果類型必須命中同一個效果句', () => {
+  // 20110 的 ① 是誘發即時但不含關鍵字、② 含關鍵字但是啟動效果 → 不命中
+  assert.deepStrictEqual(ids({ text: '除外' }), [20110, 20111]);
+  assert.deepStrictEqual(ids({ kind: { q: 1 } }), [2511, 20110, 20111]);
+  assert.deepStrictEqual(ids({ text: '除外', kind: { q: 1 } }), [20111]);
+  // 命中效果句索引指向同時滿足的那一句
+  assert.deepStrictEqual(rowsOf({ text: '除外', kind: { q: 1 } }, 20111), [0]);
+  // 反過來配:② 是啟動效果且含關鍵字,那一句同時滿足
+  assert.deepStrictEqual(ids({ text: '除外', kind: { i: 1 } }), [20110]);
+  assert.deepStrictEqual(rowsOf({ text: '除外', kind: { i: 1 } }, 20110), [1]);
+});
+
+test('必發/選發可篩選,且只在承載的效果類型上生效', () => {
+  assert.deepStrictEqual(ids({ opt: { m: 1 } }), [20112]);
+  assert.deepStrictEqual(ids({ opt: { o: 1 } }), [20110, 20111, 20112]);
+  assert.deepStrictEqual(rowsOf({ opt: { m: 1 } }, 20112), [0]);
+  assert.deepStrictEqual(rowsOf({ opt: { o: 1 } }, 20112), [1]);
+  // 永續效果不承載這個屬性:「永續效果是必發」永遠零結果(所以 UI 不讓它設出來)
+  assert.deepStrictEqual(ids({ kind: { c: 1 } }), [20109]);
+  assert.deepStrictEqual(ids({ kind: { c: 1 }, opt: { m: 1 } }), []);
+  // 承載型的效果類型但這一句沒有值:不被必發命中,也不被「排除必發」排掉
+  assert.deepStrictEqual(ids({ opt: { m: 1 } }).includes(20101), false);
+  assert.deepStrictEqual(rowsOf({ kind: { t: 1 }, opt: { m: -1 } }, 20101), [1]);
+});
+
+test('必發/選發與效果文也走同一個效果句', () => {
+  assert.deepStrictEqual(ids({ text: '除外', opt: { o: 1 } }), [20111]);
+  assert.deepStrictEqual(ids({ text: '除外', opt: { m: 1 } }), []);
+});
+
+test('效果類型條件掃得到素材指定行,效果文關鍵字仍然不掃', () => {
+  // 不掃素材行是**關鍵字**的規則(574 張融合怪獸的素材寫法會淹掉答案),
+  // 不是「素材行不存在」——找效果外文本的人要看得到它
+  assert.deepStrictEqual(rowsOf({ kind: { x: 1 } }, 20109), [0, 1, 2]);
+  assert.deepStrictEqual(ids({ kind: { x: 1 }, text: '融合' }), []);
+  assert.deepStrictEqual(rowsOf({ kind: { x: 1 }, text: '召喚' }, 20109), [1]);
+});
+
+test('句層條件回報得出來,多條件並用時三種都在', () => {
+  assert.deepStrictEqual(harness.marks(sandbox, { kind: { q: 1 } }),
+                         [{ type: 'kind' }]);
+  assert.deepStrictEqual(harness.marks(sandbox, { opt: { m: 1 } }),
+                         [{ type: 'opt' }]);
+  assert.deepStrictEqual(
+    harness.marks(sandbox, { text: '除外', kind: { q: 1 }, opt: { o: 1 } }),
+    [{ type: 'text', value: '除外' }, { type: 'kind' }, { type: 'opt' }]);
+  // 一顆鈕都沒點的軸不算生效中的條件
+  assert.deepStrictEqual(harness.marks(sandbox, { kind: {} }), []);
+});
+
+test('必發/選發那一組條件只在承載它的效果類型被選時出得來', () => {
+  const avail = sel => harness.optionalAvailable(sandbox, sel);
+  // 一顆效果類型都沒選:「必發」自己就是有結果的條件,不必先選滿承載的那幾顆
+  assert.strictEqual(avail(null), true);
+  assert.strictEqual(avail({}), true);
+  // 選的全是不承載的類型 → 收起來(「永續效果是必發」永遠零結果)
+  assert.strictEqual(avail({ c: 1 }), false);
+  assert.strictEqual(avail({ c: 1, i: 1, x: 1 }), false);
+  // 只要有一個承載就出得來(軸內是 OR)
+  assert.strictEqual(avail({ q: 1 }), true);
+  assert.strictEqual(avail({ c: 1, q: 1 }), true);
+  // 排除不是「已選」:排除永續效果之後,命中的句子仍然可能是承載型的
+  assert.strictEqual(avail({ c: -1 }), true);
+  assert.strictEqual(avail({ q: -1 }), true);
+});
+
 /* ── 按鈕由值域正典生成 ────────────────────────────────
    沙箱裡沒有真的 DOM,而 DOM 那一層只是照這份清單擺按鈕——清單是這條性質
    測得到的形狀(ADR-0008)。 */
@@ -504,8 +622,12 @@ test('參數軸與關鍵字軸並用是 AND', () => {
 test('分類類條件的按鈕清單由 window.VOCAB 導出', () => {
   const axes = harness.axes(sandbox);
   assert.deepStrictEqual(axes.map(a => a.key + '/' + a.side),
-                         ['cat/', 'sub/m', 'sub/s', 'sub/t', 'attr/', 'race/',
-                          'lm/', 'rarity/', 'ot/']);
+                         ['kind/', 'opt/', 'cat/', 'sub/m', 'sub/s', 'sub/t',
+                          'attr/', 'race/', 'lm/', 'rarity/', 'ot/']);
+  // 效果類型十六值分怪獸側與魔陷卡效果兩組呈現(Story 23):十六顆鈕排在一起時,
+  // 使用者要看得出哪些是同一個維度的東西
+  assert.deepStrictEqual(axes.find(a => a.key === 'kind').groups.map(g => g.zh),
+                         ['怪獸側', '魔陷卡效果']);
   const race = axes.find(a => a.key === 'race');
   // 軸標題也來自值域(HTML 連軸叫什麼名字都不知道)
   assert.strictEqual(race.zh, VOCAB.race.zh);

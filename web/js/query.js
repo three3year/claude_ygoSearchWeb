@@ -24,15 +24,21 @@ const LANGS = [
   { v: 'en', label: '英', title: '比對英文卡名' },
 ];
 
-/* 卡片參數的欄位表,**順序即側欄由上到下的排列**。一張表同時餵給三件事:按鈕生成、
-   read()、clear()——分成三份的話,加一軸要記得改三個地方,而漏改的那一處會安靜地
-   不生效。
+/* 生成的條件軸的欄位表,**順序即側欄由上到下的排列**。一張表同時餵給三件事:
+   按鈕生成、read()、clear()——分成三份的話,加一軸要記得改三個地方,而漏改的那一處
+   會安靜地不生效。
    - `tri`:三態鈕軸;`dom` 是[[值域正典]]的值域名,選項與軸標題都從 VOCAB 導出。
    - `side`:子類型是**一個**軸的三段(怪獸/魔法/陷阱),不是三個軸——三個軸的話
      「融合怪獸或速攻魔法」會變成軸間 AND、永遠零筆。短碼跨側重複,所以帶大類前綴。
    - `range`:數值範圍,只給一邊也要正確。
-   - `unknown`:攻守 `?` 的獨立條件——`?` 與 0 是不同的東西,不被數值範圍納入。 */
+   - `unknown`:攻守 `?` 的獨立條件——`?` 與 0 是不同的東西,不被數值範圍納入。
+
+   [[效果類型]]與[[必發/選發]]排在最前面,緊接著 HTML 那一段的效果文框:引擎的分界
+   是卡層/句層,而這三個是全部的句層條件——它們並用時取的是同一個效果句(句層耦合),
+   排在一起才看得出那是一組問題,而不是三個獨立的篩子。 */
 const FIELDS = [
+  { tri: 'kind', dom: 'kind' },
+  { tri: 'opt', dom: 'optional' },
   { tri: 'cat', dom: 'cat' },
   { tri: 'sub', dom: 'sub_m', side: 'm' },
   { tri: 'sub', dom: 'sub_s', side: 's' },
@@ -88,6 +94,24 @@ function axes() {
     return { key: f.tri, dom: f.dom, side: f.side || '', zh: dom.zh || f.dom,
              groups };
   });
+}
+
+/**
+ * 「[[必發/選發]]」那一組條件在目前的[[效果類型]]選擇下出不出得來(Story 25)。
+ *
+ * 承載這個屬性的只有誘發即時(2速)、誘發(1速)與[[魔陷卡效果]]十值,**承載關係由
+ * [[值域正典]]宣告**(`VOCAB.optional.carriers`)——抄一份在這裡的話,某天多一個
+ * 承載型的效果類型時這一組會安靜地不出現。
+ *
+ * 規則:已選(包含)的效果類型全都不承載時收起來——「永續效果是必發」是一個永遠
+ * 零結果的條件,不該設得出來。**一顆都沒包含時仍然出得來**:那時「必發」自己就是
+ * 一個有結果的條件(Story 24 要找的「必須發動的效果」不必先點滿十二顆鈕才問得出)。
+ * 排除不算已選:排除永續效果之後,命中的句子仍然可能是承載型的。
+ */
+function optionalAvailable(kindSel) {
+  const carriers = (VOCAB.optional || {}).carriers || [];
+  const included = Object.keys(kindSel || {}).filter(c => kindSel[c] > 0);
+  return !included.length || included.some(c => carriers.indexOf(c) >= 0);
 }
 
 /* ── 側欄的生成 ───────────────────────────────────────── */
@@ -148,13 +172,22 @@ function num(v) {
   return v === '' || v == null || isNaN(+v) ? null : +v;
 }
 
-function readTri(q, f) {
-  const el = axisEl(f.tri, f.side);
-  el.querySelectorAll('.tri').forEach(btn => {
+/* 一軸目前的三態選擇。讀出來的形狀就是引擎吃的形狀,所以「必發/選發 出不出得來」
+   那條規則(optionalAvailable)拿得到現成的答案,不必自己再走一次 DOM。 */
+function triSel(f) {
+  const out = {};
+  axisEl(f.tri, f.side).querySelectorAll('.tri').forEach(btn => {
     if (!btn.dataset.st) return;
     const key = f.side ? f.side + ':' + btn.dataset.code : btn.dataset.code;
-    (q[f.tri] = q[f.tri] || {})[key] = btn.dataset.st === 'ex' ? -1 : 1;
+    out[key] = btn.dataset.st === 'ex' ? -1 : 1;
   });
+  return out;
+}
+
+function readTri(q, f) {
+  const one = triSel(f);
+  // 子類型三段併進同一個軸(`sub`),所以是合併而不是覆寫
+  for (const key in one) (q[f.tri] = q[f.tri] || {})[key] = one[key];
 }
 
 function readRange(q, f) {
@@ -186,17 +219,26 @@ function setTri(btn, st) {
   btn.title = STATE_TITLE[st];
 }
 
-/* 大類選了「包含」才展開對應的子類型組。收起來時把那一組的狀態清掉——留著的話
-   條件還在生效但使用者看不到它,而看不見的條件是解釋不了的零結果。 */
+/* 收起一軸:狀態一併清掉——留著的話條件還在生效但使用者看不到它,而看不見的
+   條件是解釋不了的零結果。 */
+function showAxis(el, show) {
+  if (!show) el.querySelectorAll('.tri').forEach(b => setTri(b, ''));
+  el.hidden = !show;
+}
+
+/* 大類選了「包含」才展開對應的子類型組。 */
 function syncSubs() {
   const cat = axisEl('cat', '');
   FIELDS.filter(f => f.tri === 'sub').forEach(f => {
-    const el = axisEl('sub', f.side);
     const btn = cat.querySelector(`.tri[data-code="${f.side}"]`);
-    const show = !!btn && btn.dataset.st === 'in';
-    if (!show) el.querySelectorAll('.tri').forEach(b => setTri(b, ''));
-    el.hidden = !show;
+    showAxis(axisEl('sub', f.side), !!btn && btn.dataset.st === 'in');
   });
+}
+
+/* 「必發/選發」只在選得出結果時展開(規則見 optionalAvailable)。 */
+function syncOptional() {
+  showAxis(axisEl('opt', ''),
+           optionalAvailable(triSel(FIELDS.find(f => f.tri === 'kind'))));
 }
 
 /** 清除條件:回到「什麼都沒設」的狀態,也就是列出全部卡片的那個狀態 */
@@ -208,6 +250,7 @@ function clear() {
   all('.tri').forEach(btn => setTri(btn, ''));
   all('.range-in').forEach(input => { input.value = ''; });
   syncSubs();
+  syncOptional();
 }
 
 function init() {
@@ -219,14 +262,17 @@ function init() {
   });
   build();
   syncSubs();
+  syncOptional();
   // 委派在容器上:按鈕是生成的,一顆一顆綁事件等於把生成的好處還回去
   $('critParams').addEventListener('click', e => {
     const btn = e.target.closest('.tri');
     if (!btn) return;
     setTri(btn, STATES[(STATES.indexOf(btn.dataset.st) + 1) % STATES.length]);
     if (btn.closest('.axis[data-axis="cat"]')) syncSubs();
+    if (btn.closest('.axis[data-axis="kind"]')) syncOptional();
   });
 }
 
-  return Object.freeze({ read, clear, init, axes, LANGS, FIELDS });
+  return Object.freeze({ read, clear, init, axes, optionalAvailable,
+                         LANGS, FIELDS });
 })();

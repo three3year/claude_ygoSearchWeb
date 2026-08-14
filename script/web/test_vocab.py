@@ -76,6 +76,17 @@ class CanonTest(unittest.TestCase):
         dom = broken("sub_s", fallback="nope")
         self.assertIn("sub_s: fallback 'nope' 不是成員", vocab.problems(dom))
 
+    def test_carrier_must_be_a_kind_member(self):
+        """承載者對不到[[效果類型]]的成員 = 一條永遠不生效的規則。
+
+        寫壞的形狀有兩種下場都很糟:搜尋介面照它決定「必發/選發」出不出得來
+        (碼對不上就永遠不出來),建置期照它擋資料(碼對不上就永遠不擋)。
+        """
+        dom = broken(vocab.OPTIONAL,
+                     carriers=vocab.carriers(vocab.OPTIONAL) + ("zz",))
+        self.assertIn("optional: 承載者 'zz' 不是效果類型的成員",
+                      vocab.problems(dom))
+
 
 class DecodeTest(unittest.TestCase):
     def test_category_and_subtypes(self):
@@ -141,6 +152,25 @@ class ExportTest(unittest.TestCase):
                          ["怪獸側", "魔陷卡效果"])
         self.assertEqual(len(kinds["groups"][0]["codes"]), 6)
         self.assertEqual(len(kinds["groups"][1]["codes"]), 10)
+
+    def test_optional_carriers_are_exported(self):
+        """哪些[[效果類型]]承載[[必發/選發]]是正典的事,不是前端手抄的一張表。
+
+        前端照它決定「必發/選發」那一組條件出不出得來(Story 25);抄在 query.js
+        裡的話,某天多一個承載型的效果類型時那一組會安靜地不出現。
+        """
+        exported = vocab.export()
+        carriers = exported["optional"]["carriers"]
+        self.assertEqual(carriers, list(vocab.carriers(vocab.OPTIONAL)))
+        # 六類怪獸側只有誘發即時(2速)與誘發(1速)承載,魔陷卡效果十值全部承載
+        self.assertEqual(carriers, ["q", "t", "sn", "sq", "sr", "sc", "se",
+                                    "sf", "sp", "tn", "tc", "tk"])
+        self.assertTrue(set(carriers) <= set(vocab.codes(vocab.KIND)))
+        # 不承載的四類:效果外文本、無種類效果、永續效果、啟動效果
+        self.assertEqual(sorted(set(vocab.codes(vocab.KIND)) - set(carriers)),
+                         ["c", "i", "u", "x"])
+        # 沒有承載關係的值域不長這個鍵
+        self.assertNotIn("carriers", exported["race"])
 
     def test_export_order_is_declaration_order(self):
         """宣告序就是按鈕順序,也是領域序排序的比較序,兩者共用同一份。"""

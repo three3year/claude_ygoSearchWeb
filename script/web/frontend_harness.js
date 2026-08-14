@@ -60,6 +60,7 @@ const DRIVER = `
   });
 }
 ;function __axes() { return JSON.stringify(Query.axes()); }
+;function __optAvail(json) { return Query.optionalAvailable(JSON.parse(json)); }
 `;
 
 /**
@@ -118,4 +119,13 @@ function axes(sandbox) {
   return JSON.parse(sandbox.__axes());
 }
 
-module.exports = { load, search, ids, marks, axes };
+/**
+ * 「必發/選發」那一組條件在目前的效果類型選擇下出不出得來(Story 25)。
+ * 與 `axes()` 同一個理由:沙箱裡沒有真的 DOM,而 DOM 那一層只是照這個答案
+ * 決定要不要收起那一軸——規則本身是純的,所以測得到。
+ */
+function optionalAvailable(sandbox, kindSel) {
+  return sandbox.__optAvail(JSON.stringify(kindSel || null));
+}
+
+module.exports = { load, search, ids, marks, axes, optionalAvailable };

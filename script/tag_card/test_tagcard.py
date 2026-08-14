@@ -320,8 +320,12 @@ class TestPreambleSplit(unittest.TestCase):
                          ["0", "①"])
         self.assertEqual(report["preamble_split_fallbacks"], [])
 
-    def test_quote_across_lines_falls_back_and_reports(self):
-        """引用括住前兩行(70488851 形態):票65 先整段退回,合併是票66 的事。"""
+    def test_quote_across_lines_merges_covered_lines(self):
+        """70488851 形態:三行、引用括前兩行 → 拆成 2 段(票66)。
+
+        被引用括住的兩行合為一段(role 召喚條件),次數限制自成一段;引用型
+        效果外明示落到合併後的那個細段,source 升 official。
+        """
         entries, report = build_tag_cards(
             [card(desc="此卡不能通常召喚。只能從墓地特殊召喚。"
                        "這個卡名的①效果1回合只能使用1次。\n①:效果甲。")],
@@ -332,11 +336,64 @@ class TestPreambleSplit(unittest.TestCase):
                  supplement="【『このカードは通常召喚できない。墓地からのみ"
                             "特殊召喚できる』について】\n■効果として扱いません。")])
         clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0-1", "0-2", "①"])
+        self.assertEqual(clauses[0]["text_zh"],
+                         "此卡不能通常召喚。只能從墓地特殊召喚。")
+        self.assertEqual(clauses[0]["text_ja"],
+                         "このカードは通常召喚できない。\n"
+                         "墓地からのみ特殊召喚できる。")
+        self.assertEqual(clauses[1]["text_zh"],
+                         "這個卡名的①效果1回合只能使用1次。")
+        self.assertEqual([c["role"] for c in clauses[:2]],
+                         ["召喚條件", "使用次數限制"])
+        self.assertEqual(clauses[0]["source"], "official")
+        self.assertEqual(clauses[1]["source"], "rule")
+        self.assertEqual(report["preamble_splits"], 1)
+        self.assertEqual(report["preamble_split_fallbacks"], [])
+        self.assertEqual(report["non_effect_outside_preamble"], [])
+
+    def test_quote_covering_all_lines_keeps_single_preamble(self):
+        """引用把整段括成一體:官方視為一句,維持 "0" 不拆也不退回。"""
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。只能從墓地特殊召喚。\n①:效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。\n"
+                           "墓地からのみ特殊召喚できる。\n①:効果甲。",
+                 supplement="【『このカードは通常召喚できない。墓地からのみ"
+                            "特殊召喚できる』について】\n■効果として扱いません。")])
+        clauses = clauses_of(entries, 1000)
         self.assertEqual([c["index"] for c in clauses], ["0", "①"])
         self.assertEqual(report["preamble_splits"], 0)
+        self.assertEqual(report["preamble_split_fallbacks"], [])
+
+    def test_merged_grouping_falls_back_on_unit_mismatch(self):
+        """合併後中文單位數仍對不上 → 整段退回(不猜測的底線不變)。"""
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚,只能從墓地特殊召喚。"
+                       "這個卡名的①效果1回合只能使用1次。\n①:效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。\n"
+                           "墓地からのみ特殊召喚できる。\n"
+                           "このカード名の①の効果は1ターンに1度しか使用できない。\n"
+                           "①:効果甲。",
+                 supplement="【『このカードは通常召喚できない。墓地からのみ"
+                            "特殊召喚できる』について】\n■効果として扱いません。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0", "①"])
         self.assertEqual([(row["id"], row["reason"])
                           for row in report["preamble_split_fallbacks"]],
-                         [(1000, "引用跨界")])
+                         [(1000, "單位數不合")])
+
+    def test_no_supplement_card_splits_by_pure_linebreaks(self):
+        """無補足情報的卡與票65 完全相同:純換行拆分(回歸釘住)。"""
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。\n這個卡名的①效果1回合只能使用1次。\n"
+                       "①:效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。\n"
+                           "このカード名の①の効果は1ターンに1度しか使用できない。\n"
+                           "①:効果甲。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0-1", "0-2", "①"])
+        self.assertEqual([c["source"] for c in clauses[:2]], ["rule", "rule"])
+        self.assertEqual(report["preamble_split_fallbacks"], [])
 
     def test_split_preamble_rows_are_not_rule_layer_targets(self):
         """前言段的類型由位置規則決定,拆出的細段同樣不歸規則層管。"""

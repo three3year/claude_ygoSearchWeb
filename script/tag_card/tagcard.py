@@ -320,8 +320,8 @@ def _quotes_cut_apart(text_ja, spans, supplement):
 # 前言段以**日文官方換行**為拆點(ADR-0009):日文以換行區分前言裡的不同單位
 # (素材指定/召喚條件/使用次數限制),繁中來源常缺這些換行。拆點可由卡文重算,
 # 所以住在建置期而不是拆句表——存檔只會製造會過期的複本。
-# [[補足情報]]的 『…』 引用橫跨拆點時整段退回不拆(引用合併是票66):引用是
-# 官方視為一體的單位,機械規則不猜測。
+# [[補足情報]]的 『…』 引用跨行時,被括住的那幾行合為一段(票66):官方逐項
+# 裁定視為一體的單位不切開。合併後仍有引用被拆點切開時整段退回,不猜測。
 FALLBACK_UNITS = "單位數不合"
 FALLBACK_QUOTE = "引用跨界"
 
@@ -360,26 +360,86 @@ def _zh_unit_spans(text, span):
     return units
 
 
+def _quote_merge_groups(ja_body, lines, supplement):
+    """引用跨行時把被括住的行區間合為一段(票66)→ 合併後的 span 清單。
+
+    定位以各行正規化文字的串接為座標——正規化只剝空白,串接後與整段正規化
+    相同,引用的每個出現位置因此都對得回行區間。跨行的區間全部合併、重疊時
+    取聯集:段只會變大,已被括住的引用不會因為另一個引用的合併而再被切開。
+    """
+    parts = [official.normalise(_slice(ja_body, span)) for span in lines]
+    bounds = []
+    total = 0
+    for part in parts:
+        bounds.append((total, total + len(part)))
+        total += len(part)
+    body = "".join(parts)
+
+    def line_of(pos):
+        return next((i for i, (start, end) in enumerate(bounds)
+                     if start <= pos < end), None)
+
+    merged = []
+    for quoted in official.quotes(supplement):
+        needle = official.normalise(quoted)
+        pos = body.find(needle) if needle else -1
+        while pos >= 0:
+            first, last = line_of(pos), line_of(pos + len(needle) - 1)
+            if first is not None and last is not None and first != last:
+                merged.append([first, last])
+            pos = body.find(needle, pos + 1)
+    if not merged:
+        return list(lines)
+    merged.sort()
+    groups = []
+    for start, end in merged:
+        if groups and start <= groups[-1][1]:
+            groups[-1][1] = max(groups[-1][1], end)
+        else:
+            groups.append([start, end])
+
+    spans = []
+    covered = {pos: (start, end) for start, end in groups
+               for pos in range(start, end + 1)}
+    pos = 0
+    while pos < len(lines):
+        group = covered.get(pos)
+        if group is None:
+            spans.append(lines[pos])
+            pos += 1
+        else:
+            start, end = group
+            spans.append((lines[start][0], lines[end][1]))
+            pos = end + 1
+    return spans
+
+
 def _split_preamble(zh_body, ja_body, supplement):
     """前言段兩側原文 → ([(zh span, ja span), ...], None) 或 (None, 退回原因)。
 
-    日文單行時回 (None, None):不進拆分也不進退回清單。日文每行的單位數 =
-    句號數(無句號行算 1),中文單位總數與之相等時依序分組,否則退回——
-    分組假設中日句序一致,句序調換且句數恰好相等時會錯配且不報錯,防線是
-    抽查(ADR-0009 已知限制)。
+    日文單行、或引用把整段括成一體時回 (None, None):不進拆分也不進退回清單
+    ——後者是官方視為一句,維持現狀正是正確結果。合併後仍有引用被拆點切開
+    的段落退回(合併取聯集,這一道理論上到不了,留著當不猜測的底線)。
+
+    日文每段的單位數 = 句號數(無句號段算 1),中文單位總數與之相等時依序
+    分組,否則退回——分組假設中日句序一致,句序調換且句數恰好相等時會錯配
+    且不報錯,防線是抽查(ADR-0009 已知限制)。
     """
     lines = _line_spans(ja_body, (0, len(ja_body)))
     if len(lines) < 2:
         return None, None
-    if _quotes_cut_apart(ja_body, lines, supplement):
+    groups = _quote_merge_groups(ja_body, lines, supplement)
+    if _quotes_cut_apart(ja_body, groups, supplement):
         return None, FALLBACK_QUOTE
-    counts = [_slice(ja_body, span).count("。") or 1 for span in lines]
+    if len(groups) < 2:
+        return None, None
+    counts = [_slice(ja_body, span).count("。") or 1 for span in groups]
     units = _zh_unit_spans(zh_body, (0, len(zh_body)))
     if len(units) != sum(counts):
         return None, FALLBACK_UNITS
     pairs = []
     pos = 0
-    for span, count in zip(lines, counts):
+    for span, count in zip(groups, counts):
         pairs.append(((units[pos][0], units[pos + count - 1][1]), span))
         pos += count
     return pairs, None

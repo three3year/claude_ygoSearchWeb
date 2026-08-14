@@ -819,3 +819,133 @@ test('排序選單的鍵清單:領域序沒有方向,單鍵各帶預設方向', 
   assert.strictEqual(keys.find(k => k.key === 'atk').dir, 'desc');
   assert.strictEqual(keys.find(k => k.key === 'n').dir, 'asc');
 });
+
+/* ── 網址狀態(票08) ─────────────────────────────────────
+   編解碼是純的,所以測得到:條件物件進去、字串出來、再解析回來還是同一個物件。
+   **往返正是分享出去的網址的全部內容**——在對方那邊還原不回同一個查詢的話,
+   這一票就沒有做到任何事。寫入時機、`hashchange` 與瀏覽器歷史測不到(沙箱裡
+   沒有 location 也沒有歷史),走人工驗收。 */
+
+const hashOf = st => harness.hash(sandbox, st);
+const parseHash = h => harness.parseHash(sandbox, h);
+const canon = h => harness.canonHash(sandbox, h);
+
+/* 空條件的正規形:三個關鍵字框空著、卡名語言是預設的中文、排序是領域序。
+   側欄什麼都沒設時 `Query.read()` 吐的就是這個形狀。 */
+const EMPTY_Q = { name: '', nameLang: 'zh', code: '', text: '' };
+const DOM_SORT = { key: 'dom', dir: '' };
+
+/* 涵蓋各種條件形狀:三態的包含與排除、跨側的子類型、只給一邊的範圍、刻度 0、
+   攻守 `?` 的兩個方向、卡名語言、排序鍵與方向。 */
+const STATES = [
+  { q: { ...EMPTY_Q }, sort: DOM_SORT },
+  { q: { ...EMPTY_Q, name: '青眼%龍', nameLang: 'ja', code: '46986414',
+         text: '墓地%特殊召喚' },
+    sort: DOM_SORT },
+  { q: { ...EMPTY_Q, cat: { m: 1, t: -1 },
+         sub: { 'm:fusion': 1, 'm:normal': -1, 's:quick': 1 },
+         attr: { dark: 1, light: 1 }, race: { dragon: -1 } },
+    sort: { key: 'atk', dir: 'desc' } },
+  { q: { ...EMPTY_Q, kind: { q: 1, i: -1 }, opt: { m: 1 },
+         lv: { min: 4, max: null }, lk: { min: null, max: 3 },
+         sc: { min: 0, max: 0 }, atk: { min: 2500, max: null }, atkq: 1,
+         df: { min: null, max: 2000 }, dfq: -1 },
+    sort: { key: 'lv', dir: 'asc' } },
+  { q: { ...EMPTY_Q, lm: { L: 1, R: -1 }, rarity: { UR: 1 }, ot: { o: -1 },
+         gy: { min: 5, max: 20 } },
+    sort: { key: 'n', dir: 'asc' } },
+];
+
+test('任意條件組合序列化後再解析回來相等(往返,含三態排除)', () => {
+  for (const st of STATES) {
+    assert.deepStrictEqual(parseHash(hashOf(st)), st);
+    // 字串那一側也要是正規形:同一個狀態只有一種寫法,兩份網址因此比得出來
+    assert.strictEqual(canon(hashOf(st)), hashOf(st));
+  }
+});
+
+test('條件經過網址一趟回來,引擎得到同一批卡', () => {
+  // 往返相等的意義在這裡:解析出來的 q 就是接縫 3 吃的形狀,不必再翻譯一次
+  const q = { name: '青眼', cat: { m: 1 }, attr: { light: 1 },
+              atk: { min: 2000, max: null } };
+  const back = parseHash(hashOf({ q, sort: DOM_SORT })).q;
+  assert.ok(ids(q).length);              // 空集合的相等問不出東西
+  assert.deepStrictEqual(ids(back), ids(q));
+});
+
+test('三態的三個狀態雙向可編碼', () => {
+  const h = hashOf({ q: { ...EMPTY_Q, attr: { dark: 1, light: -1 } }, sort: DOM_SORT });
+  // 排除帶 `-` 前綴;碼照值域的宣告序寫(光在闇之前)
+  assert.strictEqual(h, 'attr=-light,dark');
+  const back = parseHash(h).q.attr;
+  assert.deepStrictEqual(back, { light: -1, dark: 1 });
+  // 未選的碼不進網址,也不會在還原時變成「未選」以外的東西
+  assert.ok(!('earth' in back));
+});
+
+test('網址不隨點擊順序而變', () => {
+  // 碼照宣告序寫而不是照使用者點出來的順序:同一組條件只有一個網址,
+  // 兩個人比得出來查的是不是同一件事
+  const of = attr => hashOf({ q: { ...EMPTY_Q, attr }, sort: DOM_SORT });
+  assert.strictEqual(of({ dark: 1, light: 1 }), of({ light: 1, dark: 1 }));
+});
+
+test('排序狀態進網址,預設的領域序不寫', () => {
+  const st = sort => hashOf({ q: EMPTY_Q, sort });
+  assert.strictEqual(st({ key: 'dom', dir: '' }), '');
+  // 方向與該鍵的預設方向相同時省略——網址短一點,而解析時補得回來
+  assert.strictEqual(st({ key: 'atk', dir: 'desc' }), 'sort=atk');
+  assert.strictEqual(st({ key: 'atk', dir: 'asc' }), 'sort=atk&dir=asc');
+  assert.deepStrictEqual(parseHash('sort=atk').sort, { key: 'atk', dir: 'desc' });
+  // 領域序沒有方向:硬寫一個進去也還原不成「領域序＋降序」那種不存在的狀態
+  assert.deepStrictEqual(parseHash('sort=dom&dir=desc').sort, DOM_SORT);
+});
+
+test('空條件的網址是空的', () => {
+  assert.strictEqual(hashOf({ q: EMPTY_Q, sort: DOM_SORT }), '');
+  assert.deepStrictEqual(parseHash(''), { q: EMPTY_Q, sort: DOM_SORT });
+  assert.deepStrictEqual(parseHash('#'), { q: EMPTY_Q, sort: DOM_SORT });
+});
+
+test('壞掉或過期的網址不讓頁面崩掉,忽略該段條件', () => {
+  const good = 'name=' + encodeURIComponent('青眼') + '&attr=dark';
+  const bad = [
+    'zzz=1',                     // 認不得的欄位名
+    'attr=nosuchattr',           // 值不在值域裡
+    'attr=',                     // 空值
+    'attr=-',                    // 只有一個減號
+    'cat=m:fusion',              // 帶了不該有的側前綴
+    'sub=fusion',                // 子類型少了大類前綴(跨側重複的碼因此認不得)
+    'lv=abc', 'lv=', 'atk=x-y',  // 壞掉的範圍
+    'atkq=9',                    // 三態以外的值
+    'sort=nosuchkey', 'dir=sideways',
+    'name=%E9%9D',               // 壞掉的百分比編碼
+    'noequalsign', '', '%', '=1',
+  ];
+  for (const seg of bad) {
+    const st = parseHash(good + '&' + seg);
+    // 壞掉的那一段被忽略,其餘條件照常生效
+    assert.deepStrictEqual(st.q.name, '青眼', seg);
+    assert.deepStrictEqual(st.q.attr, { dark: 1 }, seg);
+    assert.deepStrictEqual(st.sort, DOM_SORT, seg);
+    // 而且忽略是真的忽略:壞掉的段不在條件物件裡留下任何殘骸
+    assert.deepStrictEqual(st, parseHash(good), seg);
+  }
+});
+
+test('正規化過的網址認得出是同一個狀態(自寫的 hash 不重跑搜尋)', () => {
+  const st = { q: { ...EMPTY_Q, name: '青眼', text: '墓地' },
+               sort: { key: 'atk', dir: 'desc' } };
+  const written = hashOf(st);
+  // 瀏覽器對 hash 的百分比編碼各有各的作法(有的原樣留著、有的編起來),
+  // 拿字串直接比會把自己剛寫進去的那一個看成別人改的——那就是同一次搜尋跑兩遍
+  const raw = decodeURIComponent(written);
+  assert.notStrictEqual(raw, written);
+  assert.strictEqual(canon(raw), written);
+  assert.strictEqual(canon('#' + written), written);
+  // 段的順序不同、寫了可省略的預設值,都收斂到同一個字串
+  assert.strictEqual(
+    canon('nameLang=zh&sort=atk&dir=desc&text=' + encodeURIComponent('墓地')
+          + '&name=' + encodeURIComponent('青眼')),
+    written);
+});

@@ -241,6 +241,56 @@ function syncOptional() {
            optionalAvailable(triSel(FIELDS.find(f => f.tri === 'kind'))));
 }
 
+/* ── 寫入(網址還原條件走這一條) ───────────────────────── */
+
+/* 收起來的軸不寫:子類型那三組要選了對應的大類才展得開,而網址上可能帶著
+   「有子類型、沒有大類」這種過期的組合。看不見的條件是解釋不了的零結果,
+   所以那一段忽略——與 showAxis 收軸時清狀態是同一條規則。 */
+function writeTri(q, f) {
+  const el = axisEl(f.tri, f.side);
+  const sel = (el.hidden ? null : q[f.tri]) || {};
+  el.querySelectorAll('.tri').forEach(btn => {
+    const key = f.side ? f.side + ':' + btn.dataset.code : btn.dataset.code;
+    setTri(btn, sel[key] > 0 ? 'in' : (sel[key] < 0 ? 'ex' : ''));
+  });
+}
+
+function writeRange(q, f) {
+  const box = $('critParams').querySelector(`.range[data-range="${f.range}"]`);
+  const r = q[f.range] || {};
+  const set = (end, v) => {
+    box.querySelector(`[data-end="${end}"]`).value = v == null ? '' : v;
+  };
+  set('min', r.min);
+  set('max', r.max);
+  if (!f.unknown) return;
+  const u = q[f.unknown];
+  setTri(box.querySelector('.tri-q'), u > 0 ? 'in' : (u < 0 ? 'ex' : ''));
+}
+
+/**
+ * 查詢條件物件 → 側欄(`read()` 的反向)。網址還原條件走的就是這一條。
+ *
+ * 先清空再逐項寫:沒出現在條件裡的軸一律回到未選,否則上一次的設定會留在
+ * 畫面上繼續生效,而使用者以為自己看的是網址裡那個查詢。
+ *
+ * 大類與效果類型**先寫一輪**,子類型與必發/選發那幾組才展得開——收著的軸
+ * 寫進去等於沒寫(writeTri 會把它清掉),而那正是過期網址該有的下場。
+ */
+function write(q) {
+  q = q || {};
+  clear();
+  $('fName').value = q.name || '';
+  $('fId').value = q.code || '';
+  $('fText').value = q.text || '';
+  showLang($('fNameLang'), langOf(q.nameLang).v);
+  FIELDS.filter(f => f.tri === 'cat' || f.tri === 'kind')
+    .forEach(f => writeTri(q, f));
+  syncSubs();
+  syncOptional();
+  FIELDS.forEach(f => (f.tri ? writeTri : writeRange)(q, f));
+}
+
 /** 清除條件:回到「什麼都沒設」的狀態,也就是列出全部卡片的那個狀態 */
 function clear() {
   $('fName').value = '';
@@ -273,6 +323,6 @@ function init() {
   });
 }
 
-  return Object.freeze({ read, clear, init, axes, optionalAvailable,
+  return Object.freeze({ read, write, clear, init, axes, optionalAvailable,
                          LANGS, FIELDS });
 })();

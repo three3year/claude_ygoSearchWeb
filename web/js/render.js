@@ -297,8 +297,12 @@ function initEffKind() {
    中文名與預設方向是同一份宣告,加一個鍵時不會出現「選單有這個選項但排序沒反應」。
 
    方向鈕只長在有方向的鍵上——領域序是固定的七層比較,把它反過來排出來的東西
-   (陷阱在前、等級低到高、密碼大到小)不對應任何一個問題。 */
-function initSort() {
+   (陷阱在前、等級低到高、密碼大到小)不對應任何一個問題。
+
+   `onChange` 是換排序之後的回呼(票08 拿它更新網址):排序是「這份結果怎麼看」
+   的一部分,分享出去的連結講的是我現在看到的這一頁。呈現層自己不知道有網址
+   這回事——它只回報「排序被換過了」,要不要記進網址是主流程的事。 */
+function initSort(onChange) {
   const keySel = $('sortKey');
   const dirBtn = $('sortDir');
   keySel.innerHTML = Sort.KEYS.map(k =>
@@ -312,14 +316,15 @@ function initSort() {
     dirBtn.title = state.sortDir === 'desc'
       ? '目前是降序（點一下改升序）' : '目前是升序（點一下改降序）';
   };
+  const changed = () => { render(); if (onChange) onChange(); };
   keySel.addEventListener('change', () => {
     // 切換鍵時帶上那個鍵的預設方向:選了攻擊力就該看到最高的那張
     setSort(keySel.value, Sort.specOf(keySel.value).dir);
-    render();
+    changed();
   });
   dirBtn.addEventListener('click', () => {
     setSort(state.sortKey, state.sortDir === 'desc' ? 'asc' : 'desc');
-    render();
+    changed();
   });
   paintSort();
 }

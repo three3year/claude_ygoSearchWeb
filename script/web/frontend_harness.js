@@ -68,6 +68,9 @@ const DRIVER = `
     .map(function (e) { return e.card.id; }));
 }
 ;function __sortKeys() { return JSON.stringify(Sort.KEYS); }
+;function __hash(json) { return Hash.stringify(JSON.parse(json)); }
+;function __unhash(s) { return JSON.stringify(Hash.parse(s)); }
+;function __canonHash(s) { return Hash.canon(s); }
 `;
 
 /**
@@ -151,5 +154,26 @@ function sortKeys(sandbox) {
   return JSON.parse(sandbox.__sortKeys());
 }
 
+/**
+ * 網址狀態(票08)。`{ q, sort }` ⇄ `#hash` 的字串,兩邊都是純函式。
+ *
+ * 寫入時機、`hashchange` 與瀏覽器歷史測不到(沙箱裡沒有 location 也沒有歷史),
+ * 走人工驗收;**編解碼本身是純的,所以往返測得到**——而往返正是分享出去的網址
+ * 在對方那邊還原成同一個查詢的全部內容。
+ */
+function hash(sandbox, state) {
+  return sandbox.__hash(JSON.stringify(state || {}));
+}
+
+/** `#hash` → `{ q, sort }`(q 就是接縫 3 吃的查詢條件形狀) */
+function parseHash(sandbox, str) {
+  return JSON.parse(sandbox.__unhash(String(str == null ? '' : str)));
+}
+
+/** 網址的正規形。主流程靠它認出「這個 hashchange 是不是我自己寫的」 */
+function canonHash(sandbox, str) {
+  return sandbox.__canonHash(String(str == null ? '' : str));
+}
+
 module.exports = { load, search, ids, marks, axes, optionalAvailable,
-                   sortedIds, sortKeys };
+                   sortedIds, sortKeys, hash, parseHash, canonHash };

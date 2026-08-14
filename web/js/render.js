@@ -177,15 +177,20 @@ function group(label, lines, divider) {
     <div class="eff-group-label">${label}</div>${lines}`;
 }
 
-/* 一行效果句。效果外文本依 `role` 分三種弱化樣式,素材指定行另依召喚法上色;
-   行首的標籤寫 role(有的話)而不是「效果外文本」——8,180 行都寫同一個詞
-   等於沒寫,而那三種 role 才是使用者一眼要分出來的東西。 */
+/* 一行效果句。效果外文本依 `role` 分三種弱化樣式,素材指定行另依召喚法上色。
+   標籤寫 role(有的話)而不是「效果外文本」——8,180 行都寫同一個詞等於沒寫,
+   而那三種 role 才是使用者一眼要分出來的東西。
+
+   標籤**常態不顯示,點一下該行才展開在整段效果文的下方**:讀卡文的人多數時候
+   要讀的是卡文,每一行都掛著一顆類型標籤是雜訊;而想知道「這一句是誘發即時還是
+   啟動」的時候,那是一次刻意的提問,值得一次點擊。放下方而不是接在文字後面——
+   接在後面的話它會擠進最後一行的行尾,看起來像卡文的一部分。 */
 function effHtml(c, text, i) {
   const role = (c.ro && c.ro[i]) || '';
   const kind = (c.k && c.k[i]) || '';
   const label = role ? ROLE_ZH[role] : (KIND_ZH[kind] || kind);
-  return `<p class="eff${roleClass(c, role)}" data-ei="${i}">${
-    label ? `<span class="eff-kind">${esc(label)}</span>` : ''}${body(text)}</p>`;
+  return `<p class="eff${roleClass(c, role)}" data-ei="${i}">${body(text)}${
+    label ? `<span class="eff-kind">${esc(label)}</span>` : ''}</p>`;
 }
 
 function roleClass(c, role) {
@@ -200,6 +205,17 @@ function body(text) {
   return esc(text)
     .replace(/(?!^)(?<!\n)●/g, '<br>●')
     .replace(/\n/g, '<br>');
+}
+
+/* 效果類型標籤的展開:點一下效果句那一行,標籤在該段效果文下方出現,再點收起。
+   沒有標籤的行(故事文、空的靈擺欄)不反應。展開狀態不進呈現狀態——它是一次
+   「這句是什麼類型?」的提問,翻頁或重搜之後那個問題已經問完了。 */
+function initEffKind() {
+  $('results').addEventListener('click', e => {
+    const p = e.target.closest('.eff');
+    if (!p || !p.querySelector('.eff-kind')) return;
+    p.classList.toggle('show-kind');
+  });
 }
 
 /* 異圖切換:只換 <img> 的 src 與版次,不重繪卡片——異圖是同一張卡,
@@ -264,7 +280,7 @@ function goto(page) {
   /* state 關在閉包裡:讀寫都走具名函式,繞過「換每頁筆數要回到第 1 頁」這條
      不變式的第二條路徑(View.state.page = …)從結構上不存在 */
   return Object.freeze({
-    render, initAltArt,
+    render, initAltArt, initEffKind,
     page: () => state.page,
     perPage: () => state.perPage,
     setPage(p) { state.page = p; },

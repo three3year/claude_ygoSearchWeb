@@ -196,13 +196,22 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .card-text .eff.flavor { font-style: italic; color: var(--muted); }
 /* 空的靈擺欄(16 張):標頭底下真的沒有東西,寫出來才不會看起來像漏掉 */
 .card-text .eff.empty { color: var(--muted); opacity: .6; }
-/* 效果類型:碼 → 中文由 window.VOCAB 對照(值域正典住建置期,ADR-0008) */
+/* 效果類型/role 的標籤:碼 → 中文由 window.VOCAB 對照(值域正典住建置期,ADR-0008)。
+   **常態不顯示,點一下該行才展開在整段效果文下方**——讀卡文的人多數時候要讀的是
+   卡文,32,637 行各掛一顆標籤是雜訊。展開時整行的底色跟著亮起來,才看得出是哪一行
+   在回答。`display: block` 讓它自己佔一行,而不是擠在最後一行的行尾。 */
 .eff-kind {
-  display: inline-block; margin-right: 8px; padding: 0 6px;
+  display: none; width: fit-content; margin-top: 5px; padding: 0 6px;
   background: var(--surface2); border: 1px solid var(--border);
   border-radius: 4px; color: var(--muted); font-size: 11px;
-  vertical-align: 1px;
 }
+.card-text .eff.show-kind .eff-kind { display: block; }
+.card-text .eff.show-kind {
+  background: var(--surface2); border-left-color: var(--border);
+}
+/* 有標籤可看的行才給指標:故事文與空的靈擺欄點了不會有反應 */
+.card-text .eff { cursor: pointer; }
+.card-text .eff.flavor, .card-text .eff.empty { cursor: default; }
 
 /* ─── 效果外文本的三種弱化樣式 ────────────────────────────
    素材指定 / 召喚條件 / 使用次數限制:一眼分得出哪幾行根本不是效果。

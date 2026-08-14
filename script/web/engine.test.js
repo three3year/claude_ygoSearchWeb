@@ -1,5 +1,5 @@
 /**
- * test_engine.js — 接縫 3(前端查詢引擎)的測試
+ * engine.test.js — 接縫 3(前端查詢引擎)的測試
  *
  * 跑法:`node --test script/web/`
  *
@@ -19,28 +19,29 @@ const assert = require('node:assert');
 const harness = require('./frontend_harness.js');
 
 /* ── 合成資料集 ────────────────────────────────────────────
-   欄位形狀與 `web/data.js` 一致:空值省略而不是寫 null,值一律短碼。 */
+   欄位形狀與 `web/data.js` 一致:空值省略而不是寫 null,值一律短碼。
+   前七張是票03 留下的卡名/密碼樣本;`20101` 起是票04/05 的邊界樣本。 */
 
 const CARDS = [
   {
     id: 46986414, al: [46986430, 36996508],
     n: '黑魔導', nj: 'ブラック・マジシャン', ne: 'Dark Magician',
     c: 'm', s: ['normal'], at: 'dark', r: 'spellcaster', lv: 7,
-    atk: 2500, df: 2100,
+    atk: 2500, df: 2100, ra: 'UR', ot: 'b',
     d: '究極的攻擊魔術師。',
   },
   {
     id: 89631139,
     n: '青眼白龍', nj: '青眼の白龍', ne: 'Blue-Eyes White Dragon',
     c: 'm', s: ['normal'], at: 'light', r: 'dragon', lv: 8,
-    atk: 3000, df: 2500,
+    atk: 3000, df: 2500, ra: 'UR', ot: 'b', gy: 15,
     d: '以高攻擊力著稱的傳說之龍。',
   },
   {
     id: 23995346,
     n: '青眼究極龍', nj: '青眼の究極竜', ne: 'Blue-Eyes Ultimate Dragon',
     c: 'm', s: ['fusion'], at: 'light', r: 'dragon', lv: 12,
-    atk: 4500, df: 3800,
+    atk: 4500, df: 3800, ra: 'SR',
     tx: ['「青眼白龍」＋「青眼白龍」＋「青眼白龍」'],
     k: ['x'], ro: ['mat'],
   },
@@ -68,14 +69,104 @@ const CARDS = [
   },
   // 只有中文卡名的卡(日/英欄位缺席):語言切換不得因此爆掉
   { id: 10000, n: '無名的試作卡', c: 't', s: ['normal'], tx: ['①：什麼都不做。'], k: ['tn'] },
+
+  // 連結怪獸:連結值存 `lk`,**沒有 `df` 這個鍵**——那是「沒有這個參數」而不是 `?`
+  {
+    id: 20101, n: '連結樣本卡', c: 'm', s: ['link', 'effect'],
+    at: 'wind', r: 'cyberse', lk: 2, lm: ['L', 'R'], atk: 1200, ot: 'o',
+    tx: ['連結怪獸以外的怪獸2隻', '①：這張卡連結召喚成功的場合發動。'],
+    k: ['x', 't'], ro: ['mat', ''],
+  },
+  // 靈擺怪獸:刻度 0 是真的值(28 張),不是空
+  {
+    id: 20102, n: '靈擺樣本卡', c: 'm', s: ['pendulum', 'effect'],
+    at: 'fire', r: 'pyro', lv: 4, sc: 0, atk: 1500, df: 1000, ra: 'N',
+    tx: ['①：靈擺區域的這張卡發動。', '①：這張卡在怪獸區域時發動。'],
+    k: ['sp', 'i'], pz: [0],
+  },
+  // 攻守都是 `?`:哨兵值為負,與 0 是不同的東西
+  {
+    id: 20103, n: '不定樣本卡', c: 'm', s: ['effect'],
+    at: 'divine', r: 'divine_beast', lv: 10, atk: -2, df: -2,
+    tx: ['①：支付基本分決定攻擊力。'], k: ['i'],
+  },
+  // 罠モンスター:怪獸參數寫在效果文的括號裡,索引裡**沒有**那五個欄位(card-list 票07)
+  {
+    id: 20104, n: '岩石陷阱樣本卡', c: 't', s: ['continuous'],
+    tx: ['①：這張卡以效果怪獸卡（岩石族・地・星4・攻1000／守1000）的身分特殊召喚。'],
+    k: ['tc'],
+  },
+  // 儀式:同一個短碼在怪獸側與魔法側是兩件事(cdb 位元 0x80 兩邊都有)
+  {
+    id: 20105, n: '儀式怪獸樣本卡', c: 'm', s: ['ritual', 'effect'],
+    at: 'light', r: 'fairy', lv: 6, atk: 2000, df: 1700,
+    tx: ['①：這張卡儀式召喚成功時發動。'], k: ['t'],
+  },
+  {
+    id: 20106, n: '儀式魔法樣本卡', c: 's', s: ['ritual'], ot: 't', gy: 5,
+    tx: ['①：把手牌的儀式怪獸1隻儀式召喚。'], k: ['sr'],
+  },
+  // 句層耦合:同一句裡同時出現 vs 散落在兩句
+  {
+    id: 20107, n: '同句樣本卡', c: 's', s: ['normal'],
+    tx: ['①：把手牌1張捨棄，從墓地特殊召喚1隻怪獸。'], k: ['sn'],
+  },
+  {
+    id: 20108, n: '異句樣本卡', c: 's', s: ['normal'],
+    tx: ['①：把手牌1張捨棄。', '②：從墓地特殊召喚1隻怪獸。'], k: ['sn', 'sn'],
+  },
+  // 四行各一種 role:素材指定不掃,召喚條件與使用次數限制照掃
+  {
+    id: 20109, n: '素材樣本卡', c: 'm', s: ['fusion', 'effect'],
+    at: 'dark', r: 'fiend', lv: 8, atk: 2800, df: 2000,
+    tx: ['融合怪獸1隻＋惡魔族怪獸1隻', '這張卡不能通常召喚。',
+         '這個卡名的①效果1回合只能使用1次。', '①：這張卡攻擊力上升500。'],
+    k: ['x', 'x', 'x', 'c'], ro: ['mat', 'cond', 'limit', ''],
+  },
 ];
 
+const item = (code, zh) => ({ code, zh });
+
 const VOCAB = {
-  cat: { zh: '大類', items: [{ code: 'm', zh: '怪獸' }, { code: 's', zh: '魔法' },
-                             { code: 't', zh: '陷阱' }] },
-  kind: { zh: '效果類型', items: [{ code: 'x', zh: '效果外文本' }, { code: 'q', zh: '誘發即時效果(2速)' },
-                                  { code: 'tn', zh: '通常陷阱卡效果' }] },
-  role: { zh: 'role', items: [{ code: 'mat', zh: '素材指定' }, { code: 'limit', zh: '使用次數限制' }] },
+  cat: { zh: '大類', items: [item('m', '怪獸'), item('s', '魔法'), item('t', '陷阱')] },
+  sub_m: {
+    zh: '怪獸子類型',
+    items: [item('normal', '通常'), item('effect', '效果'), item('fusion', '融合'),
+            item('ritual', '儀式'), item('xyz', '超量'), item('pendulum', '靈擺'),
+            item('link', '連結')],
+    groups: [{ zh: '卡框', codes: ['normal', 'effect', 'fusion', 'ritual', 'xyz',
+                                   'pendulum', 'link'] }],
+  },
+  sub_s: { zh: '魔法子類型',
+           items: [item('normal', '通常'), item('quick', '速攻'), item('ritual', '儀式')] },
+  sub_t: { zh: '陷阱子類型',
+           items: [item('normal', '通常'), item('continuous', '永續')] },
+  attr: { zh: '屬性',
+          items: [item('earth', '地'), item('water', '水'), item('fire', '炎'),
+                  item('wind', '風'), item('light', '光'), item('dark', '闇'),
+                  item('divine', '神')] },
+  race: { zh: '種族',
+          items: [item('warrior', '戰士族'), item('spellcaster', '魔法使族'),
+                  item('fairy', '天使族'), item('fiend', '惡魔族'),
+                  item('pyro', '炎族'), item('rock', '岩石族'),
+                  item('dragon', '龍族'), item('cyberse', '電子界族'),
+                  item('divine_beast', '幻神獸族')] },
+  kind: { zh: '效果類型',
+          items: [item('x', '效果外文本'), item('c', '永續效果'),
+                  item('q', '誘發即時效果(2速)'), item('t', '誘發效果(1速)'),
+                  item('i', '啟動效果'), item('sn', '通常魔法卡效果'),
+                  item('sr', '儀式魔法卡效果'), item('sp', '靈擺魔法卡效果'),
+                  item('tn', '通常陷阱卡效果'), item('tc', '永續陷阱卡效果')] },
+  role: { zh: '效果外文本種別',
+          items: [item('mat', '素材指定'), item('cond', '召喚條件'),
+                  item('limit', '使用次數限制')] },
+  lm: { zh: '連結標記',
+        items: [item('TL', '↖'), item('T', '↑'), item('TR', '↗'), item('L', '←'),
+                item('R', '→'), item('BL', '↙'), item('B', '↓'), item('BR', '↘')] },
+  rarity: { zh: 'MD 稀有度',
+            items: [item('N', 'N'), item('R', 'R'), item('SR', 'SR'), item('UR', 'UR')] },
+  ot: { zh: 'OCG・TCG',
+        items: [item('o', 'OCG 限定'), item('t', 'TCG 限定'), item('b', '兩者')] },
 };
 
 const META = {
@@ -85,6 +176,7 @@ const META = {
 
 const sandbox = harness.load({ cards: CARDS, vocab: VOCAB, meta: META });
 const ids = q => harness.ids(sandbox, q);
+const rowsOf = (q, id) => (harness.search(sandbox, q).find(e => e.id === id) || {}).rows;
 const ALL = CARDS.map(c => c.id);
 
 /* ── 空條件 ───────────────────────────────────────────── */
@@ -95,18 +187,20 @@ test('空條件列出全部,不擋', () => {
   assert.deepStrictEqual(ids({ name: '   ' }), ALL);
   // 只打了萬用字元等於沒有條件
   assert.deepStrictEqual(ids({ name: '%' }), ALL);
+  assert.deepStrictEqual(ids({ text: '%' }), ALL);
 });
 
 test('關鍵字前後的空白不影響比對', () => {
   assert.deepStrictEqual(ids({ name: ' 青眼 ' }), [89631139, 23995346]);
   assert.deepStrictEqual(ids({ code: ' 46986430 ' }), [46986414]);
+  assert.deepStrictEqual(ids({ text: ' 墓地 ' }), [20107, 20108]);
 });
 
 test('回傳值帶每張卡的命中效果句索引欄位', () => {
-  // 票03 還沒有句層條件,rows 因此是 null——但欄位存在,票04/06 接得上
+  // 卡層條件不寫 rows(卡名軸沒有「命中哪一句」可言),但欄位一律存在
   const hits = harness.search(sandbox, { name: '青眼' });
   assert.deepStrictEqual(hits.map(e => e.id), [89631139, 23995346]);
-  assert.ok(hits.every(e => 'rows' in e));
+  assert.ok(hits.every(e => 'rows' in e && e.rows === null));
 });
 
 /* ── 卡名軸:中文 ─────────────────────────────────────── */
@@ -205,4 +299,232 @@ test('密碼軸空白等於沒設,非數字則不命中任何卡', () => {
 test('卡名軸與密碼軸並用是 AND', () => {
   assert.deepStrictEqual(ids({ name: '黑魔導', code: '46986414' }), [46986414]);
   assert.deepStrictEqual(ids({ name: '青眼', code: '46986414' }), []);
+});
+
+/* ── 效果文軸:逐效果句獨立比對(票04) ────────────────────
+   這是這個站與一般查卡站的分水嶺:一般查卡站對整段卡文做關鍵字比對,
+   分不出「同一個效果做了兩件事」與「兩件事散落在兩個無關的效果」。 */
+
+test('效果文關鍵字在同一句裡同時滿足才算命中', () => {
+  // 20107 兩個詞在同一句;20108 一句一個——整段卡文比對的話兩張都會中
+  assert.deepStrictEqual(ids({ text: '手牌%墓地' }), [20107]);
+  assert.deepStrictEqual(ids({ text: '手牌' }), [2511, 20106, 20107, 20108]);
+  assert.deepStrictEqual(ids({ text: '墓地' }), [20107, 20108]);
+});
+
+test('命中效果句索引指向正確的那一句', () => {
+  assert.deepStrictEqual(rowsOf({ text: '墓地' }, 20108), [1]);
+  assert.deepStrictEqual(rowsOf({ text: '手牌' }, 20108), [0]);
+  assert.deepStrictEqual(rowsOf({ text: '手牌%墓地' }, 20107), [0]);
+  // 多句命中就多個索引;沒命中的句子不進去(標亮只落在真正命中的那幾行)
+  assert.deepStrictEqual(rowsOf({ text: '攻擊力' }, 20109), [3]);
+  assert.deepStrictEqual(rowsOf({ text: '這張卡' }, 20109), [1, 3]);
+});
+
+test('效果文框的 % 萬用字元語意同卡名框', () => {
+  assert.deepStrictEqual(ids({ text: '把手牌%捨棄' }), [20107, 20108]);
+  assert.deepStrictEqual(ids({ text: '%捨棄' }), [2511, 20107, 20108]);
+  // 順序有意義
+  assert.deepStrictEqual(ids({ text: '墓地%手牌' }), []);
+});
+
+test('效果文關鍵字不掃 role = 素材指定 的行', () => {
+  // 574 張融合怪獸的素材寫法會把真正的答案淹掉,所以固定不掃
+  assert.deepStrictEqual(ids({ text: '融合' }), []);
+  assert.deepStrictEqual(ids({ text: '惡魔族' }), []);
+  // 「怪獸」出現在四張卡的素材行裡,一張都不該因此命中
+  assert.deepStrictEqual(ids({ text: '怪獸' }),
+                         [20102, 20104, 20106, 20107, 20108]);
+  // 已知副作用:效果文框搜「青眼白龍」撈不到把它寫在素材行的融合怪獸
+  assert.deepStrictEqual(ids({ text: '青眼白龍' }), []);
+  assert.deepStrictEqual(ids({ name: '青眼白龍' }), [89631139]);
+});
+
+test('召喚條件與使用次數限制的行照樣掃', () => {
+  assert.deepStrictEqual(ids({ text: '不能通常召喚' }), [20109]);
+  assert.deepStrictEqual(rowsOf({ text: '不能通常召喚' }, 20109), [1]);
+  assert.deepStrictEqual(ids({ text: '1回合' }), [2511, 483, 20109]);
+  assert.deepStrictEqual(rowsOf({ text: '1回合' }, 20109), [2]);
+});
+
+test('沒有效果句的卡不被效果文條件命中', () => {
+  // 純通常怪獸只有故事文,那不是效果——搜效果文搜不到它是對的
+  assert.deepStrictEqual(ids({ text: '魔術師' }), []);
+  assert.deepStrictEqual(ids({ name: '黑魔導' }), [46986414]);
+});
+
+test('生效中的句層條件回報得出來(呈現層照它寫命中行的 badge)', () => {
+  assert.deepStrictEqual(harness.marks(sandbox, { text: '墓地' }),
+                         [{ type: 'text', value: '墓地' }]);
+  assert.deepStrictEqual(harness.marks(sandbox, {}), []);
+  assert.deepStrictEqual(harness.marks(sandbox, { name: '青眼' }), []);
+});
+
+test('效果文軸與卡層軸並用是 AND', () => {
+  assert.deepStrictEqual(ids({ text: '墓地', name: '同句' }), [20107]);
+  assert.deepStrictEqual(ids({ text: '墓地', name: '青眼' }), []);
+  assert.deepStrictEqual(ids({ text: '手牌', cat: { s: 1 } }), [20106, 20107, 20108]);
+});
+
+/* ── 卡片參數軸:三態(票05) ──────────────────────────── */
+
+const MONSTERS = [46986414, 89631139, 23995346, 2511, 84013237,
+                  20101, 20102, 20103, 20105, 20109];
+const NON_MONSTERS = [483, 10000, 20104, 20106, 20107, 20108];
+
+test('三態的三種狀態各自的結果', () => {
+  assert.deepStrictEqual(ids({}), ALL);                    // 未選
+  assert.deepStrictEqual(ids({ cat: { m: 1 } }), MONSTERS); // 包含
+  assert.deepStrictEqual(ids({ cat: { m: -1 } }), NON_MONSTERS); // 排除
+  // 空的條件物件等於沒設(全部沒選時 read() 不該把整個軸變成零結果)
+  assert.deepStrictEqual(ids({ cat: {} }), ALL);
+});
+
+test('同一軸同時包含與排除時排除優先', () => {
+  // 子類型是多值的,同一張卡可以同時中包含與排除——那時以排除為準
+  assert.deepStrictEqual(ids({ sub: { 'm:effect': 1 } }),
+                         [2511, 20101, 20102, 20103, 20105, 20109]);
+  assert.deepStrictEqual(ids({ sub: { 'm:effect': 1, 'm:link': -1 } }),
+                         [2511, 20102, 20103, 20105, 20109]);
+  // 排除寫在包含前面或後面都一樣(不能只在寫法順序上成立)
+  assert.deepStrictEqual(ids({ sub: { 'm:link': -1, 'm:effect': 1 } }),
+                         [2511, 20102, 20103, 20105, 20109]);
+});
+
+test('軸內 OR、軸間 AND', () => {
+  assert.deepStrictEqual(ids({ attr: { dark: 1 } }), [46986414, 2511, 20109]);
+  assert.deepStrictEqual(ids({ attr: { dark: 1, light: 1 } }),
+                         [46986414, 89631139, 23995346, 2511, 84013237, 20105, 20109]);
+  assert.deepStrictEqual(ids({ attr: { light: 1 }, race: { dragon: 1 } }),
+                         [89631139, 23995346]);
+  assert.deepStrictEqual(ids({ attr: { dark: 1 }, race: { dragon: 1 } }), []);
+});
+
+test('子類型的短碼帶大類前綴:儀式怪獸與儀式魔法不互撈', () => {
+  assert.deepStrictEqual(ids({ sub: { 'm:ritual': 1 } }), [20105]);
+  assert.deepStrictEqual(ids({ sub: { 's:ritual': 1 } }), [20106]);
+  // 子類型是**一個**軸的三段:跨側多選是 OR,不是永遠零筆的 AND
+  assert.deepStrictEqual(ids({ sub: { 'm:fusion': 1, 's:quick': 1 } }),
+                         [23995346, 483, 20109]);
+  // 大類軸與子類型軸之間仍是 AND
+  assert.deepStrictEqual(ids({ cat: { m: 1 }, sub: { 's:ritual': 1 } }), []);
+});
+
+/* ── 卡片參數軸:範圍與 `?` ───────────────────────────── */
+
+test('範圍條件的邊界與只給一邊', () => {
+  assert.deepStrictEqual(ids({ lv: { min: 8 } }),
+                         [89631139, 23995346, 20103, 20109]);
+  assert.deepStrictEqual(ids({ lv: { max: 1 } }), [2511]);
+  assert.deepStrictEqual(ids({ lv: { min: 4, max: 4 } }), [84013237, 20102]);
+  assert.deepStrictEqual(ids({ lv: { min: 12, max: 12 } }), [23995346]);
+  assert.deepStrictEqual(ids({ lv: { min: 13 } }), []);
+  // 兩邊都空等於沒設,不該把「沒有等級」的卡全部濾掉
+  assert.deepStrictEqual(ids({ lv: {} }), ALL);
+});
+
+test('等級軸不撈連結怪獸,連結值軸只撈連結怪獸', () => {
+  // 連結值存在 `lk`、等級存在 `lv`,兩個欄位不共用
+  assert.deepStrictEqual(ids({ lk: { min: 1 } }), [20101]);
+  assert.deepStrictEqual(ids({ lv: { min: 1 } }).includes(20101), false);
+});
+
+test('靈擺刻度 0 是真的值而不是空', () => {
+  assert.deepStrictEqual(ids({ sc: { min: 0, max: 0 } }), [20102]);
+  assert.deepStrictEqual(ids({ sc: { min: 1 } }), []);
+});
+
+test('攻守 `?` 不被數值範圍納入', () => {
+  assert.deepStrictEqual(ids({ atk: { min: 2500 } }),
+                         [46986414, 89631139, 23995346, 84013237, 20109]);
+  // `?` 以負的哨兵值存,當成 0 的話這一條會把它撈進來
+  assert.deepStrictEqual(ids({ atk: { min: 0, max: 0 } }), [2511]);
+  assert.deepStrictEqual(ids({ atk: { max: 1200 } }), [2511, 20101]);
+  assert.deepStrictEqual(ids({ df: { min: 0, max: 2000 } }),
+                         [2511, 84013237, 20102, 20105, 20109]);
+});
+
+test('攻守 `?` 有獨立條件', () => {
+  assert.deepStrictEqual(ids({ atkq: 1 }), [20103]);
+  assert.deepStrictEqual(ids({ atkq: -1 }), ALL.filter(id => id !== 20103));
+  assert.deepStrictEqual(ids({ dfq: 1 }), [20103]);
+});
+
+test('連結怪獸的守備不算 `?`', () => {
+  // 20101 沒有 `df` 這個鍵:那是「沒有這個參數」,不是不明
+  assert.deepStrictEqual(ids({ dfq: 1 }).includes(20101), false);
+  assert.deepStrictEqual(ids({ dfq: -1 }).includes(20101), true);
+  assert.deepStrictEqual(ids({ df: { min: 0 } }).includes(20101), false);
+});
+
+test('罠モンスター不被種族/屬性/等級/攻守條件命中', () => {
+  // 20104 的效果文寫著「岩石族・地・星4・攻1000／守1000」,但那是它變成怪獸之後的
+  // 參數,索引裡根本沒有這五個欄位(card-list 票07)——想找它的人用效果文關鍵字
+  assert.deepStrictEqual(ids({ race: { rock: 1 } }), []);
+  assert.deepStrictEqual(ids({ attr: { earth: 1 } }), []);
+  assert.deepStrictEqual(ids({ lv: { min: 4, max: 4 } }).includes(20104), false);
+  assert.deepStrictEqual(ids({ atk: { min: 1000, max: 1000 } }), []);
+  assert.deepStrictEqual(ids({ text: '岩石族' }), [20104]);
+});
+
+/* ── 卡片參數軸:連結標記與三個印刷面欄位 ───────────────── */
+
+test('連結標記可篩選', () => {
+  assert.deepStrictEqual(ids({ lm: { L: 1 } }), [20101]);
+  assert.deepStrictEqual(ids({ lm: { TL: 1 } }), []);
+  assert.deepStrictEqual(ids({ lm: { L: 1, TL: 1 } }), [20101]);   // 軸內 OR
+  assert.deepStrictEqual(ids({ lm: { L: -1 } }), ALL.filter(id => id !== 20101));
+});
+
+test('MD 稀有度、Genesys 點數、OCG・TCG 三個條件', () => {
+  assert.deepStrictEqual(ids({ rarity: { UR: 1 } }), [46986414, 89631139]);
+  assert.deepStrictEqual(ids({ rarity: { UR: 1, N: 1 } }), [46986414, 89631139, 20102]);
+  // MD 未實裝不是值域成員(它是「沒有這個欄位」):四種全排除就是那一批
+  assert.deepStrictEqual(ids({ rarity: { N: -1, R: -1, SR: -1, UR: -1 } }),
+                         ALL.filter(id => ![46986414, 89631139, 23995346, 20102]
+                           .includes(id)));
+  assert.deepStrictEqual(ids({ ot: { o: 1 } }), [20101]);
+  assert.deepStrictEqual(ids({ ot: { t: 1 } }), [20106]);
+  assert.deepStrictEqual(ids({ gy: { min: 1 } }), [89631139, 20106]);
+  assert.deepStrictEqual(ids({ gy: { min: 6 } }), [89631139]);
+});
+
+test('參數軸與關鍵字軸並用是 AND', () => {
+  assert.deepStrictEqual(ids({ attr: { light: 1 }, atk: { min: 3000 } }),
+                         [89631139, 23995346]);
+  assert.deepStrictEqual(ids({ cat: { m: 1 }, text: '怪獸' }), [20102]);
+  assert.deepStrictEqual(ids({ name: '青眼', race: { dragon: 1 }, lv: { min: 10 } }),
+                         [23995346]);
+});
+
+/* ── 按鈕由值域正典生成 ────────────────────────────────
+   沙箱裡沒有真的 DOM,而 DOM 那一層只是照這份清單擺按鈕——清單是這條性質
+   測得到的形狀(ADR-0008)。 */
+
+test('分類類條件的按鈕清單由 window.VOCAB 導出', () => {
+  const axes = harness.axes(sandbox);
+  assert.deepStrictEqual(axes.map(a => a.key + '/' + a.side),
+                         ['cat/', 'sub/m', 'sub/s', 'sub/t', 'attr/', 'race/',
+                          'lm/', 'rarity/', 'ot/']);
+  const race = axes.find(a => a.key === 'race');
+  // 軸標題也來自值域(HTML 連軸叫什麼名字都不知道)
+  assert.strictEqual(race.zh, VOCAB.race.zh);
+  assert.deepStrictEqual(race.groups[0].items.map(i => i.code),
+                         VOCAB.race.items.map(i => i.code));
+  // 有分組的值域照分組排,沒有分組的整批一組、組名留空
+  assert.deepStrictEqual(axes.find(a => a.side === 'm').groups.map(g => g.zh), ['卡框']);
+  assert.deepStrictEqual(race.groups.map(g => g.zh), ['']);
+});
+
+test('在值域正典裡加一個種族,按鈕自動多一顆', () => {
+  const grown = {
+    ...VOCAB,
+    race: { zh: '種族', items: [...VOCAB.race.items, item('slime', '史萊姆族')] },
+  };
+  const box = harness.load({ cards: CARDS, vocab: grown, meta: META });
+  const before = harness.axes(sandbox).find(a => a.key === 'race');
+  const after = harness.axes(box).find(a => a.key === 'race');
+  assert.strictEqual(after.groups[0].items.length,
+                     before.groups[0].items.length + 1);
+  assert.deepStrictEqual(after.groups[0].items.at(-1), { code: 'slime', zh: '史萊姆族' });
 });

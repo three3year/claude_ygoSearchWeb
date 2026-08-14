@@ -49,13 +49,17 @@ function scriptSrcs() {
 const DRIVER = `
 ;function __runQuery(json) {
   var result = Engine.runQuery(window.CARD_DATA, JSON.parse(json));
-  return JSON.stringify(result.cards.map(function (e) {
-    return {
-      id: e.card.id,
-      rows: e.rows ? Array.from(e.rows).sort(function (a, b) { return a - b; }) : null,
-    };
-  }));
+  return JSON.stringify({
+    cards: result.cards.map(function (e) {
+      return {
+        id: e.card.id,
+        rows: e.rows ? Array.from(e.rows).sort(function (a, b) { return a - b; }) : null,
+      };
+    }),
+    marks: result.marks,
+  });
 }
+;function __axes() { return JSON.stringify(Query.axes()); }
 `;
 
 /**
@@ -93,7 +97,7 @@ function load({ cards = [], vocab = {}, meta = {} } = {}) {
 
 /** 接縫 3:查詢條件 → [{ id, rows }],rows 是該卡命中的效果句索引(沒有句層條件時為 null) */
 function search(sandbox, query) {
-  return JSON.parse(sandbox.__runQuery(JSON.stringify(query)));
+  return JSON.parse(sandbox.__runQuery(JSON.stringify(query))).cards;
 }
 
 /** 只要命中的卡片密碼清單(順序即引擎回傳序) */
@@ -101,4 +105,17 @@ function ids(sandbox, query) {
   return search(sandbox, query).map(e => e.id);
 }
 
-module.exports = { load, search, ids };
+/** 生效中的句層條件(呈現層照它寫命中行的 badge) */
+function marks(sandbox, query) {
+  return JSON.parse(sandbox.__runQuery(JSON.stringify(query))).marks;
+}
+
+/**
+ * 分類類條件的按鈕清單。**這是「按鈕由值域正典生成」唯一測得到的形狀**——沙箱裡
+ * 沒有真的 DOM,而 DOM 那一層只是照這份清單擺按鈕。值域多一個成員,這裡就多一顆。
+ */
+function axes(sandbox) {
+  return JSON.parse(sandbox.__axes());
+}
+
+module.exports = { load, search, ids, marks, axes };

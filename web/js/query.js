@@ -4,13 +4,17 @@
  * 側欄是**唯一的可變真相**:條件物件由它導出,沒有第二份「上次查了什麼」的狀態。
  * 引擎(engine.js)吃的是這裡吐出來的純物件,因此測試餵條件進去不必假造 DOM。
  *
- * 後面幾張票的條件軸(效果文、卡片參數、效果類型)各自在 read/clear 加一段;
- * 票08 的 `#hash` 編解碼也接在這個物件上——序列化的對象就是它。
+ * **卡片參數的按鈕全部由 `window.VOCAB` 生成,HTML 只留一個空殼容器**(ADR-0008)。
+ * 在[[值域正典]]裡加一個種族,按鈕自動多一顆;漏一個碼則是建置期就撞得到。手抄一份
+ * 選項在 HTML 裡的話,兩處必然漂移,而漂移的形狀是「某批卡點不出來」——不報錯、
+ * 不白屏,只是結果少了幾百張而沒有人會察覺。
+ *
+ * 票08 的 `#hash` 編解碼也接在條件物件上——序列化的對象就是它。
  */
 'use strict';
 
 const Query = (() => {
-const { $ } = Util;
+const { $, VOCAB, esc } = Util;
 
 /* 卡名語言三態循環:中 → 日 → 英 → 中。碼、鈕面文字與說明在這裡一處決定,
    HTML 只給起始態(`data-v`)。 */
@@ -19,6 +23,38 @@ const LANGS = [
   { v: 'ja', label: '日', title: '比對日文卡名（含 ※ 別名）' },
   { v: 'en', label: '英', title: '比對英文卡名' },
 ];
+
+/* 卡片參數的欄位表,**順序即側欄由上到下的排列**。一張表同時餵給三件事:按鈕生成、
+   read()、clear()——分成三份的話,加一軸要記得改三個地方,而漏改的那一處會安靜地
+   不生效。
+   - `tri`:三態鈕軸;`dom` 是[[值域正典]]的值域名,選項與軸標題都從 VOCAB 導出。
+   - `side`:子類型是**一個**軸的三段(怪獸/魔法/陷阱),不是三個軸——三個軸的話
+     「融合怪獸或速攻魔法」會變成軸間 AND、永遠零筆。短碼跨側重複,所以帶大類前綴。
+   - `range`:數值範圍,只給一邊也要正確。
+   - `unknown`:攻守 `?` 的獨立條件——`?` 與 0 是不同的東西,不被數值範圍納入。 */
+const FIELDS = [
+  { tri: 'cat', dom: 'cat' },
+  { tri: 'sub', dom: 'sub_m', side: 'm' },
+  { tri: 'sub', dom: 'sub_s', side: 's' },
+  { tri: 'sub', dom: 'sub_t', side: 't' },
+  { tri: 'attr', dom: 'attr' },
+  { tri: 'race', dom: 'race' },
+  { range: 'lv', zh: '等級／階級' },
+  { range: 'lk', zh: '連結值' },
+  { range: 'sc', zh: '靈擺刻度' },
+  { range: 'atk', zh: '攻擊力', unknown: 'atkq' },
+  { range: 'df', zh: '守備力', unknown: 'dfq' },
+  { tri: 'lm', dom: 'lm' },
+  { tri: 'rarity', dom: 'rarity' },
+  { range: 'gy', zh: 'Genesys 點數' },
+  { tri: 'ot', dom: 'ot' },
+];
+
+/* 三態:未選 → 包含 → 排除 → 未選。'' 不是狀態的缺席而是第三個狀態,所以循環表
+   把它排在裡面而不是用另一條路徑處理。 */
+const STATES = ['', 'in', 'ex'];
+const STATE_TITLE = { '': '未選（再點一次＝包含）', in: '包含（再點一次＝排除）',
+                      ex: '排除（再點一次＝取消）' };
 
 function langOf(v) {
   return LANGS.find(l => l.v === v) || LANGS[0];
@@ -31,20 +67,147 @@ function showLang(el, v) {
   el.title = lang.title;
 }
 
+/**
+ * 分類類條件的按鈕清單,**由 `window.VOCAB` 導出**。
+ *
+ * 導出而不是在 DOM 建好之後再回頭數:這是「按鈕由正典生成」這條性質唯一測得到的
+ * 形狀(接縫 3 的沙箱沒有真的 DOM)。值域多一個成員,這裡就多一顆鈕。
+ */
+function axes() {
+  return FIELDS.filter(f => f.tri).map(f => {
+    const dom = VOCAB[f.dom] || {};
+    const items = dom.items || [];
+    const byCode = {};
+    items.forEach(it => { byCode[it.code] = it; });
+    // 有分組的值域(子類型的卡框/能力、效果類型的怪獸側/魔陷卡)照分組排;
+    // 其餘整批一組,組名留空——沒有分組的軸不該長出一個沒有意義的小標題。
+    const groups = (dom.groups || []).length
+      ? dom.groups.map(g => ({ zh: g.zh,
+                               items: g.codes.map(c => byCode[c]).filter(Boolean) }))
+      : [{ zh: '', items }];
+    return { key: f.tri, dom: f.dom, side: f.side || '', zh: dom.zh || f.dom,
+             groups };
+  });
+}
+
+/* ── 側欄的生成 ───────────────────────────────────────── */
+
+function triBtn(code, zh) {
+  return `<button type="button" class="tri" data-code="${esc(code)}"
+    data-st="" title="${STATE_TITLE['']}">${esc(zh)}</button>`;
+}
+
+function axisHtml(ax) {
+  const body = ax.groups.map(g => {
+    const row = `<div class="tri-row">${
+      g.items.map(it => triBtn(it.code, it.zh)).join('')}</div>`;
+    return g.zh ? `<div class="tri-group">
+      <span class="group-label">${esc(g.zh)}</span>${row}</div>` : row;
+  }).join('');
+  // 子類型的三組各自摺著,選了對應的大類才展開(選了怪獸才看得到怪獸子類型)
+  return `<div class="axis" data-axis="${ax.key}" data-side="${ax.side}"${
+    ax.side ? ' hidden' : ''}>
+    <span class="field-label">${esc(ax.zh)}</span>${body}</div>`;
+}
+
+function rangeHtml(f) {
+  const num = which => `<input type="number" class="range-in"
+    data-key="${f.range}" data-end="${which}" aria-label="${esc(f.zh)}${
+    which === 'min' ? '下限' : '上限'}">`;
+  // 攻守的 `?` 是第三種值而不是某個數字:83 張攻 `?`、54 張守 `?`,它們在數值
+  // 範圍裡被靜靜排除的話就再也找不到了,所以自己一顆三態鈕
+  const unknown = f.unknown
+    ? `<button type="button" class="tri tri-q" data-code="?" data-st=""
+        data-unknown="${f.unknown}" title="${STATE_TITLE['']}">?</button>` : '';
+  return `<div class="range" data-range="${f.range}">
+    <span class="field-label">${esc(f.zh)}</span>
+    <div class="range-row">${num('min')}<span class="range-sep">～</span>${
+      num('max')}${unknown}</div></div>`;
+}
+
+function build() {
+  const axisByKey = {};
+  axes().forEach(ax => { axisByKey[ax.key + '/' + ax.side] = ax; });
+  $('critParams').innerHTML = FIELDS.map(f => f.tri
+    ? axisHtml(axisByKey[f.tri + '/' + (f.side || '')])
+    : rangeHtml(f)).join('');
+}
+
+/* ── 讀取 ─────────────────────────────────────────────── */
+
+function all(sel) {
+  return Array.prototype.slice.call($('critParams').querySelectorAll(sel));
+}
+
+function axisEl(key, side) {
+  return $('critParams').querySelector(
+    `.axis[data-axis="${key}"][data-side="${side || ''}"]`);
+}
+
+function num(v) {
+  return v === '' || v == null || isNaN(+v) ? null : +v;
+}
+
+function readTri(q, f) {
+  const el = axisEl(f.tri, f.side);
+  el.querySelectorAll('.tri').forEach(btn => {
+    if (!btn.dataset.st) return;
+    const key = f.side ? f.side + ':' + btn.dataset.code : btn.dataset.code;
+    (q[f.tri] = q[f.tri] || {})[key] = btn.dataset.st === 'ex' ? -1 : 1;
+  });
+}
+
+function readRange(q, f) {
+  const box = $('critParams').querySelector(`.range[data-range="${f.range}"]`);
+  const at = end => num(box.querySelector(`[data-end="${end}"]`).value);
+  const min = at('min'), max = at('max');
+  if (min != null || max != null) q[f.range] = { min, max };
+  if (!f.unknown) return;
+  const btn = box.querySelector('.tri-q');
+  if (btn.dataset.st) q[f.unknown] = btn.dataset.st === 'ex' ? -1 : 1;
+}
+
 /** 側欄目前的設定 → 查詢條件物件(接縫 3 的輸入) */
 function read() {
-  return {
+  const q = {
     name: $('fName').value.trim(),
     nameLang: langOf($('fNameLang').dataset.v).v,
     code: $('fId').value.trim(),
+    text: $('fText').value.trim(),
   };
+  FIELDS.forEach(f => (f.tri ? readTri : readRange)(q, f));
+  return q;
+}
+
+/* ── 互動 ─────────────────────────────────────────────── */
+
+function setTri(btn, st) {
+  btn.dataset.st = st;
+  btn.title = STATE_TITLE[st];
+}
+
+/* 大類選了「包含」才展開對應的子類型組。收起來時把那一組的狀態清掉——留著的話
+   條件還在生效但使用者看不到它,而看不見的條件是解釋不了的零結果。 */
+function syncSubs() {
+  const cat = axisEl('cat', '');
+  FIELDS.filter(f => f.tri === 'sub').forEach(f => {
+    const el = axisEl('sub', f.side);
+    const btn = cat.querySelector(`.tri[data-code="${f.side}"]`);
+    const show = !!btn && btn.dataset.st === 'in';
+    if (!show) el.querySelectorAll('.tri').forEach(b => setTri(b, ''));
+    el.hidden = !show;
+  });
 }
 
 /** 清除條件:回到「什麼都沒設」的狀態,也就是列出全部卡片的那個狀態 */
 function clear() {
   $('fName').value = '';
   $('fId').value = '';
+  $('fText').value = '';
   showLang($('fNameLang'), LANGS[0].v);
+  all('.tri').forEach(btn => setTri(btn, ''));
+  all('.range-in').forEach(input => { input.value = ''; });
+  syncSubs();
 }
 
 function init() {
@@ -54,7 +217,16 @@ function init() {
     const i = LANGS.findIndex(l => l.v === langBtn.dataset.v);
     showLang(langBtn, LANGS[(i + 1) % LANGS.length].v);
   });
+  build();
+  syncSubs();
+  // 委派在容器上:按鈕是生成的,一顆一顆綁事件等於把生成的好處還回去
+  $('critParams').addEventListener('click', e => {
+    const btn = e.target.closest('.tri');
+    if (!btn) return;
+    setTri(btn, STATES[(STATES.indexOf(btn.dataset.st) + 1) % STATES.length]);
+    if (btn.closest('.axis[data-axis="cat"]')) syncSubs();
+  });
 }
 
-  return Object.freeze({ read, clear, init, LANGS });
+  return Object.freeze({ read, clear, init, axes, LANGS, FIELDS });
 })();

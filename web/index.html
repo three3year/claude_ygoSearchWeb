@@ -40,7 +40,19 @@
                  placeholder="卡名關鍵字；% 為萬用字元（青眼%龍）">
         </div>
       </div>
+
+      <div class="field">
+        <span class="field-label">效果文關鍵字</span>
+        <input type="text" id="fText"
+               placeholder="逐效果句比對；% 為萬用字元（墓地%手牌）">
+        <p class="field-hint">同一個效果裡同時出現才算；不掃素材指定行</p>
+      </div>
     </div>
+
+    <!-- 空殼容器:卡片參數的按鈕與範圍全部由 window.VOCAB 生成(ADR-0008)。
+         種族有幾個、子類型有幾種,HTML 一個字都不知道——在值域正典裡加一個種族,
+         這裡自動多一顆鈕。手抄一份選項在這裡的話,漏掉的那一批卡就點不出來。 -->
+    <div class="crit" id="critParams"></div>
   </aside>
 
   <main class="results-area">

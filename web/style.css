@@ -51,7 +51,15 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   border-radius: 10px; padding: 12px;
   max-height: calc(100vh - 28px); overflow-y: auto;
 }
-.sidebar-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+/* 條件變多之後側欄自己會捲(卡片參數一長串),「搜尋」因此釘在側欄頂端——
+   調完種族按鈕還要捲回最上面才按得到,那是每一次搜尋都要付一遍的代價。
+   負 margin 是為了蓋掉側欄的 padding:不蓋的話捲動的內容會從兩側露出來。 */
+.sidebar-actions {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; gap: 8px;
+  margin: -12px -12px 12px; padding: 12px 12px 10px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
 .sidebar-actions button {
   flex: 1; padding: 7px 10px; font-size: 13px; cursor: pointer;
   background: var(--surface2); border: 1px solid var(--border);
@@ -82,6 +90,45 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   border-radius: 6px; color: var(--accent); font-size: 13px; font-family: inherit;
 }
 .lang-cycle:hover { border-color: var(--accent); }
+
+/* ─── 卡片參數:三態鈕與範圍 ──────────────────────────────
+   按鈕由 window.VOCAB 生成(ADR-0008),所以這裡不能有任何一顆鈕的專屬樣式——
+   種族有 26 顆、子類型有 23 顆,樣式只認狀態不認碼。
+   三態:未選(素面)→ 包含(亮起)→ 排除(劃掉)。三種一眼分得出來,而且「排除」
+   長得像被劃掉才不會被誤讀成另一種包含。 */
+.axis { margin-bottom: 10px; }
+.tri-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.tri-group { margin-bottom: 6px; }
+.group-label {
+  display: block; color: var(--muted); font-size: 11px;
+  opacity: .8; margin-bottom: 3px;
+}
+.tri {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+  color: var(--text); cursor: pointer; font-family: inherit; font-size: 12px;
+  line-height: 1.4; padding: 2px 7px;
+}
+.tri:hover { border-color: var(--accent); }
+.tri[data-st="in"] {
+  background: var(--accent); border-color: var(--accent);
+  color: #06131f; font-weight: bold;
+}
+.tri[data-st="ex"] {
+  background: var(--surface2); border-color: #a4483f; color: #e08b83;
+  text-decoration: line-through;
+}
+
+.range { margin-bottom: 10px; }
+.range-row { display: flex; align-items: center; gap: 5px; }
+.range-sep { color: var(--muted); font-size: 12px; }
+.range-in {
+  flex: 1; min-width: 0; width: 100%;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); padding: 4px 6px; font-size: 13px; font-family: inherit;
+}
+.range-in:focus { outline: none; border-color: var(--accent); }
+/* 攻守的 `?` 與數值範圍並排:它是第三種值,不是某個數字 */
+.tri-q { flex: none; padding: 3px 9px; }
 
 /* ─── Actions & Pager ─────────────────────────────────────── */
 .actions {
@@ -212,6 +259,24 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 /* 有標籤可看的行才給指標:故事文與空的靈擺欄點了不會有反應 */
 .card-text .eff { cursor: pointer; }
 .card-text .eff.flavor, .card-text .eff.empty { cursor: default; }
+
+/* ─── 句層命中的標亮 ──────────────────────────────────────
+   命中的是**哪一個效果**看得見:整行標亮 + 行首 badge 說明命中原因 + 關鍵字本身
+   在行內上色。三層各答一個問題——哪一行、為什麼、哪幾個字。未命中的行一個字都
+   不動,標亮才有意義(整張卡都亮起來等於沒亮)。 */
+.card-text .eff.hit {
+  background: var(--hl); border-left-color: var(--hl-border);
+}
+.card-text .eff.hit:hover { background: var(--hl); }
+.eff-hit {
+  display: inline-block; margin-right: 6px; padding: 0 6px;
+  background: var(--hl-border); border-radius: 4px;
+  color: #241f05; font-size: 11px; font-weight: bold; vertical-align: 1px;
+}
+.card-text mark.kw {
+  background: var(--hl-border); color: #241f05;
+  border-radius: 3px; padding: 0 1px;
+}
 
 /* ─── 效果外文本的三種弱化樣式 ────────────────────────────
    素材指定 / 召喚條件 / 使用次數限制:一眼分得出哪幾行根本不是效果。

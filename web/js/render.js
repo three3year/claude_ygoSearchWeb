@@ -28,9 +28,25 @@ const MAT_KINDS = ['ritual', 'fusion', 'synchro', 'xyz', 'link'];
 const state = { page: 1, perPage: 50 };
 
 /* 上一次的查詢產物——換頁與換每頁筆數由此重繪,但沒有人從外面寫入它。
-   形狀就是接縫 3 的回傳值 `{ cards: [{ card, rows }] }`:`rows`(命中的效果句
-   索引)是票04 的標亮與票06 的句層耦合要畫的東西,呈現層照著它畫就好。 */
-let lastResult = { cards: [] };
+   形狀就是接縫 3 的回傳值 `{ cards: [{ card, rows }], marks }`:`rows` 是命中的
+   效果句索引,`marks` 是生效中的句層條件。呈現層照著它畫,不自己再判一次命中。 */
+let lastResult = { cards: [], marks: [] };
+
+/* 命中原因寫在 badge 上的名字。目前只有效果文關鍵字一種句層條件。 */
+const MARK_ZH = { text: '效果文' };
+
+/* 句層條件 → 畫命中行要的兩樣東西:關鍵字的比對段(行內上色用)與 badge 的文字。
+   沒有句層條件時是 null,`effHtml` 因此連問都不必問。
+   **比對段取自引擎導出的 likeParts**:呈現層自己再寫一份切法就會漂開,而漂開的
+   形狀是「這一行被標亮了但沒有一個字上色」。 */
+function highlight(marks) {
+  if (!marks || !marks.length) return null;
+  const text = marks.find(m => m.type === 'text');
+  return {
+    parts: text ? Engine.likeParts(text.value) : [],
+    badge: marks.map(m => MARK_ZH[m.type]).join('・'),
+  };
+}
 
 function render(result = lastResult) {
   lastResult = result;
@@ -44,13 +60,15 @@ function render(result = lastResult) {
     ? `共 ${total} 張，第 ${page}/${pages} 頁`
     : '沒有符合條件的卡片';
 
+  const hl = highlight(result.marks);
   const slice = entries.slice((page - 1) * per, page * per);
-  $('results').innerHTML = slice.map(e => cardHtml(e.card)).join('');
+  $('results').innerHTML = slice.map(e => cardHtml(e, hl)).join('');
   renderPager('pagerTop', pages, page);
   renderPager('pagerBottom', pages, page);
 }
 
-function cardHtml(c) {
+function cardHtml(e, hl) {
+  const c = e.card;
   const names = [c.nj, c.ne, c.ax ? '※' + c.ax : ''].filter(Boolean);
   return `<article class="card" data-cid="${c.id}">
     <div class="card-pic">
@@ -69,7 +87,7 @@ function cardHtml(c) {
         ? `<div class="card-names">${esc(names.join('｜'))}</div>` : ''}
       ${printHtml(c)}
       ${metaHtml(c)}
-      <div class="card-text">${cardText(c)}</div>
+      <div class="card-text">${cardText(c, e.rows, hl)}</div>
     </div>
   </article>`;
 }
@@ -155,10 +173,10 @@ function lmGridHtml(c) {
    **分區與否看的是子類型而不是 `pz` 有沒有內容**:16 張靈擺卡的靈擺欄是空的
    (卡文就寫著 `【靈擺效果】【怪獸效果】` 中間什麼都沒有),照 `pz` 判的話它們會
    連一個標頭都不長,讀的人分不出剩下那幾行是靈擺欄還是怪獸欄的效果。 */
-function cardText(c) {
-  const flavor = c.d ? `<p class="eff flavor">${body(c.d)}</p>` : '';
+function cardText(c, rows, hl) {
+  const flavor = c.d ? `<p class="eff flavor">${lineHtml(c.d)}</p>` : '';
   const tx = c.tx || [];
-  const line = (t, i) => effHtml(c, t, i);
+  const line = (t, i) => effHtml(c, t, i, rows, hl);
   if (!(c.s || []).includes('pendulum')) return tx.map(line).join('') + flavor;
 
   const pend = new Set(c.pz || []);
@@ -185,11 +203,18 @@ function group(label, lines, divider) {
    要讀的是卡文,每一行都掛著一顆類型標籤是雜訊;而想知道「這一句是誘發即時還是
    啟動」的時候,那是一次刻意的提問,值得一次點擊。放下方而不是接在文字後面——
    接在後面的話它會擠進最後一行的行尾,看起來像卡文的一部分。 */
-function effHtml(c, text, i) {
+function effHtml(c, text, i, rows, hl) {
   const role = (c.ro && c.ro[i]) || '';
   const kind = (c.k && c.k[i]) || '';
   const label = role ? ROLE_ZH[role] : (KIND_ZH[kind] || kind);
-  return `<p class="eff${roleClass(c, role)}" data-ei="${i}">${body(text)}${
+  // 命中的那幾行整行標亮、行首掛 badge 說明命中原因,關鍵字本身再在行內上色;
+  // 沒命中的行一個字都不動。多條件並用時 badge 就是那一行為什麼被選中的答案。
+  const hit = !!rows && rows.indexOf(i) >= 0;
+  const ranges = hit && hl && hl.parts.length
+    ? Engine.likeRanges(text, hl.parts) : null;
+  return `<p class="eff${roleClass(c, role)}${hit ? ' hit' : ''}" data-ei="${i}">${
+    hit ? `<span class="eff-hit">${esc(hl.badge)}</span>` : ''}${
+    lineHtml(text, ranges)}${
     label ? `<span class="eff-kind">${esc(label)}</span>` : ''}</p>`;
 }
 
@@ -200,11 +225,25 @@ function roleClass(c, role) {
   return ' role-mat' + (method ? ' mat-' + method : '');
 }
 
-/* ● 選項換行(開頭的●與已經換過行的●不重複換)＋ 原文換行照顯示 */
-function body(text) {
-  return esc(text)
-    .replace(/(?!^)(?<!\n)●/g, '<br>●')
-    .replace(/\n/g, '<br>');
+/* 一行卡文的 HTML:● 選項換行(開頭的●與已經換過行的●不重複換)、原文換行照顯示、
+   命中的關鍵字上色。
+
+   三件事在**同一次走訪**裡決定,而不是先切成「命中段/非命中段」再各自處理:段界
+   上的 ● 會看不到它前面那個字,而那正是「開頭的 ● 不重複換行」要看的東西。
+   `ranges` 是關鍵字在原文裡的位置(來自引擎),沒有就是不上色。 */
+function lineHtml(text, ranges) {
+  const starts = {}, ends = {};
+  (ranges || []).forEach(r => { starts[r[0]] = 1; ends[r[1]] = 1; });
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    if (ends[i]) out += '</mark>';
+    if (starts[i]) out += '<mark class="kw">';
+    const ch = text[i];
+    if (ch === '\n') { out += '<br>'; continue; }
+    if (ch === '●' && i > 0 && text[i - 1] !== '\n') out += '<br>';
+    out += esc(ch);
+  }
+  return out + (ends[text.length] ? '</mark>' : '');
 }
 
 /* 效果類型標籤的展開:點一下效果句那一行,標籤在該段效果文下方出現,再點收起。

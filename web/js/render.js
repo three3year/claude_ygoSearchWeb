@@ -14,8 +14,8 @@
 'use strict';
 
 const View = (() => {
-const { CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH, LM_ZH,
-        LM_CODES, SUB_ZH, $, esc, pad8, byId } = Util;
+const { DB, META, CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH,
+        LM_ZH, LM_CODES, SUB_ZH, $, esc, pad8, byId } = Util;
 
 /* 卡圖:salix5/query-data 的 CDN,檔名就是不補零的卡片密碼 */
 const PIC = 'https://cdn.jsdelivr.net/gh/salix5/query-data@master/pics/';
@@ -33,8 +33,13 @@ const state = { page: 1, perPage: 50,
 
 /* 上一次的查詢產物——換頁與換每頁筆數由此重繪,但沒有人從外面寫入它。
    形狀就是接縫 3 的回傳值 `{ cards: [{ card, rows }], marks }`:`rows` 是命中的
-   效果句索引,`marks` 是生效中的句層條件。呈現層照著它畫,不自己再判一次命中。 */
-let lastResult = { cards: [], marks: [] };
+   效果句索引,`marks` 是生效中的句層條件。呈現層照著它畫,不自己再判一次命中。
+
+   **`null` 是第三種值:還沒有查過(起始畫面)**,與「查了但沒有一張命中」是兩件
+   不同的事——後者要說「沒有符合條件的卡片」,前者不該說任何像是結果的話。分成
+   兩個狀態而不是拿 `cards: []` 兼差,是因為換排序、換每頁筆數走的都是不帶參數的
+   `render()`:起始畫面上調一下每頁筆數,不該把提示換成「沒有符合條件的卡片」。 */
+let lastResult = null;
 
 /* 狀態 → 排序控制項的同步,由 initSort 裝上(在那之前 setSort 沒有控制項要更新) */
 let paintSort = () => {};
@@ -85,6 +90,7 @@ function badgeText(marks, c, i) {
 
 function render(result = lastResult) {
   lastResult = result;
+  if (!result) return renderIdle();
   const entries = Sort.sort(result.cards, state.sortKey, state.sortDir);
   const per = state.perPage;
   const total = entries.length;
@@ -100,6 +106,38 @@ function render(result = lastResult) {
   $('results').innerHTML = slice.map(e => cardHtml(e, hl)).join('');
   renderPager('pagerTop', pages, page);
   renderPager('pagerBottom', pages, page);
+}
+
+/**
+ * 起始畫面:**一條條件都沒有時不列出全部**,而是說一句該做什麼。
+ *
+ * 空條件在引擎那裡仍然是合法的條件、仍然導出全部卡片(那是純函式的性質,沒有
+ * 改)——不列出來是**呈現層的決定**:一開站就吐 14,207 張的第一頁,使用者得到的
+ * 是一批與自己無關的卡,還得先捲過去才找得到條件區;手機上那還是幾十張卡圖的
+ * 流量。畫面該問問題,不該先給一個沒有人問過的答案。
+ *
+ * 留一個「仍要列出全部」的出口:想純逛的人只差一次點擊,而那是一次刻意的選擇。
+ */
+function renderIdle() {
+  const total = META.cards || DB.length;
+  $('resultInfo').textContent = '';
+  $('results').innerHTML = `<div class="idle">
+    <p class="idle-title">設定條件後按「搜尋」</p>
+    <p class="idle-hint">卡片密碼、卡名、效果文關鍵字，或任一卡片參數
+      ——設一條就查得動。</p>
+    <button type="button" class="idle-all">仍要列出全部 ${total} 張</button>
+  </div>`;
+  renderPager('pagerTop', 1, 1);
+  renderPager('pagerBottom', 1, 1);
+}
+
+/* 「仍要列出全部」的接線。呈現層不知道「條件是空的」這件事該由誰放行——它只
+   回報鈕被按了,要不要真的跑那個查詢是主流程的事(與 initSort 的 onChange 同一
+   個分工)。委派在 #results 上,起始畫面每次重畫都不必重綁。 */
+function initIdle(onListAll) {
+  $('results').addEventListener('click', e => {
+    if (e.target.closest('.idle-all')) onListAll();
+  });
 }
 
 function cardHtml(e, hl) {
@@ -406,7 +444,7 @@ function goto(page) {
   /* state 關在閉包裡:讀寫都走具名函式,繞過「換每頁筆數要回到第 1 頁」這條
      不變式的第二條路徑(View.state.page = …)從結構上不存在 */
   return Object.freeze({
-    render, initAltArt, initEffKind, initSort,
+    render, initAltArt, initEffKind, initSort, initIdle,
     page: () => state.page,
     perPage: () => state.perPage,
     sort: () => ({ key: state.sortKey, dir: state.sortDir }),

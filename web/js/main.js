@@ -9,7 +9,9 @@
  * 誘發即時特招」丟給別人),而帶條件的網址一開就還原條件並自動跑那個搜尋——
  * 收到連結的人看到的是結果而不是空表單。編解碼住 hash.js,這裡只管時機。
  *
- * 空條件是合法的條件:一開站就是這個狀態,列出全部 14,207 張(不擋)。
+ * 空條件是合法的條件:按「搜尋」時不擋,列出全部 14,207 張。但**一開站不自動跑
+ * 它**——起始畫面是一句「設定條件後按搜尋」而不是一批沒有人問過的卡(引擎照樣
+ * 導得出全部,不列是呈現層的決定;「仍要列出全部」的出口在起始畫面上)。
  */
 'use strict';
 
@@ -70,13 +72,22 @@ function search() {
 }
 
 /* 網址 → 側欄 → 結果。壞掉或過期的段在 Hash.parse 那裡就被忽略了,
-   這裡拿到的一定是還原得回去的形狀。 */
+   這裡拿到的一定是還原得回去的形狀。
+
+   **零條件的網址不自動搜尋**,畫面是起始提示:一開站(或上一頁退回無條件的網址)
+   就吐 14,207 張的第一頁,使用者拿到的是一批與自己無關的卡。判的是**條件數**而
+   不是「hash 是不是空字串」——只帶排序或卡名語言的網址一樣沒有問任何問題。
+   「列出全部」因此成為一次刻意的動作:按搜尋或按起始畫面上的那顆鈕,兩條路都
+   走 search(),空條件在那裡照舊放行。 */
 function restore() {
   const state = Hash.parse(location.hash);
   Query.write(state.q);
   View.setSort(state.sort.key, state.sort.dir);
   View.setPage(1);
-  run();
+  if (Query.count(state.q)) { run(); return; }
+  appliedQuery = state.q;         // 排序在起始畫面被換過時,網址寫得出正確的條件段
+  Query.summarize(appliedQuery);
+  View.render(null);              // null = 還沒查過,呈現層畫起始提示
 }
 
 /* 別人改的網址(上一頁/下一頁、貼一個新連結進網址列)才重跑;自己剛寫進去的
@@ -95,6 +106,9 @@ function init() {
   Query.init();
   View.initAltArt();
   View.initEffKind();
+  // 起始畫面的「仍要列出全部」走同一條 search():空條件在那裡本來就放行,
+  // 網址、摺疊鈕、捲動行為因此與按搜尋鈕一字不差
+  View.initIdle(search);
   // 換排序也更新網址:分享出去的連結講的是「我現在看到的這一頁」,而
   // 「最高攻擊力的暗屬性誘發即時」這個問題的答案有一半在排序上
   View.initSort(push);
@@ -112,7 +126,7 @@ function init() {
   });
   window.addEventListener('hashchange', onHashChange);
   // 開站時**讀**網址而不是寫:帶條件的連結一開就還原條件並自動搜尋,
-  // 沒帶條件時還原出來的就是空條件(= 全部 14,207 張)。載入不留歷史項。
+  // 沒帶條件時停在起始提示(不自動列出全部)。載入不留歷史項。
   applied = Hash.canon(location.hash);
   restore();
 }

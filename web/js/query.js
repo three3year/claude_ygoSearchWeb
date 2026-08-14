@@ -36,12 +36,14 @@ function read() {
   return {
     name: $('fName').value.trim(),
     nameLang: langOf($('fNameLang').dataset.v).v,
+    code: $('fId').value.trim(),
   };
 }
 
 /** 清除條件:回到「什麼都沒設」的狀態,也就是列出全部卡片的那個狀態 */
 function clear() {
   $('fName').value = '';
+  $('fId').value = '';
   showLang($('fNameLang'), LANGS[0].v);
 }
 

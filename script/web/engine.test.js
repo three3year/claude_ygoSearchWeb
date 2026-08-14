@@ -92,8 +92,14 @@ const ALL = CARDS.map(c => c.id);
 test('空條件列出全部,不擋', () => {
   assert.deepStrictEqual(ids({}), ALL);
   assert.deepStrictEqual(ids({ name: '' }), ALL);
+  assert.deepStrictEqual(ids({ name: '   ' }), ALL);
   // 只打了萬用字元等於沒有條件
   assert.deepStrictEqual(ids({ name: '%' }), ALL);
+});
+
+test('關鍵字前後的空白不影響比對', () => {
+  assert.deepStrictEqual(ids({ name: ' 青眼 ' }), [89631139, 23995346]);
+  assert.deepStrictEqual(ids({ name: ' 46986430 ' }), [46986414]);
 });
 
 test('回傳值帶每張卡的命中效果句索引欄位', () => {
@@ -177,4 +183,31 @@ test('密碼比對是「額外」而不是「取代」:數字照樣比對卡名'
 test('數字要完全相等才算密碼命中,不是子字串', () => {
   // 4698 是 46986414 的前綴,但那不是任何一張卡的密碼
   assert.deepStrictEqual(ids({ name: '4698' }), []);
+});
+
+/* ── 卡片密碼欄位(卡名框以外的獨立一軸) ─────────────── */
+
+test('卡片密碼欄位比對密碼與異圖密碼', () => {
+  assert.deepStrictEqual(ids({ code: '46986414' }), [46986414]);
+  assert.deepStrictEqual(ids({ code: '46986430' }), [46986414]);
+  assert.deepStrictEqual(ids({ code: '00002511' }), [2511]);
+  assert.deepStrictEqual(ids({ code: '4698' }), []);
+});
+
+test('卡片密碼欄位只認密碼,不比對卡名', () => {
+  // 卡名框搜 39 撈得到 No.39,密碼欄位不該有這個副作用
+  assert.deepStrictEqual(ids({ code: '39' }), []);
+});
+
+test('卡片密碼欄位空白等於沒設,非數字則不命中任何卡', () => {
+  assert.deepStrictEqual(ids({ code: '' }), ALL);
+  assert.deepStrictEqual(ids({ code: '   ' }), ALL);
+  // 「打了條件卻當作沒打」會讓使用者以為結果是這個條件篩出來的
+  assert.deepStrictEqual(ids({ code: '青眼' }), []);
+  assert.deepStrictEqual(ids({ code: '4698-6414' }), []);
+});
+
+test('卡名軸與密碼軸並用是 AND', () => {
+  assert.deepStrictEqual(ids({ name: '黑魔導', code: '46986414' }), [46986414]);
+  assert.deepStrictEqual(ids({ name: '青眼', code: '46986414' }), []);
 });

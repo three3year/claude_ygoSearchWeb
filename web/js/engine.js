@@ -14,13 +14,19 @@
 
 const Engine = (() => {
 
-/* 純數字輸入才額外比對卡片密碼。前後空白在呼叫端就修掉了,這裡只認光禿禿的數字 */
+/* 密碼比對只認光禿禿的數字(前後空白在 runQuery 就修掉了) */
 const DIGITS = /^\d+$/;
+
+/* 關鍵字欄位的正規化:缺席、null 與只有空白都是「這一軸沒設」。空白在這裡一次
+   修完,判定函式因此不必各自防禦,也不會對 14,207 張卡各 trim 一遍。 */
+function term(v) {
+  return String(v == null ? '' : v).trim();
+}
 
 /* `%` 萬用字元:語意是「這幾段依序出現」(青眼%龍 = 先有青眼、後面某處有龍),
    段與段之間、頭尾都可以有別的字。空關鍵字沒有段,一律通過。 */
 function likeParts(kw) {
-  return String(kw == null ? '' : kw).split('%').filter(Boolean);
+  return kw.split('%').filter(Boolean);
 }
 
 function likeMatch(text, parts) {
@@ -39,10 +45,9 @@ function likeMatch(text, parts) {
    純數字輸入**額外**比對卡片密碼與異圖密碼——額外而不是取代,卡名裡真的有數字的
    卡(No.39)不會因為輸入是數字就搜不到。 */
 function nameHit(c, kw, lang) {
-  const raw = String(kw == null ? '' : kw).trim();
-  const parts = likeParts(raw);
+  const parts = likeParts(kw);
   if (!parts.length) return true;
-  if (DIGITS.test(raw) && idHit(c, raw)) return true;
+  if (DIGITS.test(kw) && idHit(c, kw)) return true;
   if (lang === 'ja') {
     return (!!c.nj && likeMatch(c.nj, parts)) || (!!c.ax && likeMatch(c.ax, parts));
   }
@@ -71,9 +76,16 @@ function idHit(c, digits) {
  */
 function runQuery(db, q) {
   q = q || {};
+  const name = term(q.name);
+  // 卡片密碼是卡名框以外的獨立一軸,只認密碼、不比對卡名。非數字的輸入不命中
+  // 任何卡而不是被忽略——「打了條件卻當作沒打」會讓使用者以為結果是這個條件篩
+  // 出來的。
+  const code = term(q.code);
+  const codeOk = DIGITS.test(code);
   const cards = [];
   for (const c of db) {
-    if (q.name && !nameHit(c, q.name, q.nameLang)) continue;
+    if (name && !nameHit(c, name, q.nameLang)) continue;
+    if (code && !(codeOk && idHit(c, code))) continue;
     cards.push({ card: c, rows: null });
   }
   return { cards };

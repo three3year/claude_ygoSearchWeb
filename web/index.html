@@ -23,6 +23,13 @@
 
     <div class="crit">
       <div class="field">
+        <span class="field-label">卡片密碼</span>
+        <input type="text" id="fId" inputmode="numeric"
+               placeholder="卡面左下角的 8 位數字（46986414）">
+        <p class="field-hint">完全相等才算；異圖密碼查得到本尊</p>
+      </div>
+
+      <div class="field">
         <span class="field-label">卡名關鍵字</span>
         <div class="name-row">
           <!-- 語言三態循環鈕:中 → 日 → 英 → 中。標籤與比對語言由 query.js 一處
@@ -30,16 +37,8 @@
           <button type="button" id="fNameLang" class="lang-cycle" data-v="zh"
                   title="切換卡名比對語言">中</button>
           <input type="text" id="fName"
-                 placeholder="卡名或卡片密碼；% 為萬用字元（青眼%龍）">
+                 placeholder="卡名關鍵字；% 為萬用字元（青眼%龍）">
         </div>
-        <p class="field-hint">純數字也比對卡片密碼與異圖密碼</p>
-      </div>
-
-      <div class="field">
-        <span class="field-label">卡片密碼</span>
-        <input type="text" id="fId" inputmode="numeric"
-               placeholder="卡面左下角的 8 位數字（46986414）">
-        <p class="field-hint">完全相等才算；異圖密碼查得到本尊</p>
       </div>
     </div>
   </aside>

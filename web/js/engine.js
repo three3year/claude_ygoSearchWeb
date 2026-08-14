@@ -42,12 +42,11 @@ function likeMatch(text, parts) {
 /* 卡名比對。lang:zh(預設)/ja/en,比對對應語言的卡名。
    中文與日文模式**同時比對 `※` 別名**(117 張):別名是同一張卡的另一種中文譯名,
    用舊譯名找卡的人也該找得到(沿用 oldProject engine.js:249-251 的行為)。
-   純數字輸入**額外**比對卡片密碼與異圖密碼——額外而不是取代,卡名裡真的有數字的
-   卡(No.39)不會因為輸入是數字就搜不到。 */
+   **只比對卡名**:卡片密碼是另一個欄位的事,這裡打 `39` 得到的是「No.39 希望皇
+   霍普」而不是某張密碼含 39 的卡。 */
 function nameHit(c, kw, lang) {
   const parts = likeParts(kw);
   if (!parts.length) return true;
-  if (DIGITS.test(kw) && idHit(c, kw)) return true;
   if (lang === 'ja') {
     return (!!c.nj && likeMatch(c.nj, parts)) || (!!c.ax && likeMatch(c.ax, parts));
   }
@@ -77,9 +76,8 @@ function idHit(c, digits) {
 function runQuery(db, q) {
   q = q || {};
   const name = term(q.name);
-  // 卡片密碼是卡名框以外的獨立一軸,只認密碼、不比對卡名。非數字的輸入不命中
-  // 任何卡而不是被忽略——「打了條件卻當作沒打」會讓使用者以為結果是這個條件篩
-  // 出來的。
+  // 卡片密碼自成一軸,只認密碼、不比對卡名。非數字的輸入不命中任何卡而不是被
+  // 忽略——「打了條件卻當作沒打」會讓使用者以為結果是這個條件篩出來的。
   const code = term(q.code);
   const codeOk = DIGITS.test(code);
   const cards = [];

@@ -99,7 +99,7 @@ test('空條件列出全部,不擋', () => {
 
 test('關鍵字前後的空白不影響比對', () => {
   assert.deepStrictEqual(ids({ name: ' 青眼 ' }), [89631139, 23995346]);
-  assert.deepStrictEqual(ids({ name: ' 46986430 ' }), [46986414]);
+  assert.deepStrictEqual(ids({ code: ' 46986430 ' }), [46986414]);
 });
 
 test('回傳值帶每張卡的命中效果句索引欄位', () => {
@@ -156,54 +156,49 @@ test('中文與日文模式同時比對 ※ 別名,英文模式不比對', () =>
   assert.deepStrictEqual(ids({ name: '白銀%狂時鐘' }), [2511]);
 });
 
-/* ── 卡名軸:卡片密碼 ─────────────────────────────────── */
-
-test('純數字輸入額外比對卡片密碼', () => {
-  assert.deepStrictEqual(ids({ name: '46986414' }), [46986414]);
-  assert.deepStrictEqual(ids({ name: '2511' }), [2511]);
-  // 顯示時補零成 8 位,照著抄回來也要找得到
-  assert.deepStrictEqual(ids({ name: '00002511' }), [2511]);
-});
-
-test('純數字輸入命中異圖密碼,得到的是本尊', () => {
-  assert.deepStrictEqual(ids({ name: '46986430' }), [46986414]);
-  assert.deepStrictEqual(ids({ name: '36996508' }), [46986414]);
-});
-
-test('卡片密碼比對不分語言', () => {
-  assert.deepStrictEqual(ids({ name: '46986430', nameLang: 'ja' }), [46986414]);
-  assert.deepStrictEqual(ids({ name: '46986430', nameLang: 'en' }), [46986414]);
-});
-
-test('密碼比對是「額外」而不是「取代」:數字照樣比對卡名', () => {
-  // 卡名裡真的有數字的卡(No.39)不能因為輸入是純數字就搜不到
+test('卡名框只比對卡名,不比對卡片密碼', () => {
+  // 密碼是另一個欄位的事(2026-08-14 使用者裁示,推翻 spec Story 3)
+  assert.deepStrictEqual(ids({ name: '46986414' }), []);
+  assert.deepStrictEqual(ids({ name: '46986430' }), []);
+  assert.deepStrictEqual(ids({ name: '00002511' }), []);
+  // 卡名裡真的有數字的卡照樣比對得到:拿掉的是密碼比對,不是數字比對
   assert.deepStrictEqual(ids({ name: '39' }), [84013237]);
 });
 
-test('數字要完全相等才算密碼命中,不是子字串', () => {
-  // 4698 是 46986414 的前綴,但那不是任何一張卡的密碼
-  assert.deepStrictEqual(ids({ name: '4698' }), []);
+/* ── 卡片密碼軸 ───────────────────────────────────────── */
+
+test('卡片密碼軸比對密碼與異圖密碼', () => {
+  assert.deepStrictEqual(ids({ code: '46986414' }), [46986414]);
+  assert.deepStrictEqual(ids({ code: '2511' }), [2511]);
+  // 顯示時補零成 8 位,照著抄回來也要找得到
+  assert.deepStrictEqual(ids({ code: '00002511' }), [2511]);
 });
 
-/* ── 卡片密碼欄位(卡名框以外的獨立一軸) ─────────────── */
-
-test('卡片密碼欄位比對密碼與異圖密碼', () => {
-  assert.deepStrictEqual(ids({ code: '46986414' }), [46986414]);
+test('卡片密碼軸命中異圖密碼,得到的是本尊', () => {
   assert.deepStrictEqual(ids({ code: '46986430' }), [46986414]);
-  assert.deepStrictEqual(ids({ code: '00002511' }), [2511]);
+  assert.deepStrictEqual(ids({ code: '36996508' }), [46986414]);
+});
+
+test('密碼要完全相等才算,不是子字串', () => {
+  // 4698 是 46986414 的前綴,但那不是任何一張卡的密碼
   assert.deepStrictEqual(ids({ code: '4698' }), []);
 });
 
-test('卡片密碼欄位只認密碼,不比對卡名', () => {
-  // 卡名框搜 39 撈得到 No.39,密碼欄位不該有這個副作用
+test('卡片密碼軸只認密碼,不比對卡名', () => {
+  // 卡名框搜 39 撈得到 No.39,密碼軸不該有這個副作用
   assert.deepStrictEqual(ids({ code: '39' }), []);
+  assert.deepStrictEqual(ids({ code: '青眼' }), []);
 });
 
-test('卡片密碼欄位空白等於沒設,非數字則不命中任何卡', () => {
+test('卡片密碼軸不受卡名語言影響', () => {
+  assert.deepStrictEqual(ids({ code: '46986430', nameLang: 'ja' }), [46986414]);
+  assert.deepStrictEqual(ids({ code: '46986430', nameLang: 'en' }), [46986414]);
+});
+
+test('密碼軸空白等於沒設,非數字則不命中任何卡', () => {
   assert.deepStrictEqual(ids({ code: '' }), ALL);
   assert.deepStrictEqual(ids({ code: '   ' }), ALL);
   // 「打了條件卻當作沒打」會讓使用者以為結果是這個條件篩出來的
-  assert.deepStrictEqual(ids({ code: '青眼' }), []);
   assert.deepStrictEqual(ids({ code: '4698-6414' }), []);
 });
 

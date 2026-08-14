@@ -21,7 +21,7 @@
 import random
 import re
 
-from official import INDEX_PREAMBLE, KINDS, NON_EFFECT_RE
+from official import KINDS, NON_EFFECT_RE, _is_preamble
 
 DEFAULT_SIZE = 300
 DEFAULT_PER_KIND_MIN = 40
@@ -154,14 +154,17 @@ def _candidates(entries, exclude_ids=()):
 
 
 def _preamble(entry, clause):
-    """同卡同 section 的前言段日文原文;本身就是前言段、或沒有前言段時回空字串。"""
-    if clause["index"] == INDEX_PREAMBLE:
+    """同卡同 section 的**全部**前言列日文原文依序串接;本身是前言列時回空字串。
+
+    前言段拆成 `0-1`、`0-2`…之後(ADR-0009),只認 `index == "0"` 會讓拆過的卡
+    拿到空前言,重演票62 的 94997874 誤判——收齊才是完整的前言段。
+    """
+    if _is_preamble(clause["index"]):
         return ""
-    for other in entry.get("clauses", ()):
-        if (other["section"] == clause["section"]
-                and other["index"] == INDEX_PREAMBLE):
-            return other["text_ja"] or ""
-    return ""
+    parts = [other["text_ja"] for other in entry.get("clauses", ())
+             if other["section"] == clause["section"]
+             and _is_preamble(other["index"]) and other["text_ja"]]
+    return "\n".join(parts)
 
 
 def _row(cid, clause, card, faq, entry):

@@ -201,6 +201,20 @@ class SamplingTest(unittest.TestCase):
         self.assertEqual(rows["②"]["preamble"], "前言段の日本文")
         self.assertEqual(rows["0"]["preamble"], "")
 
+    def test_拆過的卡收齊同段全部前言列依序串接(self):
+        """前言段拆成 0-1/0-2 之後(ADR-0009),樣本不得拿到空前言。"""
+        entries = [entry(1000, [
+            clause(index="0-1", kind=KIND_NON_EFFECT, text_ja="前言一行目。"),
+            clause(index="0-2", kind=KIND_NON_EFFECT, text_ja="前言二行目。"),
+            clause(index="②", text_ja="②:日本文"),
+        ])]
+        sample, _ = masked.sample_masked(entries, [card(1000)], [], size=3,
+                                         per_kind_min=1, seed=SEED)
+        rows = {row["index"]: row for row in sample}
+        self.assertEqual(rows["②"]["preamble"], "前言一行目。\n前言二行目。")
+        self.assertEqual(rows["0-1"]["preamble"], "")
+        self.assertEqual(rows["0-2"]["preamble"], "")
+
     def test_沒有前言段時留空(self):
         entries = [entry(1000, [clause(index="②")])]
         sample, _ = masked.sample_masked(entries, [card(1000)], [], size=1,

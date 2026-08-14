@@ -315,6 +315,76 @@ def _quotes_cut_apart(text_ja, spans, supplement):
     return cut
 
 
+# ---------------------------------------------------------------- 前言段拆分
+
+# 前言段以**日文官方換行**為拆點(ADR-0009):日文以換行區分前言裡的不同單位
+# (素材指定/召喚條件/使用次數限制),繁中來源常缺這些換行。拆點可由卡文重算,
+# 所以住在建置期而不是拆句表——存檔只會製造會過期的複本。
+# [[補足情報]]的 『…』 引用橫跨拆點時整段退回不拆(引用合併是票66):引用是
+# 官方視為一體的單位,機械規則不猜測。
+FALLBACK_UNITS = "單位數不合"
+FALLBACK_QUOTE = "引用跨界"
+
+
+def _line_spans(text, span):
+    """span 內各非空行的 (start, end),已照 `_strip_span` 慣例剝首尾空白。"""
+    start, end = span
+    spans = []
+    pos = start
+    while pos < end:
+        cut = text.find("\n", pos, end)
+        stop = end if cut < 0 else cut
+        line = _strip_span(text, pos, stop)
+        if line is not None:
+            spans.append(line)
+        pos = stop + 1
+    return spans
+
+
+def _zh_unit_spans(text, span):
+    """中文前言 → 對位單位的 span:自身換行切行塊,行塊內再以句號切句。
+
+    無句號的行塊整塊算一個單位——素材行是名詞片語不以句號收尾,不這樣算
+    兩側的單位數永遠對不上(2133971 形態)。
+    """
+    units = []
+    for start, end in _line_spans(text, span):
+        pos = start
+        while pos < end:
+            cut = text.find("。", pos, end)
+            stop = end if cut < 0 else cut + 1
+            unit = _strip_span(text, pos, stop)
+            if unit is not None:
+                units.append(unit)
+            pos = stop
+    return units
+
+
+def _split_preamble(zh_body, ja_body, supplement):
+    """前言段兩側原文 → ([(zh span, ja span), ...], None) 或 (None, 退回原因)。
+
+    日文單行時回 (None, None):不進拆分也不進退回清單。日文每行的單位數 =
+    句號數(無句號行算 1),中文單位總數與之相等時依序分組,否則退回——
+    分組假設中日句序一致,句序調換且句數恰好相等時會錯配且不報錯,防線是
+    抽查(ADR-0009 已知限制)。
+    """
+    lines = _line_spans(ja_body, (0, len(ja_body)))
+    if len(lines) < 2:
+        return None, None
+    if _quotes_cut_apart(ja_body, lines, supplement):
+        return None, FALLBACK_QUOTE
+    counts = [_slice(ja_body, span).count("。") or 1 for span in lines]
+    units = _zh_unit_spans(zh_body, (0, len(zh_body)))
+    if len(units) != sum(counts):
+        return None, FALLBACK_UNITS
+    pairs = []
+    pos = 0
+    for span, count in zip(lines, counts):
+        pairs.append(((units[pos][0], units[pos + count - 1][1]), span))
+        pos += count
+    return pairs, None
+
+
 # ---------------------------------------------------------------- ● 子效果
 
 def _bullet_parts(text):
@@ -355,7 +425,7 @@ def _bullet_pieces(cid, section, clause, supplement, headers, report):
     不得被 ● 拆點切開——引用橫跨拆點就證明那兩段是同一個效果句(ADR-0003)。
     """
     both = clause["text_zh"] + clause["text_ja"]
-    if clause["index"] == INDEX_PREAMBLE or BULLET not in both:
+    if official._is_preamble(clause["index"]) or BULLET not in both:
         return None
     if not _bullet_authorised(clause, supplement, headers):
         return None
@@ -954,12 +1024,24 @@ def _merge_clauses(cid, clauses, existing_index, matched, official_optional,
     return merged
 
 
-def _report_orphans(existing_index, matched, report):
-    """既有標記表裡對不到任何一行的判定——拆句法變動時使用者的修正會落在這裡。"""
+def _report_orphans(existing_index, matched, entries, report):
+    """既有標記表裡對不到任何一行的判定——拆句法變動時使用者的修正會落在這裡。
+
+    前言段被重拆成 `0-1`、`0-2`…的卡,舊的官方明示前言列(`"0"`)不算孤兒:
+    官方明示每次重跑都由補足情報重算,已改落在新的細段上,沒有人工成果被丟掉
+    (ADR-0009;前言列的 source 只有 rule 與 official,零 manual)。
+    """
+    resplit = {(entry["id"], clause["section"]) for entry in entries
+               for clause in entry["clauses"]
+               if clause["index"].startswith(INDEX_PREAMBLE + "-")}
     for key, clause in existing_index.items():
         if key in matched or clause.get("source") not in PRESERVED_SOURCES:
             continue
         cid, section, index = key
+        if (official._is_preamble(index)
+                and clause["source"] == official.SOURCE_OFFICIAL
+                and (cid, section) in resplit):
+            continue
         report["orphaned_judgments"].append(
             {"id": cid, "section": section, "index": index,
              "source": clause["source"], "kind": clause.get("kind")})
@@ -977,7 +1059,7 @@ def _rule_targets(entries):
     """
     for entry in entries:
         for clause in entry["clauses"]:
-            if clause["index"] != INDEX_PREAMBLE and clause["text_ja"]:
+            if not official._is_preamble(clause["index"]) and clause["text_ja"]:
                 yield entry["id"], clause
 
 
@@ -1136,6 +1218,9 @@ def _new_report():
         "footnote_stripped": 0,
         "role_counts": {ROLE_MATERIAL: 0, ROLE_SUMMON: 0, ROLE_USAGE: 0,
                         "null": 0},
+        "preamble_splits": 0,
+        "preamble_split_clauses": 0,
+        "preamble_split_fallbacks": [],
         "pending_split": [],
         "numeral_mismatch": [],
         "numeral_relabelled": [],
@@ -1257,19 +1342,36 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
                  "ja": "".join(ja_labels)})
             labels = ja_labels
 
+    def preamble_clause(index, text_zh, text_ja):
+        role = _preamble_role(text_zh, ctype)
+        report["preambles"] += 1
+        report["role_counts"][role or "null"] += 1
+        return _clause(index, section, text_zh, text_ja, confidence,
+                       kind=KIND_NON_EFFECT, role=role, source=SOURCE_RULE)
+
     clauses = []
     if zh_pre is not None:
         if aligned and ja_pre is None:
             report["preamble_one_sided"].append(
                 {"id": cid, "section": section, "present": "zh"})
-        text_zh = _slice(zh_text, zh_pre)
-        role = _preamble_role(text_zh, ctype)
-        clauses.append(_clause(
-            INDEX_PREAMBLE, section, text_zh,
-            _slice(ja_text, ja_pre) if aligned else "",
-            confidence, kind=KIND_NON_EFFECT, role=role, source=SOURCE_RULE))
-        report["preambles"] += 1
-        report["role_counts"][role or "null"] += 1
+        zh_body = _slice(zh_text, zh_pre)
+        ja_body = _slice(ja_text, ja_pre) if aligned else ""
+        pairs, fallback = (_split_preamble(zh_body, ja_body, supplement)
+                           if ja_body else (None, None))
+        if pairs is not None:
+            clauses.extend(
+                preamble_clause(f"{INDEX_PREAMBLE}-{pos}",
+                                _slice(zh_body, zh_span),
+                                _slice(ja_body, ja_span))
+                for pos, (zh_span, ja_span) in enumerate(pairs, start=1))
+            report["preamble_splits"] += 1
+            report["preamble_split_clauses"] += len(pairs)
+        else:
+            if fallback is not None:
+                report["preamble_split_fallbacks"].append(
+                    {"id": cid, "section": section, "text_zh": zh_body,
+                     "text_ja": ja_body, "reason": fallback})
+            clauses.append(preamble_clause(INDEX_PREAMBLE, zh_body, ja_body))
     elif aligned and ja_pre is not None:
         report["preamble_one_sided"].append(
             {"id": cid, "section": section, "present": "ja"})
@@ -1465,7 +1567,7 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
             report["low_confidence"].append(cid)
         entries.append({"id": cid, "clauses": clauses})
 
-    _report_orphans(existing_index, matched, report)
+    _report_orphans(existing_index, matched, entries, report)
     _report_judgment_orphans(entries, judgment_index, report)
     _apply_rules(entries, existing_index, report)
     _count_clauses(entries, report)

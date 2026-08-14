@@ -368,6 +368,12 @@ def print_report(report, digest_changed=False, file=sys.stdout):
     p(f"前言段(效果外文本): {report['preambles']} 條")
     for role, count in report["role_counts"].items():
         p(f"  role={role}: {count}")
+    p(f"前言段拆分(ADR-0009): 拆開 {report['preamble_splits']} 段 → "
+      f"{report['preamble_split_clauses']} 列")
+    fallbacks = report["preamble_split_fallbacks"]
+    p(f"  退回不拆: {len(fallbacks)} 段")
+    for row in fallbacks[:LIST_PREVIEW]:
+        p(f"    id={row['id']} section={row['section']} 原因={row['reason']}")
     p(f"別名註記(※)已從卡文尾端剝除: {report['footnote_stripped']} 張")
     p(f"無編號待拆: {len(report['pending_split'])} 段")
     p(f"confidence=low(該段無官方補足): {len(report['low_confidence'])} 張")

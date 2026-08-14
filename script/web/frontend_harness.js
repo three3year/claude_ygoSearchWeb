@@ -61,6 +61,13 @@ const DRIVER = `
 }
 ;function __axes() { return JSON.stringify(Query.axes()); }
 ;function __optAvail(json) { return Query.optionalAvailable(JSON.parse(json)); }
+;function __sortedIds(json) {
+  var a = JSON.parse(json);
+  var result = Engine.runQuery(window.CARD_DATA, a.query || {});
+  return JSON.stringify(Sort.sort(result.cards, a.key, a.dir)
+    .map(function (e) { return e.card.id; }));
+}
+;function __sortKeys() { return JSON.stringify(Sort.KEYS); }
 `;
 
 /**
@@ -128,4 +135,21 @@ function optionalAvailable(sandbox, kindSel) {
   return sandbox.__optAvail(JSON.stringify(kindSel || null));
 }
 
-module.exports = { load, search, ids, marks, axes, optionalAvailable };
+/**
+ * 命中的卡片密碼清單,**照 key/dir 排序後**的順序(key 省略即預設的領域序)。
+ *
+ * 走的是搜尋 → 排序這條真實的路徑:排序吃的是接縫 3 的回傳形狀,而不是另外
+ * 拼一份卡片陣列——「排序切換不重跑搜尋」在這裡看得到,重排的輸入就是同一份結果。
+ */
+function sortedIds(sandbox, query, key, dir) {
+  return JSON.parse(sandbox.__sortedIds(
+    JSON.stringify({ query: query || {}, key: key || '', dir: dir || '' })));
+}
+
+/** 排序選單的鍵清單(選單的選項由它生成,比較函式也由它決定取哪個欄位) */
+function sortKeys(sandbox) {
+  return JSON.parse(sandbox.__sortKeys());
+}
+
+module.exports = { load, search, ids, marks, axes, optionalAvailable,
+                   sortedIds, sortKeys };

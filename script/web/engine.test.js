@@ -650,3 +650,172 @@ test('在值域正典裡加一個種族,按鈕自動多一顆', () => {
                      before.groups[0].items.length + 1);
   assert.deepStrictEqual(after.groups[0].items.at(-1), { code: 'slime', zh: '史萊姆族' });
 });
+
+/* ── 排序 ──────────────────────────────────────────────
+   排序與搜尋解耦:比較函式只看卡片物件,重排走的是同一份已經命中的結果。
+   下面每一條都跑「查詢 → 排序」這條真實的路徑(harness.sortedIds)。 */
+
+const sorted = (key, dir, q) => harness.sortedIds(sandbox, q || {}, key, dir);
+
+/* 主資料集裡沒有這幾個參數的卡。攻守的空值有兩種來源,兩種都不是數值:
+   非怪獸根本沒有那個欄位,而 20103 的攻守是 `?`(負的哨兵值)。 */
+const NO_ATK = [483, 10000, 20103, 20104, 20106, 20107, 20108, 20112];
+const NO_DF = [483, 10000, 20101, 20103, 20104, 20106, 20107, 20108, 20112];
+const NO_LV = [483, 10000, 20101, 20104, 20106, 20107, 20108, 20112];
+
+test('預設是領域序:七層比較', () => {
+  // 大類(怪獸→魔法→陷阱)→ 靈擺排後 → 卡框序 → 等級高到低 → 屬性 → 種族 → 密碼。
+  // 怪獸側:通常(青眼 lv8、黑魔導 lv7)→ 效果(lv10、5、5、1)→ 融合(lv12、8)
+  // → 儀式 → 超量 → 連結 → 靈擺;20110/20111 同屬性同種族同等級,由密碼決勝。
+  const DOMAIN = [
+    89631139, 46986414,                     // 通常怪獸,等級高到低
+    20103, 20110, 20111, 2511,              // 效果怪獸
+    23995346, 20109,                        // 融合
+    20105,                                  // 儀式
+    84013237,                               // 超量
+    20101,                                  // 連結
+    20102,                                  // 靈擺(第 2 層把它挪到怪獸的最後)
+    20107, 20108, 483, 20106,               // 魔法:通常 → 速攻 → 儀式
+    10000, 20112, 20104,                    // 陷阱:通常 → 永續
+  ];
+  assert.deepStrictEqual(sorted('dom', ''), DOMAIN);
+  // 沒指定排序鍵時就是這個順序(預設值也住在 KEYS 的第一筆)
+  assert.deepStrictEqual(sorted('', ''), DOMAIN);
+});
+
+test('領域序的大類序取自 window.VOCAB 的宣告序,不是程式裡的第二份表', () => {
+  const flipped = {
+    ...VOCAB,
+    cat: { zh: '大類', items: [item('t', '陷阱'), item('s', '魔法'), item('m', '怪獸')] },
+  };
+  const box = harness.load({ cards: CARDS, vocab: flipped, meta: META });
+  const before = sorted('dom', '');
+  const after = harness.sortedIds(box, {}, 'dom', '');
+  // 三個大類的區塊整批換位置,區塊內部的順序一個字都沒動
+  const block = cat => before.filter(id => CARDS.find(c => c.id === id).c === cat);
+  assert.deepStrictEqual(after, [...block('t'), ...block('s'), ...block('m')]);
+});
+
+/* 卡框序與屬性/種族序的專用樣本:主資料集沒有協調怪獸,而「『能力』子類型不參與
+   卡框序」正是這一層最容易寫錯的地方——協調同步怪獸該站在同步那一團裡。 */
+const ORDER_VOCAB = {
+  cat: { zh: '大類', items: [item('m', '怪獸')] },
+  sub_m: {
+    zh: '怪獸子類型',
+    items: [item('normal', '通常'), item('effect', '效果'), item('synchro', '同步'),
+            item('tuner', '協調')],
+    groups: [{ zh: '卡框', codes: ['normal', 'effect', 'synchro'] },
+             { zh: '能力', codes: ['tuner'] }],
+  },
+  sub_s: { zh: '魔法子類型', items: [item('normal', '通常')] },
+  sub_t: { zh: '陷阱子類型', items: [item('normal', '通常')] },
+  attr: { zh: '屬性', items: [item('earth', '地'), item('water', '水')] },
+  race: { zh: '種族', items: [item('warrior', '戰士族'), item('dragon', '龍族')] },
+};
+const mon = (id, s, at, r) =>
+  ({ id, n: 'card' + id, c: 'm', s, at, r, lv: 5, atk: 1000, df: 1000 });
+const ORDER_CARDS = [
+  mon(1, ['effect', 'synchro', 'tuner'], 'earth', 'warrior'),
+  mon(2, ['effect'], 'earth', 'warrior'),
+  mon(3, ['effect'], 'water', 'warrior'),
+  mon(4, ['effect'], 'earth', 'dragon'),
+  mon(5, ['effect', 'tuner'], 'earth', 'warrior'),
+];
+
+test('卡框序不被「能力」子類型搶走,屬性序在種族序之前', () => {
+  const box = harness.load({ cards: ORDER_CARDS, vocab: ORDER_VOCAB, meta: {} });
+  // 效果(2/3/4/5)→ 同步(1);效果那一團先比屬性(地在水前)再比種族。
+  // 5 是協調效果怪獸:協調在宣告序上排在同步後面,拿它來排的話 5 會掉到最後。
+  assert.deepStrictEqual(harness.sortedIds(box, {}, 'dom', ''), [2, 5, 4, 3, 1]);
+});
+
+test('領域序的屬性序取自 window.VOCAB 的宣告序', () => {
+  const flipped = {
+    ...ORDER_VOCAB,
+    attr: { zh: '屬性', items: [item('water', '水'), item('earth', '地')] },
+  };
+  const box = harness.load({ cards: ORDER_CARDS, vocab: flipped, meta: {} });
+  assert.deepStrictEqual(harness.sortedIds(box, {}, 'dom', ''), [3, 2, 5, 4, 1]);
+});
+
+test('攻擊力升降序', () => {
+  // 4500 → 3000 → 2800 → 2500 兩張 → 2000 → 1800 兩張 → 1500 → 1200 → 0
+  assert.deepStrictEqual(sorted('atk', 'desc').slice(0, 11),
+    [23995346, 89631139, 20109, 84013237, 46986414, 20105, 20111, 20110,
+     20102, 20101, 2511]);
+  assert.deepStrictEqual(sorted('atk', 'asc').slice(0, 3), [2511, 20101, 20102]);
+});
+
+test('空值一律殿後,不插進數值之間', () => {
+  // 攻擊力:非怪獸沒有這個欄位,20103 的攻擊力是 `?`——兩種都不是數值,
+  // 而 `?` 當 0 排的話它會混進攻 0 那一團裡,是一個看不出來的錯
+  const tail = (out, empty) => out.slice(-empty.length).slice().sort((a, b) => a - b);
+  for (const dir of ['asc', 'desc']) {
+    assert.deepStrictEqual(tail(sorted('atk', dir), NO_ATK), NO_ATK);
+    assert.deepStrictEqual(tail(sorted('df', dir), NO_DF), NO_DF);
+    // 等級只認 `lv`:連結怪獸(20101)沒有等級,LINK-2 是連結值、是另一個參數
+    assert.deepStrictEqual(tail(sorted('lv', dir), NO_LV), NO_LV);
+  }
+});
+
+test('守備力與等級的順序', () => {
+  assert.deepStrictEqual(sorted('df', 'desc').slice(0, 5),
+                         [23995346, 89631139, 20111, 20110, 46986414]);
+  assert.deepStrictEqual(sorted('lv', 'desc').slice(0, 5),
+                         [23995346, 20103, 89631139, 20109, 46986414]);
+});
+
+test('卡名排序照卡名而不是密碼', () => {
+  const asc = sorted('n', 'asc');
+  // ASCII 的卡名排在漢字前面(No.39 希望皇 霍普)
+  assert.strictEqual(asc[0], 84013237);
+  // 同前綴的兩張照第三個字:白 < 究
+  assert.ok(asc.indexOf(89631139) < asc.indexOf(23995346));
+  assert.deepStrictEqual(sorted('n', 'desc'), asc.slice().reverse());
+});
+
+test('卡片密碼升降序', () => {
+  const asc = CARDS.map(c => c.id).sort((a, b) => a - b);
+  assert.deepStrictEqual(sorted('id', 'asc'), asc);
+  assert.deepStrictEqual(sorted('id', 'desc'), asc.slice().reverse());
+});
+
+test('升降序對稱:有值與空值兩批各自反轉,空值永遠在後', () => {
+  const has = id => NO_ATK.indexOf(id) < 0;
+  const asc = sorted('atk', 'asc');
+  const desc = sorted('atk', 'desc');
+  assert.deepStrictEqual(desc.filter(has), asc.filter(has).slice().reverse());
+  assert.deepStrictEqual(desc.filter(id => !has(id)),
+                         asc.filter(id => !has(id)).slice().reverse());
+});
+
+test('排序穩定:相同鍵值的卡順序不隨執行、不隨輸入順序變動', () => {
+  // 決勝一律落到卡片密碼(唯一鍵),比較函式因此是全序——排序結果不靠
+  // Array#sort 是不是穩定排序,輸入順序也影響不了它
+  const box = harness.load({ cards: CARDS.slice().reverse(), vocab: VOCAB, meta: META });
+  for (const [key, dir] of [['dom', ''], ['atk', 'desc'], ['atk', 'asc'],
+                            ['lv', 'desc'], ['n', 'asc']]) {
+    assert.deepStrictEqual(harness.sortedIds(box, {}, key, dir), sorted(key, dir));
+    assert.deepStrictEqual(sorted(key, dir), sorted(key, dir));
+  }
+});
+
+test('排序不改變命中集合:重排的輸入就是同一份搜尋結果', () => {
+  const q = { cat: { m: 1 }, text: '發動' };
+  const asc = (a, b) => a - b;
+  const hit = ids(q).slice().sort(asc);
+  for (const [key, dir] of [['dom', ''], ['atk', 'desc'], ['n', 'asc']]) {
+    assert.deepStrictEqual(sorted(key, dir, q).slice().sort(asc), hit);
+  }
+});
+
+test('排序選單的鍵清單:領域序沒有方向,單鍵各帶預設方向', () => {
+  const keys = harness.sortKeys(sandbox);
+  assert.deepStrictEqual(keys.map(k => k.key), ['dom', 'atk', 'df', 'lv', 'n', 'id']);
+  // 第一筆是預設的排序(領域序),而且它沒有方向可切
+  assert.strictEqual(keys[0].dir, '');
+  // 其餘各有中文名與預設方向:問「最高攻擊力的是哪張」的人選了攻擊力就該看到最高的
+  assert.ok(keys.slice(1).every(k => k.zh && (k.dir === 'asc' || k.dir === 'desc')));
+  assert.strictEqual(keys.find(k => k.key === 'atk').dir, 'desc');
+  assert.strictEqual(keys.find(k => k.key === 'n').dir, 'asc');
+});

@@ -1,7 +1,8 @@
 /**
  * util.js — 共用工具與常數表(DOM 快捷、esc、值域中文表)
  *
- * 載入順序:data -> util -> render -> main(見 index.html 的 <script> 順序)。
+ * 載入順序:data -> util -> sort -> engine -> query -> render -> main
+ * (見 index.html 的 <script> 順序)。
  *
  * 模組介面凍結:內部關在閉包裡,外面只看得到 Util 這個凍結物件。零建置協定
  * (ADR-0007)下沒有模組系統,顯式掛載的介面就是唯一的邊界。
@@ -22,6 +23,8 @@ function zhTable(name) {
   ((VOCAB[name] || {}).items || []).forEach(e => { table[e.code] = e.zh; });
   return table;
 }
+/* 宣告序本身(碼的順序)。**領域序排序的比較序就是它**——排序另抄一份順序表的話,
+   在正典裡調一個種族的位置,按鈕會動而畫面上的順序不會動(sort.js)。 */
 function codesOf(name) {
   return ((VOCAB[name] || {}).items || []).map(e => e.code);
 }
@@ -58,6 +61,6 @@ const byId = id => INDEX.get(+id);
     DB, META, VOCAB,
     CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH, LM_ZH, LM_CODES,
     SUB_ZH,
-    zhTable, $, esc, pad8, byId,
+    zhTable, codesOf, $, esc, pad8, byId,
   });
 })();

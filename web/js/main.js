@@ -28,6 +28,7 @@ function init() {
   Query.init();
   View.initAltArt();
   View.initEffKind();
+  View.initSort();
   $('btnSearch').addEventListener('click', search);
   // 清除條件後直接重搜:條件是空的,結果就是全部——把畫面留在上一次的結果上,
   // 使用者會以為條件還在

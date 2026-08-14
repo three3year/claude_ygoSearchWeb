@@ -137,11 +137,20 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 .actions .spacer { flex: 1; }
 .result-info { color: var(--gold); font-size: 13px; }
-.per-page { color: var(--muted); font-size: 13px; }
-.per-page select {
+.per-page, .sort { color: var(--muted); font-size: 13px; }
+.per-page select, .sort select {
   background: var(--bg); color: var(--text); border: 1px solid var(--border);
   border-radius: 6px; padding: 4px 8px; margin: 0 4px;
+  font-family: inherit;
 }
+/* 方向鈕只長在有方向的排序鍵上(領域序沒有),所以 hidden 要真的把它收掉 */
+.sort-dir {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); padding: 4px 10px;
+  font-size: 13px; font-family: inherit; cursor: pointer;
+}
+.sort-dir:hover { border-color: var(--accent); }
+.sort-dir[hidden] { display: none; }
 
 .pager { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; }
 .pager button {

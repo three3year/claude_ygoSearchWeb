@@ -1,9 +1,9 @@
 /**
- * render.js — 呈現層(卡片清單、卡文逐效果句分行、分頁)
+ * render.js — 呈現層(卡片清單、卡文逐效果句分行、排序、分頁)
  *
  * **資料流單向**:要顯示的卡片清單進來,畫面出去;渲染沒有內部記憶,行為完全由
- * 參數與這一層自己擁有的呈現狀態決定。分頁位置與每頁筆數歸這一層所有——兩邊都
- * 寫得到的狀態等於沒有擁有者。
+ * 參數與這一層自己擁有的呈現狀態決定。分頁位置、每頁筆數與排序歸這一層所有——
+ * 兩邊都寫得到的狀態等於沒有擁有者。
  *
  * 採**全量重繪**:本站有分頁,單次渲染量只有一頁。差異更新需要「知道上一次渲染了
  * 什麼」,那是把耦合換個名字留下來。唯一不走重繪的是異圖切換:它只換 <img> 的
@@ -24,13 +24,34 @@ const QUERY = 'https://salix5.github.io/query/?code=';
 /* 素材指定行的上色依召喚法。順序即優先序——同時帶儀式與融合位元時取先宣告的 */
 const MAT_KINDS = ['ritual', 'fusion', 'synchro', 'xyz', 'link'];
 
-/* 呈現狀態:與資料無關的兩件事。唯一的擁有者是這個模組。 */
-const state = { page: 1, perPage: 50 };
+/* 呈現狀態:與資料無關的幾件事。唯一的擁有者是這個模組。
+   **排序住在這裡而不是查詢條件裡**:換一個排序鍵不會改變命中哪些卡,所以它是
+   「怎麼看這份結果」而不是「要哪些卡」——與分頁同一類。這也正是「排序切換不重跑
+   搜尋」在結構上成立的原因:重排走的是 render(),根本沒有經過引擎。 */
+const state = { page: 1, perPage: 50,
+                sortKey: Sort.KEYS[0].key, sortDir: Sort.KEYS[0].dir };
 
 /* 上一次的查詢產物——換頁與換每頁筆數由此重繪,但沒有人從外面寫入它。
    形狀就是接縫 3 的回傳值 `{ cards: [{ card, rows }], marks }`:`rows` 是命中的
    效果句索引,`marks` 是生效中的句層條件。呈現層照著它畫,不自己再判一次命中。 */
 let lastResult = { cards: [], marks: [] };
+
+/* 狀態 → 排序控制項的同步,由 initSort 裝上(在那之前 setSort 沒有控制項要更新) */
+let paintSort = () => {};
+
+/* 換排序鍵回到第 1 頁:上一次翻到第 37 頁,換成攻擊力降序之後留在第 37 頁的話,
+   使用者看到的是「攻擊力最高的卡」以外的任何東西。
+
+   方向由排序鍵決定合不合法:沒有方向的鍵(領域序)一律清空,有方向的鍵沒給值時
+   回到該鍵的預設方向。狀態因此永遠是 `Sort.KEYS` 說得出口的形狀——票08 要把它
+   序列化進網址,而「領域序＋降序」那種組合序列化出去也還原不回任何東西。 */
+function setSort(key, dir) {
+  const spec = Sort.specOf(key);
+  state.sortKey = spec.key;
+  state.sortDir = spec.dir ? (dir || spec.dir) : '';
+  state.page = 1;
+  paintSort();
+}
 
 /* 命中原因 → badge 上的文字。效果文寫的是條件本身(關鍵字對每一行都一樣),
    [[效果類型]]與[[必發/選發]]寫的是**這一行自己的值**——多條件並用時 badge 就是
@@ -64,7 +85,7 @@ function badgeText(marks, c, i) {
 
 function render(result = lastResult) {
   lastResult = result;
-  const entries = result.cards;
+  const entries = Sort.sort(result.cards, state.sortKey, state.sortDir);
   const per = state.perPage;
   const total = entries.length;
   const pages = Math.max(1, Math.ceil(total / per));
@@ -272,6 +293,37 @@ function initEffKind() {
   });
 }
 
+/* 排序選單。**選項由 `Sort.KEYS` 生成**,HTML 只留一個空的 <select>:排序鍵、
+   中文名與預設方向是同一份宣告,加一個鍵時不會出現「選單有這個選項但排序沒反應」。
+
+   方向鈕只長在有方向的鍵上——領域序是固定的七層比較,把它反過來排出來的東西
+   (陷阱在前、等級低到高、密碼大到小)不對應任何一個問題。 */
+function initSort() {
+  const keySel = $('sortKey');
+  const dirBtn = $('sortDir');
+  keySel.innerHTML = Sort.KEYS.map(k =>
+    `<option value="${esc(k.key)}">${esc(k.zh)}</option>`).join('');
+  // 狀態 → 控制項的單向同步。setSort 也走這一條,所以不論是誰改的排序
+  // (票08 的網址狀態會是下一個),畫面上的選單都跟得上
+  paintSort = () => {
+    keySel.value = state.sortKey;
+    dirBtn.hidden = !Sort.specOf(state.sortKey).dir;
+    dirBtn.textContent = state.sortDir === 'desc' ? '↓ 降序' : '↑ 升序';
+    dirBtn.title = state.sortDir === 'desc'
+      ? '目前是降序（點一下改升序）' : '目前是升序（點一下改降序）';
+  };
+  keySel.addEventListener('change', () => {
+    // 切換鍵時帶上那個鍵的預設方向:選了攻擊力就該看到最高的那張
+    setSort(keySel.value, Sort.specOf(keySel.value).dir);
+    render();
+  });
+  dirBtn.addEventListener('click', () => {
+    setSort(state.sortKey, state.sortDir === 'desc' ? 'asc' : 'desc');
+    render();
+  });
+  paintSort();
+}
+
 /* 異圖切換:只換 <img> 的 src 與版次,不重繪卡片——異圖是同一張卡,
    換的只是卡面圖。委派在 #results 上,全量重繪不必重綁事件。 */
 function initAltArt() {
@@ -334,10 +386,12 @@ function goto(page) {
   /* state 關在閉包裡:讀寫都走具名函式,繞過「換每頁筆數要回到第 1 頁」這條
      不變式的第二條路徑(View.state.page = …)從結構上不存在 */
   return Object.freeze({
-    render, initAltArt, initEffKind,
+    render, initAltArt, initEffKind, initSort,
     page: () => state.page,
     perPage: () => state.perPage,
+    sort: () => ({ key: state.sortKey, dir: state.sortDir }),
     setPage(p) { state.page = p; },
     setPerPage(n) { state.perPage = n; state.page = 1; },
+    setSort,
   });
 })();

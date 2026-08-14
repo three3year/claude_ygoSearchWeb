@@ -38,6 +38,9 @@ let appliedQuery = null;
 /* 讀側欄 → 跑引擎 → 重畫。這是唯一一條產生結果的路徑。 */
 function run() {
   appliedQuery = Query.read();
+  // 摺疊鈕寫的是**這批結果的條件數**而不是側欄當下的樣子,與網址同一條規則:
+  // 打了字還沒按搜尋時,鈕面上的數字仍然對應畫面上這批卡
+  Query.summarize(appliedQuery);
   View.render(Engine.runQuery(DB, appliedQuery));
 }
 
@@ -60,6 +63,9 @@ function search() {
   View.setPage(1);
   run();
   push();
+  // 搜尋完就把條件區收起來:窄螢幕上它佔滿整屏,不收的話按下搜尋之後捲回頂端
+  // 看到的是自己剛設好的條件,而不是結果。桌機上這是個空動作(側欄常駐)。
+  Query.collapse();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

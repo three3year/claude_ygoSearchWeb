@@ -51,6 +51,14 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   border-radius: 10px; padding: 12px;
   max-height: calc(100vh - 28px); overflow-y: auto;
 }
+/* 摺疊的對象是內層而不是側欄本身(窄螢幕才收得起來,見檔尾)。留白**在寬螢幕仍然
+   留在 .sidebar 上**:「搜尋」是 sticky 的,而 sticky 貼齊的是捲動容器的 padding
+   邊——把 padding 搬進內層會讓那一條往上跑 12px,那就是動到桌機版面了。 */
+.sidebar-body { padding: 0; }
+
+/* 摺疊鈕:**桌機不存在**。側欄在寬螢幕是常駐的,多一顆收合鈕只是多一個狀態。
+   窄螢幕的樣式在檔尾的 media query 裡一起講。 */
+.sidebar-toggle { display: none; }
 /* 條件變多之後側欄自己會捲(卡片參數一長串),「搜尋」因此釘在側欄頂端——
    調完種族按鈕還要捲回最上面才按得到,那是每一次搜尋都要付一遍的代價。
    負 margin 是為了蓋掉側欄的 padding:不蓋的話捲動的內容會從兩側露出來。 */
@@ -152,7 +160,10 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .sort-dir:hover { border-color: var(--accent); }
 .sort-dir[hidden] { display: none; }
 
-.pager { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; }
+/* 頁碼窗:目前頁的前後各幾頁、頭尾各幾頁。**斷點只住在 CSS**——render.js 讀這個
+   變數決定要畫幾顆頁碼鈕,自己不記得「窄螢幕是幾 px」。抄一份斷點在 JS 裡的話,
+   改了這裡的 720 之後分頁器會在另一個寬度才變窄,而那是看不出原因的版面錯位。 */
+.pager { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; --pg-win: 2; }
 .pager button {
   background: var(--surface2); border: 1px solid var(--border);
   border-radius: 6px; color: var(--text); padding: 4px 12px;
@@ -207,7 +218,12 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 .card-name:hover { text-decoration: underline; }
 .card-id { color: var(--muted); font-size: 11px; font-family: monospace; }
-.card-names { color: var(--muted); font-size: 11px; margin-top: 1px; }
+/* 日英卡名是唯一一段可能不含斷行點的長字串(`Number 39: Utopia Double`),
+   窄螢幕上它會把卡片撐寬、整頁跟著橫向捲 */
+.card-names {
+  color: var(--muted); font-size: 11px; margin-top: 1px;
+  overflow-wrap: break-word;
+}
 .card-rarity {
   color: #fff; border-radius: 4px; font-size: 10px; font-weight: bold;
   padding: 1px 6px; border: 1px solid var(--border);
@@ -320,19 +336,94 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   margin: 2px 0; padding: 0 8px;
 }
 
+/* ─── 窄螢幕 ──────────────────────────────────────────────
+   三條斷點,由寬到窄:平板(兩欄留著,只把側欄與留白收窄)、手機(側欄變成頂部
+   可摺疊區、卡片改單欄)、小螢幕手機(尺寸再收一階)。範圍是「能用就好」——
+   比賽中或組牌時掏出手機查得動就夠,不做觸控手勢、下拉重整、底部固定搜尋列,
+   也不做手機專用的條件全螢幕層。
+
+   分界選在 720:再寬一點的裝置(平板直立 768〜834)兩欄仍然放得下側欄與卡片,
+   而把它們一起推去單欄的話,平板反而比桌機難用(條件永遠在畫面外)。 */
+
 @media (max-width: 900px) {
-  header { padding: 12px 12px 8px; }
-  /* 窄螢幕:側欄改成結果區上方的一段(收合成可摺疊區是票09) */
+  header { padding: 14px 14px 10px; }
   .layout {
-    grid-template-columns: minmax(0, 1fr); padding: 0 12px 40px; gap: 12px;
+    grid-template-columns: 216px minmax(0, 1fr); gap: 14px; padding: 0 14px 40px;
   }
-  .sidebar { position: static; max-height: none; }
+  .card { padding: 10px 12px; gap: 12px; }
+  .card-pic, .card-img { width: 150px; }
+  .card-img { height: 218px; }
 }
 
 @media (max-width: 720px) {
-  header { flex-direction: column; gap: 2px; }
-  /* 窄螢幕:卡圖改成置頂單欄(完整的手機版面是票09) */
-  .card { flex-direction: column; align-items: center; }
+  header { flex-direction: column; gap: 2px; padding: 12px 12px 8px; }
+  .layout {
+    grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0 12px 40px;
+  }
+
+  /* 側欄變成結果區上方的一段,**預設收起**:手機一屏只有 600 多點高,常駐的
+     條件區(十七軸、兩百多顆鈕)會把結果整個推到摺線以下。
+
+     `overflow: visible` 是為了讓底下兩條 sticky 認得的是頁面而不是側欄自己——
+     側欄在這裡不再是捲動容器(max-height 拿掉了),不改的話那兩條永遠不生效。
+     留白改由內層帶:摺疊鈕要貼著側欄的邊(整條都是可點的),而收起來時內層連同
+     它的留白一起消失——留在外層的話收起來會剩一條 24px 高的空殼。 */
+  .sidebar {
+    --bar-h: 38px;
+    position: static; max-height: none; overflow: visible; padding: 0;
+  }
+  .sidebar-body { padding: 12px; }
+  .sidebar-toggle {
+    display: flex; align-items: center; gap: 8px;
+    position: sticky; top: 0; z-index: 3;
+    width: 100%; min-height: var(--bar-h); padding: 8px 12px;
+    background: var(--surface2); border: none; border-radius: 10px;
+    color: var(--text); font-family: inherit; font-size: 14px; cursor: pointer;
+  }
+  /* 鈕面永遠寫著現在是開還是關;狀態由 aria-expanded 帶,樣式跟著它走,
+     免得「展開了沒有」在 class 與 aria 兩個地方各有一份說法 */
+  .sidebar-toggle::after { content: '▾'; margin-left: auto; color: var(--muted); }
+  .sidebar-toggle[aria-expanded="true"]::after { content: '▴'; }
+  .sidebar:not(.open) .sidebar-body { display: none; }
+  /* 條件一長串,「搜尋」跟著釘在摺疊鈕下面——桌機版釘的是側欄自己的捲動頂端,
+     手機版沒有那個捲動容器,所以改釘在頁面上、讓開摺疊鈕的高度 */
+  .sidebar-actions { top: var(--bar-h); }
+
+  /* 卡片改單欄:卡圖置頂置中、卡文佔滿整寬。圖比平板再大一點——它獨佔一列,
+     縮太小反而看不清卡面 */
+  .card { flex-direction: column; align-items: center; padding: 12px; }
   .card-pic { width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .card-img { width: 168px; height: 245px; }
   .card-body { width: 100%; }
+
+  /* iOS Safari 對 font-size 小於 16px 的輸入框會在聚焦時自動放大整頁,而放大之後
+     版面就橫著捲了——條件區「不需要橫向捲動」在 iPhone 上就是被這條吃掉的 */
+  .sidebar input[type="text"], .range-in, .per-page select, .sort select {
+    font-size: 16px;
+  }
+  /* 觸控目標:手指不是滑鼠指標,兩百多顆三態鈕點得中才算能用 */
+  .tri { padding: 5px 9px; font-size: 13px; }
+  .range-in { padding: 6px 8px; }
+  .sidebar-actions button { padding: 9px 10px; }
+
+  /* 結果列的彈簧撐開會把排序與每頁擠到自己一行去 */
+  .actions { gap: 8px; padding-bottom: 8px; }
+  .actions .spacer { display: none; }
+
+  /* 分頁器收成「頭尾各一頁 + 目前頁前後各一頁」,連上下頁與跳頁共兩排。
+     桌機的窗是 2,285 頁時會排到三四排去 */
+  .pager { --pg-win: 1; gap: 5px; }
+  .pager button { padding: 5px 9px; font-size: 12.5px; }
+}
+
+@media (max-width: 430px) {
+  header h1 { font-size: 20px; }
+  .card { padding: 10px; }
+  .card-img { width: 144px; height: 210px; }
+  .card-text .eff { font-size: 13px; padding: 3px 6px; }
+  .pager button { padding: 5px 7px; font-size: 12px; }
+  .page-jump input { width: 56px; }
+  /* 上下頁只留箭頭:360px 寬的手機上那兩個詞佔掉近八十點,留著的話中段的頁碼
+     會被擠到第二排,分頁器整個變成三排 */
+  .pg-txt { display: none; }
 }

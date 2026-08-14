@@ -16,6 +16,14 @@
   <!-- 左側常駐條件側欄:邊看結果邊調條件,不必來回捲動。
        後面幾張票的條件軸(效果文、卡片參數、效果類型)各自往這裡加一段。 -->
   <aside class="sidebar" id="sidebar">
+    <!-- 摺疊鈕只在窄螢幕出現(桌機由 CSS 收起來):手機一屏只有 600 多點高,
+         常駐的條件區會把結果整個推到摺線以下。摺起來看不見條件,所以鈕面上寫著
+         目前有幾條條件在生效——帶條件的網址在手機上一開就是摺著的,不寫的話
+         使用者看到的是一批被篩過、卻沒有任何理由的結果。 -->
+    <button type="button" id="btnFilters" class="sidebar-toggle"
+            aria-expanded="false" aria-controls="sidebarBody">篩選條件</button>
+
+    <div class="sidebar-body" id="sidebarBody">
     <div class="sidebar-actions">
       <button type="button" id="btnSearch" class="primary">搜尋</button>
       <button type="button" id="btnClear">清除條件</button>
@@ -55,6 +63,7 @@
          排列順序由 query.js 的 FIELDS 決定:效果類型與必發/選發排在最前面,
          緊接著上面的效果文框——那三個是全部的句層條件,並用時取同一個效果句。 -->
     <div class="crit" id="critParams"></div>
+    </div><!-- /.sidebar-body -->
   </aside>
 
   <main class="results-area">

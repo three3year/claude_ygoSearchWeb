@@ -349,15 +349,30 @@ function initAltArt() {
   });
 }
 
+/* 頁碼窗的大小(頭尾各幾頁、目前頁前後各幾頁)**由 CSS 決定**:窄螢幕上 285 頁的
+   分頁器照桌機的窗畫會排到三四排去,而「多窄算窄」只該有一份說法——斷點住在
+   style.css 的 `--pg-win`,這裡只是問它。JS 自己記一次 720 的話,改了 CSS 之後
+   分頁器會在另一個寬度才變窄,那是看不出原因的版面錯位(ADR-0008 的同一條理由)。
+   讀不到就回桌機的 2:沒有 CSS 的環境(測試沙箱)不該因此少畫頁碼。 */
+function pagerWin(el) {
+  if (typeof getComputedStyle !== 'function') return 2;
+  const n = parseInt(getComputedStyle(el).getPropertyValue('--pg-win'), 10);
+  return n > 0 ? n : 2;
+}
+
 function renderPager(id, pages, page) {
   const el = $(id);
   if (pages <= 1) { el.innerHTML = ''; return; }
+  const w = pagerWin(el);
   const btn = (p, label, cls = '') =>
     `<button data-p="${p}" class="${cls}${p === page ? ' cur' : ''}">${label}</button>`;
-  const parts = [btn(Math.max(1, page - 1), '‹ 上一頁')];
+  // 「上一頁」三個字包起來,小螢幕上由 CSS 收掉只留箭頭:360px 寬的手機上那兩個
+  // 詞佔掉近八十點,留著就會把頁碼擠到第二排去(整個分頁器因此變成三排)
+  const nav = zh => `<span class="pg-txt">${zh}</span>`;
+  const parts = [btn(Math.max(1, page - 1), '‹ ' + nav('上一頁'))];
   const win = [];
   for (let p = 1; p <= pages; p++) {
-    if (p <= 2 || p > pages - 2 || Math.abs(p - page) <= 2) win.push(p);
+    if (p <= w || p > pages - w || Math.abs(p - page) <= w) win.push(p);
   }
   let last = 0;
   for (const p of win) {
@@ -365,7 +380,7 @@ function renderPager(id, pages, page) {
     parts.push(btn(p, p));
     last = p;
   }
-  parts.push(btn(Math.min(pages, page + 1), '下一頁 ›'));
+  parts.push(btn(Math.min(pages, page + 1), nav('下一頁') + ' ›'));
   parts.push(`<span class="page-jump"><input type="number" min="1" max="${pages}"
     placeholder="頁碼" aria-label="跳至頁碼">/${pages}</span>`);
   el.innerHTML = parts.join('');

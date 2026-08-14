@@ -61,6 +61,7 @@ const DRIVER = `
 }
 ;function __axes() { return JSON.stringify(Query.axes()); }
 ;function __optAvail(json) { return Query.optionalAvailable(JSON.parse(json)); }
+;function __critCount(json) { return Query.count(JSON.parse(json)); }
 ;function __sortedIds(json) {
   var a = JSON.parse(json);
   var result = Engine.runQuery(window.CARD_DATA, a.query || {});
@@ -139,6 +140,14 @@ function optionalAvailable(sandbox, kindSel) {
 }
 
 /**
+ * 生效中的條件數(票09:窄螢幕的側欄摺起來之後,摺疊鈕上寫的就是它)。
+ * 與 `optionalAvailable()` 同一個理由:規則是純的,DOM 那一層只是把數字寫上去。
+ */
+function critCount(sandbox, q) {
+  return sandbox.__critCount(JSON.stringify(q || {}));
+}
+
+/**
  * 命中的卡片密碼清單,**照 key/dir 排序後**的順序(key 省略即預設的領域序)。
  *
  * 走的是搜尋 → 排序這條真實的路徑:排序吃的是接縫 3 的回傳形狀,而不是另外
@@ -175,5 +184,5 @@ function canonHash(sandbox, str) {
   return sandbox.__canonHash(String(str == null ? '' : str));
 }
 
-module.exports = { load, search, ids, marks, axes, optionalAvailable,
+module.exports = { load, search, ids, marks, axes, optionalAvailable, critCount,
                    sortedIds, sortKeys, hash, parseHash, canonHash };

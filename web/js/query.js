@@ -10,6 +10,10 @@
  * 不白屏,只是結果少了幾百張而沒有人會察覺。
  *
  * 票08 的 `#hash` 編解碼也接在條件物件上——序列化的對象就是它。
+ *
+ * 側欄自己的**開合**(票09:窄螢幕上它是頂部的可摺疊區)也在這裡:那是側欄的
+ * 呈現狀態,不是查詢的一部分。「現在算不算窄螢幕」這件事 JS 一個字都不知道——
+ * 開合只是一個 class 與 `aria-expanded`,寬螢幕由 CSS 讓它不生效。
  */
 'use strict';
 
@@ -212,7 +216,54 @@ function read() {
   return q;
 }
 
+/**
+ * 目前生效中的**條件數**(票09 的摺疊鈕寫它)。
+ *
+ * 純函式,吃的就是 `read()` 吐出來的那個物件——摺疊鈕上的數字因此不必自己再走一遍
+ * DOM,加一條條件軸時它也自動算得到。數的是**軸**而不是點亮的鈕:「屬性 3 顆」是
+ * 一條條件(軸內 OR),寫成 3 會讓人以為那是三道篩子。
+ *
+ * `nameLang` 不算:它是「卡名那一格拿哪一種卡名比」,不是一條會篩掉卡的條件——
+ * 算進去的話清空所有條件之後鈕面仍然寫著 1。
+ */
+function count(q) {
+  const isSet = v => {
+    if (v == null || v === '') return false;
+    if (typeof v !== 'object') return true;
+    // 三態軸 `{dark: 1}`、範圍 `{min: 2500, max: null}` 同一條判準:有沒有任何
+    // 一個給了值的鍵。空物件(壞掉的網址解出來的殘骸)因此不算一條。
+    // **空著的那一邊是 null 而不是 0**:刻度 0(28 張)與攻擊力 0 都是真的值,
+    // 把 0 當成沒設的話那幾條條件會從鈕面的數字裡消失
+    return Object.keys(v).some(k => v[k] != null);
+  };
+  return Object.keys(q || {}).filter(k => k !== 'nameLang' && isSet(q[k])).length;
+}
+
 /* ── 互動 ─────────────────────────────────────────────── */
+
+/**
+ * 摺疊(票09):窄螢幕上側欄是頂部的可摺疊區,預設收起、點一下展開。
+ *
+ * **開關狀態只有一份說法**:`aria-expanded` 是它,`.open` 只是給 CSS 的選擇器用。
+ * 桌機呼叫這幾個函式是安全的空動作——側欄在寬螢幕由 CSS 常駐顯示,`.open` 在那裡
+ * 不影響任何東西。「現在算不算窄螢幕」因此不必在 JS 裡再寫一次斷點(斷點只住在
+ * style.css,ADR-0008 擋的是同一種第二份真相)。
+ */
+function setOpen(open) {
+  const btn = $('btnFilters');
+  $('sidebar').classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function isOpen() {
+  return $('btnFilters').getAttribute('aria-expanded') === 'true';
+}
+
+/** 摺疊鈕的鈕面:摺起來也看得見「還有幾條條件在生效」 */
+function summarize(q) {
+  const n = count(q);
+  $('btnFilters').textContent = n ? `篩選條件・${n} 項` : '篩選條件';
+}
 
 function setTri(btn, st) {
   btn.dataset.st = st;
@@ -304,6 +355,7 @@ function clear() {
 }
 
 function init() {
+  $('btnFilters').addEventListener('click', () => setOpen(!isOpen()));
   const langBtn = $('fNameLang');
   showLang(langBtn, langBtn.dataset.v);
   langBtn.addEventListener('click', () => {
@@ -324,5 +376,6 @@ function init() {
 }
 
   return Object.freeze({ read, write, clear, init, axes, optionalAvailable,
+                         count, summarize, collapse: () => setOpen(false),
                          LANGS, FIELDS });
 })();

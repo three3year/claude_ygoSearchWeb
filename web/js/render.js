@@ -156,9 +156,12 @@ function cardHtml(e, hl) {
 }
 
 /* 卡圖載不到時安靜隱藏:CDN 缺圖不該在畫面上留一排破圖。用 visibility 而不是
-   display,位置留著,文字才不會因為某幾張缺圖而左右跳動。 */
+   display,位置留著,文字才不會因為某幾張缺圖而左右跳動。
+   decoding="async":懶載入的圖在快速捲動途中陸續抵達,同步解碼會綁在繪製幀裡
+   ——中鍵自動捲動由主執行緒驅動,那正是「一卡一卡」的來源之一。 */
 function imgHtml(id) {
-  return `<img class="card-img" loading="lazy" width="180" height="262" alt=""
+  return `<img class="card-img" loading="lazy" decoding="async"
+    width="180" height="262" alt=""
     src="${PIC}${id}.jpg" onerror="this.style.visibility='hidden'">`;
 }
 

@@ -231,6 +231,10 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .idle-title { font-size: 17px; color: var(--text); }
 
 /* ─── 結果卡片 ────────────────────────────────────────────── */
+/* 不用 content-visibility:auto——實測(2026-08-17,CPU 8x 節流+中鍵自動捲動)
+   它讓掉幀從 5.9% 惡化到 11.4%:快速捲動時每張卡變成進視窗當下才 render,
+   在主執行緒驅動的自動捲動裡那是一筆 100–200ms 的大塊工作;先全部畫好、
+   捲動只付增量繪製反而順。 */
 .card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;

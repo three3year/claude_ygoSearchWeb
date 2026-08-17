@@ -82,13 +82,14 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 
 /* 標題與輸入框同一行。每個 .field 各自是一張 grid,標題欄要用固定寬
    而不是 auto——auto 只在單一 grid 內對齊,三個欄位的輸入框會排不齊。
-   80px 恰好放得下最長的「效果文關鍵字」。 */
+   56px 恰好放得下最長的「卡片密碼」。
+   標題色取 --muted 與 --text 的中間:全亮會跟輸入的內容搶注意力。 */
 .crit .field {
-  display: grid; grid-template-columns: 80px minmax(0, 1fr);
+  display: grid; grid-template-columns: 56px minmax(0, 1fr);
   align-items: center; column-gap: 8px;
   margin-bottom: 12px;
 }
-.field-label { color: var(--text); font-size: 13px; font-weight: 600; }
+.field-label { color: #b3bac9; font-size: 13px; font-weight: 600; }
 .field-hint { grid-column: 2; color: var(--muted); font-size: 11px; margin-top: 4px; opacity: .75; }
 .name-row { display: flex; gap: 6px; }
 .name-row input { flex: 1; min-width: 0; }
@@ -121,8 +122,9 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   cursor: pointer; text-align: left;
 }
 .axis-head:hover { color: var(--text); }
-.axis-head::after { content: '▸'; margin-left: auto; color: var(--muted); }
-.axis-head[aria-expanded="true"]::after { content: '▾'; }
+/* 箭頭在標題左側(檔案總管式):縮排層級線 + 左箭頭才讀得出「這是可展開的節點」 */
+.axis-head::before { content: '▸'; color: var(--muted); }
+.axis-head[aria-expanded="true"]::before { content: '▾'; }
 /* 已選數:收起也看得見裡面藏著條件(「看不見的條件解釋不了零結果」由它接手)。
    沒點任何鈕時是空字串,整顆膠囊跟著消失。 */
 .axis-count {

@@ -33,26 +33,26 @@
       <div class="field">
         <span class="field-label">卡片密碼</span>
         <input type="text" id="fId" inputmode="numeric"
-               placeholder="卡面左下角的 8 位數字（46986414）">
+               placeholder="例：46986414">
         <p class="field-hint">完全相等才算；異圖密碼查得到本尊</p>
       </div>
 
       <div class="field">
-        <span class="field-label">卡名關鍵字</span>
+        <span class="field-label">卡名</span>
         <div class="name-row">
           <!-- 語言三態循環鈕:中 → 日 → 英 → 中。標籤與比對語言由 query.js 一處
                決定,HTML 只給起始態。 -->
           <button type="button" id="fNameLang" class="lang-cycle" data-v="zh"
                   title="切換卡名比對語言">中</button>
           <input type="text" id="fName"
-                 placeholder="卡名關鍵字；% 為萬用字元（青眼%龍）">
+                 placeholder="例：青眼%龍">
         </div>
       </div>
 
       <div class="field">
-        <span class="field-label">效果文關鍵字</span>
+        <span class="field-label">效果文</span>
         <input type="text" id="fText"
-               placeholder="逐效果句比對；% 為萬用字元（墓地%手牌）">
+               placeholder="例：墓地%手牌">
         <p class="field-hint">同一個效果裡同時出現才算；不掃素材指定行</p>
       </div>
     </div>

@@ -303,17 +303,19 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .card-text .eff.flavor, .card-text .eff.empty { cursor: default; }
 
 /* ─── 句層命中的標亮 ──────────────────────────────────────
-   命中的是**哪一個效果**看得見:整行標亮 + 行首 badge 說明命中原因 + 關鍵字本身
-   在行內上色。三層各答一個問題——哪一行、為什麼、哪幾個字。未命中的行一個字都
-   不動,標亮才有意義(整張卡都亮起來等於沒亮)。 */
+   命中的是**哪一個效果**看得見:整行標亮 + 上方獨立一行的 badge 說明命中原因 +
+   關鍵字本身在行內上色。三層各答一個問題——哪一行、為什麼、哪幾個字。未命中的行
+   一個字都不動,標亮才有意義(整張卡都亮起來等於沒亮)。
+   badge 自佔一行(`display: block`)而不是擠在行首:接在卡文前面看起來像卡文的
+   一部分。只搜效果文時沒有 badge——關鍵字上色已經回答了「為什麼」。 */
 .card-text .eff.hit {
   background: var(--hl); border-left-color: var(--hl-border);
 }
 .card-text .eff.hit:hover { background: var(--hl); }
 .eff-hit {
-  display: inline-block; margin-right: 6px; padding: 0 6px;
+  display: block; width: fit-content; margin-bottom: 3px; padding: 0 6px;
   background: var(--hl-border); border-radius: 4px;
-  color: #241f05; font-size: 11px; font-weight: bold; vertical-align: 1px;
+  color: #241f05; font-size: 11px; font-weight: bold;
 }
 .card-text mark.kw {
   background: var(--hl-border); color: #241f05;

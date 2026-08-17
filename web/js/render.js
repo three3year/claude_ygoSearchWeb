@@ -58,12 +58,13 @@ function setSort(key, dir) {
   paintSort();
 }
 
-/* 命中原因 → badge 上的文字。效果文寫的是條件本身(關鍵字對每一行都一樣),
-   [[效果類型]]與[[必發/選發]]寫的是**這一行自己的值**——多條件並用時 badge 就是
-   「這一行為什麼被選中」的答案,而那個答案逐行不同:效果類型選了誘發即時+誘發
-   兩顆時,命中的兩行寫的不是同一個詞。 */
+/* 命中原因 → badge 上的文字。[[效果類型]]與[[必發/選發]]寫的是**這一行自己的值**
+   ——多條件並用時 badge 就是「這一行為什麼被選中」的答案,而那個答案逐行不同:
+   效果類型選了誘發即時+誘發兩顆時,命中的兩行寫的不是同一個詞。
+   **效果文不進 badge**:關鍵字已經在行內上色,badge 再寫一次「效果文」是重複資訊
+   ——只搜效果文時整顆 badge 因此不長。 */
 const MARK_ZH = {
-  text: () => '效果文',
+  text: () => '',
   kind: (c, i) => KIND_ZH[(c.k || [])[i]],
   opt: (c, i) => OPT_ZH[(c.o || [])[i]],
 };
@@ -280,8 +281,8 @@ function effHtml(c, text, i, rows, hl) {
   const role = (c.ro && c.ro[i]) || '';
   const kind = (c.k && c.k[i]) || '';
   const label = role ? ROLE_ZH[role] : (KIND_ZH[kind] || kind);
-  // 命中的那幾行整行標亮、行首掛 badge 說明命中原因,關鍵字本身再在行內上色;
-  // 沒命中的行一個字都不動。多條件並用時 badge 就是那一行為什麼被選中的答案。
+  // 命中的那幾行整行標亮、上方獨立一行掛 badge 說明命中原因,關鍵字本身再在
+  // 行內上色;沒命中的行一個字都不動。只搜效果文時 badge 是空字串,整顆不長。
   const hit = !!rows && rows.indexOf(i) >= 0;
   const ranges = hit && hl && hl.parts.length
     ? Engine.likeRanges(text, hl.parts) : null;

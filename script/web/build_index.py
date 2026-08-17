@@ -47,6 +47,11 @@ def print_census(report, p):
         empty = census["no_value"][name]
         tail = f" 無值={empty}" if empty else ""
         p(f"  {name}({len(counts)}): {cells}{tail}")
+    cross = report["kind_cross"]
+    cells = " ".join(f"{code}={n}" for code, n in cross["cards"].items())
+    dropped = ("(拿掉按鈕: " + " ".join(cross["dropped"]) + ")"
+               if cross["dropped"] else "")
+    p(f"  跨類型魔陷卡數: {cells} {dropped}")
 
 
 def print_checks(report, p, limit=20):

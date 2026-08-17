@@ -38,8 +38,14 @@ function schema() {
   const tri = [], range = [];
   Query.FIELDS.forEach(f => {
     if (!f.tri) { range.push({ key: f.range, unknown: f.unknown || '' }); return; }
-    const codes = ((VOCAB[f.dom] || {}).items || [])
-      .map(it => (f.side ? f.side + ':' : '') + it.code);
+    // 合法碼跟著**按鈕**走:有分組的值域取分組聯集——建置期把跨類型 0 張的
+    // 效果類型值從分組拿掉、items 留作顯示詞彙表(ADR-0010),那種值在網址上
+    // 視同未知碼。「UI 做不出來的狀態還原不回來」,與兩態軸丟排除段同一條規則。
+    const dom = VOCAB[f.dom] || {};
+    const source = (dom.groups || []).length
+      ? dom.groups.reduce((all, g) => all.concat(g.codes), [])
+      : (dom.items || []).map(it => it.code);
+    const codes = source.map(code => (f.side ? f.side + ':' : '') + code);
     // 側分段軸(sub)的態數只讀**第一段**的宣告:三段是同一個軸,態數不該不同。
     // 若要把側分段軸兩態化,FIELDS 三段都要改——這裡不會替你合併第二段之後的宣告
     const ax = tri.find(a => a.key === f.tri);

@@ -14210,7 +14210,7 @@ window.CARD_DATA=[
 window.VOCAB={
 "attr":{"items":[{"code":"earth","zh":"地"},{"code":"water","zh":"水"},{"code":"fire","zh":"炎"},{"code":"wind","zh":"風"},{"code":"light","zh":"光"},{"code":"dark","zh":"闇"},{"code":"divine","zh":"神"}],"zh":"屬性"},
 "cat":{"items":[{"code":"m","zh":"怪獸"},{"code":"s","zh":"魔法"},{"code":"t","zh":"陷阱"}],"zh":"大類"},
-"kind":{"groups":[{"codes":["x","u","c","q","t","i"],"zh":"怪獸側"},{"codes":["sn","sq","sr","sc","se","sf","sp","tn","tc","tk"],"zh":"魔陷卡效果"}],"items":[{"code":"x","zh":"效果外文本"},{"code":"u","zh":"無種類效果"},{"code":"c","zh":"永續效果"},{"code":"q","zh":"誘發即時效果(2速)"},{"code":"t","zh":"誘發效果(1速)"},{"code":"i","zh":"啟動效果"},{"code":"sn","zh":"通常魔法卡效果"},{"code":"sq","zh":"速攻魔法卡效果"},{"code":"sr","zh":"儀式魔法卡效果"},{"code":"sc","zh":"永續魔法卡效果"},{"code":"se","zh":"裝備魔法卡效果"},{"code":"sf","zh":"場地魔法卡效果"},{"code":"sp","zh":"靈擺魔法卡效果"},{"code":"tn","zh":"通常陷阱卡效果"},{"code":"tc","zh":"永續陷阱卡效果"},{"code":"tk","zh":"反擊陷阱卡效果"}],"zh":"效果類型"},
+"kind":{"groups":[{"codes":["x","u","c","q","t","i"],"zh":"怪獸側"},{"codes":["sc","se","tc"],"zh":"跨類型魔陷效果"}],"items":[{"code":"x","zh":"效果外文本"},{"code":"u","zh":"無種類效果"},{"code":"c","zh":"永續效果"},{"code":"q","zh":"誘發即時效果(2速)"},{"code":"t","zh":"誘發效果(1速)"},{"code":"i","zh":"啟動效果"},{"code":"sn","zh":"通常魔法卡效果"},{"code":"sq","zh":"速攻魔法卡效果"},{"code":"sr","zh":"儀式魔法卡效果"},{"code":"sc","zh":"永續魔法卡效果"},{"code":"se","zh":"裝備魔法卡效果"},{"code":"sf","zh":"場地魔法卡效果"},{"code":"sp","zh":"靈擺魔法卡效果"},{"code":"tn","zh":"通常陷阱卡效果"},{"code":"tc","zh":"永續陷阱卡效果"},{"code":"tk","zh":"反擊陷阱卡效果"}],"own":{"sc":"s:continuous","se":"s:equip","sf":"s:field","sn":"s:normal","sp":"m:pendulum","sq":"s:quick","sr":"s:ritual","tc":"t:continuous","tk":"t:counter","tn":"t:normal"},"zh":"效果類型"},
 "lm":{"items":[{"code":"TL","zh":"↖"},{"code":"T","zh":"↑"},{"code":"TR","zh":"↗"},{"code":"L","zh":"←"},{"code":"R","zh":"→"},{"code":"BL","zh":"↙"},{"code":"B","zh":"↓"},{"code":"BR","zh":"↘"}],"zh":"連結標記"},
 "optional":{"carriers":["q","t","sn","sq","sr","sc","se","sf","sp","tn","tc","tk"],"items":[{"code":"m","zh":"必發"},{"code":"o","zh":"選發"}],"zh":"必發/選發"},
 "ot":{"items":[{"code":"o","zh":"OCG 限定"},{"code":"t","zh":"TCG 限定"},{"code":"b","zh":"兩者"}],"zh":"OCG・TCG"},
@@ -14222,9 +14222,9 @@ window.VOCAB={
 "sub_t":{"items":[{"code":"normal","zh":"通常"},{"code":"continuous","zh":"永續"},{"code":"counter","zh":"反擊"}],"zh":"陷阱子類型"}
 };
 window.META={
-"built_at":"2026-08-14T17:35:47+0800",
+"built_at":"2026-08-17T17:08:37+0800",
 "cards":14207,
 "clauses":34265,
 "sources":{"cards.json":"0d9ed638204298ce","tag_cards.json":"d46f5cd375a2d4dd"},
-"vocab_digest":"fa7dcf646f591143"
+"vocab_digest":"92341aee35b38e36"
 };

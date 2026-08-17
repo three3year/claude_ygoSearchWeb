@@ -50,7 +50,8 @@ def entry(code, zh, src=None, filterable=True):
     return {"code": code, "zh": zh, "src": src, "filter": filterable}
 
 
-def domain(zh, src_kind, entries, groups=(), fallback=None, carriers=()):
+def domain(zh, src_kind, entries, groups=(), fallback=None, carriers=(),
+           own=()):
     """一個值域。entries 的順序就是宣告序:按鈕順序與排序比較序共用它。
 
     groups 是按鈕分組((組名, 成員碼...)),分組必須恰好蓋過全部可篩選成員——
@@ -59,6 +60,10 @@ def domain(zh, src_kind, entries, groups=(), fallback=None, carriers=()):
     carriers 是「這個值域的值只出現在 [[效果類型]]的哪些成員上」(目前只有
     [[必發/選發]]有這種關係)。宣告在正典而不是在前端,理由與其他值域一樣:
     抄第二份就會漂移,而漂移的形狀是一組條件安靜地不出現。
+
+    own 是「這個值域的值 → 本類的 (大類碼, 子類型碼)」((值碼, 大類碼, 子類型碼)
+    的序列,ADR-0010,目前只有[[效果類型]]的魔陷十值有)。搜尋介面的跨類型排除與
+    建置期的空值判定都照它走,同一條「不抄第二份」的理由。
     """
     if src_kind == SRC_TEXT:
         entries = tuple(
@@ -66,7 +71,7 @@ def domain(zh, src_kind, entries, groups=(), fallback=None, carriers=()):
             for e in entries)
     return {"zh": zh, "src_kind": src_kind, "entries": tuple(entries),
             "groups": tuple(groups), "fallback": fallback,
-            "carriers": tuple(carriers)}
+            "carriers": tuple(carriers), "own": tuple(own)}
 
 
 # ── 卡片種類大類 ─────────────────────────────────────────────
@@ -185,8 +190,24 @@ _KIND = domain("效果類型", SRC_TEXT, (
     entry("tk", "反擊陷阱卡效果"),
 ), groups=(
     ("怪獸側", ("x", "u", "c", "q", "t", "i")),
-    ("魔陷卡效果", ("sn", "sq", "sr", "sc", "se", "sf", "sp", "tn", "tc",
-                    "tk")),
+    # 群組標題是「跨類型」:這十顆鈕只收自身[[卡片種類]]與值不一致的卡(ADR-0010)
+    ("跨類型魔陷效果", ("sn", "sq", "sr", "sc", "se", "sf", "sp", "tn", "tc",
+                        "tk")),
+), own=(
+    # 魔陷十值的本類對應:自身卡片種類與值一致(本類)的卡不進該值按鈕的成員——
+    # 裝備魔法卡自己的裝備魔法卡效果是卡片種類的重言,「所有裝備魔法卡」歸
+    # [[卡片子類型]]軸。前九值對同名子類型;靈擺魔法卡效果的本類是**靈擺怪獸**
+    # (照字面比對的話那顆鈕會變回「全部靈擺怪獸」,ADR-0010)。
+    ("sn", "s", "normal"),
+    ("sq", "s", "quick"),
+    ("sr", "s", "ritual"),
+    ("sc", "s", "continuous"),
+    ("se", "s", "equip"),
+    ("sf", "s", "field"),
+    ("sp", "m", "pendulum"),
+    ("tn", "t", "normal"),
+    ("tc", "t", "continuous"),
+    ("tk", "t", "counter"),
 ))
 # [[必發/選發]]只長在**有觸發事件的發動句**上:誘發即時效果(2速)、誘發效果(1速)
 # 與[[魔陷卡效果]]十值。啟動效果與魔陷卡本身的發動本就由玩家主動選擇開啟(不記值),
@@ -265,6 +286,12 @@ def codes(name, domains=None):
 def carriers(name, domains=None):
     """承載這個值域的[[效果類型]]短碼(沒有這種關係的值域是空的)。"""
     return (domains or DOMAINS)[name]["carriers"]
+
+
+def own_types(domains=None):
+    """[[魔陷卡效果]]值 → 本類的 (大類碼, 子類型碼)(ADR-0010)。"""
+    return {code: (cat, sub)
+            for code, cat, sub in (domains or DOMAINS)[KIND]["own"]}
 
 
 def zh(name, code, domains=None):
@@ -366,6 +393,35 @@ def problems(domains=None):
             found.append(f"{name}: fallback {dom['fallback']!r} 不是成員")
         found.extend(_group_problems(name, dom))
         found.extend(_carrier_problems(name, dom, domains))
+        found.extend(_own_problems(name, dom, domains))
+    return found
+
+
+def _own_problems(name, dom, domains):
+    """本類對應必須兩側都解得動:值是自己的成員、大類與子類型是各自值域的成員。
+
+    寫壞的下場是**排除安靜地不生效**:一致判定永遠不成立,本類卡照舊全數出現在
+    跨類型按鈕裡(ADR-0010 的語意整個沒了)——與承載關係寫壞同一族的無聲失效。
+    """
+    if not dom.get("own"):
+        return []
+    found = []
+    own_codes = {e["code"] for e in dom["entries"]}
+    seen = set()
+    for code, cat, sub in dom["own"]:
+        if code in seen:
+            found.append(f"{name}: 本類對應重複 {code!r}")
+        seen.add(code)
+        if code not in own_codes:
+            found.append(f"{name}: 本類對應 {code!r} 不是成員")
+        side = SUB.get(cat)
+        if side is None or side not in domains:
+            found.append(f"{name}: 本類對應 {code!r} 的大類 {cat!r} 不存在")
+            continue
+        if sub not in {e["code"] for e in domains[side]["entries"]}:
+            side_zh = domains[side]["zh"].replace("子類型", "側")
+            found.append(f"{name}: 本類對應 {code!r} 的子類型 {sub!r} "
+                         f"不是{side_zh}的成員")
     return found
 
 
@@ -423,6 +479,9 @@ def export(domains=None):
                                    for label, group in dom["groups"]]
         if dom["carriers"]:
             out[name]["carriers"] = list(dom["carriers"])
+        if dom["own"]:
+            out[name]["own"] = {code: f"{cat}:{sub}"
+                                for code, cat, sub in dom["own"]}
     return out
 
 

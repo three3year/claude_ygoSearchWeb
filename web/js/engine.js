@@ -22,9 +22,21 @@
 'use strict';
 
 const Engine = (() => {
+const { VOCAB } = Util;
 
 /* 密碼比對只認光禿禿的數字(前後空白在 runQuery 就修掉了) */
 const DIGITS = /^\d+$/;
+
+/* 跨類型魔陷效果(ADR-0010):魔陷十值的成員 = 帶該值效果句、且自身[[卡片種類]]
+   與該值**不一致**的卡。一致對應(值 → 本類的大類+子類型)由[[值域正典]]宣告、
+   隨 `VOCAB.kind.own` 出去——在這裡抄一份的話,正典多一個對應時排除會安靜地
+   不生效(ADR-0008 的同一個失效模式)。 */
+const KIND_OWN = {};
+for (const code in (VOCAB.kind || {}).own || {}) {
+  const pair = VOCAB.kind.own[code];
+  const i = pair.indexOf(':');
+  KIND_OWN[code] = { c: pair.slice(0, i), s: pair.slice(i + 1) };
+}
 
 /* 效果文關鍵字**不掃 `role = 素材指定` 的行**(2,358 行):搜「融合」時,574 張融合
    怪獸的素材寫法會把真正的答案淹掉。[[效果標記表]]逐句判過 `role`,所以這件事做得
@@ -170,6 +182,17 @@ function codeAt(arr, i) {
   return code ? [code] : [];
 }
 
+/* 一句的[[效果類型]]短碼。**本類卡的該值效果句視同無值**(ADR-0010):裝備魔法卡
+   自己的裝備魔法卡效果是卡片種類的重言,包含態收不到它、排除態也不擋它——與
+   「不承載不是一個值」同一個形狀。怪獸側六類沒有本類對應,一律原樣。 */
+function kindAt(c, i) {
+  const code = c.k && c.k[i];
+  if (!code) return [];
+  const own = KIND_OWN[code];
+  if (own && c.c === own.c && (c.s || []).indexOf(own.s) >= 0) return [];
+  return [code];
+}
+
 /* 空的條件物件等於沒設。這一層在句層特別要緊:記成「有設」的話,一張卡會單純
    因為**有效果句**就整批被標亮,而使用者一顆鈕都沒點。 */
 function sel(o) {
@@ -185,7 +208,7 @@ function clauseRows(c, parts, kindSel, optSel) {
   const tx = c.tx || [];
   const rows = [];
   for (let i = 0; i < tx.length; i++) {
-    if (kindSel && !triHit(codeAt(c.k, i), kindSel)) continue;
+    if (kindSel && !triHit(kindAt(c, i), kindSel)) continue;
     if (optSel && !triHit(codeAt(c.o, i), optSel)) continue;
     if (parts.length) {
       // 不掃素材指定行是**關鍵字**的規則,不是「素材行不存在」:找效果外文本的

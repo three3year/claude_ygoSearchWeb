@@ -309,6 +309,42 @@ def _census(cards, clauses_by_id):
     return {"counts": counts, "no_value": no_value}
 
 
+def _cross_type_counts(cards, clauses_by_id):
+    """魔陷十值各自的**跨類型卡數**(ADR-0010)。
+
+    跨類型 = 有該值的效果句、且自身卡片種類與該值不一致(本類對應由[[值域正典]]
+    宣告;靈擺魔法卡效果的本類是靈擺怪獸)。這個數字決定按鈕的去留:0 張的值不
+    生成按鈕——本類卡不進成員,按鈕留著就是一顆永遠 0 筆的鈕。
+    """
+    own = vocab.own_types()
+    counts = dict.fromkeys(own, 0)
+    for card in cards:
+        cat, subs = vocab.subtypes(card["type"])
+        codes = {vocab.code_of(vocab.KIND, cl.get("kind"))
+                 for cl in clauses_by_id.get(card["id"]) or ()}
+        for code in codes & set(own):
+            own_cat, own_sub = own[code]
+            if not (cat == own_cat and own_sub in subs):
+                counts[code] += 1
+    return counts
+
+
+def _drop_buttonless_kinds(exported, cross):
+    """跨類型 0 張的值從按鈕分組移除;整組空了連組標題一起拿掉。
+
+    只動 `groups`(按鈕),不動 `items`(顯示詞彙表):本類卡的效果句照樣掛著
+    該值的類型標籤,中文查表(`Util.zhTable`)不能因為按鈕沒了而查不到。
+    """
+    dropped = sorted(code for code, n in cross.items() if not n)
+    if not dropped:
+        return dropped
+    kind = exported[vocab.KIND]
+    kind["groups"] = [
+        dict(g, codes=codes) for g in kind["groups"]
+        if (codes := [c for c in g["codes"] if c not in dropped])]
+    return dropped
+
+
 def _summarise_problems(report):
     """報告 → 問題清單。非空即建置失敗;CLI 薄殼照這一份決定 exit code。"""
     checks = report["checks"]
@@ -398,6 +434,8 @@ def build_index(cards, tag_cards, built_at="", sources=None):
                                                     "bits": f"{bits:#x}"})
     index_cards = [entries[cid] for cid in sorted(entries)]
     exported = vocab.export()
+    cross = _cross_type_counts(cards, clauses_by_id)
+    dropped = _drop_buttonless_kinds(exported, cross)
     checks["missing_cards"] = sorted({c["id"] for c in cards} - set(entries))
     checks["unknown_values"].extend(_unexported_codes(index_cards, exported))
     index = {
@@ -418,6 +456,7 @@ def build_index(cards, tag_cards, built_at="", sources=None):
                   "sizes": {name: len(vocab.codes(name))
                             for name in vocab.DOMAINS}},
         "census": _census(cards, clauses_by_id),
+        "kind_cross": {"cards": cross, "dropped": dropped},
         "known_gaps": known_gaps,
         "checks": checks,
         "monster_invariant": _monster_invariant(cards),

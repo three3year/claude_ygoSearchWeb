@@ -76,6 +76,27 @@ class CanonTest(unittest.TestCase):
         dom = broken("sub_s", fallback="nope")
         self.assertIn("sub_s: fallback 'nope' 不是成員", vocab.problems(dom))
 
+    def test_own_type_code_must_be_a_member(self):
+        """本類對應掛在不存在的值上 = 一條永遠不生效的排除規則。"""
+        dom = broken(vocab.KIND, own=vocab.DOMAINS[vocab.KIND]["own"] + (
+            ("zz", "s", "equip"),))
+        self.assertIn("kind: 本類對應 'zz' 不是成員", vocab.problems(dom))
+
+    def test_own_type_target_must_resolve(self):
+        """對應的大類/子類型寫壞的話,一致判定永遠不成立,一致卡全部漏排除。"""
+        base = vocab.DOMAINS[vocab.KIND]["own"]
+        bad_cat = broken(vocab.KIND, own=base[:-1] + (("tk", "z", "counter"),))
+        self.assertIn("kind: 本類對應 'tk' 的大類 'z' 不存在",
+                      vocab.problems(bad_cat))
+        bad_sub = broken(vocab.KIND, own=base[:-1] + (("tk", "t", "equip"),))
+        self.assertIn("kind: 本類對應 'tk' 的子類型 'equip' 不是陷阱側的成員",
+                      vocab.problems(bad_sub))
+
+    def test_own_type_duplicate_is_caught(self):
+        base = vocab.DOMAINS[vocab.KIND]["own"]
+        dup = broken(vocab.KIND, own=base + (("se", "s", "equip"),))
+        self.assertIn("kind: 本類對應重複 'se'", vocab.problems(dup))
+
     def test_carrier_must_be_a_kind_member(self):
         """承載者對不到[[效果類型]]的成員 = 一條永遠不生效的規則。
 
@@ -149,7 +170,7 @@ class ExportTest(unittest.TestCase):
         kinds = exported["kind"]
         self.assertEqual(len(kinds["items"]), 16)
         self.assertEqual([g["zh"] for g in kinds["groups"]],
-                         ["怪獸側", "魔陷卡效果"])
+                         ["怪獸側", "跨類型魔陷效果"])
         self.assertEqual(len(kinds["groups"][0]["codes"]), 6)
         self.assertEqual(len(kinds["groups"][1]["codes"]), 10)
 
@@ -171,6 +192,34 @@ class ExportTest(unittest.TestCase):
                          ["c", "i", "u", "x"])
         # 沒有承載關係的值域不長這個鍵
         self.assertNotIn("carriers", exported["race"])
+
+    def test_own_types_cover_the_spelltrap_ten(self):
+        """[[魔陷卡效果]]十值各有一個本類對應(ADR-0010)。
+
+        前九值對到同名的魔法/陷阱子類型;靈擺魔法卡效果的本類是**靈擺怪獸**——
+        照字面比對(怪獸卡≠靈擺魔法卡)會讓那顆鈕變回「全部靈擺怪獸」。
+        """
+        own = vocab.own_types()
+        self.assertEqual(sorted(own), sorted(
+            ["sn", "sq", "sr", "sc", "se", "sf", "sp", "tn", "tc", "tk"]))
+        self.assertEqual(own["se"], ("s", "equip"))
+        self.assertEqual(own["sn"], ("s", "normal"))
+        self.assertEqual(own["tk"], ("t", "counter"))
+        self.assertEqual(own["sp"], ("m", "pendulum"))
+        # 怪獸側六類沒有本類對應:它們不受跨類型語意影響
+        for code in ("x", "u", "c", "q", "t", "i"):
+            self.assertNotIn(code, own)
+
+    def test_own_types_are_exported(self):
+        """一致對應由正典宣告、隨 VOCAB 出去(ADR-0010):引擎照它排除本類卡,
+        抄在前端一份的話,某天多一個對應時排除會安靜地不生效(ADR-0008)。"""
+        exported = vocab.export()
+        own = exported["kind"]["own"]
+        self.assertEqual(own["se"], "s:equip")
+        self.assertEqual(own["sp"], "m:pendulum")
+        self.assertEqual(sorted(own), sorted(vocab.own_types()))
+        # 沒有本類對應的值域不長這個鍵
+        self.assertNotIn("own", exported["race"])
 
     def test_export_order_is_declaration_order(self):
         """宣告序就是按鈕順序,也是領域序排序的比較序,兩者共用同一份。"""

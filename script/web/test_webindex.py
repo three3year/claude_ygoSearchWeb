@@ -18,6 +18,8 @@ MONSTER_PEND = 0x1000021
 MONSTER_XYZ = 0x800021
 MONSTER_FUSION = 0x40021
 SPELL_QUICK = 0x10002   # 速攻魔法
+SPELL_EQUIP = 0x40002   # 裝備魔法
+SPELL_RITUAL = 0x82     # 儀式魔法
 TRAP = 0x4              # 通常陷阱
 
 
@@ -472,6 +474,84 @@ class MonsterInvariantTest(unittest.TestCase):
         inv = report["monster_invariant"]
         self.assertEqual(inv["monster_missing_race_or_attribute"], [1])
         self.assertTrue(report["problems"])
+
+
+class CrossTypeTest(unittest.TestCase):
+    """跨類型魔陷效果(ADR-0010):魔陷十值的按鈕只收本類以外的卡。
+
+    建置期做兩件事:全庫算每值的**跨類型卡數**(自身卡片種類與值不一致),
+    跨類型 0 張的值從輸出的按鈕分組移除。`items` 是顯示詞彙表(呈現層的逐行
+    類型標籤照它查中文),**不**跟著減。
+    """
+
+    def build(self):
+        cards = [
+            # 怪獸「當作裝備魔法卡」:跨類型,se 因它保住按鈕
+            card(1, desc="①：把這張卡當作裝備卡裝備。"),
+            # 裝備魔法卡自己的裝備魔法卡效果:本類,不算跨類型
+            card(2, type=SPELL_EQUIP, desc="①：裝備怪獸攻擊力上升。"),
+            # 儀式魔法卡:本類,sr 全庫無跨類型 → 按鈕拿掉
+            card(3, type=SPELL_RITUAL, desc="①：儀式召喚。"),
+            # 靈擺怪獸的靈擺效果句:靈擺怪獸算本類(ADR-0010),sp 按鈕拿掉
+            card(4, type=MONSTER_PEND, scale=1,
+                 desc="【靈擺效果】\n①：這樣。\n【怪獸效果】\n②：那樣。"),
+        ]
+        tags = [
+            tagged(1, clause("①：把這張卡當作裝備卡裝備。",
+                             kind="裝備魔法卡效果")),
+            tagged(2, clause("①：裝備怪獸攻擊力上升。", kind="裝備魔法卡效果")),
+            tagged(3, clause("①：儀式召喚。", kind="儀式魔法卡效果")),
+            tagged(4, clause("①：這樣。", kind="靈擺魔法卡效果",
+                             section="pendulum"),
+                   clause("②：那樣。", kind="啟動效果", index="②")),
+        ]
+        return build_index(cards, tags)
+
+    def test_cross_type_card_counts_per_value(self):
+        _, report = self.build()
+        cross = report["kind_cross"]["cards"]
+        # 十值都有數字(某值突然掉到 0 要看得見),本類卡不計入
+        self.assertEqual(sorted(cross), sorted(
+            ["sn", "sq", "sr", "sc", "se", "sf", "sp", "tn", "tc", "tk"]))
+        self.assertEqual(cross["se"], 1)   # 只有怪獸那張,裝備魔法卡不算
+        self.assertEqual(cross["sr"], 0)
+        self.assertEqual(cross["sp"], 0)
+
+    def test_values_without_cross_type_cards_lose_their_buttons(self):
+        """排除本類後全庫無卡的值,建置期就不生成按鈕(前端零推導)。"""
+        index, report = self.build()
+        kind = index["vocab"]["kind"]
+        cross_group = next(g for g in kind["groups"]
+                           if g["zh"] == "跨類型魔陷效果")
+        self.assertEqual(cross_group["codes"], ["se"])
+        # 怪獸側六類不受影響
+        monster_group = next(g for g in kind["groups"] if g["zh"] == "怪獸側")
+        self.assertEqual(monster_group["codes"], ["x", "u", "c", "q", "t", "i"])
+        self.assertEqual(report["kind_cross"]["dropped"],
+                         ["sc", "sf", "sn", "sp", "sq", "sr", "tc", "tk", "tn"])
+
+    def test_items_stay_complete_for_display(self):
+        """items 是顯示詞彙表:本類卡的效果句照樣掛著「儀式魔法卡效果」標籤,
+        中文查表不能因為按鈕被拿掉而查不到。"""
+        index, _ = self.build()
+        codes = [i["code"] for i in index["vocab"]["kind"]["items"]]
+        self.assertEqual(len(codes), 16)
+        for code in ("sr", "sp", "se"):
+            self.assertIn(code, codes)
+
+    def test_own_type_cards_do_not_fail_the_build(self):
+        """本類卡帶著被拿掉按鈕的值是 ADR-0010 的既定語意,不是碼沒登記。"""
+        _, report = self.build()
+        self.assertEqual(report["problems"], [])
+
+    def test_group_disappears_when_all_ten_are_dropped(self):
+        """整組都沒有跨類型卡時,連「跨類型魔陷效果」這個組標題都不生成。"""
+        cards = [card(1, type=SPELL_RITUAL, desc="①：儀式召喚。")]
+        tags = [tagged(1, clause("①：儀式召喚。", kind="儀式魔法卡效果"))]
+        index, report = build_index(cards, tags)
+        self.assertEqual([g["zh"] for g in index["vocab"]["kind"]["groups"]],
+                         ["怪獸側"])
+        self.assertEqual(report["problems"], [])
 
 
 class ReportTest(unittest.TestCase):

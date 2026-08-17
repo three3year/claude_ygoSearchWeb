@@ -106,6 +106,7 @@ function init() {
   Query.init();
   View.initAltArt();
   View.initEffKind();
+  View.initOgToggle();
   // 換排序也更新網址:分享出去的連結講的是「我現在看到的這一頁」,而
   // 「最高攻擊力的暗屬性誘發即時」這個問題的答案有一半在排序上
   View.initSort(push);

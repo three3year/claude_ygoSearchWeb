@@ -554,6 +554,38 @@ class CrossTypeTest(unittest.TestCase):
         self.assertEqual(report["problems"], [])
 
 
+class ErrataTest(unittest.TestCase):
+    """[[卡文勘誤表]]的原文欄位:被勘誤的卡帶 `og`(勘誤前原樣),其餘卡不帶。"""
+
+    def build(self, desc, errata):
+        cards = [card(84488827, desc=desc)]
+        tags = [tagged(84488827, clause(desc, kind="誘發效果(1速)",
+                                        optional="必發"))]
+        return build_index(cards, tags, errata=errata)
+
+    def test_errata_card_carries_original_text(self):
+        index, report = self.build(
+            "召喚成功時，從以下效果選擇1個效果發動。",
+            [{"id": 84488827, "from": "可以從以下效果", "to": "從以下效果"}])
+        self.assertEqual(report["problems"], [])
+        self.assertEqual(index["cards"][0]["og"],
+                         "召喚成功時，可以從以下效果選擇1個效果發動。")
+
+    def test_untouched_card_has_no_og(self):
+        cards = [card(1000, desc="①：這樣。")]
+        tags = [tagged(1000, clause("①：這樣。"))]
+        index, report = build_index(cards, tags, errata=[])
+        self.assertNotIn("og", index["cards"][0])
+
+    def test_irreversible_errata_fails_the_build(self):
+        """修正後子字串在卡文出現兩次 → 逆推不唯一,建置失敗。"""
+        index, report = self.build(
+            "從以下效果選擇。從以下效果選擇。",
+            [{"id": 84488827, "from": "可以從以下效果", "to": "從以下效果"}])
+        self.assertTrue(report["checks"]["errata_not_reversible"])
+        self.assertTrue(any("逆推" in p for p in report["problems"]))
+
+
 class ReportTest(unittest.TestCase):
     def test_census_counts_members_and_cards(self):
         """每一個值域的成員數與對應卡數:某個值掉到 0 要看得見。"""

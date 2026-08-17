@@ -271,6 +271,20 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 .card-name:hover { text-decoration: underline; }
 .card-id { color: var(--muted); font-size: 11px; font-family: monospace; }
+/* 「顯示原文」切換鈕:只長在被卡文勘誤表勘誤過的卡上(ADR-0011),按下時反色,
+   顯示區換成勘誤前的來源原文 */
+.og-toggle {
+  flex: none; cursor: pointer; padding: 0 6px;
+  background: var(--surface2); border: 1px solid var(--accent-dim);
+  border-radius: 4px; color: var(--accent); font-size: 11px;
+  font-family: inherit;
+}
+.og-toggle:hover { border-color: var(--accent); }
+.og-toggle[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+/* 勘誤前原文是純文字:換行照原樣呈現,不分行、不掛標籤、不上色 */
+.og-text { white-space: pre-line; font-size: 13.5px; padding: 3px 8px; }
 /* 日英卡名是唯一一段可能不含斷行點的長字串(`Number 39: Utopia Double`),
    窄螢幕上它會把卡片撐寬、整頁跟著橫向捲 */
 .card-names {

@@ -145,12 +145,14 @@ function cardHtml(e, hl) {
            title="Master Duel 稀有度">${esc(c.ra)}</span>` : ''}
         ${otHtml(c)}
         <span class="card-id">${pad8(c.id)}</span>
+        ${ogBtnHtml(c)}
       </div>
       ${names.length
         ? `<div class="card-names">${esc(names.join('｜'))}</div>` : ''}
       ${printHtml(c)}
       ${metaHtml(c)}
       <div class="card-text">${cardText(c, e.rows, hl)}</div>
+      ${c.og ? `<div class="card-text og-text" hidden>${esc(c.og)}</div>` : ''}
     </div>
   </article>`;
 }
@@ -174,6 +176,15 @@ function altNavHtml(c) {
     <span class="alt-n">1/${c.al.length + 1}</span>
     <button type="button" data-step="1" aria-label="下一個卡圖">›</button>
   </div>`;
+}
+
+/* 「顯示原文」切換鈕,只長在[[卡文勘誤表]]勘誤過的卡上(`og` 是勘誤前的來源
+   卡文原樣,ADR-0011)——其餘一萬四千多張卡的原文就是畫面上那份,鈕是雜訊。
+   放密碼右邊(2026-08-17 盤問決定),與異圖切換同一個「對照出口」的角色。 */
+function ogBtnHtml(c) {
+  if (!c.og) return '';
+  return `<button type="button" class="og-toggle" aria-pressed="false"
+    title="此卡卡文經本站勘誤,點一下對照勘誤前的來源原文">顯示原文</button>`;
 }
 
 /* OCG・TCG 限定徽章,擺在標題列 MD 稀有度右邊、與稀有度同一套視覺語言。
@@ -327,6 +338,24 @@ function initEffKind() {
   });
 }
 
+/* 「顯示原文」的切換:換掉整個顯示區——標註視圖(效果句分行、kind 標籤、badge、
+   上色)與勘誤前原文是**兩份文字**,不是同一份文字的兩種畫法,逐行對映不存在,
+   所以是兩個 div 互換而不是在原視圖上摘標籤。原文那側是純文字,換行由 CSS 的
+   pre-line 呈現,● 不另起新行——原樣就是原樣。
+   逐卡切換、狀態不記憶(盤問決定):重繪(翻頁/重搜)即回到標註視圖,與
+   show-kind 同一套哲學——看原文是一次刻意的對照,對照完就收。 */
+function initOgToggle() {
+  $('results').addEventListener('click', e => {
+    const btn = e.target.closest('.og-toggle');
+    if (!btn) return;
+    const art = btn.closest('article.card');
+    const on = btn.getAttribute('aria-pressed') !== 'true';
+    btn.setAttribute('aria-pressed', on);
+    art.querySelector('.card-text').hidden = on;
+    art.querySelector('.og-text').hidden = !on;
+  });
+}
+
 /* 排序選單。**選項由 `Sort.KEYS` 生成**,HTML 只留一個空的 <select>:排序鍵、
    中文名與預設方向是同一份宣告,加一個鍵時不會出現「選單有這個選項但排序沒反應」。
 
@@ -454,7 +483,7 @@ function goto(page) {
   /* state 關在閉包裡:讀寫都走具名函式,繞過「換每頁筆數要回到第 1 頁」這條
      不變式的第二條路徑(View.state.page = …)從結構上不存在 */
   return Object.freeze({
-    render, initAltArt, initEffKind, initSort,
+    render, initAltArt, initEffKind, initOgToggle, initSort,
     page: () => state.page,
     perPage: () => state.perPage,
     sort: () => ({ key: state.sortKey, dir: state.sortDir }),

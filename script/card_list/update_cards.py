@@ -12,7 +12,8 @@ import ssl
 import sys
 import urllib.request
 
-from build_cards import DEFAULT_OUTPUT, print_report
+from build_cards import (DEFAULT_ERRATA, DEFAULT_OUTPUT, load_errata,
+                         print_report)
 from cardlist import build_card_list, serialize_card_list
 
 ROOT = os.path.dirname(
@@ -179,6 +180,8 @@ def main(argv=None):
                         help="輸出 JSON 路徑 (預設 data/cards.json)")
     parser.add_argument("--faq-json", default=DEFAULT_FAQ_JSON,
                         help="官方 Q&A 整合檔路徑,用於更新後對帳")
+    parser.add_argument("--errata", default=DEFAULT_ERRATA,
+                        help="卡文勘誤表路徑 (預設 data/text_errata.json)")
     args = parser.parse_args(argv)
 
     paths = download_sources(args.sources_dir, offline=args.offline)
@@ -192,7 +195,8 @@ def main(argv=None):
 
     cards, report = build_card_list(
         paths["zh"], ja_path=paths["ja"], en_path=paths["en"],
-        md_rarity_path=md_path, genesys_path=genesys_path, existing=existing)
+        md_rarity_path=md_path, genesys_path=genesys_path, existing=existing,
+        errata=load_errata(args.errata))
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_card_list(cards))
     print_report(report)

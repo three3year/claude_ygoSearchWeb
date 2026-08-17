@@ -187,6 +187,20 @@ def _entry(card, clauses):
     return {k: v for k, v in out.items() if v is not None}, unknown
 
 
+def _original_desc(desc, entries):
+    """勘誤後卡文 → 勘誤前原樣(逆向套用,由後往前)。
+
+    修正後子字串必須恰出現一次才逆推得回去;不唯一(或勘誤是純刪除,`to` 為空)
+    時回 None,由 `errata_not_reversible` 那一道讓建置失敗——「顯示原文」給的
+    是承諾過的原樣,逆推不出來就不該裝作推得出來。
+    """
+    for entry in reversed(entries):
+        if not entry["to"] or desc.count(entry["to"]) != 1:
+            return None
+        desc = desc.replace(entry["to"], entry["from"])
+    return desc
+
+
 def _coverage(desc, pieces):
     """效果句(加故事文)串接後對卡文的覆蓋。→ (缺口清單, 對不上的片段清單)。
 
@@ -362,6 +376,7 @@ def _summarise_problems(report):
         ("效果句在卡文裡找不到", checks["clauses_not_in_desc"]),
         ("type 出現值域正典沒解釋的位元", checks["unexplained_type_bits"]),
         ("※ 別名的缺口與抽取結果對不上", checks["alias_gap_not_extracted"]),
+        ("卡文勘誤逆推不回原文", checks["errata_not_reversible"]),
         ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
         ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
     )
@@ -371,18 +386,26 @@ def _summarise_problems(report):
     return found
 
 
-def build_index(cards, tag_cards, built_at="", sources=None):
+def build_index(cards, tag_cards, built_at="", sources=None, errata=None):
     """[[卡片總表]]條目 + [[效果標記表]]條目 → (index, report)。
 
     `built_at` 與 `sources`(來源檔雜湊)由呼叫端給:讀時鐘與讀檔都是薄殼的事,
     純函式不碰,同一份輸入因此兩次建置產物逐位元組相同。
+
+    `errata` 是[[卡文勘誤表]](ADR-0011):被勘誤的卡多帶一個 `og` 欄位——
+    勘誤**前**的來源卡文原樣,前端「顯示原文」讀它。只有這批卡帶(目前 1 張),
+    全量帶原文 gzip 要多 340 KB,而未勘誤的卡的原文就是畫面上那份文字。
     """
     clauses_by_id = {t["id"]: t.get("clauses") or [] for t in tag_cards}
+    errata_by_id = {}
+    for e in errata or []:
+        errata_by_id.setdefault(e["id"], []).append(e)
     checks = {"missing_cards": [], "duplicate_ids": [],
               "cards_without_clause_entry": [], "unknown_values": [],
               "clauses_without_kind": [], "coverage_gaps": [],
               "clauses_not_in_desc": [], "unexplained_type_bits": [],
-              "alias_gap_not_extracted": [], "optional_on_non_carrier": []}
+              "alias_gap_not_extracted": [], "optional_on_non_carrier": [],
+              "errata_not_reversible": []}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
     carriers = set(vocab.carriers(vocab.OPTIONAL))
     entries = {}
@@ -398,6 +421,12 @@ def build_index(cards, tag_cards, built_at="", sources=None):
             continue  # 大類解不出來,由 missing_cards 那一道報上去
         if cid in entries:
             checks["duplicate_ids"].append(cid)
+        if cid in errata_by_id:
+            og = _original_desc(card["desc"], errata_by_id[cid])
+            if og is None:
+                checks["errata_not_reversible"].append(cid)
+            else:
+                entry["og"] = og
         entries[cid] = entry
         clause_total += len(clauses)
         checks["unknown_values"].extend(dict(u, id=cid) for u in unknown)

@@ -379,6 +379,41 @@ class CardListTest(unittest.TestCase):
                          serialize_card_list(cards1).encode("utf-8"))
         self.assertEqual(report["changes"], {"added": [], "changed": []})
 
+    def test_errata_applied(self):
+        """卡文勘誤:原文子字串恰出現一次時替換,報告記套用筆數。"""
+        zh = self.cdb("zh.cdb", [{
+            "id": 84488827, "name": "侵入魔 巨角",
+            "desc": "上級召喚成功時，可以從以下效果選擇1個效果發動。",
+        }])
+        cards, report = build_card_list(zh, errata=[
+            {"id": 84488827, "from": "可以從以下效果", "to": "從以下效果"}])
+        self.assertEqual(cards[0]["desc"],
+                         "上級召喚成功時，從以下效果選擇1個效果發動。")
+        self.assertEqual(report["errata_applied"], 1)
+
+    def test_errata_stale_fails_loudly(self):
+        """原文子字串比對不到(上游已自行修正)→ 建置失敗,不無聲跳過。"""
+        zh = self.cdb("zh.cdb", [{
+            "id": 84488827, "name": "侵入魔 巨角",
+            "desc": "上級召喚成功時，從以下效果選擇1個效果發動。",
+        }])
+        with self.assertRaises(ValueError):
+            build_card_list(zh, errata=[
+                {"id": 84488827, "from": "可以從以下效果", "to": "從以下效果"}])
+
+    def test_errata_ambiguous_or_missing_card_fails(self):
+        """子字串出現兩次(替換點歧義)或 id 不在總表 → 一樣吵鬧失敗。"""
+        zh = self.cdb("zh.cdb", [{
+            "id": 84488827, "name": "侵入魔 巨角",
+            "desc": "可以發動。可以發動。",
+        }])
+        with self.assertRaises(ValueError):
+            build_card_list(zh, errata=[
+                {"id": 84488827, "from": "可以發動。", "to": "發動。"}])
+        with self.assertRaises(ValueError):
+            build_card_list(zh, errata=[
+                {"id": 99999999, "from": "可以", "to": ""}])
+
 
 if __name__ == "__main__":
     unittest.main()

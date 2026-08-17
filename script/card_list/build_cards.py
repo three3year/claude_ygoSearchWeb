@@ -13,6 +13,15 @@ from cardlist import build_card_list, serialize_card_list
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_OUTPUT = os.path.join(ROOT, "data", "cards.json")
+DEFAULT_ERRATA = os.path.join(ROOT, "data", "text_errata.json")
+
+
+def load_errata(path):
+    """讀卡文勘誤表;檔案不存在視為無勘誤(clean checkout 一定有,防的是測試環境)。"""
+    if not path or not os.path.exists(path):
+        return []
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
 
 
 def print_monster_invariant(report, p):
@@ -43,6 +52,8 @@ def print_report(report, file=sys.stdout):
     p(f"排除: 無正式密碼(先行卡) {excluded['no_password']} 筆、"
       f"衍生物 {excluded['token']} 筆")
     p(f"異圖合併: {report['merged_alt']} 筆")
+    if report.get("errata_applied"):
+        p(f"卡文勘誤: 套用 {report['errata_applied']} 筆")
     print_monster_invariant(report, p)
     for lang, label in (("ja", "日文"), ("en", "英文")):
         cov = report.get("name_coverage", {}).get(lang)
@@ -84,6 +95,8 @@ def main(argv=None):
                         help="Genesys 點數 JSON 路徑 (YGOPRODeck 萃取)")
     parser.add_argument("--existing",
                         help="既有 cards.json 路徑;給定時執行差值更新並輸出變動報告")
+    parser.add_argument("--errata", default=DEFAULT_ERRATA,
+                        help="卡文勘誤表路徑 (預設 data/text_errata.json)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
                         help="輸出 JSON 路徑 (預設 data/cards.json)")
     args = parser.parse_args(argv)
@@ -94,7 +107,8 @@ def main(argv=None):
             existing = json.load(f)
     cards, report = build_card_list(
         args.zh, ja_path=args.ja, en_path=args.en, md_rarity_path=args.md,
-        genesys_path=args.genesys, existing=existing)
+        genesys_path=args.genesys, existing=existing,
+        errata=load_errata(args.errata))
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_card_list(cards))
     print_report(report)

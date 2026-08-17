@@ -21,6 +21,7 @@ ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_TAGS = os.path.join(ROOT, "data", "tag_cards.json")
+DEFAULT_ERRATA = os.path.join(ROOT, "data", "text_errata.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "web", "data.js")
 
 
@@ -68,6 +69,7 @@ def print_checks(report, p, limit=20):
         ("clauses_not_in_desc", "效果句在卡文裡找不到"),
         ("unexplained_type_bits", "type 有值域正典沒解釋的位元"),
         ("alias_gap_not_extracted", "※ 別名的缺口與抽取結果對不上"),
+        ("errata_not_reversible", "卡文勘誤逆推不回原文"),
     )
     gaps = report["known_gaps"]
     p(f"已知缺口: 段落標頭 {gaps['header']} 處、※ 別名 {gaps['alias']} 處")
@@ -115,6 +117,8 @@ def main(argv=None):
                         help="卡片總表路徑 (預設 data/cards.json)")
     parser.add_argument("--tags", default=DEFAULT_TAGS,
                         help="效果標記表路徑 (預設 data/tag_cards.json)")
+    parser.add_argument("--errata", default=DEFAULT_ERRATA,
+                        help="卡文勘誤表路徑 (預設 data/text_errata.json)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
                         help="輸出路徑 (預設 web/data.js)")
     parser.add_argument("--no-write", action="store_true",
@@ -123,10 +127,12 @@ def main(argv=None):
 
     built_at = datetime.datetime.now().astimezone().strftime(
         "%Y-%m-%dT%H:%M:%S%z")
+    errata = _load(args.errata) if os.path.exists(args.errata) else []
     index, report = build_index(
         _load(args.cards), _load(args.tags), built_at=built_at,
         sources={os.path.basename(args.cards): _digest(args.cards),
-                 os.path.basename(args.tags): _digest(args.tags)})
+                 os.path.basename(args.tags): _digest(args.tags)},
+        errata=errata)
     print_report(report)
     if report["problems"]:
         return 1

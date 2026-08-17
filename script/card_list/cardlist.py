@@ -115,6 +115,31 @@ def _merge_alt_arts(entries):
     return list(cards.values()), merged, exceptions
 
 
+def _apply_errata(cards, errata):
+    """套用[[卡文勘誤表]](ADR-0011):來源卡文的誤譯在建置期修,不手改總表。
+
+    原文子字串必須在該卡卡文出現**恰好一次**,失配即整批列舉後拋錯——上游
+    哪天自己修好了,要的是建置吵出來、人來刪掉那筆勘誤,而不是無聲跳過讓
+    「勘誤還生不生效」變成猜測(與值域正典同一個「吵鬧失效」精神)。
+    """
+    by_id = {card["id"]: card for card in cards}
+    problems = []
+    for entry in errata:
+        card = by_id.get(entry["id"])
+        if card is None:
+            problems.append(f"id={entry['id']} 不在總表(被排除或併入異圖?)")
+            continue
+        count = card["desc"].count(entry["from"])
+        if count != 1:
+            problems.append(f"id={entry['id']} 原文子字串出現 {count} 次"
+                            f"(需恰好 1 次):{entry['from']}")
+            continue
+        card["desc"] = card["desc"].replace(entry["from"], entry["to"])
+    if problems:
+        raise ValueError("卡文勘誤套用失敗:\n" + "\n".join(problems))
+    return len(errata)
+
+
 def serialize_card_list(cards):
     """總表 → JSON 文字:一卡一行、鍵序固定、不 escape 中文,git diff 可讀。"""
     lines = [json.dumps(card, ensure_ascii=False, separators=(", ", ": "))
@@ -224,7 +249,7 @@ def _diff_cards(existing, cards):
 
 
 def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
-                    genesys_path=None, existing=None):
+                    genesys_path=None, existing=None, errata=None):
     excluded = {"no_password": 0, "token": 0}
     entries = {}
     stale = set()
@@ -241,8 +266,12 @@ def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
         entries[card["id"]] = (card, row[2])
     cards, merged, exceptions = _merge_alt_arts(entries)
     cards.sort(key=lambda c: c["id"])
+    # 勘誤在異圖合併後套用:勘誤表以主卡密碼記,合併前套的話被併入的異圖
+    # 條目找不到主卡文字。差值報告在最後算,勘誤後的文字才是本站的正式卡文。
+    errata_applied = _apply_errata(cards, errata) if errata else 0
     report = {
         "included": len(cards),
+        "errata_applied": errata_applied,
         "excluded": excluded,
         "merged_alt": merged,
         "cleared_monster_params": sum(1 for c in cards if c["id"] in stale),

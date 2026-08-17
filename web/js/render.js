@@ -442,11 +442,13 @@ function renderPager(id, pages, page) {
   });
 }
 
-/* 換頁後捲回結果頂端:看完一頁不必自己找回去 */
+/* 換頁後捲回結果頂端:看完一頁不必自己找回去。**立刻跳而不是平滑捲**——
+   內容已經換成新的一頁,舊位置沒有什麼好告別的,動畫只是讓新內容晚半秒能讀
+   (2026-08-17 使用者裁示)。 */
 function goto(page) {
   state.page = page;
   render();
-  window.scrollTo({ top: $('pagerTop').offsetTop - 60, behavior: 'smooth' });
+  window.scrollTo(0, $('pagerTop').offsetTop - 60);
 }
 
   /* state 關在閉包裡:讀寫都走具名函式,繞過「換每頁筆數要回到第 1 頁」這條

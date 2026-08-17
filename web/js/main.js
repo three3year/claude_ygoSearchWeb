@@ -68,7 +68,7 @@ function search() {
   // 搜尋完就把條件區收起來:窄螢幕上它佔滿整屏,不收的話按下搜尋之後捲回頂端
   // 看到的是自己剛設好的條件,而不是結果。桌機上這是個空動作(側欄常駐)。
   Query.collapse();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo(0, 0);   // 立刻跳,不做捲動動畫(與換頁同一條裁示)
 }
 
 /* 網址 → 側欄 → 結果。壞掉或過期的段在 Hash.parse 那裡就被忽略了,

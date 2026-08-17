@@ -28,7 +28,7 @@ const MAT_KINDS = ['ritual', 'fusion', 'synchro', 'xyz', 'link'];
    **排序住在這裡而不是查詢條件裡**:換一個排序鍵不會改變命中哪些卡,所以它是
    「怎麼看這份結果」而不是「要哪些卡」——與分頁同一類。這也正是「排序切換不重跑
    搜尋」在結構上成立的原因:重排走的是 render(),根本沒有經過引擎。 */
-const state = { page: 1, perPage: 50,
+const state = { page: 1, perPage: 100,
                 sortKey: Sort.KEYS[0].key, sortDir: Sort.KEYS[0].dir };
 
 /* 上一次的查詢產物——換頁與換每頁筆數由此重繪,但沒有人從外面寫入它。

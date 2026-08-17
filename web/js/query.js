@@ -47,17 +47,26 @@ const FIELDS = [
   // 而且誤入排除態會讓子類組整組收起。態數寫在宣告上,循環照宣告走——不在點擊
   // 處理裡對大類寫特例,之後別的軸要兩態化時改這裡就好。
   { tri: 'cat', dom: 'cat', states: 2 },
-  { tri: 'sub', dom: 'sub_m', side: 'm' },
-  { tri: 'sub', dom: 'sub_s', side: 's' },
-  { tri: 'sub', dom: 'sub_t', side: 't' },
-  { tri: 'attr', dom: 'attr' },
-  { tri: 'race', dom: 'race' },
-  { range: 'lv', zh: '等級／階級' },
-  { range: 'lk', zh: '連結值' },
-  { range: 'sc', zh: '靈擺刻度' },
-  { range: 'atk', zh: '攻擊力', unknown: 'atkq' },
-  { range: 'df', zh: '守備力', unknown: 'dfq' },
-  { tri: 'lm', dom: 'lm' },
+  // `parent`:檔案總管式的樹狀內縮——子軸的整個區塊**巢狀在父軸的摺疊體裡**,
+  // 收起父軸,整棵子樹跟著消失(各自的展開狀態保留,再展開時原樣回來)。
+  // 子類組掛在大類下;怪獸參數八軸掛在怪獸子類型下。
+  // `groupBlocks`:值域的具名分組(卡框/能力)各自長成一個摺疊區塊,顯示方式
+  // 與屬性/種族一致(標題列+已選數+預設收起)。只是顯示結構——查詢上它們仍是
+  // 同一個 sub 軸的碼,條件形狀一個字都沒變
+  { tri: 'sub', dom: 'sub_m', side: 'm', parent: 'cat', groupBlocks: true },
+  { tri: 'sub', dom: 'sub_s', side: 's', parent: 'cat' },
+  { tri: 'sub', dom: 'sub_t', side: 't', parent: 'cat' },
+  // `mon`:怪獸才有的參數(CONTEXT.md:非怪獸清空 race/attr/level/atk/def 五欄;
+  // 連結值/刻度/連結標記同理)。與子類組同一套連動隱藏——選了大類「怪獸」才出現,
+  // 取消就藏起並清空;出現時收著不自動展開(八軸全彈開是一面牆)
+  { tri: 'attr', dom: 'attr', mon: true, parent: 'sub_m' },
+  { tri: 'race', dom: 'race', mon: true, parent: 'sub_m' },
+  { range: 'lv', zh: '等級／階級', mon: true, parent: 'sub_m' },
+  { range: 'lk', zh: '連結值', mon: true, parent: 'sub_m' },
+  { range: 'sc', zh: '靈擺刻度', mon: true, parent: 'sub_m' },
+  { range: 'atk', zh: '攻擊力', unknown: 'atkq', mon: true, parent: 'sub_m' },
+  { range: 'df', zh: '守備力', unknown: 'dfq', mon: true, parent: 'sub_m' },
+  { tri: 'lm', dom: 'lm', mon: true, parent: 'sub_m' },
   { tri: 'rarity', dom: 'rarity' },
   { range: 'gy', zh: 'Genesys 點數' },
   { tri: 'ot', dom: 'ot' },
@@ -110,7 +119,8 @@ function axes() {
                                items: g.codes.map(c => byCode[c]).filter(Boolean) }))
       : [{ zh: '', items }];
     return { key: f.tri, dom: f.dom, side: f.side || '', zh: dom.zh || f.dom,
-             states: f.states || 3, groups };
+             states: f.states || 3, mon: !!f.mon,
+             groupBlocks: !!f.groupBlocks, groups };
   });
 }
 
@@ -147,19 +157,27 @@ function headHtml(zh) {
     <span class="axis-name">${esc(zh)}</span><span class="axis-count"></span></button>`;
 }
 
-function axisHtml(ax) {
-  const body = ax.groups.map(g => {
+function axisHtml(ax, kids) {
+  const body = ax.groups.map((g, gi) => {
     const row = `<div class="tri-row">${
       g.items.map(it => triBtn(it.code, it.zh, ax.states)).join('')}</div>`;
+    // groupBlocks:具名分組升級成自己的摺疊區塊(與屬性/種族同一套標題列),
+    // 鍵是 `值域名/分組序`,徽章與還原展開都認它
+    if (g.zh && ax.groupBlocks) {
+      return `<div class="axis-group" data-group-key="${ax.dom}/${gi}">
+        ${headHtml(g.zh)}<div class="axis-body" hidden>${row}</div></div>`;
+    }
     return g.zh ? `<div class="tri-group">
       <span class="group-label">${esc(g.zh)}</span>${row}</div>` : row;
   }).join('');
-  // 子類型的三組各自藏著(hidden),選了對應的大類才出現——那是連動隱藏
-  // (條件語意,收掉就清空),與摺疊(瀏覽狀態,收起保留條件)是兩個機制。
+  // 子類型的三組與怪獸參數軸各自藏著(hidden),選了對應的大類才出現——那是
+  // 連動隱藏(條件語意,收掉就清空),與摺疊(瀏覽狀態,收起保留條件)是兩個機制。
   // 態數(兩態/三態)由宣告帶在容器上,循環與 tooltip 都照它走。
+  // `kids` 是巢狀的子軸區塊(檔案總管式內縮),接在自己的選項後面、同一個
+  // 摺疊體裡——收起這一軸,整棵子樹自然消失。
   return `<div class="axis" data-axis="${ax.key}" data-side="${ax.side}"
-    data-states="${ax.states}"${ax.side ? ' hidden' : ''}>
-    ${headHtml(ax.zh)}<div class="axis-body" hidden>${body}</div></div>`;
+    data-states="${ax.states}"${ax.side || ax.mon ? ' hidden' : ''}>
+    ${headHtml(ax.zh)}<div class="axis-body" hidden>${body}${kids || ''}</div></div>`;
 }
 
 function rangeHtml(f) {
@@ -171,18 +189,24 @@ function rangeHtml(f) {
   const unknown = f.unknown
     ? `<button type="button" class="tri tri-q" data-code="?" data-st=""
         data-unknown="${f.unknown}" title="${STATE_TITLE[3]['']}">?</button>` : '';
-  return `<div class="range" data-range="${f.range}">
+  return `<div class="range" data-range="${f.range}"${f.mon ? ' hidden' : ''}>
     ${headHtml(f.zh)}<div class="axis-body" hidden>
     <div class="range-row">${num('min')}<span class="range-sep">～</span>${
       num('max')}${unknown}</div></div></div>`;
 }
 
+/* 依 `parent` 宣告長成一棵樹:沒有 parent 的是頂層,有的塞進父區塊的摺疊體裡。
+   順序仍由 FIELDS 決定(同一層照表排)。 */
 function build() {
   const axisByKey = {};
   axes().forEach(ax => { axisByKey[ax.key + '/' + ax.side] = ax; });
-  $('critParams').innerHTML = FIELDS.map(f => f.tri
-    ? axisHtml(axisByKey[f.tri + '/' + (f.side || '')])
-    : rangeHtml(f)).join('');
+  const htmlOf = f => f.tri
+    ? axisHtml(axisByKey[f.tri + '/' + (f.side || '')], kidsOf(blockKey(f)))
+    : rangeHtml(f);
+  const kidsOf = key =>
+    FIELDS.filter(f => f.parent === key).map(htmlOf).join('');
+  $('critParams').innerHTML =
+    FIELDS.filter(f => !f.parent).map(htmlOf).join('');
 }
 
 /* ── 讀取 ─────────────────────────────────────────────── */
@@ -200,11 +224,19 @@ function num(v) {
   return v === '' || v == null || isNaN(+v) ? null : +v;
 }
 
+/* 一軸**自己的**鈕。軸是巢狀的(子軸住在父軸的摺疊體裡),querySelectorAll 會
+   連子樹的鈕一起撈——大類軸讀到子類型的碼就是另一個軸的條件被算錯了家,
+   所以按「最近的 .axis 是不是自己」過濾。 */
+function ownTris(el) {
+  return Array.prototype.filter.call(
+    el.querySelectorAll('.tri'), btn => btn.closest('.axis') === el);
+}
+
 /* 一軸目前的三態選擇。讀出來的形狀就是引擎吃的形狀,所以「必發/選發 出不出得來」
    那條規則(optionalAvailable)拿得到現成的答案,不必自己再走一次 DOM。 */
 function triSel(f) {
   const out = {};
-  axisEl(f.tri, f.side).querySelectorAll('.tri').forEach(btn => {
+  ownTris(axisEl(f.tri, f.side)).forEach(btn => {
     if (!btn.dataset.st) return;
     const key = f.side ? f.side + ':' + btn.dataset.code : btn.dataset.code;
     out[key] = btn.dataset.st === 'ex' ? -1 : 1;
@@ -293,6 +325,15 @@ function axisCounts(q) {
       const sel = q[f.tri] || {};
       out[blockKey(f)] = Object.keys(sel).filter(k => sel[k] &&
         (!f.side || k.indexOf(f.side + ':') === 0)).length;
+      // 具名分組升級成區塊的軸(groupBlocks):每個分組多發一個鍵
+      // (`值域名/分組序`),數的是**該組的碼**——它是同一批選擇的分組視圖,
+      // 不是另一批條件,所以不進 treeCounts 的父子加總(會重複計)
+      if (f.groupBlocks) {
+        ((VOCAB[f.dom] || {}).groups || []).forEach((g, gi) => {
+          out[f.dom + '/' + gi] = (g.codes || [])
+            .filter(c => sel[f.side ? f.side + ':' + c : c]).length;
+        });
+      }
       return;
     }
     const r = q[f.range] || {};
@@ -303,34 +344,66 @@ function axisCounts(q) {
 }
 
 /**
+ * 子樹已選數:`查詢條件 → { 區塊鍵: 自己 + 整棵子樹點了幾顆 }`。
+ *
+ * 軸是巢狀的(檔案總管式內縮),收起大類時子樹整個看不見——標題列的數字因此
+ * 要**彙總後代**:大類收著也看得出裡面藏著幾條條件,「看不見的條件解釋不了
+ * 零結果」在樹狀結構下靠它成立(與窄螢幕摺疊鈕彙總全部條件是同一個道理)。
+ * 葉軸的數字就是 axisCounts 的數字。
+ */
+function treeCounts(q) {
+  const counts = axisCounts(q);
+  const total = key => FIELDS.filter(f => f.parent === key)
+    .reduce((n, f) => n + total(blockKey(f)), counts[key] || 0);
+  const out = {};
+  FIELDS.forEach(f => { out[blockKey(f)] = total(blockKey(f)); });
+  return out;
+}
+
+/**
  * 還原展開判定(票14):`查詢條件 → 該展開的區塊鍵清單`。
  *
  * 網址還原時 DOM 照這份清單開軸——收到連結的人一眼看到這個查詢設了什麼,
  * 而不是一排收起的標題列。三種成員:
  *
  * 1. **有已選條件的軸**(逐軸已選數 > 0),排除也是條件。
- * 2. **大類選取連動帶出的子類組**——點了怪獸就是要篩子類,子類還沒點也展開。
+ * 2. **有條件的軸的祖先**——軸是巢狀的,屬性藏在 怪獸子類型 藏在 大類 裡,
+ *    祖先不開,展開的葉軸沒有人看得到。
  * 3. **承載的效果類型連動帶出的必發/選發**——與 optionalAvailable 同一份承載
  *    宣告(`VOCAB.optional.carriers`),排除不算已選也是同一條規則。但注意兩者
  *    答的問題不同:optionalAvailable 管「出不出得來」(一顆都沒選也出得來),
  *    這裡管「要不要自動展開」(連動出現才展開,預設可見不代表要展開)。
+ *
+ * 連動出現但**自己沒有條件**的軸不在清單裡(2026-08-17 使用者裁示的檔案總管
+ * 規矩:節點收著出現,要看再點開)。
  */
 function expandedAxes(q) {
   q = q || {};
   const counts = axisCounts(q);
-  const cat = q.cat || {};
   const kindSel = q.kind || {};
   const carriers = (VOCAB.optional || {}).carriers || [];
-  const out = [];
+  const parentOf = {};
+  FIELDS.forEach(f => { parentOf[blockKey(f)] = f.parent || ''; });
+  const open = {};
+  const groupKeys = [];
   FIELDS.forEach(f => {
     const key = blockKey(f);
     let on = counts[key] > 0;
-    if (f.side) on = on || cat[f.side] > 0;
     if (f.tri === 'opt') on = on || Object.keys(kindSel)
       .some(c => kindSel[c] > 0 && carriers.indexOf(c) >= 0);
-    if (on) out.push(key);
+    // 連同祖先鏈一起開
+    for (let k = key; on && k; k = parentOf[k]) open[k] = true;
+    // 分組區塊(卡框/能力):組內有條件才開,祖先鏈跟軸自己的一樣
+    if (f.groupBlocks) {
+      ((VOCAB[f.dom] || {}).groups || []).forEach((g, gi) => {
+        const gk = f.dom + '/' + gi;
+        if (!(counts[gk] > 0)) return;
+        groupKeys.push(gk);
+        for (let k = key; k; k = parentOf[k]) open[k] = true;
+      });
+    }
   });
-  return out;
+  return FIELDS.map(blockKey).filter(k => open[k]).concat(groupKeys);
 }
 
 /* ── 互動 ─────────────────────────────────────────────── */
@@ -359,11 +432,12 @@ function summarize(q) {
   $('btnFilters').textContent = n ? `篩選條件・${n} 項` : '篩選條件';
 }
 
-/* 一顆鈕屬於兩態還是三態軸:宣告寫在 .axis 容器上。範圍旁的 `?` 鈕不在
-   .axis 裡,closest 找不到就是三態——它本來就是三態。 */
+/* 一顆鈕屬於兩態還是三態軸:宣告寫在 .axis 容器上。範圍旁的 `?` 鈕先命中
+   自己的 .range(它沒有 data-states → 三態,它本來就是三態)——軸是巢狀的,
+   直接找 .axis 會越過 .range 撞到祖先軸的宣告。 */
 function statesOf(btn) {
-  const ax = btn.closest('.axis');
-  return ax && +ax.dataset.states === 2 ? 2 : 3;
+  const box = btn.closest('.axis, .range');
+  return box && +box.dataset.states === 2 ? 2 : 3;
 }
 
 function setTri(btn, st) {
@@ -388,43 +462,61 @@ function setAxisOpen(box, open) {
  * 的條件物件——DOM 只把答案寫上去,與窄螢幕摺疊鈕的 summarize 同一個結構。
  */
 function updateCounts() {
-  const counts = axisCounts(read());
+  const q = read();
+  const tree = treeCounts(q);
   FIELDS.forEach(f => {
-    const n = counts[blockKey(f)];
+    const n = tree[blockKey(f)];
     blockEl(f).querySelector('.axis-count').textContent = n ? String(n) : '';
+  });
+  // 分組區塊(卡框/能力)是同一批選擇的分組視圖,各自數自己那一組(flat 不彙總)
+  const flat = axisCounts(q);
+  all('.axis-group').forEach(box => {
+    const n = flat[box.dataset.groupKey];
+    box.querySelector('.axis-count').textContent = n ? String(n) : '';
   });
 }
 
 /* 連動隱藏的開關。**只在轉換時動作**:同一個狀態重複呼叫不做事,否則點另一顆
    大類鈕會把使用者剛手動收起的子類組又彈開。
-   - 藏掉:狀態一併清掉——留著的話條件還在生效但使用者看不到它,而看不見的
-     條件是解釋不了的零結果。摺疊同時歸位(收起)。
-   - 出現:**自動展開**(票14)——連動出現的軸就是使用者下一步要用的軸
-     (點了怪獸就是要篩子類),躲在收起的標題後面等於沒出現。 */
-function showAxis(el, show) {
+   - 藏掉:狀態一併清掉(三態鈕與範圍輸入都是)——留著的話條件還在生效但使用者
+     看不到它,而看不見的條件是解釋不了的零結果。摺疊同時歸位(收起)。
+   - 出現:`expand` 決定要不要**自動展開**——必發/選發連動出現時展開;子類組與
+     怪獸參數軸照檔案總管的規矩**收著出現**(2026-08-17 使用者裁示:節點預設
+     收起,要看再點開),各自的展開狀態在父軸收合之間保留。 */
+function showAxis(el, show, expand) {
   if (el.hidden === !show) return;
   if (show) {
-    setAxisOpen(el, true);
+    if (expand) setAxisOpen(el, true);
   } else {
     el.querySelectorAll('.tri').forEach(b => setTri(b, ''));
+    el.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
+    // 子樹裡的分組區塊(卡框/能力)一併收回:連動再出現時從預設狀態重新開始
+    el.querySelectorAll('.axis-group').forEach(b => setAxisOpen(b, false));
     setAxisOpen(el, false);
   }
   el.hidden = !show;
 }
 
-/* 大類選了「包含」才展開對應的子類型組。 */
+/* 大類連動:選了「包含」才出現。子類組跟著自己那一側;怪獸參數軸(mon)跟著
+   「怪獸」——屬性/種族/等級這些是怪獸才有的參數(CONTEXT.md:非怪獸清空
+   那五欄,連結值/刻度/連結標記同理),大類沒選怪獸時它們是問不出結果的條件。 */
 function syncSubs() {
   const cat = axisEl('cat', '');
-  FIELDS.filter(f => f.tri === 'sub').forEach(f => {
-    const btn = cat.querySelector(`.tri[data-code="${f.side}"]`);
-    showAxis(axisEl('sub', f.side), !!btn && btn.dataset.st === 'in');
-  });
+  // 只看大類**自己的**鈕:子樹裡的軸(子類型、連結標記)也住在這個容器下,
+  // 用選擇器直搜會把撞碼的子軸鈕誤當大類
+  const on = side => {
+    const btn = ownTris(cat).find(b => b.dataset.code === side);
+    return !!btn && btn.dataset.st === 'in';
+  };
+  FIELDS.filter(f => f.tri === 'sub').forEach(
+    f => showAxis(axisEl('sub', f.side), on(f.side), false));
+  FIELDS.filter(f => f.mon).forEach(f => showAxis(blockEl(f), on('m'), false));
 }
 
 /* 「必發/選發」只在選得出結果時展開(規則見 optionalAvailable)。 */
 function syncOptional() {
   showAxis(axisEl('opt', ''),
-           optionalAvailable(triSel(FIELDS.find(f => f.tri === 'kind'))));
+           optionalAvailable(triSel(FIELDS.find(f => f.tri === 'kind'))), true);
 }
 
 /* ── 寫入(網址還原條件走這一條) ───────────────────────── */
@@ -438,7 +530,7 @@ function writeTri(q, f) {
   // 兩態軸沒有排除:寫進來的負值(理論上只有手拼的條件物件做得出來)當未選,
   // 兩態鈕才不會被寫成一個循環永遠回不到的狀態
   const ex = (f.states || 3) === 2 ? '' : 'ex';
-  el.querySelectorAll('.tri').forEach(btn => {
+  ownTris(el).forEach(btn => {
     const key = f.side ? f.side + ':' + btn.dataset.code : btn.dataset.code;
     setTri(btn, sel[key] > 0 ? 'in' : (sel[key] < 0 ? ex : ''));
   });
@@ -446,14 +538,16 @@ function writeTri(q, f) {
 
 function writeRange(q, f) {
   const box = $('critParams').querySelector(`.range[data-range="${f.range}"]`);
-  const r = q[f.range] || {};
+  // 藏著的軸不寫(與 writeTri 同一條規則):怪獸參數軸要選了大類「怪獸」才在,
+  // 「有攻擊力、沒有大類」是過期網址的組合,寫進去等於一條看不見的條件
+  const r = (box.hidden ? null : q[f.range]) || {};
   const set = (end, v) => {
     box.querySelector(`[data-end="${end}"]`).value = v == null ? '' : v;
   };
   set('min', r.min);
   set('max', r.max);
   if (!f.unknown) return;
-  const u = q[f.unknown];
+  const u = box.hidden ? null : q[f.unknown];
   setTri(box.querySelector('.tri-q'), u > 0 ? 'in' : (u < 0 ? 'ex' : ''));
 }
 
@@ -484,6 +578,8 @@ function write(q) {
   // 展開判定看的該是真的還原成功的那一份條件。
   const open = expandedAxes(read());
   FIELDS.forEach(f => setAxisOpen(blockEl(f), open.indexOf(blockKey(f)) >= 0));
+  all('.axis-group').forEach(box =>
+    setAxisOpen(box, open.indexOf(box.dataset.groupKey) >= 0));
 }
 
 /** 清除條件:回到「什麼都沒設」的狀態,也就是列出全部卡片的那個狀態。
@@ -498,8 +594,8 @@ function clear() {
   syncSubs();
   syncOptional();
   // 收合放在連動之後:必發/選發那一組若因連動從隱藏轉回可見,轉換會讓它自動
-  // 展開——清除要的是初始狀態,最後一律收回
-  all('.axis, .range').forEach(box => setAxisOpen(box, false));
+  // 展開——清除要的是初始狀態,最後一律收回(分組區塊也是)
+  all('.axis, .range, .axis-group').forEach(box => setAxisOpen(box, false));
   updateCounts();
 }
 
@@ -525,8 +621,11 @@ function init() {
     const btn = e.target.closest('.tri');
     if (!btn) return;
     setTri(btn, nextState(btn.dataset.st, statesOf(btn)));
-    if (btn.closest('.axis[data-axis="cat"]')) syncSubs();
-    if (btn.closest('.axis[data-axis="kind"]')) syncOptional();
+    // 比**最近的**軸而不是 closest 選擇器:軸是巢狀的,子類型的鈕往上也找得到
+    // 大類的容器,直接用選擇器會把子軸的點擊誤判成大類的
+    const ax = (btn.closest('.axis') || {}).dataset || {};
+    if (ax.axis === 'cat') syncSubs();
+    if (ax.axis === 'kind') syncOptional();
     updateCounts();
   });
   // 範圍輸入框打字也要讓標題列的已選數跟上(收起時看得見自己設了範圍)
@@ -536,6 +635,7 @@ function init() {
 }
 
   return Object.freeze({ read, write, clear, init, axes, optionalAvailable,
-                         nextState, count, axisCounts, expandedAxes, summarize,
-                         collapse: () => setOpen(false), LANGS, FIELDS });
+                         nextState, count, axisCounts, treeCounts, expandedAxes,
+                         summarize, collapse: () => setOpen(false),
+                         LANGS, FIELDS });
 })();

@@ -665,6 +665,17 @@ test('態數是軸宣告的一部分:大類兩態,其餘軸三態', () => {
   });
 });
 
+test('怪獸參數軸掛在大類「怪獸」的連動上(宣告可測)', () => {
+  // 屬性/種族/連結標記是怪獸才有的參數(範圍軸的等級/攻守等同理,但 axes()
+  // 只列三態軸):大類沒選怪獸時它們藏著——宣告寫在軸清單上,DOM 照它藏
+  const axes = harness.axes(sandbox);
+  ['attr', 'race', 'lm'].forEach(k =>
+    assert.strictEqual(axes.find(a => a.key === k).mon, true, k));
+  // 全卡種通用的軸不掛:效果類型、必發/選發、大類自己、稀有度、OCG・TCG
+  ['kind', 'opt', 'cat', 'rarity', 'ot'].forEach(k =>
+    assert.strictEqual(axes.find(a => a.key === k).mon, false, k));
+});
+
 test('狀態循環照宣告走:兩態兩次點擊回到未選,三態維持三段', () => {
   const next = (st, states) => harness.nextState(sandbox, st, states);
   // 兩態:未選 ⇄ 選取,永遠碰不到排除
@@ -689,17 +700,17 @@ const NO_DF = [483, 10000, 20101, 20103, 20104, 20106, 20107, 20108, 20112];
 const NO_LV = [483, 10000, 20101, 20104, 20106, 20107, 20108, 20112];
 
 test('預設是領域序:七層比較', () => {
-  // 大類(怪獸→魔法→陷阱)→ 靈擺排後 → 卡框序 → 等級高到低 → 屬性 → 種族 → 密碼。
-  // 怪獸側:通常(青眼 lv8、黑魔導 lv7)→ 效果(lv10、5、5、1)→ 融合(lv12、8)
-  // → 儀式 → 超量 → 連結 → 靈擺;20110/20111 同屬性同種族同等級,由密碼決勝。
+  // 大類(怪獸→魔法→陷阱)→ 卡框序 → 靈擺排後 → 等級高到低 → 屬性 → 種族 → 密碼。
+  // 怪獸側:通常(青眼 lv8、黑魔導 lv7)→ 效果(lv10、5、5、1)→ 效果靈擺 →
+  // 融合(lv12、8)→ 儀式 → 超量 → 連結;20110/20111 同屬性同種族同等級,由密碼決勝。
   const DOMAIN = [
     89631139, 46986414,                     // 通常怪獸,等級高到低
     20103, 20110, 20111, 2511,              // 效果怪獸
+    20102,                                  // 效果靈擺(靈擺是卡框內的平手條件,不離開效果那一團)
     23995346, 20109,                        // 融合
     20105,                                  // 儀式
     84013237,                               // 超量
     20101,                                  // 連結
-    20102,                                  // 靈擺(第 2 層把它挪到怪獸的最後)
     20107, 20108, 483, 20106,               // 魔法:通常 → 速攻 → 儀式
     10000, 20112, 20104,                    // 陷阱:通常 → 永續
   ];
@@ -728,8 +739,8 @@ const ORDER_VOCAB = {
   sub_m: {
     zh: '怪獸子類型',
     items: [item('normal', '通常'), item('effect', '效果'), item('synchro', '同步'),
-            item('tuner', '協調')],
-    groups: [{ zh: '卡框', codes: ['normal', 'effect', 'synchro'] },
+            item('pendulum', '靈擺'), item('tuner', '協調')],
+    groups: [{ zh: '卡框', codes: ['normal', 'effect', 'synchro', 'pendulum'] },
              { zh: '能力', codes: ['tuner'] }],
   },
   sub_s: { zh: '魔法子類型', items: [item('normal', '通常')] },
@@ -754,6 +765,19 @@ test('卡框序不被「能力」子類型搶走,屬性序在種族序之前', (
   assert.deepStrictEqual(harness.sortedIds(box, {}, 'dom', ''), [2, 5, 4, 3, 1]);
 });
 
+test('靈擺是卡框內的平手條件:同步靈擺站在同步那一團的最後', () => {
+  const cards = [
+    mon(1, ['effect'], 'earth', 'warrior'),
+    mon(2, ['effect', 'pendulum'], 'earth', 'warrior'),
+    mon(3, ['effect', 'synchro'], 'earth', 'warrior'),
+    mon(4, ['effect', 'synchro', 'pendulum'], 'earth', 'warrior'),
+  ];
+  const box = harness.load({ cards, vocab: ORDER_VOCAB, meta: {} });
+  // 卡框先分團(效果 → 同步),團內非靈擺在前、靈擺在後——同步靈擺不會
+  // 因為卡框取到宣告序最後的「靈擺」而離開同步那一團
+  assert.deepStrictEqual(harness.sortedIds(box, {}, 'dom', ''), [1, 2, 3, 4]);
+});
+
 test('領域序的屬性序取自 window.VOCAB 的宣告序', () => {
   const flipped = {
     ...ORDER_VOCAB,
@@ -764,9 +788,11 @@ test('領域序的屬性序取自 window.VOCAB 的宣告序', () => {
 });
 
 test('攻擊力升降序', () => {
-  // 4500 → 3000 → 2800 → 2500 兩張 → 2000 → 1800 兩張 → 1500 → 1200 → 0
+  // 4500 → 3000 → 2800 → 2500 兩張 → 2000 → 1800 兩張 → 1500 → 1200 → 0。
+  // 平手落回預設序:攻 2500 的通常怪獸(46986414)站在超量(84013237)前,
+  // 攻 1800 的兩張(20110/20111)整條預設序同到密碼才分勝負
   assert.deepStrictEqual(sorted('atk', 'desc').slice(0, 11),
-    [23995346, 89631139, 20109, 84013237, 46986414, 20105, 20111, 20110,
+    [23995346, 89631139, 20109, 46986414, 84013237, 20105, 20110, 20111,
      20102, 20101, 2511]);
   assert.deepStrictEqual(sorted('atk', 'asc').slice(0, 3), [2511, 20101, 20102]);
 });
@@ -784,8 +810,9 @@ test('空值一律殿後,不插進數值之間', () => {
 });
 
 test('守備力與等級的順序', () => {
+  // 守 2200 的兩張(20110/20111)平手,照預設序由密碼分勝負
   assert.deepStrictEqual(sorted('df', 'desc').slice(0, 5),
-                         [23995346, 89631139, 20111, 20110, 46986414]);
+                         [23995346, 89631139, 20110, 20111, 46986414]);
   assert.deepStrictEqual(sorted('lv', 'desc').slice(0, 5),
                          [23995346, 20103, 89631139, 20109, 46986414]);
 });
@@ -805,18 +832,27 @@ test('卡片密碼升降序', () => {
   assert.deepStrictEqual(sorted('id', 'desc'), asc.slice().reverse());
 });
 
-test('升降序對稱:有值與空值兩批各自反轉,空值永遠在後', () => {
+test('方向只翻主鍵:同鍵值那一團的內部順序不隨方向變,空值永遠在後', () => {
   const has = id => NO_ATK.indexOf(id) < 0;
+  const atkOf = id => CARDS.find(c => c.id === id).atk;
   const asc = sorted('atk', 'asc');
   const desc = sorted('atk', 'desc');
-  assert.deepStrictEqual(desc.filter(has), asc.filter(has).slice().reverse());
-  assert.deepStrictEqual(desc.filter(id => !has(id)),
-                         asc.filter(id => !has(id)).slice().reverse());
+  // 有值的一批:同攻擊力分團,升序的團整批反過來就是降序——團的順序翻了,
+  // 團內(預設序)一字不差
+  const groups = [];
+  for (const id of asc.filter(has)) {
+    const g = groups[groups.length - 1];
+    if (g && atkOf(g[0]) === atkOf(id)) g.push(id);
+    else groups.push([id]);
+  }
+  assert.deepStrictEqual(desc.filter(has), groups.slice().reverse().flat());
+  // 空值那一批整個是「同鍵值的一團」:兩個方向下順序相同(預設序),而且都在最後
+  assert.deepStrictEqual(desc.filter(id => !has(id)), asc.filter(id => !has(id)));
 });
 
 test('排序穩定:相同鍵值的卡順序不隨執行、不隨輸入順序變動', () => {
-  // 決勝一律落到卡片密碼(唯一鍵),比較函式因此是全序——排序結果不靠
-  // Array#sort 是不是穩定排序,輸入順序也影響不了它
+  // 平手落回預設序,最終決勝在領域序末層的卡片密碼(唯一鍵),比較函式因此是
+  // 全序——排序結果不靠 Array#sort 是不是穩定排序,輸入順序也影響不了它
   const box = harness.load({ cards: CARDS.slice().reverse(), vocab: VOCAB, meta: META });
   for (const [key, dir] of [['dom', ''], ['atk', 'desc'], ['atk', 'asc'],
                             ['lv', 'desc'], ['n', 'asc']]) {
@@ -834,10 +870,11 @@ test('排序不改變命中集合:重排的輸入就是同一份搜尋結果', (
   }
 });
 
-test('排序選單的鍵清單:領域序沒有方向,單鍵各帶預設方向', () => {
+test('排序選單的鍵清單:預設(領域序)沒有方向,單鍵各帶預設方向', () => {
   const keys = harness.sortKeys(sandbox);
   assert.deepStrictEqual(keys.map(k => k.key), ['dom', 'atk', 'df', 'lv', 'n', 'id']);
-  // 第一筆是預設的排序(領域序),而且它沒有方向可切
+  // 第一筆是預設的排序(領域序),選單上叫「預設」,而且它沒有方向可切
+  assert.strictEqual(keys[0].zh, '預設');
   assert.strictEqual(keys[0].dir, '');
   // 其餘各有中文名與預設方向:問「最高攻擊力的是哪張」的人選了攻擊力就該看到最高的
   assert.ok(keys.slice(1).every(k => k.zh && (k.dir === 'asc' || k.dir === 'desc')));
@@ -1067,6 +1104,42 @@ test('逐軸已選數:範圍與攻守 `?` 落在同一個區塊,各算一筆', (
     lv: { min: null, max: null } }).lv, 0);
 });
 
+test('分組區塊(卡框/能力):具名分組發自己的鍵,計數與展開都認它', () => {
+  // 怪獸子類型的具名分組升級成摺疊區塊,顯示方式與屬性/種族一致——
+  // 查詢上仍是同一個 sub 軸,分組鍵只是同一批選擇的分組視圖
+  const q = { ...EMPTY_Q, cat: { m: 1 },
+              sub: { 'm:fusion': 1, 'm:normal': -1 } };
+  const c = axisCounts(q);
+  // 測試 VOCAB 的 sub_m 只有一個具名分組「卡框」(序 0):兩顆都在裡面
+  assert.strictEqual(c['sub_m/0'], 2);
+  assert.strictEqual(c.sub_m, 2);
+  // 分組視圖不進父子彙總(否則同一批選擇被算兩次)
+  assert.strictEqual(harness.treeCounts(sandbox, q).sub_m, 2);
+  // 組內有條件 → 分組區塊連同祖先鏈一起開
+  assert.deepStrictEqual(expanded(q), ['cat', 'sub_m', 'sub_m/0']);
+  // 組內沒條件 → 分組區塊不開
+  assert.deepStrictEqual(
+    expanded({ ...EMPTY_Q, cat: { m: 1 } }).indexOf('sub_m/0'), -1);
+});
+
+test('子樹已選數:父軸彙總後代,葉軸等於逐軸數(檔案總管內縮)', () => {
+  const q = { ...EMPTY_Q, cat: { m: 1 }, sub: { 'm:fusion': 1 },
+              attr: { dark: 1, light: 1 }, atk: { min: 2500, max: null } };
+  const t = harness.treeCounts(sandbox, q);
+  // 葉軸:與 axisCounts 同數
+  assert.strictEqual(t.attr, 2);
+  assert.strictEqual(t.atk, 1);
+  // 怪獸子類型 = 自己 1 + 八個參數軸(attr 2 + atk 1)
+  assert.strictEqual(t.sub_m, 4);
+  // 大類 = 自己 1 + 子類組三段的子樹
+  assert.strictEqual(t.cat, 5);
+  // 樹外的軸不受影響
+  assert.strictEqual(t.kind, 0);
+  // 空條件全零
+  const empty = harness.treeCounts(sandbox, EMPTY_Q);
+  Object.keys(empty).forEach(k => assert.strictEqual(empty[k], 0, k));
+});
+
 test('逐軸已選數:空條件全零,涵蓋每一個生成的區塊', () => {
   const c = axisCounts(EMPTY_Q);
   const keys = Object.keys(c);
@@ -1077,29 +1150,33 @@ test('逐軸已選數:空條件全零,涵蓋每一個生成的區塊', () => {
   keys.forEach(k => assert.strictEqual(c[k], 0, k));
 });
 
-/* ── 還原展開判定(票14) ────────────────────────────────
-   網址還原時哪些軸該展開是一條純規則:有已選條件的軸,加上連動出現的軸
-   (大類選取帶出的子類組、承載的效果類型帶出的必發/選發)。展開動作本身是
-   DOM(走人工驗收),判定在這裡測。 */
+/* ── 還原展開判定(票14,2026-08-17 改檔案總管規矩) ──────
+   網址還原時哪些軸該展開是一條純規則:有已選條件的軸**連同祖先鏈**(軸是巢狀
+   的,屬性住在 怪獸子類型 住在 大類 裡,祖先不開誰也看不到葉軸),加上承載的
+   效果類型帶出的必發/選發。連動出現但自己沒條件的軸**不**展開(節點收著出現,
+   要看再點開)。展開動作本身是 DOM(走人工驗收),判定在這裡測。 */
 
 const expanded = q => harness.expandedAxes(sandbox, q);
 
-test('還原展開:有已選條件的軸在集合裡,空條件是空集合', () => {
+test('還原展開:有條件的軸連同祖先鏈,空條件是空集合', () => {
   assert.deepStrictEqual(expanded(EMPTY_Q), []);
-  assert.deepStrictEqual(expanded({ ...EMPTY_Q, race: { dragon: 1 } }), ['race']);
+  // 種族藏在 怪獸子類型 藏在 大類 裡:三層一起開
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, race: { dragon: 1 } }),
+                         ['cat', 'sub_m', 'race']);
   // 排除也是條件:收到連結的人要看得到「不要龍族」設在哪
-  assert.deepStrictEqual(expanded({ ...EMPTY_Q, race: { dragon: -1 } }), ['race']);
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, race: { dragon: -1 } }),
+                         ['cat', 'sub_m', 'race']);
   assert.deepStrictEqual(expanded({ ...EMPTY_Q, atk: { min: 2500, max: null } }),
-                         ['atk']);
+                         ['cat', 'sub_m', 'atk']);
   // 攻守 `?` 落在攻守自己的區塊
-  assert.deepStrictEqual(expanded({ ...EMPTY_Q, dfq: -1 }), ['df']);
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, dfq: -1 }),
+                         ['cat', 'sub_m', 'df']);
 });
 
-test('還原展開:大類選取連動帶出對應子類組(子類還沒點也一樣)', () => {
-  assert.deepStrictEqual(expanded({ ...EMPTY_Q, cat: { m: 1 } }),
-                         ['cat', 'sub_m']);
-  assert.deepStrictEqual(expanded({ ...EMPTY_Q, cat: { m: 1, t: 1 } }),
-                         ['cat', 'sub_m', 'sub_t']);
+test('還原展開:連動出現但自己沒條件的子類組不展開(收著出現)', () => {
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, cat: { m: 1 } }), ['cat']);
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, cat: { m: 1, t: 1 } }), ['cat']);
+  // 子類自己有條件才開,連同祖先
   assert.deepStrictEqual(
     expanded({ ...EMPTY_Q, cat: { s: 1 }, sub: { 's:quick': 1 } }),
     ['cat', 'sub_s']);

@@ -67,6 +67,7 @@ const DRIVER = `
 ;function __optAvail(json) { return Query.optionalAvailable(JSON.parse(json)); }
 ;function __critCount(json) { return Query.count(JSON.parse(json)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
+;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
 ;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
 ;function __sortedIds(json) {
   var a = JSON.parse(json);
@@ -171,8 +172,16 @@ function axisCounts(sandbox, q) {
 }
 
 /**
+ * 子樹已選數(檔案總管式內縮):`查詢條件 → { 區塊鍵: 自己+後代點了幾顆 }`。
+ * 父軸標題列寫的是它——大類收著也看得出整棵子樹裡藏著幾條條件。
+ */
+function treeCounts(sandbox, q) {
+  return JSON.parse(sandbox.__treeCounts(JSON.stringify(q || {})));
+}
+
+/**
  * 還原展開判定(票14):`查詢條件 → 該展開的區塊鍵清單`。網址還原時 DOM 照這份
- * 清單開軸——有已選條件的軸、連動出現的子類組與必發/選發軸都在裡面。
+ * 清單開軸——有已選條件的軸連同**祖先鏈**,以及連動出現的必發/選發軸。
  */
 function expandedAxes(sandbox, q) {
   return JSON.parse(sandbox.__expandedAxes(JSON.stringify(q || {})));
@@ -216,5 +225,5 @@ function canonHash(sandbox, str) {
 }
 
 module.exports = { load, search, ids, marks, axes, optionalAvailable, nextState,
-                   critCount, axisCounts, expandedAxes,
+                   critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, hash, parseHash, canonHash };

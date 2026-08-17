@@ -4,9 +4,9 @@
  * **這一層是純的**:比較函式只看卡片物件,不碰 DOM、不讀查詢條件。排序因此
  * 與搜尋完全解耦——換一個排序鍵不必重跑引擎,重排已經有的那份結果就好。
  *
- * 預設的**領域序**是七層比較(沿用 oldProject 的 `cmpCards`):
- * 大類 → 靈擺卡排後 → [[卡片子類型]]序 → 等級/階級/連結值**高到低** →
- * 屬性序 → 種族序 → [[卡片密碼]]升序。
+ * 預設的**領域序**是七層比較(承自 oldProject 的 `cmpCards`,靈擺那一層降到
+ * 卡框之後):大類 → [[卡片子類型]]序 → 靈擺卡排後 → 等級/階級/連結值**高到低**
+ * → 屬性序 → 種族序 → [[卡片密碼]]升序。
  *
  * **第 1、3、5、6 層的比較序直接取自 `window.VOCAB` 的宣告序,這裡沒有第二份
  * 順序表**(ADR-0008)。oldProject 的 `RACES = VOCAB.race.map(e => e.zh)` 旁註著
@@ -19,9 +19,10 @@
 const Sort = (() => {
 const { VOCAB, codesOf } = Util;
 
-/* 靈擺自己是第 2 層,所以不參與第 3 層的卡框序。不排除的話,靈擺融合與靈擺通常
-   會因為兩者的卡框序都取到「靈擺」而併成一團——第 2 層已經把靈擺整批挪到後面了,
-   第 3 層要問的是這張靈擺卡是哪一種卡框。 */
+/* 靈擺是**卡框序的平手條件**(第 3 層),不參與第 2 層的卡框序本身。不排除的話,
+   一張靈擺卡的卡框會取到宣告序最後的「靈擺」,融合靈擺因此離開融合那一團、跑到
+   整個怪獸區塊的尾巴——第 2 層要問的是這張靈擺卡是哪一種卡框,同卡框內靈擺
+   排在非靈擺後面才是第 3 層的事。 */
 const PENDULUM = 'pendulum';
 
 /* 短碼 → 宣告序的名次。**沒登記的碼(以及沒有這個參數的卡)一律殿後**:魔法卡
@@ -100,7 +101,7 @@ const domKeys = new WeakMap();
 function domKey(c) {
   let key = domKeys.get(c);
   if (!key) {
-    key = [CAT_RANK(c.c), isPendulum(c), frameOf(c), -levelOf(c),
+    key = [CAT_RANK(c.c), frameOf(c), isPendulum(c), -levelOf(c),
            ATTR_RANK(c.at), RACE_RANK(c.r), c.id];
     domKeys.set(c, key);
   }
@@ -125,7 +126,7 @@ function cmpDomain(a, b) {
  * 決定。分成兩份的話,加一個排序鍵會變成「選單有這個選項但排序沒反應」。
  */
 const KEYS = [
-  { key: 'dom', zh: '領域序', dir: '' },
+  { key: 'dom', zh: '預設', dir: '' },      // 領域序;選單上叫「預設」
   { key: 'atk', zh: '攻擊力', dir: 'desc' },
   { key: 'df', zh: '守備力', dir: 'desc' },
   { key: 'lv', zh: '等級／階級', dir: 'desc' },
@@ -163,12 +164,12 @@ function specOf(key) {
  *
  * - **空值一律殿後**,升序降序都是。位置一致而且不插進數值之間——「攻擊力升序」
  *   的第一張該是攻 0 的怪獸,不是 2,858 張沒有攻擊力的魔法卡。
- * - **降序就是升序的反轉**。方向連決勝的[[卡片密碼]]一起翻,所以同鍵值的那幾張
- *   在兩個方向下也是互為反轉;有值的那一批與空值的那一批各自反轉,兩批的前後
- *   關係不變(空值永遠在後)。
+ * - **單鍵只是把那個鍵搬到比較的最前面**:平手(以及空值那一批的內部)落回預設的
+ *   領域序繼續往下比,不直接跳到卡片密碼——「攻擊力降序」裡兩張攻 2500 的卡仍照
+ *   卡框、等級站位。方向只屬於主鍵,同鍵值那一團的內部順序不隨方向翻。
  *
- * 決勝一律落到卡片密碼,而密碼是唯一鍵——比較函式因此是**全序**,排序結果不靠
- * `Array#sort` 是不是穩定排序,同一份輸入排幾次都是同一個順序。
+ * 決勝最終落到領域序末層的[[卡片密碼]],而密碼是唯一鍵——比較函式因此是**全序**,
+ * 排序結果不靠 `Array#sort` 是不是穩定排序,同一份輸入排幾次都是同一個順序。
  */
 function comparator(key, dir) {
   const spec = specOf(key);
@@ -180,10 +181,10 @@ function comparator(key, dir) {
     if (va == null || vb == null) {
       if (va != null) return -1;
       if (vb != null) return 1;
-      return sign * (a.id - b.id);
+      return cmpDomain(a, b);
     }
     if (va !== vb) return va < vb ? -sign : sign;
-    return sign * (a.id - b.id);
+    return cmpDomain(a, b);
   };
 }
 

@@ -125,6 +125,13 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 .axis-count:empty { display: none; }
 .axis-body { padding: 2px 0 4px; }
+/* 檔案總管式內縮:子軸區塊巢狀在父軸的摺疊體裡,縮排 + 左側導引線標出層級;
+   收起父軸,整棵子樹跟著消失(各自的展開狀態保留)。分組區塊(卡框/能力)
+   與子軸同一套樣式——它們的顯示方式就是要跟屬性/種族一樣。 */
+.axis-body > .axis, .axis-body > .range, .axis-body > .axis-group {
+  margin: 4px 0 4px 4px; padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
 .tri-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .tri-group { margin-bottom: 6px; }
 .group-label {
@@ -207,21 +214,14 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .page-jump input:focus { outline: none; border-color: var(--accent); }
 
 /* ─── 起始畫面 ────────────────────────────────────────────
-   還沒查過(render.js 的 lastResult = null)時結果區的樣子:一句該做什麼,
-   加一個「仍要列出全部」的出口。置中留白——它是提示,不該長得像一筆結果。 */
+   還沒查過(render.js 的 lastResult = null)時結果區的樣子:一句該做什麼。
+   置中留白——它是提示,不該長得像一筆結果。 */
 .idle {
   text-align: center; padding: 64px 16px;
   border: 1px dashed var(--border); border-radius: 10px;
   color: var(--muted);
 }
-.idle-title { font-size: 17px; color: var(--text); margin-bottom: 8px; }
-.idle-hint { font-size: 13px; margin-bottom: 24px; }
-.idle-all {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 6px; color: var(--muted); padding: 6px 14px;
-  font-size: 13px; font-family: inherit; cursor: pointer;
-}
-.idle-all:hover { border-color: var(--accent); color: var(--text); }
+.idle-title { font-size: 17px; color: var(--text); }
 
 /* ─── 結果卡片 ────────────────────────────────────────────── */
 .card {
@@ -273,10 +273,15 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 
 .card-print { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
 .card-gy { color: var(--accent); font-size: 11px; }
+/* OCG・TCG 限定:與稀有度徽章同一套視覺語言(實色漸層、白字圓角),
+   紅=OCG 限定、綠=TCG 限定——與 UR 紫、SR 橘、R 藍、N 灰都不撞色 */
 .card-ot {
-  color: var(--gold); font-size: 10.5px; padding: 0 6px;
-  border: 1px solid var(--gold); border-radius: 4px;
+  color: #fff; border-radius: 4px; font-size: 10px; font-weight: bold;
+  padding: 1px 6px; white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .4);
 }
+.card-ot.ot-o { background: linear-gradient(135deg, #c62828, #ef5350); }
+.card-ot.ot-t { background: linear-gradient(135deg, #00695c, #26a69a); }
 
 .card-meta {
   color: var(--gold); font-size: 12px; margin: 10px 0 12px;

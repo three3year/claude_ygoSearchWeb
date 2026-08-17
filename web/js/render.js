@@ -117,28 +117,16 @@ function render(result = lastResult) {
  * 是一批與自己無關的卡,還得先捲過去才找得到條件區;手機上那還是幾十張卡圖的
  * 流量。畫面該問問題,不該先給一個沒有人問過的答案。
  *
- * 留一個「仍要列出全部」的出口:想純逛的人只差一次點擊,而那是一次刻意的選擇。
+ * 想純逛全部的人按空條件的「搜尋」就行(那裡本來就放行)——起始畫面只有一句話,
+ * 不再放提示句與「仍要列出全部」鈕(2026-08-17 使用者裁示拿掉)。
  */
 function renderIdle() {
-  const total = META.cards || DB.length;
   $('resultInfo').textContent = '';
   $('results').innerHTML = `<div class="idle">
     <p class="idle-title">設定條件後按「搜尋」</p>
-    <p class="idle-hint">卡片密碼、卡名、效果文關鍵字，或任一卡片參數
-      ——設一條就查得動。</p>
-    <button type="button" class="idle-all">仍要列出全部 ${total} 張</button>
   </div>`;
   renderPager('pagerTop', 1, 1);
   renderPager('pagerBottom', 1, 1);
-}
-
-/* 「仍要列出全部」的接線。呈現層不知道「條件是空的」這件事該由誰放行——它只
-   回報鈕被按了,要不要真的跑那個查詢是主流程的事(與 initSort 的 onChange 同一
-   個分工)。委派在 #results 上,起始畫面每次重畫都不必重綁。 */
-function initIdle(onListAll) {
-  $('results').addEventListener('click', e => {
-    if (e.target.closest('.idle-all')) onListAll();
-  });
 }
 
 function cardHtml(e, hl) {
@@ -155,6 +143,7 @@ function cardHtml(e, hl) {
            target="_blank" rel="noopener">${esc(c.n)}</a>
         ${c.ra ? `<span class="card-rarity ra-${esc(c.ra)}"
            title="Master Duel 稀有度">${esc(c.ra)}</span>` : ''}
+        ${otHtml(c)}
         <span class="card-id">${pad8(c.id)}</span>
       </div>
       ${names.length
@@ -184,15 +173,18 @@ function altNavHtml(c) {
   </div>`;
 }
 
-/* MD 稀有度以外的印刷面資訊:Genesys 點數、OCG・TCG 限定。
+/* OCG・TCG 限定徽章,擺在標題列 MD 稀有度右邊、與稀有度同一套視覺語言。
    「兩者」是 13,822 張的常態,不寫出來——只有限定才是資訊。 */
+function otHtml(c) {
+  if (!c.ot || c.ot === 'b') return '';
+  return `<span class="card-ot ot-${esc(c.ot)}"
+    title="${esc(OT_ZH[c.ot] || c.ot)}">${esc(OT_ZH[c.ot] || c.ot)}</span>`;
+}
+
+/* MD 稀有度以外的印刷面資訊:Genesys 點數。 */
 function printHtml(c) {
-  const parts = [];
-  if (c.gy) parts.push(`<span class="card-gy">Genesys ${c.gy}</span>`);
-  if (c.ot && c.ot !== 'b') {
-    parts.push(`<span class="card-ot">${esc(OT_ZH[c.ot] || c.ot)}</span>`);
-  }
-  return parts.length ? `<div class="card-print">${parts.join('')}</div>` : '';
+  if (!c.gy) return '';
+  return `<div class="card-print"><span class="card-gy">Genesys ${c.gy}</span></div>`;
 }
 
 /* 種類與參數。怪獸參數只有怪獸有——罠モンスター的種族是它變成怪獸之後的形態,
@@ -445,7 +437,7 @@ function goto(page) {
   /* state 關在閉包裡:讀寫都走具名函式,繞過「換每頁筆數要回到第 1 頁」這條
      不變式的第二條路徑(View.state.page = …)從結構上不存在 */
   return Object.freeze({
-    render, initAltArt, initEffKind, initSort, initIdle,
+    render, initAltArt, initEffKind, initSort,
     page: () => state.page,
     perPage: () => state.perPage,
     sort: () => ({ key: state.sortKey, dir: state.sortDir }),

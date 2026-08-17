@@ -361,7 +361,13 @@ function initSort(onChange) {
 }
 
 /* 異圖切換:只換 <img> 的 src 與版次,不重繪卡片——異圖是同一張卡,
-   換的只是卡面圖。委派在 #results 上,全量重繪不必重綁事件。 */
+   換的只是卡面圖。委派在 #results 上,全量重繪不必重綁事件。
+
+   換 src 時瀏覽器會**留著舊圖直到新圖載完**,CDN 慢的時候按了像沒按——所以按下
+   的瞬間把舊圖調淡,新圖到了再恢復,回饋不等網路。載入中再按會換掉 src、中止前
+   一次下載,殘留的 once 監聽器最終只是多移除一次同一個 class,無害。
+   同方向的下一張圖順手預載:連續翻圖是這個控制項的主要用法(黑魔導 17 版),
+   預載一張讓下一按幾乎即時,又不必一口氣抓全部版次。 */
 function initAltArt() {
   $('results').addEventListener('click', e => {
     const btn = e.target.closest('.alt-nav button');
@@ -371,12 +377,18 @@ function initAltArt() {
     const card = byId(art.dataset.cid);
     if (!card) return;
     const ids = [card.id, ...(card.al || [])];
-    const i = (+nav.dataset.i + +btn.dataset.step + ids.length) % ids.length;
+    const step = +btn.dataset.step;
+    const i = (+nav.dataset.i + step + ids.length) % ids.length;
     nav.dataset.i = i;
     nav.querySelector('.alt-n').textContent = `${i + 1}/${ids.length}`;
     const img = art.querySelector('.card-img');
     img.style.visibility = '';   // 前一張缺圖被藏起來了,新的一張要重新有機會
+    img.classList.add('img-loading');
+    const done = () => img.classList.remove('img-loading');
+    img.addEventListener('load', done, { once: true });
+    img.addEventListener('error', done, { once: true });
     img.src = PIC + ids[i] + '.jpg';
+    new Image().src = PIC + ids[(i + step + ids.length) % ids.length] + '.jpg';
   });
 }
 

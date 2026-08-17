@@ -233,7 +233,10 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .card-img {
   width: 180px; height: 262px; object-fit: cover;
   border-radius: 6px; background: var(--surface2);
+  transition: opacity .15s;
 }
+/* 異圖載入中:舊圖調淡當作「按到了」的即時回饋,新圖 onload 後移除 */
+.card-img.img-loading { opacity: .4; }
 /* 異圖切換:只有 342 張有異圖的卡會長出這一列 */
 .alt-nav {
   display: flex; align-items: center; justify-content: center; gap: 8px;

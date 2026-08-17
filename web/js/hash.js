@@ -40,9 +40,11 @@ function schema() {
     if (!f.tri) { range.push({ key: f.range, unknown: f.unknown || '' }); return; }
     const codes = ((VOCAB[f.dom] || {}).items || [])
       .map(it => (f.side ? f.side + ':' : '') + it.code);
+    // 側分段軸(sub)的態數只讀**第一段**的宣告:三段是同一個軸,態數不該不同。
+    // 若要把側分段軸兩態化,FIELDS 三段都要改——這裡不會替你合併第二段之後的宣告
     const ax = tri.find(a => a.key === f.tri);
     if (ax) ax.codes = ax.codes.concat(codes);
-    else tri.push({ key: f.tri, codes });
+    else tri.push({ key: f.tri, codes, states: f.states || 3 });
   });
   return { tri, range };
 }
@@ -130,13 +132,15 @@ function toRange(v) {
 }
 
 /* 三態的碼清單。**不在值域裡的碼直接丟掉**:值域改過之後的舊網址(某個碼沒了)
-   不該讓頁面崩掉,也不該變成一個沒有人選得出來的條件。 */
-function toTri(v, codes) {
+   不該讓頁面崩掉,也不該變成一個沒有人選得出來的條件。兩態軸(大類,票12)的
+   排除段同一個下場——`cat=-t` 還原不成任何 UI 做得出來的狀態。 */
+function toTri(v, ax) {
   const sel = {};
   v.split(',').forEach(token => {
     const ex = token.charAt(0) === '-';
     const code = ex ? token.slice(1) : token;
-    if (code && codes.indexOf(code) >= 0) sel[code] = ex ? -1 : 1;
+    if (ex && ax.states === 2) return;
+    if (code && ax.codes.indexOf(code) >= 0) sel[code] = ex ? -1 : 1;
   });
   return Object.keys(sel).length ? sel : null;
 }
@@ -163,7 +167,7 @@ function parse(hash) {
     if (key === 'sort' || key === 'dir') { raw[key] = v; return; }
     const ax = SCHEMA.tri.find(a => a.key === key);
     if (ax) {
-      const sel = toTri(v, ax.codes);
+      const sel = toTri(v, ax);
       // 讀不出任何一個碼時不動原本的值:壞掉的一段不該把好的那一段也擦掉
       if (sel) q[key] = sel;
       return;

@@ -60,8 +60,14 @@ const DRIVER = `
   });
 }
 ;function __axes() { return JSON.stringify(Query.axes()); }
+;function __nextState(json) {
+  var a = JSON.parse(json);
+  return Query.nextState(a.st, a.states);
+}
 ;function __optAvail(json) { return Query.optionalAvailable(JSON.parse(json)); }
 ;function __critCount(json) { return Query.count(JSON.parse(json)); }
+;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
+;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
 ;function __sortedIds(json) {
   var a = JSON.parse(json);
   var result = Engine.runQuery(window.CARD_DATA, a.query || {});
@@ -140,11 +146,36 @@ function optionalAvailable(sandbox, kindSel) {
 }
 
 /**
+ * 狀態循環規則(票12):`(目前狀態, 態數) → 下一個狀態`。
+ * 態數是軸宣告的一部分(`axes()` 的 `states`),DOM 那一層照這條規則循環——
+ * 兩態軸(大類)永遠碰不到排除,而這件事在宣告與規則上都測得到。
+ */
+function nextState(sandbox, st, states) {
+  return sandbox.__nextState(JSON.stringify({ st, states }));
+}
+
+/**
  * 生效中的條件數(票09:窄螢幕的側欄摺起來之後,摺疊鈕上寫的就是它)。
  * 與 `optionalAvailable()` 同一個理由:規則是純的,DOM 那一層只是把數字寫上去。
  */
 function critCount(sandbox, q) {
   return sandbox.__critCount(JSON.stringify(q || {}));
+}
+
+/**
+ * 逐軸已選數(票13):`查詢條件 → { 區塊鍵: 點了幾顆 }`。軸摺疊之後標題列寫的
+ * 就是它——收起的軸看不見裡面,數字讓條件保持可見。規則是純的,DOM 只照答案寫。
+ */
+function axisCounts(sandbox, q) {
+  return JSON.parse(sandbox.__axisCounts(JSON.stringify(q || {})));
+}
+
+/**
+ * 還原展開判定(票14):`查詢條件 → 該展開的區塊鍵清單`。網址還原時 DOM 照這份
+ * 清單開軸——有已選條件的軸、連動出現的子類組與必發/選發軸都在裡面。
+ */
+function expandedAxes(sandbox, q) {
+  return JSON.parse(sandbox.__expandedAxes(JSON.stringify(q || {})));
 }
 
 /**
@@ -184,5 +215,6 @@ function canonHash(sandbox, str) {
   return sandbox.__canonHash(String(str == null ? '' : str));
 }
 
-module.exports = { load, search, ids, marks, axes, optionalAvailable, critCount,
+module.exports = { load, search, ids, marks, axes, optionalAvailable, nextState,
+                   critCount, axisCounts, expandedAxes,
                    sortedIds, sortKeys, hash, parseHash, canonHash };

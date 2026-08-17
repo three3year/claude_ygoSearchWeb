@@ -651,6 +651,31 @@ test('在值域正典裡加一個種族,按鈕自動多一顆', () => {
   assert.deepStrictEqual(after.groups[0].items.at(-1), { code: 'slime', zh: '史萊姆族' });
 });
 
+/* ── 大類兩態(票12) ────────────────────────────────────
+   大類只有三值,排除某一類等同勾選其餘兩類——排除態是冗餘的,而且誤入排除態
+   會讓子類組整組收起。態數是**軸宣告的一部分**(不是點擊處理裡的大類特例):
+   DOM 那一層照宣告循環,所以宣告與循環規則都是純的、測得到。 */
+
+test('態數是軸宣告的一部分:大類兩態,其餘軸三態', () => {
+  const axes = harness.axes(sandbox);
+  assert.strictEqual(axes.find(a => a.key === 'cat').states, 2);
+  // 其他每一軸(含子類型三段)都維持三態——兩態化只發生在宣告了 2 的軸上
+  axes.filter(a => a.key !== 'cat').forEach(a => {
+    assert.strictEqual(a.states, 3, a.key + '/' + a.side);
+  });
+});
+
+test('狀態循環照宣告走:兩態兩次點擊回到未選,三態維持三段', () => {
+  const next = (st, states) => harness.nextState(sandbox, st, states);
+  // 兩態:未選 ⇄ 選取,永遠碰不到排除
+  assert.strictEqual(next('', 2), 'in');
+  assert.strictEqual(next('in', 2), '');
+  // 三態:未選 → 包含 → 排除 → 未選
+  assert.strictEqual(next('', 3), 'in');
+  assert.strictEqual(next('in', 3), 'ex');
+  assert.strictEqual(next('ex', 3), '');
+});
+
 /* ── 排序 ──────────────────────────────────────────────
    排序與搜尋解耦:比較函式只看卡片物件,重排走的是同一份已經命中的結果。
    下面每一條都跑「查詢 → 排序」這條真實的路徑(harness.sortedIds)。 */
@@ -842,7 +867,8 @@ const STATES = [
   { q: { ...EMPTY_Q, name: '青眼%龍', nameLang: 'ja', code: '46986414',
          text: '墓地%特殊召喚' },
     sort: DOM_SORT },
-  { q: { ...EMPTY_Q, cat: { m: 1, t: -1 },
+  // 大類是兩態軸(票12):只有正選,沒有排除
+  { q: { ...EMPTY_Q, cat: { m: 1, s: 1 },
          sub: { 'm:fusion': 1, 'm:normal': -1, 's:quick': 1 },
          attr: { dark: 1, light: 1 }, race: { dragon: -1 } },
     sort: { key: 'atk', dir: 'desc' } },
@@ -881,6 +907,18 @@ test('三態的三個狀態雙向可編碼', () => {
   assert.deepStrictEqual(back, { light: -1, dark: 1 });
   // 未選的碼不進網址,也不會在還原時變成「未選」以外的東西
   assert.ok(!('earth' in back));
+});
+
+test('兩態軸的排除值在網址還原時被丟掉(票12:大類讀不出排除)', () => {
+  // 大類兩態化之後,`cat=-t` 這種手改出來的段還原不成任何 UI 做得出來的狀態,
+  // 與「值不在值域裡」同一個下場:丟掉該碼,其餘照常
+  const st = parseHash('cat=m,-t&attr=dark');
+  assert.deepStrictEqual(st.q.cat, { m: 1 });
+  assert.deepStrictEqual(st.q.attr, { dark: 1 });
+  // 整段都是排除時,連 cat 這個鍵都不留(空殼不算條件)
+  assert.ok(!('cat' in parseHash('cat=-m,-t').q));
+  // 三態軸不受影響:排除照常還原
+  assert.deepStrictEqual(parseHash('attr=-light').q.attr, { light: -1 });
 });
 
 test('網址不隨點擊順序而變', () => {
@@ -988,6 +1026,94 @@ test('條件數:只給一邊的範圍與攻守 `?` 各自算一條', () => {
   // `?` 是第三種值、與數值範圍分開的一條
   assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: 2500, max: null }, atkq: 1 }), 2);
   assert.strictEqual(critCount({ ...EMPTY_Q, dfq: -1 }), 1);
+});
+
+/* ── 逐軸已選數(票13) ──────────────────────────────────
+   參數軸摺疊之後,收起的軸看不見自己設了什麼——標題列因此寫著該軸的已選數。
+   critCount 數的是「幾條條件」(整軸算一條),這裡數的是「這一軸點了幾顆」,
+   兩個數字答的是不同的問題。鍵是**畫面上的區塊**:子類型三段各自一個標題列,
+   所以共用的 sub 軸物件照大類前綴拆回三份,誰的選擇誰計數。 */
+
+const axisCounts = q => harness.axisCounts(sandbox, q);
+
+test('逐軸已選數:三態軸數點亮的鈕,排除也算', () => {
+  const c = axisCounts({ ...EMPTY_Q, attr: { dark: 1, light: -1 },
+                         race: { dragon: 1 } });
+  assert.strictEqual(c.attr, 2);
+  assert.strictEqual(c.race, 1);
+  // 沒點的軸是 0(標題列因此不顯示數字)
+  assert.strictEqual(c.cat, 0);
+  assert.strictEqual(c.kind, 0);
+});
+
+test('逐軸已選數:子類型三段共用一個軸物件,各自數自己那一側', () => {
+  const c = axisCounts({ ...EMPTY_Q, cat: { m: 1, s: 1 },
+                         sub: { 'm:fusion': 1, 'm:normal': -1, 's:quick': 1 } });
+  assert.strictEqual(c.sub_m, 2);
+  assert.strictEqual(c.sub_s, 1);
+  assert.strictEqual(c.sub_t, 0);
+  assert.strictEqual(c.cat, 2);
+});
+
+test('逐軸已選數:範圍與攻守 `?` 落在同一個區塊,各算一筆', () => {
+  const c = axisCounts({ ...EMPTY_Q, atk: { min: 2500, max: null }, atkq: 1,
+                         sc: { min: 0, max: 0 } });
+  assert.strictEqual(c.atk, 2);
+  // 刻度 0 是真的值,不是「沒設」
+  assert.strictEqual(c.sc, 1);
+  assert.strictEqual(c.df, 0);
+  // 兩邊都空的範圍(壞網址的殘骸)不算
+  assert.strictEqual(axisCounts({ ...EMPTY_Q,
+    lv: { min: null, max: null } }).lv, 0);
+});
+
+test('逐軸已選數:空條件全零,涵蓋每一個生成的區塊', () => {
+  const c = axisCounts(EMPTY_Q);
+  const keys = Object.keys(c);
+  // 區塊鍵 = 三態軸的值域名 + 範圍軸的欄位名,一塊一鍵
+  ['kind', 'optional', 'cat', 'sub_m', 'sub_s', 'sub_t', 'attr', 'race',
+   'lv', 'lk', 'sc', 'atk', 'df', 'lm', 'rarity', 'gy', 'ot']
+    .forEach(k => assert.ok(keys.indexOf(k) >= 0, k));
+  keys.forEach(k => assert.strictEqual(c[k], 0, k));
+});
+
+/* ── 還原展開判定(票14) ────────────────────────────────
+   網址還原時哪些軸該展開是一條純規則:有已選條件的軸,加上連動出現的軸
+   (大類選取帶出的子類組、承載的效果類型帶出的必發/選發)。展開動作本身是
+   DOM(走人工驗收),判定在這裡測。 */
+
+const expanded = q => harness.expandedAxes(sandbox, q);
+
+test('還原展開:有已選條件的軸在集合裡,空條件是空集合', () => {
+  assert.deepStrictEqual(expanded(EMPTY_Q), []);
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, race: { dragon: 1 } }), ['race']);
+  // 排除也是條件:收到連結的人要看得到「不要龍族」設在哪
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, race: { dragon: -1 } }), ['race']);
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, atk: { min: 2500, max: null } }),
+                         ['atk']);
+  // 攻守 `?` 落在攻守自己的區塊
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, dfq: -1 }), ['df']);
+});
+
+test('還原展開:大類選取連動帶出對應子類組(子類還沒點也一樣)', () => {
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, cat: { m: 1 } }),
+                         ['cat', 'sub_m']);
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, cat: { m: 1, t: 1 } }),
+                         ['cat', 'sub_m', 'sub_t']);
+  assert.deepStrictEqual(
+    expanded({ ...EMPTY_Q, cat: { s: 1 }, sub: { 's:quick': 1 } }),
+    ['cat', 'sub_s']);
+});
+
+test('還原展開:承載的效果類型連動帶出必發/選發', () => {
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, kind: { q: 1 } }),
+                         ['kind', 'optional']);
+  // 不承載的類型(永續效果)帶不出來——那一組在畫面上根本是藏著的
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, kind: { c: 1 } }), ['kind']);
+  // 排除不是已選(與 optionalAvailable 同一條規則)
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, kind: { q: -1 } }), ['kind']);
+  // 必發/選發自己有條件當然展開
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, opt: { m: 1 } }), ['optional']);
 });
 
 test('條件數在網址走一趟之後不變(分享的連結在手機上摺著開)', () => {

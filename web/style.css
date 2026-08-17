@@ -104,7 +104,27 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
    種族有 26 顆、子類型有 23 顆,樣式只認狀態不認碼。
    三態:未選(素面)→ 包含(亮起)→ 排除(劃掉)。三種一眼分得出來,而且「排除」
    長得像被劃掉才不會被誤讀成另一種包含。 */
-.axis { margin-bottom: 10px; }
+.axis { margin-bottom: 6px; }
+/* 摺疊標題列(票13):整條可點,箭頭寫著現在是開還是收。狀態由 aria-expanded 帶,
+   樣式跟著它走——與窄螢幕的側欄摺疊鈕同一條規則,「展開了沒有」只有一份說法。 */
+.axis-head {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  background: none; border: none; padding: 3px 0; margin: 0;
+  color: var(--muted); font-size: 12px; font-family: inherit;
+  cursor: pointer; text-align: left;
+}
+.axis-head:hover { color: var(--text); }
+.axis-head::after { content: '▸'; margin-left: auto; color: var(--muted); }
+.axis-head[aria-expanded="true"]::after { content: '▾'; }
+/* 已選數:收起也看得見裡面藏著條件(「看不見的條件解釋不了零結果」由它接手)。
+   沒點任何鈕時是空字串,整顆膠囊跟著消失。 */
+.axis-count {
+  background: var(--accent-dim); border-radius: 8px;
+  color: var(--text); font-size: 11px; font-weight: bold;
+  line-height: 1.3; min-width: 18px; padding: 0 5px; text-align: center;
+}
+.axis-count:empty { display: none; }
+.axis-body { padding: 2px 0 4px; }
 .tri-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .tri-group { margin-bottom: 6px; }
 .group-label {
@@ -126,7 +146,7 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   text-decoration: line-through;
 }
 
-.range { margin-bottom: 10px; }
+.range { margin-bottom: 6px; }
 .range-row { display: flex; align-items: center; gap: 5px; }
 .range-sep { color: var(--muted); font-size: 12px; }
 .range-in {
@@ -424,6 +444,8 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   .tri { padding: 5px 9px; font-size: 13px; }
   .range-in { padding: 6px 8px; }
   .sidebar-actions button { padding: 9px 10px; }
+  /* 軸摺疊標題列(票13)也是觸控目標:整條可點,加高才點得中 */
+  .axis-head { padding: 7px 0; font-size: 13px; }
 
   /* 結果列的彈簧撐開會把排序與每頁擠到自己一行去 */
   .actions { gap: 8px; padding-bottom: 8px; }

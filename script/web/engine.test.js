@@ -682,7 +682,7 @@ test('必發/選發那一組條件只在承載它的效果類型被選時出得�
 test('分類類條件的按鈕清單由 window.VOCAB 導出', () => {
   const axes = harness.axes(sandbox);
   assert.deepStrictEqual(axes.map(a => a.key + '/' + a.side),
-                         ['kind/', 'opt/', 'cat/', 'sub/m', 'sub/s', 'sub/t',
+                         ['cat/', 'kind/', 'opt/', 'sub/m', 'sub/s', 'sub/t',
                           'attr/', 'race/', 'lm/', 'rarity/', 'ot/']);
   // 效果類型十六值分怪獸側與跨類型魔陷效果兩組呈現(Story 23、ADR-0010):
   // 十六顆鈕排在一起時,使用者要看得出哪些是同一個維度的東西

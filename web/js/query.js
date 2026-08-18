@@ -37,16 +37,17 @@ const LANGS = [
    - `range`:數值範圍,只給一邊也要正確。
    - `unknown`:攻守 `?` 的獨立條件——`?` 與 0 是不同的東西,不被數值範圍納入。
 
-   [[效果類型]]與[[必發/選發]]排在最前面,緊接著 HTML 那一段的效果文框:引擎的分界
-   是卡層/句層,而這三個是全部的句層條件——它們並用時取的是同一個效果句(句層耦合),
-   排在一起才看得出那是一組問題,而不是三個獨立的篩子。 */
+   大類排在最上(2026-08-18 使用者裁示):它是搜尋與呈現的最上層分類,子類型與
+   怪獸參數整棵樹都巢狀在它底下。[[效果類型]]與[[必發/選發]]緊接其後:這兩個與
+   HTML 那一段的效果文框是全部的句層條件——並用時取的是同一個效果句(句層耦合),
+   彼此相鄰才看得出那是一組問題,而不是幾個獨立的篩子。 */
 const FIELDS = [
-  { tri: 'kind', dom: 'kind' },
-  { tri: 'opt', dom: 'optional' },
   // 大類是**兩態**(票12):三值互斥,排除某一類等同勾選其餘兩類,排除態是冗餘的,
   // 而且誤入排除態會讓子類組整組收起。態數寫在宣告上,循環照宣告走——不在點擊
   // 處理裡對大類寫特例,之後別的軸要兩態化時改這裡就好。
   { tri: 'cat', dom: 'cat', states: 2 },
+  { tri: 'kind', dom: 'kind' },
+  { tri: 'opt', dom: 'optional' },
   // `parent`:檔案總管式的樹狀內縮——子軸的整個區塊**巢狀在父軸的摺疊體裡**,
   // 收起父軸,整棵子樹跟著消失(各自的展開狀態保留,再展開時原樣回來)。
   // 子類組掛在大類下;怪獸參數八軸掛在怪獸子類型下。
@@ -66,7 +67,8 @@ const FIELDS = [
   { range: 'sc', zh: '靈擺刻度', mon: true, parent: 'sub_m' },
   { range: 'atk', zh: '攻擊力', unknown: 'atkq', mon: true, parent: 'sub_m' },
   { range: 'df', zh: '守備力', unknown: 'dfq', mon: true, parent: 'sub_m' },
-  { tri: 'lm', dom: 'lm', mon: true, parent: 'sub_m' },
+  // `grid9`:連結標記排成九宮格(2026-08-18)。只是顯示結構,條件形狀不變
+  { tri: 'lm', dom: 'lm', mon: true, parent: 'sub_m', grid9: true },
   { tri: 'rarity', dom: 'rarity' },
   { range: 'gy', zh: 'Genesys 點數' },
   { tri: 'ot', dom: 'ot' },
@@ -120,7 +122,7 @@ function axes() {
       : [{ zh: '', items }];
     return { key: f.tri, dom: f.dom, side: f.side || '', zh: dom.zh || f.dom,
              states: f.states || 3, mon: !!f.mon,
-             groupBlocks: !!f.groupBlocks, groups };
+             groupBlocks: !!f.groupBlocks, grid9: !!f.grid9, groups };
   });
 }
 
@@ -164,8 +166,12 @@ function headHtml(zh) {
 
 function axisHtml(ax, kids) {
   const body = ax.groups.map((g, gi) => {
-    const row = `<div class="tri-row">${
-      g.items.map(it => triBtn(it.code, it.zh, ax.states)).join('')}</div>`;
+    const btns = g.items.map(it => triBtn(it.code, it.zh, ax.states));
+    // 九宮格軸(連結標記):中央格插在第 4 顆之後——與結果卡片的 lmGridHtml
+    // 同一條規則,值域的宣告序就是九宮格由左上到右下的讀法
+    if (ax.grid9) btns.splice(4, 0, '<span class="tri-mid"></span>');
+    const row = `<div class="tri-row${ax.grid9 ? ' tri-grid9' : ''}">${
+      btns.join('')}</div>`;
     // groupBlocks:具名分組升級成自己的摺疊區塊(與屬性/種族同一套標題列),
     // 鍵是 `值域名/分組序`,徽章與還原展開都認它
     if (g.zh && ax.groupBlocks) {

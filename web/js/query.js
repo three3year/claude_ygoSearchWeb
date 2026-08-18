@@ -151,10 +151,15 @@ function triBtn(code, zh, states) {
 
 /* 摺疊標題列(票13):軸名 + 已選數。每一個生成的區塊都有一條,預設收起——
    側欄初見只剩一排標題列,不必捲過兩百多顆鈕。已選數讓收起的條件保持可見
-   (「看不見的條件解釋不了零結果」由它接手),沒點任何鈕時不顯示數字。 */
+   (「看不見的條件解釋不了零結果」由它接手),沒點任何鈕時不顯示數字。
+   清除鈕與標題鈕**並排**而不是巢狀(button 不能包 button),區塊裡有條件才出現
+   ——可見性與已選數是同一份答案,都由 updateCounts 寫。 */
 function headHtml(zh) {
-  return `<button type="button" class="axis-head" aria-expanded="false">
-    <span class="axis-name">${esc(zh)}</span><span class="axis-count"></span></button>`;
+  return `<div class="axis-hrow"><button type="button" class="axis-head"
+    aria-expanded="false"><span class="axis-name">${esc(zh)}</span>
+    <span class="axis-count"></span></button>
+    <button type="button" class="axis-clear" hidden
+      title="清除這一組條件">×</button></div>`;
 }
 
 function axisHtml(ax, kids) {
@@ -463,17 +468,17 @@ function setAxisOpen(box, open) {
  */
 function updateCounts() {
   const q = read();
+  // querySelector 撈到的是**自己的**標題列:軸是巢狀的,但自己的 .axis-hrow
+  // 在文件序上先於摺疊體裡的子軸,首個命中必是自己
+  const stamp = (box, n) => {
+    box.querySelector('.axis-count').textContent = n ? String(n) : '';
+    box.querySelector('.axis-clear').hidden = !n;
+  };
   const tree = treeCounts(q);
-  FIELDS.forEach(f => {
-    const n = tree[blockKey(f)];
-    blockEl(f).querySelector('.axis-count').textContent = n ? String(n) : '';
-  });
+  FIELDS.forEach(f => stamp(blockEl(f), tree[blockKey(f)]));
   // 分組區塊(卡框/能力)是同一批選擇的分組視圖,各自數自己那一組(flat 不彙總)
   const flat = axisCounts(q);
-  all('.axis-group').forEach(box => {
-    const n = flat[box.dataset.groupKey];
-    box.querySelector('.axis-count').textContent = n ? String(n) : '';
-  });
+  all('.axis-group').forEach(box => stamp(box, flat[box.dataset.groupKey]));
 }
 
 /* 連動隱藏的開關。**只在轉換時動作**:同一個狀態重複呼叫不做事,否則點另一顆
@@ -599,6 +604,22 @@ function clear() {
   updateCounts();
 }
 
+/**
+ * 單一區塊的清除鈕(2026-08-17):只重置**這個區塊與其整棵子樹**的條件,其餘軸
+ * 不動,也不重跑搜尋(與全域清除同一條裁示)。子樹跟著清是因為標題列的已選數
+ * 彙總整棵子樹——鈕就在那個數字旁邊,按下去數字歸零才對得上;DOM 上子軸就巢狀
+ * 在區塊裡,一次 querySelectorAll 撈得完。展開狀態不動:使用者正在這一軸上操作,
+ * 順手收起來等於把人踢出去(全域清除的「回到初始狀態」不適用於單軸)。
+ */
+function clearBlock(box) {
+  box.querySelectorAll('.tri').forEach(b => setTri(b, ''));
+  box.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
+  // 清掉的可能是大類或效果類型:連動的子類組/怪獸參數/必發選發要跟著藏或現
+  syncSubs();
+  syncOptional();
+  updateCounts();
+}
+
 function init() {
   $('btnFilters').addEventListener('click', () => setOpen(!isOpen()));
   const langBtn = $('fNameLang');
@@ -612,9 +633,15 @@ function init() {
   syncOptional();
   // 委派在容器上:按鈕是生成的,一顆一顆綁事件等於把生成的好處還回去
   $('critParams').addEventListener('click', e => {
+    const clr = e.target.closest('.axis-clear');
+    if (clr) {
+      clearBlock(clr.closest('.axis, .range, .axis-group'));
+      return;
+    }
     const head = e.target.closest('.axis-head');
     if (head) {
-      setAxisOpen(head.parentElement,
+      // 標題鈕的父層是 .axis-hrow(清除鈕的並排容器),摺疊的對象要往上找區塊
+      setAxisOpen(head.closest('.axis, .range, .axis-group'),
                   head.getAttribute('aria-expanded') !== 'true');
       return;
     }

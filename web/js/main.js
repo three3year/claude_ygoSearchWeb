@@ -111,9 +111,10 @@ function init() {
   // 「最高攻擊力的暗屬性誘發即時」這個問題的答案有一半在排序上
   View.initSort(push);
   $('btnSearch').addEventListener('click', search);
-  // 清除條件後直接重搜:條件是空的,結果就是全部——把畫面留在上一次的結果上,
-  // 使用者會以為條件還在
-  $('btnClear').addEventListener('click', () => { Query.clear(); search(); });
+  // 清除只重置側欄,不重跑搜尋(2026-08-17 使用者裁示,推翻先前的「清除即重搜」):
+  // 側欄領先畫面本來就是合法狀態(打了字還沒按搜尋是同一種),條件歸零後由使用者
+  // 決定何時按「搜尋」。網址與摺疊鈕寫的仍是畫面上這批結果的條件,不動。
+  $('btnClear').addEventListener('click', () => Query.clear());
   $('perPage').addEventListener('change', e => {
     View.setPerPage(+e.target.value);   // 換每頁筆數會回到第 1 頁
     View.render();

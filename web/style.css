@@ -114,14 +114,26 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
    長得像被劃掉才不會被誤讀成另一種包含。 */
 .axis { margin-bottom: 6px; }
 /* 摺疊標題列(票13):整條可點,箭頭寫著現在是開還是收。狀態由 aria-expanded 帶,
-   樣式跟著它走——與窄螢幕的側欄摺疊鈕同一條規則,「展開了沒有」只有一份說法。 */
+   樣式跟著它走——與窄螢幕的側欄摺疊鈕同一條規則,「展開了沒有」只有一份說法。
+   標題鈕與單軸清除鈕並排在 .axis-hrow 上(button 不能包 button),標題鈕吃掉
+   剩餘寬度——清除鈕藏著時點擊範圍與原本整條可點一樣寬。 */
+.axis-hrow { display: flex; align-items: center; }
 .axis-head {
-  display: flex; align-items: center; gap: 6px; width: 100%;
+  display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;
   background: none; border: none; padding: 3px 0; margin: 0;
   color: var(--muted); font-size: 12px; font-family: inherit;
   cursor: pointer; text-align: left;
 }
 .axis-head:hover { color: var(--text); }
+/* 單軸清除鈕:區塊裡有條件才出現(hidden 由 updateCounts 寫,與已選數同一份
+   答案)。素面淡色、hover 才轉警示紅——它會同時出現在好幾條標題列上,
+   常亮的話側欄整排都是紅叉。 */
+.axis-clear {
+  flex: none; background: none; border: none; border-radius: 4px;
+  color: var(--muted); cursor: pointer; font-family: inherit;
+  font-size: 13px; line-height: 1.2; padding: 2px 6px;
+}
+.axis-clear:hover { color: #e08b83; background: var(--surface2); }
 /* 箭頭在標題左側(檔案總管式):縮排層級線 + 左箭頭才讀得出「這是可展開的節點」 */
 .axis-head::before { content: '▸'; color: var(--muted); }
 .axis-head[aria-expanded="true"]::before { content: '▾'; }
@@ -479,8 +491,9 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   .tri { padding: 5px 9px; font-size: 13px; }
   .range-in { padding: 6px 8px; }
   .sidebar-actions button { padding: 9px 10px; }
-  /* 軸摺疊標題列(票13)也是觸控目標:整條可點,加高才點得中 */
+  /* 軸摺疊標題列(票13)也是觸控目標:整條可點,加高才點得中;清除鈕同理 */
   .axis-head { padding: 7px 0; font-size: 13px; }
+  .axis-clear { padding: 7px 10px; font-size: 15px; }
 
   /* 結果列的彈簧撐開會把排序與每頁擠到自己一行去 */
   .actions { gap: 8px; padding-bottom: 8px; }

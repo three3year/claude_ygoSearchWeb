@@ -97,15 +97,14 @@
   </main>
 </div>
 
-<!-- 頁尾聲明四行:來源兩行、QA 判定＋資料更新時間一行、免責一行(2026-08-21
-     使用者裁示的行序)。靜態文案住 HTML;唯一動態的是資料更新時間——值來自
+<!-- 頁尾聲明三行:來源一行、QA 判定＋資料更新一行、免責一行(2026-08-21
+     使用者裁示的精簡版)。靜態文案住 HTML;唯一動態的是資料更新時間——值來自
      META,由 main.js 填進行內 span,META 沒有該欄位(建置機從未跑過更新流程)
      時 span 維持 hidden、該行只剩 QA 判定那一句。時間未知就不顯示,不顯示錯的。 -->
 <footer class="site-footer">
-  <p>中文卡片資料與卡圖來源於查牌網・日文/英文卡名資料來源於 ygopro-database</p>
-  <p>Master Duel 稀有度來源於 Master Duel Meta・Genesys 點數來源於 YGOPRODeck</p>
+  <p>資料來源：查牌網（中文卡文・卡圖）・ygopro-database（日英卡名）・Master Duel Meta（MD 稀有度）・YGOPRODeck（Genesys 點數）</p>
   <p>效果類型依官方 QA 判定<span id="dataUpdated" hidden></span></p>
-  <p>「遊戲王」及相關卡片圖文為 KONAMI 之著作權與商標,本站為非官方粉絲查詢工具,與 KONAMI 無關;卡片圖文僅供查詢參考</p>
+  <p>「遊戲王」為 KONAMI 之著作權與商標,本站為非官方查詢工具</p>
 </footer>
 
 <!-- 零建置協定(ADR-0007):沒有 bundler、沒有 ES modules,<script> 依序載入,

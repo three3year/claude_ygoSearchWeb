@@ -80,6 +80,7 @@ const DRIVER = `
 ;function __unhash(s) { return JSON.stringify(Hash.parse(s)); }
 ;function __canonHash(s) { return Hash.canon(s); }
 ;function __fmtTime(v) { return Util.fmtTime(v); }
+;function __cardHtml(json) { return View.cardHtml(JSON.parse(json), null); }
 `;
 
 /**
@@ -226,6 +227,15 @@ function canonHash(sandbox, str) {
   return sandbox.__canonHash(String(str == null ? '' : str));
 }
 
+/**
+ * 呈現縫:`{ card, rows } → 一張卡的 HTML 字串`(spec banlist)。
+ * 沙箱裡沒有真的 DOM,測得到的是字面——render.test.js 斷言使用者看得到的
+ * 文字,不斷言 markup。
+ */
+function cardHtml(sandbox, entry) {
+  return sandbox.__cardHtml(JSON.stringify(entry));
+}
+
 module.exports = { load, search, ids, marks, axes, optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
-                   sortedIds, sortKeys, hash, parseHash, canonHash };
+                   sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml };

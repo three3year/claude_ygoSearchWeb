@@ -58,7 +58,14 @@ def _make_card(row):
         "ot": ot,
         "md_rarity": "",
         "genesys_points": 0,
+        "ban_ocg": "",
     }
+
+
+# [[禁限狀態]]:來源原始值 → 統一三值(2026-08-22 使用者裁示,三賽制共用)。
+# 表以外的字串即建置失敗——來源哪天冒出新值要吵不要靜(值域正典原則)。
+BAN_ZH = {"Forbidden": "禁止", "Limited": "限制", "Semi-Limited": "準限制"}
+BAN_FIELDS = {"ocg": "ban_ocg"}
 
 
 MAX_PASSWORD = 100000000  # 正式卡片密碼為 8 位數;9 位數為先行卡暫時編號
@@ -207,6 +214,38 @@ def _fill_genesys_points(cards, path):
     return listed
 
 
+def _fill_banlist(cards, paths):
+    """禁限來源 JSON({密碼字串: 原始禁限值})逐賽制填入;主卡沒對到時試異圖密碼。
+
+    原始值先過 BAN_ZH 正規化,表以外的字串整批列舉後拋錯(吵鬧失效)。
+    來源含本站不收錄的卡屬正常,對不上的筆數進報告(unmatched)而不失敗。
+    """
+    coverage = {}
+    unknown = []
+    for fmt, path in sorted(paths.items()):
+        with open(path, encoding="utf-8") as f:
+            raw = {int(k): v for k, v in json.load(f).items()}
+        for pw, value in sorted(raw.items()):
+            if value not in BAN_ZH:
+                unknown.append(f"banlist-{fmt} 密碼 {pw} 的值 {value!r}")
+        statuses = {pw: BAN_ZH[v] for pw, v in raw.items() if v in BAN_ZH}
+        matched = 0
+        for card in cards:
+            value = statuses.pop(card["id"], "")
+            if not value:
+                for alt in card["alt_ids"]:
+                    value = statuses.pop(alt, "")
+                    if value:
+                        break
+            card[BAN_FIELDS[fmt]] = value
+            if value:
+                matched += 1
+        coverage[fmt] = {"listed": matched, "unmatched": len(statuses)}
+    if unknown:
+        raise ValueError("禁限來源出現三值以外的字串:\n" + "\n".join(unknown))
+    return coverage
+
+
 def _has_stale_monster_params(row):
     """cdb 這一列是否「大類非怪獸卻帶怪獸參數」——大類閘門清掉的就是這些值。"""
     ctype, atk, def_, level, race, attribute = row[4:10]
@@ -249,7 +288,8 @@ def _diff_cards(existing, cards):
 
 
 def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
-                    genesys_path=None, existing=None, errata=None):
+                    genesys_path=None, banlist_paths=None, existing=None,
+                    errata=None):
     excluded = {"no_password": 0, "token": 0}
     entries = {}
     stale = set()
@@ -289,6 +329,8 @@ def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
         report["md_rarity_coverage"] = _fill_md_rarity(cards, md_rarity_path)
     if genesys_path is not None:
         report["genesys_listed"] = _fill_genesys_points(cards, genesys_path)
+    if banlist_paths is not None:
+        report["banlist_coverage"] = _fill_banlist(cards, banlist_paths)
     if existing is not None:
         report["changes"] = _diff_cards(existing, cards)
     return cards, report

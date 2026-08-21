@@ -71,6 +71,9 @@ def print_report(report, file=sys.stdout):
     genesys_listed = report.get("genesys_listed")
     if genesys_listed is not None:
         p(f"Genesys 列點卡: {genesys_listed} 張(其餘為 0 點)")
+    for fmt, cov in sorted((report.get("banlist_coverage") or {}).items()):
+        p(f"{fmt.upper()} 禁限: 上榜 {cov['listed']} 張、"
+          f"對不上總表 {cov['unmatched']} 筆")
     changes = report.get("changes")
     if changes is not None:
         p(f"差值更新: 新增 {len(changes['added'])} 張、"
@@ -93,6 +96,8 @@ def main(argv=None):
     parser.add_argument("--md", help="MD 稀有度 JSON 路徑 (masterduelmeta)")
     parser.add_argument("--genesys",
                         help="Genesys 點數 JSON 路徑 (YGOPRODeck 萃取)")
+    parser.add_argument("--banlist-ocg",
+                        help="OCG 禁限 JSON 路徑 (YGOPRODeck 禁限端點萃取)")
     parser.add_argument("--existing",
                         help="既有 cards.json 路徑;給定時執行差值更新並輸出變動報告")
     parser.add_argument("--errata", default=DEFAULT_ERRATA,
@@ -105,10 +110,13 @@ def main(argv=None):
     if args.existing:
         with open(args.existing, encoding="utf-8") as f:
             existing = json.load(f)
+    banlist_paths = {}
+    if args.banlist_ocg:
+        banlist_paths["ocg"] = args.banlist_ocg
     cards, report = build_card_list(
         args.zh, ja_path=args.ja, en_path=args.en, md_rarity_path=args.md,
-        genesys_path=args.genesys, existing=existing,
-        errata=load_errata(args.errata))
+        genesys_path=args.genesys, banlist_paths=banlist_paths or None,
+        existing=existing, errata=load_errata(args.errata))
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_card_list(cards))
     print_report(report)

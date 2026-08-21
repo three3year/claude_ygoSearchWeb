@@ -66,7 +66,7 @@ class CardListTest(unittest.TestCase):
             "id", "alt_ids", "name_zh", "name_ja", "name_en", "desc",
             "type", "atk", "def", "level", "race", "attribute",
             "scale", "link_marker", "setcode", "ot", "md_rarity",
-            "genesys_points"])
+            "genesys_points", "ban_ocg"])
         self.assertEqual(card["id"], 63028558)
         self.assertEqual(card["alt_ids"], [])
         self.assertEqual(card["name_zh"], "青眼白龍")
@@ -350,6 +350,47 @@ class CardListTest(unittest.TestCase):
         cards, report = build_card_list(zh)
         self.assertEqual(cards[0]["genesys_points"], 0)
         self.assertNotIn("genesys_listed", report)
+
+    def test_banlist_merge(self):
+        """[[禁限狀態]]以密碼對齊並正規化為統一三值;異圖後備;未上榜留空;
+        報告含各賽制的上榜數與對不上總表的筆數。"""
+        zh = self.cdb("zh.cdb", [
+            {"id": 21044178, "name": "處刑人-死亡透鏡"},
+            {"id": 10000001, "name": "異圖對齊卡"},
+            {"id": 10000002, "name": "異圖對齊卡", "alias": 10000001},
+            {"id": 23434538, "name": "增殖的G"},
+            {"id": 20000001, "name": "未上榜卡"},
+        ])
+        bl = os.path.join(self.tmp.name, "banlist-ocg.json")
+        with open(bl, "w", encoding="utf-8") as f:
+            json.dump({"21044178": "Forbidden", "10000002": "Limited",
+                       "23434538": "Semi-Limited",
+                       "99999999": "Forbidden"}, f)  # 不在總表 → unmatched
+        cards, report = build_card_list(zh, banlist_paths={"ocg": bl})
+        by_id = {c["id"]: c for c in cards}
+        self.assertEqual(by_id[21044178]["ban_ocg"], "禁止")
+        self.assertEqual(by_id[10000001]["ban_ocg"], "限制")  # 異圖後備
+        self.assertEqual(by_id[23434538]["ban_ocg"], "準限制")
+        self.assertEqual(by_id[20000001]["ban_ocg"], "")
+        self.assertEqual(report["banlist_coverage"],
+                         {"ocg": {"listed": 3, "unmatched": 1}})
+
+    def test_banlist_unknown_value_fails(self):
+        """來源出現三值以外的字串 → 建置失敗(吵鬧失效,值域正典原則)。"""
+        zh = self.cdb("zh.cdb", [{"id": 21044178, "name": "卡"}])
+        bl = os.path.join(self.tmp.name, "banlist-ocg.json")
+        with open(bl, "w", encoding="utf-8") as f:
+            json.dump({"21044178": "Not Yet Released"}, f)
+        with self.assertRaises(ValueError) as ctx:
+            build_card_list(zh, banlist_paths={"ocg": bl})
+        self.assertIn("Not Yet Released", str(ctx.exception))
+
+    def test_banlist_optional(self):
+        """不給禁限來源:欄位為空字串,報告無禁限段。"""
+        zh = self.cdb("zh.cdb", [{"id": 21044178, "name": "卡"}])
+        cards, report = build_card_list(zh)
+        self.assertEqual(cards[0]["ban_ocg"], "")
+        self.assertNotIn("banlist_coverage", report)
 
     def test_incremental_update(self):
         """差值更新:新增卡併入、變動卡覆蓋並報告變動欄位、結果與全量建置一致。"""

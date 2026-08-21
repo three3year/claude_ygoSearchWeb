@@ -60,6 +60,7 @@ CODED_FIELDS = (
     ("lm", vocab.LINK_MARKER, True),
     ("ra", vocab.RARITY, False),
     ("ot", vocab.OT, False),
+    ("bo", vocab.BAN_O, False),
     ("k", vocab.KIND, True),
     ("o", vocab.OPTIONAL, True),
     ("ro", vocab.ROLE, True),
@@ -159,6 +160,8 @@ def _entry(card, clauses):
     unknown.extend(_monster_face(card, out))
     out["ra"] = _coded(unknown, "ra", vocab.RARITY, card["md_rarity"])
     out["ot"] = _coded(unknown, "ot", vocab.OT, card["ot"])
+    # [[禁限狀態]]:只有上榜卡帶(欄位的有無由上榜與否決定,未上榜省略)
+    out["bo"] = _coded(unknown, "bo", vocab.BAN_O, card["ban_ocg"])
     if card["genesys_points"]:
         out["gy"] = card["genesys_points"]
     if clauses:
@@ -300,7 +303,8 @@ def _census(cards, clauses_by_id):
         else:
             no_value[vocab.CAT] += 1
         for name, field in ((vocab.ATTR, "attribute"), (vocab.RACE, "race"),
-                            (vocab.RARITY, "md_rarity"), (vocab.OT, "ot")):
+                            (vocab.RARITY, "md_rarity"), (vocab.OT, "ot"),
+                            (vocab.BAN_O, "ban_ocg")):
             code = vocab.code_of(name, card[field])
             if code:
                 counts[name][code] += 1

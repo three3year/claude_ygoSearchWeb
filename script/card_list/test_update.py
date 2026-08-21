@@ -4,9 +4,10 @@ import os
 import tempfile
 import unittest
 
-from update_cards import (SOURCES, check_faq_gap, download_all,
-                          download_genesys, download_md_rarity,
-                          download_sources, record_downloaded_at)
+from update_cards import (BANLIST_FORMATS, SOURCES, check_faq_gap,
+                          download_all, download_banlists, download_genesys,
+                          download_md_rarity, download_sources,
+                          record_downloaded_at)
 
 
 class DownloadSourcesTest(unittest.TestCase):
@@ -150,7 +151,11 @@ class DownloadAllTest(unittest.TestCase):
         self.genesys = {"data": [{"id": 1, "misc_info": [{"genesys_points": 5}]}]}
 
     def fetch_json(self, url):
-        return [] if "page=" in url else self.genesys
+        if "page=" in url:
+            return []
+        if "banlist=" in url:
+            return {"data": [{"id": 1, "banlist_info": {"ban_ocg": "Limited"}}]}
+        return self.genesys
 
     def test_all_sources_succeed_writes_record(self):
         download_all(self.dir, "2026-08-08T17:57:00+0800",
@@ -158,6 +163,14 @@ class DownloadAllTest(unittest.TestCase):
         with open(self.record, encoding="utf-8") as f:
             self.assertEqual(json.load(f)["downloaded_at"],
                              "2026-08-08T17:57:00+0800")
+
+    def test_downloads_banlists_too(self):
+        """一鍵更新連禁限來源一起抓:回傳的路徑存在且內容已寫入。"""
+        *_, banlist_paths = download_all(
+            self.dir, "2026-08-08T17:57:00+0800",
+            fetch=lambda url: b"cdb", fetch_json=self.fetch_json)
+        for path in banlist_paths.values():
+            self.assertTrue(os.path.exists(path))
 
     def test_one_source_fails_writes_nothing(self):
         def boom(url):
@@ -225,6 +238,55 @@ class DownloadGenesysTest(unittest.TestCase):
             self.assertEqual(json.load(f), {"1": 5})
         self.assertEqual(
             download_genesys(self.dir, fetch_json=None, offline=True), path)
+
+
+class DownloadBanlistsTest(unittest.TestCase):
+    """OCG 禁限來源:自 YGOPRODeck 禁限端點萃取 {密碼: 原始禁限值}。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = self.tmp.name
+
+    def test_extracts_password_status_map(self):
+        """禁限端點 dump → {密碼: 原始值};缺 banlist_info 的條目略過。"""
+        dump = {"data": [
+            {"id": 21044178, "banlist_info": {"ban_ocg": "Forbidden"}},
+            {"id": 23434538, "banlist_info": {"ban_ocg": "Limited"}},
+            {"id": 4031928, "banlist_info": {"ban_goat": "Forbidden"}},  # 略過
+        ]}
+        paths = download_banlists(self.dir, fetch_json=lambda url: dump)
+        self.assertEqual(set(paths), set(BANLIST_FORMATS))
+        with open(paths["ocg"], encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"21044178": "Forbidden",
+                                            "23434538": "Limited"})
+
+    def test_fetches_each_format_endpoint(self):
+        """每個賽制打自己的端點(banlist=ocg / …)。"""
+        fetched = []
+        download_banlists(
+            self.dir,
+            fetch_json=lambda url: fetched.append(url) or {"data": []})
+        for fmt in BANLIST_FORMATS:
+            self.assertTrue(any(f"banlist={fmt}" in url for url in fetched),
+                            f"{fmt} 端點沒有被抓")
+
+    def test_failure_keeps_existing_and_offline_cache(self):
+        """失敗指明禁限來源且不毀既有檔;offline 沿用快取、缺檔報錯。"""
+        with self.assertRaises(RuntimeError) as ctx:
+            download_banlists(self.dir, fetch_json=None, offline=True)
+        self.assertIn("banlist", str(ctx.exception))
+        dump = {"data": [{"id": 1, "banlist_info": {"ban_ocg": "Limited"}}]}
+        paths = download_banlists(self.dir, fetch_json=lambda url: dump)
+        def boom(url):
+            raise OSError("boom")
+        with self.assertRaises(RuntimeError) as ctx:
+            download_banlists(self.dir, fetch_json=boom)
+        self.assertIn("banlist", str(ctx.exception))
+        with open(paths["ocg"], encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"1": "Limited"})
+        self.assertEqual(
+            download_banlists(self.dir, fetch_json=None, offline=True), paths)
 
 
 class CheckFaqGapTest(unittest.TestCase):

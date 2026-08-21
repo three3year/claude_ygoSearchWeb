@@ -347,6 +347,23 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .card-ot.ot-o { background: linear-gradient(135deg, #c62828, #ef5350); }
 .card-ot.ot-t { background: linear-gradient(135deg, #00695c, #26a69a); }
 
+/* [[禁限狀態]]徽章列(名稱行下方):上榜值沿稀有度/限定的實色漸層白字,
+   禁止最重(紅黑)、限制次之(橘)、準限制最輕(黃);「—」與「未發行」是
+   推導出來的非強調資訊,退成描邊淡字,不與上榜值搶眼。 */
+.card-ban { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.card-ban-badge {
+  color: #fff; border-radius: 4px; font-size: 10px; font-weight: bold;
+  padding: 1px 6px; white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .4);
+}
+.card-ban-badge.ban-f { background: linear-gradient(135deg, #4a0d0d, #b71c1c); }
+.card-ban-badge.ban-l { background: linear-gradient(135deg, #b53d00, #f57c00); }
+.card-ban-badge.ban-s { background: linear-gradient(135deg, #9c7a00, #d9b400); }
+.card-ban-badge.ban-none {
+  background: none; color: var(--muted); border: 1px solid var(--border);
+  font-weight: normal; text-shadow: none;
+}
+
 .card-meta {
   color: var(--gold); font-size: 12px; margin: 10px 0 12px;
   display: flex; align-items: flex-start; gap: 16px;

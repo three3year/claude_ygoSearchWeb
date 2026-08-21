@@ -15,7 +15,7 @@
 
 const View = (() => {
 const { DB, META, CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH,
-        LM_ZH, LM_CODES, SUB_ZH, $, esc, pad8, byId } = Util;
+        LM_ZH, LM_CODES, SUB_ZH, BAN_ZH, $, esc, pad8, byId } = Util;
 
 /* 卡圖:salix5/query-data 的 CDN,檔名就是不補零的卡片密碼 */
 const PIC = 'https://cdn.jsdelivr.net/gh/salix5/query-data@master/pics/';
@@ -149,6 +149,7 @@ function cardHtml(e, hl) {
       </div>
       ${names.length
         ? `<div class="card-names">${esc(names.join('｜'))}</div>` : ''}
+      ${banHtml(c)}
       ${printHtml(c)}
       ${metaHtml(c)}
       <div class="card-text">${cardText(c, e.rows, hl)}</div>
@@ -193,6 +194,25 @@ function otHtml(c) {
   if (!c.ot || c.ot === 'b') return '';
   return `<span class="card-ot ot-${esc(c.ot)}"
     title="${esc(OT_ZH[c.ot] || c.ot)}">${esc(OT_ZH[c.ot] || c.ot)}</span>`;
+}
+
+/* [[禁限狀態]]徽章列,名稱行下方一列(2026-08-22 使用者裁示)。**任一賽制上榜
+   才長**——沒上榜是 1.4 萬張的常態,不是資訊;長出來時各賽制欄位固定順序齊列。
+   每欄三種字面:上榜值(禁止/限制/準限制)、已發行(MD:已收錄)未上榜「—」、
+   未在該賽制發行「未發行」——後兩者由既有欄位推導(OCG/TCG 看 ot、MD 看
+   稀有度欄位的有無),不進索引。 */
+const BAN_FORMATS = [
+  { key: 'bo', zh: 'OCG', released: c => c.ot !== 't' },
+];
+function banHtml(c) {
+  if (!BAN_FORMATS.some(f => c[f.key])) return '';
+  return `<div class="card-ban">${BAN_FORMATS.map(f => {
+    const code = c[f.key];
+    const text = code ? (BAN_ZH[f.key][code] || code)
+      : f.released(c) ? '—' : '未發行';
+    return `<span class="card-ban-badge ban-${code || 'none'}"
+      title="${esc(f.zh)} 禁限卡表狀態">${esc(f.zh)} ${esc(text)}</span>`;
+  }).join('')}</div>`;
 }
 
 /* MD 稀有度以外的印刷面資訊:Genesys 點數。 */
@@ -488,6 +508,7 @@ function goto(page) {
      不變式的第二條路徑(View.state.page = …)從結構上不存在 */
   return Object.freeze({
     render, initAltArt, initEffKind, initOgToggle, initSort,
+    cardHtml,   // 呈現縫:{ card, rows } → HTML 字串(render.test.js 由此驗字面)
     page: () => state.page,
     perPage: () => state.perPage,
     sort: () => ({ key: state.sortKey, dir: state.sortDir }),

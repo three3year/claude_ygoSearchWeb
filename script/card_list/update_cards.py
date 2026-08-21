@@ -43,6 +43,12 @@ DOWNLOADED_AT_FILENAME = "downloaded_at.json"
 GENESYS_URL = ("https://db.ygoprodeck.com/api/v7/cardinfo.php"
                "?misc=yes&format=genesys")
 GENESYS_FILENAME = "genesys.json"
+# 禁限來源([[禁限狀態]]):同一個端點以 banlist=<fmt> 只回上榜卡,
+# banlist_info.ban_<fmt> 是原始禁限值;正規化(→ 禁止/限制/準限制)在建置端做,
+# 這裡只存原樣——來源冒出新字串時該由建置吵出來,不是下載時靜靜濾掉。
+BANLIST_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist={fmt}"
+BANLIST_FORMATS = ("ocg",)
+BANLIST_FILENAME = "banlist-{fmt}.json"
 
 
 def _fetch_url(url):
@@ -154,6 +160,41 @@ def download_genesys(dest_dir, fetch_json=_fetch_json, offline=False):
     return path
 
 
+def download_banlists(dest_dir, fetch_json=_fetch_json, offline=False):
+    """自 YGOPRODeck 禁限端點抓取各賽制的 {卡片密碼: 原始禁限值} → banlist-*.json。
+
+    缺 banlist_info 或缺該賽制欄位的條目略過(banlist=goat 之類的別榜資料)。
+    先寫 .tmp 再原子替換,失敗時既有檔不受影響。
+    """
+    os.makedirs(dest_dir, exist_ok=True)
+    paths = {}
+    for fmt in BANLIST_FORMATS:
+        path = os.path.join(dest_dir, BANLIST_FILENAME.format(fmt=fmt))
+        if offline:
+            if not os.path.exists(path):
+                raise RuntimeError(
+                    f"離線模式但缺少來源 banlist-{fmt}({path});"
+                    "請先連網下載一次")
+            paths[fmt] = path
+            continue
+        try:
+            dump = fetch_json(BANLIST_URL.format(fmt=fmt))
+            statuses = {}
+            for card in dump["data"]:
+                value = (card.get("banlist_info") or {}).get(f"ban_{fmt}")
+                if value:
+                    statuses[int(card["id"])] = value
+        except Exception as e:
+            raise RuntimeError(f"來源 banlist-{fmt} 下載失敗: {e}") from e
+        tmp_path = path + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
+            json.dump({str(k): v for k, v in sorted(statuses.items())}, f,
+                      ensure_ascii=False, indent=0)
+        os.replace(tmp_path, path)
+        paths[fmt] = path
+    return paths
+
+
 def record_downloaded_at(dest_dir, now, offline=False):
     """全部來源下載成功後記下資料更新時間,一次執行一個時間(五個來源不分開)。
 
@@ -173,7 +214,8 @@ def record_downloaded_at(dest_dir, now, offline=False):
 
 def download_all(sources_dir, now, offline=False,
                  fetch=_fetch_url, fetch_json=_fetch_json):
-    """五個來源(中/日/英 cdb、MD 稀有度、Genesys)→ 全部成功才記資料更新時間。
+    """全部來源(中/日/英 cdb、MD 稀有度、Genesys、禁限)→ 全部成功才記
+    資料更新時間。
 
     任一下載失敗即 raise,記錄不被動到——「全部成功才寫」由呼叫順序保證,
     收在同一個函式裡讓這件事測得到。
@@ -183,8 +225,10 @@ def download_all(sources_dir, now, offline=False,
                                  offline=offline)
     genesys_path = download_genesys(sources_dir, fetch_json=fetch_json,
                                     offline=offline)
+    banlist_paths = download_banlists(sources_dir, fetch_json=fetch_json,
+                                      offline=offline)
     record_downloaded_at(sources_dir, now, offline=offline)
-    return paths, md_path, genesys_path
+    return paths, md_path, genesys_path, banlist_paths
 
 
 def check_faq_gap(cards, faq_json_path=DEFAULT_FAQ_JSON):
@@ -219,7 +263,7 @@ def main(argv=None):
                         help="卡文勘誤表路徑 (預設 data/text_errata.json)")
     args = parser.parse_args(argv)
 
-    paths, md_path, genesys_path = download_all(
+    paths, md_path, genesys_path, banlist_paths = download_all(
         args.sources_dir,
         datetime.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z"),
         offline=args.offline)
@@ -231,7 +275,8 @@ def main(argv=None):
 
     cards, report = build_card_list(
         paths["zh"], ja_path=paths["ja"], en_path=paths["en"],
-        md_rarity_path=md_path, genesys_path=genesys_path, existing=existing,
+        md_rarity_path=md_path, genesys_path=genesys_path,
+        banlist_paths=banlist_paths, existing=existing,
         errata=load_errata(args.errata))
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_card_list(cards))

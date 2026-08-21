@@ -38,6 +38,8 @@ const OT_ZH = zhTable('ot');
 /* 連結標記的中文就是箭頭字元(↖↑↗…),宣告序就是九宮格由左上到右下的讀法 */
 const LM_ZH = zhTable('lm');
 const LM_CODES = codesOf('lm');
+/* [[禁限狀態]]:索引欄位 → 該賽制值域的中文表(目前 OCG 一個賽制) */
+const BAN_ZH = { bo: zhTable('ban_o') };
 /* 子類型一側一份:同一個碼在怪獸側是儀式怪獸、在魔法側是儀式魔法,
    讀哪一份由卡片的大類決定(CONTEXT.md「卡片子類型」) */
 const SUB_ZH = { m: zhTable('sub_m'), s: zhTable('sub_s'), t: zhTable('sub_t') };
@@ -70,7 +72,7 @@ const byId = id => INDEX.get(+id);
   return Object.freeze({
     DB, META, VOCAB,
     CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH, LM_ZH, LM_CODES,
-    SUB_ZH,
+    SUB_ZH, BAN_ZH,
     zhTable, codesOf, $, esc, pad8, byId, fmtTime,
   });
 })();

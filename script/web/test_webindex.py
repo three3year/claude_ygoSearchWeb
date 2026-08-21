@@ -37,7 +37,7 @@ def card(cid, **kw):
             "name_en": "", "desc": "", "type": MONSTER, "atk": 1000,
             "def": 1000, "level": 4, "race": 0x2000, "attribute": 0x20,
             "scale": 0, "link_marker": 0, "setcode": 0, "ot": 3,
-            "md_rarity": "", "genesys_points": 0}
+            "md_rarity": "", "genesys_points": 0, "ban_ocg": ""}
     base.update(kw)
     if not base["type"] & 0x1:
         base.update({"atk": None, "def": None, "level": 0, "race": 0,
@@ -192,6 +192,25 @@ class CardFaceTest(unittest.TestCase):
         # MD 未實裝的 416 張與 0 點不是值域成員,是「沒有這個參數」
         self.assertNotIn("ra", second)
         self.assertNotIn("gy", second)
+
+    def test_ban_field_only_on_listed_cards(self):
+        """[[禁限狀態]]:上榜卡帶短碼,未上榜是「沒有這個欄位」而不是空值。"""
+        cards = [card(1, ban_ocg="禁止"), card(2, ban_ocg="限制"),
+                 card(3, ban_ocg="準限制"), card(4)]
+        index, report = build_index(cards, [tagged(i) for i in (1, 2, 3, 4)])
+        by_id = {c["id"]: c for c in index["cards"]}
+        self.assertEqual(by_id[1]["bo"], "f")
+        self.assertEqual(by_id[2]["bo"], "l")
+        self.assertEqual(by_id[3]["bo"], "s")
+        self.assertNotIn("bo", by_id[4])
+        self.assertEqual(report["problems"], [])
+
+    def test_unknown_ban_value_fails_the_build(self):
+        """索引出現禁限值域沒有的值即建置失敗(吵鬧失效)。"""
+        cards = [card(1, ban_ocg="解禁")]
+        _, report = build_index(cards, [tagged(1)])
+        self.assertTrue(report["problems"])
+        self.assertTrue(report["checks"]["unknown_values"])
 
     def test_alt_ids_become_al(self):
         cards = [card(46986414, alt_ids=[46986415, 46986430]), card(2)]

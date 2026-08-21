@@ -184,7 +184,7 @@ function altNavHtml(c) {
 function ogBtnHtml(c) {
   if (!c.og) return '';
   return `<button type="button" class="og-toggle" aria-pressed="false"
-    title="此卡卡文經本站勘誤,點一下對照勘誤前的來源原文">顯示原文</button>`;
+    title="此卡卡文經本站勘誤,點一下對照勘誤前的來源原文">顯示查牌網原文</button>`;
 }
 
 /* OCG・TCG 限定徽章,擺在標題列 MD 稀有度右邊、與稀有度同一套視覺語言。

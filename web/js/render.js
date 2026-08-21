@@ -286,7 +286,10 @@ function group(label, lines, divider) {
 function effHtml(c, text, i, rows, hl) {
   const role = (c.ro && c.ro[i]) || '';
   const kind = (c.k && c.k[i]) || '';
-  const label = role ? ROLE_ZH[role] : (KIND_ZH[kind] || kind);
+  // 效果類型與必發/選發(有承載才有)各一顆標籤:「這句是誘發嗎」與「它必發嗎」
+  // 是同一次提問要的兩個答案,分兩處放等於要點兩次
+  const labels = (role ? [ROLE_ZH[role]]
+    : [KIND_ZH[kind] || kind, OPT_ZH[(c.o || [])[i]]]).filter(Boolean);
   // 命中的那幾行整行標亮、上方獨立一行掛 badge 說明命中原因,關鍵字本身再在
   // 行內上色;沒命中的行一個字都不動。只搜效果文時 badge 是空字串,整顆不長。
   const hit = !!rows && rows.indexOf(i) >= 0;
@@ -296,7 +299,8 @@ function effHtml(c, text, i, rows, hl) {
   return `<p class="eff${roleClass(c, role)}${hit ? ' hit' : ''}" data-ei="${i}">${
     badge ? `<span class="eff-hit">${esc(badge)}</span>` : ''}${
     lineHtml(text, ranges)}${
-    label ? `<span class="eff-kind">${esc(label)}</span>` : ''}</p>`;
+    labels.length ? `<span class="eff-kinds">${labels.map(t =>
+      `<span class="eff-kind">${esc(t)}</span>`).join('')}</span>` : ''}</p>`;
 }
 
 function roleClass(c, role) {

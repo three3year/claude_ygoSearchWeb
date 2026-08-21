@@ -160,10 +160,14 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 .axis-count:empty { display: none; }
 .axis-body { padding: 2px 0 4px; }
-/* 檔案總管式內縮:子軸區塊巢狀在父軸的摺疊體裡,縮排 + 左側導引線標出層級;
-   收起父軸,整棵子樹跟著消失(各自的展開狀態保留)。分組區塊(卡框/能力)
-   與子軸同一套樣式——它們的顯示方式就是要跟屬性/種族一樣。 */
-.axis-body > .axis, .axis-body > .range, .axis-body > .axis-group {
+/* 檔案總管式內縮:**摺疊體裡的每一樣東西都縮一層**——子軸區塊、按鈕列、數值輸入列
+   一視同仁,縮排 + 左側導引線標出層級。只縮子軸而不縮按鈕列的話,按鈕會與自己的
+   標題列同高度貼齊左緣,讀起來不像掛在那個標題底下。收起父軸,整棵子樹跟著消失
+   (各自的展開狀態保留)。用 `> *` 而不是列舉選擇器:摺疊體的直接子代只有六種
+   (.axis/.range/.axis-group/.tri-row/.tri-group/.range-row),列舉的話日後多一種
+   會安靜地漏縮。具名分組(效果類型的怪獸側/跨類型魔陷效果)自己是一層,所以它的
+   按鈕列再縮一層——與可摺疊的分組區塊(卡框/能力)讀起來一致。 */
+.axis-body > *, .tri-group > .tri-row {
   margin: 4px 0 4px 4px; padding-left: 10px;
   border-left: 1px solid var(--border);
 }

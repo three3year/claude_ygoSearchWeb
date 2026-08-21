@@ -127,21 +127,35 @@ function axes() {
 }
 
 /**
- * 「[[必發/選發]]」那一組條件在目前的[[效果類型]]選擇下出不出得來(Story 25)。
+ * 「[[必發/選發]]」軸的兩組條件在目前的[[效果類型]]選擇下**各自**出不出得來
+ * (Story 25、spec-optional-combo)。[[連動隱藏]]的粒度是**組**:「全部」組看
+ * 值本身的承載者(`VOCAB.optional.carriers`),「怪獸側」組的每一顆組合鈕只看
+ * 自己宣告的效果類型(`VOCAB.optional.combos`)——「永續效果是必發」與
+ * 「通常陷阱卡效果 + 誘發(必發)」都是永遠零結果的條件,不該設得出來。承載
+ * 關係與組合宣告都住在[[值域正典]]——抄一份在這裡的話,某天多一個承載型的
+ * 效果類型時那一組會安靜地不出現。
  *
- * 承載這個屬性的只有誘發即時(2速)、誘發(1速)與[[魔陷卡效果]]十值,**承載關係由
- * [[值域正典]]宣告**(`VOCAB.optional.carriers`)——抄一份在這裡的話,某天多一個
- * 承載型的效果類型時這一組會安靜地不出現。
- *
- * 規則:已選(包含)的效果類型全都不承載時收起來——「永續效果是必發」是一個永遠
- * 零結果的條件,不該設得出來。**一顆都沒包含時仍然出得來**:那時「必發」自己就是
- * 一個有結果的條件(Story 24 要找的「必須發動的效果」不必先點滿十二顆鈕才問得出)。
- * 排除不算已選:排除永續效果之後,命中的句子仍然可能是承載型的。
+ * 規則:已選(包含)的效果類型全都與該組無關時收起該組——**一顆都沒包含時
+ * 兩組都出得來**:那時「必發」「誘發(必發)」自己就是有結果的條件(Story 24
+ * 要找的「必須發動的效果」不必先點滿十二顆鈕才問得出)。排除不算已選:排除
+ * 永續效果之後,命中的句子仍然可能是承載型的。回傳與 `VOCAB.optional.groups`
+ * 對齊的布林陣列。組可見時與效果類型軸仍設得出更細的矛盾(類型只含誘發即時
+ * 卻點誘發(必發)),那一層不設防——句層 AND 給誠實的零結果。
  */
 function optionalAvailable(kindSel) {
-  const carriers = (VOCAB.optional || {}).carriers || [];
+  const dom = VOCAB.optional || {};
+  const carriers = dom.carriers || [];
+  const combos = dom.combos || {};
   const included = Object.keys(kindSel || {}).filter(c => kindSel[c] > 0);
-  return !included.length || included.some(c => carriers.indexOf(c) >= 0);
+  // 一顆鈕的承載者:組合鈕是自己宣告的那一個效果類型(`'t:m'` 的左半),
+  // 值鈕(必發/選發本身)是全部承載者
+  const kindsOf = code => combos[code]
+    ? [combos[code].slice(0, combos[code].indexOf(':'))] : carriers;
+  const groups = (dom.groups || []).length
+    ? dom.groups : [{ codes: (dom.items || []).map(it => it.code) }];
+  return groups.map(g => !included.length ||
+    (g.codes || []).some(code => kindsOf(code)
+      .some(k => included.indexOf(k) >= 0)));
 }
 
 /* ── 側欄的生成 ───────────────────────────────────────── */
@@ -178,7 +192,9 @@ function axisHtml(ax, kids) {
       return `<div class="axis-group" data-group-key="${ax.dom}/${gi}">
         ${headHtml(g.zh)}<div class="axis-body" hidden>${row}</div></div>`;
     }
-    return g.zh ? `<div class="tri-group">
+    // data-group-key:必發/選發的連動隱藏粒度是組(spec-optional-combo),
+    // syncOptional 靠它逐組藏/現;其他軸的具名分組帶著也無妨(沒有人讀)
+    return g.zh ? `<div class="tri-group" data-group-key="${ax.dom}/${gi}">
       <span class="group-label">${esc(g.zh)}</span>${row}</div>` : row;
   }).join('');
   // 子類型的三組與怪獸參數軸各自藏著(hidden),選了對應的大類才出現——那是
@@ -366,11 +382,23 @@ function axisCounts(q) {
  * 要**彙總後代**:大類收著也看得出裡面藏著幾條條件,「看不見的條件解釋不了
  * 零結果」在樹狀結構下靠它成立(與窄螢幕摺疊鈕彙總全部條件是同一個道理)。
  * 葉軸的數字就是 axisCounts 的數字。
+ *
+ * **大類自己的鈕另有一條規則**(2026-08-22 使用者裁示):某一側的子樹已有已選
+ * 時,該側那顆大類鈕**不計**——點「怪獸」是通往獸族的路,標籤是獸族那一顆,
+ * 「怪獸+獸族」寫 2 會讓人以為設了兩道獨立的篩子。子樹空著時它自己就是最後
+ * 一顆鈕,照計(收起的大類只選「怪獸」仍要看得見 1)。
  */
 function treeCounts(q) {
   const counts = axisCounts(q);
+  const own = key => {
+    if (key !== 'cat') return counts[key] || 0;
+    const sel = (q || {}).cat || {};
+    return Object.keys(sel).filter(c => sel[c] &&
+      !FIELDS.some(f => f.parent === 'cat' && f.side === c &&
+                        total(blockKey(f)) > 0)).length;
+  };
   const total = key => FIELDS.filter(f => f.parent === key)
-    .reduce((n, f) => n + total(blockKey(f)), counts[key] || 0);
+    .reduce((n, f) => n + total(blockKey(f)), own(key));
   const out = {};
   FIELDS.forEach(f => { out[blockKey(f)] = total(blockKey(f)); });
   return out;
@@ -531,10 +559,23 @@ function syncSubs() {
   FIELDS.filter(f => f.mon).forEach(f => showAxis(blockEl(f), on('m'), false));
 }
 
-/* 「必發/選發」只在選得出結果時展開(規則見 optionalAvailable)。 */
+/* 組粒度的[[連動隱藏]](spec-optional-combo):與 showAxis 同一條規則——藏掉
+   就清空、只在轉換時動作。組沒有自己的摺疊標題列,hidden 之外沒有狀態要歸位。 */
+function showGroup(el, show) {
+  if (el.hidden === !show) return;
+  if (!show) el.querySelectorAll('.tri').forEach(b => setTri(b, ''));
+  el.hidden = !show;
+}
+
+/* 「必發/選發」的兩組各自只在選得出結果時出現(規則見 optionalAvailable);
+   兩組都收起時整軸跟著藏,任一組在則軸在(出現時照舊自動展開)。 */
 function syncOptional() {
-  showAxis(axisEl('opt', ''),
-           optionalAvailable(triSel(FIELDS.find(f => f.tri === 'kind'))), true);
+  const el = axisEl('opt', '');
+  const avail = optionalAvailable(triSel(FIELDS.find(f => f.tri === 'kind')));
+  Array.prototype.forEach.call(
+    el.querySelectorAll('.tri-group'),
+    (g, gi) => showGroup(g, !!avail[gi]));
+  showAxis(el, avail.some(Boolean), true);
 }
 
 /* ── 寫入(網址還原條件走這一條) ───────────────────────── */
@@ -544,11 +585,15 @@ function syncOptional() {
    所以那一段忽略——與 showAxis 收軸時清狀態是同一條規則。 */
 function writeTri(q, f) {
   const el = axisEl(f.tri, f.side);
-  const sel = (el.hidden ? null : q[f.tri]) || {};
   // 兩態軸沒有排除:寫進來的負值(理論上只有手拼的條件物件做得出來)當未選,
   // 兩態鈕才不會被寫成一個循環永遠回不到的狀態
   const ex = (f.states || 3) === 2 ? '' : 'ex';
   ownTris(el).forEach(btn => {
+    // 連動隱藏的粒度有兩層:整軸,與必發/選發的組(spec-optional-combo)。
+    // 藏著的組不寫,與藏著的軸不寫同一條規則——網址上「有怪獸側組合、效果
+    // 類型卻只選了魔陷值」是過期的組合,寫進去等於一條看不見的條件
+    const grp = btn.closest('.tri-group');
+    const sel = (el.hidden || (grp && grp.hidden) ? null : q[f.tri]) || {};
     const key = f.side ? f.side + ':' + btn.dataset.code : btn.dataset.code;
     setTri(btn, sel[key] > 0 ? 'in' : (sel[key] < 0 ? ex : ''));
   });

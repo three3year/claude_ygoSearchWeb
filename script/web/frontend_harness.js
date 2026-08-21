@@ -64,7 +64,7 @@ const DRIVER = `
   var a = JSON.parse(json);
   return Query.nextState(a.st, a.states);
 }
-;function __optAvail(json) { return Query.optionalAvailable(JSON.parse(json)); }
+;function __optAvail(json) { return JSON.stringify(Query.optionalAvailable(JSON.parse(json))); }
 ;function __critCount(json) { return Query.count(JSON.parse(json)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
@@ -139,12 +139,13 @@ function axes(sandbox) {
 }
 
 /**
- * 「必發/選發」那一組條件在目前的效果類型選擇下出不出得來(Story 25)。
+ * 「必發/選發」的兩組條件在目前的效果類型選擇下各自出不出得來
+ * (Story 25、spec-optional-combo);回傳與 VOCAB.optional.groups 對齊的布林陣列。
  * 與 `axes()` 同一個理由:沙箱裡沒有真的 DOM,而 DOM 那一層只是照這個答案
  * 決定要不要收起那一軸——規則本身是純的,所以測得到。
  */
 function optionalAvailable(sandbox, kindSel) {
-  return sandbox.__optAvail(JSON.stringify(kindSel || null));
+  return JSON.parse(sandbox.__optAvail(JSON.stringify(kindSel || null)));
 }
 
 /**

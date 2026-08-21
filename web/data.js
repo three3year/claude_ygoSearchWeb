@@ -14212,7 +14212,7 @@ window.VOCAB={
 "cat":{"items":[{"code":"m","zh":"怪獸"},{"code":"s","zh":"魔法"},{"code":"t","zh":"陷阱"}],"zh":"大類"},
 "kind":{"groups":[{"codes":["x","u","c","q","t","i"],"zh":"怪獸側"},{"codes":["sc","se","tc"],"zh":"跨類型魔陷效果"}],"items":[{"code":"x","zh":"效果外文本"},{"code":"u","zh":"無種類效果"},{"code":"c","zh":"永續效果"},{"code":"q","zh":"誘發即時效果(2速)"},{"code":"t","zh":"誘發效果(1速)"},{"code":"i","zh":"啟動效果"},{"code":"sn","zh":"通常魔法卡效果"},{"code":"sq","zh":"速攻魔法卡效果"},{"code":"sr","zh":"儀式魔法卡效果"},{"code":"sc","zh":"永續魔法卡效果"},{"code":"se","zh":"裝備魔法卡效果"},{"code":"sf","zh":"場地魔法卡效果"},{"code":"sp","zh":"靈擺魔法卡效果"},{"code":"tn","zh":"通常陷阱卡效果"},{"code":"tc","zh":"永續陷阱卡效果"},{"code":"tk","zh":"反擊陷阱卡效果"}],"own":{"sc":"s:continuous","se":"s:equip","sf":"s:field","sn":"s:normal","sp":"m:pendulum","sq":"s:quick","sr":"s:ritual","tc":"t:continuous","tk":"t:counter","tn":"t:normal"},"zh":"效果類型"},
 "lm":{"items":[{"code":"TL","zh":"↖"},{"code":"T","zh":"↑"},{"code":"TR","zh":"↗"},{"code":"L","zh":"←"},{"code":"R","zh":"→"},{"code":"BL","zh":"↙"},{"code":"B","zh":"↓"},{"code":"BR","zh":"↘"}],"zh":"連結標記"},
-"optional":{"carriers":["q","t","sn","sq","sr","sc","se","sf","sp","tn","tc","tk"],"items":[{"code":"m","zh":"必發"},{"code":"o","zh":"選發"}],"zh":"必發/選發"},
+"optional":{"carriers":["q","t","sn","sq","sr","sc","se","sf","sp","tn","tc","tk"],"combos":{"qm":"q:m","qo":"q:o","tm":"t:m","to":"t:o"},"groups":[{"codes":["m","o"],"zh":"全部"},{"codes":["qm","qo","tm","to"],"zh":"怪獸側"}],"items":[{"code":"m","zh":"必發"},{"code":"o","zh":"選發"},{"code":"qm","zh":"誘發即時(必發)"},{"code":"qo","zh":"誘發即時(選發)"},{"code":"tm","zh":"誘發(必發)"},{"code":"to","zh":"誘發(選發)"}],"zh":"必發/選發"},
 "ot":{"items":[{"code":"o","zh":"OCG 限定"},{"code":"t","zh":"TCG 限定"},{"code":"b","zh":"兩者"}],"zh":"OCG・TCG"},
 "race":{"items":[{"code":"warrior","zh":"戰士族"},{"code":"spellcaster","zh":"魔法使族"},{"code":"fairy","zh":"天使族"},{"code":"fiend","zh":"惡魔族"},{"code":"zombie","zh":"不死族"},{"code":"machine","zh":"機械族"},{"code":"aqua","zh":"水族"},{"code":"pyro","zh":"炎族"},{"code":"rock","zh":"岩石族"},{"code":"winged_beast","zh":"鳥獸族"},{"code":"plant","zh":"植物族"},{"code":"insect","zh":"昆蟲族"},{"code":"thunder","zh":"雷族"},{"code":"dragon","zh":"龍族"},{"code":"beast","zh":"獸族"},{"code":"beast_warrior","zh":"獸戰士族"},{"code":"dinosaur","zh":"恐龍族"},{"code":"fish","zh":"魚族"},{"code":"sea_serpent","zh":"海龍族"},{"code":"reptile","zh":"爬蟲類族"},{"code":"psychic","zh":"超能族"},{"code":"divine_beast","zh":"幻神獸族"},{"code":"creator_god","zh":"創造神族"},{"code":"wyrm","zh":"幻龍族"},{"code":"cyberse","zh":"電子界族"},{"code":"illusion","zh":"幻想魔族"}],"zh":"種族"},
 "rarity":{"items":[{"code":"N","zh":"N"},{"code":"R","zh":"R"},{"code":"SR","zh":"SR"},{"code":"UR","zh":"UR"}],"zh":"MD 稀有度"},
@@ -14222,10 +14222,10 @@ window.VOCAB={
 "sub_t":{"items":[{"code":"normal","zh":"通常"},{"code":"continuous","zh":"永續"},{"code":"counter","zh":"反擊"}],"zh":"陷阱子類型"}
 };
 window.META={
-"built_at":"2026-08-21T17:56:46+0800",
+"built_at":"2026-08-22T04:12:14+0800",
 "cards":14207,
 "clauses":34390,
 "data_updated_at":"2026-08-08T17:57:00+0800",
-"sources":{"cards.json":"13fcab8766c776e8","tag_cards.json":"9937850d547732ae"},
-"vocab_digest":"92341aee35b38e36"
+"sources":{"cards.json":"619bab0596fb8d82","tag_cards.json":"0012a4ef8e9a60a4"},
+"vocab_digest":"a47bc9bf99485dd7"
 };

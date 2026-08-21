@@ -51,7 +51,7 @@ def entry(code, zh, src=None, filterable=True):
 
 
 def domain(zh, src_kind, entries, groups=(), fallback=None, carriers=(),
-           own=()):
+           own=(), combos=()):
     """一個值域。entries 的順序就是宣告序:按鈕順序與排序比較序共用它。
 
     groups 是按鈕分組((組名, 成員碼...)),分組必須恰好蓋過全部可篩選成員——
@@ -64,6 +64,12 @@ def domain(zh, src_kind, entries, groups=(), fallback=None, carriers=(),
     own 是「這個值域的值 → 本類的 (大類碼, 子類型碼)」((值碼, 大類碼, 子類型碼)
     的序列,ADR-0010,目前只有[[效果類型]]的魔陷十值有)。搜尋介面的跨類型排除與
     建置期的空值判定都照它走,同一條「不抄第二份」的理由。
+
+    combos 是**組合條件**((組合碼, 效果類型碼, 值碼, 中文) 的序列,目前只有
+    [[必發/選發]]的怪獸側四顆有,spec-optional-combo):一顆按鈕 = 「同一
+    [[效果句]]是該效果類型**且**帶該值」。組合不是第三種值——值域的值仍只有
+    entries 那幾個,組合是**條件的形狀**,所以另立宣告而不混進 entries
+    (混進去的話 code_of 會把標記表裡不存在的來源值解出碼來)。
     """
     if src_kind == SRC_TEXT:
         entries = tuple(
@@ -71,7 +77,8 @@ def domain(zh, src_kind, entries, groups=(), fallback=None, carriers=(),
             for e in entries)
     return {"zh": zh, "src_kind": src_kind, "entries": tuple(entries),
             "groups": tuple(groups), "fallback": fallback,
-            "carriers": tuple(carriers), "own": tuple(own)}
+            "carriers": tuple(carriers), "own": tuple(own),
+            "combos": tuple(combos)}
 
 
 # ── 卡片種類大類 ─────────────────────────────────────────────
@@ -216,11 +223,25 @@ _KIND = domain("效果類型", SRC_TEXT, (
 # (Story 25——「永續效果是必發」是一個永遠零結果的條件,不該設得出來),建置期
 # 照它擋下標記表把值貼到不承載的類型上。抄在前端一份的話,某天多一個承載型的
 # 效果類型時那一組會安靜地不出現——與漏一個碼同一個失效模式(ADR-0008)。
+# 搜尋介面上這個屬性是同一軸的兩組條件(spec-optional-combo):「全部」組是
+# 值本身的兩顆,「怪獸側」組是效果類型×值的四顆組合鈕——必發/選發的使用情境
+# 大多落在怪獸效果上(必發 1,830 卡裡 1,481 卡是怪獸側),「怪獸的必發效果」
+# 該是一顆鈕而不是跨兩軸三顆。魔陷側不設組合:軸內排除優先本來就表達得出來
+# (全部必發包含+怪獸側兩顆必發排除)。組合的鈕面省略「效果」與速度標注,
+# 與效果類型軸的全名「誘發即時效果(2速)」對得起來又不佔滿一列。
 _OPTIONAL = domain("必發/選發", SRC_TEXT, (
     entry("m", "必發"),
     entry("o", "選發"),
+), groups=(
+    ("全部", ("m", "o")),
+    ("怪獸側", ("qm", "qo", "tm", "to")),
 ), carriers=("q", "t", "sn", "sq", "sr", "sc", "se", "sf", "sp", "tn", "tc",
-             "tk"))
+             "tk"), combos=(
+    ("qm", "q", "m", "誘發即時(必發)"),
+    ("qo", "q", "o", "誘發即時(選發)"),
+    ("tm", "t", "m", "誘發(必發)"),
+    ("to", "t", "o", "誘發(選發)"),
+))
 _ROLE = domain("效果外文本種別", SRC_TEXT, (
     entry("mat", "素材指定"),
     entry("cond", "召喚條件"),
@@ -352,7 +373,8 @@ def problems(domains=None):
     EXPECTED_SIZES 不符、短碼重複、缺短碼或缺中文、同值域內中文重複(按鈕會有
     兩顆長一樣的)、來源值重複或位元重疊(解碼時對到兩個成員)、fallback 指向
     不存在的成員、分組沒有恰好蓋過全部可篩選成員(宣告序有空洞)、分組列了
-    不存在的成員、承載者不是效果類型的成員、本類對應解不動(ADR-0010)。
+    不存在的成員、承載者不是效果類型的成員、本類對應解不動(ADR-0010)、
+    組合條件解不動(spec-optional-combo)。
     """
     domains = domains or DOMAINS
     found = []
@@ -393,6 +415,7 @@ def problems(domains=None):
             found.append(f"{name}: fallback {dom['fallback']!r} 不是成員")
         found.extend(_group_problems(name, dom))
         found.extend(_carrier_problems(name, dom, domains))
+        found.extend(_combo_problems(name, dom, domains))
         found.extend(_own_problems(name, dom, domains))
     return found
 
@@ -425,6 +448,43 @@ def _own_problems(name, dom, domains):
     return found
 
 
+def _combo_problems(name, dom, domains):
+    """組合條件(效果類型×自身值)必須兩側都解得動,且只長在怪獸側的承載者上。
+
+    寫壞的下場與承載關係同族:按鈕由分組長出來、命中規則由這份宣告決定,
+    碼對不上時那一顆鈕在畫面上,點了卻永遠零結果。「怪獸側」的判別走結構而
+    不是組名:魔陷十值全部有本類對應(ADR-0010)、怪獸側六類都沒有,所以
+    「沒有本類對應的承載者」恰好就是誘發即時(2速)與誘發(1速)。
+    """
+    combos = dom.get("combos") or ()
+    if not combos:
+        return []
+    found = []
+    members = {e["code"] for e in dom["entries"]}
+    zhs = {e["zh"] for e in dom["entries"]}
+    seen = set(members)
+    own = ({code for code, _, _ in domains[KIND]["own"]}
+           if KIND in domains else set())
+    for code, kind, value, zh_label in combos:
+        if code in seen:
+            found.append(f"{name}: 組合短碼重複 {code!r}")
+        seen.add(code)
+        if not zh_label:
+            found.append(f"{name}: 組合 {code!r} 缺中文")
+        elif zh_label in zhs:
+            found.append(f"{name}: 中文重複 {zh_label!r}")
+        zhs.add(zh_label)
+        if value not in members:
+            found.append(f"{name}: 組合 {code!r} 的值 {value!r} 不是成員")
+        if kind not in dom["carriers"]:
+            found.append(
+                f"{name}: 組合 {code!r} 的效果類型 {kind!r} 不是承載者")
+        elif kind in own:
+            found.append(
+                f"{name}: 組合 {code!r} 的效果類型 {kind!r} 不是怪獸側")
+    return found
+
+
 def _carrier_problems(name, dom, domains):
     """承載者必須是[[效果類型]]的成員:對不到 = 一條永遠不生效的規則。
 
@@ -444,6 +504,8 @@ def _group_problems(name, dom):
         return []
     found = []
     members = [e["code"] for e in dom["entries"] if e["filter"]]
+    # 組合條件也是按鈕(spec-optional-combo),分組要蓋到它們
+    members += [c[0] for c in dom.get("combos") or ()]
     grouped = []
     for label, group in dom["groups"]:
         if not label:
@@ -477,6 +539,12 @@ def export(domains=None):
         if dom["groups"]:
             out[name]["groups"] = [{"zh": label, "codes": list(group)}
                                    for label, group in dom["groups"]]
+        if dom.get("combos"):
+            out[name]["items"].extend(
+                {"code": code, "zh": zh_label}
+                for code, _, _, zh_label in dom["combos"])
+            out[name]["combos"] = {code: f"{kind}:{value}"
+                                   for code, kind, value, _ in dom["combos"]}
         if dom["carriers"]:
             out[name]["carriers"] = list(dom["carriers"])
         if dom["own"]:

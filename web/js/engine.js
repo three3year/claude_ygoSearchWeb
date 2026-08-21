@@ -169,12 +169,26 @@ function paramHit(c, q) {
     && unknownHit(c.df, q.dfq);
 }
 
-/* 一句的短碼,包成 triHit 吃的陣列形狀。沒有值的句子是空陣列——**「不承載」不是
-   一個值**:22,942 個效果句不承載[[必發/選發]],它們不該被「必發」命中,也不該被
-   「排除必發」排掉(排除的是必發,不是「沒有這個屬性」)。 */
-function codeAt(arr, i) {
-  const code = arr && arr[i];
-  return code ? [code] : [];
+/* 怪獸側組合鈕(spec-optional-combo):「效果類型:值 → 組合碼」的查表,由
+   [[值域正典]]的宣告(`VOCAB.optional.combos`,形狀 `{qm: 'q:m', …}`)反轉而來
+   ——在這裡抄一份的話,正典改宣告時命中規則會安靜地漂移(ADR-0008)。 */
+const OPT_COMBO = {};
+for (const code in (VOCAB.optional || {}).combos || {}) {
+  OPT_COMBO[VOCAB.optional.combos[code]] = code;
+}
+
+/* 一句對[[必發/選發]]軸的值集合:自己的值,加上「效果類型×值」符合的組合碼——
+   組合鈕 = 「同一句是該效果類型**且**帶該值」的單一條件,包含/排除/軸內 OR
+   全走既有的 triHit,不另立第二套規則。沒有值的句子是空陣列——**「不承載」不是
+   一個值**:22,942 個效果句不承載必發/選發,它們不該被「必發」命中,也不該被
+   「排除必發」排掉(排除的是必發,不是「沒有這個屬性」);組合的包含與排除同樣
+   碰不到它們。組合只指怪獸側的誘發即時/誘發,與 kindAt 的本類排除(ADR-0010,
+   只作用於魔陷十值)天然無交集,這裡不需要特例。 */
+function optAt(c, i) {
+  const code = c.o && c.o[i];
+  if (!code) return [];
+  const combo = OPT_COMBO[((c.k && c.k[i]) || '') + ':' + code];
+  return combo ? [code, combo] : [code];
 }
 
 /* 一句的[[效果類型]]短碼。**本類卡的該值效果句視同無值**(ADR-0010):裝備魔法卡
@@ -211,7 +225,7 @@ function clauseRows(c, parts, kindSel, optSel, matOn) {
   const rows = [];
   for (let i = 0; i < tx.length; i++) {
     if (kindSel && !triHit(kindAt(c, i), kindSel)) continue;
-    if (optSel && !triHit(codeAt(c.o, i), optSel)) continue;
+    if (optSel && !triHit(optAt(c, i), optSel)) continue;
     if (parts.length) {
       // 開關只管**關鍵字**掃不掃素材行(見上方 ROLE_MAT):效果類型與必發/選發
       // 照樣看得到它,找效果外文本的人不受影響

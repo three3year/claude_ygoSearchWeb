@@ -97,6 +97,43 @@ class CanonTest(unittest.TestCase):
         dup = broken(vocab.KIND, own=base + (("se", "s", "equip"),))
         self.assertIn("kind: 本類對應重複 'se'", vocab.problems(dup))
 
+    def test_combo_kind_must_be_a_carrier(self):
+        """組合條件掛在不承載的效果類型上 = 一顆點了永遠零結果的鈕。"""
+        dom = broken(vocab.OPTIONAL,
+                     combos=vocab.DOMAINS[vocab.OPTIONAL]["combos"] + (
+                         ("cm", "c", "m", "永續(必發)"),))
+        self.assertIn("optional: 組合 'cm' 的效果類型 'c' 不是承載者",
+                      vocab.problems(dom))
+
+    def test_combo_kind_must_be_monster_side(self):
+        """組合只長在怪獸側(spec-optional-combo):魔陷值全部有本類對應,
+        怪獸側六類都沒有,「有本類對應的承載者」就是魔陷值。"""
+        dom = broken(vocab.OPTIONAL,
+                     combos=vocab.DOMAINS[vocab.OPTIONAL]["combos"] + (
+                         ("snm", "sn", "m", "通常魔法(必發)"),))
+        self.assertIn("optional: 組合 'snm' 的效果類型 'sn' 不是怪獸側",
+                      vocab.problems(dom))
+
+    def test_combo_value_must_be_a_member(self):
+        dom = broken(vocab.OPTIONAL,
+                     combos=vocab.DOMAINS[vocab.OPTIONAL]["combos"] + (
+                         ("qz", "q", "z", "誘發即時(看心情)"),))
+        self.assertIn("optional: 組合 'qz' 的值 'z' 不是成員",
+                      vocab.problems(dom))
+
+    def test_combo_code_collision_is_caught(self):
+        """組合碼與成員碼同一個命名空間:hash 與按鈕都以碼定身分。"""
+        dom = broken(vocab.OPTIONAL,
+                     combos=vocab.DOMAINS[vocab.OPTIONAL]["combos"] + (
+                         ("m", "q", "m", "誘發即時(必發二)"),))
+        self.assertIn("optional: 組合短碼重複 'm'", vocab.problems(dom))
+
+    def test_combo_zh_duplicate_is_caught(self):
+        dom = broken(vocab.OPTIONAL,
+                     combos=vocab.DOMAINS[vocab.OPTIONAL]["combos"] + (
+                         ("q2", "q", "m", "必發"),))
+        self.assertIn("optional: 中文重複 '必發'", vocab.problems(dom))
+
     def test_carrier_must_be_a_kind_member(self):
         """承載者對不到[[效果類型]]的成員 = 一條永遠不生效的規則。
 
@@ -193,6 +230,28 @@ class ExportTest(unittest.TestCase):
         # 沒有承載關係的值域不長這個鍵
         self.assertNotIn("carriers", exported["race"])
 
+    def test_optional_combos_are_exported(self):
+        """四顆組合鈕的成員宣告住正典、隨 VOCAB 出去(spec-optional-combo):
+        按鈕由分組長出來,命中規則由 combos 的效果類型×值宣告——抄在前端一份
+        的話,正典改宣告時那一組會安靜地漂移(ADR-0008)。"""
+        exported = vocab.export()
+        opt = exported["optional"]
+        self.assertEqual(opt["combos"],
+                         {"qm": "q:m", "qo": "q:o", "tm": "t:m", "to": "t:o"})
+        self.assertEqual([g["zh"] for g in opt["groups"]], ["全部", "怪獸側"])
+        self.assertEqual(opt["groups"][0]["codes"], ["m", "o"])
+        self.assertEqual(opt["groups"][1]["codes"], ["qm", "qo", "tm", "to"])
+        # 組合是 items 的成員(按鈕要有鈕面),排在值成員之後
+        self.assertEqual([i["code"] for i in opt["items"]],
+                         ["m", "o", "qm", "qo", "tm", "to"])
+        zh = {i["code"]: i["zh"] for i in opt["items"]}
+        self.assertEqual(zh["qm"], "誘發即時(必發)")
+        self.assertEqual(zh["to"], "誘發(選發)")
+        # 值本身仍只有必發/選發二值:組合不是第三種值,是條件的形狀
+        self.assertEqual(vocab.codes(vocab.OPTIONAL), ("m", "o"))
+        # 沒有組合的值域不長這個鍵
+        self.assertNotIn("combos", exported["kind"])
+
     def test_own_types_cover_the_spelltrap_ten(self):
         """[[魔陷卡效果]]十值各有一個本類對應(ADR-0010)。
 
@@ -226,6 +285,8 @@ class ExportTest(unittest.TestCase):
         exported = vocab.export()
         for name, dom in exported.items():
             declared = [e["code"] for e in vocab.entries(name) if e["filter"]]
+            declared += [c[0]
+                         for c in vocab.DOMAINS[name].get("combos") or ()]
             self.assertEqual([i["code"] for i in dom["items"]], declared, name)
 
     def test_unfilterable_member_stays_out_of_buttons(self):

@@ -97,10 +97,14 @@ const CARDS = [
     k: ['tc'],
   },
   // 儀式:同一個短碼在怪獸側與魔法側是兩件事(cdb 位元 0x80 兩邊都有)
+  // 誘發的必發與選發各一句:怪獸側組合鈕(spec-optional-combo)的對照組——
+  // 同一張卡兩顆組合鈕各中一句,「同句成立」從命中行分得出來
   {
     id: 20105, n: '儀式怪獸樣本卡', c: 'm', s: ['ritual', 'effect'],
     at: 'light', r: 'fairy', lv: 6, atk: 2000, df: 1700,
-    tx: ['①：這張卡儀式召喚成功時發動。'], k: ['t'],
+    tx: ['①：這張卡儀式召喚成功時發動。把對方場上1張卡破壞。',
+         '②：這張卡被解放的場合發動。可以從牌組抽1張卡。'],
+    k: ['t', 't'], o: ['m', 'o'],
   },
   {
     id: 20106, n: '儀式魔法樣本卡', c: 's', s: ['ritual'], ot: 't', gy: 5,
@@ -202,9 +206,16 @@ const VOCAB = {
           // 本類對應(ADR-0010):跨類型排除照它判,由值域正典宣告、隨 VOCAB 出去
           own: { sn: 's:normal', sr: 's:ritual', se: 's:equip',
                  sp: 'm:pendulum', tn: 't:normal', tc: 't:continuous' } },
-  // 承載關係住在值域正典(CONTEXT.md「必發/選發」):只有誘發即時(2速)、
-  // 誘發(1速)與魔陷卡效果十值承載,永續效果與啟動效果不承載
-  optional: { zh: '必發/選發', items: [item('m', '必發'), item('o', '選發')],
+  // 承載關係與怪獸側組合鈕都住在值域正典(CONTEXT.md「必發/選發」、
+  // spec-optional-combo):只有誘發即時(2速)、誘發(1速)與魔陷卡效果十值承載;
+  // 組合鈕 = 「同一句是該效果類型且帶該值」,由 combos 宣告命中規則
+  optional: { zh: '必發/選發',
+              items: [item('m', '必發'), item('o', '選發'),
+                      item('qm', '誘發即時(必發)'), item('qo', '誘發即時(選發)'),
+                      item('tm', '誘發(必發)'), item('to', '誘發(選發)')],
+              groups: [{ zh: '全部', codes: ['m', 'o'] },
+                       { zh: '怪獸側', codes: ['qm', 'qo', 'tm', 'to'] }],
+              combos: { qm: 'q:m', qo: 'q:o', tm: 't:m', to: 't:o' },
               carriers: ['q', 't', 'sn', 'sr', 'se', 'sp', 'tn', 'tc'] },
   role: { zh: '效果外文本種別',
           items: [item('mat', '素材指定'), item('cond', '召喚條件'),
@@ -637,8 +648,8 @@ test('句層耦合:效果文關鍵字與效果類型必須命中同一個效果�
 });
 
 test('必發/選發可篩選,且只在承載的效果類型上生效', () => {
-  assert.deepStrictEqual(ids({ opt: { m: 1 } }), [20112]);
-  assert.deepStrictEqual(ids({ opt: { o: 1 } }), [20110, 20111, 20112]);
+  assert.deepStrictEqual(ids({ opt: { m: 1 } }), [20105, 20112]);
+  assert.deepStrictEqual(ids({ opt: { o: 1 } }), [20105, 20110, 20111, 20112]);
   assert.deepStrictEqual(rowsOf({ opt: { m: 1 } }, 20112), [0]);
   assert.deepStrictEqual(rowsOf({ opt: { o: 1 } }, 20112), [1]);
   // 永續效果不承載這個屬性:「永續效果是必發」永遠零結果(所以 UI 不讓它設出來)
@@ -647,6 +658,52 @@ test('必發/選發可篩選,且只在承載的效果類型上生效', () => {
   // 承載型的效果類型但這一句沒有值:不被必發命中,也不被「排除必發」排掉
   assert.deepStrictEqual(ids({ opt: { m: 1 } }).includes(20101), false);
   assert.deepStrictEqual(rowsOf({ kind: { t: 1 }, opt: { m: -1 } }, 20101), [1]);
+});
+
+/* ── 怪獸側組合鈕(spec-optional-combo) ─────────────────
+   組合鈕 = 「同一[[效果句]]是該效果類型**且**帶該值」的單一條件,與全部組的
+   必發/選發同一軸。命中規則由值域正典的 combos 宣告,引擎不自帶第二份表。 */
+
+test('組合鈕的包含:同一句是該效果類型且帶該值才命中', () => {
+  assert.deepStrictEqual(ids({ opt: { tm: 1 } }), [20105]);
+  assert.deepStrictEqual(rowsOf({ opt: { tm: 1 } }, 20105), [0]);
+  assert.deepStrictEqual(ids({ opt: { to: 1 } }), [20105]);
+  assert.deepStrictEqual(rowsOf({ opt: { to: 1 } }, 20105), [1]);
+  assert.deepStrictEqual(ids({ opt: { qo: 1 } }), [20110, 20111]);
+  // 全庫沒有 q+必發 的句子(真實資料也只有 16 張):零結果是資料的形狀,不是壞
+  assert.deepStrictEqual(ids({ opt: { qm: 1 } }), []);
+  // 效果類型不合的不命中:20112 的必發句是通常陷阱卡效果,不是誘發
+  assert.deepStrictEqual(ids({ opt: { tm: 1 } }).includes(20112), false);
+  // 承載型效果類型但這一句沒有值:組合的包含同樣碰不到它(20101 的誘發句無值)
+  assert.deepStrictEqual(ids({ opt: { to: 1 } }).includes(20101), false);
+});
+
+test('組合鈕的排除:這一句不是「該類型且該值」', () => {
+  // 全部必發包含+怪獸側必發排除 = 魔陷側必發(spec 不補魔陷側組的理由)
+  assert.deepStrictEqual(ids({ opt: { m: 1, tm: -1 } }), [20112]);
+  assert.deepStrictEqual(rowsOf({ opt: { m: 1, tm: -1 } }, 20112), [0]);
+  // 排除 tm 不擋 t+選發(20105 ②)也不擋 q+選發(20110 ①、20111)
+  assert.deepStrictEqual(ids({ opt: { o: 1, tm: -1 } }),
+                         [20105, 20110, 20111, 20112]);
+  // 排除 to 不擋 q+選發,擋的只有 t+選發那一句(20105 因此整卡不中)
+  assert.deepStrictEqual(ids({ opt: { o: 1, to: -1 } }), [20110, 20111, 20112]);
+  // 無值的句子不被組合的排除擋(20101 的誘發句無值,排除 to 之後照樣通過 kind 條件)
+  assert.deepStrictEqual(rowsOf({ kind: { t: 1 }, opt: { to: -1 } }, 20101), [1]);
+});
+
+test('組合鈕與效果文關鍵字同句耦合', () => {
+  // 20105 ① 有「破壞」且是 t+必發;② 有「抽1張」但是 t+選發
+  assert.deepStrictEqual(ids({ text: '破壞', opt: { tm: 1 } }), [20105]);
+  assert.deepStrictEqual(rowsOf({ text: '破壞', opt: { tm: 1 } }, 20105), [0]);
+  // 關鍵字在 ①、組合在 ②:不同句不命中
+  assert.deepStrictEqual(ids({ text: '破壞', opt: { to: 1 } }), []);
+});
+
+test('組合鈕與效果類型軸的細粒度矛盾不設防:誠實零結果', () => {
+  // 同一句不可能同時是誘發即時與誘發——組可見時設出這種矛盾,句層 AND 給零
+  assert.deepStrictEqual(ids({ kind: { q: 1 }, opt: { tm: 1 } }), []);
+  // 一致的組合照常運作
+  assert.deepStrictEqual(ids({ kind: { t: 1 }, opt: { tm: 1 } }), [20105]);
 });
 
 test('必發/選發與效果文也走同一個效果句', () => {
@@ -677,20 +734,26 @@ test('句層條件回報得出來,多條件並用時三種都在', () => {
   assert.deepStrictEqual(harness.marks(sandbox, { kind: {} }), []);
 });
 
-test('必發/選發那一組條件只在承載它的效果類型被選時出得來', () => {
+test('必發/選發的兩組各自只在承載的效果類型被選時出得來(粒度是組)', () => {
+  // 回傳與 VOCAB.optional.groups 對齊的布林陣列:[全部, 怪獸側]
   const avail = sel => harness.optionalAvailable(sandbox, sel);
-  // 一顆效果類型都沒選:「必發」自己就是有結果的條件,不必先選滿承載的那幾顆
-  assert.strictEqual(avail(null), true);
-  assert.strictEqual(avail({}), true);
-  // 選的全是不承載的類型 → 收起來(「永續效果是必發」永遠零結果)
-  assert.strictEqual(avail({ c: 1 }), false);
-  assert.strictEqual(avail({ c: 1, i: 1, x: 1 }), false);
-  // 只要有一個承載就出得來(軸內是 OR)
-  assert.strictEqual(avail({ q: 1 }), true);
-  assert.strictEqual(avail({ c: 1, q: 1 }), true);
+  // 一顆效果類型都沒選:「必發」「誘發(必發)」自己就是有結果的條件,兩組都在
+  assert.deepStrictEqual(avail(null), [true, true]);
+  assert.deepStrictEqual(avail({}), [true, true]);
+  // 選的全是不承載的類型 → 兩組都收(「永續效果是必發」永遠零結果)
+  assert.deepStrictEqual(avail({ c: 1 }), [false, false]);
+  assert.deepStrictEqual(avail({ c: 1, i: 1, x: 1 }), [false, false]);
+  // 誘發即時/誘發是兩組共同的承載者:都出得來
+  assert.deepStrictEqual(avail({ q: 1 }), [true, true]);
+  assert.deepStrictEqual(avail({ c: 1, t: 1 }), [true, true]);
+  // 魔陷值只承載「全部」組:怪獸側組收起(「通常陷阱卡效果 + 誘發(必發)」
+  // 是同一句不可能成立的條件,組粒度的連動隱藏把它擋在門外)
+  assert.deepStrictEqual(avail({ tn: 1 }), [true, false]);
+  assert.deepStrictEqual(avail({ se: 1, c: 1 }), [true, false]);
   // 排除不是「已選」:排除永續效果之後,命中的句子仍然可能是承載型的
-  assert.strictEqual(avail({ c: -1 }), true);
-  assert.strictEqual(avail({ q: -1 }), true);
+  assert.deepStrictEqual(avail({ c: -1 }), [true, true]);
+  assert.deepStrictEqual(avail({ q: -1 }), [true, true]);
+  assert.deepStrictEqual(avail({ tn: 1, t: -1 }), [true, false]);
 });
 
 /* ── 按鈕由值域正典生成 ────────────────────────────────
@@ -714,6 +777,19 @@ test('分類類條件的按鈕清單由 window.VOCAB 導出', () => {
   // 有分組的值域照分組排,沒有分組的整批一組、組名留空
   assert.deepStrictEqual(axes.find(a => a.side === 'm').groups.map(g => g.zh), ['卡框']);
   assert.deepStrictEqual(race.groups.map(g => g.zh), ['']);
+});
+
+test('必發/選發軸由 VOCAB 長出兩組六顆(spec-optional-combo)', () => {
+  const opt = harness.axes(sandbox).find(a => a.key === 'opt');
+  assert.deepStrictEqual(opt.groups.map(g => g.zh), ['全部', '怪獸側']);
+  assert.deepStrictEqual(opt.groups[0].items.map(i => i.code), ['m', 'o']);
+  assert.deepStrictEqual(opt.groups[1].items.map(i => i.code),
+                         ['qm', 'qo', 'tm', 'to']);
+  // 鈕面由正典的中文宣告而來,省略「效果」與速度標注
+  assert.deepStrictEqual(opt.groups[1].items.map(i => i.zh),
+                         ['誘發即時(必發)', '誘發即時(選發)',
+                          '誘發(必發)', '誘發(選發)']);
+  assert.strictEqual(opt.states, 3);
 });
 
 test('在值域正典裡加一個種族,按鈕自動多一顆', () => {
@@ -1047,6 +1123,19 @@ test('兩態軸的排除值在網址還原時被丟掉(票12:大類讀不出排�
   assert.deepStrictEqual(parseHash('attr=-light').q.attr, { light: -1 });
 });
 
+test('組合鈕的碼進出網址(spec-optional-combo)', () => {
+  // 條件軸由 Query.FIELDS 導出、合法碼跟著分組走:組合碼自動是合法碼
+  const st = { q: { ...EMPTY_Q, opt: { qo: 1, tm: -1 } }, sort: DOM_SORT };
+  assert.strictEqual(hashOf(st), 'opt=qo,-tm');
+  assert.deepStrictEqual(parseHash(hashOf(st)), st);
+  // 全部組與怪獸側組同一個參數(同一軸),照宣告序寫
+  const both = { q: { ...EMPTY_Q, opt: { m: 1, tm: -1 } }, sort: DOM_SORT };
+  assert.strictEqual(hashOf(both), 'opt=m,-tm');
+  // 不在值域裡的碼照舊被丟掉
+  assert.deepStrictEqual(parseHash('opt=zz,tm').q.opt, { tm: 1 });
+  assert.ok(!('opt' in parseHash('opt=zz').q));
+});
+
 test('網址不隨點擊順序而變', () => {
   // 碼照宣告序寫而不是照使用者點出來的順序:同一組條件只有一個網址,
   // 兩個人比得出來查的是不是同一件事
@@ -1244,10 +1333,18 @@ test('子樹已選數:父軸彙總後代,葉軸等於逐軸數(檔案總管內�
   assert.strictEqual(t.atk, 1);
   // 怪獸子類型 = 自己 1 + 八個參數軸(attr 2 + atk 1)
   assert.strictEqual(t.sub_m, 4);
-  // 大類 = 自己 1 + 子類組三段的子樹
-  assert.strictEqual(t.cat, 5);
+  // 大類 = 子類組三段的子樹;「怪獸」那一側子樹有已選,自己那顆是路、不計
+  // (2026-08-22 使用者裁示:怪獸+獸族該寫 1,不是 2)
+  assert.strictEqual(t.cat, 4);
   // 樹外的軸不受影響
   assert.strictEqual(t.kind, 0);
+  // 子樹空著時大類自己就是最後一顆鈕,照計(收起也要看得見它)
+  assert.strictEqual(harness.treeCounts(
+    sandbox, { ...EMPTY_Q, cat: { m: 1 } }).cat, 1);
+  // 另一側沒有子樹條件時,那一側照計:魔法(sub_s 空)+獸族 → 2
+  assert.strictEqual(harness.treeCounts(
+    sandbox, { ...EMPTY_Q, cat: { m: 1, s: 1 },
+               race: { dragon: 1 } }).cat, 2);
   // 空條件全零
   const empty = harness.treeCounts(sandbox, EMPTY_Q);
   Object.keys(empty).forEach(k => assert.strictEqual(empty[k], 0, k));

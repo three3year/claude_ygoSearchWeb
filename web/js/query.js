@@ -279,6 +279,9 @@ function read() {
     code: $('fId').value.trim(),
     text: $('fText').value.trim(),
   };
+  // 素材行開關:勾了才進條件物件(沒勾=預設不掃,鍵不出現——與網址的
+  // 「可省略的一律省略」同一條規則)
+  if ($('fTextMat').checked) q.textMat = 1;
   FIELDS.forEach(f => (f.tri ? readTri : readRange)(q, f));
   return q;
 }
@@ -291,7 +294,8 @@ function read() {
  * 一條條件(軸內 OR),寫成 3 會讓人以為那是三道篩子。
  *
  * `nameLang` 不算:它是「卡名那一格拿哪一種卡名比」,不是一條會篩掉卡的條件——
- * 算進去的話清空所有條件之後鈕面仍然寫著 1。
+ * 算進去的話清空所有條件之後鈕面仍然寫著 1。`textMat`(素材行開關)同理:
+ * 它只修飾效果文那一格怎麼比,效果文空著時它什麼都不篩。
  */
 function count(q) {
   const isSet = v => {
@@ -303,7 +307,8 @@ function count(q) {
     // 把 0 當成沒設的話那幾條條件會從鈕面的數字裡消失
     return Object.keys(v).some(k => v[k] != null);
   };
-  return Object.keys(q || {}).filter(k => k !== 'nameLang' && isSet(q[k])).length;
+  return Object.keys(q || {})
+    .filter(k => k !== 'nameLang' && k !== 'textMat' && isSet(q[k])).length;
 }
 
 /**
@@ -579,6 +584,7 @@ function write(q) {
   $('fName').value = q.name || '';
   $('fId').value = q.code || '';
   $('fText').value = q.text || '';
+  $('fTextMat').checked = !!q.textMat;
   showLang($('fNameLang'), langOf(q.nameLang).v);
   FIELDS.filter(f => f.tri === 'cat' || f.tri === 'kind')
     .forEach(f => writeTri(q, f));
@@ -601,6 +607,7 @@ function clear() {
   $('fName').value = '';
   $('fId').value = '';
   $('fText').value = '';
+  $('fTextMat').checked = false;
   showLang($('fNameLang'), LANGS[0].v);
   all('.tri').forEach(btn => setTri(btn, ''));
   all('.range-in').forEach(input => { input.value = ''; });

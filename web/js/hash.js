@@ -90,6 +90,8 @@ function stringify(state) {
     const v = String(q[key] == null ? '' : q[key]).trim();
     if (v) parts.push(key + '=' + encodeURIComponent(v));
   });
+  // 素材行開關:勾了才寫,與其他預設值同一條「可省略的一律省略」
+  if (q.textMat) parts.push('textMat=1');
   if (langOf(q[LANG]) !== DEFAULT_LANG) parts.push(LANG + '=' + langOf(q[LANG]));
   SCHEMA.tri.forEach(ax => {
     const sel = q[ax.key];
@@ -169,6 +171,8 @@ function parse(hash) {
     const v = dec(seg.slice(i + 1));
     if (v == null) return;
     if (TEXTS.indexOf(key) >= 0) { q[key] = v.trim(); return; }
+    // 素材行開關只有「開」寫得出來(`textMat=1`),別的值視同壞段忽略
+    if (key === 'textMat') { if (v === '1') q.textMat = 1; return; }
     if (key === LANG) { q[LANG] = langOf(v); return; }
     if (key === 'sort' || key === 'dir') { raw[key] = v; return; }
     const ax = SCHEMA.tri.find(a => a.key === key);

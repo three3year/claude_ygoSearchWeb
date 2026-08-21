@@ -41,14 +41,6 @@ for (const code in (VOCAB.kind || {}).own || {}) {
   KIND_OWN[code] = { c: pair.slice(0, i), s: pair.slice(i + 1) };
 }
 
-/* 效果文關鍵字**不掃 `role = 素材指定` 的行**(2,358 行):搜「融合」時,574 張融合
-   怪獸的素材寫法會把真正的答案淹掉。[[效果標記表]]逐句判過 `role`,所以這件事做得
-   準,而一般查卡站做不到。固定規則,不提供開關。
-   已知副作用(spec 已記):效果文框搜「青眼白龍」不會撈到把它寫在素材行的融合怪獸,
-   但卡名框搜得到本尊。召喚條件與使用次數限制照樣掃——「不能通常召喚」「1回合只能
-   使用1次」是使用者確實會查的限制文字。 */
-const ROLE_MAT = 'mat';
-
 /* 關鍵字欄位的正規化:缺席、null 與只有空白都是「這一軸沒設」。空白在這裡一次
    修完,判定函式因此不必各自防禦,也不會對 14,207 張卡各 trim 一遍。 */
 function term(v) {
@@ -196,6 +188,13 @@ function kindAt(c, i) {
   return [code];
 }
 
+/* 素材指定行(`role = mat`,2,358 行)**預設不掃**:搜「融合」時,574 張融合怪獸
+   的素材寫法會把真正的答案淹掉。`q.textMat` 開了才掃——效果文框搜「青眼白龍」
+   要撈得到把它寫在素材行的融合怪獸(2026-08-21 使用者裁示:原本的固定規則改成
+   效果文框旁的勾選開關)。[[效果標記表]]逐句判過 `role`,所以這個開關切得準,
+   而一般查卡站做不到。 */
+const ROLE_MAT = 'mat';
+
 /* 空的條件物件等於沒設。這一層在句層特別要緊:記成「有設」的話,一張卡會單純
    因為**有效果句**就整批被標亮,而使用者一顆鈕都沒點。 */
 function sel(o) {
@@ -207,16 +206,16 @@ function sel(o) {
    回傳命中的效果句索引;一句都沒中即這張卡不命中。
    三態排除在這一層的語意是**這一句不是那個類型**,而不是「這張卡沒有那種句子」
    ——同一顆鈕在同一個軸上不能有兩種語意,而句層的單位是句。 */
-function clauseRows(c, parts, kindSel, optSel) {
+function clauseRows(c, parts, kindSel, optSel, matOn) {
   const tx = c.tx || [];
   const rows = [];
   for (let i = 0; i < tx.length; i++) {
     if (kindSel && !triHit(kindAt(c, i), kindSel)) continue;
     if (optSel && !triHit(codeAt(c.o, i), optSel)) continue;
     if (parts.length) {
-      // 不掃素材指定行是**關鍵字**的規則,不是「素材行不存在」:找效果外文本的
-      // 人照樣看得到它,被淹掉的只有關鍵字搜尋(見上方 ROLE_MAT)
-      if (c.ro && c.ro[i] === ROLE_MAT) continue;
+      // 開關只管**關鍵字**掃不掃素材行(見上方 ROLE_MAT):效果類型與必發/選發
+      // 照樣看得到它,找效果外文本的人不受影響
+      if (!matOn && c.ro && c.ro[i] === ROLE_MAT) continue;
       if (!likeMatch(tx[i], parts)) continue;
     }
     rows.push(i);
@@ -258,7 +257,7 @@ function runQuery(db, q) {
     if (!paramHit(c, q)) continue;
     let rows = null;
     if (marks.length) {
-      rows = clauseRows(c, textParts, kindSel, optSel);
+      rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
       if (!rows.length) continue;
     }
     cards.push({ card: c, rows });

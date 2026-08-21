@@ -115,7 +115,7 @@ const CARDS = [
     id: 20108, n: '異句樣本卡', c: 's', s: ['normal'],
     tx: ['①：把手牌1張捨棄。', '②：從墓地特殊召喚1隻怪獸。'], k: ['sn', 'sn'],
   },
-  // 四行各一種 role:素材指定不掃,召喚條件與使用次數限制照掃
+  // 四行各一種 role:素材指定由 textMat 開關決定掃不掃,召喚條件與使用次數限制照掃
   {
     id: 20109, n: '素材樣本卡', c: 'm', s: ['fusion', 'effect'],
     at: 'dark', r: 'fiend', lv: 8, atk: 2800, df: 2000,
@@ -377,16 +377,29 @@ test('效果文框的 % 萬用字元語意同卡名框', () => {
   assert.deepStrictEqual(ids({ text: '墓地%手牌' }), []);
 });
 
-test('效果文關鍵字不掃 role = 素材指定 的行', () => {
-  // 574 張融合怪獸的素材寫法會把真正的答案淹掉,所以固定不掃
+test('效果文關鍵字預設不掃 role = 素材指定 的行', () => {
+  // 574 張融合怪獸的素材寫法會把真正的答案淹掉,所以預設不掃
   assert.deepStrictEqual(ids({ text: '融合' }), []);
   assert.deepStrictEqual(ids({ text: '惡魔族' }), []);
   // 「怪獸」出現在四張卡的素材行裡,一張都不該因此命中
   assert.deepStrictEqual(ids({ text: '怪獸' }),
                          [20102, 20104, 20106, 20107, 20108, 20113, 20114]);
-  // 已知副作用:效果文框搜「青眼白龍」撈不到把它寫在素材行的融合怪獸
+  // 副作用:效果文框搜「青眼白龍」撈不到把它寫在素材行的融合怪獸(開關才撈得到)
   assert.deepStrictEqual(ids({ text: '青眼白龍' }), []);
   assert.deepStrictEqual(ids({ name: '青眼白龍' }), [89631139]);
+});
+
+test('勾了素材行開關(textMat),素材指定行照掃', () => {
+  // 2026-08-21 使用者裁示:原本的固定規則改成效果文框旁的勾選開關
+  assert.deepStrictEqual(ids({ text: '融合', textMat: 1 }), [20109]);
+  assert.deepStrictEqual(ids({ text: '惡魔族', textMat: 1 }), [20109]);
+  assert.deepStrictEqual(ids({ text: '怪獸', textMat: 1 }),
+                         [84013237, 20101, 20102, 20104, 20106, 20107, 20108,
+                          20109, 20113, 20114]);
+  assert.deepStrictEqual(ids({ text: '青眼白龍', textMat: 1 }), [23995346]);
+  assert.deepStrictEqual(rowsOf({ text: '青眼白龍', textMat: 1 }, 23995346), [0]);
+  // 開關只影響素材行:非素材行的命中兩種狀態一樣
+  assert.deepStrictEqual(ids({ text: '墓地', textMat: 1 }), [20107, 20108]);
 });
 
 test('召喚條件與使用次數限制的行照樣掃', () => {
@@ -543,6 +556,8 @@ test('參數軸與關鍵字軸並用是 AND', () => {
   assert.deepStrictEqual(ids({ attr: { light: 1 }, atk: { min: 3000 } }),
                          [89631139, 23995346]);
   assert.deepStrictEqual(ids({ cat: { m: 1 }, text: '怪獸' }), [20102, 20113]);
+  assert.deepStrictEqual(ids({ cat: { m: 1 }, text: '怪獸', textMat: 1 }),
+                         [84013237, 20101, 20102, 20109, 20113]);
   assert.deepStrictEqual(ids({ name: '青眼', race: { dragon: 1 }, lv: { min: 10 } }),
                          [23995346]);
 });
@@ -639,11 +654,14 @@ test('必發/選發與效果文也走同一個效果句', () => {
   assert.deepStrictEqual(ids({ text: '除外', opt: { m: 1 } }), []);
 });
 
-test('效果類型條件掃得到素材指定行,效果文關鍵字仍然不掃', () => {
-  // 不掃素材行是**關鍵字**的規則(574 張融合怪獸的素材寫法會淹掉答案),
-  // 不是「素材行不存在」——找效果外文本的人要看得到它
+test('效果類型條件掃得到素材指定行,效果文關鍵字看 textMat 開關', () => {
+  // 不掃素材行是**關鍵字**的預設,不是「素材行不存在」:效果類型照樣看得到它
   assert.deepStrictEqual(rowsOf({ kind: { x: 1 } }, 20109), [0, 1, 2]);
   assert.deepStrictEqual(ids({ kind: { x: 1 }, text: '融合' }), []);
+  // 勾了開關,素材行同樣走句層耦合
+  assert.deepStrictEqual(ids({ kind: { x: 1 }, text: '融合', textMat: 1 }), [20109]);
+  assert.deepStrictEqual(rowsOf({ kind: { x: 1 }, text: '融合', textMat: 1 }, 20109),
+                         [0]);
   assert.deepStrictEqual(rowsOf({ kind: { x: 1 }, text: '召喚' }, 20109), [1]);
 });
 
@@ -963,7 +981,7 @@ const DOM_SORT = { key: 'dom', dir: '' };
 const STATES = [
   { q: { ...EMPTY_Q }, sort: DOM_SORT },
   { q: { ...EMPTY_Q, name: '青眼%龍', nameLang: 'ja', code: '46986414',
-         text: '墓地%特殊召喚' },
+         text: '墓地%特殊召喚', textMat: 1 },
     sort: DOM_SORT },
   // 大類是兩態軸(票12):只有正選,沒有排除
   { q: { ...EMPTY_Q, cat: { m: 1, s: 1 },
@@ -1005,6 +1023,16 @@ test('三態的三個狀態雙向可編碼', () => {
   assert.deepStrictEqual(back, { light: -1, dark: 1 });
   // 未選的碼不進網址,也不會在還原時變成「未選」以外的東西
   assert.ok(!('earth' in back));
+});
+
+test('素材行開關進網址:勾了寫 textMat=1,沒勾不寫、壞值不留殘骸', () => {
+  const h = hashOf({ q: { ...EMPTY_Q, text: '融合', textMat: 1 }, sort: DOM_SORT });
+  assert.strictEqual(h, 'text=' + encodeURIComponent('融合') + '&textMat=1');
+  assert.deepStrictEqual(parseHash(h).q, { ...EMPTY_Q, text: '融合', textMat: 1 });
+  assert.strictEqual(hashOf({ q: { ...EMPTY_Q, text: '融合' }, sort: DOM_SORT }),
+                     'text=' + encodeURIComponent('融合'));
+  assert.ok(!('textMat' in parseHash('textMat=9').q));
+  assert.ok(!('textMat' in parseHash('textMat=').q));
 });
 
 test('兩態軸的排除值在網址還原時被丟掉(票12:大類讀不出排除)', () => {
@@ -1121,6 +1149,9 @@ test('條件數:空條件是 0,卡名語言不是一條條件', () => {
   // 語言只是「卡名那一格拿哪一種卡名比」,算進去的話清空條件之後鈕面仍寫著 1
   assert.strictEqual(critCount({ ...EMPTY_Q, nameLang: 'ja' }), 0);
   assert.strictEqual(critCount({ ...EMPTY_Q, name: '青眼', nameLang: 'ja' }), 1);
+  // 素材行開關同理:它只修飾效果文那一格怎麼比,不是一條會篩掉卡的條件
+  assert.strictEqual(critCount({ ...EMPTY_Q, textMat: 1 }), 0);
+  assert.strictEqual(critCount({ ...EMPTY_Q, text: '融合', textMat: 1 }), 1);
 });
 
 test('條件數算的是軸,不是點亮的按鈕', () => {

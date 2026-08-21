@@ -28,12 +28,13 @@ class CanonTest(unittest.TestCase):
             self.assertEqual(len(vocab.codes(name)), expected, name)
 
     def test_ban_domain_unified_three_values(self):
-        """[[禁限狀態]]:OCG 禁限值域統一三值,來源值即中文(SRC_TEXT)。"""
-        self.assertEqual(vocab.codes(vocab.BAN_O), ("f", "l", "s"))
-        self.assertEqual(vocab.zh(vocab.BAN_O, "f"), "禁止")
-        self.assertEqual(vocab.zh(vocab.BAN_O, "l"), "限制")
-        self.assertEqual(vocab.zh(vocab.BAN_O, "s"), "準限制")
-        self.assertEqual(vocab.code_of(vocab.BAN_O, "限制"), "l")
+        """[[禁限狀態]]:各賽制的禁限值域統一三值,來源值即中文(SRC_TEXT)。"""
+        for name in (vocab.BAN_O, vocab.BAN_T):
+            self.assertEqual(vocab.codes(name), ("f", "l", "s"), name)
+            self.assertEqual(vocab.zh(name, "f"), "禁止")
+            self.assertEqual(vocab.zh(name, "l"), "限制")
+            self.assertEqual(vocab.zh(name, "s"), "準限制")
+            self.assertEqual(vocab.code_of(name, "限制"), "l")
 
     def test_duplicate_code_is_caught(self):
         dom = broken(vocab.RACE, entries=vocab.entries(vocab.RACE) + (

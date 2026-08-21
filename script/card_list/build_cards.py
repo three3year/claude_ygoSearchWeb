@@ -98,6 +98,8 @@ def main(argv=None):
                         help="Genesys 點數 JSON 路徑 (YGOPRODeck 萃取)")
     parser.add_argument("--banlist-ocg",
                         help="OCG 禁限 JSON 路徑 (YGOPRODeck 禁限端點萃取)")
+    parser.add_argument("--banlist-tcg",
+                        help="TCG 禁限 JSON 路徑 (YGOPRODeck 禁限端點萃取)")
     parser.add_argument("--existing",
                         help="既有 cards.json 路徑;給定時執行差值更新並輸出變動報告")
     parser.add_argument("--errata", default=DEFAULT_ERRATA,
@@ -113,6 +115,8 @@ def main(argv=None):
     banlist_paths = {}
     if args.banlist_ocg:
         banlist_paths["ocg"] = args.banlist_ocg
+    if args.banlist_tcg:
+        banlist_paths["tcg"] = args.banlist_tcg
     cards, report = build_card_list(
         args.zh, ja_path=args.ja, en_path=args.en, md_rarity_path=args.md,
         genesys_path=args.genesys, banlist_paths=banlist_paths or None,

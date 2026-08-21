@@ -203,6 +203,7 @@ function otHtml(c) {
    稀有度欄位的有無),不進索引。 */
 const BAN_FORMATS = [
   { key: 'bo', zh: 'OCG', released: c => c.ot !== 't' },
+  { key: 'bt', zh: 'TCG', released: c => c.ot !== 'o' },
 ];
 function banHtml(c) {
   if (!BAN_FORMATS.some(f => c[f.key])) return '';

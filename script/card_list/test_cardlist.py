@@ -66,7 +66,7 @@ class CardListTest(unittest.TestCase):
             "id", "alt_ids", "name_zh", "name_ja", "name_en", "desc",
             "type", "atk", "def", "level", "race", "attribute",
             "scale", "link_marker", "setcode", "ot", "md_rarity",
-            "genesys_points", "ban_ocg"])
+            "genesys_points", "ban_ocg", "ban_tcg"])
         self.assertEqual(card["id"], 63028558)
         self.assertEqual(card["alt_ids"], [])
         self.assertEqual(card["name_zh"], "青眼白龍")
@@ -366,14 +366,22 @@ class CardListTest(unittest.TestCase):
             json.dump({"21044178": "Forbidden", "10000002": "Limited",
                        "23434538": "Semi-Limited",
                        "99999999": "Forbidden"}, f)  # 不在總表 → unmatched
-        cards, report = build_card_list(zh, banlist_paths={"ocg": bl})
+        tl = os.path.join(self.tmp.name, "banlist-tcg.json")
+        with open(tl, "w", encoding="utf-8") as f:
+            json.dump({"23434538": "Forbidden"}, f)
+        cards, report = build_card_list(zh,
+                                        banlist_paths={"ocg": bl, "tcg": tl})
         by_id = {c["id"]: c for c in cards}
         self.assertEqual(by_id[21044178]["ban_ocg"], "禁止")
         self.assertEqual(by_id[10000001]["ban_ocg"], "限制")  # 異圖後備
         self.assertEqual(by_id[23434538]["ban_ocg"], "準限制")
         self.assertEqual(by_id[20000001]["ban_ocg"], "")
+        # 賽制各自獨立:同一張卡 OCG 準限制、TCG 禁止
+        self.assertEqual(by_id[23434538]["ban_tcg"], "禁止")
+        self.assertEqual(by_id[21044178]["ban_tcg"], "")
         self.assertEqual(report["banlist_coverage"],
-                         {"ocg": {"listed": 3, "unmatched": 1}})
+                         {"ocg": {"listed": 3, "unmatched": 1},
+                          "tcg": {"listed": 1, "unmatched": 0}})
 
     def test_banlist_unknown_value_fails(self):
         """來源出現三值以外的字串 → 建置失敗(吵鬧失效,值域正典原則)。"""
@@ -390,6 +398,7 @@ class CardListTest(unittest.TestCase):
         zh = self.cdb("zh.cdb", [{"id": 21044178, "name": "卡"}])
         cards, report = build_card_list(zh)
         self.assertEqual(cards[0]["ban_ocg"], "")
+        self.assertEqual(cards[0]["ban_tcg"], "")
         self.assertNotIn("banlist_coverage", report)
 
     def test_incremental_update(self):

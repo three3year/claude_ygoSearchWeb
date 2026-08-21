@@ -47,7 +47,7 @@ GENESYS_FILENAME = "genesys.json"
 # banlist_info.ban_<fmt> 是原始禁限值;正規化(→ 禁止/限制/準限制)在建置端做,
 # 這裡只存原樣——來源冒出新字串時該由建置吵出來,不是下載時靜靜濾掉。
 BANLIST_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist={fmt}"
-BANLIST_FORMATS = ("ocg",)
+BANLIST_FORMATS = ("ocg", "tcg")
 BANLIST_FILENAME = "banlist-{fmt}.json"
 
 

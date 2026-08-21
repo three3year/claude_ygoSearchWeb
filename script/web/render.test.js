@@ -29,6 +29,8 @@ const VOCAB = {
                                 item('b', '兩者')] },
   ban_o: { zh: 'OCG 禁限',
            items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
+  ban_t: { zh: 'TCG 禁限',
+           items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
 };
 
 const sandbox = harness.load({ cards: [], vocab: VOCAB, meta: {} });
@@ -60,4 +62,27 @@ test('沒上任何榜的卡完全不長禁限列', () => {
   const out = html({});
   assert.ok(!out.includes('禁止'));
   assert.ok(!out.includes('OCG'));  // ot 是「兩者」,畫面上不該有任何 OCG 字樣
+});
+
+test('任一賽制上榜即整列出現,各賽制欄位固定順序齊列', () => {
+  // 只上 OCG 榜:TCG 欄仍在,已發行未上榜寫「—」
+  const out = html({ bo: 'f' });
+  assert.ok(out.includes('OCG 禁止'));
+  assert.ok(out.includes('TCG —'));
+  assert.ok(out.indexOf('OCG 禁止') < out.indexOf('TCG —'));
+  // 同一張卡兩賽制各自的值互不干擾
+  const both = html({ bo: 's', bt: 'f' });
+  assert.ok(both.includes('OCG 準限制'));
+  assert.ok(both.includes('TCG 禁止'));
+});
+
+test('未在該賽制發行的欄位寫「未發行」(由 ot 推導)', () => {
+  // OCG 限定卡(ot='o')上了 OCG 榜:TCG 欄是未發行,不是「—」
+  const ocgOnly = html({ ot: 'o', bo: 'l' });
+  assert.ok(ocgOnly.includes('TCG 未發行'));
+  assert.ok(!ocgOnly.includes('TCG —'));
+  // TCG 限定卡(ot='t')上了 TCG 榜:OCG 欄是未發行
+  const tcgOnly = html({ ot: 't', bt: 'f' });
+  assert.ok(tcgOnly.includes('OCG 未發行'));
+  assert.ok(tcgOnly.includes('TCG 禁止'));
 });

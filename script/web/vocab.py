@@ -37,6 +37,7 @@ LINK_MARKER = "lm"
 RARITY = "rarity"
 OT = "ot"
 BAN_O = "ban_o"
+BAN_T = "ban_t"
 
 
 def entry(code, zh, src=None, filterable=True):
@@ -281,6 +282,11 @@ _BAN_O = domain("OCG 禁限", SRC_TEXT, (
     entry("l", "限制"),
     entry("s", "準限制"),
 ))
+_BAN_T = domain("TCG 禁限", SRC_TEXT, (
+    entry("f", "禁止"),
+    entry("l", "限制"),
+    entry("s", "準限制"),
+))
 
 DOMAINS = {
     CAT: _CAT,
@@ -288,7 +294,7 @@ DOMAINS = {
     ATTR: _ATTR, RACE: _RACE,
     KIND: _KIND, OPTIONAL: _OPTIONAL, ROLE: _ROLE,
     LINK_MARKER: _LINK_MARKER, RARITY: _RARITY, OT: _OT,
-    BAN_O: _BAN_O,
+    BAN_O: _BAN_O, BAN_T: _BAN_T,
 }
 
 # 各值域的成員數。與 CONTEXT.md / spec 記的值域規模對帳用:少一個成員代表某批卡
@@ -299,7 +305,7 @@ EXPECTED_SIZES = {
     ATTR: 7, RACE: 26,
     KIND: 16, OPTIONAL: 2, ROLE: 3,
     LINK_MARKER: 8, RARITY: 4, OT: 3,
-    BAN_O: 3,
+    BAN_O: 3, BAN_T: 3,
 }
 
 # cdb `type` 的位元由大類與三個子類型值域共同解釋;沒有被解釋的位元會讓建置倒

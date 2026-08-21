@@ -59,13 +59,14 @@ def _make_card(row):
         "md_rarity": "",
         "genesys_points": 0,
         "ban_ocg": "",
+        "ban_tcg": "",
     }
 
 
 # [[禁限狀態]]:來源原始值 → 統一三值(2026-08-22 使用者裁示,三賽制共用)。
 # 表以外的字串即建置失敗——來源哪天冒出新值要吵不要靜(值域正典原則)。
 BAN_ZH = {"Forbidden": "禁止", "Limited": "限制", "Semi-Limited": "準限制"}
-BAN_FIELDS = {"ocg": "ban_ocg"}
+BAN_FIELDS = {"ocg": "ban_ocg", "tcg": "ban_tcg"}
 
 
 MAX_PASSWORD = 100000000  # 正式卡片密碼為 8 位數;9 位數為先行卡暫時編號

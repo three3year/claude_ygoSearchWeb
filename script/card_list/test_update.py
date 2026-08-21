@@ -249,17 +249,28 @@ class DownloadBanlistsTest(unittest.TestCase):
         self.dir = self.tmp.name
 
     def test_extracts_password_status_map(self):
-        """禁限端點 dump → {密碼: 原始值};缺 banlist_info 的條目略過。"""
-        dump = {"data": [
-            {"id": 21044178, "banlist_info": {"ban_ocg": "Forbidden"}},
-            {"id": 23434538, "banlist_info": {"ban_ocg": "Limited"}},
-            {"id": 4031928, "banlist_info": {"ban_goat": "Forbidden"}},  # 略過
-        ]}
-        paths = download_banlists(self.dir, fetch_json=lambda url: dump)
+        """各賽制端點的 dump → {密碼: 原始值};缺該賽制欄位的條目略過。"""
+        dumps = {
+            "ocg": {"data": [
+                {"id": 21044178, "banlist_info": {"ban_ocg": "Forbidden"}},
+                {"id": 23434538, "banlist_info": {"ban_ocg": "Limited"}},
+                {"id": 4031928, "banlist_info": {"ban_goat": "Forbidden"}},
+            ]},
+            "tcg": {"data": [
+                {"id": 23434538, "banlist_info": {"ban_tcg": "Forbidden"}},
+                {"id": 4031928, "banlist_info": {"ban_goat": "Forbidden"}},
+            ]},
+        }
+        def fetch_json(url):
+            return dumps[url.split("banlist=")[1]]
+        paths = download_banlists(self.dir, fetch_json=fetch_json)
+        self.assertEqual(set(paths), {"ocg", "tcg"})
         self.assertEqual(set(paths), set(BANLIST_FORMATS))
         with open(paths["ocg"], encoding="utf-8") as f:
             self.assertEqual(json.load(f), {"21044178": "Forbidden",
                                             "23434538": "Limited"})
+        with open(paths["tcg"], encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"23434538": "Forbidden"})
 
     def test_fetches_each_format_endpoint(self):
         """每個賽制打自己的端點(banlist=ocg / …)。"""

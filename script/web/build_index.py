@@ -23,6 +23,10 @@ DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_TAGS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_ERRATA = os.path.join(ROOT, "data", "text_errata.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "web", "data.js")
+# 資料更新時間(來源檔下載時間)由 update_cards.py 記錄;不入版控,
+# clean checkout 沒有這個檔 → META 不帶欄位,前端整行省略
+DEFAULT_DOWNLOADED_AT = os.path.join(
+    ROOT, "data", "sources", "downloaded_at.json")
 
 
 def _load(path):
@@ -119,6 +123,9 @@ def main(argv=None):
                         help="效果標記表路徑 (預設 data/tag_cards.json)")
     parser.add_argument("--errata", default=DEFAULT_ERRATA,
                         help="卡文勘誤表路徑 (預設 data/text_errata.json)")
+    parser.add_argument("--downloaded-at", default=DEFAULT_DOWNLOADED_AT,
+                        help="資料更新時間記錄路徑 "
+                             "(預設 data/sources/downloaded_at.json)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
                         help="輸出路徑 (預設 web/data.js)")
     parser.add_argument("--no-write", action="store_true",
@@ -128,11 +135,13 @@ def main(argv=None):
     built_at = datetime.datetime.now().astimezone().strftime(
         "%Y-%m-%dT%H:%M:%S%z")
     errata = _load(args.errata) if os.path.exists(args.errata) else []
+    data_updated_at = (_load(args.downloaded_at).get("downloaded_at")
+                       if os.path.exists(args.downloaded_at) else None)
     index, report = build_index(
         _load(args.cards), _load(args.tags), built_at=built_at,
         sources={os.path.basename(args.cards): _digest(args.cards),
                  os.path.basename(args.tags): _digest(args.tags)},
-        errata=errata)
+        errata=errata, data_updated_at=data_updated_at)
     print_report(report)
     if report["problems"]:
         return 1

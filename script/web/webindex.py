@@ -386,11 +386,15 @@ def _summarise_problems(report):
     return found
 
 
-def build_index(cards, tag_cards, built_at="", sources=None, errata=None):
+def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
+                data_updated_at=None):
     """[[卡片總表]]條目 + [[效果標記表]]條目 → (index, report)。
 
-    `built_at` 與 `sources`(來源檔雜湊)由呼叫端給:讀時鐘與讀檔都是薄殼的事,
-    純函式不碰,同一份輸入因此兩次建置產物逐位元組相同。
+    `built_at`、`sources`(來源檔雜湊)與 `data_updated_at`([[資料更新時間]],
+    來源檔的下載時間)由呼叫端給:讀時鐘與讀檔都是薄殼的事,純函式不碰,
+    同一份輸入因此兩次建置產物逐位元組相同。`data_updated_at` 為空
+    (None 或空字串)時 META 不帶該欄位——footer 那一行由前端整行省略,
+    不是顯示空字串。
 
     `errata` 是[[卡文勘誤表]](ADR-0011):被勘誤的卡多帶一個 `og` 欄位——
     勘誤**前**的來源卡文原樣,前端「顯示原文」讀它。只有這批卡帶(目前 1 張),
@@ -472,6 +476,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None):
         "vocab": exported,
         "meta": {
             "built_at": built_at,
+            **({"data_updated_at": data_updated_at} if data_updated_at else {}),
             "cards": len(index_cards),
             "clauses": clause_total,
             "vocab_digest": vocab.digest(),

@@ -52,6 +52,16 @@ function esc(s) {
 /* 卡片密碼顯示時補零成 8 位(卡面左下角就是 8 位數) */
 const pad8 = id => String(id).padStart(8, '0');
 
+/* 資料更新時間的顯示格式:`2026-08-08T17:57:00+0800` → `2026-08-08 17:57 (UTC+8)`。
+   秒數捨去(「資料多新」分鐘就夠)。顯示固定 UTC+8(CONTEXT.md「資料更新時間」),
+   偏移就只認 +0800;其他任何形狀(含別的偏移)都是非預期,原樣返回——
+   footer 顯示原值,不出 NaN/Invalid Date。 */
+function fmtTime(v) {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):\d{2}\+0800$/
+    .exec(typeof v === 'string' ? v : '');
+  return m ? `${m[1]} ${m[2]} (UTC+8)` : v;
+}
+
 /* 密碼 → 卡片。異圖切換要從點下去的那張卡取回異圖清單,線性掃 14,207 筆
    在每次點擊上都做一遍是沒必要的浪費。 */
 const INDEX = new Map(DB.map(c => [c.id, c]));
@@ -61,6 +71,6 @@ const byId = id => INDEX.get(+id);
     DB, META, VOCAB,
     CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH, LM_ZH, LM_CODES,
     SUB_ZH,
-    zhTable, codesOf, $, esc, pad8, byId,
+    zhTable, codesOf, $, esc, pad8, byId, fmtTime,
   });
 })();

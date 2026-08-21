@@ -438,6 +438,16 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   margin: 2px 0; padding: 0 8px;
 }
 
+/* ─── 頁尾聲明 ────────────────────────────────────────────
+   來源、資料更新時間、免責三行,小字置中。文案是一般文字,窄螢幕自己換行,
+   不需要 overflow 容器。 */
+.site-footer {
+  max-width: 100%; margin: 0 auto; padding: 14px 20px 24px;
+  border-top: 1px solid var(--border);
+  color: var(--muted); font-size: 12px; text-align: center;
+}
+.site-footer p { margin: 2px 0; }
+
 /* ─── 窄螢幕 ──────────────────────────────────────────────
    三條斷點,由寬到窄:平板(兩欄留著,只把側欄與留白收窄)、手機(側欄變成頂部
    可摺疊區、卡片改單欄)、小螢幕手機(尺寸再收一階)。範圍是「能用就好」——

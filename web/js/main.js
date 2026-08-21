@@ -16,7 +16,7 @@
 'use strict';
 
 (() => {
-const { DB, META, $ } = Util;
+const { DB, META, $, fmtTime } = Util;
 
 /**
  * 目前畫面對應的網址狀態,**正規形**。
@@ -100,9 +100,16 @@ function onHashChange() {
 }
 
 function init() {
-  const built = META.built_at ? `・建置於 ${META.built_at}` : '';
+  // 建置時間不上畫面(它不代表資料多新,--offline 重建也會前進);訪客要看的
+  // 是 footer 的資料更新時間——META 沒有該欄位時整行維持 hidden,時間未知
+  // 就不顯示,不顯示錯的
   $('dbInfo').textContent =
-    `${META.cards || DB.length} 張卡・${META.clauses || 0} 個效果句${built}`;
+    `${META.cards || DB.length} 張卡・${META.clauses || 0} 個效果句`;
+  if (META.data_updated_at) {
+    const updated = $('dataUpdated');
+    updated.textContent = `資料更新時間：${fmtTime(META.data_updated_at)}`;
+    updated.hidden = false;
+  }
   Query.init();
   View.initAltArt();
   View.initEffKind();

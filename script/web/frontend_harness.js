@@ -79,6 +79,7 @@ const DRIVER = `
 ;function __hash(json) { return Hash.stringify(JSON.parse(json)); }
 ;function __unhash(s) { return JSON.stringify(Hash.parse(s)); }
 ;function __canonHash(s) { return Hash.canon(s); }
+;function __fmtTime(v) { return Util.fmtTime(v); }
 `;
 
 /**

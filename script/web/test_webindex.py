@@ -615,13 +615,13 @@ class ReportTest(unittest.TestCase):
 
 
 class SerializeTest(unittest.TestCase):
-    def build(self, built_at="2026-08-13T00:00:00+0800"):
+    def build(self, built_at="2026-08-13T00:00:00+0800", **kwargs):
         cards = [card(1, desc="①：這樣。", name_ja="日", name_en="En"),
                  card(2, type=TRAP, desc="這樣。")]
         tags = [tagged(1, clause("①：這樣。")),
                 tagged(2, clause("這樣。", kind="通常陷阱卡效果", index="1"))]
         return build_index(cards, tags, built_at=built_at,
-                           sources={"cards.json": "abc"})
+                           sources={"cards.json": "abc"}, **kwargs)
 
     def test_three_globals(self):
         index, _ = self.build()
@@ -642,6 +642,20 @@ class SerializeTest(unittest.TestCase):
         self.assertEqual(meta["clauses"], 2)
         self.assertEqual(meta["vocab_digest"], vocab.digest())
         self.assertEqual(meta["sources"], {"cards.json": "abc"})
+
+    def test_meta_carries_data_updated_at_when_given(self):
+        """資料更新時間(來源檔下載時間)由薄殼傳入 → META 帶欄位、序列化看得到。"""
+        index, _ = self.build(data_updated_at="2026-08-08T17:57:00+0800")
+        self.assertEqual(index["meta"]["data_updated_at"],
+                         "2026-08-08T17:57:00+0800")
+        self.assertIn('"data_updated_at":"2026-08-08T17:57:00+0800"',
+                      serialize_index(index))
+
+    def test_meta_omits_data_updated_at_when_absent(self):
+        """從未跑過更新流程 → 欄位缺席(不是空字串),不是建置失敗。"""
+        index, report = self.build()
+        self.assertNotIn("data_updated_at", index["meta"])
+        self.assertEqual(report["problems"], [])
 
     def test_same_input_builds_byte_identical_output(self):
         """時鐘與來源雜湊由呼叫端給,純函式不碰,所以重跑逐位元組相同。"""

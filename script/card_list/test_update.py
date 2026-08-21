@@ -4,8 +4,9 @@ import os
 import tempfile
 import unittest
 
-from update_cards import (SOURCES, check_faq_gap, download_genesys,
-                          download_md_rarity, download_sources)
+from update_cards import (SOURCES, check_faq_gap, download_all,
+                          download_genesys, download_md_rarity,
+                          download_sources, record_downloaded_at)
 
 
 class DownloadSourcesTest(unittest.TestCase):
@@ -99,6 +100,95 @@ class DownloadMdRarityTest(unittest.TestCase):
             else [{"konamiID": "1", "rarity": "N"}])
         path = download_md_rarity(self.dir, fetch_json=None, offline=True)
         self.assertTrue(os.path.exists(path))
+
+
+class RecordDownloadedAtTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = self.tmp.name
+
+    def test_writes_single_timestamp(self):
+        """一次執行記一個時間;時刻由呼叫端注入,不讀時鐘。"""
+        path = record_downloaded_at(self.dir, "2026-08-08T17:57:00+0800")
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f),
+                             {"downloaded_at": "2026-08-08T17:57:00+0800"})
+
+    def test_new_run_overwrites_previous(self):
+        """再跑一次更新 → 記錄換成新時間。"""
+        record_downloaded_at(self.dir, "2026-08-01T00:00:00+0800")
+        path = record_downloaded_at(self.dir, "2026-08-08T17:57:00+0800")
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["downloaded_at"],
+                             "2026-08-08T17:57:00+0800")
+
+    def test_offline_keeps_existing_record(self):
+        """offline 沿用既有記錄:時間反映下載,不反映重跑。"""
+        record_downloaded_at(self.dir, "2026-08-08T17:57:00+0800")
+        path = record_downloaded_at(
+            self.dir, "2026-08-20T12:00:00+0800", offline=True)
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["downloaded_at"],
+                             "2026-08-08T17:57:00+0800")
+
+    def test_offline_without_record_writes_nothing(self):
+        """offline 且從未記錄過 → 不寫檔也不報錯(footer 那行省略即可)。"""
+        path = record_downloaded_at(
+            self.dir, "2026-08-20T12:00:00+0800", offline=True)
+        self.assertFalse(os.path.exists(path))
+
+
+class DownloadAllTest(unittest.TestCase):
+    """下載殼縫:注入假 fetch,驗「全部成功才寫時間記錄、單一失敗不寫」。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = self.tmp.name
+        self.record = os.path.join(self.dir, "downloaded_at.json")
+        self.genesys = {"data": [{"id": 1, "misc_info": [{"genesys_points": 5}]}]}
+
+    def fetch_json(self, url):
+        return [] if "page=" in url else self.genesys
+
+    def test_all_sources_succeed_writes_record(self):
+        download_all(self.dir, "2026-08-08T17:57:00+0800",
+                     fetch=lambda url: b"cdb", fetch_json=self.fetch_json)
+        with open(self.record, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["downloaded_at"],
+                             "2026-08-08T17:57:00+0800")
+
+    def test_one_source_fails_writes_nothing(self):
+        def boom(url):
+            raise OSError("boom")
+        with self.assertRaises(RuntimeError):
+            download_all(self.dir, "2026-08-08T17:57:00+0800",
+                         fetch=lambda url: b"cdb", fetch_json=boom)
+        self.assertFalse(os.path.exists(self.record))
+
+    def test_failure_keeps_previous_record(self):
+        download_all(self.dir, "2026-08-01T00:00:00+0800",
+                     fetch=lambda url: b"cdb", fetch_json=self.fetch_json)
+        def boom(url):
+            raise OSError("boom")
+        with self.assertRaises(RuntimeError):
+            download_all(self.dir, "2026-08-08T17:57:00+0800",
+                         fetch=boom, fetch_json=self.fetch_json)
+        with open(self.record, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["downloaded_at"],
+                             "2026-08-01T00:00:00+0800")
+
+    def test_offline_keeps_record_untouched(self):
+        download_all(self.dir, "2026-08-01T00:00:00+0800",
+                     fetch=lambda url: b"cdb", fetch_json=self.fetch_json)
+        def no_net(url):
+            raise AssertionError("offline 不應連網")
+        download_all(self.dir, "2026-08-20T12:00:00+0800", offline=True,
+                     fetch=no_net, fetch_json=no_net)
+        with open(self.record, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["downloaded_at"],
+                             "2026-08-01T00:00:00+0800")
 
 
 class DownloadGenesysTest(unittest.TestCase):

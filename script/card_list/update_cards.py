@@ -6,6 +6,7 @@
     python script/card_list/update_cards.py --offline  # 不連網,用既有來源檔重跑
 """
 import argparse
+import datetime
 import json
 import os
 import ssl
@@ -37,6 +38,7 @@ FILENAMES = {"zh": "cards.cdb", "ja": "ja-JP.cdb", "en": "en-US.cdb"}
 MD_RARITY_URL = ("https://www.masterduelmeta.com/api/v1/cards"
                  "?limit=3000&page={page}&fields=konamiID,rarity")
 MD_RARITY_FILENAME = "md-rarity.json"
+DOWNLOADED_AT_FILENAME = "downloaded_at.json"
 # genesys_points 只在帶 format=genesys 時才出現於 misc_info
 GENESYS_URL = ("https://db.ygoprodeck.com/api/v7/cardinfo.php"
                "?misc=yes&format=genesys")
@@ -152,6 +154,39 @@ def download_genesys(dest_dir, fetch_json=_fetch_json, offline=False):
     return path
 
 
+def record_downloaded_at(dest_dir, now, offline=False):
+    """全部來源下載成功後記下資料更新時間,一次執行一個時間(五個來源不分開)。
+
+    offline 沿用既有記錄——時間反映「下載」而不是「重跑」;從未記錄過也不報錯,
+    footer 那一行省略即可。時刻由呼叫端注入,這裡不讀時鐘。
+    """
+    path = os.path.join(dest_dir, DOWNLOADED_AT_FILENAME)
+    if offline:
+        return path
+    os.makedirs(dest_dir, exist_ok=True)
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump({"downloaded_at": now}, f, ensure_ascii=False)
+    os.replace(tmp_path, path)
+    return path
+
+
+def download_all(sources_dir, now, offline=False,
+                 fetch=_fetch_url, fetch_json=_fetch_json):
+    """五個來源(中/日/英 cdb、MD 稀有度、Genesys)→ 全部成功才記資料更新時間。
+
+    任一下載失敗即 raise,記錄不被動到——「全部成功才寫」由呼叫順序保證,
+    收在同一個函式裡讓這件事測得到。
+    """
+    paths = download_sources(sources_dir, fetch=fetch, offline=offline)
+    md_path = download_md_rarity(sources_dir, fetch_json=fetch_json,
+                                 offline=offline)
+    genesys_path = download_genesys(sources_dir, fetch_json=fetch_json,
+                                    offline=offline)
+    record_downloaded_at(sources_dir, now, offline=offline)
+    return paths, md_path, genesys_path
+
+
 def check_faq_gap(cards, faq_json_path=DEFAULT_FAQ_JSON):
     """對帳:卡片總表對官方 Q&A 整合檔,回傳可列印的報告行。
 
@@ -184,9 +219,10 @@ def main(argv=None):
                         help="卡文勘誤表路徑 (預設 data/text_errata.json)")
     args = parser.parse_args(argv)
 
-    paths = download_sources(args.sources_dir, offline=args.offline)
-    md_path = download_md_rarity(args.sources_dir, offline=args.offline)
-    genesys_path = download_genesys(args.sources_dir, offline=args.offline)
+    paths, md_path, genesys_path = download_all(
+        args.sources_dir,
+        datetime.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z"),
+        offline=args.offline)
 
     existing = None
     if os.path.exists(args.output):

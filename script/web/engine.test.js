@@ -1314,3 +1314,26 @@ test('條件數在網址走一趟之後不變(分享的連結在手機上摺著�
   // 加一條條件軸,摺疊鈕自動算得到它——條件數不必跟著 FIELDS 抄第二份
   assert.strictEqual(critCount(parseHash('attr=dark&lv=4-&sort=atk').q), 2);
 });
+
+/* ── 資料更新時間的顯示格式(footer 票03) ─────────────────── */
+
+test('資料更新時間:ISO+0800 → 人可讀的 UTC+8 形式', () => {
+  assert.strictEqual(sandbox.__fmtTime('2026-08-08T17:57:00+0800'),
+                     '2026-08-08 17:57 (UTC+8)');
+  // 秒數捨去、T 換空白
+  assert.strictEqual(sandbox.__fmtTime('2026-08-17T19:41:03+0800'),
+                     '2026-08-17 19:41 (UTC+8)');
+});
+
+test('資料更新時間:非預期形狀原樣返回,不出 NaN/Invalid Date', () => {
+  // 顯示固定 UTC+8,別的偏移也算非預期形狀(管線整條都以 +0800 記錄)
+  for (const bad of ['腐敗資料', '', '2026-08-08', '17:57 (UTC+8)',
+                     '2026-01-01T00:00:00+0900',
+                     '2026-01-01T23:59:59-0500']) {
+    assert.strictEqual(sandbox.__fmtTime(bad), bad);
+  }
+  // 欄位整個不是字串(META 形狀改變)也原樣返回,由呼叫端決定顯不顯示
+  assert.strictEqual(sandbox.__fmtTime(null), null);
+  assert.strictEqual(sandbox.__fmtTime(undefined), undefined);
+  assert.strictEqual(sandbox.__fmtTime(12345), 12345);
+});

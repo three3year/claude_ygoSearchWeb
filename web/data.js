@@ -14222,9 +14222,10 @@ window.VOCAB={
 "sub_t":{"items":[{"code":"normal","zh":"通常"},{"code":"continuous","zh":"永續"},{"code":"counter","zh":"反擊"}],"zh":"陷阱子類型"}
 };
 window.META={
-"built_at":"2026-08-21T15:05:55+0800",
+"built_at":"2026-08-21T17:56:46+0800",
 "cards":14207,
 "clauses":34390,
+"data_updated_at":"2026-08-08T17:57:00+0800",
 "sources":{"cards.json":"13fcab8766c776e8","tag_cards.json":"9937850d547732ae"},
 "vocab_digest":"92341aee35b38e36"
 };

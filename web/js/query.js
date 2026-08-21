@@ -491,9 +491,11 @@ function updateCounts() {
    大類鈕會把使用者剛手動收起的子類組又彈開。
    - 藏掉:狀態一併清掉(三態鈕與範圍輸入都是)——留著的話條件還在生效但使用者
      看不到它,而看不見的條件是解釋不了的零結果。摺疊同時歸位(收起)。
-   - 出現:`expand` 決定要不要**自動展開**——必發/選發連動出現時展開;子類組與
-     怪獸參數軸照檔案總管的規矩**收著出現**(2026-08-17 使用者裁示:節點預設
-     收起,要看再點開),各自的展開狀態在父軸收合之間保留。 */
+   - 出現:`expand` 決定要不要**自動展開**——必發/選發與子類組連動出現時展開
+     (子類組原本收著出現,2026-08-21 使用者裁示改為展開一層:點了大類還要再點
+     一次才看得到子類型,多的那一步沒有資訊量);怪獸參數軸照檔案總管的規矩
+     **收著出現**(八軸全彈開是一面牆),各自的展開狀態在父軸收合之間保留。
+     「一層」止於子類組自己:巢在裡面的卡框/能力分組與怪獸參數軸不跟著開。 */
 function showAxis(el, show, expand) {
   if (el.hidden === !show) return;
   if (show) {
@@ -520,7 +522,7 @@ function syncSubs() {
     return !!btn && btn.dataset.st === 'in';
   };
   FIELDS.filter(f => f.tri === 'sub').forEach(
-    f => showAxis(axisEl('sub', f.side), on(f.side), false));
+    f => showAxis(axisEl('sub', f.side), on(f.side), true));
   FIELDS.filter(f => f.mon).forEach(f => showAxis(blockEl(f), on('m'), false));
 }
 

@@ -50,8 +50,8 @@ const CARDS = [
     n: '拉比麗斯的狂時鐘', nj: '白銀の城の狂時計', ne: 'Labrynth Cooclock',
     ax: '白銀之城的狂時鐘',
     c: 'm', s: ['effect'], at: 'dark', r: 'fiend', lv: 1, atk: 0, df: 0,
-    tx: ['這個卡名的①②效果1回合各能使用1次。', '①：將此卡從手牌捨棄可以發動。'],
-    k: ['x', 'q'], ro: ['limit', ''],
+    tx: ['這個卡名的①②效果1回合各能使用1次。', '①：將此卡從手牌捨棄發動。'],
+    k: ['x', 'q'], ro: ['limit', ''], o: ['', 'm'],
   },
   {
     id: 84013237,
@@ -648,7 +648,7 @@ test('句層耦合:效果文關鍵字與效果類型必須命中同一個效果�
 });
 
 test('必發/選發可篩選,且只在承載的效果類型上生效', () => {
-  assert.deepStrictEqual(ids({ opt: { m: 1 } }), [20105, 20112]);
+  assert.deepStrictEqual(ids({ opt: { m: 1 } }), [2511, 20105, 20112]);
   assert.deepStrictEqual(ids({ opt: { o: 1 } }), [20105, 20110, 20111, 20112]);
   assert.deepStrictEqual(rowsOf({ opt: { m: 1 } }, 20112), [0]);
   assert.deepStrictEqual(rowsOf({ opt: { o: 1 } }, 20112), [1]);
@@ -670,8 +670,8 @@ test('組合鈕的包含:同一句是該效果類型且帶該值才命中', () =
   assert.deepStrictEqual(ids({ opt: { to: 1 } }), [20105]);
   assert.deepStrictEqual(rowsOf({ opt: { to: 1 } }, 20105), [1]);
   assert.deepStrictEqual(ids({ opt: { qo: 1 } }), [20110, 20111]);
-  // 全庫沒有 q+必發 的句子(真實資料也只有 16 張):零結果是資料的形狀,不是壞
-  assert.deepStrictEqual(ids({ opt: { qm: 1 } }), []);
+  assert.deepStrictEqual(ids({ opt: { qm: 1 } }), [2511]);
+  assert.deepStrictEqual(rowsOf({ opt: { qm: 1 } }, 2511), [1]);
   // 效果類型不合的不命中:20112 的必發句是通常陷阱卡效果,不是誘發
   assert.deepStrictEqual(ids({ opt: { tm: 1 } }).includes(20112), false);
   // 承載型效果類型但這一句沒有值:組合的包含同樣碰不到它(20101 的誘發句無值)
@@ -679,9 +679,10 @@ test('組合鈕的包含:同一句是該效果類型且帶該值才命中', () =
 });
 
 test('組合鈕的排除:這一句不是「該類型且該值」', () => {
-  // 全部必發包含+怪獸側必發排除 = 魔陷側必發(spec 不補魔陷側組的理由)
-  assert.deepStrictEqual(ids({ opt: { m: 1, tm: -1 } }), [20112]);
-  assert.deepStrictEqual(rowsOf({ opt: { m: 1, tm: -1 } }, 20112), [0]);
+  // 全部必發包含+怪獸側兩顆必發排除 = 魔陷側必發(spec 不補魔陷側組的理由)
+  assert.deepStrictEqual(ids({ opt: { m: 1, tm: -1 } }), [2511, 20112]);
+  assert.deepStrictEqual(ids({ opt: { m: 1, tm: -1, qm: -1 } }), [20112]);
+  assert.deepStrictEqual(rowsOf({ opt: { m: 1, tm: -1, qm: -1 } }, 20112), [0]);
   // 排除 tm 不擋 t+選發(20105 ②)也不擋 q+選發(20110 ①、20111)
   assert.deepStrictEqual(ids({ opt: { o: 1, tm: -1 } }),
                          [20105, 20110, 20111, 20112]);

@@ -52,3 +52,12 @@
 兩句)、Python 全綠(正典自檢新增六條)。真實 data.js 冒煙:tm 1,467、to 4,132、
 qm 16、qo 1,421、必發 1,830、「必發包含+怪獸側必發排除」= 魔陷側必發 360,
 與 spec 的預期數字逐一吻合。
+
+2026-08-22 /code-review(Standards+Spec 兩軸)後修正:tri-group 的死屬性
+data-group-key 移除、syncOptional 註解改為誠實的位置序說明(硬傷:註解與行為
+不符);optionalAvailable 拿掉沒有使用者的 groups fallback;writeTri 基底條件
+提出迴圈;fixture 的 2511 誘發即時句補必發值,qm 的包含/排除與「兩顆怪獸側必發
+都排除=魔陷側必發」補進接縫 3 測試(Spec 軸指出 qm 那一半原本只靠真實資料冒煙)。
+審查另指出 commit 43a7b9d 夾帶了平行工作的 treeCounts 大類鈕規則(使用者自己的
+未提交變更被 git add -A 掃入)——內容正確、測試綠,處置(拆 commit 或補票)
+留使用者決定。

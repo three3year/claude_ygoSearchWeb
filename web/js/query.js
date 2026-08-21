@@ -151,9 +151,7 @@ function optionalAvailable(kindSel) {
   // 值鈕(必發/選發本身)是全部承載者
   const kindsOf = code => combos[code]
     ? [combos[code].slice(0, combos[code].indexOf(':'))] : carriers;
-  const groups = (dom.groups || []).length
-    ? dom.groups : [{ codes: (dom.items || []).map(it => it.code) }];
-  return groups.map(g => !included.length ||
+  return (dom.groups || []).map(g => !included.length ||
     (g.codes || []).some(code => kindsOf(code)
       .some(k => included.indexOf(k) >= 0)));
 }
@@ -192,9 +190,7 @@ function axisHtml(ax, kids) {
       return `<div class="axis-group" data-group-key="${ax.dom}/${gi}">
         ${headHtml(g.zh)}<div class="axis-body" hidden>${row}</div></div>`;
     }
-    // data-group-key:必發/選發的連動隱藏粒度是組(spec-optional-combo),
-    // syncOptional 靠它逐組藏/現;其他軸的具名分組帶著也無妨(沒有人讀)
-    return g.zh ? `<div class="tri-group" data-group-key="${ax.dom}/${gi}">
+    return g.zh ? `<div class="tri-group">
       <span class="group-label">${esc(g.zh)}</span>${row}</div>` : row;
   }).join('');
   // 子類型的三組與怪獸參數軸各自藏著(hidden),選了對應的大類才出現——那是
@@ -568,13 +564,13 @@ function showGroup(el, show) {
 }
 
 /* 「必發/選發」的兩組各自只在選得出結果時出現(規則見 optionalAvailable);
-   兩組都收起時整軸跟著藏,任一組在則軸在(出現時照舊自動展開)。 */
+   兩組都收起時整軸跟著藏,任一組在則軸在(出現時照舊自動展開)。組以**位置序**
+   對上答案:tri-group 的文件序就是分組的宣告序,而 optionalAvailable 回傳的
+   陣列與宣告序對齊——同一份順序,不需要第二種識別。 */
 function syncOptional() {
   const el = axisEl('opt', '');
   const avail = optionalAvailable(triSel(FIELDS.find(f => f.tri === 'kind')));
-  Array.prototype.forEach.call(
-    el.querySelectorAll('.tri-group'),
-    (g, gi) => showGroup(g, !!avail[gi]));
+  el.querySelectorAll('.tri-group').forEach((g, gi) => showGroup(g, !!avail[gi]));
   showAxis(el, avail.some(Boolean), true);
 }
 
@@ -588,12 +584,13 @@ function writeTri(q, f) {
   // 兩態軸沒有排除:寫進來的負值(理論上只有手拼的條件物件做得出來)當未選,
   // 兩態鈕才不會被寫成一個循環永遠回不到的狀態
   const ex = (f.states || 3) === 2 ? '' : 'ex';
+  const base = (el.hidden ? null : q[f.tri]) || {};
   ownTris(el).forEach(btn => {
     // 連動隱藏的粒度有兩層:整軸,與必發/選發的組(spec-optional-combo)。
     // 藏著的組不寫,與藏著的軸不寫同一條規則——網址上「有怪獸側組合、效果
     // 類型卻只選了魔陷值」是過期的組合,寫進去等於一條看不見的條件
     const grp = btn.closest('.tri-group');
-    const sel = (el.hidden || (grp && grp.hidden) ? null : q[f.tri]) || {};
+    const sel = grp && grp.hidden ? {} : base;
     const key = f.side ? f.side + ':' + btn.dataset.code : btn.dataset.code;
     setTri(btn, sel[key] > 0 ? 'in' : (sel[key] < 0 ? ex : ''));
   });

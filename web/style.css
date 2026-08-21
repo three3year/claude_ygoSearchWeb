@@ -29,6 +29,9 @@ body {
   font-family: "Microsoft JhengHei", "Noto Sans TC", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.6;
+  /* 直向 flex + .layout 撐滿剩餘高度:還沒搜尋時頁面不足一屏,footer 也要
+     貼齊視窗底而不是浮在內容下面 */
+  display: flex; flex-direction: column; min-height: 100vh;
 }
 
 header {
@@ -46,6 +49,7 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   max-width: 100%; margin: 0 auto; padding: 0 20px 60px;
   display: grid; grid-template-columns: 340px minmax(0, 1fr);
   gap: 20px; align-items: start;
+  flex: 1; width: 100%;   /* 把 footer 推到視窗底(body 是直向 flex) */
 }
 
 .sidebar {
@@ -439,8 +443,8 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 
 /* ─── 頁尾聲明 ────────────────────────────────────────────
-   三行小字置中(來源、QA 判定＋更新時間、免責)。文案是一般文字,
-   窄螢幕自己換行,不需要 overflow 容器。 */
+   三行小字置中(資料更新、來源、免責)。文案是一般文字,窄螢幕自己換行,
+   不需要 overflow 容器。貼齊視窗底由 body 的 flex 佈局負責。 */
 .site-footer {
   max-width: 100%; margin: 0 auto; padding: 4px 20px;
   border-top: 1px solid var(--border);

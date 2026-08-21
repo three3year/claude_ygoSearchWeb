@@ -97,13 +97,13 @@
   </main>
 </div>
 
-<!-- 頁尾聲明三行:來源一行、QA 判定＋資料更新一行、免責一行(2026-08-21
-     使用者裁示的精簡版)。靜態文案住 HTML;唯一動態的是資料更新時間——值來自
-     META,由 main.js 填進行內 span,META 沒有該欄位(建置機從未跑過更新流程)
-     時 span 維持 hidden、該行只剩 QA 判定那一句。時間未知就不顯示,不顯示錯的。 -->
+<!-- 頁尾聲明三行:資料更新一行、來源一行、免責一行(2026-08-21 使用者裁示)。
+     靜態文案住 HTML;唯一動態的是第一行的資料更新時間——值來自 META,由
+     main.js 填入,META 沒有該欄位(建置機從未跑過更新流程)時整行維持 hidden。
+     時間未知就不顯示,不顯示錯的。 -->
 <footer class="site-footer">
-  <p>資料來源：查牌網（中文卡文・卡圖）・ygopro-database（日英卡名）・Master Duel Meta（MD 稀有度）・YGOPRODeck（Genesys 點數）</p>
-  <p>效果類型依官方 QA 判定<span id="dataUpdated" hidden></span></p>
+  <p id="dataUpdated" hidden></p>
+  <p>資料來源：查牌網（中文卡文・卡圖）・ygopro-database（日英卡名）・Master Duel Meta（MD 稀有度）・YGOPRODeck（Genesys 點數）・YuGiOh Neuron（效果類型）</p>
   <p>「遊戲王」為 KONAMI 之著作權與商標,本站為非官方查詢工具</p>
 </footer>
 

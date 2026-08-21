@@ -107,7 +107,7 @@ function init() {
     `${META.cards || DB.length} 張卡・${META.clauses || 0} 個效果句`;
   if (META.data_updated_at) {
     const updated = $('dataUpdated');
-    updated.textContent = `資料更新：${fmtTime(META.data_updated_at)}`;
+    updated.textContent = `資料更新時間：${fmtTime(META.data_updated_at)}`;
     updated.hidden = false;
   }
   Query.init();

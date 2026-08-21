@@ -159,6 +159,11 @@ function paramHit(c, q) {
     && triHit(c.lm || [], q.lm)
     && triHit(c.ra ? [c.ra] : [], q.rarity)
     && triHit(c.ot ? [c.ot] : [], q.ot)
+    // [[禁限狀態]]三賽制各一軸:未上榜的卡沒有這個欄位——「無限制」「未發行」
+    // 不是值,包含收不到它們、排除也不擋它們(排除的是那個狀態,不是「沒有」)
+    && triHit(c.bo ? [c.bo] : [], q.ban_o)
+    && triHit(c.bt ? [c.bt] : [], q.ban_t)
+    && triHit(c.bm ? [c.bm] : [], q.ban_m)
     && rangeHit(c.lv, q.lv)
     && rangeHit(c.lk, q.lk)
     && rangeHit(c.sc, q.sc)

@@ -37,6 +37,7 @@ const LANG = 'nameLang';
 function schema() {
   const tri = [], range = [];
   Query.FIELDS.forEach(f => {
+    if (f.group) return;   // 僅摺疊分組的父層(禁限)沒有條件,不進網址
     if (!f.tri) { range.push({ key: f.range, unknown: f.unknown || '' }); return; }
     // 合法碼跟著**按鈕**走:有分組的值域取分組聯集——建置期把跨類型 0 張的
     // 效果類型值從分組拿掉、items 留作顯示詞彙表(ADR-0010),那種值在網址上

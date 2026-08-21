@@ -72,6 +72,15 @@ const FIELDS = [
   { tri: 'rarity', dom: 'rarity' },
   { range: 'gy', zh: 'Genesys 點數' },
   { tri: 'ot', dom: 'ot' },
+  // [[禁限狀態]](spec banlist,2026-08-22 使用者裁示):「禁限」是**僅作摺疊
+  // 分組的父層**(`group`,自己沒有鈕),三賽制各自一軸巢狀其下——賽制內多選
+  // OR、賽制間 AND,「OCG 禁止且 MD 禁止」問得出來;做成同一軸的三段(如
+  // 子類型)的話跨賽制多選是 OR,交集永遠問不出來。位置在 OCG・TCG 限定軸
+  // 之後:賽制相關的條件聚在同一區。無連動隱藏——禁限不依附任何軸。
+  { group: 'ban', zh: '禁限' },
+  { tri: 'ban_o', dom: 'ban_o', parent: 'ban' },
+  { tri: 'ban_t', dom: 'ban_t', parent: 'ban' },
+  { tri: 'ban_m', dom: 'ban_m', parent: 'ban' },
 ];
 
 /* 三態:未選 → 包含 → 排除 → 未選。'' 不是狀態的缺席而是第三個狀態,所以循環表
@@ -218,6 +227,16 @@ function rangeHtml(f) {
       num('max')}${unknown}</div></div></div>`;
 }
 
+/* 僅作摺疊分組的父層(「禁限」):自己沒有鈕,只有標題列與摺疊體,子軸巢狀
+   其中。長成 .axis 是刻意的——摺疊、標題列的子樹已選數、單區清除、還原展開
+   全部沿用軸的既有機制,不另立第二套容器;ownTris 對它是空集合,讀取層
+   (read/axisCounts)則直接跳過。 */
+function groupBoxHtml(f, kids) {
+  return `<div class="axis" data-axis="${f.group}" data-side=""
+    data-states="3">${headHtml(f.zh)}<div class="axis-body" hidden>${
+    kids || ''}</div></div>`;
+}
+
 /* 依 `parent` 宣告長成一棵樹:沒有 parent 的是頂層,有的塞進父區塊的摺疊體裡。
    順序仍由 FIELDS 決定(同一層照表排)。 */
 function build() {
@@ -225,6 +244,7 @@ function build() {
   axes().forEach(ax => { axisByKey[ax.key + '/' + ax.side] = ax; });
   const htmlOf = f => f.tri
     ? axisHtml(axisByKey[f.tri + '/' + (f.side || '')], kidsOf(blockKey(f)))
+    : f.group ? groupBoxHtml(f, kidsOf(blockKey(f)))
     : rangeHtml(f);
   const kidsOf = key =>
     FIELDS.filter(f => f.parent === key).map(htmlOf).join('');
@@ -294,7 +314,10 @@ function read() {
   // 素材行開關:勾了才進條件物件(沒勾=預設不掃,鍵不出現——與網址的
   // 「可省略的一律省略」同一條規則)
   if ($('fTextMat').checked) q.textMat = 1;
-  FIELDS.forEach(f => (f.tri ? readTri : readRange)(q, f));
+  FIELDS.forEach(f => {
+    if (f.group) return;   // 僅摺疊分組的父層沒有條件可讀
+    (f.tri ? readTri : readRange)(q, f);
+  });
   return q;
 }
 
@@ -337,18 +360,21 @@ function count(q) {
 /* 一個 FIELDS 條目對應畫面上的一個區塊。鍵(三態軸用值域名、範圍用欄位名)與
    元素的對應只寫這一次——逐軸已選數、還原展開與 DOM 寫回都用同一份。 */
 function blockKey(f) {
-  return f.tri ? f.dom : f.range;
+  return f.tri ? f.dom : (f.range || f.group);
 }
 
 function blockEl(f) {
-  return f.tri ? axisEl(f.tri, f.side)
-    : $('critParams').querySelector(`.range[data-range="${f.range}"]`);
+  if (f.range) {
+    return $('critParams').querySelector(`.range[data-range="${f.range}"]`);
+  }
+  return axisEl(f.tri || f.group, f.side);
 }
 
 function axisCounts(q) {
   q = q || {};
   const out = {};
   FIELDS.forEach(f => {
+    if (f.group) { out[blockKey(f)] = 0; return; }  // 父層自己沒有鈕
     if (f.tri) {
       const sel = q[f.tri] || {};
       out[blockKey(f)] = Object.keys(sel).filter(k => sel[k] &&
@@ -632,7 +658,10 @@ function write(q) {
     .forEach(f => writeTri(q, f));
   syncSubs();
   syncOptional();
-  FIELDS.forEach(f => (f.tri ? writeTri : writeRange)(q, f));
+  FIELDS.forEach(f => {
+    if (f.group) return;   // 僅摺疊分組的父層沒有條件可寫
+    (f.tri ? writeTri : writeRange)(q, f);
+  });
   updateCounts();
   // 還原展開(票14):有已選條件的軸與連動帶出的軸自動展開,其餘收起。
   // 吃 read() 而不是傳進來的 q:過期的段(有子類型沒大類)在上面已被丟掉,

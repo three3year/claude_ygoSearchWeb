@@ -27,21 +27,22 @@ const CARDS = [
     id: 46986414, al: [46986430, 36996508],
     n: '黑魔導', nj: 'ブラック・マジシャン', ne: 'Dark Magician',
     c: 'm', s: ['normal'], at: 'dark', r: 'spellcaster', lv: 7,
-    atk: 2500, df: 2100, ra: 'UR', ot: 'b',
+    atk: 2500, df: 2100, ra: 'UR', ot: 'b', bo: 'l',
     d: '究極的攻擊魔術師。',
   },
+  // 禁限樣本(spec banlist):OCG 禁止且 MD 禁止——賽制間 AND 的對照組
   {
     id: 89631139,
     n: '青眼白龍', nj: '青眼の白龍', ne: 'Blue-Eyes White Dragon',
     c: 'm', s: ['normal'], at: 'light', r: 'dragon', lv: 8,
-    atk: 3000, df: 2500, ra: 'UR', ot: 'b', gy: 15,
+    atk: 3000, df: 2500, ra: 'UR', ot: 'b', gy: 15, bo: 'f', bm: 'f',
     d: '以高攻擊力著稱的傳說之龍。',
   },
   {
     id: 23995346,
     n: '青眼究極龍', nj: '青眼の究極竜', ne: 'Blue-Eyes Ultimate Dragon',
     c: 'm', s: ['fusion'], at: 'light', r: 'dragon', lv: 12,
-    atk: 4500, df: 3800, ra: 'SR',
+    atk: 4500, df: 3800, ra: 'SR', bt: 'f',
     tx: ['「青眼白龍」＋「青眼白龍」＋「青眼白龍」'],
     k: ['x'], ro: ['mat'],
   },
@@ -108,6 +109,7 @@ const CARDS = [
   },
   {
     id: 20106, n: '儀式魔法樣本卡', c: 's', s: ['ritual'], ot: 't', gy: 5,
+    bt: 'l',
     tx: ['①：把手牌的儀式怪獸1隻儀式召喚。'], k: ['sr'],
   },
   // 句層耦合:同一句裡同時出現 vs 散落在兩句
@@ -227,6 +229,13 @@ const VOCAB = {
             items: [item('N', 'N'), item('R', 'R'), item('SR', 'SR'), item('UR', 'UR')] },
   ot: { zh: 'OCG・TCG',
         items: [item('o', 'OCG 限定'), item('t', 'TCG 限定'), item('b', '兩者')] },
+  // [[禁限狀態]]:三賽制各一個值域,統一三值(spec banlist)
+  ban_o: { zh: 'OCG 禁限',
+           items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
+  ban_t: { zh: 'TCG 禁限',
+           items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
+  ban_m: { zh: 'MD 禁限',
+           items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
 };
 
 const META = {
@@ -765,7 +774,8 @@ test('分類類條件的按鈕清單由 window.VOCAB 導出', () => {
   const axes = harness.axes(sandbox);
   assert.deepStrictEqual(axes.map(a => a.key + '/' + a.side),
                          ['cat/', 'kind/', 'opt/', 'sub/m', 'sub/s', 'sub/t',
-                          'attr/', 'race/', 'lm/', 'rarity/', 'ot/']);
+                          'attr/', 'race/', 'lm/', 'rarity/', 'ot/',
+                          'ban_o/', 'ban_t/', 'ban_m/']);
   // 效果類型十六值分怪獸側與跨類型魔陷效果兩組呈現(Story 23、ADR-0010):
   // 十六顆鈕排在一起時,使用者要看得出哪些是同一個維度的東西
   assert.deepStrictEqual(axes.find(a => a.key === 'kind').groups.map(g => g.zh),
@@ -826,8 +836,8 @@ test('怪獸參數軸掛在大類「怪獸」的連動上(宣告可測)', () => 
   const axes = harness.axes(sandbox);
   ['attr', 'race', 'lm'].forEach(k =>
     assert.strictEqual(axes.find(a => a.key === k).mon, true, k));
-  // 全卡種通用的軸不掛:效果類型、必發/選發、大類自己、稀有度、OCG・TCG
-  ['kind', 'opt', 'cat', 'rarity', 'ot'].forEach(k =>
+  // 全卡種通用的軸不掛:效果類型、必發/選發、大類自己、稀有度、OCG・TCG、禁限
+  ['kind', 'opt', 'cat', 'rarity', 'ot', 'ban_o', 'ban_t', 'ban_m'].forEach(k =>
     assert.strictEqual(axes.find(a => a.key === k).mon, false, k));
 });
 
@@ -1073,6 +1083,10 @@ const STATES = [
   { q: { ...EMPTY_Q, lm: { L: 1, R: -1 }, rarity: { UR: 1 }, ot: { o: -1 },
          gy: { min: 5, max: 20 } },
     sort: { key: 'n', dir: 'asc' } },
+  // 禁限三子軸(spec banlist 票04):包含與排除都要走得過網址
+  { q: { ...EMPTY_Q, ban_o: { f: 1, l: 1 }, ban_t: { l: -1 },
+         ban_m: { s: 1 } },
+    sort: DOM_SORT },
 ];
 
 test('任意條件組合序列化後再解析回來相等(往返,含三態排除)', () => {
@@ -1356,7 +1370,8 @@ test('逐軸已選數:空條件全零,涵蓋每一個生成的區塊', () => {
   const keys = Object.keys(c);
   // 區塊鍵 = 三態軸的值域名 + 範圍軸的欄位名,一塊一鍵
   ['kind', 'optional', 'cat', 'sub_m', 'sub_s', 'sub_t', 'attr', 'race',
-   'lv', 'lk', 'sc', 'atk', 'df', 'lm', 'rarity', 'gy', 'ot']
+   'lv', 'lk', 'sc', 'atk', 'df', 'lm', 'rarity', 'gy', 'ot',
+   'ban', 'ban_o', 'ban_t', 'ban_m']
     .forEach(k => assert.ok(keys.indexOf(k) >= 0, k));
   keys.forEach(k => assert.strictEqual(c[k], 0, k));
 });
@@ -1434,4 +1449,74 @@ test('資料更新時間:非預期形狀原樣返回,不出 NaN/Invalid Date', (
   assert.strictEqual(sandbox.__fmtTime(null), null);
   assert.strictEqual(sandbox.__fmtTime(undefined), undefined);
   assert.strictEqual(sandbox.__fmtTime(12345), 12345);
+});
+
+/* ── [[禁限狀態]]搜尋軸(spec banlist 票04) ────────────────
+   「禁限」是僅作摺疊分組的父層,OCG/TCG/MD 三賽制**各自一軸**巢狀其下——
+   賽制內多選 OR、賽制間 AND(2026-08-22 使用者裁示),可問跨賽制差異。
+   每軸只設上榜三值的三態鈕;「無限制」「未發行」不是值域成員,包含與排除
+   都碰不到未上榜的卡。 */
+
+test('禁限三子軸由 VOCAB 生成,排在 OCG・TCG 限定軸之後', () => {
+  const axes = harness.axes(sandbox);
+  const keys = axes.map(a => a.key);
+  assert.deepStrictEqual(keys.slice(keys.indexOf('ot')),
+                         ['ot', 'ban_o', 'ban_t', 'ban_m']);
+  ['ban_o', 'ban_t', 'ban_m'].forEach(k => {
+    const ax = axes.find(a => a.key === k);
+    assert.deepStrictEqual(ax.groups[0].items.map(i => i.code),
+                           ['f', 'l', 's'], k);
+    assert.strictEqual(ax.states, 3, k);
+  });
+});
+
+test('禁限:單一賽制單值命中,未上榜的卡不被包含態命中', () => {
+  assert.deepStrictEqual(ids({ ban_o: { f: 1 } }), [89631139]);
+  assert.deepStrictEqual(ids({ ban_t: { l: 1 } }), [20106]);
+});
+
+test('禁限:賽制內多選是 OR', () => {
+  assert.deepStrictEqual(ids({ ban_o: { f: 1, l: 1 } }),
+                         [46986414, 89631139]);
+});
+
+test('禁限:賽制間是 AND(各自一軸)', () => {
+  // OCG 禁止的兩張裡只有青眼同時 MD 禁止
+  assert.deepStrictEqual(ids({ ban_o: { f: 1, l: 1 }, ban_m: { f: 1 } }),
+                         [89631139]);
+  // 交集為空是誠實的零結果
+  assert.deepStrictEqual(ids({ ban_t: { f: 1 }, ban_m: { f: 1 } }), []);
+});
+
+test('禁限:排除態剔除該狀態,未上榜的卡不被排除', () => {
+  const out = ids({ ban_o: { f: -1 } });
+  assert.ok(out.indexOf(89631139) < 0);
+  assert.ok(out.indexOf(46986414) >= 0);   // OCG 限制不是 OCG 禁止
+  assert.ok(out.indexOf(20101) >= 0);      // 未上榜的卡照樣在
+  assert.strictEqual(out.length, CARDS.length - 1);
+});
+
+test('禁限與既有軸並用是 AND', () => {
+  // TCG 禁止的只有青眼究極龍(怪獸);大類選魔法時交集為空
+  // (儀式魔法樣本卡是 TCG 限制,不是禁止)
+  assert.deepStrictEqual(ids({ cat: { m: 1 }, ban_t: { f: 1 } }), [23995346]);
+  assert.deepStrictEqual(ids({ cat: { s: 1 }, ban_t: { f: 1 } }), []);
+});
+
+test('禁限:標題列已選數逐軸各數自己,父層彙總三子軸', () => {
+  const q = { ...EMPTY_Q, ban_o: { f: 1 }, ban_m: { l: 1, s: -1 } };
+  const flat = harness.axisCounts(sandbox, q);
+  assert.strictEqual(flat.ban_o, 1);
+  assert.strictEqual(flat.ban_t, 0);
+  assert.strictEqual(flat.ban_m, 2);
+  assert.strictEqual(flat.ban, 0);         // 父層自己沒有鈕
+  const tree = harness.treeCounts(sandbox, q);
+  assert.strictEqual(tree.ban, 3);
+  assert.strictEqual(tree.ban_o, 1);
+});
+
+test('禁限:還原展開連同父層開,空著不開', () => {
+  assert.deepStrictEqual(expanded({ ...EMPTY_Q, ban_t: { f: 1 } }),
+                         ['ban', 'ban_t']);
+  assert.ok(expanded(EMPTY_Q).indexOf('ban') < 0);
 });

@@ -72,8 +72,9 @@ def print_report(report, file=sys.stdout):
     if genesys_listed is not None:
         p(f"Genesys 列點卡: {genesys_listed} 張(其餘為 0 點)")
     for fmt, cov in sorted((report.get("banlist_coverage") or {}).items()):
-        p(f"{fmt.upper()} 禁限: 上榜 {cov['listed']} 張、"
-          f"對不上總表 {cov['unmatched']} 筆")
+        extra = (f"對不上總表 {cov['unmatched']} 筆" if "unmatched" in cov
+                 else f"無稀有度不採計(未收錄預掛) {cov['skipped_unrated']} 筆")
+        p(f"{fmt.upper()} 禁限: 上榜 {cov['listed']} 張、{extra}")
     changes = report.get("changes")
     if changes is not None:
         p(f"差值更新: 新增 {len(changes['added'])} 張、"

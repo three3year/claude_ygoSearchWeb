@@ -60,6 +60,7 @@ def _make_card(row):
         "genesys_points": 0,
         "ban_ocg": "",
         "ban_tcg": "",
+        "ban_md": "",
     }
 
 
@@ -67,6 +68,8 @@ def _make_card(row):
 # 表以外的字串即建置失敗——來源哪天冒出新值要吵不要靜(值域正典原則)。
 BAN_ZH = {"Forbidden": "禁止", "Limited": "限制", "Semi-Limited": "準限制"}
 BAN_FIELDS = {"ocg": "ban_ocg", "tcg": "ban_tcg"}
+# MD 來源(masterduelmeta)有自己的一套字面,語意對應同一組三值
+MD_BAN_ZH = {"Forbidden": "禁止", "Limited 1": "限制", "Limited 2": "準限制"}
 
 
 MAX_PASSWORD = 100000000  # 正式卡片密碼為 8 位數;9 位數為先行卡暫時編號
@@ -177,21 +180,39 @@ def _fill_names(cards, field, names):
 
 
 def _fill_md_rarity(cards, path):
-    """MD 稀有度 JSON({密碼字串: 稀有度})以密碼填入;主卡沒對到時試異圖密碼。"""
+    """MD 來源 JSON({密碼字串: {rarity, banStatus}})以密碼填入稀有度與
+    MD [[禁限狀態]];主卡沒對到時試異圖密碼。
+
+    banStatus 先過 MD_BAN_ZH 正規化(Limited 1/2 → 限制/準限制),表外字串
+    整批列舉後拋錯(吵鬧失效)。**無稀有度的 banStatus 不採計**——那是來源對
+    未收錄卡的預掛,MD 的收錄與否由稀有度欄位定義,採了會讓「未發行」與
+    「上榜」同時成立;筆數進報告(skipped_unrated)。
+    回傳 (稀有度覆蓋, MD 禁限統計)。
+    """
     with open(path, encoding="utf-8") as f:
-        rarity = {int(k): v for k, v in json.load(f).items()}
+        entries = {int(k): v for k, v in json.load(f).items()}
+    unknown = [f"md 密碼 {pw} 的值 {e['banStatus']!r}"
+               for pw, e in sorted(entries.items())
+               if e.get("banStatus") and e["banStatus"] not in MD_BAN_ZH]
+    if unknown:
+        raise ValueError("MD 禁限出現對應表以外的字串:\n" + "\n".join(unknown))
+    skipped_unrated = sum(1 for e in entries.values()
+                          if e.get("banStatus") and not e.get("rarity"))
     rated = 0
+    listed = 0
     for card in cards:
-        value = rarity.get(card["id"], "")
-        if not value:
-            for alt in card["alt_ids"]:
-                value = rarity.get(alt, "")
-                if value:
-                    break
-        card["md_rarity"] = value
-        if value:
-            rated += 1
-    return {"rated": rated, "missing": len(cards) - rated}
+        entry = next((entries[pw] for pw in (card["id"], *card["alt_ids"])
+                      if pw in entries and entries[pw].get("rarity")), None)
+        if entry is None:
+            continue
+        card["md_rarity"] = entry["rarity"]
+        rated += 1
+        ban = entry.get("banStatus")
+        if ban:
+            card["ban_md"] = MD_BAN_ZH[ban]
+            listed += 1
+    return ({"rated": rated, "missing": len(cards) - rated},
+            {"listed": listed, "skipped_unrated": skipped_unrated})
 
 
 def _fill_genesys_points(cards, path):
@@ -327,11 +348,14 @@ def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
             coverage["en"] = _fill_names(cards, "name_en", _read_names(en_path))
         report["name_coverage"] = coverage
     if md_rarity_path is not None:
-        report["md_rarity_coverage"] = _fill_md_rarity(cards, md_rarity_path)
+        rarity_cov, md_ban = _fill_md_rarity(cards, md_rarity_path)
+        report["md_rarity_coverage"] = rarity_cov
+        report.setdefault("banlist_coverage", {})["md"] = md_ban
     if genesys_path is not None:
         report["genesys_listed"] = _fill_genesys_points(cards, genesys_path)
     if banlist_paths is not None:
-        report["banlist_coverage"] = _fill_banlist(cards, banlist_paths)
+        report.setdefault("banlist_coverage", {}).update(
+            _fill_banlist(cards, banlist_paths))
     if existing is not None:
         report["changes"] = _diff_cards(existing, cards)
     return cards, report

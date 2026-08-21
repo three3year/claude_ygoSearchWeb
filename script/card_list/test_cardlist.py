@@ -66,7 +66,7 @@ class CardListTest(unittest.TestCase):
             "id", "alt_ids", "name_zh", "name_ja", "name_en", "desc",
             "type", "atk", "def", "level", "race", "attribute",
             "scale", "link_marker", "setcode", "ot", "md_rarity",
-            "genesys_points", "ban_ocg", "ban_tcg"])
+            "genesys_points", "ban_ocg", "ban_tcg", "ban_md"])
         self.assertEqual(card["id"], 63028558)
         self.assertEqual(card["alt_ids"], [])
         self.assertEqual(card["name_zh"], "青眼白龍")
@@ -310,7 +310,8 @@ class CardListTest(unittest.TestCase):
         ])
         md = os.path.join(self.tmp.name, "md.json")
         with open(md, "w", encoding="utf-8") as f:
-            json.dump({"89631139": "UR", "10000002": "SR"}, f)
+            json.dump({"89631139": {"rarity": "UR"},
+                       "10000002": {"rarity": "SR"}}, f)
         cards, report = build_card_list(zh, md_rarity_path=md)
         by_id = {c["id"]: c for c in cards}
         self.assertEqual(by_id[89631139]["md_rarity"], "UR")
@@ -324,7 +325,51 @@ class CardListTest(unittest.TestCase):
         zh = self.cdb("zh.cdb", [{"id": 89631139, "name": "青眼白龍"}])
         cards, report = build_card_list(zh)
         self.assertEqual(cards[0]["md_rarity"], "")
+        self.assertEqual(cards[0]["ban_md"], "")
         self.assertNotIn("md_rarity_coverage", report)
+        self.assertNotIn("banlist_coverage", report)
+
+    def test_md_ban_merge(self):
+        """MD [[禁限狀態]]:Limited 1/2 正規化為限制/準限制;異圖後備;
+        有 banStatus 但無稀有度(未收錄的預掛)不採計、計入報告。"""
+        zh = self.cdb("zh.cdb", [
+            {"id": 89631139, "name": "青眼白龍"},
+            {"id": 10000001, "name": "異圖對齊卡"},
+            {"id": 10000002, "name": "異圖對齊卡", "alias": 10000001},
+            {"id": 30000001, "name": "準限制卡"},
+            {"id": 91869203, "name": "天使的施捨"},
+            {"id": 20000001, "name": "無禁限卡"},
+        ])
+        md = os.path.join(self.tmp.name, "md.json")
+        with open(md, "w", encoding="utf-8") as f:
+            json.dump({
+                "89631139": {"rarity": "UR", "banStatus": "Forbidden"},
+                "10000002": {"rarity": "SR", "banStatus": "Limited 1"},
+                "30000001": {"rarity": "N", "banStatus": "Limited 2"},
+                "91869203": {"banStatus": "Forbidden"},   # 無稀有度 → 不採計
+                "20000001": {"rarity": "R"},
+            }, f)
+        cards, report = build_card_list(zh, md_rarity_path=md)
+        by_id = {c["id"]: c for c in cards}
+        self.assertEqual(by_id[89631139]["ban_md"], "禁止")
+        self.assertEqual(by_id[10000001]["ban_md"], "限制")  # 異圖後備
+        self.assertEqual(by_id[30000001]["ban_md"], "準限制")
+        self.assertEqual(by_id[91869203]["ban_md"], "")
+        self.assertEqual(by_id[91869203]["md_rarity"], "")
+        self.assertEqual(by_id[20000001]["ban_md"], "")
+        self.assertEqual(report["banlist_coverage"]["md"],
+                         {"listed": 3, "skipped_unrated": 1})
+
+    def test_md_unknown_ban_value_fails(self):
+        """MD 來源出現對應表以外的禁限字串 → 建置失敗。"""
+        zh = self.cdb("zh.cdb", [{"id": 89631139, "name": "青眼白龍"}])
+        md = os.path.join(self.tmp.name, "md.json")
+        with open(md, "w", encoding="utf-8") as f:
+            json.dump({"89631139": {"rarity": "UR",
+                                    "banStatus": "Limited 3"}}, f)
+        with self.assertRaises(ValueError) as ctx:
+            build_card_list(zh, md_rarity_path=md)
+        self.assertIn("Limited 3", str(ctx.exception))
 
     def test_genesys_points_merge(self):
         """Genesys 點數以密碼對齊;異圖後備;未列點為 0;報告含列點數。"""

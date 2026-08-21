@@ -38,7 +38,7 @@ def card(cid, **kw):
             "def": 1000, "level": 4, "race": 0x2000, "attribute": 0x20,
             "scale": 0, "link_marker": 0, "setcode": 0, "ot": 3,
             "md_rarity": "", "genesys_points": 0, "ban_ocg": "",
-            "ban_tcg": ""}
+            "ban_tcg": "", "ban_md": ""}
     base.update(kw)
     if not base["type"] & 0x1:
         base.update({"atk": None, "def": None, "level": 0, "race": 0,
@@ -196,18 +196,21 @@ class CardFaceTest(unittest.TestCase):
 
     def test_ban_field_only_on_listed_cards(self):
         """[[禁限狀態]]:上榜卡帶短碼,未上榜是「沒有這個欄位」而不是空值。"""
-        cards = [card(1, ban_ocg="禁止", ban_tcg="限制"),
+        cards = [card(1, ban_ocg="禁止", ban_tcg="限制", ban_md="準限制",
+                      md_rarity="UR"),
                  card(2, ban_ocg="限制"),
                  card(3, ban_ocg="準限制"), card(4)]
         index, report = build_index(cards, [tagged(i) for i in (1, 2, 3, 4)])
         by_id = {c["id"]: c for c in index["cards"]}
         self.assertEqual(by_id[1]["bo"], "f")
         self.assertEqual(by_id[1]["bt"], "l")
+        self.assertEqual(by_id[1]["bm"], "s")
         self.assertEqual(by_id[2]["bo"], "l")
         self.assertEqual(by_id[3]["bo"], "s")
         self.assertNotIn("bt", by_id[2])  # 賽制各自獨立:TCG 未上榜就沒有 bt
-        self.assertNotIn("bo", by_id[4])
-        self.assertNotIn("bt", by_id[4])
+        self.assertNotIn("bm", by_id[2])
+        for key in ("bo", "bt", "bm"):
+            self.assertNotIn(key, by_id[4])
         self.assertEqual(report["problems"], [])
 
     def test_unknown_ban_value_fails_the_build(self):

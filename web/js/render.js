@@ -204,6 +204,8 @@ function otHtml(c) {
 const BAN_FORMATS = [
   { key: 'bo', zh: 'OCG', released: c => c.ot !== 't' },
   { key: 'bt', zh: 'TCG', released: c => c.ot !== 'o' },
+  // MD 的「發行」是收錄進遊戲,由稀有度欄位的有無定義(未收錄 416 張沒有 ra)
+  { key: 'bm', zh: 'MD', released: c => c.ra != null },
 ];
 function banHtml(c) {
   if (!BAN_FORMATS.some(f => c[f.key])) return '';

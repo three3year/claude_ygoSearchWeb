@@ -61,13 +61,42 @@ class DownloadMdRarityTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.dir = self.tmp.name
 
-    def test_paged_fetch_builds_password_rarity_map(self):
-        """分頁抓到空頁為止,彙整成 {密碼: 稀有度} JSON;略過無效條目。"""
+    def test_paged_fetch_builds_password_entry_map(self):
+        """分頁抓到空頁為止,彙整成 {密碼: {稀有度, 禁限}};略過無效條目。
+
+        稀有度與 banStatus 各自可缺:只有 banStatus 的筆(未收錄卡的預掛)
+        也入檔——採不採計是建置端的決定,下載端保留原貌讓報告數得到。
+        """
         pages = {
             1: [{"konamiID": "89631139", "rarity": "UR"},
-                {"konamiID": "12345678", "rarity": "N"}],
-            2: [{"konamiID": None, "rarity": "R"},        # 無密碼 → 略過
-                {"konamiID": "23456789", "rarity": ""}],   # 無稀有度 → 略過
+                {"konamiID": "23434538", "rarity": "SR",
+                 "banStatus": "Limited 1"}],
+            2: [{"konamiID": None, "rarity": "R"},          # 無密碼 → 略過
+                {"konamiID": "91869203", "banStatus": "Forbidden"},
+                {"konamiID": "23456789", "rarity": ""}],    # 兩者皆無 → 略過
+            3: [],
+        }
+        def fetch_json(url):
+            self.assertIn("banStatus", url)  # 端點要多要 banStatus 欄位
+            page = int(url.split("page=")[1].split("&")[0])
+            return pages[page]
+        path = download_md_rarity(self.dir, fetch_json=fetch_json)
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {
+                "23434538": {"rarity": "SR", "banStatus": "Limited 1"},
+                "89631139": {"rarity": "UR"},
+                "91869203": {"banStatus": "Forbidden"},
+            })
+
+    def test_duplicate_konami_id_rows_merge_per_field(self):
+        """同一密碼多列(異圖/預掛):逐欄位合併,後列缺的欄位不蓋掉先列的值。
+
+        整筆覆蓋的病灶:只有 banStatus 的後列會把先列的稀有度吃掉,
+        MD 稀有度覆蓋率無聲下降(實測掉了 9 張)。
+        """
+        pages = {
+            1: [{"konamiID": "89631139", "rarity": "UR"}],
+            2: [{"konamiID": "89631139", "banStatus": "Forbidden"}],
             3: [],
         }
         def fetch_json(url):
@@ -75,8 +104,8 @@ class DownloadMdRarityTest(unittest.TestCase):
             return pages[page]
         path = download_md_rarity(self.dir, fetch_json=fetch_json)
         with open(path, encoding="utf-8") as f:
-            self.assertEqual(json.load(f),
-                             {"12345678": "N", "89631139": "UR"})
+            self.assertEqual(json.load(f), {
+                "89631139": {"rarity": "UR", "banStatus": "Forbidden"}})
 
     def test_failure_keeps_existing_file(self):
         """抓取失敗:錯誤指明 md 來源,既有檔不毀損。"""
@@ -89,7 +118,7 @@ class DownloadMdRarityTest(unittest.TestCase):
             download_md_rarity(self.dir, fetch_json=boom)
         self.assertIn("md", str(ctx.exception))
         with open(path, encoding="utf-8") as f:
-            self.assertEqual(json.load(f), {"1": "N"})
+            self.assertEqual(json.load(f), {"1": {"rarity": "N"}})
 
     def test_offline_uses_cache_and_errors_when_missing(self):
         """offline:有既有檔直接沿用;沒有則指明缺 md 來源。"""

@@ -36,8 +36,10 @@ SOURCES = {
 }
 FILENAMES = {"zh": "cards.cdb", "ja": "ja-JP.cdb", "en": "en-US.cdb"}
 MD_RARITY_URL = ("https://www.masterduelmeta.com/api/v1/cards"
-                 "?limit=3000&page={page}&fields=konamiID,rarity")
-MD_RARITY_FILENAME = "md-rarity.json"
+                 "?limit=3000&page={page}&fields=konamiID,rarity,banStatus")
+# 檔名不再叫 md-rarity:同一份來源同時承載稀有度與 MD [[禁限狀態]]。
+# 換名讓舊形狀的快取在離線模式下直接報「缺來源」,而不是餵舊形狀給建置端。
+MD_RARITY_FILENAME = "md.json"
 DOWNLOADED_AT_FILENAME = "downloaded_at.json"
 # genesys_points 只在帶 format=genesys 時才出現於 misc_info
 GENESYS_URL = ("https://db.ygoprodeck.com/api/v7/cardinfo.php"
@@ -67,9 +69,11 @@ def _fetch_json(url):
 
 
 def download_md_rarity(dest_dir, fetch_json=_fetch_json, offline=False):
-    """自 masterduelmeta API 分頁抓取 {卡片密碼: MD稀有度} → md-rarity.json。
+    """自 masterduelmeta API 分頁抓取 {卡片密碼: {稀有度, 禁限}} → md.json。
 
-    分頁抓到空頁為止;konamiID 非純數字或缺稀有度的條目略過。
+    分頁抓到空頁為止;konamiID 非純數字、或稀有度與 banStatus 皆缺的條目略過。
+    只有 banStatus 的筆(未收錄卡的預掛)也入檔——採不採計是建置端的決定
+    (spec banlist:無稀有度不採計並進報告),下載端保留原貌讓報告數得到。
     先寫 .tmp 再原子替換,失敗時既有檔不受影響。
     """
     os.makedirs(dest_dir, exist_ok=True)
@@ -79,7 +83,7 @@ def download_md_rarity(dest_dir, fetch_json=_fetch_json, offline=False):
             raise RuntimeError(
                 f"離線模式但缺少來源 md({path});請先連網下載一次")
         return path
-    rarity = {}
+    entries = {}
     page = 1
     try:
         while True:
@@ -88,15 +92,20 @@ def download_md_rarity(dest_dir, fetch_json=_fetch_json, offline=False):
                 break
             for row in rows:
                 kid = row.get("konamiID")
-                value = row.get("rarity")
-                if kid and value and str(kid).isdigit():
-                    rarity[int(kid)] = value
+                if not kid or not str(kid).isdigit():
+                    continue
+                # 同一密碼可能多列(異圖/預掛):逐欄位合併,整筆覆蓋會讓
+                # 只有 banStatus 的後列吃掉先列的稀有度(實測掉 9 張)
+                update = {k: row[k] for k in ("rarity", "banStatus")
+                          if row.get(k)}
+                if update:
+                    entries.setdefault(int(kid), {}).update(update)
             page += 1
     except Exception as e:
         raise RuntimeError(f"來源 md 下載失敗(第 {page} 頁): {e}") from e
     tmp_path = path + ".tmp"
     with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
-        json.dump({str(k): v for k, v in sorted(rarity.items())}, f,
+        json.dump({str(k): v for k, v in sorted(entries.items())}, f,
                   ensure_ascii=False, indent=0)
     os.replace(tmp_path, path)
     return path

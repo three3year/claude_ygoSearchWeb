@@ -31,6 +31,8 @@ const VOCAB = {
            items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
   ban_t: { zh: 'TCG 禁限',
            items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
+  ban_m: { zh: 'MD 禁限',
+           items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
 };
 
 const sandbox = harness.load({ cards: [], vocab: VOCAB, meta: {} });
@@ -74,6 +76,22 @@ test('任一賽制上榜即整列出現,各賽制欄位固定順序齊列', () =
   const both = html({ bo: 's', bt: 'f' });
   assert.ok(both.includes('OCG 準限制'));
   assert.ok(both.includes('TCG 禁止'));
+});
+
+test('MD 欄:上榜值、已收錄未上榜「—」、未收錄「未發行」(由稀有度推導)', () => {
+  // 三榜齊上:三欄依 OCG、TCG、MD 順序齊列
+  const all = html({ bo: 'f', bt: 'f', bm: 'l' });
+  assert.ok(all.includes('MD 限制'));
+  assert.ok(all.indexOf('TCG 禁止') < all.indexOf('MD 限制'));
+  // 已收錄(有 ra)未上榜 → 「—」
+  assert.ok(html({ bo: 'f' }).includes('MD —'));
+  // 未收錄進 MD(沒有 ra 欄位)→ 「未發行」
+  const notInMd = harness.cardHtml(sandbox, {
+    card: (() => { const c = card({ bo: 'f' }); delete c.ra; return c; })(),
+    rows: null,
+  });
+  assert.ok(notInMd.includes('MD 未發行'));
+  assert.ok(!notInMd.includes('MD —'));
 });
 
 test('未在該賽制發行的欄位寫「未發行」(由 ot 推導)', () => {

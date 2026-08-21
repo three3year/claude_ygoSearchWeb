@@ -29,7 +29,7 @@ class CanonTest(unittest.TestCase):
 
     def test_ban_domain_unified_three_values(self):
         """[[禁限狀態]]:各賽制的禁限值域統一三值,來源值即中文(SRC_TEXT)。"""
-        for name in (vocab.BAN_O, vocab.BAN_T):
+        for name in (vocab.BAN_O, vocab.BAN_T, vocab.BAN_M):
             self.assertEqual(vocab.codes(name), ("f", "l", "s"), name)
             self.assertEqual(vocab.zh(name, "f"), "禁止")
             self.assertEqual(vocab.zh(name, "l"), "限制")

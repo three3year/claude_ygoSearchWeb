@@ -494,6 +494,32 @@ def _quotes_the_lead(lead, quoted):
 _INDEX_PREFIX_RE = re.compile(r"^\d{0,2}[:：]?$")
 
 
+def non_effect_quotes(supplement):
+    """効果として扱いません句式家族的行所引用的 『…』 清單。
+
+    涵蓋即歸屬與拆句表的引用例外(ADR-0012)要辨認「這個引用是不是效果外文本
+    的明示」,與 `attest` 的 non_effect 路徑同一套:行判定看括弧之外,引用取
+    行內的,行內沒有時退到標頭的。
+    """
+    found = []
+    for header, body in _blocks(supplement or ""):
+        for raw in body.split("\n"):
+            line = raw.strip()
+            if line and _is_non_effect_line(line):
+                found.extend(quotes(line)
+                             or (quotes(header) if header else []))
+    return found
+
+
+def _quote_covers_segment(quoted, text_ja):
+    """引用完整包含這一段嗎?段尾的句號不算差異(涵蓋即歸屬,ADR-0012)。"""
+    needle = _normalise(quoted)
+    body = _normalise(text_ja)
+    if not needle or not body:
+        return False
+    return body in needle or body.rstrip("。") in needle
+
+
 def _covers_whole_clause(text_ja, quoted):
     """官方的 `『原文』` 引用涵蓋整個效果句嗎?前面最多剩編號、後面最多剩句號。
 
@@ -783,6 +809,18 @@ def attest(name_ja, supplement, clauses, unsplit=()):
                 assign(segment["index"], KIND_NON_EFFECT, LADDER_NON_EFFECT,
                        line)
                 return
+        covered = [segment for segment in preambles
+                   if segment["text_ja"] and any(
+                       _quote_covers_segment(t, segment["text_ja"])
+                       for t in targets)]
+        if covered:
+            # 涵蓋即歸屬(ADR-0012):官方說「這整團不是效果」,被引用完整
+            # 包含的每一段當然都不是效果——拆句表把這型引用切開後,歸屬
+            # 照樣逐段成立,不降級
+            for segment in covered:
+                assign(segment["index"], KIND_NON_EFFECT, LADDER_NON_EFFECT,
+                       line)
+            return
         for clause in attributable:
             covering = next((t for t in targets
                              if _covers_whole_clause(clause["text_ja"], t)),

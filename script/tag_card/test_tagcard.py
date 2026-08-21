@@ -13,6 +13,7 @@ TYPE_EFFECT_MONSTER = 0x21       # 怪獸 + 效果
 TYPE_PENDULUM_EFFECT = 0x1000021  # 怪獸 + 效果 + 靈擺
 TYPE_PENDULUM_NORMAL = 0x1000011  # 怪獸 + 通常 + 靈擺
 TYPE_FUSION_MONSTER = 0x61       # 怪獸 + 效果 + 融合
+TYPE_RITUAL_MONSTER = 0xA1       # 怪獸 + 效果 + 儀式
 TYPE_SPELL = 0x2                 # 魔法(沒有細分位元 = 通常魔法)
 TYPE_QUICKPLAY_SPELL = 0x10002   # 魔法 + 速攻
 TYPE_CONTINUOUS_SPELL = 0x20002  # 魔法 + 永續
@@ -405,6 +406,122 @@ class TestPreambleSplit(unittest.TestCase):
         self.assertEqual(report["numbered_linebreak_mismatch"],
                          [{"id": 1000, "section": "main", "index": "①",
                            "zh_lines": 3, "ja_lines": 1}])
+
+    def test_single_line_multi_role_preamble_splits_by_sentence_role(self):
+        """34695290 形態(ADR-0012):單行兩句 role 相異 → 句號+role 二次拆點。
+
+        官方明示的引用只括第一句,拆開後落到召喚條件那個細段。
+        """
+        entries, report = build_tag_cards(
+            [card(desc="此卡只能用「甲」卡片的效果特殊召喚。"
+                       "這個卡名的①效果1回合只能使用1次。\n①:效果甲。")],
+            [faq(card_text="このカードは「甲」カードの効果でしか特殊召喚できない。"
+                           "このカード名の①の効果は1ターンに1度しか使用できない。"
+                           "①：効果甲。",
+                 supplement="■『このカードは「甲」カードの効果でしか特殊召喚"
+                            "できない。』は効果として扱いません。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0-1", "0-2", "①"])
+        self.assertEqual(clauses[0]["text_zh"],
+                         "此卡只能用「甲」卡片的效果特殊召喚。")
+        self.assertEqual(clauses[0]["text_ja"],
+                         "このカードは「甲」カードの効果でしか特殊召喚できない。")
+        self.assertEqual(clauses[1]["text_zh"],
+                         "這個卡名的①效果1回合只能使用1次。")
+        self.assertEqual([c["kind"] for c in clauses[:2]],
+                         ["效果外文本", "效果外文本"])
+        self.assertEqual([c["role"] for c in clauses[:2]],
+                         ["召喚條件", "使用次數限制"])
+        self.assertEqual([c["source"] for c in clauses[:2]],
+                         ["official", "rule"])
+        self.assertEqual(report["preamble_splits"], 1)
+        self.assertEqual(report["preamble_split_clauses"], 2)
+        self.assertEqual(report["preamble_split_fallbacks"], [])
+        self.assertEqual(report["non_effect_outside_preamble"], [])
+        self.assertEqual(report["substring_violations"], [])
+
+    def test_same_role_adjacent_sentences_merge_into_one_piece(self):
+        """8192327 形態:單行三句「召喚、召喚、次數」→ 同 role 合併拆成 2 段。
+
+        跨句引用括住的正是同 role 的前兩句:段界與引用天然一致,引用不被切開,
+        引用型效果外明示落到合併後的那個細段。
+        """
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。我方墓地有5隻光屬性怪獸的場合才能特殊"
+                       "召喚。這個卡名的①效果1回合只能使用1次。\n①:效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。自分の墓地の光属性モンス"
+                           "ターが５体の場合のみ特殊召喚できる。このカード名の①の"
+                           "効果は1ターンに1度しか使用できない。①：効果甲。",
+                 supplement="■『このカードは通常召喚できない。自分の墓地の光属性"
+                            "モンスターが５体の場合のみ特殊召喚できる』は効果とし"
+                            "て扱いません。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0-1", "0-2", "①"])
+        self.assertEqual(clauses[0]["text_zh"],
+                         "此卡不能通常召喚。我方墓地有5隻光屬性怪獸的場合才能"
+                         "特殊召喚。")
+        self.assertEqual(clauses[1]["text_zh"],
+                         "這個卡名的①效果1回合只能使用1次。")
+        self.assertEqual([c["role"] for c in clauses[:2]],
+                         ["召喚條件", "使用次數限制"])
+        self.assertEqual([c["source"] for c in clauses[:2]],
+                         ["official", "rule"])
+        self.assertEqual(report["preamble_split_fallbacks"], [])
+        self.assertEqual(report["non_effect_outside_preamble"], [])
+
+    def test_ritual_material_sentence_splits_from_usage_limit(self):
+        """儀式形態:「藉由〜降臨。」+ 次數句同一行 → 素材指定+使用次數限制。"""
+        entries, _ = build_tag_cards(
+            [card(desc="藉由「甲之儀式」降臨。這個卡名的①效果1回合只能使用1次。\n"
+                       "①:效果甲。", ctype=TYPE_RITUAL_MONSTER)],
+            [faq(card_text="「甲の儀式」により降臨。このカード名の①の効果は1ター"
+                           "ンに1度しか使用できない。①：効果甲。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0-1", "0-2", "①"])
+        self.assertEqual([c["role"] for c in clauses[:2]],
+                         ["素材指定", "使用次數限制"])
+        self.assertEqual(clauses[0]["text_zh"], "藉由「甲之儀式」降臨。")
+
+    def test_quote_merged_multi_line_multi_role_preamble_stays_whole(self):
+        """61901281 真實形態:三行、role 相異(召喚+方法次數),引用括住全段。
+
+        引用合併把三行合成一組,組內二次拆點會切開引用 → 整組退回一段,
+        維持 "0" 不拆——官方視為一體的單位,連方法次數句也在裡面。
+        """
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。只能從我方墓地將1隻光屬性怪獸除外來"
+                       "特殊召喚。這個方法的「甲」的特殊召喚1回合只能有1次。\n"
+                       "①:效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。\n"
+                           "自分の墓地から光属性モンスター１体を除外した場合のみ"
+                           "特殊召喚できる。\n"
+                           "この方法による「甲」の特殊召喚は１ターンに１度しか"
+                           "できない。\n①：効果甲。",
+                 supplement="【『このカードは通常召喚できない。自分の墓地から"
+                            "光属性モンスター１体を除外した場合のみ特殊召喚できる。"
+                            "この方法による「甲」の特殊召喚は１ターンに１度しか"
+                            "できない』について】\n■効果として扱いません。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0", "①"])
+        self.assertEqual(clauses[0]["source"], "official")
+        self.assertEqual(report["preamble_splits"], 0)
+        self.assertEqual(report["preamble_split_fallbacks"], [])
+
+    def test_quote_across_roles_in_one_line_keeps_single_preamble(self):
+        """61901281 形態的單行版:引用括住 role 相異的兩句 → 官方視為一體,不拆。"""
+        entries, report = build_tag_cards(
+            [card(desc="此卡不能通常召喚。這個卡名的①效果1回合只能使用1次。\n"
+                       "①:效果甲。")],
+            [faq(card_text="このカードは通常召喚できない。このカード名の①の効果は"
+                           "1ターンに1度しか使用できない。①：効果甲。",
+                 supplement="【『このカードは通常召喚できない。このカード名の①の"
+                            "効果は1ターンに1度しか使用できない』について】\n"
+                            "■効果として扱いません。")])
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0", "①"])
+        self.assertEqual(clauses[0]["source"], "official")
+        self.assertEqual(report["preamble_splits"], 0)
+        self.assertEqual(report["preamble_split_fallbacks"], [])
 
     def test_split_preamble_rows_are_not_rule_layer_targets(self):
         """前言段的類型由位置規則決定,拆出的細段同樣不歸規則層管。"""
@@ -3282,6 +3399,136 @@ class TestClauseSplits(unittest.TestCase):
         self.assertEqual([c["index"] for c in clauses_of(entries, 1000)], ["①"])
         self.assertEqual(report["split_unused"],
                          [{"id": 1000, "section": "main"}])
+
+
+class TestNumberedPreambleSplits(unittest.TestCase):
+    """拆句表對編號卡的前言生效(票69/ADR-0012)。
+
+    機械規則救不了的前言(中日句數對不上)以拆句表人工紀錄兜底;適用範圍限
+    前言段——紀錄的每一段都必須是效果外文本段的 index,編號句邊界仍歸編號。
+    """
+
+    # 50604072 形態:日文第一行是複合句對繁中兩句,單位數 3≠2 機械規則退回
+    ZH_PRE = ("此卡不能通常召喚。只能用「爆裂模式」的效果特殊召喚。"
+              "這個卡名的①效果1回合只能使用1次。")
+    JA_PRE1 = ("このカードは通常召喚できず、"
+               "「バスター・モード」の効果でのみ特殊召喚できる。")
+    JA_PRE2 = "このカード名の①の効果は１ターンに１度しか使用できない。"
+    JA_PRE = f"{JA_PRE1}\n{JA_PRE2}"
+    DESC = f"{ZH_PRE}\n①:效果甲。"
+    CARD_TEXT = f"{JA_PRE}\n①：効果甲。"
+    SEGMENTS = [segment("0", "此卡不能通常召喚。只能用「爆裂模式」的效果特殊召喚。",
+                        JA_PRE1),
+                segment("0-2", "這個卡名的①效果1回合只能使用1次。", JA_PRE2)]
+
+    def build(self, record, supplement=None):
+        return build_tag_cards(
+            [card(desc=self.DESC)],
+            [faq(card_text=self.CARD_TEXT, supplement=supplement)],
+            splits=[record])
+
+    def record(self, **kwargs):
+        kwargs.setdefault("segments", self.SEGMENTS)
+        return split(text_zh=self.ZH_PRE, text_ja=self.JA_PRE,
+                     ticket="票69", **kwargs)
+
+    def test_preamble_record_splits_the_preamble_of_a_numbered_card(self):
+        entries, report = self.build(
+            self.record(),
+            supplement=f"【『{self.JA_PRE1[:-1]}』について】\n■効果として扱いません。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0", "0-2", "①"])
+        self.assertEqual([c["kind"] for c in clauses[:2]],
+                         ["效果外文本", "效果外文本"])
+        self.assertEqual([c["role"] for c in clauses[:2]],
+                         ["召喚條件", "使用次數限制"])
+        self.assertEqual(clauses[0]["source"], "official")
+        self.assertEqual(clauses[1]["source"], "rule")
+        self.assertIsNone(clauses[2]["kind"])
+        self.assertEqual(report["split_records"], 1)
+        self.assertEqual(report["split_unused"], [])
+        self.assertEqual(report["preamble_split_fallbacks"], [])
+        self.assertEqual(report["substring_violations"], [])
+        self.assertEqual(report["non_effect_outside_preamble"], [])
+
+    def test_a_stale_preamble_record_falls_back_to_the_mechanical_rule(self):
+        """卡文變動即失效:退回整段,機械規則照舊接手(這裡是單位數不合退回)。"""
+        entries, report = self.build(self.record(text_hash="0" * 16))
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0", "①"])
+        self.assertEqual([r["id"] for r in report["split_stale"]], [1000])
+        self.assertEqual(report["split_records"], 0)
+        # 紀錄有被嘗試,失效已進 split_stale,不再重複報未使用
+        self.assertEqual(report["split_unused"], [])
+
+    def test_a_record_with_effect_segments_stays_unused_on_a_numbered_card(self):
+        """編號句邊界仍歸編號:紀錄含效果段時整筆不適用,回報未使用。"""
+        bad = [segment("0", self.ZH_PRE, self.JA_PRE),
+               segment("1", "①:效果甲。", "①：効果甲。")]
+        entries, report = self.build(self.record(segments=bad))
+        self.assertEqual([c["index"] for c in clauses_of(entries, 1000)],
+                         ["0", "①"])
+        self.assertEqual(report["split_unused"],
+                         [{"id": 1000, "section": "main"}])
+
+
+class TestCoveredNonEffectQuote(unittest.TestCase):
+    """効果として扱いません引用被拆句表拆點切開:涵蓋即歸屬(票69/ADR-0012)。
+
+    4168871 形態:日文是一個複合句(拆點在頓號、句號規則碰不到),官方引用
+    整句裁定効果の扱いではありません。官方說「這整團不是效果」,團裡的每一段
+    當然都不是效果——引用完整包含的段照樣歸屬 official,不降級。
+    """
+
+    JA_USAGE = "「甲の宝札」は１ターンに１枚しか発動できず、"
+    JA_LIMIT = "このカードを発動するターン、自分はモンスターを特殊召喚できない。"
+    JA_TAIL = "１ターンに１度、カードを１枚ドローできる。"
+    ZH_USAGE = "「甲之寶牌」在1回合只能發動1張。"
+    ZH_LIMIT = "此卡發動的整回合中，我方不能將怪獸特殊召喚。"
+    ZH_TAIL = "1回合1次，可以抽1張卡。"
+    # 官方引用不含句尾句號
+    QUOTE = (JA_USAGE + JA_LIMIT)[:-1]
+
+    def build(self, supplement, segments=None):
+        zh = self.ZH_USAGE + self.ZH_LIMIT + self.ZH_TAIL
+        ja = self.JA_USAGE + self.JA_LIMIT + self.JA_TAIL
+        record = split(segments or [segment("0", self.ZH_USAGE, self.JA_USAGE),
+                                    segment("0-2", self.ZH_LIMIT,
+                                            self.JA_LIMIT),
+                                    segment("1", self.ZH_TAIL, self.JA_TAIL)],
+                       text_zh=zh, text_ja=ja, ticket="票69")
+        return build_tag_cards([card(desc=zh)],
+                               [faq(card_text=ja, supplement=supplement)],
+                               splits=[record])
+
+    def test_covered_segments_are_split_and_both_attested_official(self):
+        entries, report = self.build(
+            f"■『{self.QUOTE}』は効果の扱いではありません。")
+        clauses = clauses_of(entries, 1000)
+        self.assertEqual([c["index"] for c in clauses], ["0", "0-2", "1"])
+        self.assertEqual([c["kind"] for c in clauses[:2]],
+                         ["效果外文本", "效果外文本"])
+        self.assertEqual([c["source"] for c in clauses[:2]],
+                         ["official", "official"])
+        self.assertEqual(clauses[0]["role"], "使用次數限制")
+        self.assertEqual(report["split_records"], 1)
+        self.assertEqual(report["split_quote_violations"], [])
+        self.assertEqual(report["non_effect_outside_preamble"], [])
+        self.assertEqual(report["pending_split"], [])
+
+    def test_a_non_effect_quote_cut_mid_segment_is_still_a_violation(self):
+        """引用沒有分解成整段的串接(切在段中間)→ 例外不開,整筆照舊失效。"""
+        torn = self.JA_USAGE + self.JA_LIMIT[:10]
+        _, report = self.build(f"■『{torn}』は効果の扱いではありません。")
+        self.assertEqual([r["id"] for r in report["split_quote_violations"]],
+                         [1000])
+        self.assertEqual(len(report["pending_split"]), 1)
+
+    def test_an_ordinary_quote_cut_apart_is_still_a_violation(self):
+        """例外只開給効果として扱いません句式家族,其他型引用被切開照舊失效。"""
+        _, report = self.build(f"■『{self.QUOTE}』は誘発効果です。")
+        self.assertEqual([r["id"] for r in report["split_quote_violations"]],
+                         [1000])
 
 
 class TestCrossOrderedSplits(unittest.TestCase):

@@ -207,15 +207,14 @@ def _looks_like_material_line(text, ctype):
     return bool(first) and not first.endswith("。")
 
 
-def _preamble_role(text, ctype):
-    """前言段 → 素材指定 / 召喚條件 / 使用次數限制 / None。
+def _unit_role(text):
+    """單一對位單位(句) → 素材指定 / 召喚條件 / 使用次數限制 / None。
 
-    先看第一行是否為素材行,再逐子句掃描——卡文的書寫順序固定是
-    素材 → 召喚條件 → 使用次數限制,所以「第一個判得出來的子句」就是這段的主旨。
-    子句內的優先序為 素材 > 召喚條件 > 使用次數限制。
+    逐子句掃描——卡文的書寫順序固定是 素材 → 召喚條件 → 使用次數限制,所以
+    「第一個判得出來的子句」就是這一句的主旨。子句內的優先序為
+    素材 > 召喚條件 > 使用次數限制。前言段整段與第二層拆點的逐句判 role
+    (ADR-0012)共用這一套正規式。
     """
-    if _looks_like_material_line(text, ctype):
-        return ROLE_MATERIAL
     for segment in _SEGMENT_SEP_RE.split(text):
         if not segment.strip():
             continue
@@ -226,6 +225,16 @@ def _preamble_role(text, ctype):
         if _USAGE_RE.search(segment):
             return ROLE_USAGE
     return None
+
+
+def _preamble_role(text, ctype):
+    """前言段 → 素材指定 / 召喚條件 / 使用次數限制 / None。
+
+    先看第一行是否為素材行,再走逐句掃描。
+    """
+    if _looks_like_material_line(text, ctype):
+        return ROLE_MATERIAL
+    return _unit_role(text)
 
 
 # ---------------------------------------------------------------- 效果句
@@ -414,34 +423,109 @@ def _quote_merge_groups(ja_body, lines, supplement):
     return spans
 
 
+def _ja_sentence_spans(text, span):
+    """組內以句號切句的 span 清單;句對位不成立時回 None。
+
+    無句號的組(素材行)整組算一個單位。句號之後還掛著殘文時對位單位數
+    與 `count("。")` 對不上,回 None 讓整組維持一段。
+    """
+    start, end = span
+    spans = []
+    pos = start
+    while pos < end:
+        cut = text.find("。", pos, end)
+        if cut < 0:
+            leftover = _strip_span(text, pos, end)
+            if leftover is None:
+                break
+            return [leftover] if not spans else None
+        piece = _strip_span(text, pos, cut + 1)
+        if piece is not None:
+            spans.append(piece)
+        pos = cut + 1
+    return spans or None
+
+
+def _role_runs(roles):
+    """逐句的 role 清單 → 相鄰同 role 合為一段的 [(起, 迄), ...]。
+
+    role 相異處才設拆點(ADR-0012);認不出 role 的句子(None)依附所在段,
+    段還沒有 role 時由第一個判得出來的句子定調。
+    """
+    runs = []
+    current = None
+    for pos, role in enumerate(roles):
+        if runs and (role is None or current is None or role == current):
+            runs[-1][1] = pos + 1
+            if current is None:
+                current = role
+        else:
+            runs.append([pos, pos + 1])
+            current = role
+    return [tuple(run) for run in runs]
+
+
+def _sentence_pieces(zh_body, ja_body, span, unit_run, supplement):
+    """一組(換行/引用合併後)內的第二層拆點(ADR-0012)→ [(zh span, ja span)]。
+
+    組內以句號切句、逐句判 role,role 相異處拆開、同 role 相鄰句合為一段。
+    拆不成(單句、句對位不成立、或拆點會切開官方引用)時整組一段——
+    官方訊號永遠優先於 role 推論。
+    """
+    whole = [((unit_run[0][0], unit_run[-1][1]), span)]
+    if len(unit_run) < 2:
+        return whole
+    sentences = _ja_sentence_spans(ja_body, span)
+    if sentences is None or len(sentences) != len(unit_run):
+        return whole
+    runs = _role_runs([_unit_role(_slice(zh_body, unit))
+                       for unit in unit_run])
+    if len(runs) < 2:
+        return whole
+    ja_spans = [(sentences[a][0], sentences[b - 1][1]) for a, b in runs]
+    start = span[0]
+    if _quotes_cut_apart(_slice(ja_body, span),
+                         [(s - start, e - start) for s, e in ja_spans],
+                         supplement):
+        return whole
+    return [((unit_run[a][0], unit_run[b - 1][1]), ja_span)
+            for (a, b), ja_span in zip(runs, ja_spans)]
+
+
 def _split_preamble(zh_body, ja_body, supplement):
     """前言段兩側原文 → ([(zh span, ja span), ...], None) 或 (None, 退回原因)。
 
-    日文單行、或引用把整段括成一體時回 (None, None):不進拆分也不進退回清單
-    ——後者是官方視為一句,維持現狀正是正確結果。合併後仍有引用被拆點切開
-    的段落退回(合併取聯集,這一道理論上到不了,留著當不猜測的底線)。
+    第一層拆點是日文換行(ADR-0009),引用跨行時合併;第二層在組內以句號+role
+    拆(ADR-0012)。引用把整段括成一體、或單行拆完仍只有一段時回 (None, None):
+    不進拆分也不進退回清單——官方視為一句,維持現狀正是正確結果。合併後仍有
+    引用被拆點切開的段落退回(不猜測的底線,釘在最終 spans 上)。
 
-    日文每段的單位數 = 句號數(無句號段算 1),中文單位總數與之相等時依序
+    日文每組的單位數 = 句號數(無句號組算 1),中文單位總數與之相等時依序
     分組,否則退回——分組假設中日句序一致,句序調換且句數恰好相等時會錯配
-    且不報錯,防線是抽查(ADR-0009 已知限制)。
+    且不報錯,防線是抽查(ADR-0009 已知限制)。單行卡的單位數不合維持現狀
+    不退回,退回清單只收多行卡(票68:退回清單不上升)。
     """
     lines = _line_spans(ja_body, (0, len(ja_body)))
-    if len(lines) < 2:
+    if not lines:
         return None, None
     groups = _quote_merge_groups(ja_body, lines, supplement)
     if _quotes_cut_apart(ja_body, groups, supplement):
         return None, FALLBACK_QUOTE
-    if len(groups) < 2:
-        return None, None
     counts = [_slice(ja_body, span).count("。") or 1 for span in groups]
     units = _zh_unit_spans(zh_body, (0, len(zh_body)))
     if len(units) != sum(counts):
-        return None, FALLBACK_UNITS
+        return (None, None) if len(groups) < 2 else (None, FALLBACK_UNITS)
     pairs = []
     pos = 0
     for span, count in zip(groups, counts):
-        pairs.append(((units[pos][0], units[pos + count - 1][1]), span))
+        pairs.extend(_sentence_pieces(zh_body, ja_body, span,
+                                      units[pos:pos + count], supplement))
         pos += count
+    if len(pairs) < 2:
+        return None, None
+    if _quotes_cut_apart(ja_body, [ja_span for _, ja_span in pairs],
+                         supplement):
+        return None, FALLBACK_QUOTE
     return pairs, None
 
 
@@ -568,6 +652,18 @@ def _index_splits(splits):
             for record in splits or ()}
 
 
+def _is_preamble_record(record):
+    """紀錄的每一段都是效果外文本段 → 可套用在編號卡的前言上(票69)。
+
+    編號句邊界仍歸編號:含效果段的紀錄只適用於無編號整團,套在編號卡上
+    回報未使用。
+    """
+    segments = record.get("segments") or ()
+    return bool(segments) and all(
+        official._is_preamble(segment.get("index") or "")
+        for segment in segments)
+
+
 def _ja_order(record, count):
     """日文的閱讀順序(段落位置的排列);不是合法排列時回 None。
 
@@ -620,8 +716,43 @@ def _validate_split(record, blob, supplement):
     # 引用交叉驗證只問「引用有沒有完整落在某一段裡」,與段落順序無關
     cut = _quotes_cut_apart(blob["text_ja"], spans["ja"], supplement)
     if cut:
+        cut = [quoted for quoted in cut
+               if not _non_effect_quote_covers_run(
+                   quoted, record["segments"], spans["ja"], blob["text_ja"],
+                   supplement)]
+    if cut:
         return None, ("split_quote_violations", {"quotes": cut})
     return spans, None
+
+
+def _non_effect_quote_covers_run(quoted, segments, ja_spans, text_ja,
+                                 supplement):
+    """効果として扱いません型引用分解成連續幾個**完整**效果外文本段嗎?
+
+    「引用不得被拆點切開」的唯一窄例外(ADR-0012 涵蓋即歸屬):官方對整團寫下
+    効果として扱いません時,拆句表獲准把這個引用切開——條件是引用恰好是連續
+    幾段(日文位置序)的串接、且每一段都是效果外文本段(段尾句號不算差異)。
+    歸屬由涵蓋即歸屬照樣逐段寫回 official,不降級。其他型引用被切開照舊失效。
+    """
+    if quoted not in official.non_effect_quotes(supplement):
+        return False
+    needle = official.normalise(quoted).rstrip("。")
+    if not needle:
+        return False
+    ordered = sorted(((span, segment.get("index") or "")
+                      for segment, span in zip(segments, ja_spans)
+                      if span is not None),
+                     key=lambda item: item[0][0])
+    parts = [(official.normalise(_slice(text_ja, span)), index)
+             for span, index in ordered]
+    for start in range(len(parts)):
+        joined = ""
+        for stop in range(start, len(parts)):
+            joined += parts[stop][0]
+            if joined.rstrip("。") == needle:
+                return all(official._is_preamble(index)
+                           for _, index in parts[start:stop + 1])
+    return False
 
 
 def _apply_split(cid, section, record, blob, ctype, supplement, report):
@@ -1411,28 +1542,44 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
                        kind=KIND_NON_EFFECT, role=role, source=SOURCE_RULE)
 
     clauses = []
+    preamble_split_indexes = set()
+    preamble_record_tried = False
     if zh_pre is not None:
         if aligned and ja_pre is None:
             report["preamble_one_sided"].append(
                 {"id": cid, "section": section, "present": "zh"})
         zh_body = _slice(zh_text, zh_pre)
         ja_body = _slice(ja_text, ja_pre) if aligned else ""
-        pairs, fallback = (_split_preamble(zh_body, ja_body, supplement)
-                           if ja_body else (None, None))
-        if pairs is not None:
-            clauses.extend(
-                preamble_clause(f"{INDEX_PREAMBLE}-{pos}",
-                                _slice(zh_body, zh_span),
-                                _slice(ja_body, ja_span))
-                for pos, (zh_span, ja_span) in enumerate(pairs, start=1))
-            report["preamble_splits"] += 1
-            report["preamble_split_clauses"] += len(pairs)
+        segments = None
+        if split is not None and _is_preamble_record(split):
+            # 編號卡的前言拆句表兜底(票69):機械規則救不了的中日對位由人工
+            # 紀錄決定;紀錄失效時照舊退給機械規則,不整段擱置
+            preamble_record_tried = True
+            blob = _clause(INDEX_PREAMBLE, section, zh_body, ja_body,
+                           confidence)
+            segments = _apply_split(cid, section, split, blob, ctype,
+                                    supplement, report)
+        if segments is not None:
+            clauses.extend(segments)
+            preamble_split_indexes = {clause["index"] for clause in segments}
         else:
-            if fallback is not None:
-                report["preamble_split_fallbacks"].append(
-                    {"id": cid, "section": section, "text_zh": zh_body,
-                     "text_ja": ja_body, "reason": fallback})
-            clauses.append(preamble_clause(INDEX_PREAMBLE, zh_body, ja_body))
+            pairs, fallback = (_split_preamble(zh_body, ja_body, supplement)
+                               if ja_body else (None, None))
+            if pairs is not None:
+                clauses.extend(
+                    preamble_clause(f"{INDEX_PREAMBLE}-{pos}",
+                                    _slice(zh_body, zh_span),
+                                    _slice(ja_body, ja_span))
+                    for pos, (zh_span, ja_span) in enumerate(pairs, start=1))
+                report["preamble_splits"] += 1
+                report["preamble_split_clauses"] += len(pairs)
+            else:
+                if fallback is not None:
+                    report["preamble_split_fallbacks"].append(
+                        {"id": cid, "section": section, "text_zh": zh_body,
+                         "text_ja": ja_body, "reason": fallback})
+                clauses.append(preamble_clause(INDEX_PREAMBLE, zh_body,
+                                               ja_body))
     elif aligned and ja_pre is not None:
         report["preamble_one_sided"].append(
             {"id": cid, "section": section, "present": "ja"})
@@ -1471,7 +1618,7 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
         else:
             clauses.extend(segments)
             split_indexes = {clause["index"] for clause in segments}
-    elif split is not None:
+    elif split is not None and not preamble_record_tried:
         report["split_unused"].append({"id": cid, "section": section})
 
     clauses = _split_bullets(cid, section, clauses, supplement, report)
@@ -1480,7 +1627,9 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
         # 都出自拆句表——● 又把某一段拆得更細時,新的 index 也算在內
         split_indexes = {clause["index"] for clause in clauses}
     attested = _apply_attestations(cid, section, clauses, name_ja, supplement,
-                                   unsplit, split_indexes, report)
+                                   unsplit,
+                                   split_indexes | preamble_split_indexes,
+                                   report)
     judged = _apply_judgments(cid, section, clauses, judgments, report)
     official_optional = _apply_optional(cid, section, clauses, attested,
                                         unsplit, judged, report)

@@ -1,4 +1,5 @@
-"""三級分類器的純函式測試:餵合成卡片記錄,不做 IO(先例:test_ocg_dates.py)。
+"""三級分類器的純函式測試:餵合成卡片記錄,不做 IO(先例:tag_card 的勘誤
+同步測試 test_sync_errata.py 與本資料夾的 test_ocg_dates.py)。
 
 邊界照票02:9 期界日(2014-03-21,ST14 發售日)前一日/當日/後一日、查無日期、
 有①但帶無編號段的靈擺卡(11067666 型,段分級不同)、純通常怪獸排除、
@@ -8,6 +9,8 @@ import json
 import os
 import unittest
 
+# 先 import classify:tag_card 的搜尋路徑由它在載入時 append,tagcard 那行
+# 才找得到模組——這兩行的順序是依賴,不是字母序巧合
 from classify import (TIER_NEW, TIER_OLD, TIER_REWRITTEN, TIER_UNDATED,
                       classify_card)
 from tagcard import (TYPE_MONSTER, TYPE_NORMAL, TYPE_PENDULUM,
@@ -52,9 +55,10 @@ class DateBoundaryTest(unittest.TestCase):
                          [("main", TIER_NEW)])
 
     def test_numbered_without_date_is_undated(self):
-        """有①但查無日期 → 日期不明,不硬塞進任何一級。"""
-        self.assertEqual(_tiers(_card(NEW_DESC), None),
-                         [("main", TIER_UNDATED)])
+        """有①但查無日期 → 日期不明,不硬塞進任何一級;空字串同 None。"""
+        for date in (None, ""):
+            self.assertEqual(_tiers(_card(NEW_DESC), date),
+                             [("main", TIER_UNDATED)])
 
 
 class OldTextTest(unittest.TestCase):

@@ -17,8 +17,8 @@ _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 # 分段邏輯復用 tag_card 的 tagcard.py(跨資料夾,需手動加入搜尋路徑)。
 # 用 append 而非 insert:不讓這個目錄有機會遮蔽標準庫或既有模組。
 sys.path.append(os.path.join(_ROOT, "script", "tag_card"))
-from tagcard import (FOOTNOTE_RE, TYPE_MONSTER, TYPE_NORMAL,  # noqa: E402
-                     TYPE_PENDULUM, _segments, _zh_sections)
+from tagcard import (FOOTNOTE_RE, _segments, _zh_sections,  # noqa: E402
+                     is_pure_normal)
 
 # 9 期界日:OCG 首個新格式產品 ST14 的發售日(官方商品頁,spec Further Notes)
 ERA9_START = "2014-03-21"
@@ -27,12 +27,14 @@ TIER_OLD = "舊文本"
 TIER_REWRITTEN = "官方已改寫"
 TIER_NEW = "新格式新卡"
 TIER_UNDATED = "日期不明"
-TIERS = (TIER_OLD, TIER_REWRITTEN, TIER_NEW, TIER_UNDATED)
 
 
 def _dated_tier(ocg_date):
-    """有①的段依首發日分級;日期是 ISO 字串,比大小即比日期。"""
-    if ocg_date is None:
+    """有①的段依首發日分級;日期是 ISO 字串,比大小即比日期。
+
+    None 與空字串都算查無日期——來源檔存原始樣貌,空值不進日期比較硬猜。
+    """
+    if not ocg_date:
         return TIER_UNDATED
     return TIER_REWRITTEN if ocg_date < ERA9_START else TIER_NEW
 
@@ -44,9 +46,7 @@ def classify_card(card, ocg_date):
     純通常怪獸整張排除、風味文段不進清單、無段可判時回空列表——與
     build_tag_cards 對段的取捨完全一致(別名註記剝除也同一條規則)。
     """
-    ctype = card.get("type", 0)
-    if (ctype & TYPE_MONSTER and ctype & TYPE_NORMAL
-            and not ctype & TYPE_PENDULUM):
+    if is_pure_normal(card.get("type", 0)):
         return []
     sections, _ = _zh_sections(FOOTNOTE_RE.sub("", card.get("desc") or ""))
     tiers = []

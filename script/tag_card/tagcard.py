@@ -91,6 +91,15 @@ CLAUSE_FIELDS = ("index", "section", "text_zh", "text_ja", "text_hash", "kind",
                  "confidence", "tags")
 
 
+def is_pure_normal(ctype):
+    """純通常怪獸嗎?已處理且確實沒有效果,整張排除在效果句集合之外。
+
+    三級分類器(script/text_format/classify.py)沿用同一把尺,判準只住這一份。
+    """
+    return bool(ctype & TYPE_MONSTER and ctype & TYPE_NORMAL
+                and not ctype & TYPE_PENDULUM)
+
+
 def card_type_label(ctype):
     """卡片總表的 type 位元 → [[卡片種類]]的名稱;認不出來時回 None。
 
@@ -1753,10 +1762,8 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
         elif ctype & TYPE_PENDULUM:
             report["pendulum_bit_without_header"].append(cid)
 
-        # 純通常怪獸:已處理且確實沒有效果,clauses 為空陣列
-        pure_normal = (ctype & TYPE_MONSTER and ctype & TYPE_NORMAL
-                       and not ctype & TYPE_PENDULUM)
-        if pure_normal:
+        # 純通常怪獸:clauses 為空陣列
+        if is_pure_normal(ctype):
             report["pure_normal"] += 1
             if _cut_points(stripped):
                 report["normal_with_numerals"].append(cid)

@@ -217,7 +217,7 @@ function banCell(c, f) {
     : f.released(c) ? '無限制' : '未發行';
   const body = code
     ? `<i class="ban-ico ban-${code}">${BAN_ICON_NUM[code]}</i>`
-    : `<span class="ban-plain">${f.released(c) ? '—' : '未發行'}</span>`;
+    : `<span class="ban-plain">${f.released(c) ? '-' : '未發行'}</span>`;
   return `<span class="ban-cell" title="${esc(f.zh)} ${esc(zh)}">${
     esc(f.zh)} : ${body}</span>`;
 }

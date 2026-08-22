@@ -67,11 +67,14 @@ test('沒上任何榜的卡完全不長禁限列', () => {
 });
 
 test('任一賽制上榜即整列出現,各賽制欄位固定順序齊列', () => {
-  // 只上 OCG 榜:TCG 欄仍在,已發行未上榜顯示「—」(說明字面是無限制)
+  // 只上 OCG 榜:TCG 欄仍在,已發行未上榜顯示半形「-」(說明字面是無限制)
   const out = html({ bo: 'f' });
   assert.ok(out.includes('OCG 禁止'));
   assert.ok(out.includes('TCG 無限制'));
-  assert.ok(out.includes('—'));
+  const ban = /<div class="card-ban">[\s\S]*?<\/div>/.exec(out)[0]
+    .replace(/<[^>]+>/g, '');
+  assert.ok(ban.includes('-'));
+  assert.ok(!ban.includes('—'));
   assert.ok(out.indexOf('OCG 禁止') < out.indexOf('TCG 無限制'));
   // 同一張卡兩賽制各自的值互不干擾
   const both = html({ bo: 's', bt: 'f' });

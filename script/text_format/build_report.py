@@ -1,8 +1,10 @@
 """三級分類報表殼:全庫盤點 → .scratch/text-format/report.md(票05)。
 
 三個佇列——舊文本(改寫佇列)、官方已改寫(優先稽核佇列)、新格式新卡
-(一般稽核佇列)——加「日期不明」獨立區,末尾附「含①卡的舊詞彙訊號命中」
-人工抽查附錄(僅供抽查,不保證準確,不混入正式佇列)。
+(一般稽核佇列)——加「本站已改寫」與「日期不明」兩個獨立區,末尾附
+「含①卡的舊詞彙訊號命中」人工抽查附錄(僅供抽查,不保證準確,不混入
+正式佇列)。「本站已改寫」來自[[文本改寫表]](text-rewrite 票02):被本站
+改寫的卡獨立成區,改寫工程的進度直接可視化,不污染優先稽核佇列。
 
 分級與標籤全部來自 classify.classify_card(純函式),這裡只做讀檔、分組、
 排版——報表產生器是薄殼,不立測試(spec Testing Decisions)。冪等:同一份
@@ -22,7 +24,8 @@ from itertools import groupby
 # 先 import classify:tag_card 的搜尋路徑由它在載入時 append,tagcard 那行
 # 才找得到模組——這兩行的順序是依賴,不是字母序巧合
 from classify import (OLD_PATTERNS, TIER_NEW, TIER_OLD, TIER_REWRITTEN,
-                      TIER_UNDATED, classify_card, old_pattern_labels)
+                      TIER_SITE_REWRITTEN, TIER_UNDATED, classify_card,
+                      old_pattern_labels)
 from ocg_dates import align_ocg_dates, load_ocg_dates
 from official_dates import merge_aligned_dates
 from tagcard import (FOOTNOTE_RE, TYPE_MONSTER, TYPE_SPELL, TYPE_TRAP,
@@ -33,6 +36,7 @@ DEFAULT_CARDS = os.path.join(_ROOT, "data", "cards.json")
 DEFAULT_DATES = os.path.join(_ROOT, "data", "sources", "ocg-dates.json")
 DEFAULT_OFFICIAL_DATES = os.path.join(_ROOT, "data", "sources",
                                       "official-dates.json")
+DEFAULT_REWRITES = os.path.join(_ROOT, "data", "text_rewrites.json")
 DEFAULT_OUT = os.path.join(_ROOT, ".scratch", "text-format", "report.md")
 
 GUIDE = "docs/text_format_guide.md"
@@ -64,13 +68,18 @@ def _pendulum_mark(section):
     return "(靈擺)" if section == "pendulum" else ""
 
 
-def scan(cards, dates):
-    """全庫一次掃描 → 各區塊要用的資料(分級都來自 classify_card)。"""
+def scan(cards, dates, rewritten_ids):
+    """全庫一次掃描 → 各區塊要用的資料(分級都來自 classify_card)。
+
+    rewritten_ids 是[[文本改寫表]]的卡片密碼集合——「該卡已被本站改寫」
+    的查表在這裡做,分類器維持純函式。
+    """
     stats = {"cards": len(cards), "pure_normal": 0, "no_segments": 0}
     seg_counts = Counter()
     card_sets = defaultdict(set)
     groups = defaultdict(list)   # (標籤組合, 大類序, 大類) → [(id, 名, 段)]
     dated = {TIER_REWRITTEN: {}, TIER_NEW: {}}   # 分級 → {id: (首發日, 名)}
+    site_rows = []               # 本站已改寫 [(id, 名, 段)]
     undated = []                 # [(id, 名)]
     signals = defaultdict(list)  # 條目 → [(id, 名, 段, 分級)]
     for card in cards:
@@ -78,7 +87,7 @@ def scan(cards, dates):
             stats["pure_normal"] += 1
             continue
         date = dates.get(card["id"])
-        segs = classify_card(card, date)
+        segs = classify_card(card, date, card["id"] in rewritten_ids)
         if not segs:
             stats["no_segments"] += 1
             continue
@@ -91,6 +100,8 @@ def scan(cards, dates):
             if tier == TIER_OLD:
                 groups[(tuple(seg["labels"]), cat_pos, cat)].append(
                     (cid, name, seg["section"]))
+            elif tier == TIER_SITE_REWRITTEN:
+                site_rows.append((cid, name, seg["section"]))
             elif tier != TIER_UNDATED:
                 dated[tier][cid] = (date, name)
         if any(seg["tier"] == TIER_UNDATED for seg in segs):
@@ -109,7 +120,8 @@ def scan(cards, dates):
             for label in sorted(hits, key=_LABEL_POS.get):
                 signals[label].append(
                     (cid, name, section, tier_by_section[section]))
-    return stats, seg_counts, card_sets, groups, dated, undated, signals
+    return (stats, seg_counts, card_sets, groups, dated, site_rows, undated,
+            signals)
 
 
 # ---------------------------------------------------------------- 排版
@@ -126,6 +138,7 @@ def _overview(stats, seg_counts, card_sets):
         "|---|---|---|---|",
     ]
     for tier, queue in ((TIER_OLD, "改寫佇列"),
+                        (TIER_SITE_REWRITTEN, "獨立成區(改寫進度)"),
                         (TIER_REWRITTEN, "優先稽核佇列"),
                         (TIER_NEW, "一般稽核佇列"),
                         (TIER_UNDATED, "獨立列出,不進佇列")):
@@ -168,6 +181,22 @@ def _rewrite_queue(seg_counts, card_sets, groups):
                   ""]
         lines += [f"- `{cid}` {name}{_pendulum_mark(section)}"
                   for cid, name, section in sorted(rows)]
+    return lines
+
+
+def _site_rewritten_section(seg_counts, card_sets, site_rows):
+    lines = [
+        f"## 本站已改寫({seg_counts[TIER_SITE_REWRITTEN]:,} 段 / "
+        f"{len(card_sets[TIER_SITE_REWRITTEN]):,} 張)",
+        "",
+        "在[[文本改寫表]](data/text_rewrites.json)的卡:舊式卡文已依規範"
+        "改寫進站,新全文是本站正式卡文。獨立成區、不進任何佇列——它們的"
+        "首發日多在 9 期界日前,不獨立的話會誤歸「官方已改寫」污染優先稽核"
+        "佇列。這一區隨改寫批次成長,是改寫工程的進度條。",
+        "",
+    ]
+    lines += [f"- `{cid}` {name}{_pendulum_mark(section)}"
+              for cid, name, section in sorted(site_rows)] or ["(無)"]
     return lines
 
 
@@ -217,7 +246,8 @@ def _signals_appendix(signals):
     return lines
 
 
-def render(stats, seg_counts, card_sets, groups, dated, undated, signals):
+def render(stats, seg_counts, card_sets, groups, dated, site_rows, undated,
+           signals):
     sections = (
         [
             "# 三級分類報表(文本世代盤點)",
@@ -227,10 +257,12 @@ def render(stats, seg_counts, card_sets, groups, dated, undated, signals):
             "",
             "分級判準見 CONTEXT.md「舊式卡文/新式卡文」與 "
             "script/text_format/classify.py:①編號段為界的二分,再以 OCG "
-            "首發日對 9 期界日(2014-03-21)細分。",
+            "首發日對 9 期界日(2014-03-21)細分;被本站改寫的卡"
+            "([[文本改寫表]])獨立成「本站已改寫」區。",
         ],
         _overview(stats, seg_counts, card_sets),
         _rewrite_queue(seg_counts, card_sets, groups),
+        _site_rewritten_section(seg_counts, card_sets, site_rows),
         _audit_queue(
             f"優先稽核佇列(官方已改寫,{seg_counts[TIER_REWRITTEN]:,} 段 / "
             f"{len(dated[TIER_REWRITTEN]):,} 張)",
@@ -261,6 +293,8 @@ def main(argv=None):
                         help="官方 DB 収録シリーズ後備日期 JSON "
                              "(預設 data/sources/official-dates.json,"
                              "檔案不存在時只用 YGOPRODeck)")
+    parser.add_argument("--rewrites", default=DEFAULT_REWRITES,
+                        help="文本改寫表路徑 (預設 data/text_rewrites.json)")
     parser.add_argument("--out", default=DEFAULT_OUT,
                         help="報表輸出路徑 (預設 .scratch/text-format/report.md)")
     args = parser.parse_args(argv)
@@ -276,15 +310,21 @@ def main(argv=None):
                                    load_ocg_dates(args.official_dates))
         dates, conflicts = merge_aligned_dates(dates, fallback)
 
-    stats, seg_counts, card_sets, groups, dated, undated, signals = scan(
-        cards, dates)
+    rewritten_ids = set()
+    if os.path.exists(args.rewrites):
+        with open(args.rewrites, encoding="utf-8") as f:
+            rewritten_ids = {entry["id"] for entry in json.load(f)}
+
+    (stats, seg_counts, card_sets, groups, dated, site_rows, undated,
+     signals) = scan(cards, dates, rewritten_ids)
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8", newline="\n") as f:
-        f.write(render(stats, seg_counts, card_sets, groups, dated, undated,
-                       signals))
+        f.write(render(stats, seg_counts, card_sets, groups, dated, site_rows,
+                       undated, signals))
 
-    for tier in (TIER_OLD, TIER_REWRITTEN, TIER_NEW, TIER_UNDATED):
+    for tier in (TIER_OLD, TIER_SITE_REWRITTEN, TIER_REWRITTEN, TIER_NEW,
+                 TIER_UNDATED):
         print(f"{tier}: {seg_counts[tier]:,} 段 / {len(card_sets[tier]):,} 張")
     if conflicts:
         print(f"OCG 首發日不一致 {len(conflicts)} 張(YGOPRODeck ≠ 官方後備,"

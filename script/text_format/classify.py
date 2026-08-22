@@ -4,11 +4,15 @@
 敘述】風味文段、靈擺卡各段獨立),判為舊文本的段集合因此永遠等於 tagcard
 報告的 pending_split 定義(3,805 段,test_classify.py 的迴歸釘住這個等式)。
 
-分級判準(spec:.scratch/text-format/spec.md):
+分級判準(spec:.scratch/text-format/spec.md、.scratch/text-rewrite/spec.md):
     舊文本      = 無①段(判準單一,日期不參與)→ 改寫佇列
+    本站已改寫  = 有① 且 該卡在[[文本改寫表]]    → 獨立成區(改寫進度)
     官方已改寫  = 有① 且 9 期界日前首發        → 優先稽核佇列
     新格式新卡  = 有① 且 界日(含)以後首發     → 一般稽核佇列
     日期不明    = 有① 但查無 ocg_date           → 獨立列出,不猜
+
+「本站已改寫」在日期分級之前判:被本站改寫的卡首發日多在 9 期界日前,
+不獨立成級的話會誤歸「官方已改寫」污染優先稽核佇列。
 
 舊文本段另帶「所需對應表條目」標籤(規範 §4,`OLD_PATTERNS`),供報表
 把改寫佇列分群——同一群共用同一組舊→新對應規則。
@@ -28,6 +32,7 @@ from tagcard import (FOOTNOTE_RE, _segments, _zh_sections,  # noqa: E402
 ERA9_START = "2014-03-21"
 
 TIER_OLD = "舊文本"
+TIER_SITE_REWRITTEN = "本站已改寫"
 TIER_REWRITTEN = "官方已改寫"
 TIER_NEW = "新格式新卡"
 TIER_UNDATED = "日期不明"
@@ -88,10 +93,14 @@ def _dated_tier(ocg_date):
     return TIER_REWRITTEN if ocg_date < ERA9_START else TIER_NEW
 
 
-def classify_card(card, ocg_date):
+def classify_card(card, ocg_date, site_rewritten=False):
     """卡片總表條目 + OCG 首發日 → [{"section", "tier", "labels"}, ...]。
 
-    card 需 desc / type;ocg_date 來自 align_ocg_dates(查無日期為 None)。
+    card 需 desc / type;ocg_date 來自 align_ocg_dates(查無日期為 None);
+    site_rewritten 是「該卡已被本站改寫」(在[[文本改寫表]]即為真,由呼叫端
+    查表——分類器維持純函式不做 IO)。已改寫卡的①段一律判「本站已改寫」,
+    日期不參與(改寫是本站的動作,與首發日無關);無①段照樣判舊文本——
+    「舊文本段 = tagcard pending_split」的同尺等式不因改寫旗標而動搖。
     純通常怪獸整張排除、風味文段不進清單、無段可判時回空列表——與
     build_tag_cards 對段的取捨完全一致(別名註記剝除也同一條規則)。
     labels 是舊文本段命中的對應表條目(`old_pattern_labels`);其他分級
@@ -106,7 +115,9 @@ def classify_card(card, ocg_date):
         if preamble is None and not numbered and unnumbered is None:
             continue
         if numbered:
-            tier, labels = _dated_tier(ocg_date), []
+            tier = (TIER_SITE_REWRITTEN if site_rewritten
+                    else _dated_tier(ocg_date))
+            labels = []
         else:
             start, end = unnumbered
             tier, labels = TIER_OLD, old_pattern_labels(text[start:end])

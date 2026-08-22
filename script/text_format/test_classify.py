@@ -11,8 +11,8 @@ import unittest
 
 # 先 import classify:tag_card 的搜尋路徑由它在載入時 append,tagcard 那行
 # 才找得到模組——這兩行的順序是依賴,不是字母序巧合
-from classify import (TIER_NEW, TIER_OLD, TIER_REWRITTEN, TIER_UNDATED,
-                      classify_card)
+from classify import (TIER_NEW, TIER_OLD, TIER_REWRITTEN,
+                      TIER_SITE_REWRITTEN, TIER_UNDATED, classify_card)
 from tagcard import (TYPE_MONSTER, TYPE_NORMAL, TYPE_PENDULUM,
                      build_tag_cards)
 
@@ -38,6 +38,11 @@ def _tiers(card, ocg_date):
             for seg in classify_card(card, ocg_date)]
 
 
+def _tiers_rw(card, ocg_date):
+    return [(seg["section"], seg["tier"])
+            for seg in classify_card(card, ocg_date, site_rewritten=True)]
+
+
 class DateBoundaryTest(unittest.TestCase):
     def test_day_before_era9_is_rewritten(self):
         """有①且界日前一日首發 → 官方已改寫(優先稽核佇列)。"""
@@ -59,6 +64,40 @@ class DateBoundaryTest(unittest.TestCase):
         for date in (None, ""):
             self.assertEqual(_tiers(_card(NEW_DESC), date),
                              [("main", TIER_UNDATED)])
+
+
+class SiteRewrittenTest(unittest.TestCase):
+    """「本站已改寫」級(text-rewrite 票02):已改寫輸入 → 第五級,日期不參與。"""
+
+    def test_rewritten_before_era9_is_site_not_official(self):
+        """界日前首發+已改寫 → 本站已改寫,不再誤歸「官方已改寫」。"""
+        self.assertEqual(_tiers_rw(_card(NEW_DESC), "2000-01-01"),
+                         [("main", TIER_SITE_REWRITTEN)])
+
+    def test_rewritten_after_era9_is_still_site(self):
+        """界日後首發+已改寫 → 一樣是本站已改寫(改寫與首發日無關)。"""
+        self.assertEqual(_tiers_rw(_card(NEW_DESC), "2020-01-01"),
+                         [("main", TIER_SITE_REWRITTEN)])
+
+    def test_rewritten_undated_is_site(self):
+        """查無日期+已改寫 → 本站已改寫:改寫是本站的動作,不必猜日期。"""
+        self.assertEqual(_tiers_rw(_card(NEW_DESC), None),
+                         [("main", TIER_SITE_REWRITTEN)])
+
+    def test_not_rewritten_control_group_unchanged(self):
+        """未改寫對照組:同卡同日期照舊走日期分級。"""
+        self.assertEqual(_tiers(_card(NEW_DESC), "2000-01-01"),
+                         [("main", TIER_REWRITTEN)])
+
+    def test_site_rewritten_segment_has_no_labels(self):
+        """本站已改寫的段不帶對應條目標籤——對應表只服務改寫佇列。"""
+        segs = classify_card(_card(NEW_DESC), None, site_rewritten=True)
+        self.assertEqual(segs[0]["labels"], [])
+
+    def test_unnumbered_segment_stays_old_despite_flag(self):
+        """已改寫旗標不動無①段:舊文本段=pending_split 的同尺等式不動搖。"""
+        self.assertEqual(_tiers_rw(_card(OLD_DESC), "2000-01-01"),
+                         [("main", TIER_OLD)])
 
 
 class OldTextTest(unittest.TestCase):

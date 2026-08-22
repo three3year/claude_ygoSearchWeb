@@ -205,7 +205,7 @@ def download_banlists(dest_dir, fetch_json=_fetch_json, offline=False):
 
 
 def record_downloaded_at(dest_dir, now, offline=False):
-    """全部來源下載成功後記下資料更新時間,一次執行一個時間(五個來源不分開)。
+    """全部來源下載成功後記下資料更新時間,一次執行一個時間(七個來源檔不分開)。
 
     offline 沿用既有記錄——時間反映「下載」而不是「重跑」;從未記錄過也不報錯,
     footer 那一行省略即可。時刻由呼叫端注入,這裡不讀時鐘。

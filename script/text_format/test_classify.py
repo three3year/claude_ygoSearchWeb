@@ -97,6 +97,42 @@ class PendulumTest(unittest.TestCase):
                          [])
 
 
+class LabelTest(unittest.TestCase):
+    """對應條目標籤(規範 §4):餵合成卡文斷言(分級, 標籤)輸出,不測 regex 構造。"""
+
+    def _labels(self, desc):
+        segs = classify_card(_card(desc), None)
+        self.assertEqual([seg["tier"] for seg in segs], [TIER_OLD])
+        return segs[0]["labels"]
+
+    def test_new_format_segment_has_no_labels(self):
+        """非舊文本的段不帶對應條目標籤——對應表只服務改寫佇列。"""
+        segs = classify_card(_card(NEW_DESC), "2020-01-01")
+        self.assertEqual(segs[0]["labels"], [])
+
+    def test_trigger_without_activation_collector(self):
+        """「…時，可以…」誘發句無「發動」收尾 → 誘發缺發動(§4.4)。"""
+        self.assertEqual(self._labels(OLD_DESC), ["誘發缺發動"])
+
+    def test_flip_label_and_selection_stack(self):
+        """「反轉：選擇…破壞」同段命中兩條:標籤是多標籤,順序照條目序。"""
+        self.assertEqual(self._labels("反轉：選擇場上1隻守備表示怪獸破壞。"),
+                         ["反轉標籤", "選擇取對象"])
+
+    def test_named_card_usage_limit(self):
+        """具卡名的次數限制句 → 具卡名限制(§4.7)。"""
+        self.assertEqual(self._labels("「我我我搭檔」在1回合只能發動1張。"),
+                         ["具卡名限制"])
+
+    def test_ritual_material_line_is_not_cost_idiom(self):
+        """儀式素材行「藉由「〜」降臨」是效果外文本,不是藉由代價句。"""
+        self.assertEqual(self._labels("藉由「電腦網儀式」降臨。"), [])
+
+    def test_base_only_segment_has_empty_labels(self):
+        """沒命中任何條目的舊段:標籤空列表=僅基礎條目(§4.1)群。"""
+        self.assertEqual(self._labels("我方牌組抽2張卡。"), [])
+
+
 class ExclusionTest(unittest.TestCase):
     def test_pure_normal_monster_excluded(self):
         """純通常怪獸整張排除:風味文不是效果文,不進任何佇列。"""

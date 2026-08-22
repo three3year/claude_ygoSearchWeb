@@ -37,7 +37,7 @@ GUIDE = "docs/text_format_guide.md"
 BASE_LABEL = "僅基礎條目"
 BASE_REF = "§4.1"
 
-# 分群用的卡種 = 大類三分;宣告序即群與群之間的排序
+# 分群用的大類三分;排列順序即群與群之間的排序
 CATEGORIES = ((TYPE_MONSTER, "怪獸"), (TYPE_SPELL, "魔法"), (TYPE_TRAP, "陷阱"))
 
 _LABEL_POS = {key: pos for pos, (key, _, _) in enumerate(OLD_PATTERNS)}
@@ -61,7 +61,7 @@ def scan(cards, dates):
     stats = {"cards": len(cards), "pure_normal": 0, "no_segments": 0}
     seg_counts = Counter()
     card_sets = defaultdict(set)
-    groups = defaultdict(list)   # (標籤組合, 卡種序, 卡種) → [(id, 名, 段)]
+    groups = defaultdict(list)   # (標籤組合, 大類序, 大類) → [(id, 名, 段)]
     dated = {TIER_REWRITTEN: {}, TIER_NEW: {}}   # 分級 → {id: (首發日, 名)}
     undated = []                 # [(id, 名)]
     signals = defaultdict(list)  # 條目 → [(id, 名, 段, 分級)]
@@ -143,18 +143,18 @@ def _rewrite_queue(seg_counts, card_sets, groups):
         f"## 改寫佇列(舊文本,{seg_counts[TIER_OLD]:,} 段 / "
         f"{len(card_sets[TIER_OLD]):,} 張)",
         "",
-        f"依「所需對應表條目(多標籤)× 卡種」分群——同一群的段落共用同一組"
+        f"依「所需對應表條目(多標籤)× 大類」分群——同一群的段落共用同一組"
         f"舊→新對應規則({GUIDE} §4,偵測樣式維護於 "
         "script/text_format/classify.py 的 `OLD_PATTERNS`)。條目是近似訊號,"
         "服務分群、不是建置關卡;命中多條的段落自成一群(整組規則一起套),"
         f"沒命中任何條目的段落歸「{BASE_LABEL}」——只需 {BASE_REF} 缺圈號"
         "分層。靈擺欄的段落以「(靈擺)」標注。",
     ]
-    ordered = sorted(groups.items(),
-                     key=lambda item: (tuple(_LABEL_POS[label]
-                                             for label in item[0][0]),
-                                       item[0][1]))
-    for (labels, _, cat), rows in ordered:
+    def group_order(item):
+        (labels, cat_pos, _), _ = item
+        return tuple(_LABEL_POS[label] for label in labels), cat_pos
+
+    for (labels, _, cat), rows in sorted(groups.items(), key=group_order):
         lines += ["", f"### {_group_title(labels)} × {cat}({len(rows):,} 段)",
                   ""]
         lines += [f"- `{cid}` {name}{_pendulum_mark(section)}"
@@ -164,12 +164,12 @@ def _rewrite_queue(seg_counts, card_sets, groups):
 
 def _audit_queue(title, note, rows):
     lines = [f"## {title}", "", note]
-    ordered = sorted(rows.items(), key=lambda kv: (kv[1][0], kv[0]))
-    for year, batch in groupby(ordered, key=lambda kv: kv[1][0][:4]):
+    ordered = sorted((date, cid, name)
+                     for cid, (date, name) in rows.items())
+    for year, batch in groupby(ordered, key=lambda row: row[0][:4]):
         batch = list(batch)
         lines += ["", f"### {year} 年({len(batch):,} 張)", ""]
-        lines += [f"- `{cid}` {name}({date})"
-                  for cid, (date, name) in batch]
+        lines += [f"- `{cid}` {name}({date})" for date, cid, name in batch]
     return lines
 
 

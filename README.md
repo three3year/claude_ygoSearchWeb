@@ -137,6 +137,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/tag_card/run_masked_test.py` | 遮蔽測試殼(抽樣 / 對答案) |
 | `script/tag_card/check_split_rule.py` | 拆句判準的交叉驗證器(新判準會不會切開官方引用) |
 | `script/text_format/ocg_dates.py` | OCG 首發日來源的消費端(純函式):以卡片密碼對齊總表、異圖歸主卡 |
+| `script/text_format/classify.py` | 三級分類器(純函式):卡文段落 + 首發日 → 舊文本/官方已改寫/新格式新卡/日期不明 |
 | `script/web/vocab.py` | 值域正典(cdb 位元/整數/中文 → 短碼 → 中文 + 宣告序)+ 自檢接縫 |
 | `script/web/webindex.py` | 前端索引管線(純函式):總表 + 標記表 → 索引 + 一致性檢查報告 |
 | `script/web/build_index.py` | 建置 CLI 薄殼(讀檔 → 寫 web/data.js → 印報告 → 依 problems 定 exit code) |

@@ -4,9 +4,24 @@
 
 **Blocked by:** 01 — ocg_date 發售日來源引入。
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] 分類器是純函式,不做 IO;餵合成卡片記錄即可測
-- [ ] 邊界測試齊全:界日前一日/當日/後一日、無日期、有①但帶無編號段的靈擺卡(段分級不同)、純通常怪獸排除、只剩風味文的靈擺通常怪獸
-- [ ] 對真實資料的迴歸檢查:判為舊文本的段數 == tagcard 報告的 pending_split(3,805,同一把尺)
-- [ ] 測試比照既有合成記錄測試的慣例(prior art:tag_card 的勘誤同步測試)
+- [x] 分類器是純函式,不做 IO;餵合成卡片記錄即可測
+- [x] 邊界測試齊全:界日前一日/當日/後一日、無日期、有①但帶無編號段的靈擺卡(段分級不同)、純通常怪獸排除、只剩風味文的靈擺通常怪獸
+- [x] 對真實資料的迴歸檢查:判為舊文本的段數 == tagcard 報告的 pending_split(3,805,同一把尺)
+- [x] 測試比照既有合成記錄測試的慣例(prior art:tag_card 的勘誤同步測試)
+
+## Comments
+
+2026-08-22 實作完成:
+
+- 分類器:`script/text_format/classify.py` 純函式 `classify_card(card,
+  ocg_date)` → 各段 `{"section", "tier"}`。分段整套復用 tagcard 同一把尺
+  (`FOOTNOTE_RE` 剝別名註記 → `_zh_sections` 分段丟風味文 → `_segments`
+  認①),純通常怪獸以 type 位元整張排除;有①段依 ISO 日期字串與界日
+  `ERA9_START = "2014-03-21"` 比大小分級,無①段一律舊文本(日期不參與)。
+- 測試:`test_classify.py` 合成記錄測邊界五族;同一把尺迴歸對真實
+  `data/cards.json` 跑 `build_tag_cards(cards, [], splits=None)`(不套拆句
+  表,pending_split 才是「無編號整團」的全集)比對相等,並釘住基準 3,805。
+- 全套測試綠(card_list/faq_info/tag_card/text_format/web + node)。
+- README 目錄表補列 classify.py。

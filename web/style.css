@@ -362,17 +362,20 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 .ban-sep { color: var(--border); }
 .ban-plain { font-weight: normal; }
+/* 圈框式圖示(2026-08-22 使用者裁示「外面要有圈」):不是實心圓,而是如
+   🚫/①/② 的**空心圈**——彩色圓環,環內是同色的斜槓或數字。 */
 .ban-ico {
-  display: inline-block; width: 14px; height: 14px; border-radius: 50%;
-  font-style: normal; font-size: 10px; font-weight: bold; color: #fff;
-  text-align: center; line-height: 14px;
+  display: inline-block; box-sizing: border-box;
+  width: 15px; height: 15px; border-radius: 50%; border: 2px solid;
+  font-style: normal; font-size: 9px; font-weight: bold;
+  text-align: center; line-height: 11px;
 }
-/* 紅圈白斜槓:斜槓用漸層畫在圓底上,14px 下比字元圖示清晰 */
-.ban-ico.ban-f { background:
-  linear-gradient(135deg, transparent 41%, #fff 41%, #fff 59%, transparent 59%),
-  #c62828; }
-.ban-ico.ban-l { background: #e65100; }
-.ban-ico.ban-s { background: #c79100; }
+/* 紅圈紅斜槓:斜槓用漸層畫在透明底上,15px 下比字元圖示清晰 */
+.ban-ico.ban-f { border-color: #c62828; background:
+  linear-gradient(135deg, transparent 43%, #c62828 43%,
+                  #c62828 57%, transparent 57%); }
+.ban-ico.ban-l { border-color: #e65100; color: #e65100; }
+.ban-ico.ban-s { border-color: #c79100; color: #c79100; }
 
 .card-meta {
   color: var(--gold); font-size: 12px; margin: 10px 0 12px;

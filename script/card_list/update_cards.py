@@ -22,10 +22,13 @@ ROOT = os.path.dirname(
 DEFAULT_SOURCES_DIR = os.path.join(ROOT, "data", "sources")
 DEFAULT_FAQ_JSON = os.path.join(ROOT, "data", "sources", "faq_info.json")
 
-# 官方 Q&A 對帳復用 faq_info 的純函式模組(跨資料夾,需手動加入搜尋路徑)。
+# 官方 Q&A 對帳復用 faq_info、首發日對齊復用 text_format 的純函式模組
+# (跨資料夾,需手動加入搜尋路徑)。
 # 用 append 而非 insert:不讓這個目錄有機會遮蔽標準庫或既有模組。
 sys.path.append(os.path.join(ROOT, "script", "faq_info"))
+sys.path.append(os.path.join(ROOT, "script", "text_format"))
 from faqgap import find_missing_cards, format_gap_report  # noqa: E402
+from ocg_dates import align_ocg_dates, load_ocg_dates  # noqa: E402
 
 SOURCES = {
     "zh": "https://github.com/salix5/cdb/releases/latest/download/cards.cdb",
@@ -51,6 +54,10 @@ GENESYS_FILENAME = "genesys.json"
 BANLIST_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist={fmt}"
 BANLIST_FORMATS = ("ocg", "tcg")
 BANLIST_FILENAME = "banlist-{fmt}.json"
+# OCG 首發日([[文本格式規範]]的三級分類用):必須是不帶 format= 卡池篩選的
+# 全量 dump——genesys 端點那種 format=genesys 會漏卡,首發日要全庫都對得到。
+OCG_DATE_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes"
+OCG_DATE_FILENAME = "ocg-dates.json"
 
 
 def _fetch_url(url):
@@ -204,8 +211,40 @@ def download_banlists(dest_dir, fetch_json=_fetch_json, offline=False):
     return paths
 
 
+def download_ocg_dates(dest_dir, fetch_json=_fetch_json, offline=False):
+    """自 YGOPRODeck 全量 dump 萃取 {卡片密碼: OCG 首發日} → ocg-dates.json。
+
+    只保留 misc_info 帶 ocg_date 的卡;查無日期的卡(TCG 限定等)不入檔、
+    不硬猜——對齊卡片總表後可辨識為「日期不明」(script/text_format/)。
+    先寫 .tmp 再原子替換,失敗時既有檔不受影響。
+    """
+    os.makedirs(dest_dir, exist_ok=True)
+    path = os.path.join(dest_dir, OCG_DATE_FILENAME)
+    if offline:
+        if not os.path.exists(path):
+            raise RuntimeError(
+                f"離線模式但缺少來源 ocg-dates({path});請先連網下載一次")
+        return path
+    try:
+        dump = fetch_json(OCG_DATE_URL)
+        dates = {}
+        for card in dump["data"]:
+            misc = (card.get("misc_info") or [{}])[0]
+            value = misc.get("ocg_date")
+            if value is not None:
+                dates[int(card["id"])] = value
+    except Exception as e:
+        raise RuntimeError(f"來源 ocg-dates 下載失敗: {e}") from e
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump({str(k): v for k, v in sorted(dates.items())}, f,
+                  ensure_ascii=False, indent=0)
+    os.replace(tmp_path, path)
+    return path
+
+
 def record_downloaded_at(dest_dir, now, offline=False):
-    """全部來源下載成功後記下資料更新時間,一次執行一個時間(七個來源檔不分開)。
+    """全部來源下載成功後記下資料更新時間,一次執行一個時間(八個來源檔不分開)。
 
     offline 沿用既有記錄——時間反映「下載」而不是「重跑」;從未記錄過也不報錯,
     footer 那一行省略即可。時刻由呼叫端注入,這裡不讀時鐘。
@@ -223,8 +262,8 @@ def record_downloaded_at(dest_dir, now, offline=False):
 
 def download_all(sources_dir, now, offline=False,
                  fetch=_fetch_url, fetch_json=_fetch_json):
-    """全部來源(中/日/英 cdb、MD 稀有度、Genesys、禁限)→ 全部成功才記
-    資料更新時間。
+    """全部來源(中/日/英 cdb、MD 稀有度、Genesys、禁限、OCG 首發日)→
+    全部成功才記資料更新時間。
 
     任一下載失敗即 raise,記錄不被動到——「全部成功才寫」由呼叫順序保證,
     收在同一個函式裡讓這件事測得到。
@@ -236,8 +275,10 @@ def download_all(sources_dir, now, offline=False,
                                     offline=offline)
     banlist_paths = download_banlists(sources_dir, fetch_json=fetch_json,
                                       offline=offline)
+    ocg_dates_path = download_ocg_dates(sources_dir, fetch_json=fetch_json,
+                                        offline=offline)
     record_downloaded_at(sources_dir, now, offline=offline)
-    return paths, md_path, genesys_path, banlist_paths
+    return paths, md_path, genesys_path, banlist_paths, ocg_dates_path
 
 
 def check_faq_gap(cards, faq_json_path=DEFAULT_FAQ_JSON):
@@ -258,6 +299,23 @@ def check_faq_gap(cards, faq_json_path=DEFAULT_FAQ_JSON):
     return lines
 
 
+def check_ocg_date_coverage(cards, dates_path):
+    """首發日覆蓋率:卡片總表對 ocg-dates 來源,回傳可列印的報告行。
+
+    純本地比對、不連網;異圖歸主卡的對齊復用 script/text_format/ 的純函式。
+    只報張數——查無日期的卡在三級分類報表歸「日期不明」單獨列出,這裡不列卡。
+    """
+    if not os.path.exists(dates_path):
+        return [f"OCG 首發日覆蓋: 尚無 {os.path.basename(dates_path)},略過"]
+    aligned = align_ocg_dates(cards, load_ocg_dates(dates_path))
+    dated = sum(1 for v in aligned.values() if v is not None)
+    missing = len(aligned) - dated
+    line = f"OCG 首發日覆蓋: 有日期 {dated} 張 / 查無日期 {missing} 張"
+    if missing:
+        line += "(查無日期的卡在三級分類報表歸「日期不明」)"
+    return [line]
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="一鍵更新卡片總表")
     parser.add_argument("--offline", action="store_true",
@@ -272,7 +330,7 @@ def main(argv=None):
                         help="卡文勘誤表路徑 (預設 data/text_errata.json)")
     args = parser.parse_args(argv)
 
-    paths, md_path, genesys_path, banlist_paths = download_all(
+    paths, md_path, genesys_path, banlist_paths, ocg_dates_path = download_all(
         args.sources_dir,
         datetime.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z"),
         offline=args.offline)
@@ -293,6 +351,8 @@ def main(argv=None):
     print(f"已寫出 {args.output}")
 
     for line in check_faq_gap(cards, args.faq_json):
+        print(line)
+    for line in check_ocg_date_coverage(cards, ocg_dates_path):
         print(line)
 
 

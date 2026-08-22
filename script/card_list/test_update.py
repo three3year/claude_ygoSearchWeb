@@ -5,9 +5,10 @@ import tempfile
 import unittest
 
 from update_cards import (BANLIST_FORMATS, SOURCES, check_faq_gap,
-                          download_all, download_banlists, download_genesys,
-                          download_md_rarity, download_sources,
-                          record_downloaded_at)
+                          check_ocg_date_coverage, download_all,
+                          download_banlists, download_genesys,
+                          download_md_rarity, download_ocg_dates,
+                          download_sources, record_downloaded_at)
 
 
 class DownloadSourcesTest(unittest.TestCase):
@@ -195,11 +196,18 @@ class DownloadAllTest(unittest.TestCase):
 
     def test_downloads_banlists_too(self):
         """一鍵更新連禁限來源一起抓:回傳的路徑存在且內容已寫入。"""
-        *_, banlist_paths = download_all(
+        *_, banlist_paths, _ = download_all(
             self.dir, "2026-08-08T17:57:00+0800",
             fetch=lambda url: b"cdb", fetch_json=self.fetch_json)
         for path in banlist_paths.values():
             self.assertTrue(os.path.exists(path))
+
+    def test_downloads_ocg_dates_too(self):
+        """一鍵更新連 OCG 首發日來源一起抓:回傳的路徑存在。"""
+        *_, ocg_dates_path = download_all(
+            self.dir, "2026-08-08T17:57:00+0800",
+            fetch=lambda url: b"cdb", fetch_json=self.fetch_json)
+        self.assertTrue(os.path.exists(ocg_dates_path))
 
     def test_one_source_fails_writes_nothing(self):
         def boom(url):
@@ -267,6 +275,85 @@ class DownloadGenesysTest(unittest.TestCase):
             self.assertEqual(json.load(f), {"1": 5})
         self.assertEqual(
             download_genesys(self.dir, fetch_json=None, offline=True), path)
+
+
+class DownloadOcgDatesTest(unittest.TestCase):
+    """OCG 首發日來源:自 YGOPRODeck 全量 dump 萃取 {密碼: ocg_date}。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = self.tmp.name
+
+    def test_extracts_password_date_map(self):
+        """dump → {密碼: 首發日字串};查無 ocg_date 的條目不入檔(不硬猜)。"""
+        dump = {"data": [
+            {"id": 89631139, "misc_info": [{"ocg_date": "1999-02-04"}]},
+            {"id": 46986414, "misc_info": [{"konami_id": 4041}]},  # TCG 限定等
+            {"id": 12345678},                                      # 無 misc_info
+        ]}
+        path = download_ocg_dates(self.dir, fetch_json=lambda url: dump)
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"89631139": "1999-02-04"})
+
+    def test_fetches_full_dump_without_format_filter(self):
+        """端點是全量 dump(misc=yes)且不帶 format= 卡池篩選——
+        genesys 端點那種 format=genesys 會漏卡,首發日要全庫都有機會對到。"""
+        fetched = []
+        download_ocg_dates(
+            self.dir,
+            fetch_json=lambda url: fetched.append(url) or {"data": []})
+        self.assertEqual(len(fetched), 1)
+        self.assertIn("misc=yes", fetched[0])
+        self.assertNotIn("format=", fetched[0])
+
+    def test_failure_keeps_existing_and_offline_cache(self):
+        """失敗指明 ocg-dates 來源且不毀既有檔;offline 沿用快取、缺檔報錯。"""
+        with self.assertRaises(RuntimeError) as ctx:
+            download_ocg_dates(self.dir, fetch_json=None, offline=True)
+        self.assertIn("ocg-dates", str(ctx.exception))
+        dump = {"data": [{"id": 1, "misc_info": [{"ocg_date": "2014-03-21"}]}]}
+        path = download_ocg_dates(self.dir, fetch_json=lambda url: dump)
+        def boom(url):
+            raise OSError("boom")
+        with self.assertRaises(RuntimeError) as ctx:
+            download_ocg_dates(self.dir, fetch_json=boom)
+        self.assertIn("ocg-dates", str(ctx.exception))
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"1": "2014-03-21"})
+        self.assertEqual(
+            download_ocg_dates(self.dir, fetch_json=None, offline=True), path)
+
+
+class CheckOcgDateCoverageTest(unittest.TestCase):
+    """更新後的首發日覆蓋率回報:有日期/查無日期張數,異圖歸主卡。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = os.path.join(self.tmp.name, "ocg-dates.json")
+
+    @staticmethod
+    def _card(id_, alt_ids=()):
+        return {"id": id_, "alt_ids": list(alt_ids)}
+
+    def test_reports_dated_and_missing_counts(self):
+        """主卡直接對到、異圖對到都算有日期;對不到的計入查無日期。"""
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump({"111": "2004-01-01", "223": "2015-06-20"}, f)
+        lines = check_ocg_date_coverage(
+            [self._card(111), self._card(222, alt_ids=[223]),
+             self._card(333)], self.path)
+        text = "\n".join(lines)
+        self.assertIn("2 張", text)  # 有日期
+        self.assertIn("1 張", text)  # 查無日期
+        self.assertIn("三級分類報表", text)  # 指出查無日期的卡歸「日期不明」
+
+    def test_missing_source_file_skips_check(self):
+        """尚未抓過首發日來源:略過回報而非報錯。"""
+        lines = check_ocg_date_coverage(
+            [self._card(111)], os.path.join(self.tmp.name, "nope.json"))
+        self.assertIn("略過", "\n".join(lines))
 
 
 class DownloadBanlistsTest(unittest.TestCase):

@@ -33,6 +33,7 @@ python script/card_list/build_cards.py --zh data/sources/cards.cdb --ja data/sou
 python -m unittest discover -s script/card_list
 python -m unittest discover -s script/faq_info
 python -m unittest discover -s script/tag_card
+python -m unittest discover -s script/text_format
 python -m unittest discover -s script/web
 node --test                       # 前端查詢引擎(node 內建,零 npm 依賴)
 ```
@@ -118,7 +119,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/card_list/` | 卡片總表建置/更新腳本(下方三支+測試);之後其他用途的腳本各自開資料夾 |
 | `script/card_list/cardlist.py` | 核心管線(純函式):來源 → 總表結構 + 建置/變動報告 |
 | `script/card_list/build_cards.py` | 建置 CLI 薄殼(讀檔、寫 JSON、印報告) |
-| `script/card_list/update_cards.py` | 一鍵更新殼(下載來源 → 建置 → 官方 Q&A 對帳;`--offline` 離線重跑) |
+| `script/card_list/update_cards.py` | 一鍵更新殼(下載來源 → 建置 → 官方 Q&A 對帳 + 首發日覆蓋回報;`--offline` 離線重跑) |
 | `script/faq_info/faqinfo.py` | 官方 Q&A 抽取管線(純函式):HTML → 補足情報結構 + 報告 |
 | `script/faq_info/faqgap.py` | 缺口盤點與 cid 對應表管理(純函式) |
 | `script/faq_info/faqfetch.py` | 官方 Q&A 頁與 ygoprodeck 的網路存取 |
@@ -135,6 +136,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/tag_card/merge_judgments.py` | 判定結果合併殼(結果檔 → 拆句表 + 標記表) |
 | `script/tag_card/run_masked_test.py` | 遮蔽測試殼(抽樣 / 對答案) |
 | `script/tag_card/check_split_rule.py` | 拆句判準的交叉驗證器(新判準會不會切開官方引用) |
+| `script/text_format/ocg_dates.py` | OCG 首發日來源的消費端(純函式):以卡片密碼對齊總表、異圖歸主卡 |
 | `script/web/vocab.py` | 值域正典(cdb 位元/整數/中文 → 短碼 → 中文 + 宣告序)+ 自檢接縫 |
 | `script/web/webindex.py` | 前端索引管線(純函式):總表 + 標記表 → 索引 + 一致性檢查報告 |
 | `script/web/build_index.py` | 建置 CLI 薄殼(讀檔 → 寫 web/data.js → 印報告 → 依 problems 定 exit code) |

@@ -24,12 +24,15 @@ from itertools import groupby
 from classify import (OLD_PATTERNS, TIER_NEW, TIER_OLD, TIER_REWRITTEN,
                       TIER_UNDATED, classify_card, old_pattern_labels)
 from ocg_dates import align_ocg_dates, load_ocg_dates
+from official_dates import merge_aligned_dates
 from tagcard import (FOOTNOTE_RE, TYPE_MONSTER, TYPE_SPELL, TYPE_TRAP,
                      _segments, _zh_sections, is_pure_normal)
 
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEFAULT_CARDS = os.path.join(_ROOT, "data", "cards.json")
 DEFAULT_DATES = os.path.join(_ROOT, "data", "sources", "ocg-dates.json")
+DEFAULT_OFFICIAL_DATES = os.path.join(_ROOT, "data", "sources",
+                                      "official-dates.json")
 DEFAULT_OUT = os.path.join(_ROOT, ".scratch", "text-format", "report.md")
 
 GUIDE = "docs/text_format_guide.md"
@@ -184,8 +187,9 @@ def _undated_section(seg_counts, undated):
         f"## 日期不明({seg_counts[TIER_UNDATED]:,} 段 / "
         f"{len(undated):,} 張)",
         "",
-        "有①但查無 OCG 首發日;獨立列出,不併入任何佇列、不猜。來源補到"
-        "日期後重跑,這批會自動歸隊。",
+        "有①但 YGOPRODeck 與官方後備皆查無 OCG 首發日;獨立列出,不併入"
+        "任何佇列、不猜。來源補到日期後重跑,這批會自動歸隊(缺口補抓:"
+        "script/text_format/fetch_official_dates.py)。",
         "",
     ]
     lines += [f"- `{cid}` {name}" for cid, name in sorted(undated)]
@@ -253,6 +257,10 @@ def main(argv=None):
     parser.add_argument("--dates", default=DEFAULT_DATES,
                         help="OCG 首發日來源 JSON "
                              "(預設 data/sources/ocg-dates.json)")
+    parser.add_argument("--official-dates", default=DEFAULT_OFFICIAL_DATES,
+                        help="官方 DB 収録シリーズ後備日期 JSON "
+                             "(預設 data/sources/official-dates.json,"
+                             "檔案不存在時只用 YGOPRODeck)")
     parser.add_argument("--out", default=DEFAULT_OUT,
                         help="報表輸出路徑 (預設 .scratch/text-format/report.md)")
     args = parser.parse_args(argv)
@@ -260,6 +268,13 @@ def main(argv=None):
     with open(args.cards, encoding="utf-8") as f:
         cards = json.load(f)
     dates = align_ocg_dates(cards, load_ocg_dates(args.dates))
+    conflicts = []
+    if os.path.exists(args.official_dates):
+        # YGOPRODeck 為主、官方後備補缺;不一致只往 stdout 回報(更新流程
+        # 也會報),不寫進報表——報表分級一律以合併後的日期為準
+        fallback = align_ocg_dates(cards,
+                                   load_ocg_dates(args.official_dates))
+        dates, conflicts = merge_aligned_dates(dates, fallback)
 
     stats, seg_counts, card_sets, groups, dated, undated, signals = scan(
         cards, dates)
@@ -271,6 +286,9 @@ def main(argv=None):
 
     for tier in (TIER_OLD, TIER_REWRITTEN, TIER_NEW, TIER_UNDATED):
         print(f"{tier}: {seg_counts[tier]:,} 段 / {len(card_sets[tier]):,} 張")
+    if conflicts:
+        print(f"OCG 首發日不一致 {len(conflicts)} 張(YGOPRODeck ≠ 官方後備,"
+              "分級以 YGOPRODeck 為主;逐卡明細見 update_cards.py 的回報)")
     print(f"改寫佇列分群: {len(groups)} 群;"
           f"附錄訊號命中: {sum(len(v) for v in signals.values()):,} 段")
     print(f"已寫出 {args.out}")

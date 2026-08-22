@@ -355,6 +355,46 @@ class CheckOcgDateCoverageTest(unittest.TestCase):
             [self._card(111)], os.path.join(self.tmp.name, "nope.json"))
         self.assertIn("略過", "\n".join(lines))
 
+    def test_official_fallback_fills_and_counts(self):
+        """官方後備補缺:YGOPRODeck 缺、官方有的卡算有日期並回報補了幾張。"""
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump({"111": "2004-01-01"}, f)
+        official = os.path.join(self.tmp.name, "official-dates.json")
+        with open(official, "w", encoding="utf-8") as f:
+            json.dump({"222": "2026-06-27"}, f)
+        lines = check_ocg_date_coverage(
+            [self._card(111), self._card(222), self._card(333)],
+            self.path, official_path=official)
+        text = "\n".join(lines)
+        self.assertIn("有日期 2 張", text)
+        self.assertIn("官方後備補 1 張", text)
+        self.assertIn("查無日期 1 張", text)
+
+    def test_conflicts_reported_not_silently_overwritten(self):
+        """兩邊都有日期且不一致 → 逐卡列出兩邊的值,不默默以任一邊蓋掉。"""
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump({"111": "2014-03-21"}, f)
+        official = os.path.join(self.tmp.name, "official-dates.json")
+        with open(official, "w", encoding="utf-8") as f:
+            json.dump({"111": "2026-06-27"}, f)
+        lines = check_ocg_date_coverage(
+            [self._card(111)], self.path, official_path=official)
+        text = "\n".join(lines)
+        self.assertIn("不一致", text)
+        self.assertIn("2014-03-21", text)
+        self.assertIn("2026-06-27", text)
+
+    def test_missing_official_file_keeps_primary_only(self):
+        """後備來源檔還沒抓過:回報維持 YGOPRODeck 單來源,不報錯。"""
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump({"111": "2004-01-01"}, f)
+        lines = check_ocg_date_coverage(
+            [self._card(111), self._card(222)], self.path,
+            official_path=os.path.join(self.tmp.name, "nope.json"))
+        text = "\n".join(lines)
+        self.assertIn("有日期 1 張", text)
+        self.assertIn("查無日期 1 張", text)
+
 
 class DownloadBanlistsTest(unittest.TestCase):
     """OCG 禁限來源:自 YGOPRODeck 禁限端點萃取 {密碼: 原始禁限值}。"""

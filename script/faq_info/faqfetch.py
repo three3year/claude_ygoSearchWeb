@@ -1,4 +1,4 @@
-"""官方 Q&A 頁與 ygoprodeck 的網路存取(重爬/補爬薄殼共用)。
+"""官方 DB 頁面(Q&A/卡片頁)與 ygoprodeck 的網路存取(重爬/補爬薄殼共用)。
 
 只負責取得位元組,不做解析。有禮貌的請求間隔由 sleep_between 統一。
 """
@@ -9,6 +9,9 @@ import urllib.request
 
 FAQ_URL = ("https://www.db.yugioh-card.com/yugiohdb/faq_search.action"
            "?ope=4&cid={cid}&request_locale=ja")
+# 卡片頁(収録シリーズ後備日期用):必須 ja locale——英文頁同區塊是 TCG 發售日
+CARD_URL = ("https://www.db.yugioh-card.com/yugiohdb/card_search.action"
+            "?ope=2&cid={cid}&request_locale=ja")
 # 官方站對預設的 Python UA 會擋,沿用瀏覽器 UA。
 FAQ_USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                   "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -23,6 +26,14 @@ def fetch_faq_page(cid, timeout=30):
     """抓取單一官方 Q&A 頁,回傳 HTML 字串。"""
     req = urllib.request.Request(
         FAQ_URL.format(cid=cid), headers={"User-Agent": FAQ_USER_AGENT})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read().decode("utf-8")
+
+
+def fetch_card_page(cid, timeout=30):
+    """抓取單一官方卡片頁(日文),回傳 HTML 字串。"""
+    req = urllib.request.Request(
+        CARD_URL.format(cid=cid), headers={"User-Agent": FAQ_USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode("utf-8")
 

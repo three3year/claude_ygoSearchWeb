@@ -66,6 +66,25 @@ python script/faq_info/recrawl_faq.py --sample 20
 不需改程式:開 `https://www.db.yugioh-card.com/yugiohdb/faq_search.action?ope=4&cid=<cid>`
 確認卡名相符後加一筆,再跑 `refill_faq.py --offline`。
 
+### OCG 首發日後備(官方 DB 収録シリーズ)
+
+```bash
+# 盤點缺口(YGOPRODeck 查無 OCG 首發日的卡),只看不動
+python script/text_format/fetch_official_dates.py --dry-run
+
+# 補抓缺口卡的官方卡片頁(日文)→ data/sources/official-dates.json
+python script/text_format/fetch_official_dates.py
+
+# 三級分類報表(YGOPRODeck 為主、官方後備補缺)→ .scratch/text-format/report.md
+python script/text_format/build_report.py
+```
+
+只抓「YGOPRODeck 缺日期且有官方 cid」的卡,不做全庫抓取;取官方**日文頁**
+収録シリーズ最早一筆発売日(英文頁是 TCG 日期,抓到視為錯誤)。快取與官方
+Q&A 同目錄(`card_<cid>.html`),節流與 `--offline` 慣例相同。消費端合併以
+YGOPRODeck 為主、官方後備補缺;兩邊都有日期且不一致的卡逐卡回報
+(`update_cards.py` 更新後對帳會列出),不默默以任一邊蓋掉。
+
 ### 效果標記表
 
 ```bash
@@ -137,6 +156,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/tag_card/run_masked_test.py` | 遮蔽測試殼(抽樣 / 對答案) |
 | `script/tag_card/check_split_rule.py` | 拆句判準的交叉驗證器(新判準會不會切開官方引用) |
 | `script/text_format/ocg_dates.py` | OCG 首發日來源的消費端(純函式):以卡片密碼對齊總表、異圖歸主卡 |
+| `script/text_format/official_dates.py` | 官方後備日期(純函式):収録シリーズ解析、缺口盤點、雙來源合併與一致性回報 |
+| `script/text_format/fetch_official_dates.py` | 後備日期補抓殼(缺口卡官方日文頁 → official-dates.json;節流、快取、`--offline`) |
 | `script/text_format/classify.py` | 三級分類器(純函式):卡文段落 + OCG 首發日 → 舊文本/官方已改寫/新格式新卡/日期不明 |
 | `script/text_format/build_report.py` | 三級分類報表殼(全庫盤點 → .scratch/text-format/report.md,可重跑冪等) |
 | `script/web/vocab.py` | 值域正典(cdb 位元/整數/中文 → 短碼 → 中文 + 宣告序)+ 自檢接縫 |
@@ -153,7 +174,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `docs/effect_kind_rules.md` | 規則清單(建置流程產生,不要手改) |
 | `docs/text_format_guide.md` | 文本格式規範(新式卡文句型的三欄對照與本站規範句) |
 | `docs/adr/` | 最難反轉的決定 |
-| `../data_ygoFaqCache/_cache` | 官方 Q&A 快取(repo 外,約 1.1GB) |
+| `../data_ygoFaqCache/_cache` | 官方 DB 頁面快取:Q&A 頁 `faq_*.html` + 卡片頁 `card_*.html`(repo 外,約 1.1GB) |
 | `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |
 | `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` |
 | `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`sort`(領域序與排序鍵,純函式)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`hash`(條件與排序 ⇄ 網址 `#hash`,純函式)、`render`(卡片呈現、異圖切換、排序與分頁)、`main`(主流程與網址寫入時機) |

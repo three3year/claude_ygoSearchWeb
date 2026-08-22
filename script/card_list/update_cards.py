@@ -29,6 +29,8 @@ sys.path.append(os.path.join(ROOT, "script", "faq_info"))
 sys.path.append(os.path.join(ROOT, "script", "text_format"))
 from faqgap import find_missing_cards, format_gap_report  # noqa: E402
 from ocg_dates import align_ocg_dates, load_ocg_dates  # noqa: E402
+from official_dates import (conflict_report_lines,  # noqa: E402
+                            merge_aligned_dates)
 
 SOURCES = {
     "zh": "https://github.com/salix5/cdb/releases/latest/download/cards.cdb",
@@ -58,6 +60,9 @@ BANLIST_FILENAME = "banlist-{fmt}.json"
 # 全量 dump——genesys 端點那種 format=genesys 會漏卡,首發日要全庫都對得到。
 OCG_DATE_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php?misc=yes"
 OCG_DATE_FILENAME = "ocg-dates.json"
+# 官方 DB 収録シリーズ後備日期:由 fetch_official_dates.py 補抓,不在
+# download_all 之列(對官方站發數十次請求,由人決定何時執行,比照 refill)
+OFFICIAL_DATE_FILENAME = "official-dates.json"
 
 
 def _fetch_url(url):
@@ -244,7 +249,9 @@ def download_ocg_dates(dest_dir, fetch_json=_fetch_json, offline=False):
 
 
 def record_downloaded_at(dest_dir, now, offline=False):
-    """全部來源下載成功後記下資料更新時間,一次執行一個時間(八個來源檔不分開)。
+    """全部來源下載成功後記下資料更新時間,一次執行一個時間(九個來源檔
+    不分開;官方後備首發日由獨立補抓腳本 fetch_official_dates.py 下載,
+    成功補抓同樣呼叫這裡記錄)。
 
     offline 沿用既有記錄——時間反映「下載」而不是「重跑」;從未記錄過也不報錯,
     footer 那一行省略即可。時刻由呼叫端注入,這裡不讀時鐘。
@@ -299,21 +306,34 @@ def check_faq_gap(cards, faq_json_path=DEFAULT_FAQ_JSON):
     return lines
 
 
-def check_ocg_date_coverage(cards, dates_path):
-    """首發日覆蓋率:卡片總表對 ocg-dates 來源,回傳可列印的報告行。
+def check_ocg_date_coverage(cards, dates_path, official_path=None):
+    """首發日覆蓋率:卡片總表對 ocg-dates(主)+ 官方後備,回傳可列印的報告行。
 
-    純本地比對、不連網;異圖歸主卡的對齊復用 script/text_format/ 的純函式。
-    只報張數——查無日期的卡在三級分類報表歸「日期不明」單獨列出,這裡不列卡。
+    純本地比對、不連網;對齊與合併復用 script/text_format/ 的純函式,
+    YGOPRODeck 為主、官方後備補缺。只報張數——查無日期的卡在三級分類報表
+    歸「日期不明」單獨列出;但兩邊都有日期且不一致的卡逐卡列出兩邊的值,
+    不默默以任一邊蓋掉。
     """
     if not os.path.exists(dates_path):
         return [f"OCG 首發日覆蓋: 尚無 {os.path.basename(dates_path)},略過"]
-    aligned = align_ocg_dates(cards, load_ocg_dates(dates_path))
-    dated = sum(1 for v in aligned.values() if v is not None)
-    missing = len(aligned) - dated
-    line = f"OCG 首發日覆蓋: 有日期 {dated} 張 / 查無日期 {missing} 張"
+    primary = align_ocg_dates(cards, load_ocg_dates(dates_path))
+    filled, conflicts = 0, []
+    merged = primary
+    if official_path and os.path.exists(official_path):
+        fallback = align_ocg_dates(cards, load_ocg_dates(official_path))
+        merged, conflicts = merge_aligned_dates(primary, fallback)
+        filled = sum(1 for pid, v in merged.items()
+                     if v is not None and primary[pid] is None)
+    dated = sum(1 for v in merged.values() if v is not None)
+    missing = len(merged) - dated
+    line = f"OCG 首發日覆蓋: 有日期 {dated} 張"
+    if filled:
+        line += f"(官方後備補 {filled} 張)"
+    line += f" / 查無日期 {missing} 張"
     if missing:
-        line += "(查無日期的卡在三級分類報表歸「日期不明」)"
-    return [line]
+        line += "(查無日期的卡在三級分類報表歸「日期不明」;"\
+                "有 cid 者可用 script/text_format/fetch_official_dates.py 補)"
+    return [line] + conflict_report_lines(conflicts, cards)
 
 
 def main(argv=None):
@@ -352,7 +372,10 @@ def main(argv=None):
 
     for line in check_faq_gap(cards, args.faq_json):
         print(line)
-    for line in check_ocg_date_coverage(cards, ocg_dates_path):
+    for line in check_ocg_date_coverage(
+            cards, ocg_dates_path,
+            official_path=os.path.join(args.sources_dir,
+                                       OFFICIAL_DATE_FILENAME)):
         print(line)
 
 

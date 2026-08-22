@@ -97,14 +97,14 @@
   </main>
 </div>
 
-<!-- 頁尾聲明三行:資料更新一行、來源一行、免責一行(2026-08-21 使用者裁示)。
+<!-- 頁尾聲明兩行:資料更新一行、來源一行(2026-08-21 使用者裁示;
+     2026-08-22 使用者裁示移除 KONAMI 免責一行)。
      靜態文案住 HTML;唯一動態的是第一行的資料更新時間——值來自 META,由
      main.js 填入,META 沒有該欄位(建置機從未跑過更新流程)時整行維持 hidden。
      時間未知就不顯示,不顯示錯的。 -->
 <footer class="site-footer">
   <p id="dataUpdated" hidden></p>
   <p>資料來源：查牌網（中文卡文・卡圖）・ygopro-database（日英卡名）・Master Duel Meta（MD 稀有度・MD 禁限）・YGOPRODeck（Genesys 點數・OCG/TCG 禁限）・Yu-Gi-Oh! Neuron（效果類型）</p>
-  <p>「遊戲王」為 KONAMI 之著作權與商標,本站為非官方查詢工具</p>
 </footer>
 
 <!-- 零建置協定(ADR-0007):沒有 bundler、沒有 ES modules,<script> 依序載入,

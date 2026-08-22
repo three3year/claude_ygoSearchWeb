@@ -347,22 +347,32 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .card-ot.ot-o { background: linear-gradient(135deg, #c62828, #ef5350); }
 .card-ot.ot-t { background: linear-gradient(135deg, #00695c, #26a69a); }
 
-/* [[禁限狀態]]徽章列(名稱行下方):上榜值沿稀有度/限定的實色漸層白字,
-   禁止最重(紅黑)、限制次之(橘)、準限制最輕(黃);「—」與「未發行」是
-   推導出來的非強調資訊,退成描邊淡字,不與上榜值搶眼。 */
-.card-ban { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
-.card-ban-badge {
-  color: #fff; border-radius: 4px; font-size: 10px; font-weight: bold;
-  padding: 1px 6px; white-space: nowrap;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, .4);
+/* [[禁限狀態]]列(名稱行下方):仿官方查牌網的緊湊圖示樣式(2026-08-22 使用者
+   裁示)——一顆灰底小膠囊,`OCG : 🛇 / TCG : 🛇 / MD : ①`。圖示由 CSS 畫:
+   禁止是紅圈白斜槓,限制/準限制是橘/金圈數字 1/2(可投入張數);「—」與
+   「未發行」是推導出來的非強調資訊,退成淡字。中文字面在 title。 */
+.card-ban {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 3px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 2px 8px; font-size: 11px;
 }
-.card-ban-badge.ban-f { background: linear-gradient(135deg, #4a0d0d, #b71c1c); }
-.card-ban-badge.ban-l { background: linear-gradient(135deg, #b53d00, #f57c00); }
-.card-ban-badge.ban-s { background: linear-gradient(135deg, #9c7a00, #d9b400); }
-.card-ban-badge.ban-none {
-  background: none; color: var(--muted); border: 1px solid var(--border);
-  font-weight: normal; text-shadow: none;
+.ban-cell {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--muted); font-weight: bold; white-space: nowrap;
 }
+.ban-sep { color: var(--border); }
+.ban-plain { font-weight: normal; }
+.ban-ico {
+  display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+  font-style: normal; font-size: 10px; font-weight: bold; color: #fff;
+  text-align: center; line-height: 14px;
+}
+/* 紅圈白斜槓:斜槓用漸層畫在圓底上,14px 下比字元圖示清晰 */
+.ban-ico.ban-f { background:
+  linear-gradient(135deg, transparent 41%, #fff 41%, #fff 59%, transparent 59%),
+  #c62828; }
+.ban-ico.ban-l { background: #e65100; }
+.ban-ico.ban-s { background: #c79100; }
 
 .card-meta {
   color: var(--gold); font-size: 12px; margin: 10px 0 12px;
@@ -464,7 +474,7 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 
 /* ─── 頁尾聲明 ────────────────────────────────────────────
-   三行小字置中(資料更新、來源、免責)。文案是一般文字,窄螢幕自己換行,
+   兩行小字置中(資料更新、來源)。文案是一般文字,窄螢幕自己換行,
    不需要 overflow 容器。貼齊視窗底由 body 的 flex 佈局負責。 */
 .site-footer {
   max-width: 100%; margin: 0 auto; padding: 4px 20px;

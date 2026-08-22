@@ -67,11 +67,12 @@ test('沒上任何榜的卡完全不長禁限列', () => {
 });
 
 test('任一賽制上榜即整列出現,各賽制欄位固定順序齊列', () => {
-  // 只上 OCG 榜:TCG 欄仍在,已發行未上榜寫「—」
+  // 只上 OCG 榜:TCG 欄仍在,已發行未上榜顯示「—」(說明字面是無限制)
   const out = html({ bo: 'f' });
   assert.ok(out.includes('OCG 禁止'));
-  assert.ok(out.includes('TCG —'));
-  assert.ok(out.indexOf('OCG 禁止') < out.indexOf('TCG —'));
+  assert.ok(out.includes('TCG 無限制'));
+  assert.ok(out.includes('—'));
+  assert.ok(out.indexOf('OCG 禁止') < out.indexOf('TCG 無限制'));
   // 同一張卡兩賽制各自的值互不干擾
   const both = html({ bo: 's', bt: 'f' });
   assert.ok(both.includes('OCG 準限制'));
@@ -83,15 +84,15 @@ test('MD 欄:上榜值、已收錄未上榜「—」、未收錄「未發行」(
   const all = html({ bo: 'f', bt: 'f', bm: 'l' });
   assert.ok(all.includes('MD 限制'));
   assert.ok(all.indexOf('TCG 禁止') < all.indexOf('MD 限制'));
-  // 已收錄(有 ra)未上榜 → 「—」
-  assert.ok(html({ bo: 'f' }).includes('MD —'));
+  // 已收錄(有 ra)未上榜 → 「—」(說明字面是無限制)
+  assert.ok(html({ bo: 'f' }).includes('MD 無限制'));
   // 未收錄進 MD(沒有 ra 欄位)→ 「未發行」
   const notInMd = harness.cardHtml(sandbox, {
     card: (() => { const c = card({ bo: 'f' }); delete c.ra; return c; })(),
     rows: null,
   });
   assert.ok(notInMd.includes('MD 未發行'));
-  assert.ok(!notInMd.includes('MD —'));
+  assert.ok(!notInMd.includes('MD 無限制'));
 });
 
 test('未在該賽制發行的欄位寫「未發行」(由 ot 推導)', () => {

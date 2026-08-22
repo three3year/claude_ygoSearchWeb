@@ -196,26 +196,35 @@ function otHtml(c) {
     title="${esc(OT_ZH[c.ot] || c.ot)}">${esc(OT_ZH[c.ot] || c.ot)}</span>`;
 }
 
-/* [[禁限狀態]]徽章列,名稱行下方一列(2026-08-22 使用者裁示)。**任一賽制上榜
+/* [[禁限狀態]]列,名稱行下方一列(2026-08-22 使用者裁示)。**任一賽制上榜
    才長**——沒上榜是 1.4 萬張的常態,不是資訊;長出來時各賽制欄位固定順序齊列。
-   每欄三種字面:上榜值(禁止/限制/準限制)、已發行(MD:已收錄)未上榜「—」、
-   未在該賽制發行「未發行」——後兩者由既有欄位推導(OCG/TCG 看 ot、MD 看
-   稀有度欄位的有無),不進索引。 */
+   樣式仿官方查牌網的緊湊圖示(2026-08-22 使用者裁示):一顆灰底小膠囊,
+   `OCG : 🛇 / TCG : 🛇 / MD : ①` ——禁止是紅圈斜槓、限制/準限制是圈數字 1/2
+   (可投入張數),圖示由 CSS 畫。已發行(MD:已收錄)未上榜「—」、未在該賽制
+   發行「未發行」——後兩者由既有欄位推導(OCG/TCG 看 ot、MD 看稀有度欄位的
+   有無),不進索引。中文字面(禁止/限制/準限制/無限制/未發行)在 title:
+   圖示認不得的人停一下就有答案。 */
 const BAN_FORMATS = [
   { key: 'bo', zh: 'OCG', released: c => c.ot !== 't' },
   { key: 'bt', zh: 'TCG', released: c => c.ot !== 'o' },
   // MD 的「發行」是收錄進遊戲,由稀有度欄位的有無定義(未收錄 416 張沒有 ra)
   { key: 'bm', zh: 'MD', released: c => c.ra != null },
 ];
+const BAN_ICON_NUM = { f: '', l: '1', s: '2' };  // 禁止畫斜槓,限制/準限制寫張數
+function banCell(c, f) {
+  const code = c[f.key];
+  const zh = code ? (BAN_ZH[f.key][code] || code)
+    : f.released(c) ? '無限制' : '未發行';
+  const body = code
+    ? `<i class="ban-ico ban-${code}">${BAN_ICON_NUM[code]}</i>`
+    : `<span class="ban-plain">${f.released(c) ? '—' : '未發行'}</span>`;
+  return `<span class="ban-cell" title="${esc(f.zh)} ${esc(zh)}">${
+    esc(f.zh)} : ${body}</span>`;
+}
 function banHtml(c) {
   if (!BAN_FORMATS.some(f => c[f.key])) return '';
-  return `<div class="card-ban">${BAN_FORMATS.map(f => {
-    const code = c[f.key];
-    const text = code ? (BAN_ZH[f.key][code] || code)
-      : f.released(c) ? '—' : '未發行';
-    return `<span class="card-ban-badge ban-${code || 'none'}"
-      title="${esc(f.zh)} 禁限卡表狀態">${esc(f.zh)} ${esc(text)}</span>`;
-  }).join('')}</div>`;
+  return `<div class="card-ban">${BAN_FORMATS.map(f => banCell(c, f))
+    .join('<span class="ban-sep">/</span>')}</div>`;
 }
 
 /* MD 稀有度以外的印刷面資訊:Genesys 點數。 */

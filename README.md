@@ -150,6 +150,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `data/sources/` | 來源檔暫存,含 `faq_info.json`(不入版控) |
 | `docs/effect_kind_guide.md` | 效果類型的判定規範(所有判定票的共同 prompt) |
 | `docs/effect_kind_rules.md` | 規則清單(建置流程產生,不要手改) |
+| `docs/text_format_guide.md` | 文本格式規範(新式卡文句型的三欄對照與本站規範句) |
 | `docs/adr/` | 最難反轉的決定 |
 | `../data_ygoFaqCache/_cache` | 官方 Q&A 快取(repo 外,約 1.1GB) |
 | `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |

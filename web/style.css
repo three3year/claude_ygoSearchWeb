@@ -306,16 +306,17 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .card-name:hover { text-decoration: underline; }
 .card-id { color: var(--muted); font-size: 11px; font-family: monospace; }
 /* 「顯示原文」切換鈕:只長在被卡文勘誤表勘誤過的卡上(ADR-0011),按下時反色,
-   顯示區換成勘誤前的來源原文 */
+   顯示區換成勘誤前的來源原文。灰色系(2026-08-22 使用者裁示)——它是對照
+   輔助,不用強調色跟卡名、搜尋主軸搶眼。 */
 .og-toggle {
   flex: none; cursor: pointer; padding: 0 6px;
-  background: var(--surface2); border: 1px solid var(--accent-dim);
-  border-radius: 4px; color: var(--accent); font-size: 11px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--muted); font-size: 11px;
   font-family: inherit;
 }
-.og-toggle:hover { border-color: var(--accent); }
+.og-toggle:hover { border-color: var(--muted); }
 .og-toggle[aria-pressed="true"] {
-  background: var(--accent); border-color: var(--accent); color: #fff;
+  background: var(--muted); border-color: var(--muted); color: var(--bg);
 }
 /* 勘誤前原文:換行照原樣呈現,不分行、不掛效果標籤、不上關鍵字色;
    只帶差異標記(2026-08-22 使用者裁示)——刪除線=原文才有、本站勘誤刪去,

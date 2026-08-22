@@ -200,10 +200,10 @@ function otHtml(c) {
    才長**——沒上榜是 1.4 萬張的常態,不是資訊;長出來時各賽制欄位固定順序齊列。
    樣式仿官方查牌網的緊湊圖示(2026-08-22 使用者裁示):一顆灰底小膠囊,
    `OCG : 🛇 / TCG : 🛇 / MD : ①` ——禁止是紅圈斜槓、限制/準限制是圈數字 1/2
-   (可投入張數),圖示由 CSS 畫。已發行(MD:已收錄)未上榜「—」、未在該賽制
-   發行「未發行」——後兩者由既有欄位推導(OCG/TCG 看 ot、MD 看稀有度欄位的
-   有無),不進索引。中文字面(禁止/限制/準限制/無限制/未發行)在 title:
-   圖示認不得的人停一下就有答案。 */
+   (可投入張數),圖示由 CSS 畫。沒上榜的欄(無限制與未發行)畫面統一半形
+   「-」,兩者由既有欄位推導(OCG/TCG 看 ot、MD 看稀有度欄位的有無),不進
+   索引、只在 title 區分。中文字面(禁止/限制/準限制/無限制/未發行)在
+   title:圖示認不得的人停一下就有答案。 */
 const BAN_FORMATS = [
   { key: 'bo', zh: 'OCG', released: c => c.ot !== 't' },
   { key: 'bt', zh: 'TCG', released: c => c.ot !== 'o' },
@@ -215,9 +215,11 @@ function banCell(c, f) {
   const code = c[f.key];
   const zh = code ? (BAN_ZH[f.key][code] || code)
     : f.released(c) ? '無限制' : '未發行';
+  // 沒上榜(無限制/未發行)畫面一律「-」,兩者的區分只在 title(2026-08-22
+  // 使用者裁示)——這一列要說的是「上了哪些榜」,其餘都是非資訊
   const body = code
     ? `<i class="ban-ico ban-${code}">${BAN_ICON_NUM[code]}</i>`
-    : `<span class="ban-plain">${f.released(c) ? '-' : '未發行'}</span>`;
+    : '<span class="ban-plain">-</span>';
   return `<span class="ban-cell" title="${esc(f.zh)} ${esc(zh)}">${
     esc(f.zh)} : ${body}</span>`;
 }

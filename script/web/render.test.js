@@ -98,11 +98,16 @@ test('MD 欄:上榜值、已收錄未上榜「—」、未收錄「未發行」(
   assert.ok(!notInMd.includes('MD 無限制'));
 });
 
-test('未在該賽制發行的欄位寫「未發行」(由 ot 推導)', () => {
-  // OCG 限定卡(ot='o')上了 OCG 榜:TCG 欄是未發行,不是「—」
+test('未在該賽制發行的欄位:title 寫「未發行」,畫面同樣顯示半形「-」', () => {
+  // OCG 限定卡(ot='o')上了 OCG 榜:TCG 欄是未發行,不是無限制
   const ocgOnly = html({ ot: 'o', bo: 'l' });
   assert.ok(ocgOnly.includes('TCG 未發行'));
-  assert.ok(!ocgOnly.includes('TCG —'));
+  assert.ok(!ocgOnly.includes('TCG 無限制'));
+  // 畫面字面統一是「-」,未發行/無限制的區分只在 title(2026-08-22 使用者裁示)
+  const ban = /<div class="card-ban">[\s\S]*?<\/div>/.exec(ocgOnly)[0]
+    .replace(/<[^>]+>/g, '');
+  assert.ok(ban.includes('-'));
+  assert.ok(!ban.includes('未發行'));
   // TCG 限定卡(ot='t')上了 TCG 榜:OCG 欄是未發行
   const tcgOnly = html({ ot: 't', bt: 'f' });
   assert.ok(tcgOnly.includes('OCG 未發行'));

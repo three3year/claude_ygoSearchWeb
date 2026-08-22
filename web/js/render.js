@@ -153,7 +153,7 @@ function cardHtml(e, hl) {
       ${printHtml(c)}
       ${metaHtml(c)}
       <div class="card-text">${cardText(c, e.rows, hl)}</div>
-      ${c.og ? `<div class="card-text og-text" hidden>${esc(c.og)}</div>` : ''}
+      ${ogTextHtml(c)}
     </div>
   </article>`;
 }
@@ -179,13 +179,27 @@ function altNavHtml(c) {
   </div>`;
 }
 
-/* 「顯示原文」切換鈕,只長在[[卡文勘誤表]]勘誤過的卡上(`og` 是勘誤前的來源
-   卡文原樣,ADR-0011)——其餘一萬四千多張卡的原文就是畫面上那份,鈕是雜訊。
+/* 「顯示原文」切換鈕,只長在[[卡文勘誤表]]勘誤過的卡上(ADR-0011)——其餘
+   一萬四千多張卡的原文就是畫面上那份,鈕是雜訊。
    放密碼右邊(2026-08-17 盤問決定),與異圖切換同一個「對照出口」的角色。 */
 function ogBtnHtml(c) {
   if (!c.og) return '';
   return `<button type="button" class="og-toggle" aria-pressed="false"
-    title="此卡卡文經本站勘誤,點一下對照勘誤前的來源原文">顯示查牌網原文</button>`;
+    title="此卡卡文經本站勘誤,點一下對照勘誤前的來源原文(差異會標示出來)">顯示查牌網原文</button>`;
+}
+
+/* 「顯示查牌網原文」的顯示區。`og` 是建置期由勘誤表算好的差異段落表
+   ([op, 文字] 列表):「=」兩邊相同、「-」原文才有(本站勘誤刪去,畫刪除線)、
+   「+」本站勘誤補上(原文沒有,標底色)。差異與勘誤同源、住建置期,前端只上
+   標記不跑 diff(2026-08-22 使用者裁示:按鈕要標示出差異)。 */
+function ogTextHtml(c) {
+  if (!c.og) return '';
+  const seg = c.og.map(([op, t]) => {
+    if (op === '-') return `<del class="og-del" title="查牌網原文有這段,本站勘誤後刪去">${esc(t)}</del>`;
+    if (op === '+') return `<ins class="og-add" title="本站勘誤後補上,查牌網原文沒有這段">${esc(t)}</ins>`;
+    return esc(t);
+  }).join('');
+  return `<div class="card-text og-text" hidden>${seg}</div>`;
 }
 
 /* OCG・TCG 限定徽章,擺在標題列 MD 稀有度右邊、與稀有度同一套視覺語言。
@@ -378,8 +392,8 @@ function initEffKind() {
 
 /* 「顯示原文」的切換:換掉整個顯示區——標註視圖(效果句分行、kind 標籤、badge、
    上色)與勘誤前原文是**兩份文字**,不是同一份文字的兩種畫法,逐行對映不存在,
-   所以是兩個 div 互換而不是在原視圖上摘標籤。原文那側是純文字,換行由 CSS 的
-   pre-line 呈現,● 不另起新行——原樣就是原樣。
+   所以是兩個 div 互換而不是在原視圖上摘標籤。原文那側除了差異標記(og 段落表,
+   見 ogTextHtml)是純文字,換行由 CSS 的 pre-line 呈現,● 不另起新行。
    逐卡切換、狀態不記憶(盤問決定):重繪(翻頁/重搜)即回到標註視圖,與
    show-kind 同一套哲學——看原文是一次刻意的對照,對照完就收。 */
 function initOgToggle() {

@@ -317,8 +317,19 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .og-toggle[aria-pressed="true"] {
   background: var(--accent); border-color: var(--accent); color: #fff;
 }
-/* 勘誤前原文是純文字:換行照原樣呈現,不分行、不掛標籤、不上色 */
+/* 勘誤前原文:換行照原樣呈現,不分行、不掛效果標籤、不上關鍵字色;
+   只帶差異標記(2026-08-22 使用者裁示)——刪除線=原文才有、本站勘誤刪去,
+   綠底=本站勘誤補上、原文沒有。半透明色塊,深色底上不搶掉內文。 */
 .og-text { white-space: pre-line; font-size: 13.5px; padding: 3px 8px; }
+.og-text .og-del {
+  background: rgba(229, 83, 75, .16); color: #f0a8a2;
+  text-decoration: line-through;
+  text-decoration-color: rgba(229, 83, 75, .8);
+}
+.og-text .og-add {
+  background: rgba(87, 171, 90, .18); color: #9ed9a0;
+  text-decoration: none;
+}
 /* 日英卡名是唯一一段可能不含斷行點的長字串(`Number 39: Utopia Double`),
    窄螢幕上它會把卡片撐寬、整頁跟著橫向捲 */
 .card-names {

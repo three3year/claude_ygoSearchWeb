@@ -208,6 +208,90 @@ def _original_desc(desc, entries):
     return desc
 
 
+def _strip_common(a, b):
+    """兩字串的共同前綴/後綴長度 → (p, s):a[p:len(a)-s] 對 b[p:len(b)-s]
+    是真正的差異核心——勘誤表的 from/to 常帶著定位用的前後文,標差異不標它們。"""
+    p = 0
+    while p < len(a) and p < len(b) and a[p] == b[p]:
+        p += 1
+    s = 0
+    while s < len(a) - p and s < len(b) - p and a[-1 - s] == b[-1 - s]:
+        s += 1
+    return p, s
+
+
+def _mark_edit(segments, pos, core_del, core_ins):
+    """在段落表的「現行文字」座標 pos 處把 core_del 標為刪除、補進 core_ins。
+
+    現行文字=「=」「+」段依序串接(「-」段不佔座標)。宿主段必須完整涵蓋
+    刪除範圍:「=」段拆成 =/-/+/=;「+」段(前一筆勘誤補的字又被後一筆改)
+    直接改字——那段字原文沒有、成品也沒有,兩邊都不標。跨段無法機械標示,
+    回 None 讓建置吵出來。
+    """
+    out = []
+    done = False
+    cursor = 0
+    for op, text in segments:
+        if op == "-":
+            out.append([op, text])
+            continue
+        start, end = cursor, cursor + len(text)
+        cursor = end
+        if done or pos < start or pos + len(core_del) > end:
+            out.append([op, text])
+            continue
+        done = True
+        left = text[:pos - start]
+        right = text[pos - start + len(core_del):]
+        if op == "=":
+            out.extend([["=", left], ["-", core_del],
+                        ["+", core_ins], ["=", right]])
+        else:
+            out.append(["+", left + core_ins + right])
+    return out if done else None
+
+
+def _og_diff(desc, entries):
+    """勘誤後卡文 → 原文與差異的段落表 [[op, text], ...]。
+
+    op:「=」兩邊相同、「-」原文才有(勘誤刪去)、「+」勘誤後才有(本站補上)。
+    原文=「=」+「-」依序串接、本站卡文=「=」+「+」依序串接;前端「顯示查牌網
+    原文」由此上差異標記(2026-08-22 使用者裁示),不在瀏覽器裡跑 diff——
+    差異跟勘誤同源,正典住建置期(ADR-0008)。
+
+    先由 `_original_desc` 逆推回原文,再按套用順序把每筆勘誤的差異核心標進
+    段落表。逆推不回去、核心跨段、或段落表兜不回兩側文字時回 None,由
+    `errata_not_reversible` 那一道讓建置失敗。
+    """
+    og = _original_desc(desc, entries)
+    if og is None:
+        return None
+    segments = [["=", og]]
+    for entry in entries:
+        cur = "".join(t for op, t in segments if op != "-")
+        if cur.count(entry["from"]) != 1:
+            return None
+        p, s = _strip_common(entry["from"], entry["to"])
+        segments = _mark_edit(
+            segments, cur.index(entry["from"]) + p,
+            entry["from"][p:len(entry["from"]) - s],
+            entry["to"][p:len(entry["to"]) - s])
+        if segments is None:
+            return None
+    merged = []
+    for op, text in segments:
+        if not text:
+            continue
+        if merged and merged[-1][0] == op:
+            merged[-1][1] += text
+        else:
+            merged.append([op, text])
+    if ("".join(t for op, t in merged if op != "+") != og
+            or "".join(t for op, t in merged if op != "-") != desc):
+        return None
+    return merged
+
+
 def _coverage(desc, pieces):
     """效果句(加故事文)串接後對卡文的覆蓋。→ (缺口清單, 對不上的片段清單)。
 
@@ -386,7 +470,7 @@ def _summarise_problems(report):
         ("效果句在卡文裡找不到", checks["clauses_not_in_desc"]),
         ("type 出現值域正典沒解釋的位元", checks["unexplained_type_bits"]),
         ("※ 別名的缺口與抽取結果對不上", checks["alias_gap_not_extracted"]),
-        ("卡文勘誤逆推不回原文", checks["errata_not_reversible"]),
+        ("卡文勘誤逆推不回原文或差異標不出來", checks["errata_not_reversible"]),
         ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
         ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
     )
@@ -407,8 +491,9 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     不是顯示空字串。
 
     `errata` 是[[卡文勘誤表]](ADR-0011):被勘誤的卡多帶一個 `og` 欄位——
-    勘誤**前**的來源卡文原樣,前端「顯示原文」讀它。只有這批卡帶(目前 1 張),
-    全量帶原文 gzip 要多 340 KB,而未勘誤的卡的原文就是畫面上那份文字。
+    勘誤**前**的來源卡文原樣連同差異段落([[op, text], ...],`_og_diff`),
+    前端「顯示原文」讀它並標示差異。只有這批卡帶,全量帶原文 gzip 要多
+    340 KB,而未勘誤的卡的原文就是畫面上那份文字。
     """
     clauses_by_id = {t["id"]: t.get("clauses") or [] for t in tag_cards}
     errata_by_id = {}
@@ -436,7 +521,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
         if cid in entries:
             checks["duplicate_ids"].append(cid)
         if cid in errata_by_id:
-            og = _original_desc(card["desc"], errata_by_id[cid])
+            og = _og_diff(card["desc"], errata_by_id[cid])
             if og is None:
                 checks["errata_not_reversible"].append(cid)
             else:

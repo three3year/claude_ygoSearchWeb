@@ -73,7 +73,7 @@ def print_checks(report, p, limit=20):
         ("clauses_not_in_desc", "效果句在卡文裡找不到"),
         ("unexplained_type_bits", "type 有值域正典沒解釋的位元"),
         ("alias_gap_not_extracted", "※ 別名的缺口與抽取結果對不上"),
-        ("errata_not_reversible", "卡文勘誤逆推不回原文"),
+        ("errata_not_reversible", "卡文勘誤逆推不回原文或差異標不出來"),
     )
     gaps = report["known_gaps"]
     p(f"已知缺口: 段落標頭 {gaps['header']} 處、※ 別名 {gaps['alias']} 處")

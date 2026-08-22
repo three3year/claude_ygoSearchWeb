@@ -582,7 +582,8 @@ class CrossTypeTest(unittest.TestCase):
 
 
 class ErrataTest(unittest.TestCase):
-    """[[卡文勘誤表]]的原文欄位:被勘誤的卡帶 `og`(勘誤前原樣),其餘卡不帶。"""
+    """[[卡文勘誤表]]的原文欄位:被勘誤的卡帶 `og`(原文與差異的段落表,
+    「=」兩邊相同、「-」原文才有、「+」勘誤後補上),其餘卡不帶。"""
 
     def build(self, desc, errata):
         cards = [card(84488827, desc=desc)]
@@ -590,13 +591,34 @@ class ErrataTest(unittest.TestCase):
                                         optional="必發"))]
         return build_index(cards, tags, errata=errata)
 
-    def test_errata_card_carries_original_text(self):
+    def test_deletion_marks_original_only_text(self):
+        """勘誤刪字:被刪的差異核心標「-」,from/to 的共同前後綴不算差異。"""
         index, report = self.build(
             "召喚成功時，從以下效果選擇1個效果發動。",
             [{"id": 84488827, "from": "可以從以下效果", "to": "從以下效果"}])
         self.assertEqual(report["problems"], [])
         self.assertEqual(index["cards"][0]["og"],
-                         "召喚成功時，可以從以下效果選擇1個效果發動。")
+                         [["=", "召喚成功時，"], ["-", "可以"],
+                          ["=", "從以下效果選擇1個效果發動。"]])
+
+    def test_insertion_marks_added_text(self):
+        """勘誤補句:原文沒有的字標「+」,原文段照樣拼得回原樣。"""
+        index, report = self.build(
+            "①：發動。此效果在對手回合也能發動。",
+            [{"id": 84488827, "from": "①：發動。",
+              "to": "①：發動。此效果在對手回合也能發動。"}])
+        self.assertEqual(report["problems"], [])
+        self.assertEqual(index["cards"][0]["og"],
+                         [["=", "①：發動。"],
+                          ["+", "此效果在對手回合也能發動。"]])
+
+    def test_replacement_marks_both_sides(self):
+        index, report = self.build(
+            "抽3張。",
+            [{"id": 84488827, "from": "抽2張", "to": "抽3張"}])
+        self.assertEqual(report["problems"], [])
+        self.assertEqual(index["cards"][0]["og"],
+                         [["=", "抽"], ["-", "2"], ["+", "3"], ["=", "張。"]])
 
     def test_untouched_card_has_no_og(self):
         cards = [card(1000, desc="①：這樣。")]
@@ -611,6 +633,14 @@ class ErrataTest(unittest.TestCase):
             [{"id": 84488827, "from": "可以從以下效果", "to": "從以下效果"}])
         self.assertTrue(report["checks"]["errata_not_reversible"])
         self.assertTrue(any("逆推" in p for p in report["problems"]))
+
+    def test_edit_across_segment_boundary_fails_the_build(self):
+        """後筆勘誤的差異核心橫跨前筆勘誤的段界 → 標不出來,建置失敗。"""
+        index, report = self.build(
+            "AY",
+            [{"id": 84488827, "from": "AB", "to": "AXB"},
+             {"id": 84488827, "from": "XB", "to": "Y"}])
+        self.assertTrue(report["checks"]["errata_not_reversible"])
 
 
 class ReportTest(unittest.TestCase):

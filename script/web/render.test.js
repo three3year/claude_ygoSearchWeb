@@ -7,8 +7,8 @@
  * 餵合成卡片、斷言產出的 HTML **字面**(使用者看得到的文字)——不斷言 DOM
  * 結構與 CSS class 名稱(實作細節,重構就壞而且壞得沒有意義)。
  *
- * 目前只蓋[[禁限狀態]]徽章列(spec banlist,2026-08-22 使用者裁示 render 也要
- * 自動測);其餘呈現仍走人工驗收。
+ * 目前蓋[[禁限狀態]]徽章列(spec banlist,2026-08-22 使用者裁示 render 也要
+ * 自動測)與[[卡文勘誤表]]原文視圖的差異標示;其餘呈現仍走人工驗收。
  */
 'use strict';
 
@@ -112,4 +112,21 @@ test('未在該賽制發行的欄位:title 寫「未發行」,畫面同樣顯示
   const tcgOnly = html({ ot: 't', bt: 'f' });
   assert.ok(tcgOnly.includes('OCG 未發行'));
   assert.ok(tcgOnly.includes('TCG 禁止'));
+});
+
+test('被勘誤的卡:原文視圖帶差異標示,刪去與補上兩側說明都在', () => {
+  // og 是建置期算好的差異段落表(2026-08-22 使用者裁示:原文要標示差異)
+  const out = html({ og: [['=', '召喚成功時，'], ['-', '可以'],
+                          ['=', '發動。'], ['+', '此效果在對手回合也能發動。']] });
+  assert.ok(out.includes('顯示查牌網原文'));            // 對照鈕
+  assert.ok(out.includes('可以'));                      // 原文才有的字仍看得到
+  assert.ok(out.includes('本站勘誤後刪去'));            // 刪去段的說明(title)
+  assert.ok(out.includes('本站勘誤後補上'));            // 補上段的說明(title)
+  assert.ok(out.includes('此效果在對手回合也能發動。'));
+});
+
+test('沒被勘誤的卡:沒有對照鈕、沒有原文視圖', () => {
+  const out = html({});
+  assert.ok(!out.includes('顯示查牌網原文'));
+  assert.ok(!out.includes('本站勘誤'));
 });

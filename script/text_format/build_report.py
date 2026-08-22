@@ -43,6 +43,11 @@ CATEGORIES = ((TYPE_MONSTER, "怪獸"), (TYPE_SPELL, "魔法"), (TYPE_TRAP, "陷
 _LABEL_POS = {key: pos for pos, (key, _, _) in enumerate(OLD_PATTERNS)}
 _LABEL_REF = {key: ref for key, ref, _ in OLD_PATTERNS}
 
+# 附錄不掃的條目:「〜的場合,可以〜」正是新式合法句型的大宗(結算內分支、
+# 素材代用、破壞代替、永續條件……),2026-08-23 全量人工分型 223 段命中
+# 零真陽性——掃在①段上只有噪音。舊段分群(classify 的 labels)照用不動。
+APPENDIX_EXCLUDED = frozenset({"誘發缺發動"})
+
 
 def category(ctype):
     """type 位元 → 大類名稱與排序位(怪獸/魔法/陷阱)。"""
@@ -96,7 +101,8 @@ def scan(cards, dates):
             if not numbered:
                 continue
             hits = {label for _, (start, end) in numbered
-                    for label in old_pattern_labels(text[start:end])}
+                    for label in old_pattern_labels(text[start:end])
+                    } - APPENDIX_EXCLUDED
             for label in sorted(hits, key=_LABEL_POS.get):
                 signals[label].append(
                     (cid, name, section, tier_by_section[section]))
@@ -193,9 +199,12 @@ def _signals_appendix(signals):
         "**僅供人工抽查,不保證準確**——偵測樣式是為舊文本段設計的,掃在"
         f"新式段上以偽陽性為主(各條目的誤報樣態見 {GUIDE} §4 逐條);此清單"
         "不混入上方任何佇列。掃描對象是①段自身的文字(不含前言段),與 §4 "
-        "的誤報參照組同一個口徑。",
+        "的誤報參照組同一個口徑。「誘發缺發動」(§4.4)不列入附錄:全量分型"
+        "後零真陽性(「〜的場合,可以〜」是新式合法句型大宗),掃了只有噪音。",
     ]
     for label, _, _ in OLD_PATTERNS:
+        if label in APPENDIX_EXCLUDED:
+            continue
         rows = signals.get(label, [])
         lines += ["", f"### {label}({_LABEL_REF[label]},{len(rows):,} 段)",
                   ""]

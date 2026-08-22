@@ -403,6 +403,9 @@ function initOgToggle() {
     const art = btn.closest('article.card');
     const on = btn.getAttribute('aria-pressed') !== 'true';
     btn.setAttribute('aria-pressed', on);
+    // 鈕面跟著狀態換字(2026-08-22 使用者裁示):開著時寫「隱藏」,收合的出口
+    // 就在按鈕自己身上,不用靠反色猜「再按一下會發生什麼」
+    btn.textContent = on ? '隱藏查牌網原文' : '顯示查牌網原文';
     art.querySelector('.card-text').hidden = on;
     art.querySelector('.og-text').hidden = !on;
   });

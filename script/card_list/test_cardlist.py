@@ -509,6 +509,55 @@ class CardListTest(unittest.TestCase):
             build_card_list(zh, errata=[
                 {"id": 99999999, "from": "可以", "to": ""}])
 
+    def test_rewrite_applied_replaces_whole_desc(self):
+        """文本改寫:`old` 與現行 desc 全文相等時整卡替換,報告記套用筆數。"""
+        zh = self.cdb("zh.cdb", [{
+            "id": 1571945, "name": "白色忍者",
+            "desc": "反轉：選擇場上1隻守備表示怪獸破壞。",
+        }])
+        cards, report = build_card_list(zh, rewrites=[{
+            "id": 1571945,
+            "old": "反轉：選擇場上1隻守備表示怪獸破壞。",
+            "new": "①：此卡反轉的場合發動。場上1隻守備表示怪獸破壞。",
+        }])
+        self.assertEqual(cards[0]["desc"],
+                         "①：此卡反轉的場合發動。場上1隻守備表示怪獸破壞。")
+        self.assertEqual(report["rewrites_applied"], 1)
+
+    def test_rewrite_stale_old_fails_loudly_listing_all(self):
+        """`old` 與現行 desc 不相等(上游更新)→ 建置失敗,整批列舉不只報第一筆。"""
+        zh = self.cdb("zh.cdb", [
+            {"id": 11111111, "name": "卡一", "desc": "新的卡文。"},
+            {"id": 22222222, "name": "卡二", "desc": "也是新的卡文。"},
+        ])
+        with self.assertRaises(ValueError) as ctx:
+            build_card_list(zh, rewrites=[
+                {"id": 11111111, "old": "舊的卡文。", "new": "①：改寫一。"},
+                {"id": 22222222, "old": "舊的卡文。", "new": "①：改寫二。"},
+            ])
+        self.assertIn("11111111", str(ctx.exception))
+        self.assertIn("22222222", str(ctx.exception))
+
+    def test_rewrite_missing_card_fails(self):
+        """id 不在總表(被排除或併入異圖)→ 一樣吵鬧失敗。"""
+        zh = self.cdb("zh.cdb", [{"id": 11111111, "name": "卡", "desc": "文。"}])
+        with self.assertRaises(ValueError):
+            build_card_list(zh, rewrites=[
+                {"id": 99999999, "old": "文。", "new": "①：改寫。"}])
+
+    def test_same_card_in_errata_and_rewrites_fails(self):
+        """兩表互斥:同一 id 同時在勘誤表與改寫表 → 建置失敗。"""
+        zh = self.cdb("zh.cdb", [{
+            "id": 11111111, "name": "卡", "desc": "舊文。此外，另一效果。",
+        }])
+        with self.assertRaises(ValueError) as ctx:
+            build_card_list(
+                zh,
+                errata=[{"id": 11111111, "from": "舊文", "to": "新文"}],
+                rewrites=[{"id": 11111111, "old": "舊文。此外，另一效果。",
+                           "new": "①：效果一。\n②：效果二。"}])
+        self.assertIn("11111111", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

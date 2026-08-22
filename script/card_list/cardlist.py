@@ -151,6 +151,44 @@ def _apply_errata(cards, errata):
     return len(errata)
 
 
+def _apply_rewrites(cards, rewrites):
+    """套用[[文本改寫表]]:舊式卡文依[[文本格式規範]]改寫後,新全文在建置期
+    **整卡替換**(勘誤=修誤譯改子字串,改寫=格式現代化動整段結構)。
+
+    `old` 是改寫時的來源 desc 全文,必須與現行 desc **全文相等**,不相等即
+    整批列舉後拋錯(ADR-0011 的失敗哲學)——上游卡文哪天變了,要的是建置
+    吵出來、人來重審那筆改寫,而不是把過時的新全文默默蓋上去。
+    """
+    by_id = {card["id"]: card for card in cards}
+    problems = []
+    for entry in rewrites:
+        card = by_id.get(entry["id"])
+        if card is None:
+            problems.append(f"id={entry['id']} 不在總表(被排除或併入異圖?)")
+            continue
+        if card["desc"] != entry["old"]:
+            problems.append(f"id={entry['id']} 舊全文與現行卡文不相等"
+                            "(上游來源更新了?請重審這筆改寫)")
+            continue
+        card["desc"] = entry["new"]
+    if problems:
+        raise ValueError("文本改寫套用失敗:\n" + "\n".join(problems))
+    return len(rewrites)
+
+
+def _check_tables_disjoint(errata, rewrites):
+    """兩表互斥:同一張卡不得同時在勘誤表與改寫表。
+
+    勘誤=內容、改寫=形式的分工不被偷渡混淆——改寫卡的誤譯直接寫對在新全文
+    並於 reason 註明;既有勘誤卡被改寫時,勘誤筆遷出併入改寫筆。
+    """
+    overlap = sorted({e["id"] for e in errata} & {r["id"] for r in rewrites})
+    if overlap:
+        raise ValueError(
+            "同卡同時在勘誤表與改寫表(勘誤筆應遷出併入改寫筆): "
+            + ", ".join(str(cid) for cid in overlap))
+
+
 def serialize_card_list(cards):
     """總表 → JSON 文字:一卡一行、鍵序固定、不 escape 中文,git diff 可讀。"""
     lines = [json.dumps(card, ensure_ascii=False, separators=(", ", ": "))
@@ -311,7 +349,8 @@ def _diff_cards(existing, cards):
 
 def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
                     genesys_path=None, banlist_paths=None, existing=None,
-                    errata=None):
+                    errata=None, rewrites=None):
+    _check_tables_disjoint(errata or [], rewrites or [])
     excluded = {"no_password": 0, "token": 0}
     entries = {}
     stale = set()
@@ -328,12 +367,15 @@ def build_card_list(zh_path, ja_path=None, en_path=None, md_rarity_path=None,
         entries[card["id"]] = (card, row[2])
     cards, merged, exceptions = _merge_alt_arts(entries)
     cards.sort(key=lambda c: c["id"])
-    # 勘誤在異圖合併後套用:勘誤表以主卡密碼記,合併前套的話被併入的異圖
-    # 條目找不到主卡文字。差值報告在最後算,勘誤後的文字才是本站的正式卡文。
+    # 勘誤與改寫都在異圖合併後套用:兩表都以主卡密碼記,合併前套的話被併入
+    # 的異圖條目找不到主卡文字。差值報告在最後算,套用後的文字才是本站的
+    # 正式卡文。互斥保證兩表無交集,改寫卡不經勘誤,先後順序無關緊要。
     errata_applied = _apply_errata(cards, errata) if errata else 0
+    rewrites_applied = _apply_rewrites(cards, rewrites) if rewrites else 0
     report = {
         "included": len(cards),
         "errata_applied": errata_applied,
+        "rewrites_applied": rewrites_applied,
         "excluded": excluded,
         "merged_alt": merged,
         "cleared_monster_params": sum(1 for c in cards if c["id"] in stale),

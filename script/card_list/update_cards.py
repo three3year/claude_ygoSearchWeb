@@ -13,8 +13,8 @@ import ssl
 import sys
 import urllib.request
 
-from build_cards import (DEFAULT_ERRATA, DEFAULT_OUTPUT, load_errata,
-                         print_report)
+from build_cards import (DEFAULT_ERRATA, DEFAULT_OUTPUT, DEFAULT_REWRITES,
+                         load_table, print_report)
 from cardlist import build_card_list, serialize_card_list
 
 ROOT = os.path.dirname(
@@ -348,6 +348,8 @@ def main(argv=None):
                         help="官方 Q&A 整合檔路徑,用於更新後對帳")
     parser.add_argument("--errata", default=DEFAULT_ERRATA,
                         help="卡文勘誤表路徑 (預設 data/text_errata.json)")
+    parser.add_argument("--rewrites", default=DEFAULT_REWRITES,
+                        help="文本改寫表路徑 (預設 data/text_rewrites.json)")
     args = parser.parse_args(argv)
 
     paths, md_path, genesys_path, banlist_paths, ocg_dates_path = download_all(
@@ -364,7 +366,7 @@ def main(argv=None):
         paths["zh"], ja_path=paths["ja"], en_path=paths["en"],
         md_rarity_path=md_path, genesys_path=genesys_path,
         banlist_paths=banlist_paths, existing=existing,
-        errata=load_errata(args.errata))
+        errata=load_table(args.errata), rewrites=load_table(args.rewrites))
     with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         f.write(serialize_card_list(cards))
     print_report(report)

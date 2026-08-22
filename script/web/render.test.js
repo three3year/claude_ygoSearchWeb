@@ -130,3 +130,14 @@ test('沒被勘誤的卡:沒有對照鈕、沒有原文視圖', () => {
   assert.ok(!out.includes('顯示查牌網原文'));
   assert.ok(!out.includes('本站勘誤'));
 });
+
+test('被本站改寫的卡:對照鈕在,原文視圖是舊全文純文字、不帶差異標註', () => {
+  // ow 是改寫前的查牌網舊譯全文(text-rewrite 票03):整段重寫,
+  // 逐字刪改標註是滿版噪音,純文字視圖;刪除線/綠底仍是勘誤卡專屬
+  const out = html({ ow: '反轉：選擇場上1隻守備表示怪獸破壞。' });
+  assert.ok(out.includes('顯示查牌網原文'));              // 對照鈕沿用
+  assert.ok(out.includes('本站改寫'));                    // 鈕的說明講改寫
+  assert.ok(out.includes('反轉：選擇場上1隻守備表示怪獸破壞。'));
+  assert.ok(!out.includes('本站勘誤後刪去'));             // 沒有勘誤的差異標註
+  assert.ok(!out.includes('本站勘誤後補上'));
+});

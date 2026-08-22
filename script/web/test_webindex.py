@@ -643,6 +643,71 @@ class ErrataTest(unittest.TestCase):
         self.assertTrue(report["checks"]["errata_not_reversible"])
 
 
+class RewriteTest(unittest.TestCase):
+    """[[文本改寫表]]的原文欄位:被改寫的卡帶 `ow`(改寫前舊全文純字串,
+    不做差異段落),與勘誤卡的 `og` 是兩個欄位、不混用。"""
+
+    OLD = "反轉：選擇場上1隻守備表示怪獸破壞。"
+    NEW = "①：此卡反轉的場合發動。場上1隻守備表示怪獸破壞。"
+
+    def test_rewritten_card_carries_old_full_text(self):
+        cards = [card(1571945, desc=self.NEW)]
+        tags = [tagged(1571945, clause(self.NEW, kind="誘發效果(1速)"))]
+        index, report = build_index(cards, tags, rewrites=[
+            {"id": 1571945, "old": self.OLD, "new": self.NEW}])
+        self.assertEqual(report["problems"], [])
+        entry = index["cards"][0]
+        self.assertEqual(entry["ow"], self.OLD)
+        self.assertNotIn("og", entry)
+
+    def test_untouched_card_has_no_ow(self):
+        cards = [card(1000, desc="①：這樣。")]
+        tags = [tagged(1000, clause("①：這樣。"))]
+        index, _ = build_index(cards, tags, rewrites=[])
+        self.assertNotIn("ow", index["cards"][0])
+
+    def test_errata_card_keeps_og_shape_untouched(self):
+        """勘誤卡照舊帶差異段落表 `og`,不因改寫表存在而長出 `ow`。"""
+        cards = [card(84488827, desc="召喚時，從以下效果選擇。"),
+                 card(1571945, desc=self.NEW)]
+        tags = [tagged(84488827, clause("召喚時，從以下效果選擇。")),
+                tagged(1571945, clause(self.NEW, kind="誘發效果(1速)"))]
+        index, report = build_index(
+            cards, tags,
+            errata=[{"id": 84488827, "from": "可以從以下效果",
+                     "to": "從以下效果"}],
+            rewrites=[{"id": 1571945, "old": self.OLD, "new": self.NEW}])
+        self.assertEqual(report["problems"], [])
+        # 索引照卡片密碼排序:改寫卡(1571945)在前、勘誤卡(84488827)在後
+        rewrite_entry, errata_entry = index["cards"]
+        self.assertIn("og", errata_entry)
+        self.assertNotIn("ow", errata_entry)
+        self.assertIn("ow", rewrite_entry)
+        self.assertNotIn("og", rewrite_entry)
+
+    def test_new_text_mismatch_fails_the_build(self):
+        """改寫筆的 `new` 與現行卡文不相等 → 帶不出正確原文,建置失敗。"""
+        cards = [card(1571945, desc="①：別的卡文。")]
+        tags = [tagged(1571945, clause("①：別的卡文。"))]
+        _, report = build_index(cards, tags, rewrites=[
+            {"id": 1571945, "old": self.OLD, "new": self.NEW}])
+        self.assertEqual(report["checks"]["rewrite_desc_mismatch"], [1571945])
+        self.assertTrue(any("不相等" in p for p in report["problems"]))
+
+    def test_card_in_both_tables_fails_the_build(self):
+        """同卡同時在勘誤表與改寫表 → 兩表互斥破功,建置失敗。"""
+        cards = [card(1571945, desc=self.NEW)]
+        tags = [tagged(1571945, clause(self.NEW, kind="誘發效果(1速)"))]
+        _, report = build_index(
+            cards, tags,
+            errata=[{"id": 1571945, "from": "破壞", "to": "破壞掉"}],
+            rewrites=[{"id": 1571945, "old": self.OLD, "new": self.NEW}])
+        self.assertEqual(report["checks"]["rewrite_overlaps_errata"],
+                         [1571945])
+        self.assertTrue(any("同時在勘誤表與改寫表" in p
+                            for p in report["problems"]))
+
+
 class ReportTest(unittest.TestCase):
     def test_census_counts_members_and_cards(self):
         """每一個值域的成員數與對應卡數:某個值掉到 0 要看得見。"""

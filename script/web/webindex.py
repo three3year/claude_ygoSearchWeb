@@ -471,6 +471,8 @@ def _summarise_problems(report):
         ("type 出現值域正典沒解釋的位元", checks["unexplained_type_bits"]),
         ("※ 別名的缺口與抽取結果對不上", checks["alias_gap_not_extracted"]),
         ("卡文勘誤逆推不回原文或差異標不出來", checks["errata_not_reversible"]),
+        ("文本改寫的新全文與現行卡文不相等", checks["rewrite_desc_mismatch"]),
+        ("同卡同時在勘誤表與改寫表", checks["rewrite_overlaps_errata"]),
         ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
         ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
     )
@@ -481,7 +483,7 @@ def _summarise_problems(report):
 
 
 def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
-                data_updated_at=None):
+                rewrites=None, data_updated_at=None):
     """[[卡片總表]]條目 + [[效果標記表]]條目 → (index, report)。
 
     `built_at`、`sources`(來源檔雜湊)與 `data_updated_at`([[資料更新時間]],
@@ -494,17 +496,26 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     勘誤**前**的來源卡文原樣連同差異段落([[op, text], ...],`_og_diff`),
     前端「顯示原文」讀它並標示差異。只有這批卡帶,全量帶原文 gzip 要多
     340 KB,而未勘誤的卡的原文就是畫面上那份文字。
+
+    `rewrites` 是[[文本改寫表]]:被本站改寫的卡多帶一個 `ow` 欄位——改寫
+    **前**的查牌網舊譯全文(純字串,不做差異段落:整段重寫下逐字標註是
+    滿版噪音,前端以純文字視圖呈現)。與勘誤的 `og` 是兩個欄位、兩種形狀,
+    不混用;`ow` 不進搜尋(與 `og` 同規則)。改寫筆的 `new` 與現行卡文
+    不相等、或同卡同時在勘誤表與改寫表,都進 problems 讓建置失敗——
+    上游對不上就吵,不默默帶一份過時的原文。
     """
     clauses_by_id = {t["id"]: t.get("clauses") or [] for t in tag_cards}
     errata_by_id = {}
     for e in errata or []:
         errata_by_id.setdefault(e["id"], []).append(e)
+    rewrites_by_id = {r["id"]: r for r in rewrites or []}
     checks = {"missing_cards": [], "duplicate_ids": [],
               "cards_without_clause_entry": [], "unknown_values": [],
               "clauses_without_kind": [], "coverage_gaps": [],
               "clauses_not_in_desc": [], "unexplained_type_bits": [],
               "alias_gap_not_extracted": [], "optional_on_non_carrier": [],
-              "errata_not_reversible": []}
+              "errata_not_reversible": [], "rewrite_desc_mismatch": [],
+              "rewrite_overlaps_errata": []}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
     carriers = set(vocab.carriers(vocab.OPTIONAL))
     entries = {}
@@ -526,6 +537,13 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
                 checks["errata_not_reversible"].append(cid)
             else:
                 entry["og"] = og
+        if cid in rewrites_by_id:
+            if cid in errata_by_id:
+                checks["rewrite_overlaps_errata"].append(cid)
+            elif rewrites_by_id[cid]["new"] != card["desc"]:
+                checks["rewrite_desc_mismatch"].append(cid)
+            else:
+                entry["ow"] = rewrites_by_id[cid]["old"]
         entries[cid] = entry
         clause_total += len(clauses)
         checks["unknown_values"].extend(dict(u, id=cid) for u in unknown)

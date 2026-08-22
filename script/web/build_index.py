@@ -22,6 +22,7 @@ ROOT = os.path.dirname(
 DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_TAGS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_ERRATA = os.path.join(ROOT, "data", "text_errata.json")
+DEFAULT_REWRITES = os.path.join(ROOT, "data", "text_rewrites.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "web", "data.js")
 # 資料更新時間(來源檔下載時間)由 update_cards.py 記錄;不入版控,
 # clean checkout 沒有這個檔 → META 不帶欄位,前端整行省略
@@ -74,6 +75,8 @@ def print_checks(report, p, limit=20):
         ("unexplained_type_bits", "type 有值域正典沒解釋的位元"),
         ("alias_gap_not_extracted", "※ 別名的缺口與抽取結果對不上"),
         ("errata_not_reversible", "卡文勘誤逆推不回原文或差異標不出來"),
+        ("rewrite_desc_mismatch", "文本改寫的新全文與現行卡文不相等"),
+        ("rewrite_overlaps_errata", "同卡同時在勘誤表與改寫表"),
     )
     gaps = report["known_gaps"]
     p(f"已知缺口: 段落標頭 {gaps['header']} 處、※ 別名 {gaps['alias']} 處")
@@ -123,6 +126,8 @@ def main(argv=None):
                         help="效果標記表路徑 (預設 data/tag_cards.json)")
     parser.add_argument("--errata", default=DEFAULT_ERRATA,
                         help="卡文勘誤表路徑 (預設 data/text_errata.json)")
+    parser.add_argument("--rewrites", default=DEFAULT_REWRITES,
+                        help="文本改寫表路徑 (預設 data/text_rewrites.json)")
     parser.add_argument("--downloaded-at", default=DEFAULT_DOWNLOADED_AT,
                         help="資料更新時間記錄路徑 "
                              "(預設 data/sources/downloaded_at.json)")
@@ -135,13 +140,14 @@ def main(argv=None):
     built_at = datetime.datetime.now().astimezone().strftime(
         "%Y-%m-%dT%H:%M:%S%z")
     errata = _load(args.errata) if os.path.exists(args.errata) else []
+    rewrites = _load(args.rewrites) if os.path.exists(args.rewrites) else []
     data_updated_at = (_load(args.downloaded_at).get("downloaded_at")
                        if os.path.exists(args.downloaded_at) else None)
     index, report = build_index(
         _load(args.cards), _load(args.tags), built_at=built_at,
         sources={os.path.basename(args.cards): _digest(args.cards),
                  os.path.basename(args.tags): _digest(args.tags)},
-        errata=errata, data_updated_at=data_updated_at)
+        errata=errata, rewrites=rewrites, data_updated_at=data_updated_at)
     print_report(report)
     if report["problems"]:
         return 1

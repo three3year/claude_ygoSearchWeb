@@ -179,26 +179,34 @@ function altNavHtml(c) {
   </div>`;
 }
 
-/* 「顯示原文」切換鈕,只長在[[卡文勘誤表]]勘誤過的卡上(ADR-0011)——其餘
-   一萬四千多張卡的原文就是畫面上那份,鈕是雜訊。
+/* 「顯示原文」切換鈕,只長在[[卡文勘誤表]]勘誤過(og)或[[文本改寫表]]改寫過
+   (ow)的卡上——其餘一萬四千多張卡的原文就是畫面上那份,鈕是雜訊。
    放密碼右邊(2026-08-17 盤問決定),與異圖切換同一個「對照出口」的角色。 */
 function ogBtnHtml(c) {
-  if (!c.og) return '';
+  if (!c.og && !c.ow) return '';
+  const title = c.og
+    ? '此卡卡文經本站勘誤,點一下對照勘誤前的來源原文(差異會標示出來)'
+    : '此卡卡文經本站改寫成新格式,點一下對照查牌網舊譯全文';
   return `<button type="button" class="og-toggle" aria-pressed="false"
-    title="此卡卡文經本站勘誤,點一下對照勘誤前的來源原文(差異會標示出來)">顯示查牌網原文</button>`;
+    title="${title}">顯示查牌網原文</button>`;
 }
 
-/* 「顯示查牌網原文」的顯示區。`og` 是建置期由勘誤表算好的差異段落表
-   ([op, 文字] 列表):「=」兩邊相同、「-」原文才有(本站勘誤刪去,畫刪除線)、
-   「+」本站勘誤補上(原文沒有,標底色)。差異與勘誤同源、住建置期,前端只上
-   標記不跑 diff(2026-08-22 使用者裁示:按鈕要標示出差異)。 */
+/* 「顯示查牌網原文」的顯示區,兩種形狀:
+   勘誤卡的 `og` 是建置期由勘誤表算好的差異段落表([op, 文字] 列表):
+   「=」兩邊相同、「-」原文才有(本站勘誤刪去,畫刪除線)、「+」本站勘誤補上
+   (原文沒有,標底色)。差異與勘誤同源、住建置期,前端只上標記不跑 diff
+   (2026-08-22 使用者裁示:按鈕要標示出差異)。
+   改寫卡的 `ow` 是改寫前的舊全文**純文字**——整段重寫下逐字刪改標註是
+   滿版噪音,刪除線/綠底仍是勘誤卡專屬(text-rewrite spec)。 */
 function ogTextHtml(c) {
-  if (!c.og) return '';
-  const seg = c.og.map(([op, t]) => {
-    if (op === '-') return `<del class="og-del" title="查牌網原文有這段,本站勘誤後刪去">${esc(t)}</del>`;
-    if (op === '+') return `<ins class="og-add" title="本站勘誤後補上,查牌網原文沒有這段">${esc(t)}</ins>`;
-    return esc(t);
-  }).join('');
+  if (!c.og && !c.ow) return '';
+  const seg = c.og
+    ? c.og.map(([op, t]) => {
+        if (op === '-') return `<del class="og-del" title="查牌網原文有這段,本站勘誤後刪去">${esc(t)}</del>`;
+        if (op === '+') return `<ins class="og-add" title="本站勘誤後補上,查牌網原文沒有這段">${esc(t)}</ins>`;
+        return esc(t);
+      }).join('')
+    : esc(c.ow);
   return `<div class="card-text og-text" hidden>${seg}</div>`;
 }
 

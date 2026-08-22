@@ -2,7 +2,7 @@
 
 來源檔 data/sources/ocg-dates.json 由 update_cards.py 下載(YGOPRODeck 全量
 dump 的 misc_info.ocg_date),存原始樣貌;對齊在這裡做,與 genesys/禁限的
-消費慣例一致(主卡沒對到時試異圖密碼)。發售日只服務三級分類報表與稽核
+消費慣例一致(主卡沒對到時試異圖密碼)。首發日只服務三級分類報表與稽核
 排序,不進前端索引、不做搜尋軸。
 """
 import json

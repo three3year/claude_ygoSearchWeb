@@ -190,7 +190,8 @@ class SameRulerRegressionTest(unittest.TestCase):
 
         pending_split 的定義就是「無編號整團」,但拆句表套用後那些段會離開
         清單,所以要對「不套拆句表」的報告比;日期不參與舊文本判定,全部
-        餵 None 即可。基準集合 3,805 段(票02),資料更新後兩邊會一起動。
+        餵 None 即可。基準集合 3,805 段(票02);試點批改寫進站 49 段後
+        3,756 段(text-rewrite#05),資料更新或改寫批進站後兩邊會一起動。
         """
         with open(_DATA_CARDS, encoding="utf-8") as f:
             cards = json.load(f)
@@ -199,7 +200,7 @@ class SameRulerRegressionTest(unittest.TestCase):
                   for seg in classify_card(card, None)
                   if seg["tier"] == TIER_OLD)
         self.assertEqual(old, len(report["pending_split"]))
-        self.assertEqual(old, 3805)
+        self.assertEqual(old, 3756)
 
 
 if __name__ == "__main__":

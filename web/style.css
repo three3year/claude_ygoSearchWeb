@@ -320,8 +320,14 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 /* 勘誤前原文:換行照原樣呈現,不分行、不掛效果標籤、不上關鍵字色;
    只帶差異標記(2026-08-22 使用者裁示)——刪除線=原文才有、本站勘誤刪去,
-   綠底=本站勘誤補上、原文沒有。半透明色塊,深色底上不搶掉內文。 */
-.og-text { white-space: pre-line; font-size: 13.5px; padding: 3px 8px; }
+   綠底=本站勘誤補上、原文沒有。半透明色塊,深色底上不搶掉內文。
+   整塊上一階底色(--surface2,與 hover 同階、比卡片底微亮):看原文是
+   對照模式,底色讓人一眼知道現在讀的不是本站卡文(2026-08-23 使用者裁示)。 */
+.og-text {
+  white-space: pre-line; font-size: 13.5px; padding: 6px 10px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px;
+}
 .og-text .og-del {
   background: rgba(229, 83, 75, .16); color: #f0a8a2;
   text-decoration: line-through;

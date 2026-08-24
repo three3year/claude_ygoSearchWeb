@@ -135,6 +135,65 @@ class PlaceholderTest(unittest.TestCase):
         self.assertEqual([f["problem"] for f in findings], ["未用規範譯法"])
 
 
+PATTERN_PHASE_CAN = ("| 〈時點〉に発動できる | 〈時點〉可以發動 "
+                     "| — | 843 | — | — | — |")
+
+
+class TimePlaceholderTest(unittest.TestCase):
+    """`〈時點〉`=階段/時點名的中日成對替換(2026-08-24 站主核可)。"""
+
+    def test_paired_phase_not_reported(self):
+        """日文命中準備階段、中文寫準備階段:配對成立,不報。"""
+        findings = check_texts(
+            _glossary(pattern_rows=[PATTERN_PHASE_CAN]),
+            [_rec(ja="自分スタンバイフェイズに発動できる。",
+                  zh="我方準備階段可以發動。")])
+        self.assertEqual(findings, [])
+
+    def test_mismatched_phase_reported(self):
+        """日文主要階段、中文寫成準備階段:錯位要抓到(配對的意義)。"""
+        findings = check_texts(
+            _glossary(pattern_rows=[PATTERN_PHASE_CAN]),
+            [_rec(ja="自分メインフェイズに発動できる。",
+                  zh="我方準備階段可以發動。")])
+        self.assertEqual([(f["level"], f["problem"]) for f in findings],
+                         [("句式", "未照模板")])
+
+    def test_multiple_hits_each_must_pair(self):
+        """同句命中兩個時點:缺任一配對即報。"""
+        findings = check_texts(
+            _glossary(pattern_rows=[PATTERN_PHASE_CAN]),
+            [_rec(ja="メインフェイズに発動できる。エンドフェイズに発動できる。",
+                  zh="主要階段可以發動。結束階段也能用。")])
+        self.assertEqual([f["problem"] for f in findings], ["未照模板"])
+
+    def test_prefix_composition_matches(self):
+        """G10 型「次の〈時點〉→下個〈時點〉」:前綴組合照常配對。"""
+        row = "| 次の〈時點〉 | 下個〈時點〉 | — | 289 | — | — | — |"
+        findings = check_texts(
+            _glossary(pattern_rows=[row]),
+            [_rec(ja="次のターンのスタンバイフェイズに発動する。",
+                  zh="下個回合的準備階段發動。")])
+        self.assertEqual(findings, [])
+
+    def test_banned_time_placeholder_unpaired(self):
+        """禁譯欄的〈時點〉不配對:任一時點名命中禁譯形即報。"""
+        row = ("| 〈時點〉に発動できる | 〈時點〉可以發動 "
+               "| 〈時點〉中可以發動 | 1 | — | — | — |")
+        findings = check_texts(
+            _glossary(pattern_rows=[row]),
+            [_rec(ja="メインフェイズに発動できる。",
+                  zh="主要階段中可以發動。")])
+        self.assertEqual([(f["problem"], f["banned"]) for f in findings],
+                         [("用禁譯", ["〈時點〉中可以發動"])])
+
+    def test_asymmetric_slots_raise(self):
+        """兩側〈時點〉槽數不對稱:大聲失敗。"""
+        bad = "| 〈時點〉に発動できる | 準備階段可以發動 | — | 1 | — | — | — |"
+        with self.assertRaises(GlossaryError):
+            check_texts(_glossary(pattern_rows=[bad]), [])
+
+
 class PatternCheckTest(unittest.TestCase):
     """句式級:日文側命中樣式 → 中文側須照模板(佔位符含全形數字)。"""
 

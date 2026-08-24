@@ -8,6 +8,15 @@ spec.md);報告式,回傳清單供殼層排版,不阻擋建置。
             卡文用全形,比對一律兩者皆容許——寬窄之辨歸《文本格式規範》§2,
             不歸本表。
     〜    → 同句內任意內文 ``[^。\\n]*``(不跨句號、不跨行)。
+    〈時點〉→ 階段/時點名,**中日成對替換**(2026-08-24 站主核可):日文側
+            匹配 ターン/ドローフェイズ/スタンバイフェイズ/メインフェイズ/
+            バトルフェイズ/エンドフェイズ/ダメージステップ 之一,中文側須
+            在對應槽位出現**配對**的 回合/抽牌階段/準備階段/主要階段/
+            戰鬥階段/結束階段/傷害步驟——日文命中哪個,中文就查哪個,
+            錯位(日文主要階段、中文寫成準備階段)因此也查得到。同一句
+            多次命中時逐一驗,缺任一配對即報。兩側樣式的〈時點〉槽數必須
+            相等,否則解析失敗;禁譯欄內的〈時點〉**不配對**,任一時點名
+            命中即算(禁譯要抓的是形,不是哪個階段)。
     其餘字元照字面比對(re.escape)。出現上述以外的 ``〈…〉`` 佔位符或
     落單的 ``〈``/``〉`` 即解析失敗。
 
@@ -41,17 +50,47 @@ _NUM_RE = "[0-9０-９]+"
 _ANY_RE = "[^。\n]*"
 _SEPARATOR_RE = re.compile(r"^[-: ]+$")
 
+# 〈時點〉的中日配對表(單一來源;順序=alternation 順序,無互為前綴之虞)
+_TIME_TOKEN = "〈時點〉"
+_TIME_UNITS = (("ダメージステップ", "傷害步驟"),
+               ("ドローフェイズ", "抽牌階段"),
+               ("スタンバイフェイズ", "準備階段"),
+               ("メインフェイズ", "主要階段"),
+               ("バトルフェイズ", "戰鬥階段"),
+               ("エンドフェイズ", "結束階段"),
+               ("ターン", "回合"))
+_TIME_JA2ZH = dict(_TIME_UNITS)
+_TIME_JA_GROUP = "(" + "|".join(ja for ja, _ in _TIME_UNITS) + ")"
+_TIME_ZH_ANY = "(?:" + "|".join(zh for _, zh in _TIME_UNITS) + ")"
+_TIME_SLOT = "\x00"  # 中文模板的槽位標記(卡文不可能出現此字元)
+
 
 class GlossaryError(ValueError):
     """詞彙表解析失敗:格式壞了要立即發現,不靜默漏檢。"""
 
 
-def _compile_style(style, row):
-    """人讀樣式 → regex(佔位符推導規則見模組 docstring)。"""
-    parts = []
+def _compile_style(style, row, time_mode="none"):
+    """人讀樣式 → (regex 或模板 parts, 〈時點〉槽數)。
+
+    time_mode 決定 〈時點〉 的推導(推導規則見模組 docstring):
+        "ja"    → 日文側 alternation 捕捉群(供跨側配對取值)
+        "zh"    → 中文側槽位標記,回傳模板 parts 由 _fill_time_slots 現場填
+        "plain" → 不配對的中文 alternation(禁譯欄用)
+        "none"  → 不接受 〈時點〉(出現即解析失敗)
+    回傳 (compiled_regex, 0) 或——time_mode=="zh" 且有槽時——(parts, 槽數)。
+    """
+    parts, slots = [], 0
     for token in _TOKEN_RE.split(style):
         if token == "〜":
             parts.append(_ANY_RE)
+        elif token == _TIME_TOKEN and time_mode != "none":
+            slots += 1
+            if time_mode == "ja":
+                parts.append(_TIME_JA_GROUP)
+            elif time_mode == "plain":
+                parts.append(_TIME_ZH_ANY)
+            else:
+                parts.append(_TIME_SLOT)
         elif token.startswith("〈"):
             if token != "〈n〉":
                 raise GlossaryError(f"佔位符不明:{token}(列:{row})")
@@ -60,7 +99,17 @@ def _compile_style(style, row):
             if "〈" in token or "〉" in token:
                 raise GlossaryError(f"佔位符括號落單:{style}(列:{row})")
             parts.append(re.escape(token))
-    return re.compile("".join(parts))
+    if time_mode == "zh" and slots:
+        return parts, slots
+    return re.compile("".join(parts)), (slots if time_mode == "ja" else 0)
+
+
+def _fill_time_slots(zh_parts, units):
+    """中文模板 parts+日文側命中的時點 → 該次配對的具體 regex。"""
+    it = iter(units)
+    filled = [re.escape(_TIME_JA2ZH[next(it)]) if part == _TIME_SLOT else part
+              for part in zh_parts]
+    return re.compile("".join(filled))
 
 
 def _parse_exceptions(cell, row):
@@ -83,12 +132,23 @@ def _parse_row(line, level, miss_problem):
     ja, zh, banned_cell, _, _, exception_cell, _ = cells
     banned = ([] if banned_cell == _EMPTY else
               [part.strip() for part in re.split(r"[;;]", banned_cell)])
-    return {
+    ja_re, ja_slots = _compile_style(ja, line, time_mode="ja")
+    zh_compiled, zh_slots = _compile_style(zh, line, time_mode="zh")
+    if ja_slots != zh_slots:
+        raise GlossaryError(f"〈時點〉槽數兩側不對稱({ja_slots} vs "
+                            f"{zh_slots}):{line}")
+    entry = {
         "level": level, "ja": ja, "zh": zh, "miss_problem": miss_problem,
-        "ja_re": _compile_style(ja, line), "zh_re": _compile_style(zh, line),
-        "banned": [(style, _compile_style(style, line)) for style in banned],
+        "ja_re": ja_re, "time_slots": ja_slots,
+        "banned": [(style, _compile_style(style, line, time_mode="plain")[0])
+                   for style in banned],
         "exceptions": _parse_exceptions(exception_cell, line),
     }
+    if ja_slots:
+        entry["zh_parts"] = zh_compiled  # 模板 parts,配對時現場填
+    else:
+        entry["zh_re"] = zh_compiled
+    return entry
 
 
 def parse_glossary(md_text):
@@ -141,13 +201,24 @@ def check_texts(md_text, records):
         for entry in entries:
             if record.get("id") in entry["exceptions"]:
                 continue
-            if not entry["ja_re"].search(ja):
-                continue
+            if entry["time_slots"]:
+                # 跨側配對:日文側每種命中的時點組合,中文側都要有對應形
+                unit_sets = {m.groups()
+                             for m in entry["ja_re"].finditer(ja)}
+                if not unit_sets:
+                    continue
+                zh_ok = all(
+                    _fill_time_slots(entry["zh_parts"], units).search(zh)
+                    for units in unit_sets)
+            else:
+                if not entry["ja_re"].search(ja):
+                    continue
+                zh_ok = bool(entry["zh_re"].search(zh))
             banned = [style for style, banned_re in entry["banned"]
                       if banned_re.search(zh)]
             if banned:
                 problem = "用禁譯"
-            elif not entry["zh_re"].search(zh):
+            elif not zh_ok:
                 problem = entry["miss_problem"]
             else:
                 continue

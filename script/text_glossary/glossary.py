@@ -26,6 +26,10 @@ spec.md);報告式,回傳清單供殼層排版,不阻擋建置。
           規範與禁譯並存時仍報禁譯——句中混用也是不一致)。
     句式:日文側命中「日文樣式」 → 中文側須命中「中文樣式」(否則報
           「未照模板」),禁譯同上。
+「規範譯法」「中文樣式」欄可以「;」(半形或全形)分隔**多個規範形**,任一形
+命中即照規範(2026-08-25 站主裁示,票03 追記;首例 ドローする 定數形
+「抽〈n〉張卡」+變數形「依照〜數量，〜抽牌。」)。帶〈時點〉時每一形的槽數
+都須與日文側相等,否則解析失敗。
 「例外」欄所列卡片密碼對該條目自動跳過;無日文卡文的記錄(ot=2 繁中單側)
 整筆跳過——檢查以日文側為門。
 
@@ -133,22 +137,21 @@ def _parse_row(line, level, miss_problem):
     banned = ([] if banned_cell == _EMPTY else
               [part.strip() for part in re.split(r"[;;]", banned_cell)])
     ja_re, ja_slots = _compile_style(ja, line, time_mode="ja")
-    zh_compiled, zh_slots = _compile_style(zh, line, time_mode="zh")
-    if ja_slots != zh_slots:
-        raise GlossaryError(f"〈時點〉槽數兩側不對稱({ja_slots} vs "
-                            f"{zh_slots}):{line}")
-    entry = {
+    zh_forms = []  # 多形:任一形命中即照規範(2026-08-25 站主裁示)
+    for style in re.split(r"[;;]", zh):
+        zh_compiled, zh_slots = _compile_style(style.strip(), line,
+                                               time_mode="zh")
+        if ja_slots != zh_slots:
+            raise GlossaryError(f"〈時點〉槽數兩側不對稱({ja_slots} vs "
+                                f"{zh_slots}):{line}")
+        zh_forms.append(zh_compiled)  # 有槽=模板 parts,無槽=regex
+    return {
         "level": level, "ja": ja, "zh": zh, "miss_problem": miss_problem,
-        "ja_re": ja_re, "time_slots": ja_slots,
+        "ja_re": ja_re, "time_slots": ja_slots, "zh_forms": zh_forms,
         "banned": [(style, _compile_style(style, line, time_mode="plain")[0])
                    for style in banned],
         "exceptions": _parse_exceptions(exception_cell, line),
     }
-    if ja_slots:
-        entry["zh_parts"] = zh_compiled  # 模板 parts,配對時現場填
-    else:
-        entry["zh_re"] = zh_compiled
-    return entry
 
 
 def parse_glossary(md_text):
@@ -208,12 +211,14 @@ def check_texts(md_text, records):
                 if not unit_sets:
                     continue
                 zh_ok = all(
-                    _fill_time_slots(entry["zh_parts"], units).search(zh)
+                    any(_fill_time_slots(parts, units).search(zh)
+                        for parts in entry["zh_forms"])
                     for units in unit_sets)
             else:
                 if not entry["ja_re"].search(ja):
                     continue
-                zh_ok = bool(entry["zh_re"].search(zh))
+                zh_ok = any(form.search(zh)
+                            for form in entry["zh_forms"])
             banned = [style for style, banned_re in entry["banned"]
                       if banned_re.search(zh)]
             if banned:

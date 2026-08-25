@@ -215,6 +215,46 @@ class PatternCheckTest(unittest.TestCase):
                          [("句式", "未照模板")])
 
 
+class MultiFormTest(unittest.TestCase):
+    """規範譯法欄「;」分隔多形:任一形命中即照規範(2026-08-25 站主裁示,
+    票 text-glossary#03 追記;首例 ドローする 定數形+變數形)。"""
+
+    MULTI = ("| ドローする | 抽〈n〉張卡;依照〜數量，〜抽牌。 "
+             "| — | 501 | draw | — | — |")
+
+    def test_first_form_conforms_not_reported(self):
+        """定數形照第一形:不報。"""
+        rec = _rec(ja="カードを２枚ドローする。", zh="抽2張卡。")
+        self.assertEqual(check_texts(_glossary([self.MULTI]), [rec]), [])
+
+    def test_second_form_conforms_not_reported(self):
+        """變數形照第二形(依照〜數量,〜抽牌。):不報。"""
+        rec = _rec(ja="モンスターの数だけ、自分はデッキからドローする。",
+                   zh="依照怪獸數量，我方抽牌。")
+        self.assertEqual(check_texts(_glossary([self.MULTI]), [rec]), [])
+
+    def test_neither_form_reported(self):
+        """兩形皆非:報「未用規範譯法」。"""
+        rec = _rec(ja="モンスターの数だけ、自分はデッキからドローする。",
+                   zh="我方從牌組抽怪獸數量的卡。")
+        self.assertEqual([f["problem"] for f in
+                          check_texts(_glossary([self.MULTI]), [rec])],
+                         ["未用規範譯法"])
+
+    def test_fullwidth_separator_also_splits(self):
+        """全形「;」也是分隔符(與禁譯欄同慣例)。"""
+        row = self.MULTI.replace(";", ";")
+        rec = _rec(ja="カードを２枚ドローする。", zh="抽2張卡。")
+        self.assertEqual(check_texts(_glossary([row]), [rec]), [])
+
+    def test_multiform_slot_asymmetry_raises(self):
+        """任一形的〈時點〉槽數與日文側不對稱:解析大聲失敗。"""
+        row = ("| 〈時點〉に発動できる | 〈時點〉可以發動;可以發動 "
+               "| — | 1 | — | — | — |")
+        with self.assertRaises(GlossaryError):
+            check_texts(_glossary(pattern_rows=[row]), [_rec()])
+
+
 class MultiEntryTest(unittest.TestCase):
     def test_one_record_hits_multiple_entries(self):
         """多條目命中:同一句記錄對每個命中條目各報一筆,供依條目分組。"""

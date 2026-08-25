@@ -6,7 +6,10 @@
 原封不動**——那是判定票的成果,勘誤動的是卡文不是判定(盤問決定:同票一次性
 更新,而不是教三個模組在讀入時各自套勘誤)。
 
-可重跑(冪等):已同步的紀錄找不到原文子字串就跳過;新勘誤入表後重跑同一支。
+可重跑(冪等),兩道防線互補:同步後 `from` 消失的勘誤(刪字型如 `to` 是
+`from` 子字串、替換型如兩者互不含)靠「找不到 `from` 即跳過」;補寫型
+(`to` 內含 `from`)同步後 `from` 仍在,改看 `to` 已在即跳過
+(見 `_already_applied`)。新勘誤入表後重跑同一支。
 原文子字串橫跨拆點(單一段落找不到、串接後找得到)無法機械處理,吵鬧失敗。
 
 用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
@@ -23,6 +26,20 @@ from tagcard import _ja_order, _text_hash, split_hash
 DEFAULT_ERRATA = os.path.join(ROOT, "data", "text_errata.json")
 
 
+def _already_applied(text, entry):
+    """補寫型勘誤(`to` 內含 `from`)是否已同步過。
+
+    這型同步後文字**仍含** `from`(如「〜表側攻擊表示。」→ 同句+「此效果在
+    對手回合也能發動。」),光靠「找不到 `from` 即跳過」擋不住重跑,會句尾
+    再追加一次(issues/04)。改看 `to` 是否已在:在即已同步。
+    只查 `to in text` 不夠,故先要求 `from in to` 圈出補寫型:刪字型
+    (`to` 是 `from` 子字串)同步**前** `to` 就在文字裡,單查會把第一次同步
+    也跳掉。刪字型與替換型(兩者互不含)同步後 `from` 消失,本就靠找不到
+    `from` 冪等,不歸這裡管。
+    """
+    return entry["from"] in entry["to"] and entry["to"] in text
+
+
 def _sync_split(record, entry, problems):
     """一筆拆句紀錄 × 一筆勘誤 → 是否有改動。雜湊由段落重建後重算。"""
     segments = record.get("segments") or []
@@ -36,7 +53,7 @@ def _sync_split(record, entry, problems):
     if record.get("text_hash") != split_hash(concat_zh, concat_ja):
         problems.append(f"id={record['id']} 拆句雜湊無法由段落重建,人工處理")
         return False
-    if entry["from"] not in concat_zh:
+    if entry["from"] not in concat_zh or _already_applied(concat_zh, entry):
         return False  # 已同步過,或勘誤落在編號句/故事文,拆句表無事
     hits = [seg for seg in segments if entry["from"] in seg.get("text_zh", "")]
     if len(hits) != 1 or hits[0]["text_zh"].count(entry["from"]) != 1:
@@ -55,7 +72,8 @@ def _sync_tag_row(clause, entry):
     雜湊以判定基礎文本計(絕大多數卡是日文,勘誤不動它,雜湊因此不變;
     ADR-0006 的繁中單側卡以繁中計,跟著換)。
     """
-    if entry["from"] not in clause.get("text_zh", ""):
+    text_zh = clause.get("text_zh", "")
+    if entry["from"] not in text_zh or _already_applied(text_zh, entry):
         return False
     clause["text_zh"] = clause["text_zh"].replace(entry["from"], entry["to"])
     clause["text_hash"] = _text_hash(clause["text_ja"], clause["text_zh"])

@@ -1,6 +1,6 @@
 # 04 sync_errata_texts 重跑對「to 內含 from」的勘誤二次追加
 
-Status: ready-for-agent
+Status: resolved
 
 ## 問題
 
@@ -26,6 +26,33 @@ Status: ready-for-agent
 
 ## 驗收
 
-- `python script/tag_card/sync_errata_texts.py` 對現行四筆+任意新勘誤
-  重跑 N 次,三表逐位元組不變。
-- `test_sync_errata.py` 補一條「to 內含 from 重跑不重複追加」的迴歸測試。
+- [x] `python script/tag_card/sync_errata_texts.py` 對現行四筆+任意新勘誤
+      重跑 N 次,三表逐位元組不變。
+- [x] `test_sync_errata.py` 補一條「to 內含 from 重跑不重複追加」的迴歸測試。
+
+## Comments
+
+2026-08-25 完成,採修法方向第一案(查 `to` 已在即跳過),但加一道型別分流:
+判定式為 **`from in to` 且 `to in text`**(新函式 `_already_applied`)。
+只查 `to in text` 不夠——刪字型(#01/#03/#05,`to` ⊂ `from`)同步**前**
+`to` 就在文字裡,單查會把第一次同步也跳掉;兩道防線因此互補:同步後
+`from` 消失的型靠「找不到 `from`」、補寫型靠「`to` 已在」。**分型不只兩種**
+(code-review Spec 軸指出):庫內 `94997874` 前言那筆(「其中1個，對手回合
+也能發動。」→「其中1個。」)`from`/`to` 互不含,是替換型,同步後 `from`
+消失、歸第一道防線,`_already_applied` 對它恆為 False——docstring 已按
+「同步後 from 還在不在」而非「刪字/補寫」二分來敘述。掛在 `_sync_split`
+(比對段落串接)與 `_sync_tag_row`(比對該行)兩處,檔頭 docstring 的冪等
+契約同步改寫。
+
+- 迴歸測試 `test_additive_errata_idempotent`:先驗紅(第二次跑 splits_changed
+  1 != 0,重現票內的二次追加),修後綠;既有 `test_idempotent` 等四測
+  反向守住「刪字型第一次同步不可被跳過」。
+- 實資料驗收:連跑 3 次,`git status data/` 全空;`94997874` 兩行效果句
+  「此效果在對手回合也能發動。」各恰好 1 次(該卡拆句紀錄 0 筆,補寫型在
+  實資料只走標記表;拆句路徑由單元測試覆蓋)。
+- 測試:六目錄 671 測(+1)+ node 120 測全綠。
+- 殘留邊界(不修,已有下游防線):若某卡在首次同步前,同一筆紀錄他處就
+  逐字含有整段 `to`,補寫型會被誤判已同步而靜默跳過;此時卡文與拆句/標記
+  表不一致,會在 split_stale 與前端建置覆蓋檢查吵鬧失敗,不會靜靜壞掉。
+
+自此新勘誤可直接全表重跑,不必再走 `--errata` 定向檔繞道(#03/#05 的權宜)。

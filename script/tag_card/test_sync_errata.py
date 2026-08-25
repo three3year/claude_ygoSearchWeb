@@ -12,9 +12,13 @@ from tagcard import _text_hash, split_hash
 ZH_A = "解放2隻怪獸上級召喚成功時，可以從以下效果選擇1個效果發動。"
 ZH_A_FIXED = "解放2隻怪獸上級召喚成功時，從以下效果選擇1個效果發動。"
 ZH_B = "●場上的卡全部破壞。"
+ZH_B_FIXED = "●場上的卡全部破壞。此效果在對手回合也能發動。"
 JA_A = "アドバンス召喚に成功した時、以下の効果から１つを選択して発動する。"
 JA_B = "●フィールド上のカードを全て破壊する。"
+# 刪字型(`to` 是 `from` 子字串):靠「找不到 from 即跳過」冪等
 ERRATA = [{"id": 84488827, "from": "可以從以下效果", "to": "從以下效果"}]
+# 補寫型(`to` 內含 `from`):同步後 from 仍在,靠「to 已在」判已同步
+ADDITIVE = [{"id": 84488827, "from": ZH_B, "to": ZH_B_FIXED}]
 
 
 def split_record(zh_segs, ja_segs, **kw):
@@ -61,6 +65,29 @@ class SyncErrataTest(unittest.TestCase):
         self.assertEqual(report["problems"], [])
         self.assertEqual(report["splits_changed"], 0)
         self.assertEqual(report["clauses_changed"], 0)
+
+    def test_additive_errata_idempotent(self):
+        """補寫型(`to` 內含 `from`)重跑不二次追加(issues/04)。
+
+        同步後段落仍含 `from`,舊冪等防線(找不到 from 即跳過)擋不住。
+        """
+        splits = [split_record([ZH_A, ZH_B], [JA_A, JA_B])]
+        tags = [tag_entry(ZH_A + "\n" + ZH_B, JA_A + JA_B)]
+        first = sync_texts(ADDITIVE, splits, tags)
+        self.assertEqual(first["problems"], [])
+        self.assertEqual(first["splits_changed"], 1)
+        self.assertEqual(first["clauses_changed"], 1)
+        self.assertEqual(splits[0]["segments"][1]["text_zh"], ZH_B_FIXED)
+
+        second = sync_texts(ADDITIVE, splits, tags)
+        self.assertEqual(second["problems"], [])
+        self.assertEqual(second["splits_changed"], 0)
+        self.assertEqual(second["clauses_changed"], 0)
+        self.assertEqual(splits[0]["segments"][1]["text_zh"], ZH_B_FIXED)
+        self.assertEqual(splits[0]["text_hash"],
+                         split_hash(ZH_A + ZH_B_FIXED, JA_A + JA_B))
+        self.assertEqual(tags[0]["clauses"][0]["text_zh"],
+                         ZH_A + "\n" + ZH_B_FIXED)
 
     def test_from_across_split_point_fails(self):
         """原文子字串橫跨拆點 → 吵鬧失敗,不動資料。"""

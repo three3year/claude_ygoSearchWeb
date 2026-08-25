@@ -40,6 +40,55 @@ PATTERN_TWICE = ("| この効果は１ターンに〈n〉度まで使用でき�
                  "| 這個效果1回合可以使用最多〈n〉次 | — | 10 | — | — | — |")
 
 
+# 負向護欄:日文樣式以「≠」附排除樣式,命中落在排除樣式內就不算
+TERM_X_MONSTER = ("| Xモンスター≠EXモンスターゾーン | 超量怪獸 | — | 464 "
+                  "| Xyz Monster | — | — |")
+
+
+class JaExclusionTest(unittest.TestCase):
+    """日文樣式的負向護欄(票03 站主指出:Xモンスター 誤中 EXモンスターゾーン)。"""
+
+    def test_hit_inside_excluded_style_not_reported(self):
+        """命中整段落在排除樣式內 → 不算命中,不報。"""
+        findings = check_texts(
+            _glossary([TERM_X_MONSTER]),
+            [_rec(ja="このカードがEXモンスターゾーンに存在する限り、",
+                  zh="只要此卡在額外怪獸區域存在，")])
+        self.assertEqual(findings, [])
+
+    def test_real_hit_outside_exclusion_still_reported(self):
+        """同句另有排除範圍外的真命中 → 照報(護欄只遮住被排除的那段)。"""
+        findings = check_texts(
+            _glossary([TERM_X_MONSTER]),
+            [_rec(ja="EXモンスターゾーンのXモンスター１体を対象として発動できる。",
+                  zh="以額外怪獸區域1隻怪獸為對象可以發動。")])
+        self.assertEqual([(f["entry"], f["problem"]) for f in findings],
+                         [("Xモンスター", "未用規範譯法")])
+
+    def test_conforming_translation_with_exclusion_not_reported(self):
+        """排除範圍外有命中但中文照規範 → 不報。"""
+        findings = check_texts(
+            _glossary([TERM_X_MONSTER]),
+            [_rec(ja="EXモンスターゾーンのXモンスター１体を対象として発動できる。",
+                  zh="以額外怪獸區域1隻超量怪獸為對象可以發動。")])
+        self.assertEqual(findings, [])
+
+    def test_multiple_exclusions_split_by_semicolon(self):
+        """多個排除樣式以「;」分隔,各自生效。"""
+        row = ("| Xモンスター≠EXモンスターゾーン;PXモンスター | 超量怪獸 | — "
+               "| 1 | — | — | — |")
+        findings = check_texts(
+            _glossary([row]),
+            [_rec(ja="EXモンスターゾーンとPXモンスターのみ。", zh="沒有規範詞。")])
+        self.assertEqual(findings, [])
+
+    def test_bad_placeholder_in_exclusion_raises(self):
+        """排除樣式裡的佔位符不明 → 解析階段吵鬧失敗。"""
+        row = "| Xモンスター≠〈階級〉モンスター | 超量怪獸 | — | 1 | — | — | — |"
+        with self.assertRaises(GlossaryError):
+            check_texts(_glossary([row]), [])
+
+
 class TermCheckTest(unittest.TestCase):
     """譯詞級:日文側含原詞 → 中文側須用規範譯法、不得用禁譯。"""
 

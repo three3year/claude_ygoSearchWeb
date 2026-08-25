@@ -30,6 +30,10 @@ spec.md);報告式,回傳清單供殼層排版,不阻擋建置。
 命中即照規範(2026-08-25 站主裁示,票03 追記;首例 ドローする 定數形
 「抽〈n〉張卡」+變數形「依照〜數量，〜抽牌。」)。帶〈時點〉時每一形的槽數
 都須與日文側相等,否則解析失敗。
+「日文」「日文樣式」欄可用「≠」附**負向護欄**:`樣式≠排除樣式1;排除樣式2`
+——比對前先把排除樣式命中的段落遮掉,命中整段落在裡面就不算命中(2026-08-25
+站主指出 Xモンスター 誤中 EXモンスターゾーン;短樣式被長詞包住的誤中走這裡,
+單卡的「不用修」走「例外」欄)。排除樣式支援同一套佔位符。
 「例外」欄所列卡片密碼對該條目自動跳過;無日文卡文的記錄(ot=2 繁中單側)
 整筆跳過——檢查以日文側為門。
 
@@ -67,6 +71,12 @@ _TIME_JA2ZH = dict(_TIME_UNITS)
 _TIME_JA_GROUP = "(" + "|".join(ja for ja, _ in _TIME_UNITS) + ")"
 _TIME_ZH_ANY = "(?:" + "|".join(zh for _, zh in _TIME_UNITS) + ")"
 _TIME_SLOT = "\x00"  # 中文模板的槽位標記(卡文不可能出現此字元)
+# 日文樣式的負向護欄:「樣式≠排除樣式1;排除樣式2」。比對前先把排除樣式命中的
+# 段落遮成不可能匹配的字元(等長,不動其餘位置),命中落在裡面就自然消失。
+# 用途是短樣式被長詞包住的誤中(2026-08-25 站主指出:Xモンスター 誤中
+# EXモンスターゾーン),不是給條目寫例外——例外走「例外」欄。
+_EXCLUDE_SEP = "≠"
+_MASK_CHAR = "\x01"
 
 
 class GlossaryError(ValueError):
@@ -116,6 +126,21 @@ def _fill_time_slots(zh_parts, units):
     return re.compile("".join(filled))
 
 
+def _parse_ja_style(cell, row):
+    """日文欄 → (主樣式, 排除樣式清單)。無「≠」時排除清單為空。"""
+    style, _, excluded = cell.partition(_EXCLUDE_SEP)
+    excludes = [_compile_style(part.strip(), row)[0]
+                for part in re.split(r"[;；]", excluded) if part.strip()]
+    return style.strip(), excludes
+
+
+def _mask_excluded(ja, excludes):
+    """把排除樣式命中的段落遮掉(等長替換),供主樣式比對用。"""
+    for rx in excludes:
+        ja = rx.sub(lambda m: _MASK_CHAR * len(m.group(0)), ja)
+    return ja
+
+
 def _parse_exceptions(cell, row):
     """例外欄 → 卡片密碼集合;「—」為空,其餘必須是逗號分隔的數字。"""
     if cell == _EMPTY:
@@ -133,9 +158,10 @@ def _parse_row(line, level, miss_problem):
         raise GlossaryError(f"表格列欄數 {len(cells)} != {_COLUMNS}:{line}")
     if _SEPARATOR_RE.match("".join(cells)):
         return None  # 表頭下的分隔列
-    ja, zh, banned_cell, _, _, exception_cell, _ = cells
+    ja_cell, zh, banned_cell, _, _, exception_cell, _ = cells
     banned = ([] if banned_cell == _EMPTY else
               [part.strip() for part in re.split(r"[;;]", banned_cell)])
+    ja, ja_excludes = _parse_ja_style(ja_cell, line)
     ja_re, ja_slots = _compile_style(ja, line, time_mode="ja")
     zh_forms = []  # 多形:任一形命中即照規範(2026-08-25 站主裁示)
     for style in re.split(r"[;;]", zh):
@@ -147,7 +173,8 @@ def _parse_row(line, level, miss_problem):
         zh_forms.append(zh_compiled)  # 有槽=模板 parts,無槽=regex
     return {
         "level": level, "ja": ja, "zh": zh, "miss_problem": miss_problem,
-        "ja_re": ja_re, "time_slots": ja_slots, "zh_forms": zh_forms,
+        "ja_re": ja_re, "ja_excludes": ja_excludes,
+        "time_slots": ja_slots, "zh_forms": zh_forms,
         "banned": [(style, _compile_style(style, line, time_mode="plain")[0])
                    for style in banned],
         "exceptions": _parse_exceptions(exception_cell, line),
@@ -204,10 +231,11 @@ def check_texts(md_text, records):
         for entry in entries:
             if record.get("id") in entry["exceptions"]:
                 continue
+            ja_scan = _mask_excluded(ja, entry["ja_excludes"])
             if entry["time_slots"]:
                 # 跨側配對:日文側每種命中的時點組合,中文側都要有對應形
                 unit_sets = {m.groups()
-                             for m in entry["ja_re"].finditer(ja)}
+                             for m in entry["ja_re"].finditer(ja_scan)}
                 if not unit_sets:
                     continue
                 zh_ok = all(
@@ -215,7 +243,7 @@ def check_texts(md_text, records):
                         for parts in entry["zh_forms"])
                     for units in unit_sets)
             else:
-                if not entry["ja_re"].search(ja):
+                if not entry["ja_re"].search(ja_scan):
                     continue
                 zh_ok = any(form.search(zh)
                             for form in entry["zh_forms"])

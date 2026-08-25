@@ -53,8 +53,12 @@ const FIELDS = [
   // 子類組掛在大類下;怪獸參數八軸掛在怪獸子類型下。
   // `groupBlocks`:值域的具名分組(卡框/能力)各自長成一個摺疊區塊,顯示方式
   // 與屬性/種族一致(標題列+已選數+預設收起)。只是顯示結構——查詢上它們仍是
-  // 同一個 sub 軸的碼,條件形狀一個字都沒變
-  { tri: 'sub', dom: 'sub_m', side: 'm', parent: 'cat', groupBlocks: true },
+  // 同一個 sub 軸的碼,條件形狀一個字都沒變。
+  // `groupAfter`:分組區塊的插點(組名 → 子軸區塊鍵)。「能力」排在種族下面
+  // (2026-08-24 使用者裁示):協調/反轉這些與屬性/種族同屬怪獸的性質,聚在
+  // 參數軸之間;沒宣告插點的分組(卡框)照舊排在子軸前面
+  { tri: 'sub', dom: 'sub_m', side: 'm', parent: 'cat', groupBlocks: true,
+    groupAfter: { '能力': 'race' } },
   { tri: 'sub', dom: 'sub_s', side: 's', parent: 'cat' },
   { tri: 'sub', dom: 'sub_t', side: 't', parent: 'cat' },
   // `mon`:怪獸才有的參數(CONTEXT.md:非怪獸清空 race/attr/level/atk/def 五欄;
@@ -131,7 +135,8 @@ function axes() {
       : [{ zh: '', items }];
     return { key: f.tri, dom: f.dom, side: f.side || '', zh: dom.zh || f.dom,
              states: f.states || 3, mon: !!f.mon,
-             groupBlocks: !!f.groupBlocks, grid9: !!f.grid9, groups };
+             groupBlocks: !!f.groupBlocks, groupAfter: f.groupAfter || {},
+             grid9: !!f.grid9, groups };
   });
 }
 
@@ -186,7 +191,11 @@ function headHtml(zh) {
 }
 
 function axisHtml(ax, kids) {
-  const body = ax.groups.map((g, gi) => {
+  kids = kids || [];
+  // `groupAfter` 宣告了插點的分組區塊,先按目的地(子軸區塊鍵)收著
+  const anchored = {};
+  let own = '';
+  ax.groups.forEach((g, gi) => {
     const btns = g.items.map(it => triBtn(it.code, it.zh, ax.states));
     // 九宮格軸(連結標記):中央格插在第 4 顆之後——與結果卡片的 lmGridHtml
     // 同一條規則,值域的宣告序就是九宮格由左上到右下的讀法
@@ -195,21 +204,32 @@ function axisHtml(ax, kids) {
       btns.join('')}</div>`;
     // groupBlocks:具名分組升級成自己的摺疊區塊(與屬性/種族同一套標題列),
     // 鍵是 `值域名/分組序`,徽章與還原展開都認它
-    if (g.zh && ax.groupBlocks) {
-      return `<div class="axis-group" data-group-key="${ax.dom}/${gi}">
-        ${headHtml(g.zh)}<div class="axis-body" hidden>${row}</div></div>`;
-    }
-    return g.zh ? `<div class="tri-group">
+    const html = g.zh && ax.groupBlocks
+      ? `<div class="axis-group" data-group-key="${ax.dom}/${gi}">
+        ${headHtml(g.zh)}<div class="axis-body" hidden>${row}</div></div>`
+      : g.zh ? `<div class="tri-group">
       <span class="group-label">${esc(g.zh)}</span>${row}</div>` : row;
-  }).join('');
+    const dest = ax.groupAfter[g.zh];
+    if (dest) (anchored[dest] = anchored[dest] || []).push(html);
+    else own += html;
+  });
   // 子類型的三組與怪獸參數軸各自藏著(hidden),選了對應的大類才出現——那是
   // 連動隱藏(條件語意,收掉就清空),與摺疊(瀏覽狀態,收起保留條件)是兩個機制。
   // 態數(兩態/三態)由宣告帶在容器上,循環與 tooltip 都照它走。
   // `kids` 是巢狀的子軸區塊(檔案總管式內縮),接在自己的選項後面、同一個
-  // 摺疊體裡——收起這一軸,整棵子樹自然消失。
+  // 摺疊體裡——收起這一軸,整棵子樹自然消失。宣告了插點的分組區塊跟在目的地
+  // 子軸的後面(能力接在種族下)。
+  let body = own + kids.map(k => {
+    const extra = (anchored[k.key] || []).join('');
+    delete anchored[k.key];
+    return k.html + extra;
+  }).join('');
+  // 插點沒對上任何子軸(值域或欄位表漂移)的分組落到最後——寧可排錯位置,
+  // 不能讓一組鈕安靜地消失
+  for (const dest in anchored) body += anchored[dest].join('');
   return `<div class="axis" data-axis="${ax.key}" data-side="${ax.side}"
     data-states="${ax.states}"${ax.side || ax.mon ? ' hidden' : ''}>
-    ${headHtml(ax.zh)}<div class="axis-body" hidden>${body}${kids || ''}</div></div>`;
+    ${headHtml(ax.zh)}<div class="axis-body" hidden>${body}</div></div>`;
 }
 
 function rangeHtml(f) {
@@ -234,11 +254,12 @@ function rangeHtml(f) {
 function groupBoxHtml(f, kids) {
   return `<div class="axis" data-axis="${f.group}" data-side=""
     data-states="3">${headHtml(f.zh)}<div class="axis-body" hidden>${
-    kids || ''}</div></div>`;
+    (kids || []).map(k => k.html).join('')}</div></div>`;
 }
 
 /* 依 `parent` 宣告長成一棵樹:沒有 parent 的是頂層,有的塞進父區塊的摺疊體裡。
-   順序仍由 FIELDS 決定(同一層照表排)。 */
+   順序仍由 FIELDS 決定(同一層照表排)。子軸帶著區塊鍵傳給父層——分組區塊的
+   插點(groupAfter)要認得出誰是誰。 */
 function build() {
   const axisByKey = {};
   axes().forEach(ax => { axisByKey[ax.key + '/' + ax.side] = ax; });
@@ -246,8 +267,8 @@ function build() {
     ? axisHtml(axisByKey[f.tri + '/' + (f.side || '')], kidsOf(blockKey(f)))
     : f.group ? groupBoxHtml(f, kidsOf(blockKey(f)))
     : rangeHtml(f);
-  const kidsOf = key =>
-    FIELDS.filter(f => f.parent === key).map(htmlOf).join('');
+  const kidsOf = key => FIELDS.filter(f => f.parent === key)
+    .map(f => ({ key: blockKey(f), html: htmlOf(f) }));
   $('critParams').innerHTML =
     FIELDS.filter(f => !f.parent).map(htmlOf).join('');
 }

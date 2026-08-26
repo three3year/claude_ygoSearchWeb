@@ -25,7 +25,7 @@ from itertools import groupby
 # 才找得到模組——這兩行的順序是依賴,不是字母序巧合
 from classify import (OLD_PATTERNS, TIER_NEW, TIER_OLD, TIER_REWRITTEN,
                       TIER_SITE_REWRITTEN, TIER_UNDATED, classify_card,
-                      old_pattern_labels)
+                      is_effectless_monster, old_pattern_labels)
 from ocg_dates import align_ocg_dates, load_ocg_dates
 from official_dates import merge_aligned_dates
 from tagcard import (FOOTNOTE_RE, TYPE_MONSTER, TYPE_SPELL, TYPE_TRAP,
@@ -74,7 +74,8 @@ def scan(cards, dates, rewritten_ids):
     rewritten_ids 是[[文本改寫表]]的卡片密碼集合——「該卡已被本站改寫」
     的查表在這裡做,分類器維持純函式。
     """
-    stats = {"cards": len(cards), "pure_normal": 0, "no_segments": 0}
+    stats = {"cards": len(cards), "pure_normal": 0, "effectless": 0,
+             "no_segments": 0}
     seg_counts = Counter()
     card_sets = defaultdict(set)
     groups = defaultdict(list)   # (標籤組合, 大類序, 大類) → [(id, 名, 段)]
@@ -85,6 +86,10 @@ def scan(cards, dates, rewritten_ids):
     for card in cards:
         if is_pure_normal(card.get("type", 0)):
             stats["pure_normal"] += 1
+            continue
+        if is_effectless_monster(card):
+            # 排除的兩族分開計數:合併進「無段可判」會讓那個數字說謊
+            stats["effectless"] += 1
             continue
         date = dates.get(card["id"])
         segs = classify_card(card, date, card["id"] in rewritten_ids)
@@ -131,8 +136,10 @@ def _overview(stats, seg_counts, card_sets):
         "## 總覽",
         "",
         f"掃描基準:卡片總表 {stats['cards']:,} 張;純通常怪獸整張排除 "
-        f"{stats['pure_normal']:,} 張、無段可判 {stats['no_segments']:,} 張"
-        "(空卡文或只剩風味文)。",
+        f"{stats['pure_normal']:,} 張、無效果怪獸整張排除 "
+        f"{stats['effectless']:,} 張(融合/儀式/連結等,卡文只有素材行、"
+        "降臨句或召喚限制,句面本就是效果外文本)、無段可判 "
+        f"{stats['no_segments']:,} 張(空卡文或只剩風味文)。",
         "",
         "| 分級 | 段數 | 張數 | 去向 |",
         "|---|---|---|---|",
@@ -148,8 +155,8 @@ def _overview(stats, seg_counts, card_sets):
         "",
         "靈擺卡各段獨立判級,同一張卡可同時出現在多個分級;張數是「至少有"
         "一段屬該級」的卡數,各級張數合計因此可大於實卡數。舊文本的段集合"
-        "= tagcard 報告的 pending_split(同一把尺,test_classify.py 迴歸"
-        "釘住這個等式)。",
+        "= tagcard 報告的 pending_split 扣掉無效果怪獸(同一把尺加一道本"
+        "報表獨有的排除,test_classify.py 迴歸釘住這個等式)。",
     ]
     return lines
 

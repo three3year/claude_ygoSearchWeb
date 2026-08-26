@@ -1,8 +1,11 @@
 """三級分類器:一張卡的繁中卡文段落 + OCG 首發日 → 各段的文本世代分級。
 
 純函式、不做 IO。分段沿用 tagcard 管線的同一把尺(排除純通常怪獸與【怪獸
-敘述】風味文段、靈擺卡各段獨立),判為舊文本的段集合因此永遠等於 tagcard
-報告的 pending_split 定義(3,805 段,test_classify.py 的迴歸釘住這個等式)。
+敘述】風味文段、靈擺卡各段獨立),判為舊文本的段集合因此等於 tagcard 報告的
+pending_split **扣掉[[無效果怪獸]]**(`is_effectless_monster`,test_classify.py
+的迴歸釘住這個等式與扣掉的張數)。那 88 張是本分類器獨有的排除:它們的卡文
+全是效果外文本,對改寫佇列無事可做,但對 tagcard 那條線仍是要拆的段——實測
+88 張在現行[[效果標記表]]裡的 89 行全數已判效果外文本,兩條線各自都對。
 
 分級判準(spec:.scratch/text-format/spec.md、.scratch/text-rewrite/spec.md):
     舊文本      = 無①段(判準單一,日期不參與)→ 改寫佇列
@@ -25,8 +28,10 @@ _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 # 分段邏輯復用 tag_card 的 tagcard.py(跨資料夾,需手動加入搜尋路徑)。
 # 用 append 而非 insert:不讓這個目錄有機會遮蔽標準庫或既有模組。
 sys.path.append(os.path.join(_ROOT, "script", "tag_card"))
-from tagcard import (FOOTNOTE_RE, _segments, _zh_sections,  # noqa: E402
-                     is_pure_normal)
+from tagcard import (FOOTNOTE_RE, MATERIAL_TYPES, TYPE_EFFECT,  # noqa: E402
+                     TYPE_MONSTER, TYPE_NORMAL, TYPE_PENDULUM,
+                     _looks_like_material_line, _segments, _unit_role,
+                     _zh_sections, _zh_unit_spans, is_pure_normal)
 
 # 9 期界日:OCG 首個新格式產品 ST14 的發售日(官方商品頁,spec Further Notes)
 ERA9_START = "2014-03-21"
@@ -83,6 +88,77 @@ def old_pattern_labels(text):
             if any(pattern.search(text) for pattern in patterns)]
 
 
+def _unnumbered_texts(card):
+    """卡文各段的無編號整團文字;任一段帶①時回 None(帶①就有效果句)。
+
+    段裡什麼都沒有(空卡文、只剩風味文)時回 None——「沒有段可看」不是
+    「看過了都是效果外文本」,那條路歸 `classify_card` 的無段可判。
+    """
+    sections, _ = _zh_sections(FOOTNOTE_RE.sub("", card.get("desc") or ""))
+    texts = []
+    for _, text in sections:
+        _, numbered, unnumbered = _segments(text)
+        if numbered:
+            return None
+        if unnumbered is not None:
+            start, end = unnumbered
+            texts.append(text[start:end])
+    return texts or None
+
+
+def _all_units_non_effect(text, ctype):
+    """整團文字逐句判 role,全部判得出來 → 整段都是[[效果外文本]]。
+
+    單位切法與 role 判準都沿用 tagcard 的前言段那一套(`_zh_unit_spans` /
+    `_unit_role`),第一行的素材行另由呼叫端認——素材行是名詞片語,逐句
+    掃描的正規式抓不到它。
+    """
+    units = _zh_unit_spans(text, (0, len(text)))
+    if not units:
+        return False
+    material_first = _looks_like_material_line(text, ctype)
+    for pos, (start, end) in enumerate(units):
+        if pos == 0 and material_first:
+            continue
+        if _unit_role(text[start:end]) is None:
+            return False
+    return True
+
+
+def is_effectless_monster(card):
+    """無效果怪獸嗎?整張排除在掃描基準之外(text-rewrite#08 站主裁示)。
+
+    融合/儀式/同調/超量/連結怪獸的卡文只有素材行、降臨句或召喚限制時,句面
+    本就是[[效果外文本]],沒有可改寫之處。分類器原本對「無①段且非通常怪獸」
+    一律計舊,把這批結構性誤收進改寫佇列——其中副話術士 克拉拉&洛希卡
+    (2017)、天威的鬼神(2019)、無之畢竟 終歸虛空(2021)還是新格式時代的
+    卡。比照[[純通常怪獸]]的既有排除(`is_pure_normal`),整張不進三級分類。
+
+    兩條判準,任一成立即是無效果怪獸:
+    官方型別**沒有效果位元**——官方自己就標了這隻怪獸沒有效果(85 張);
+    有效果位元、但卡文每段都以素材行起頭且逐句皆判得出效果外文本的 role
+    (3 張,如副話術士:素材行+連結召喚限制)。官方把只寫召喚限制的怪獸
+    也標成效果怪獸,只看位元會漏掉這一族。
+
+    「以素材行起頭」是第二條的防線,不是修辭:只用 role 掃全庫會誤收 20 張
+    真有效果的上級召喚系怪獸(「解放…上級召喚成功時…」被召喚條件式命中)。
+    帶①段的卡一律不排除——①段的定義就是效果句,這道閘門保證排除永遠不會
+    把新格式卡從稽核佇列裡靜靜拿掉。
+    """
+    ctype = card.get("type", 0)
+    # 兩條判準都只在特殊召喚系怪獸上成立(第二條的素材行更是直接要求它),
+    # 閘門提到最前面:主牌組怪獸沒有「整張沒有效果」這回事,通常怪獸另有排除
+    if not (ctype & TYPE_MONSTER and ctype & MATERIAL_TYPES):
+        return False
+    texts = _unnumbered_texts(card)
+    if texts is None:
+        return False
+    if not ctype & (TYPE_NORMAL | TYPE_EFFECT | TYPE_PENDULUM):
+        return True
+    return all(_looks_like_material_line(text, ctype)
+               and _all_units_non_effect(text, ctype) for text in texts)
+
+
 def _dated_tier(ocg_date):
     """有①的段依首發日分級;日期是 ISO 字串,比大小即比日期。
 
@@ -106,7 +182,7 @@ def classify_card(card, ocg_date, site_rewritten=False):
     labels 是舊文本段命中的對應表條目(`old_pattern_labels`);其他分級
     恆為空列表——對應表只服務改寫佇列。
     """
-    if is_pure_normal(card.get("type", 0)):
+    if is_pure_normal(card.get("type", 0)) or is_effectless_monster(card):
         return []
     sections, _ = _zh_sections(FOOTNOTE_RE.sub("", card.get("desc") or ""))
     tiers = []

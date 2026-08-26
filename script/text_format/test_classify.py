@@ -12,9 +12,10 @@ import unittest
 # 先 import classify:tag_card 的搜尋路徑由它在載入時 append,tagcard 那行
 # 才找得到模組——這兩行的順序是依賴,不是字母序巧合
 from classify import (TIER_NEW, TIER_OLD, TIER_REWRITTEN,
-                      TIER_SITE_REWRITTEN, TIER_UNDATED, classify_card)
-from tagcard import (TYPE_MONSTER, TYPE_NORMAL, TYPE_PENDULUM,
-                     build_tag_cards)
+                      TIER_SITE_REWRITTEN, TIER_UNDATED, classify_card,
+                      is_effectless_monster)
+from tagcard import (TYPE_EFFECT, TYPE_FUSION, TYPE_LINK, TYPE_MONSTER,
+                     TYPE_NORMAL, TYPE_PENDULUM, TYPE_RITUAL, build_tag_cards)
 
 _DATA_CARDS = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "..", "..", "data", "cards.json")
@@ -23,6 +24,11 @@ EFFECT_MONSTER = TYPE_MONSTER
 NORMAL_MONSTER = TYPE_MONSTER | TYPE_NORMAL
 PENDULUM_NORMAL = TYPE_MONSTER | TYPE_NORMAL | TYPE_PENDULUM
 PENDULUM_EFFECT = TYPE_MONSTER | TYPE_PENDULUM
+# 無效果的特殊召喚系怪獸:官方型別就少了效果位元
+FUSION_PLAIN = TYPE_MONSTER | TYPE_FUSION
+RITUAL_PLAIN = TYPE_MONSTER | TYPE_RITUAL
+# 只寫召喚限制、卻仍被官方標成效果怪獸的那一族(副話術士 1482001 型)
+LINK_EFFECT = TYPE_MONSTER | TYPE_LINK | TYPE_EFFECT
 
 NEW_DESC = "①：1回合1次，可以以場上1張卡為對象發動。破壞那張卡。"
 OLD_DESC = "這張卡召喚成功時，可以破壞場上1張卡。"
@@ -183,25 +189,86 @@ class ExclusionTest(unittest.TestCase):
         self.assertEqual(_tiers(_card(""), "2015-01-10"), [])
 
 
+class EffectlessMonsterTest(unittest.TestCase):
+    """無效果怪獸整張排除(text-rewrite#08):卡文全是效果外文本,無可改寫。"""
+
+    def test_fusion_material_line_only_excluded(self):
+        """只有素材行的融合怪獸(結融體 1641882 型)→ 整張排除。"""
+        self.assertEqual(_tiers(_card("「小天使」+「催眠羊」", FUSION_PLAIN),
+                                "1999-02-04"), [])
+
+    def test_ritual_summon_line_only_excluded(self):
+        """只有降臨句的儀式怪獸(法律守護者 3627449 型)→ 整張排除。"""
+        self.assertEqual(_tiers(_card("藉由「法律的祈禱」降臨。", RITUAL_PLAIN),
+                                "2000-01-01"), [])
+
+    def test_effect_bit_with_material_and_summon_limit_excluded(self):
+        """帶效果位元、但只寫素材行+召喚限制(副話術士 1482001 型)→ 排除。
+
+        官方把只寫召喚限制的怪獸也標成效果怪獸,只看型位元會漏掉這一族。
+        """
+        desc = "通常召喚的怪獸1隻\n除了在主要階段2以外，此卡不能連結召喚。"
+        self.assertEqual(_tiers(_card(desc, LINK_EFFECT), "2017-11-11"), [])
+
+    # 逐句 role 會把「上級召喚時解放…」誤判成召喚條件,全庫實測 20 張真有
+    # 效果的卡因此中招(合成魔獸 加澤特 8794435 型)。兩道閘門各擋一次:
+    GAZELLE = "此卡的攻擊力變成上級召喚時解放的2隻怪獸的原攻擊力的合計數值。"
+
+    def test_main_deck_effect_monster_not_excluded(self):
+        """反例一:主牌組怪獸連判都不判——特殊召喚系閘門先擋下。"""
+        self.assertEqual(
+            _tiers(_card(self.GAZELLE, TYPE_MONSTER | TYPE_EFFECT),
+                   "2002-01-01"),
+            [("main", TIER_OLD)])
+
+    def test_effect_bit_without_material_line_not_excluded(self):
+        """反例二:過了閘門、但卡文不以素材行起頭 → 不排除。
+
+        素材行那道要求是第二條判準的防線:少了它,同一段文字光憑 role
+        就會被當成效果外文本。
+        """
+        self.assertEqual(
+            _tiers(_card(self.GAZELLE, FUSION_PLAIN | TYPE_EFFECT),
+                   "2002-01-01"),
+            [("main", TIER_OLD)])
+
+    def test_numbered_card_never_excluded(self):
+        """帶①段的卡一律不排除:①段的定義就是效果句。"""
+        self.assertFalse(is_effectless_monster(_card(NEW_DESC, FUSION_PLAIN)))
+
+    def test_spell_never_excluded(self):
+        """判準只認怪獸——魔陷卡不走這條排除。"""
+        self.assertFalse(is_effectless_monster(
+            {"id": 0, "desc": "藉由「法律的祈禱」降臨。", "type": 0x2}))
+
+
 @unittest.skipUnless(os.path.exists(_DATA_CARDS), "需要 data/cards.json")
 class SameRulerRegressionTest(unittest.TestCase):
     def test_old_text_count_matches_pending_split(self):
-        """同一把尺迴歸:判舊文本的段數 == tagcard 報告的 pending_split。
+        """同一把尺迴歸:判舊文本的段數 == pending_split 扣掉無效果怪獸。
 
         pending_split 的定義就是「無編號整團」,但拆句表套用後那些段會離開
         清單,所以要對「不套拆句表」的報告比;日期不參與舊文本判定,全部
         餵 None 即可。基準集合 3,805 段(票02);試點批改寫進站 49 段後
         3,756 段(text-rewrite#05);§4.1×怪獸子批1 進站 40 段後 3,716 段
-        (text-rewrite#07),資料更新或改寫批進站後兩邊會一起動。
+        (text-rewrite#07);無效果怪獸 88 張排除後 3,628 段
+        (text-rewrite#08),資料更新或改寫批進站後兩邊會一起動。
+
+        扣掉的張數一起釘住:排除判準放寬(如 role 正規式擴張)會讓這個數字
+        先動,而不是靜靜地從改寫佇列多吃掉幾張真有效果的卡。
         """
         with open(_DATA_CARDS, encoding="utf-8") as f:
             cards = json.load(f)
         _, report = build_tag_cards(cards, [], splits=None)
+        by_id = {card["id"]: card for card in cards}
+        pending = [row for row in report["pending_split"]
+                   if not is_effectless_monster(by_id[row["id"]])]
         old = sum(1 for card in cards
                   for seg in classify_card(card, None)
                   if seg["tier"] == TIER_OLD)
-        self.assertEqual(old, len(report["pending_split"]))
-        self.assertEqual(old, 3716)
+        self.assertEqual(old, len(pending))
+        self.assertEqual(len(report["pending_split"]) - len(pending), 88)
+        self.assertEqual(old, 3628)
 
 
 if __name__ == "__main__":

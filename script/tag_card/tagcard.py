@@ -27,6 +27,7 @@ FULLWIDTH_COLON = "："
 # 卡片總表 type 位元(與 script/card_list/cardlist.py 同一套)
 TYPE_MONSTER = 0x1
 TYPE_NORMAL = 0x10
+TYPE_EFFECT = 0x20
 TYPE_FUSION = 0x40
 TYPE_RITUAL = 0x80
 TYPE_SYNCHRO = 0x2000

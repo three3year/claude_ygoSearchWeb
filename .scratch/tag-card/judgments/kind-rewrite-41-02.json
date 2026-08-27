@@ -1,0 +1,354 @@
+[
+ {
+  "id": 6142213,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7180418,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7200041,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "③",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 7264861,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null,
+    "note": "①段含賦予型領起句(官方明示「モンスターの効果の扱いではありません」)與被賦予的●(官方明示永続効果)。日文卡文無●,`_split_bullets` 的繁中/日文●數量一致檢查不成立,故未拆成 ①-●1;照 text-rewrite#07 魔法史萊姆(3918345)的處置,本行取實質效果的永續效果,以免該效果在標記表消失。拆句問題已記於 map 霧區。"
+   }
+  ]
+ },
+ {
+  "id": 7369217,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "①段含兩個●:●1 官方明示起動効果(取對象),●2 官方明示「装備魔法カード扱いになっている際に発動する事ができる効果」(對照聯合飛行員 89357740 的 ①-●2 判裝備魔法卡效果)。日文卡文無●故未拆,本行取領起與●1 的啟動效果;●2 的裝備魔法卡效果因未拆而併入本行。"
+   },
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": null,
+    "role": null,
+    "note": "官方明示「装備魔法カード扱いになっている際に適用される効果」「チェーンブロックの作られない効果」——以裝備魔法卡身分運作,適用型無觸發事件故不記必發/選發。"
+   }
+  ]
+ },
+ {
+  "id": 8396952,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null,
+    "note": "官方明示領起句是「必ず発動する誘発効果」。①段含●正/●反(各官方明示永続効果),日文卡文雖有●,但改寫卡的編號段日文側為空,●授權判定讀不到日文故未拆,本行取領起句自身的類型。"
+   }
+  ]
+ },
+ {
+  "id": 8967776,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9418365,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "誘發效果(1速)",
+    "optional": "選發",
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "無種類效果",
+    "optional": null,
+    "role": null,
+    "note": "官方補足未提此句;沿用既有判定(llm_then_rule)。"
+   }
+  ]
+ },
+ {
+  "id": 9603356,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9633505,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9817927,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 9910360,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 10000040,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "無種類效果",
+    "optional": null,
+    "role": null,
+    "note": "官方補足未分類此句;沿用既有判定(llm_then_rule)。"
+   }
+  ]
+ },
+ {
+  "id": 10920352,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11475049,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "無種類效果",
+    "optional": null,
+    "role": null,
+    "note": "本卡補足未提此句,但同族聖遺物-雷神之鎚(80237445)幾乎同文的①,補足明示【①の効果について】「起動効果・誘発効果・誘発即時効果・永続効果のいずれにも分類されない効果です」;既有判定亦為無種類效果,維持。"
+   },
+   {
+    "index": "②",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null
+   },
+   {
+    "index": "③",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11502550,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 11685347,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null,
+    "note": "本批唯一沒有官方分類明示的卡:補足只解釋「チェーンする場合」的定義。日文卡文無「発動」字樣,依 spec 保守原則不補發動句,沿用既有判定的永續效果。若日後認定為誘発効果,須連同卡文一起走改判。"
+   }
+  ]
+ },
+ {
+  "id": 11954712,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12296376,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "無種類效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12953226,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "誘發效果(1速)",
+    "optional": "必發",
+    "role": null
+   },
+   {
+    "index": "②",
+    "kind": "永續效果",
+    "optional": null,
+    "role": null
+   }
+  ]
+ },
+ {
+  "id": 12965761,
+  "section": "main",
+  "clauses": [
+   {
+    "index": "①",
+    "kind": "啟動效果",
+    "optional": null,
+    "role": null,
+    "note": "①段含兩個●,情形同金屬化寄生生物-月之衣(7369217):●1 官方明示起動効果(取對象),●2 官方明示為裝備魔法卡扱い時可發動的效果;日文卡文無●故未拆,本行取啟動效果。"
+   },
+   {
+    "index": "②",
+    "kind": "裝備魔法卡效果",
+    "optional": "必發",
+    "role": null,
+    "note": "官方明示「「デス・デンドル」自身が装備魔法カード扱いになっている際に発動する効果」「チェーンブロックの作られる効果」——以裝備魔法卡身分運作的發動型效果,有觸發事件(裝備怪獸戰鬥破壞怪獸)故承載必發/選發;日文直述形「特殊召喚する」→必發。"
+   }
+  ]
+ }
+]

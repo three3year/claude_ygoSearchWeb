@@ -17,10 +17,13 @@
 2. 產完整三欄審查檔,範本 `review-41-monster-02.md`。
 3. **擬稿過卡文詞彙表**:`python script/text_glossary/check_draft.py <審查檔>`,
    關鍵指標「新文本獨有(改寫引入)」目標 0。
-4. 站主逐行審查、退回的迭代到放行。
-5. 放行後寫入 `data/text_rewrites.json`(ticket: `text-rewrite#12`),重建全站
+4. **產網頁審核台並以 Artifact 發佈**(2026-08-27 站主定案,審查票一律要附):
+   `python script/text_rewrite/build_review_page.py <審查檔>` → 以 Artifact 發佈
+   產出的 HTML。審查檔是唯一內容來源,改了就重跑再發佈同一路徑(保持同網址)。
+5. 站主逐行審查、退回的迭代到放行。
+6. 放行後寫入 `data/text_rewrites.json`(ticket: `text-rewrite#12`),重建全站
    全線驗證(照票11 的 checklist)。`test_classify` 的錨點 3,578 段隨之更新。
-6. kind 補判收尾:新句待判佇列清零後,站主明說 commit 才提交。
+7. kind 補判收尾:新句待判佇列清零後,站主明說 commit 才提交。
 
 ## 沿用的群級規範(票07 + 票11 累積)
 

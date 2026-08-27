@@ -18,10 +18,13 @@ Label: wayfinder:map
 - 詞彙:見 `CONTEXT.md` 的「句型群」「子批」詞條。
 - 每張子批票的固定流程:改寫 → 完整三欄審查檔(日文原文/查牌網舊譯/新文本
   +依據+判斷點)→ **擬稿過卡文詞彙表**(`script/text_glossary/check_draft.py`,
-  2026-08-25 站主定案)→ 站主逐行放行 → 寫入 `data/text_rewrites.json` → 重建
-  全站全線驗證 → kind 補判(固定收尾)→ 站主明說 commit 才提交。範本:試點批
-  `issues/04`、`issues/05` 與 `review-flip-monsters.md`;詞彙表那一關的判準與
-  兩種系統性誤報見 `spec.md`「擬稿過卡文詞彙表」。
+  2026-08-25 站主定案)→ **產網頁審核台並以 Artifact 發佈**
+  (`script/text_rewrite/build_review_page.py`,2026-08-27 站主定案:
+  **審查票一律附審核網頁**)→ 站主逐行放行 → 寫入 `data/text_rewrites.json`
+  → 重建全站全線驗證 → kind 補判(固定收尾)→ 站主明說 commit 才提交。
+  範本:子批 2 的 `review-41-monster-02.md` 與同名 `.html`;詞彙表那一關的判準
+  與兩種系統性誤報見 `spec.md`「擬稿過卡文詞彙表」,審核台的理由與慣例見
+  `spec.md`「網頁審核台」。
 - 審查中長出的規範,照試點慣例追記 `docs/text_format_guide.md`,以「審查批改」
   commit;規範爭議走 /grilling + /domain-modeling。
 - **子批票逐張開**:前一子批 resolved 後才開下一張(create-then-wire),

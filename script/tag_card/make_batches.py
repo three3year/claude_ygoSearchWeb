@@ -35,7 +35,7 @@ import official
 from official import INDEX_UNNUMBERED
 from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_SPLITS,
                    DEFAULT_TAG_CARDS, ROOT, dump_json, load_json,
-                   load_optional)
+                   load_modern_ja, load_optional)
 from tagcard import (FOOTNOTE_RE, SECTION_PENDULUM, build_tag_cards,
                      card_type_label)
 
@@ -334,7 +334,8 @@ def main(argv=None):
     faqs = load_json(args.faq_info)
     entries, report = build_tag_cards(cards, faqs,
                                       existing=load_optional(args.sheet),
-                                      splits=load_optional(args.splits))
+                                      splits=load_optional(args.splits),
+                                      modern_ja=load_modern_ja())
 
     if args.rejudge is not None:
         return write_rejudge_batch(entries, cards, faqs, args)

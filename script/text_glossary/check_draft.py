@@ -53,7 +53,13 @@ def _quoted(block, label):
 
 
 def parse_review(md_text):
-    """審查檔全文 → 每卡 {no, id, name, text_ja, draft, old, skipped}。"""
+    """審查檔全文 → 每卡 {no, id, name, text_ja, text_ja_faq, draft, old, skipped}。
+
+    `text_ja` 是「日文原文」欄=**官方現行文本**(`ja-JP.cdb`),改寫的翻譯來源。
+    `text_ja_faq` 是「舊日文」欄=`faq_info` 的官方 Q&A 頁文本;那一份是**補足
+    情報的錨**,也是查漏翻/多翻時的對照組,兩份相同時審查檔不寫、這一欄為空
+    (2026-08-27 站主裁示:基底改用官方現行文本,有語意差異再拿 faq 比對)。
+    """
     cards = []
     for block in re.split(r"\n(?=## \d+\. `)", md_text):
         head = HEAD_RE.match(block.splitlines()[0])
@@ -64,6 +70,7 @@ def parse_review(md_text):
             "no": head.group(1), "id": int(head.group(2)),
             "name": head.group(3).strip(),
             "text_ja": "\n".join(_quoted(block, "日文原文")),
+            "text_ja_faq": "\n".join(_quoted(block, "舊日文")),
             "draft": "\n".join(draft),
             "old": "\n".join(_quoted(block, "查牌網舊譯")),
             "skipped": any("不進站" in line for line in draft),

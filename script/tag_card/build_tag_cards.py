@@ -27,7 +27,8 @@ import sys
 
 import rules
 from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_RULES_DOC,
-                   DEFAULT_SPLITS, DEFAULT_TAG_CARDS, load_json, load_optional)
+                   DEFAULT_SPLITS, DEFAULT_TAG_CARDS, load_json,
+                   load_modern_ja, load_optional)
 from tagcard import build_tag_cards, serialize_tag_cards
 
 LIST_PREVIEW = 20  # 清單過長時只印前幾筆,完整內容看輸出檔
@@ -497,7 +498,8 @@ def main(argv=None):
     entries, report = build_tag_cards(load_json(args.cards),
                                       load_json(args.faq_info),
                                       existing=existing, judgments=judgments,
-                                      splits=splits)
+                                      splits=splits,
+                                      modern_ja=load_modern_ja())
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8", newline="\n") as f:

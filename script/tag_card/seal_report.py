@@ -26,7 +26,8 @@ import sys
 import rules
 from build_tag_cards import DIGEST_RE, LIST_PREVIEW
 from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_RULES_DOC,
-                   DEFAULT_SPLITS, DEFAULT_TAG_CARDS, load_json, load_optional)
+                   DEFAULT_SPLITS, DEFAULT_TAG_CARDS, load_json,
+                   load_modern_ja, load_optional)
 from tagcard import build_tag_cards, serialize_tag_cards
 
 # 票55 的那批(ADR-0006):無官方日文文本、無[[官方明示]]、無[[影子預測]],
@@ -213,7 +214,8 @@ def main(argv=None):
     entries, report = build_tag_cards(load_json(args.cards),
                                       load_json(args.faq_info),
                                       existing=existing,
-                                      splits=load_optional(args.splits))
+                                      splits=load_optional(args.splits),
+                                      modern_ja=load_modern_ja())
     gates = all_gates(entries, report, read_digest(args.rules_doc), args.sheet)
     ok = print_report(entries, report, gates)
     if args.out:

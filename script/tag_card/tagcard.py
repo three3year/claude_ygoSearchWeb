@@ -169,6 +169,63 @@ def _segments(text):
     return preamble, numbered, None
 
 
+def _numerals_of(text):
+    """段落文字裡的效果編號序列(`_segments` 的編號那一份)。"""
+    _, numbered, _ = _segments(text)
+    return [char for char, _ in numbered]
+
+
+def _numbered_texts(text):
+    """段落文字 → 各編號段的文字(依編號順序)。"""
+    _, numbered, _ = _segments(text)
+    return [_slice(text, span) for _, span in numbered]
+
+
+# 跨語言的發動標記。中日的卡文用同一個詞,是少數翻譯後仍然對得起來的錨點。
+_ACTIVATION_ZH = "發動"
+_ACTIVATION_JA = "発動"
+
+
+def _activation_profile_matches(zh_text, ja_text):
+    """中日兩側的「哪幾段會發動」是不是同一個形狀?
+
+    對位是**照位置**配的(第 n 個編號配第 n 個編號),而官方改寫現行文本時會
+    **重排編號**——阿修羅 `2134346` 與武尊神-日孁 `9418365` 的①②在官方現行
+    文本裡剛好對調。編號數一樣、位置一配就錯,而且錯得無聲無息:那一條效果句
+    會掛上別條效果的日文原文。
+
+    「發動 / 発動」是譯後仍然對得起來的錨點:逐段比對有沒有這個詞,形狀不一樣
+    就表示位置對不上(或官方改了發動與否),一律不補位、維持原本留空的行為。
+    """
+    zh_flags = [_ACTIVATION_ZH in seg for seg in _numbered_texts(zh_text)]
+    ja_flags = [_ACTIVATION_JA in seg for seg in _numbered_texts(ja_text)]
+    return zh_flags == ja_flags
+
+
+def modern_ja_helps(zh_text, faq_ja, modern_ja):
+    """該不該改用官方現行日文對位?
+
+    中日對位的門是「編號數量相同」(`_build_section` 的 `aligned`),對不上就整段
+    不配、`text_ja` 留空。`faq_info` 的 `card_text` 對**未再版舊卡**是官方 DB 停在
+    最後一次印刷世代的舊文本,常常沒有編號;[[文本改寫表]]又替繁中補上了編號,
+    於是**每一張改寫卡都對不上**(2026-08-28 實測:已進站的 139 張無一例外,
+    192 條效果句 `text_ja` 全空)。`ja-JP.cdb` 的現行文本自帶官方編號,補位後
+    197 張對不上的救回 192 張。
+
+    只在 `faq` 對不上、而現行文本對得上時才換——**`faq` 優先不可動**:補足情報
+    與 `card_text` 來自同一個官方頁面,官方明示的原文引用階梯靠這個配對
+    (引號對得回 `faq` 96.2%、對得回 `ja-JP.cdb` 只有 60.3%)。這是補位,不是替換。
+    """
+    if not modern_ja or not modern_ja.strip():
+        return False
+    zh = _numerals_of(zh_text)
+    if len(zh) == len(_numerals_of(faq_ja or "")):
+        return False                       # faq 本來就對得上,不動
+    if len(zh) != len(_numerals_of(modern_ja)):
+        return False
+    return _activation_profile_matches(zh_text, modern_ja)
+
+
 def _zh_sections(desc):
     """繁中卡文 → ([(section, 段落文字), ...], 丟棄敘述段)。
 
@@ -1426,6 +1483,7 @@ def _new_report():
         "pending_split": [],
         "numeral_mismatch": [],
         "numeral_relabelled": [],
+        "modern_ja_fallback": [],
         "preamble_one_sided": [],
         "no_japanese_text": [],
         "zh_judged_clauses": 0,
@@ -1707,7 +1765,7 @@ def _count_clauses(entries, report):
 
 
 def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
-                    splits=None):
+                    splits=None, modern_ja=None):
     """卡片總表 + 補足情報 → (效果標記表條目, 報告)。
 
     cards: 卡片總表條目(需 id / desc / type)。
@@ -1721,6 +1779,11 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
         (kind / optional / role),在官方明示抽取**之後**合併。
     splits: 拆句表,一張卡一筆、鍵為 (卡片密碼, section)。決定效果句的**集合**,
         在官方明示抽取**之前**生效——拆完才對得出歸屬(ADR-0003)。
+    modern_ja: 官方**現行**日文卡文 {卡片密碼: 卡文},`ja-JP.cdb` 那一份。
+        只在 `faq_info` 的 `card_text` 與繁中編號數對不上、而現行文本對得上時
+        當**補位**用(判準見 `modern_ja_helps`),且只補 main 段——靈擺卡的
+        現行文本帶【Ｐ効果】標頭、與 `pen_effect` 的切法不同,不在補位範圍。
+        不給就是原本的行為。
     """
     report = _new_report()
     existing_index = _index_existing(existing)
@@ -1756,6 +1819,11 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
         if flavor_dropped:
             report["flavor_dropped"] += 1
         has_pendulum_section = any(s == SECTION_PENDULUM for s, _ in sections)
+        if not has_pendulum_section and modern_ja is not None:
+            now = modern_ja.get(cid) or ""
+            if modern_ja_helps(stripped, ja_by_section[SECTION_MAIN], now):
+                ja_by_section[SECTION_MAIN] = now
+                report["modern_ja_fallback"].append(cid)
         if has_pendulum_section:
             report["pendulum_sections"] += 1
             if not ctype & TYPE_PENDULUM:

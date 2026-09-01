@@ -18,6 +18,24 @@ DEFAULT_FAQ_INFO = os.path.join(ROOT, "data", "sources", "faq_info.json")
 DEFAULT_TAG_CARDS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_SPLITS = os.path.join(ROOT, "data", "clause_splits.json")
 DEFAULT_RULES_DOC = os.path.join(ROOT, "docs", "effect_kind_rules.md")
+DEFAULT_MODERN_JA = os.path.join(ROOT, "data", "sources", "ja-JP.cdb")
+
+
+def load_modern_ja(path=DEFAULT_MODERN_JA):
+    """`ja-JP.cdb` → {卡片密碼: 官方現行日文卡文};檔不在就回空表。
+
+    只有中日編號數對不上時管線才會拿它補位(見 `tagcard.modern_ja_helps`),
+    所以缺這個來源檔不是錯誤——回空表等於維持補位前的行為。
+    """
+    if not os.path.exists(path):
+        return {}
+    import sqlite3
+    con = sqlite3.connect(path)
+    try:
+        return {row[0]: row[1] or ""
+                for row in con.execute("select id, desc from texts")}
+    finally:
+        con.close()
 
 
 def load_json(path):

@@ -53,7 +53,7 @@ import sys
 from build_tag_cards import print_report, write_rules_doc
 from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_RULES_DOC,
                    DEFAULT_SPLITS, DEFAULT_TAG_CARDS, dump_json, load_json,
-                   load_optional)
+                   load_modern_ja, load_optional)
 from tagcard import build_tag_cards, serialize_tag_cards
 
 # 套用時被管線擋下來的理由;新加的拆句紀錄一筆都不該落在這些清單裡
@@ -226,15 +226,17 @@ def main(argv=None):
 
     # 先照既有的拆句表跑一次,好拿到整團現在的原文——拆句表的雜湊對著它算,
     # 判定票寫結果檔時看到的也是它
+    modern = load_modern_ja()
     _entries, report = build_tag_cards(cards, faqs, existing=existing,
-                                       splits=splits)
+                                       splits=splits, modern_ja=modern)
     records, skipped, blob_problems = split_records(
         result, blob_index(report), args.ticket)
     problems += blob_problems
     updated = merged_splits(splits, records)
 
     entries, report = build_tag_cards(cards, faqs, existing=existing,
-                                      judgments=result, splits=updated)
+                                      judgments=result, splits=updated,
+                                      modern_ja=modern)
     problems += applied_problems(report, records)
 
     print(f"結果檔 {len(result)} 段落:拆句 {len(records)} 筆、"

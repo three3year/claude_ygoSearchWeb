@@ -1,0 +1,647 @@
+<title>§4.1×怪獸 子批 2 審查台</title>
+<style>
+:root{
+  --paper:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f5;
+  --ink:#1b1f27; --muted:#5c6472; --faint:#8b93a1;
+  --rule:#dce0e7; --rule-soft:#e8ebf0;
+  --accent:#96661a; --accent-soft:#f3e6cd; --accent-line:#c99a3f;
+  --ok:#2c7359; --ok-soft:#dfeee8;
+  --back:#a8412c; --back-soft:#f7e2dc;
+  --skip:#5c6472; --skip-soft:#e6e9ee;
+  --ins:#e8f0d9; --ins-ink:#3f5c1c;
+  --del-ink:#EEEEEE;
+  --shadow:0 1px 2px rgba(27,31,39,.06), 0 8px 24px -16px rgba(27,31,39,.28);
+  --serif:"Noto Serif TC","Source Han Serif TC","Songti TC","PMingLiU",
+    "MingLiU",Georgia,serif;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",
+    system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#10131a; --surface:#181c24; --surface-2:#1f242e;
+    --ink:#e6e9ee; --muted:#98a1b0; --faint:#6d7686;
+    --rule:#2a303b; --rule-soft:#232935;
+    --accent:#dda953; --accent-soft:#3a2f19; --accent-line:#9a7430;
+    --ok:#63b596; --ok-soft:#1c3830;
+    --back:#e28b74; --back-soft:#3d251e;
+    --skip:#98a1b0; --skip-soft:#232935;
+    --ins:#2b3a1c; --ins-ink:#b6d189;
+    --del-ink:#EEEEEE;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="light"]{
+  --paper:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f5;
+  --ink:#1b1f27; --muted:#5c6472; --faint:#8b93a1;
+  --rule:#dce0e7; --rule-soft:#e8ebf0;
+  --accent:#96661a; --accent-soft:#f3e6cd; --accent-line:#c99a3f;
+  --ok:#2c7359; --ok-soft:#dfeee8;
+  --back:#a8412c; --back-soft:#f7e2dc;
+  --skip:#5c6472; --skip-soft:#e6e9ee;
+  --ins:#e8f0d9; --ins-ink:#3f5c1c; --del-ink:#EEEEEE;
+  --shadow:0 1px 2px rgba(27,31,39,.06), 0 8px 24px -16px rgba(27,31,39,.28);
+}
+:root[data-theme="dark"]{
+  --paper:#10131a; --surface:#181c24; --surface-2:#1f242e;
+  --ink:#e6e9ee; --muted:#98a1b0; --faint:#6d7686;
+  --rule:#2a303b; --rule-soft:#232935;
+  --accent:#dda953; --accent-soft:#3a2f19; --accent-line:#9a7430;
+  --ok:#63b596; --ok-soft:#1c3830;
+  --back:#e28b74; --back-soft:#3d251e;
+  --skip:#98a1b0; --skip-soft:#232935;
+  --ins:#2b3a1c; --ins-ink:#b6d189; --del-ink:#EEEEEE;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+.page{
+  background:var(--paper); color:var(--ink); font-family:var(--sans);
+  font-size:16px; line-height:1.75; margin:0 auto; padding:0 0 7rem;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--serif); text-wrap:balance; margin:0; font-weight:600}
+code{font-family:var(--mono); font-size:.86em; background:var(--surface-2);
+  padding:.08em .35em; border-radius:3px}
+.term{font-style:normal; border-bottom:1px dotted var(--accent-line);
+  padding-bottom:1px}
+
+/* ── 頁首 ───────────────────────────── */
+.masthead{
+  border-bottom:1px solid var(--rule); background:var(--surface);
+  padding:2.6rem 1.5rem 1.6rem;
+}
+.masthead-in{max-width:1180px; margin:0 auto;
+  display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-end;
+  justify-content:space-between}
+.eyebrow{
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:.5rem;
+}
+.masthead h1{font-size:clamp(1.6rem,3.4vw,2.3rem); line-height:1.3}
+.masthead .sub{color:var(--muted); font-size:.92rem; margin-top:.4rem}
+.progress-wrap{min-width:230px}
+.progress-nums{display:flex; align-items:baseline; gap:.4rem;
+  font-family:var(--mono); font-variant-numeric:tabular-nums}
+.progress-nums b{font-size:1.9rem; font-weight:600; letter-spacing:-.02em}
+.progress-nums span{color:var(--muted); font-size:.85rem}
+.bar{height:6px; border-radius:3px; background:var(--surface-2);
+  margin-top:.55rem; overflow:hidden; display:flex}
+.bar i{display:block; height:100%}
+.bar .b-ok{background:var(--ok)} .bar .b-back{background:var(--back)}
+
+/* ── 摘要 ───────────────────────────── */
+.wrap{max-width:1180px; margin:0 auto; padding:0 1.5rem}
+.stats{display:grid; gap:1px; background:var(--rule-soft);
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  border:1px solid var(--rule-soft); border-radius:8px; overflow:hidden;
+  margin:1.8rem 0}
+.stat{background:var(--surface); padding:1rem 1.15rem}
+.stat dt{font-size:.75rem; letter-spacing:.06em; color:var(--muted);
+  margin-bottom:.25rem}
+.stat dd{margin:0; font-family:var(--mono); font-size:1.45rem;
+  font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.stat dd small{font-size:.72rem; color:var(--faint); letter-spacing:0;
+  margin-left:.3rem; font-family:var(--sans)}
+.stat.good dd{color:var(--ok)}
+
+/* ── 版面 ───────────────────────────── */
+.layout{display:grid; grid-template-columns:250px minmax(0,1fr); gap:2.5rem}
+@media (max-width:900px){.layout{grid-template-columns:1fr; gap:1.5rem}}
+
+.rail{position:sticky; top:1rem; align-self:start; max-height:calc(100vh - 2rem);
+  display:flex; flex-direction:column; gap:.7rem}
+@media (max-width:900px){.rail{position:static; max-height:none}}
+.rail h2{font-size:.78rem; font-family:var(--mono); letter-spacing:.14em;
+  text-transform:uppercase; color:var(--faint)}
+.filters{display:flex; flex-wrap:wrap; gap:.35rem}
+.filters button{
+  font:inherit; font-size:.76rem; padding:.25rem .6rem; cursor:pointer;
+  background:var(--surface); color:var(--muted);
+  border:1px solid var(--rule); border-radius:999px;
+}
+.filters button[aria-pressed="true"]{
+  background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.index{list-style:none; margin:0; padding:0; overflow-y:auto; flex:1;
+  border-top:1px solid var(--rule-soft)}
+.index li{border-bottom:1px solid var(--rule-soft)}
+.index a{
+  display:grid; grid-template-columns:2.1rem 1fr auto; gap:.5rem;
+  align-items:center; padding:.42rem .3rem; text-decoration:none;
+  color:var(--ink); font-size:.85rem;
+}
+.index a:hover,.index a:focus-visible{background:var(--surface-2)}
+.index .n{font-family:var(--mono); font-size:.75rem; color:var(--faint);
+  font-variant-numeric:tabular-nums; text-align:right}
+.index .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--rule);
+  box-shadow:0 0 0 1px var(--rule)}
+.dot.ok{background:var(--ok); box-shadow:none}
+.dot.back{background:var(--back); box-shadow:none}
+.dot.skip{background:transparent; box-shadow:0 0 0 1px var(--faint)}
+
+/* ── 群級裁示 ────────────────────────── */
+.calls{border:1px solid var(--accent-line); border-radius:8px;
+  background:var(--surface); margin-bottom:2.2rem; overflow:hidden}
+.calls > h2{font-size:1.02rem; padding:.9rem 1.2rem; background:var(--accent-soft);
+  color:var(--accent); border-bottom:1px solid var(--accent-line)}
+.call{padding:1.15rem 1.2rem; border-bottom:1px solid var(--rule-soft)}
+.call:last-child{border-bottom:0}
+.call h3{font-size:.98rem; margin-bottom:.4rem}
+.call p{margin:.35rem 0; color:var(--muted); font-size:.9rem}
+.call p.opt{color:var(--ink)}
+.call .tag{font-family:var(--mono); font-size:.7rem; letter-spacing:.1em;
+  color:var(--accent); text-transform:uppercase; display:block;
+  margin-bottom:.3rem}
+.call-list{margin:.5rem 0; padding-left:1.25rem; color:var(--muted);
+  font-size:.9rem}
+.call-list li{margin:.4rem 0; line-height:1.8}
+.call-list li::marker{color:var(--accent-line)}
+.call-table{overflow-x:auto; margin:.55rem 0}
+.call-table table{border-collapse:collapse; font-size:.84rem; min-width:100%}
+.call-table th,.call-table td{border:1px solid var(--rule); padding:.35rem .55rem;
+  text-align:left; vertical-align:top; color:var(--muted)}
+.call-table th{background:var(--surface-2); color:var(--ink); white-space:nowrap;
+  font-weight:600}
+
+/* ── 卡片 ───────────────────────────── */
+.card{background:var(--surface); border:1px solid var(--rule);
+  border-radius:8px; box-shadow:var(--shadow); margin-bottom:1.6rem;
+  scroll-margin-top:1rem; overflow:hidden}
+.card[data-state="ok"]{border-color:var(--ok)}
+.card[data-state="back"]{border-color:var(--back)}
+.card.is-skip{background:var(--surface-2); box-shadow:none}
+.card-head{display:flex; flex-wrap:wrap; gap:.5rem 1rem; align-items:baseline;
+  padding:1rem 1.3rem; border-bottom:1px solid var(--rule-soft)}
+.card-head .no{font-family:var(--mono); font-size:.8rem; color:var(--faint);
+  font-variant-numeric:tabular-nums}
+.card-head h3{font-size:1.12rem}
+.card-head .ja{color:var(--faint); font-size:.85rem}
+.card-head .pw{font-family:var(--mono); font-size:.8rem; color:var(--muted);
+  margin-left:auto; font-variant-numeric:tabular-nums}
+.chip{font-size:.72rem; padding:.1rem .5rem; border-radius:999px;
+  letter-spacing:.04em; white-space:nowrap}
+.chip.ok{background:var(--ok-soft); color:var(--ok)}
+.chip.back{background:var(--back-soft); color:var(--back)}
+.chip.skip{background:var(--skip-soft); color:var(--skip)}
+.chip.wait{background:var(--accent-soft); color:var(--accent)}
+
+.texts{padding:.3rem 1.3rem 1rem}
+.text-row{padding:.85rem 0; border-bottom:1px dashed var(--rule-soft)}
+.text-row:last-child{border-bottom:0}
+.text-row > .lab{font-family:var(--mono); font-size:.7rem; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--faint); display:block;
+  margin-bottom:.3rem}
+.text-row p{margin:0; white-space:pre-wrap}
+.t-ja p{font-size:.94rem; color:var(--muted); line-height:1.85}
+.t-old p{color:var(--muted)}
+.t-ja > .lab{color:var(--accent)}
+.t-faq p{font-size:.9rem; color:var(--faint); line-height:1.8}
+.segwarn{color:var(--back); font-weight:600; letter-spacing:0;
+  text-transform:none; margin-left:.5rem}
+.t-new{background:var(--surface-2); border-left:3px solid var(--accent-line);
+  padding:.8rem 1rem; border-radius:0 5px 5px 0; margin-top:.3rem}
+.t-new > .lab{color:var(--accent)}
+.t-new p{font-size:1.04rem; line-height:1.9}
+ins{background:var(--ins); color:var(--ins-ink); text-decoration:none;
+  border-radius:2px; padding:0 .06em}
+del{color:var(--del-ink); opacity:.75}
+
+.notes{list-style:none; margin:0; padding:.9rem 1.3rem 1rem;
+  border-top:1px solid var(--rule-soft)}
+.notes > li{display:grid; grid-template-columns:5.2rem 1fr; gap:.9rem;
+  padding:.4rem 0; font-size:.88rem}
+@media (max-width:640px){.notes > li{grid-template-columns:1fr; gap:.2rem}}
+.notes .lab{font-size:.78rem; color:var(--faint); text-align:right;
+  padding-top:.12rem}
+@media (max-width:640px){.notes .lab{text-align:left}}
+.notes .lab.wait{color:var(--accent); font-weight:600}
+.notes ol{margin:.4rem 0 0; padding-left:1.3rem; color:var(--muted)}
+.notes ol li{margin:.2rem 0}
+.notes .body{color:var(--muted)}
+
+.verdict{display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;
+  padding:.9rem 1.3rem; background:var(--surface-2);
+  border-top:1px solid var(--rule-soft)}
+.verdict button{font:inherit; font-size:.86rem; padding:.34rem .95rem;
+  border-radius:5px; cursor:pointer; border:1px solid var(--rule);
+  background:var(--surface); color:var(--muted)}
+.verdict button:hover{border-color:var(--faint)}
+.verdict button[aria-pressed="true"].v-ok{background:var(--ok);
+  border-color:var(--ok); color:#fff}
+.verdict button[aria-pressed="true"].v-back{background:var(--back);
+  border-color:var(--back); color:#fff}
+.verdict input{flex:1; min-width:200px; font:inherit; font-size:.86rem;
+  padding:.34rem .6rem; border-radius:5px; border:1px solid var(--rule);
+  background:var(--surface); color:var(--ink)}
+.verdict input::placeholder{color:var(--faint)}
+
+/* ── 匯出列 ──────────────────────────── */
+.dock{position:fixed; left:0; right:0; bottom:0; z-index:20;
+  background:var(--surface); border-top:1px solid var(--rule);
+  box-shadow:0 -6px 24px -18px rgba(0,0,0,.5)}
+.dock-in{max-width:1180px; margin:0 auto; padding:.7rem 1.5rem;
+  display:flex; flex-wrap:wrap; gap:.8rem; align-items:center}
+.dock .tally{font-family:var(--mono); font-size:.82rem; color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.dock .tally b{color:var(--ink)}
+.dock .spacer{flex:1}
+.dock button{font:inherit; font-size:.86rem; padding:.42rem 1rem;
+  border-radius:5px; cursor:pointer; border:1px solid var(--rule);
+  background:var(--surface); color:var(--ink)}
+.dock button.primary{background:var(--ink); color:var(--paper);
+  border-color:var(--ink)}
+.dock button:hover{border-color:var(--faint)}
+
+dialog{border:1px solid var(--rule); border-radius:8px; padding:0;
+  background:var(--surface); color:var(--ink); max-width:min(760px,92vw);
+  width:100%; box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(10,12,16,.55)}
+.dlg-head{display:flex; align-items:center; gap:1rem; padding:.9rem 1.2rem;
+  border-bottom:1px solid var(--rule-soft)}
+.dlg-head h2{font-size:1rem; flex:1}
+dialog textarea{width:100%; min-height:46vh; border:0; resize:vertical;
+  font-family:var(--mono); font-size:.8rem; line-height:1.65; padding:1rem 1.2rem;
+  background:var(--surface); color:var(--ink)}
+dialog textarea:focus{outline:none}
+.dlg-foot{padding:.8rem 1.2rem; border-top:1px solid var(--rule-soft);
+  display:flex; gap:.6rem; justify-content:flex-end; align-items:center}
+.dlg-foot .hint{margin-right:auto; font-size:.82rem; color:var(--muted)}
+
+:where(a,button,input,textarea,summary):focus-visible{
+  outline:2px solid var(--accent-line); outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){
+  .card{transition:border-color .18s ease}
+  .verdict button{transition:background .15s ease,border-color .15s ease,
+    color .15s ease}
+}
+.hidden{display:none !important}
+</style>
+
+<div class="page">
+<header class="masthead">
+  <div class="masthead-in">
+    <div>
+      <div class="eyebrow">text-rewrite #13 · 舊卡文翻新</div>
+      <h1>僅基礎條目(§4.1)× 怪獸 — 子批 2</h1>
+      <p class="sub">6 張改寫待逐行審查。放行後才寫入 <code>data/text_rewrites.json</code>,依慣例只在你明說 commit 才提交。</p>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-nums"><b id="doneN">0</b><span>/ 6 已裁</span></div>
+      <div class="bar"><i class="b-ok" id="barOk" style="width:0"></i><i
+        class="b-back" id="barBack" style="width:0"></i></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <dl class="stats">
+    <div class="stat"><dt>進站候選</dt><dd>6<small>張</small></dd></div><div class="stat"><dt>建議不進站</dt><dd>0<small>張</small></dd></div><div class="stat good"><dt>詞彙表改寫引入</dt><dd>0<small>筆</small></dd></div><div class="stat"><dt>詞彙表殘留</dt><dd>0<small>筆待裁</small></dd></div><div class="stat"><dt>逐卡待裁點</dt><dd>2<small>處</small></dd></div><div class="stat good"><dt>官方分層不符</dt><dd>0<small>張</small></dd></div>
+  </dl>
+
+  <section class="calls" id="calls">
+    <h2>群級判斷點 — 先決事項,再進逐卡</h2>
+<div class="call"><span class="tag">群級判斷點</span><h3>為什麼會有這一批(2026-08-28)</h3><p>票12 把改寫的日文基底換成 <code>ja-JP.cdb</code> 的官方現行文本之後,冒出一個佇列涵蓋不到的缺口:<strong>改寫佇列的分母是「舊文本」層(中文沒有圈號)</strong>,而官方改寫過的卡只要中文已經有圈號就不在分母裡。32 融合咒印生物-光的姊妹卡就是這樣被發現的。</p><p>全庫掃過一次,缺口比想像中小:</p><div class="call-table"><table><thead><tr><th>母體</th><th>張數</th></tr></thead><tbody><tr><td>非「舊文本」層、非靈擺、有官方現行日文</td><td>10,292</td></tr><tr><td>其中中文圈號數 ≠ 官方現行日文圈號數</td><td><strong>5</strong></td></tr></tbody></table></div><p>5 張裡有 <strong>2 張方向相反</strong>——<code>ja-JP.cdb</code> 反而比中文舊(<code>11502550</code> E.HERO 天空新宇俠是本站子批 2 改寫過的卡、<code>10000040</code> 赫爾阿克帝的中文較新)。<strong>這是本批最該記的一件事:<code>ja-JP.cdb</code> 不是絕對的現行文本</strong>,它是另一個有自己更新節奏的來源;票12 的裁示成立於改寫佇列(未再版舊卡),不能推廣成「ja-JP 永遠是正典」。逐卡仍要看三份文本誰比較新。</p><p>圈號數只抓得到<strong>結構</strong>落差;<strong>句面</strong>落差(圈號數一樣、用字被官方改掉)靠家族比對找出來,本批的代用定式 4 張就是這一路。</p></div>
+<div class="call"><span class="tag">群級判斷點</span><h3>本批範圍與分工</h3><div class="call-table"><table><thead><tr><th>來源</th><th>卡</th><th>為什麼要另票</th></tr></thead><tbody><tr><td>代用定式(句面)</td><td>1–4</td><td>已是新格式,永遠不進佇列</td></tr><tr><td>結構落差(圈號數)</td><td>5–6</td><td>同上</td></tr></tbody></table></div><p><strong>在佇列裡、不必另票的</strong>(輪到時照同一套處理,已記進票12):雲魔物家族 7 張(<code>16197610</code>、<code>17810268</code>、<code>20003527</code>、<code>43318266</code>、<code>57610714</code>、<code>79703905</code> + 憤怒類人猿 <code>39168895</code>)、代用定式的無圈號舊形 4 張(<code>30451366</code>幻像綿羊、<code>50259460</code> 破壞神 瓦沙克、<code>53493204</code> 心眼的女神、<code>99426834</code>沼地的魔獸王)。</p></div>
+<div class="call"><span class="tag">群級判斷點</span><h3>代用定式的三個世代</h3><p>官方把這一族改寫過<strong>兩次</strong>,庫內三個世代並存:</p><div class="call-table"><table><thead><tr><th>世代</th><th>日文</th><th>中文</th><th>庫內張數</th></tr></thead><tbody><tr><td>舊</td><td><code>このカードを融合素材モンスター１体の代わりにする事ができる。その際、…正規のものでなければならない。</code></td><td>手牌、場上、墓地的此卡可以代替在融合怪獸卡有記載卡名的…</td><td>4(全在佇列)</td></tr><tr><td>中間</td><td><code>…融合モンスターカードにカード名が記された融合素材モンスター１体の代わりにできる。その際、…</code></td><td>①：此卡可以代替在融合怪獸卡有記載卡名的…</td><td>3(本批 1–3)</td></tr><tr><td><strong>現行</strong></td><td><code>融合モンスターを融合召喚する場合、手札・フィールド・墓地のこのカードはその融合モンスターにカード名が記された融合素材モンスター１体として代用できる（他の融合素材は代用できない）。</code></td><td><strong>融合怪獸融合召喚的場合，手牌、場上、墓地的此卡可以代用為在那隻融合怪獸有記載卡名的1隻融合素材怪獸（其他的融合素材不能代用）。</strong></td><td><strong>3</strong>(沼地的魔神王 <code>79109599</code> ①、E-HERO 死亡鏡囚 <code>30583090</code> ②、泥泥龍 <code>84040113</code> ①)</td></tr></tbody></table></div><p>現行形的中文<strong>逐字有 3 張先例</strong>,本批照抄;票12 的 32 融合咒印生物-光已依同一形進站。</p></div>
+  </section>
+
+  <div class="layout">
+    <nav class="rail" aria-label="卡片索引">
+      <h2>索引</h2>
+      <div class="filters" role="group" aria-label="篩選">
+        <button type="button" data-filter="all" aria-pressed="true">全部</button>
+        <button type="button" data-filter="todo" aria-pressed="false">未裁</button>
+        <button type="button" data-filter="wait" aria-pressed="false">待裁點</button>
+        <button type="button" data-filter="back" aria-pressed="false">退回</button>
+      </div>
+      <ul class="index" id="index"></ul>
+    </nav>
+    <main id="stream"></main>
+  </div>
+</div>
+
+<div class="dock">
+  <div class="dock-in">
+    <span class="tally" id="tally"></span>
+    <span class="spacer"></span>
+    <button type="button" id="btnDiff" aria-pressed="true">對照舊譯:開</button>
+    <button type="button" id="btnReset">清除所有裁示</button>
+    <button type="button" class="primary" id="btnExport">匯出審查結果</button>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-head"><h2>審查結果</h2>
+    <button type="button" id="dlgClose">關閉</button></div>
+  <textarea id="out" readonly></textarea>
+  <div class="dlg-foot">
+    <span class="hint" id="copyHint">整段複製後貼回對話,我依此進站。</span>
+    <button type="button" class="primary" id="btnCopy">複製</button>
+  </div>
+</dialog>
+</div>
+
+<script id="data" type="application/json">{"cards": [{"no": 1, "id": "52101615", "name": "融合咒印生物-闇", "nameJa": "融合呪印生物－闇", "ja": ["①：融合モンスターを融合召喚する場合またはこのカードの効果で特殊召喚する場合、手札・フィールド・墓地のこのカードはその融合モンスターにカード名が記された融合素材モンスター１体として代用できる（他の融合素材は代用できない）。", "②：闇属性の融合モンスターによって決められた、このカードを含む自分フィールドの融合素材モンスター一組をリリースして発動できる。", "そのリリースしたモンスターを融合素材とする闇属性の融合モンスター１体をＥＸデッキから特殊召喚する。"], "jaFaq": ["①：このカードは、融合モンスターカードにカード名が記された融合素材モンスター１体の代わりにできる。その際、他の融合素材モンスターは正規のものでなければならない。②：闇属性の融合モンスターカードによって決められた融合素材モンスター一組（このカードをその内の１体とする）を自分フィールドからリリースして発動できる。そのリリースしたモンスターを融合素材とする闇属性の融合モンスター１体をEXデッキから特殊召喚する。"], "jaSegs": 2, "draftSegs": 2, "old": ["①：此卡可以代替在融合怪獸卡有記載卡名的1隻融合素材怪獸。此時其他的融合素材怪獸必須是正規的卡。", "②：將闇屬性融合怪獸卡決定的整組融合素材怪獸（此卡為其中1隻）從我方場上解放可以發動。從額外牌組將1隻以那些解放的怪獸為融合素材的闇屬性融合怪獸特殊召喚。"], "draft": ["①：融合怪獸融合召喚的場合或用此卡的效果特殊召喚的場合，手牌、場上、墓地的此卡可以代用為在那隻融合怪獸有記載卡名的1隻融合素材怪獸（其他的融合素材不能代用）。", "②：將闇屬性融合怪獸卡決定的包含此卡的整組融合素材怪獸從我方場上解放可以發動。從額外牌組將1隻以那些解放的怪獸為融合素材的闇屬性融合怪獸特殊召喚。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "與票12 的 32 融合咒印生物-光\u003cstrong>逐字同構\u003c/strong>(只差屬性字),依據、計數與判斷點全部沿用該卡,不重述。", "items": []}, {"label": "判斷點", "flag": "", "text": "①循現行形(3 張逐字先例);②依站主裁示的雪蓮 \u003ccode>572850\u003c/code> 定式「決定的包含此卡的」,「整組」照官方保留的\u003ccode>一組\u003c/code>留下,cost 語序保留「將」。", "items": []}, {"label": "反向檢查回答", "flag": "", "text": "R4「必須是正規的卡 → （其他的融合素材不能代用）」計數4 &lt; 8 \u003cstrong>不能用計數決定\u003c/strong>——8 例是官方的\u003cstrong>中間世代\u003c/strong>形、4 例是\u003cstrong>現行\u003c/strong>形(\u003ccode>79109599\u003c/code>、\u003ccode>30583090\u003c/code>、\u003ccode>84040113\u003c/code> + 票12 已進站的 32);方向同巨大戰艦家族,官方改寫過的形就是正典,存量少只代表其他卡還沒輪到。R5 兩筆是\u003cstrong>姊妹卡互指對方的舊形\u003c/strong>(1↔2 循環),本批兩張一起改就解消。R6/R7 正是本批的依據。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 2, "id": "88696724", "name": "融合咒印生物-地", "nameJa": "融合呪印生物－地", "ja": ["①：融合モンスターを融合召喚する場合またはこのカードの効果で特殊召喚する場合、手札・フィールド・墓地のこのカードはその融合モンスターにカード名が記された融合素材モンスター１体として代用できる（他の融合素材は代用できない）。", "②：地属性の融合モンスターによって決められた、このカードを含む自分フィールドの融合素材モンスター一組をリリースして発動できる。", "そのリリースしたモンスターを融合素材とする地属性の融合モンスター１体をＥＸデッキから特殊召喚する。"], "jaFaq": ["①：このカードは、融合モンスターカードにカード名が記された融合素材モンスター１体の代わりにできる。その際、他の融合素材モンスターは正規のものでなければならない。②：地属性の融合モンスターカードによって決められた融合素材モンスター一組（このカードをその内の１体とする）を自分フィールドからリリースして発動できる。そのリリースしたモンスターを融合素材とする地属性の融合モンスター１体をエクストラデッキから特殊召喚する。"], "jaSegs": 2, "draftSegs": 2, "old": ["①：此卡可以代替在融合怪獸卡有記載卡名的1隻融合素材怪獸。此時其他的融合素材怪獸必須是正規的卡。", "②：將地屬性融合怪獸卡決定的整組融合素材怪獸（此卡為其中1隻）從我方場上解放可以發動。從額外牌組將1隻以那些解放的怪獸為融合素材的地屬性融合怪獸特殊召喚。"], "draft": ["①：融合怪獸融合召喚的場合或用此卡的效果特殊召喚的場合，手牌、場上、墓地的此卡可以代用為在那隻融合怪獸有記載卡名的1隻融合素材怪獸（其他的融合素材不能代用）。", "②：將地屬性融合怪獸卡決定的包含此卡的整組融合素材怪獸從我方場上解放可以發動。從額外牌組將1隻以那些解放的怪獸為融合素材的地屬性融合怪獸特殊召喚。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "同 1,與 32 逐字同構(只差屬性字)。", "items": []}, {"label": "判斷點", "flag": "", "text": "同 1。", "items": []}, {"label": "反向檢查回答", "flag": "", "text": "同 1(R4 計數是世代差、R5 是姊妹卡循環)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 3, "id": "6205579", "name": "寄生結融者", "nameJa": "パラサイト・フュージョナー", "ja": ["このカードは、このカードの①の効果を適用する場合のみ融合素材にできる。", "①：融合モンスターを融合召喚する場合、手札・フィールド・墓地のこのカードはその融合モンスターにカード名が記された融合素材モンスター１体として代用できる（他の融合素材は代用できない）。", "②：このカードが特殊召喚した場合に発動できる。", "このカードを含む自分フィールドのモンスターを融合素材とし、融合モンスター１体を融合召喚する。"], "jaFaq": ["このカードは、このカードの①の効果を適用する場合のみ融合素材にできる。①：このカードは、融合モンスターカードにカード名が記された融合素材モンスター１体の代わりにできる。その際、他の融合素材モンスターは正規のものでなければならない。②：このカードが特殊召喚に成功した場合に発動できる。融合モンスターカードによって決められた、このカードを含む融合素材モンスターを自分フィールドから墓地へ送り、その融合モンスター１体をエクストラデッキから融合召喚する。"], "jaSegs": 2, "draftSegs": 2, "old": ["此卡只能在此卡的①效果適用的場合作為融合素材。", "①：此卡可以代替在融合怪獸卡有記載卡名的1隻融合素材怪獸。此時其他的融合素材怪獸必須是正規的卡。", "②：此卡特殊召喚成功的場合可以發動。融合怪獸卡決定的包含此卡的融合素材怪獸從我方場上送去墓地，從額外牌組融合召喚那1隻融合怪獸。"], "draft": ["此卡只能在此卡的①效果適用的場合作為融合素材。", "①：融合怪獸融合召喚的場合，手牌、場上、墓地的此卡可以代用為在那隻融合怪獸有記載卡名的1隻融合素材怪獸（其他的融合素材不能代用）。", "②：此卡特殊召喚的場合可以發動。包含此卡的我方場上的怪獸作為融合素材，將1隻融合怪獸融合召喚。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "①\u003cstrong>沼地的魔神王 \u003ccode>79109599\u003c/code> ① 逐字\u003c/strong>(日文同句、無「または」句);②\u003cstrong>泥泥龍 \u003ccode>84040113\u003c/code> ② 逐字\u003c/strong>——官方把②也改寫過,現行日文\u003ccode>このカードを含む自分フィールドのモンスターを融合素材とし、融合モンスター１体を融合召喚する。\u003c/code> 與泥泥龍②\u003cstrong>完全同文\u003c/strong>,中文作「包含此卡的我方場上的怪獸作為融合素材，將1隻融合怪獸融合召喚。」(「作為融合素材，將1隻融合怪獸融合召喚」庫內 \u003cstrong>34 例\u003c/strong>)。", "items": []}, {"label": "判斷點", "flag": "", "text": "②的觸發由 \u003ccode>特殊召喚に成功した場合\u003c/code>→\u003ccode>特殊召喚した場合\u003c/code>,中文「成功的場合」→「的場合」;素材指定句從「融合怪獸卡決定的…送去墓地」改成「作為融合素材」——官方改寫掉的是\u003cstrong>送去墓地\u003c/strong>那個處理(現行寫法把素材當融合素材用,不再逐字寫墓地),屬\u003cstrong>多翻\u003c/strong>風險,依票12 裁示刪。", "items": []}, {"label": "反向檢查回答", "flag": "", "text": "R4 同 1(世代差)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏(舊日文的\u003ccode>墓地へ送り\u003c/code>在現行文本沒有對應,不是漏翻)。", "items": []}]}, {"no": 4, "id": "81481818", "name": "拼布絨毛動物", "nameJa": "パッチワーク・ファーニマル", "ja": ["①：このカードはモンスターゾーンに存在する限り、「デストーイ」モンスターとしても扱う。", "②：このカードはモンスターゾーンに存在する限り、「デストーイ」融合モンスターを融合召喚する場合、このカードはその融合モンスターにカード名が記された融合素材モンスター１体として代用できる（他の融合素材は代用できない）。"], "jaFaq": ["①：このカードはモンスターゾーンに存在する限り、「デストーイ」モンスターとしても扱う。②：このカードはモンスターゾーンに存在する限り、「デストーイ」融合モンスターカードにカード名が記された融合素材モンスター１体の代わりにできる。その際、他の融合素材モンスターは正規のものでなければならない。"], "jaSegs": 2, "draftSegs": 2, "old": ["①：只要此卡在怪獸區域存在，此卡也當作「魔玩具」怪獸。", "②：只要此卡在怪獸區域存在，此卡可以代替在「魔玩具」融合怪獸卡有記載卡名的1隻融合素材怪獸。此時其他的融合素材怪獸必須是正規的卡。"], "draft": ["①：只要此卡在怪獸區域存在，此卡也當作「魔玩具」怪獸。", "②：只要此卡在怪獸區域存在，「魔玩具」融合怪獸融合召喚的場合，此卡可以代用為在那隻融合怪獸有記載卡名的1隻融合素材怪獸（其他的融合素材不能代用）。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "②循現行代用形,家族限定詞「「魔玩具」」照官方位置放在\u003ccode>融合怪獸融合召喚的場合\u003c/code> 之前;領起句「只要此卡在怪獸區域存在，」不動(庫內 504 例)。①官方未改,不動。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足判②永続効果、不取對象、不形成連鎖——現行文本只改句面,不動類型。", "items": []}, {"label": "反向檢查回答", "flag": "", "text": "R4 同 1(世代差)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 5, "id": "1525329", "name": "擁有7種武器的獵人", "nameJa": "７つの武器を持つハンター", "ja": ["①：このカードが召喚した場合、種族を１つ宣言して発動する。", "このカードは以下の効果を得る。", "●このカードが宣言した種族のモンスターと戦闘を行うダメージ計算時に発動する。", "このカードの攻撃力はそのダメージ計算時のみ１０００アップする。"], "jaFaq": ["このカードが召喚に成功した時、種族を１つ宣言して発動する。このカードが、宣言した種族のモンスターと戦闘を行う場合、このカードの攻撃力はダメージ計算時のみ１０００ポイントアップする。"], "jaSegs": 1, "draftSegs": 1, "old": ["①：此卡召喚成功時，宣言1個種族發動。", "②：此卡和①效果宣言的種族的怪獸進行戰鬥的傷害計算時發動。此卡的攻擊力只在那次傷害計算時上升1000。"], "draft": ["①：此卡召喚的場合，宣言1個種族發動。此卡得到以下效果。", "●此卡和宣言的種族的怪獸進行戰鬥的傷害計算時發動。此卡的攻擊力只在那次傷害計算時上升1000。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "\u003cstrong>分層改依官方\u003c/strong>——官方現行文本把第二個效果寫成①底下的 \u003cstrong>●\u003c/strong>(賦予型:\u003ccode>このカードは以下の効果を得る。●…\u003c/code>),不是獨立的②;照票11 的賦予型領起句裁示(範本武裝龍閃電 LV10 \u003ccode>58153103\u003c/code>)改為①+●。「此卡得到以下效果。」庫內 48 例、「傷害計算時發動」15 例。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足兩句都判\u003cstrong>フィールドで発動する誘発効果\u003c/strong>、必發、不取對象;改成●之後類型不變,只是掛在①底下。\u003ccode>召喚に成功した時\u003c/code>→\u003ccode>召喚した場合\u003c/code>,中文「召喚成功時」→「召喚的場合」(庫內 8 例)。●的回指依官方刪去「①效果」三字(官方寫 \u003ccode>このカードが宣言した種族\u003c/code>,已在①底下不必回指)。", "items": []}, {"label": "反向檢查回答", "flag": "", "text": "R1 \u003ccode>此卡和宣言的種族的怪\u003c/code> 庫內 0 例是\u003cstrong>接縫\u003c/strong>——刪掉舊譯的「①效果」三字後兩段現成零件相接(「此卡和」335 例、「宣言的種族的怪獸」3 例);R2「未對位」是分層改動的必然(標記表還是②的舊集合),由進站後的 kind 補判重拆。", "items": []}, {"label": "⚠ 待裁", "flag": "待裁", "text": "這一張改的是\u003cstrong>分層\u003c/strong>(②→①-●),\u003ccode>data/tag_cards.json\u003c/code> 的效果句集合會跟著變,進站後要走 kind 補判把 ①-●1 判回誘發效果(1速)/必發。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 6, "id": "9633505", "name": "守護者 姬絲特", "nameJa": "ガーディアン・ケースト", "ja": ["自分フィールドに「静寂のロッド－ケースト」が存在しない場合、このカードは召喚・反転召喚・特殊召喚できない。", "①：このカードはモンスターゾーンに存在する限り、魔法カードの効果を受けず、攻撃対象にされない（この効果が適用されたモンスターしか自分フィールドに存在しない状態での相手の攻撃は自分への直接攻撃になる）。"], "jaFaq": ["「静寂のロッド－ケースト」が自分のフィールド上に存在する時のみ、このカードは召喚・反転召喚・特殊召喚する事ができる。このカードは魔法の効果を受けない。また相手モンスターから攻撃対象にされない。"], "jaSegs": 1, "draftSegs": 1, "old": ["我方場上沒有「靜寂之杖-姬絲特」的場合，此卡不能召喚、反轉召喚、特殊召喚。", "①：此卡不受魔法卡的效果影響。", "②：此卡不會成為對手怪獸的攻擊對象（我方場上只有適用此效果的怪獸存在的狀態，對手可以向我方直接攻擊）。"], "draft": ["我方場上沒有「靜寂之杖-姬絲特」的場合，此卡不能召喚、反轉召喚、特殊召喚。", "①：只要此卡在怪獸區域存在，不受魔法卡的效果影響，不會成為攻擊對象（我方場上只有適用此效果的怪獸存在的狀態，對手可以向我方直接攻擊）。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "\u003cstrong>本站子批 2 已進站的卡\u003c/strong>(\u003ccode>text-rewrite#11\u003c/code>),當時依舊日文的兩句分立拆成①②;官方現行文本\u003cstrong>把兩句合併成同一個①\u003c/strong>並加上\u003ccode>モンスターゾーンに存在する限り\u003c/code> 的區域限定。分層改依官方。「只要此卡在怪獸區域存在，」504 例、「不受魔法卡的效果影響」9 例、「不會成為攻擊對象」17 例(對比「不會成為對手怪獸的攻擊對象」2 例——官方現行文本已刪去\u003ccode>相手モンスターから\u003c/code>,跟著刪)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足兩句都判永続効果,合併後仍是永續效果。括號注照官方現行文本\u003cstrong>照留舊譯\u003c/strong>:\u003ccode>相手の攻撃は自分への直接攻撃になる\u003c/code> 的中文定式是「對手可以向我方直接攻擊」(\u003cstrong>庫內 11 例逐字\u003c/strong>,傳說的漁夫、聖天樹家族、黑暗聖域等);初稿曾自造「對手的攻擊變成向我方直接攻擊」(全庫 \u003cstrong>0 例\u003c/strong>),由反向檢查 R1 抓回。", "items": []}, {"label": "反向檢查回答", "flag": "", "text": "R1 已修正(見上,自造句改回 11 例定式);R2「未對位」同 5,是分層合併的必然,由 kind 補判處理。", "items": []}, {"label": "⚠ 待裁", "flag": "待裁", "text": "同 5,分層由②合併進①,進站後標記表的效果句集合會少一條,要走 kind 補判確認。\u003cstrong>另外這張證實了「子批 1、2 回頭稽核」不是假警報\u003c/strong>——它就是子批 2 依舊文本拆錯分層的實例。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}]}</script>
+<script>
+(function(){
+  "use strict";
+  var DATA = JSON.parse(document.getElementById("data").textContent);
+  var CARDS = DATA.cards;
+  var KEY = "text-rewrite-13-verdicts";
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+  var showDiff = true, filter = "all";
+
+  function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;"); }
+
+  /* 字元級 diff:LCS 回溯,舊譯→新文本。新增標 ins,刪去標 del。 */
+  function diff(a, b){
+    var n = a.length, m = b.length;
+    if (!n || !m || n * m > 400000) return esc(b);
+    var prev = new Uint32Array(m + 1), cur = new Uint32Array(m + 1), rows = [];
+    for (var i = 1; i <= n; i++){
+      for (var j = 1; j <= m; j++){
+        cur[j] = a[i-1] === b[j-1] ? prev[j-1] + 1 : Math.max(prev[j], cur[j-1]);
+      }
+      rows.push(cur.slice()); prev = cur; cur = new Uint32Array(m + 1);
+    }
+    var out = [], i2 = n, j2 = m;
+    function row(r){ return r === 0 ? new Uint32Array(m + 1) : rows[r-1]; }
+    while (i2 > 0 || j2 > 0){
+      if (i2 > 0 && j2 > 0 && a[i2-1] === b[j2-1]){
+        out.push(["=", b[j2-1]]); i2--; j2--;
+      } else if (j2 > 0 && (i2 === 0 || row(i2)[j2-1] >= row(i2-1)[j2])){
+        out.push(["+", b[j2-1]]); j2--;
+      } else { out.push(["-", a[i2-1]]); i2--; }
+    }
+    out.reverse();
+    var html = "", mode = "", buf = "";
+    function flush(){
+      if (!buf) return;
+      if (mode === "+") html += "<ins>" + esc(buf) + "</ins>";
+      else if (mode === "-") html += "<del>" + esc(buf) + "</del>";
+      else html += esc(buf);
+      buf = "";
+    }
+    out.forEach(function(t){
+      if (t[0] !== mode){ flush(); mode = t[0]; }
+      buf += t[1];
+    });
+    flush();
+    return html;
+  }
+
+  function newHtml(c){
+    var draft = c.draft.join("\n");
+    if (!showDiff || c.skipped) return esc(draft);
+    return diff(c.old.join("\n"), draft);
+  }
+
+  function waitCount(c){
+    return c.notes.filter(function(n){ return n.flag; }).length;
+  }
+
+  /* 舊日文(faq_info 的官方 Q&A 頁文本)。改寫基底是「日文原文」欄的官方現行
+     文本,這一欄只在兩份有落差時出現、供查漏翻與多翻;沒有落差就不佔版面。 */
+  function faqHtml(c){
+    if (!c.jaFaq.length) return "";
+    return '<div class="text-row t-faq"><span class="lab">' +
+      "舊日文 · faq_info(對照組)" + '</span><p>' +
+      esc(c.jaFaq.join("\n")) + "</p></div>";
+  }
+
+  function cardHtml(c){
+    var v = state[c.id] || {};
+    var chips = "";
+    if (c.backfill) chips += '<span class="chip wait">遞補</span>';
+    if (c.skipped) chips += '<span class="chip skip">建議不進站</span>';
+    else if (v.verdict === "ok") chips += '<span class="chip ok">放行</span>';
+    else if (v.verdict === "back") chips += '<span class="chip back">退回</span>';
+    if (waitCount(c)) chips += '<span class="chip wait">待裁 ' +
+      waitCount(c) + '</span>';
+
+    var notes = c.notes.map(function(n){
+      var body = n.text ? '<span class="body">' + n.text + "</span>" : "";
+      if (n.items.length) body += "<ol>" + n.items.map(function(x){
+        return "<li>" + x.replace(/^\d+\.\s*/, "") + "</li>"; }).join("") + "</ol>";
+      return '<li><span class="lab' + (n.flag ? " wait" : "") + '">' +
+        esc(n.label) + "</span>" + body + "</li>";
+    }).join("");
+
+    return '<article class="card' + (c.skipped ? " is-skip" : "") +
+      (match(c) ? "" : " hidden") +
+      '" id="c' + c.no + '" data-no="' + c.no + '" data-state="' +
+      (v.verdict || "") + '">' +
+      '<div class="card-head"><span class="no">' +
+        String(c.no).padStart(2, "0") + "</span>" +
+        "<h3>" + esc(c.name) + "</h3>" +
+        '<span class="ja">' + esc(c.nameJa) + "</span>" + chips +
+        '<span class="pw">' + c.id + "</span></div>" +
+      '<div class="texts">' +
+        '<div class="text-row t-ja"><span class="lab">' +
+          /* 有舊日文欄才代表這一批已換基底;子批 2 以前的審查檔不加註 */
+          (c.jaFaq.length ? "日文原文 · ja-JP.cdb(官方現行)" : "日文原文") +
+          ((c.jaSegs && c.jaSegs !== c.draftSegs)
+            ? '<span class="segwarn">官方 ' + c.jaSegs + " 段 / 新文本 " +
+              c.draftSegs + " 段,分層不符</span>"
+            : "") + "</span><p>" +
+          esc(c.ja.join("\n")) + "</p></div>" +
+        faqHtml(c) +
+        '<div class="text-row t-old"><span class="lab">查牌網舊譯</span><p>' +
+          esc(c.old.join("\n")) + "</p></div>" +
+        '<div class="text-row t-new"><span class="lab">新文本</span><p>' +
+          newHtml(c) + "</p></div>" +
+      "</div>" +
+      '<ul class="notes">' + notes + "</ul>" +
+      (c.skipped ? "" :
+      '<div class="verdict" data-id="' + c.id + '">' +
+        '<button type="button" class="v-ok" data-v="ok" aria-pressed="' +
+          (v.verdict === "ok") + '">放行</button>' +
+        '<button type="button" class="v-back" data-v="back" aria-pressed="' +
+          (v.verdict === "back") + '">退回</button>' +
+        '<input type="text" placeholder="批註(退回請說明;裁示也可寫在這)" ' +
+          'value="' + esc(v.note || "").replace(/"/g, "&quot;") + '">' +
+      "</div>") +
+      "</article>";
+  }
+
+  function match(c){
+    var v = state[c.id] || {};
+    if (filter === "todo") return !c.skipped && !v.verdict;
+    if (filter === "wait") return waitCount(c) > 0;
+    if (filter === "back") return v.verdict === "back";
+    return true;
+  }
+
+  function renderIndex(){
+    document.getElementById("index").innerHTML = CARDS.map(function(c){
+      var v = state[c.id] || {};
+      var cls = c.skipped ? "skip" : (v.verdict === "ok" ? "ok" :
+        v.verdict === "back" ? "back" : "");
+      return '<li class="' + (match(c) ? "" : "hidden") + '"><a href="#c' +
+        c.no + '"><span class="n">' + String(c.no).padStart(2, "0") +
+        '</span><span class="nm">' + esc(c.name) + '</span><span class="dot ' +
+        cls + '"></span></a></li>';
+    }).join("");
+  }
+
+  function renderStream(){
+    document.getElementById("stream").innerHTML = CARDS.map(cardHtml).join("");
+  }
+
+  function tally(){
+    var live = CARDS.filter(function(c){ return !c.skipped; });
+    var ok = 0, back = 0;
+    live.forEach(function(c){
+      var v = state[c.id] || {};
+      if (v.verdict === "ok") ok++; else if (v.verdict === "back") back++;
+    });
+    document.getElementById("doneN").textContent = ok + back;
+    document.getElementById("barOk").style.width =
+      (ok / live.length * 100) + "%";
+    document.getElementById("barBack").style.width =
+      (back / live.length * 100) + "%";
+    document.getElementById("tally").innerHTML = "放行 <b>" + ok +
+      "</b> · 退回 <b>" + back + "</b> · 未裁 <b>" +
+      (live.length - ok - back) + "</b> · 排除 <b>" +
+      (CARDS.length - live.length) + "</b>";
+  }
+
+  function save(){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function refresh(){ renderIndex(); renderStream(); tally(); }
+
+  document.getElementById("stream").addEventListener("click", function(e){
+    var btn = e.target.closest(".verdict button");
+    if (!btn) return;
+    var id = btn.closest(".verdict").dataset.id;
+    var v = state[id] || (state[id] = {});
+    v.verdict = v.verdict === btn.dataset.v ? "" : btn.dataset.v;
+    save();
+    var card = btn.closest(".card");
+    card.dataset.state = v.verdict || "";
+    card.querySelectorAll(".verdict button").forEach(function(b){
+      b.setAttribute("aria-pressed", String(b.dataset.v === v.verdict));
+    });
+    var head = card.querySelector(".card-head");
+    var old = head.querySelector(".chip.ok, .chip.back");
+    if (old) old.remove();
+    if (v.verdict){
+      var chip = document.createElement("span");
+      chip.className = "chip " + v.verdict;
+      chip.textContent = v.verdict === "ok" ? "放行" : "退回";
+      head.insertBefore(chip, head.querySelector(".chip.wait") ||
+        head.querySelector(".pw"));
+    }
+    renderIndex(); tally();
+  });
+
+  document.getElementById("stream").addEventListener("input", function(e){
+    if (!e.target.matches(".verdict input")) return;
+    var id = e.target.closest(".verdict").dataset.id;
+    (state[id] || (state[id] = {})).note = e.target.value;
+    save();
+  });
+
+  document.querySelectorAll(".filters button").forEach(function(b){
+    b.addEventListener("click", function(){
+      filter = b.dataset.filter;
+      document.querySelectorAll(".filters button").forEach(function(o){
+        o.setAttribute("aria-pressed", String(o === b));
+      });
+      refresh();
+    });
+  });
+
+  document.getElementById("btnDiff").addEventListener("click", function(){
+    showDiff = !showDiff;
+    this.setAttribute("aria-pressed", String(showDiff));
+    this.textContent = "對照舊譯:" + (showDiff ? "開" : "關");
+    renderStream();
+  });
+
+  document.getElementById("btnReset").addEventListener("click", function(){
+    if (!confirm("清除全部裁示與批註?")) return;
+    state = {}; save(); refresh();
+  });
+
+  function report(){
+    var lines = ["## text-rewrite#13 子批 2 審查結果", ""];
+    var ok = [], back = [], todo = [];
+    CARDS.forEach(function(c){
+      if (c.skipped) return;
+      var v = state[c.id] || {};
+      (v.verdict === "ok" ? ok : v.verdict === "back" ? back : todo).push(c);
+    });
+    /* 排除清單由審查檔決定,不寫死:子批 2 的兩張曾被寫死在模板裡,
+       子批 3 沒有排除卡,匯出的結果照樣說「排除 2 張」。 */
+    var skipped = CARDS.filter(function(c){ return c.skipped; });
+    var line = "放行 " + ok.length + " 張、退回 " + back.length +
+      " 張、未裁 " + todo.length + " 張";
+    line += skipped.length
+      ? ";排除 " + skipped.length + " 張(" +
+        skipped.map(function(c){ return c.id + " " + c.name; }).join("、") + ")。"
+      : ";無排除卡。";
+    lines.push(line, "");
+    if (back.length){
+      lines.push("### 退回(" + back.length + ")", "");
+      back.forEach(function(c){
+        lines.push("- " + c.no + " `" + c.id + "` " + c.name + " — " +
+          ((state[c.id] || {}).note || "(未寫批註)"));
+      });
+      lines.push("");
+    }
+    var noted = ok.filter(function(c){ return (state[c.id] || {}).note; });
+    if (noted.length){
+      lines.push("### 放行帶批註(" + noted.length + ")", "");
+      noted.forEach(function(c){
+        lines.push("- " + c.no + " `" + c.id + "` " + c.name + " — " +
+          state[c.id].note);
+      });
+      lines.push("");
+    }
+    if (todo.length){
+      lines.push("### 未裁(" + todo.length + ")", "");
+      lines.push(todo.map(function(c){ return c.no + " " + c.name; })
+        .join("、"));
+      lines.push("");
+    }
+    if (ok.length && !back.length && !todo.length){
+      lines.push("### 全數放行", "",
+        ok.length + " 張全數放行,可進站。");
+    }
+    return lines.join("\n");
+  }
+
+  var dlg = document.getElementById("dlg");
+  document.getElementById("btnExport").addEventListener("click", function(){
+    document.getElementById("out").value = report();
+    document.getElementById("copyHint").textContent =
+      "整段複製後貼回對話,我依此進站。";
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+  });
+  document.getElementById("dlgClose").addEventListener("click", function(){
+    if (dlg.close) dlg.close(); else dlg.removeAttribute("open");
+  });
+  document.getElementById("btnCopy").addEventListener("click", function(){
+    var ta = document.getElementById("out");
+    ta.select();
+    var done = function(){
+      document.getElementById("copyHint").textContent = "已複製。";
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ta.value).then(done, function(){
+        try { document.execCommand("copy"); done(); } catch (e) {}
+      });
+    } else {
+      try { document.execCommand("copy"); done(); } catch (e) {}
+    }
+  });
+
+  refresh();
+})();
+</script>

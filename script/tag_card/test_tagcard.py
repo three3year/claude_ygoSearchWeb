@@ -4281,5 +4281,71 @@ class TestCardTypeLabel(unittest.TestCase):
         self.assertIsNone(card_type_label(0))
 
 
+
+class TestModernJaFallback(unittest.TestCase):
+    """官方現行日文的**補位**(text-rewrite#12)。
+
+    對位的門是編號數相同,`faq_info` 的舊文本常常沒有編號,而改寫替繁中補了編號
+    ——每一張改寫卡都會對不上、`text_ja` 整卡留空。`ja-JP.cdb` 的現行文本自帶
+    官方編號,拿來補位;但**只補位、不取代** `faq`(補足的引號對位靠 faq 那一組),
+    而且語序對不上時寧可不補。
+    """
+
+    ZH = "①：此卡召喚成功時發動。抽1張卡。\n②：此卡不會被戰鬥破壞。"
+    OLD_JA = ("このカードが召喚に成功した時、１枚ドローする。"
+              "このカードは戦闘では破壊されない。")
+    NEW_JA = ("①：このカードが召喚に成功した場合に発動する。１枚ドローする。\n"
+              "②：このカードは戦闘では破壊されない。")
+
+    def _build(self, modern):
+        entries, report = build_tag_cards(
+            [card(desc=self.ZH)], [faq(card_text=self.OLD_JA)],
+            modern_ja=modern)
+        return entries[0]["clauses"], report
+
+    def test_without_modern_ja_the_japanese_is_dropped(self):
+        """對照組:沒給現行文本 → 編號數對不上,日文整段不配。"""
+        clauses, report = self._build(None)
+        self.assertEqual([c["text_ja"] for c in clauses], ["", ""])
+        self.assertEqual(len(report["numeral_mismatch"]), 1)
+
+    def test_modern_ja_fills_in_when_faq_cannot_align(self):
+        """補位:現行文本的編號數對得上 → 逐段配回日文,並記進報告。"""
+        clauses, report = self._build({1000: self.NEW_JA})
+        self.assertIn("１枚ドローする", clauses[0]["text_ja"])
+        self.assertIn("戦闘では破壊されない", clauses[1]["text_ja"])
+        self.assertEqual(report["modern_ja_fallback"], [1000])
+        self.assertEqual(report["numeral_mismatch"], [])
+
+    def test_faq_wins_when_it_already_aligns(self):
+        """`faq` 對得上就不補位——補足的引號對位靠 faq 那一組,不能換掉。"""
+        aligned_faq = ("①：このカードが召喚に成功した場合に発動する。ドローする。\n"
+                       "②：このカードは戦闘では破壊されない。")
+        entries, report = build_tag_cards(
+            [card(desc=self.ZH)], [faq(card_text=aligned_faq)],
+            modern_ja={1000: self.NEW_JA})
+        self.assertIn("ドローする", entries[0]["clauses"][0]["text_ja"])
+        self.assertNotIn("１枚", entries[0]["clauses"][0]["text_ja"])
+        self.assertEqual(report["modern_ja_fallback"], [])
+
+    def test_reordered_numbering_refuses_to_fall_back(self):
+        """官方重排編號時**不補位**:位置一配就把日文掛到別條效果上。
+
+        卡例:阿修羅 2134346、武尊神-日孁 9418365——官方現行文本把①②對調。
+        用「發動 / 発動」逐段比形狀當跨語言錨點,形狀不一樣就不補。
+        """
+        swapped = ("①：このカードは戦闘では破壊されない。\n"
+                   "②：このカードが召喚に成功した場合に発動する。１枚ドローする。")
+        clauses, report = self._build({1000: swapped})
+        self.assertEqual([c["text_ja"] for c in clauses], ["", ""])
+        self.assertEqual(report["modern_ja_fallback"], [])
+
+    def test_missing_modern_text_is_not_an_error(self):
+        """現行文本查無此卡 → 照舊留空,不炸。"""
+        clauses, report = self._build({})
+        self.assertEqual([c["text_ja"] for c in clauses], ["", ""])
+        self.assertEqual(report["modern_ja_fallback"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

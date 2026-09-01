@@ -4,14 +4,17 @@
 的事其實只有兩件:看清楚這一卡改了什麼、標放行或退回。本殼把審查檔原樣解析成
 一頁可操作的網頁——**內容全部來自審查檔,不另抄一份**,審查檔改了重跑即可同步。
 
-三件事是終端機給不了而這裡給得出的:
+四件事是終端機給不了而這裡給得出的:
 
-1. **字元級 diff**:新文本對照查牌網舊譯逐字標出增刪,一眼看得出這一卡到底動了
+1. **四欄對照**:日文原文欄是**官方現行文本**(`ja-JP.cdb`),兩份日文有落差時
+   多一欄「舊日文 · faq_info」當對照組(2026-08-27 站主裁示的基底切換);
+   官方現行文本自帶圈號分層,段數與新文本對不上會在欄標紅字。
+2. **字元級 diff**:新文本對照查牌網舊譯逐字標出增刪,一眼看得出這一卡到底動了
    什麼。改寫的絕大多數卡只是補圈號與發動句,diff 讓那些卡幾秒就審完,把注意力
    留給真正動了句構的少數。
-2. **裁示留在頁面上**:每卡放行/退回加批註,存在瀏覽器本機,關掉再開還在;
+3. **裁示留在頁面上**:每卡放行/退回加批註,存在瀏覽器本機,關掉再開還在;
    審完一鍵匯出成 markdown 貼回對話,不必人工謄。
-3. **待裁點可篩**:審查檔裡標了「待裁」的欄位(判斷點、詞彙表殘留)在索引側欄
+4. **待裁點可篩**:審查檔裡標了「待裁」的欄位(判斷點、詞彙表殘留)在索引側欄
    可以單獨篩出來,不必從頭捲。
 
 單檔、零外部資源(Artifact 的 CSP 下 CDN 一律連不出去),深淺色主題都調過。
@@ -20,7 +23,13 @@
     python script/text_rewrite/build_review_page.py .scratch/text-rewrite/review-41-monster-02.md
     python script/text_rewrite/build_review_page.py <審查檔> --out <輸出 HTML>
 
-產出後以 Artifact 發佈給站主審(2026-08-27 站主定案:**審查票一律附審核網頁**)。
+產出後**先跑冒煙測試再發佈**(2026-08-28 站主定案,起因見 `render_check.js`):
+
+    node script/text_rewrite/render_check.js <審核台.html>
+
+本殼只把 JSON 塞進模板、不執行模板裡的 JS,產得出檔不代表頁面打得開;那支會
+真的跑一遍 render。通過後以 Artifact 發佈給站主審(2026-08-27 站主定案:
+**審查票一律附審核網頁**)。
 """
 import argparse
 import io
@@ -99,7 +108,7 @@ def notes_of(block):
 
 
 def parse_review(md_text):
-    """審查檔全文 → 每卡的三欄、註記與狀態。
+    """審查檔全文 → 每卡的四欄、註記與狀態。
 
     `skipped` 認的是新文本欄寫「不進站」的卡(建議排除),與 check_draft.py
     同一條判準;`backfill` 認小節裡的遞補註記。
@@ -110,12 +119,18 @@ def parse_review(md_text):
         if not head:
             continue
         draft = quoted(block, "新文本")
+        card_id = head.group(2)
+        ja = quoted(block, "日文原文")
         cards.append({
             "no": int(head.group(1)),
-            "id": head.group(2),
+            "id": card_id,
             "name": head.group(3).strip(),
             "nameJa": (head.group(4) or "").strip(),
-            "ja": quoted(block, "日文原文"),
+            "ja": ja,
+            "jaFaq": quoted(block, "舊日文"),
+            "jaSegs": sum(1 for ch in "①②③④⑤⑥⑦⑧⑨⑩" if ch in "".join(ja)),
+            "draftSegs": sum(1 for ln in draft
+                             if re.match(r"^[①②③④⑤⑥⑦⑧⑨⑩]：", ln)),
             "old": quoted(block, "查牌網舊譯"),
             "draft": draft,
             "skipped": any("不進站" in line for line in draft),
@@ -125,6 +140,93 @@ def parse_review(md_text):
     return cards
 
 
+_BULLET_RE = re.compile(r"^\s*[-*]\s+(.*)")
+_ORDERED_RE = re.compile(r"^\s*(\d+)\.\s+(.*)")
+
+
+def group_calls(md_text):
+    """`## 群級判斷點` 底下的每個 `###` 小節 → 審核台的一張判斷點卡。
+
+    內文原樣搬進頁面:段落走 rich(),markdown 表格轉 <table>,**條列轉
+    `<ul>`/`<ol>`**。子批 2 版把這一區寫死在模板裡,每批都要改殼——現在內容
+    回歸審查檔,殼不再碰批次內容。
+
+    條列一定要分開渲染:這一區的內容是一條一條的判斷,續行用縮排接在條目底下。
+    早期版本把整段當一個 <p> 用 `join_cjk` 黏起來,十幾條判斷會擠成一大坨、
+    連斷在哪都看不出來(2026-08-28 站主回報)。
+    """
+    m = re.search(r"^## 群級判斷點.*?$(.*?)(?=^---$|^## \d+\. `)", md_text,
+                  re.M | re.S)
+    if not m:
+        return ""
+    calls = []
+    for sec in re.split(r"^### ", m.group(1), flags=re.M)[1:]:
+        lines = sec.splitlines()
+        title, body = lines[0].strip(), lines[1:]
+        parts, para, table, items = [], [], [], []
+        ordered = [False]
+
+        def flush_items():
+            if items:
+                tag = "ol" if ordered[0] else "ul"
+                parts.append(
+                    '<' + tag + ' class="call-list">'
+                    + "".join("<li>" + rich(join_cjk(it)) + "</li>"
+                              for it in items)
+                    + "</" + tag + ">")
+                del items[:]
+
+        def flush_para():
+            if para:
+                parts.append("<p>" + rich(join_cjk(para)) + "</p>")
+                del para[:]
+
+        def flush_table():
+            if table:
+                rows = [[rich(c.strip()) for c in r.strip("|").split("|")]
+                        for r in table if not re.match(r"^\|[\s:|-]+\|$", r)]
+                head, rest = rows[0], rows[1:]
+                html = ["<table><thead><tr>"]
+                html += ["<th>" + c + "</th>" for c in head]
+                html.append("</tr></thead><tbody>")
+                for r in rest:
+                    html.append("<tr>" + "".join("<td>" + c + "</td>" for c in r)
+                                + "</tr>")
+                html.append("</tbody></table>")
+                parts.append('<div class="call-table">' + "".join(html) + "</div>")
+                del table[:]
+
+        for line in body:
+            bullet = _BULLET_RE.match(line)
+            number = _ORDERED_RE.match(line)
+            if line.lstrip().startswith("|"):
+                flush_para()
+                flush_items()
+                table.append(line.strip())
+            elif line.strip() == "":
+                flush_para()
+                flush_table()
+                flush_items()
+            elif bullet or number:
+                flush_para()
+                flush_table()
+                if items and ordered[0] != bool(number):
+                    flush_items()      # 換了種類就另起一張清單
+                ordered[0] = bool(number)
+                items.append([bullet.group(1) if bullet else number.group(2)])
+            elif items:
+                items[-1].append(line)   # 條目的續行
+            else:
+                flush_table()
+                para.append(line)
+        flush_para()
+        flush_table()
+        flush_items()
+        calls.append('<div class="call"><span class="tag">群級判斷點</span>'
+                     "<h3>" + rich(title) + "</h3>" + "".join(parts) + "</div>")
+    return "\n".join(calls)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="子批審查檔 → 網頁審核台")
     parser.add_argument("review", help="子批審查檔 md 路徑")
@@ -132,23 +234,61 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     with io.open(args.review, encoding="utf-8") as f:
-        cards = parse_review(f.read())
+        md_text = f.read()
+    cards = parse_review(md_text)
     if not cards:
         print(args.review + ":找不到 `## N. `密碼` 卡名` 的卡片小節")
         return 1
 
+    live = [c for c in cards if not c["skipped"]]
+    n_live, n_skip = len(live), len(cards) - len(live)
+    wait = sum(1 for c in cards for n in c["notes"] if n["flag"])
+
+    m = re.search(r"子批\s*(\d+)", md_text)
+    batch = "子批 " + m.group(1) if m else "子批"
+    m = re.search(r"text-rewrite#(\d+)", md_text)
+    ticket = m.group(1) if m else "?"
+    m = re.search(r"命中 (\d+) 張/(\d+) 筆", md_text)
+    gloss_hits = int(m.group(2)) if m else 0
+    m = re.search(r"新文本獨有\(改寫引入\)(\d+) 筆", md_text)
+    gloss_intro = int(m.group(1)) if m else 0
+
+    subline = "{} 張改寫待逐行審查".format(n_live)
+    if n_skip:
+        subline += "、{} 張建議不進站".format(n_skip)
+    subline += ("。放行後才寫入 <code>data/text_rewrites.json</code>,"
+                "依慣例只在你明說 commit 才提交。")
+
+    seg_bad = sum(1 for c in live
+                  if c["jaSegs"] and c["jaSegs"] != c["draftSegs"])
+    stats = [("進站候選", n_live, "張", ""),
+             ("建議不進站", n_skip, "張", ""),
+             ("詞彙表改寫引入", gloss_intro, "筆", " good" if gloss_intro == 0 else ""),
+             ("詞彙表殘留", gloss_hits - gloss_intro, "筆待裁", ""),
+             ("逐卡待裁點", wait, "處", ""),
+             ("官方分層不符", seg_bad, "張", " good" if seg_bad == 0 else "")]
+    stats_html = "".join(
+        '<div class="stat{}"><dt>{}</dt><dd>{}<small>{}</small></dd></div>'
+        .format(cls, dt, dd, small) for dt, dd, small, cls in stats)
+
     out = args.out or os.path.splitext(args.review)[0] + ".html"
     payload = json.dumps({"cards": cards}, ensure_ascii=False).replace("<", "\\u003c")
+    html = (TEMPLATE
+            .replace("__TICKET__", ticket)
+            .replace("__BATCH__", batch)
+            .replace("__SUBLINE__", subline)
+            .replace("__NLIVE__", str(n_live))
+            .replace("__STATS__", stats_html)
+            .replace("__CALLS__", group_calls(md_text))
+            .replace("__DATA__", payload))
     with io.open(out, "w", encoding="utf-8", newline="\n") as f:
-        f.write(TEMPLATE.replace("__DATA__", payload))
-    live = [c for c in cards if not c["skipped"]]
-    wait = sum(1 for c in cards for n in c["notes"] if n["flag"])
+        f.write(html)
     print("已寫出 {}:{} 卡({} 待審、{} 排除)、待裁點 {} 處".format(
-        out, len(cards), len(live), len(cards) - len(live), wait))
+        out, len(cards), n_live, n_skip, wait))
     return 0
 
 
-TEMPLATE = r'''<title>§4.1×怪獸 子批 2 審查台</title>
+TEMPLATE = r'''<title>§4.1×怪獸 __BATCH__ 審查台</title>
 <style>
 :root{
   --paper:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f5;
@@ -303,6 +443,16 @@ code{font-family:var(--mono); font-size:.86em; background:var(--surface-2);
 .call .tag{font-family:var(--mono); font-size:.7rem; letter-spacing:.1em;
   color:var(--accent); text-transform:uppercase; display:block;
   margin-bottom:.3rem}
+.call-list{margin:.5rem 0; padding-left:1.25rem; color:var(--muted);
+  font-size:.9rem}
+.call-list li{margin:.4rem 0; line-height:1.8}
+.call-list li::marker{color:var(--accent-line)}
+.call-table{overflow-x:auto; margin:.55rem 0}
+.call-table table{border-collapse:collapse; font-size:.84rem; min-width:100%}
+.call-table th,.call-table td{border:1px solid var(--rule); padding:.35rem .55rem;
+  text-align:left; vertical-align:top; color:var(--muted)}
+.call-table th{background:var(--surface-2); color:var(--ink); white-space:nowrap;
+  font-weight:600}
 
 /* ── 卡片 ───────────────────────────── */
 .card{background:var(--surface); border:1px solid var(--rule);
@@ -335,6 +485,10 @@ code{font-family:var(--mono); font-size:.86em; background:var(--surface-2);
 .text-row p{margin:0; white-space:pre-wrap}
 .t-ja p{font-size:.94rem; color:var(--muted); line-height:1.85}
 .t-old p{color:var(--muted)}
+.t-ja > .lab{color:var(--accent)}
+.t-faq p{font-size:.9rem; color:var(--faint); line-height:1.8}
+.segwarn{color:var(--back); font-weight:600; letter-spacing:0;
+  text-transform:none; margin-left:.5rem}
 .t-new{background:var(--surface-2); border-left:3px solid var(--accent-line);
   padding:.8rem 1rem; border-radius:0 5px 5px 0; margin-top:.3rem}
 .t-new > .lab{color:var(--accent)}
@@ -418,13 +572,12 @@ dialog textarea:focus{outline:none}
 <header class="masthead">
   <div class="masthead-in">
     <div>
-      <div class="eyebrow">text-rewrite #11 · 舊卡文翻新</div>
-      <h1>僅基礎條目(§4.1)× 怪獸 — 子批 2</h1>
-      <p class="sub">50 張改寫待逐行審查、2 張建議不進站。放行後才寫入
-        <code>data/text_rewrites.json</code>,依慣例只在你明說 commit 才提交。</p>
+      <div class="eyebrow">text-rewrite #__TICKET__ · 舊卡文翻新</div>
+      <h1>僅基礎條目(§4.1)× 怪獸 — __BATCH__</h1>
+      <p class="sub">__SUBLINE__</p>
     </div>
     <div class="progress-wrap">
-      <div class="progress-nums"><b id="doneN">0</b><span>/ 50 已裁</span></div>
+      <div class="progress-nums"><b id="doneN">0</b><span>/ __NLIVE__ 已裁</span></div>
       <div class="bar"><i class="b-ok" id="barOk" style="width:0"></i><i
         class="b-back" id="barBack" style="width:0"></i></div>
     </div>
@@ -433,49 +586,12 @@ dialog textarea:focus{outline:none}
 
 <div class="wrap">
   <dl class="stats">
-    <div class="stat"><dt>進站候選</dt><dd>50<small>張</small></dd></div>
-    <div class="stat"><dt>建議不進站</dt><dd>2<small>張</small></dd></div>
-    <div class="stat good"><dt>詞彙表改寫引入</dt><dd>0<small>筆</small></dd></div>
-    <div class="stat"><dt>詞彙表殘留</dt><dd>7<small>筆待裁</small></dd></div>
-    <div class="stat"><dt>逐卡判斷點</dt><dd>4<small>處待裁</small></dd></div>
-    <div class="stat good"><dt>進站前關卡</dt><dd>50<small>張全過</small></dd></div>
+    __STATS__
   </dl>
 
   <section class="calls" id="calls">
-    <h2>群級裁示 — 這三項先決,再進逐卡</h2>
-
-    <div class="call">
-      <span class="tag">裁示 1 · 已照票10 預設處理</span>
-      <h3>2 張無可改寫,跳過並往後遞補</h3>
-      <p><code>11067666</code> 白翼的魔術師 — 佇列命中的【怪獸效果】欄兩句,
-        補足情報都明示「効果の扱いではありません」,沒有效果句可以編號。</p>
-      <p><code>12206212</code> 神鷹女郎三姊妹 — 全卡只有召喚條件一段,
-        效果標記表判效果外文本,同樣沒有效果句可以編號。</p>
-      <p class="opt">遞補群內第 51、52 名(<code>12953226</code> 女邪神茹雅、
-        <code>12965761</code> 死亡石斛),子批 3 自第 53 名起算。</p>
-    </div>
-
-    <div class="call">
-      <span class="tag">裁示 2 · 待你決定</span>
-      <h3>票10 的「3 張永久地板」低估了,要不要另開票重數?</h3>
-      <p>票10 那個數字是用票08 的 role 正規式數的。改用效果標記表已判 kind
-        ——票10 自己引用的證據面——重數是 <strong>33 張</strong>;再加欄位層級的
-        殘留(靈擺卡舊文本那一欄全是效果外文本,如本批的白翼的魔術師)還不只。</p>
-      <p class="opt">對本批的操作沒有影響,但 map「收尾驗收」條記的地板量級要修
-        (已先修進 map)。是否另開票重數,本票不代開。</p>
-    </div>
-
-    <div class="call">
-      <span class="tag">裁示 3 · 待你決定</span>
-      <h3>逐卡判斷點 4 處,其餘 46 張零爭議</h3>
-      <p>強制/任意與取對象全數依官方補足情報明示判定。要決定的是:
-        <a href="#c10">10 無限地獄猛獸</a>(領起句留效果外 vs 折進條件位)、
-        <a href="#c28">28 赫爾阿克帝</a>(勝利句依 §3.2 上移 vs 維持原句序)、
-        <a href="#c38">38 墓穴看守者</a>(場域現代化 vs 保守照譯)、
-        <a href="#c42">42 連爆魔人</a>(本批唯一無官方分類明示)。</p>
-      <p class="opt">另有 <a href="#c11">11</a>、<a href="#c52">52</a> 兩張聯合怪獸
-        改用庫內新式聯合骨架,是本批最大的結構變動,依據逐句列在卡片裡。</p>
-    </div>
+    <h2>群級判斷點 — 先決事項,再進逐卡</h2>
+__CALLS__
   </section>
 
   <div class="layout">
@@ -520,7 +636,7 @@ dialog textarea:focus{outline:none}
   "use strict";
   var DATA = JSON.parse(document.getElementById("data").textContent);
   var CARDS = DATA.cards;
-  var KEY = "text-rewrite-11-verdicts";
+  var KEY = "text-rewrite-__TICKET__-verdicts";
   var state = {};
   try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
   var showDiff = true, filter = "all";
@@ -575,6 +691,15 @@ dialog textarea:focus{outline:none}
     return c.notes.filter(function(n){ return n.flag; }).length;
   }
 
+  /* 舊日文(faq_info 的官方 Q&A 頁文本)。改寫基底是「日文原文」欄的官方現行
+     文本,這一欄只在兩份有落差時出現、供查漏翻與多翻;沒有落差就不佔版面。 */
+  function faqHtml(c){
+    if (!c.jaFaq.length) return "";
+    return '<div class="text-row t-faq"><span class="lab">' +
+      "舊日文 · faq_info(對照組)" + '</span><p>' +
+      esc(c.jaFaq.join("\n")) + "</p></div>";
+  }
+
   function cardHtml(c){
     var v = state[c.id] || {};
     var chips = "";
@@ -603,8 +728,15 @@ dialog textarea:focus{outline:none}
         '<span class="ja">' + esc(c.nameJa) + "</span>" + chips +
         '<span class="pw">' + c.id + "</span></div>" +
       '<div class="texts">' +
-        '<div class="text-row t-ja"><span class="lab">日文原文</span><p>' +
+        '<div class="text-row t-ja"><span class="lab">' +
+          /* 有舊日文欄才代表這一批已換基底;子批 2 以前的審查檔不加註 */
+          (c.jaFaq.length ? "日文原文 · ja-JP.cdb(官方現行)" : "日文原文") +
+          ((c.jaSegs && c.jaSegs !== c.draftSegs)
+            ? '<span class="segwarn">官方 ' + c.jaSegs + " 段 / 新文本 " +
+              c.draftSegs + " 段,分層不符</span>"
+            : "") + "</span><p>" +
           esc(c.ja.join("\n")) + "</p></div>" +
+        faqHtml(c) +
         '<div class="text-row t-old"><span class="lab">查牌網舊譯</span><p>' +
           esc(c.old.join("\n")) + "</p></div>" +
         '<div class="text-row t-new"><span class="lab">新文本</span><p>' +
@@ -726,16 +858,23 @@ dialog textarea:focus{outline:none}
   });
 
   function report(){
-    var lines = ["## text-rewrite#11 子批 2 審查結果", ""];
+    var lines = ["## text-rewrite#__TICKET__ __BATCH__ 審查結果", ""];
     var ok = [], back = [], todo = [];
     CARDS.forEach(function(c){
       if (c.skipped) return;
       var v = state[c.id] || {};
       (v.verdict === "ok" ? ok : v.verdict === "back" ? back : todo).push(c);
     });
-    lines.push("放行 " + ok.length + " 張、退回 " + back.length +
-      " 張、未裁 " + todo.length + " 張;排除 2 張(11067666 白翼的魔術師、" +
-      "12206212 神鷹女郎三姊妹)。", "");
+    /* 排除清單由審查檔決定,不寫死:子批 2 的兩張曾被寫死在模板裡,
+       子批 3 沒有排除卡,匯出的結果照樣說「排除 2 張」。 */
+    var skipped = CARDS.filter(function(c){ return c.skipped; });
+    var line = "放行 " + ok.length + " 張、退回 " + back.length +
+      " 張、未裁 " + todo.length + " 張";
+    line += skipped.length
+      ? ";排除 " + skipped.length + " 張(" +
+        skipped.map(function(c){ return c.id + " " + c.name; }).join("、") + ")。"
+      : ";無排除卡。";
+    lines.push(line, "");
     if (back.length){
       lines.push("### 退回(" + back.length + ")", "");
       back.forEach(function(c){
@@ -760,7 +899,8 @@ dialog textarea:focus{outline:none}
       lines.push("");
     }
     if (ok.length && !back.length && !todo.length){
-      lines.push("### 全數放行", "", "50 張全數放行,可進站。");
+      lines.push("### 全數放行", "",
+        ok.length + " 張全數放行,可進站。");
     }
     return lines.join("\n");
   }

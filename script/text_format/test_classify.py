@@ -159,6 +159,24 @@ class LabelTest(unittest.TestCase):
         """「…時，可以…」誘發句無「發動」收尾 → 誘發缺發動(§4.4)。"""
         self.assertEqual(self._labels(OLD_DESC), ["誘發缺發動"])
 
+    def test_hand_special_summon_permission_excluded(self):
+        """狀態場合的手牌特召許可句不算 §4.4——那族是無種類效果,本就無發動。"""
+        self.assertEqual(
+            self._labels("對手場上有超量怪獸存在的場合，此卡可以從手牌特殊召喚。"),
+            [])
+
+    def test_hand_special_summon_on_trigger_is_collected(self):
+        """帶觸發事件的手牌特召**要**算 §4.4(text-rewrite#12)。
+
+        「此卡可以」的排除原本一律生效,把這一族誘發効果吃掉了——它們要發動
+        (庫內 kind=誘發效果的手牌特召 201 條全部有「發動」),漏抓等於落進
+        §4.1 群、票裡不會有提示。分界在觸發子句形狀:「〜時，」不排除。
+        卡例:小狗外星人 15475415。
+        """
+        self.assertEqual(
+            self._labels("我方的「外星人」怪獸召喚成功時，此卡可以從手牌特殊召喚。"),
+            ["誘發缺發動"])
+
     def test_flip_label_and_selection_stack(self):
         """「反轉：選擇…破壞」同段命中兩條:標籤是多標籤,順序照條目序。"""
         self.assertEqual(self._labels("反轉：選擇場上1隻守備表示怪獸破壞。"),
@@ -253,7 +271,8 @@ class SameRulerRegressionTest(unittest.TestCase):
         3,756 段(text-rewrite#05);§4.1×怪獸子批1 進站 40 段後 3,716 段
         (text-rewrite#07);無效果怪獸 88 張排除後 3,628 段
         (text-rewrite#08);§4.1×怪獸子批2 進站 50 段後 3,578 段
-        (text-rewrite#11),資料更新或改寫批進站後兩邊會一起動。
+        (text-rewrite#11);子批3 進站 50 段後 3,528 段
+        (text-rewrite#12),資料更新或改寫批進站後兩邊會一起動。
 
         扣掉的張數一起釘住:排除判準放寬(如 role 正規式擴張)會讓這個數字
         先動,而不是靜靜地從改寫佇列多吃掉幾張真有效果的卡。
@@ -269,7 +288,7 @@ class SameRulerRegressionTest(unittest.TestCase):
                   if seg["tier"] == TIER_OLD)
         self.assertEqual(old, len(pending))
         self.assertEqual(len(report["pending_split"]) - len(pending), 88)
-        self.assertEqual(old, 3578)
+        self.assertEqual(old, 3528)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,166 @@
+[
+ {
+  "id": 18590133,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "永續效果", "optional": null, "role": null},
+   {"index": "②", "kind": "永續效果", "optional": null, "role": null}
+  ]
+ },
+ {
+  "id": 19642889,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "永續效果", "optional": null, "role": null}
+  ]
+ },
+ {
+  "id": 19700943,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "永續效果", "optional": null, "role": null}
+  ]
+ },
+ {
+  "id": 19733961,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "永續效果", "optional": null, "role": null,
+    "note": "無補足情報(supplement 空,本批唯一)。官方現行文本把兩句合為同一個①(第二句無圈號);改寫前標記表 2 列 src=llm 皆判永續,數值增減永續句(である限り…アップする)、無發動判定需求,合併後仍是永續效果。"}
+  ]
+ },
+ {
+  "id": 19877898,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "永續效果", "optional": null, "role": null}
+  ]
+ },
+ {
+  "id": 19974580,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "啟動效果", "optional": null, "role": null,
+    "note": "補足只明示除外是效果處理、非 cost,未給類型詞;句面「自分メインフェイズに発動できる」=起動効果,改寫前 src=llm 同值。"},
+   {"index": "②", "kind": "誘發效果(1速)", "optional": "必發", "role": null,
+    "note": "補足未給類型詞;「相手に戦闘ダメージを与えた場合に発動する」直述形=誘發/必發,改寫前 src=llm 同值。"}
+  ]
+ },
+ {
+  "id": 20438745,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "無種類效果", "optional": null, "role": null},
+   {"index": "②", "kind": "啟動效果", "optional": null, "role": null,
+    "note": "②段是「賦予型領起句 + ●效果」整段:領起句補足明示『モンスターの効果の扱いではありません』,實質效果是●的起動効果(補足明示,不取對象)。●未拆成 ②-●1——補足引號錨在 faq 舊文本(メインフェイズ時/相手ライフに…ポイント),對不上 ja-JP 現行文本,_split_bullets 的●授權讀不到;照票07/票11/票12 累計 6 張的同一處置取實質效果的類型,以免效果在標記表消失。2026-08-26 裁示的正形 [②]效果外文本+[②-●1]啟動效果 屬拆句霧區另案(同魔法史萊姆/進化護法 主教);同批巨人卡洛 21155323 引號對得上現行文本、已自動拆出正形,本卡輪到霧區收束時比照。"}
+  ]
+ },
+ {
+  "id": 20470500,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "誘發效果(1速)", "optional": "必發", "role": null},
+   {"index": "②", "kind": "永續效果", "optional": null, "role": null,
+    "note": "「破壊できる」句面像任意,補足明示『モンスターゾーンで適用できる永続効果』——代替破壞的適用選擇不是發動。"}
+  ]
+ },
+ {
+  "id": 20529766,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "效果外文本", "optional": null, "role": null},
+   {"index": "①-●1", "kind": "永續效果", "optional": null, "role": null},
+   {"index": "①-●2", "kind": "永續效果", "optional": null, "role": null},
+   {"index": "①-●3", "kind": "永續效果", "optional": null, "role": null}
+  ]
+ },
+ {
+  "id": 21155323,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "無種類效果", "optional": null, "role": null},
+   {"index": "②", "kind": "效果外文本", "optional": null, "role": null,
+    "note": "領起句補足明示『モンスターの効果の扱いではありません』;●已自動拆出 ②-●1(引號『●このカードの元々の攻撃力は２１００になる』對得上 ja-JP 現行文本)並由官方明示判永續——本批二重怪獸 3 張中唯一達成 2026-08-26 裁示正形 [②]效果外文本+[②-●1]<類型> 的一張。"}
+  ]
+ },
+ {
+  "id": 21340051,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "誘發效果(1速)", "optional": "必發", "role": null},
+   {"index": "②", "kind": "永續效果", "optional": null, "role": null}
+  ]
+ },
+ {
+  "id": 21785144,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "永續效果", "optional": null, "role": null},
+   {"index": "②", "kind": "永續效果", "optional": null, "role": null},
+   {"index": "③", "kind": "誘發效果(1速)", "optional": "必發", "role": null}
+  ]
+ },
+ {
+  "id": 22377815,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "無種類效果", "optional": null, "role": null},
+   {"index": "②", "kind": "誘發效果(1速)", "optional": "必發", "role": null,
+    "note": "②段是「賦予型領起句 + ●效果」整段:領起句補足明示『モンスターの効果の扱いではありません』,實質效果是●的誘発効果(補足明示,必發、不取對象、傷害步驟結束時發動)。●未拆成 ②-●1——補足引號錨在 faq 舊文本(によって/時),對不上 ja-JP 現行文本(で/場合に発動する),●授權讀不到;照霧區 6 張既有處置取實質效果的類型。正形 [②]效果外文本+[②-●1]誘發 屬拆句霧區另案(同 20438745)。"}
+  ]
+ },
+ {
+  "id": 22812068,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "無種類效果", "optional": null, "role": null}
+  ]
+ },
+ {
+  "id": 23118924,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "誘發效果(1速)", "optional": "選發", "role": null,
+    "note": "①段是「賦予型領起句 + ●地 + ●風」整段,官方對兩個●明示不同類型:●地=永続効果、●風=誘発効果(任意、不取對象、傷害步驟結束時發動組連鎖)——「不拆必錯」型(bullets_typed_apart 的標的),但補足引號錨在 faq 舊文本、對不上 ja-JP 現行文本,拆句授權讀不到。單一類型欄位下取●風的誘發(1速)/選發——有發動時點與連鎖、查詢層漏掉損失較大的那一半;●地的永續明示記於此為稽核軌跡。改寫前拆句表原形 [0]效果外+[1]永續+[2]誘發選發(src=official),修復歸拆句霧區另案。"}
+  ]
+ },
+ {
+  "id": 23274061,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "永續效果", "optional": null, "role": null},
+   {"index": "②", "kind": "誘發效果(1速)", "optional": "必發", "role": null}
+  ]
+ },
+ {
+  "id": 23289281,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "啟動效果", "optional": null, "role": null},
+   {"index": "②", "kind": "誘發效果(1速)", "optional": "必發", "role": null}
+  ]
+ },
+ {
+  "id": 23303072,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "永續效果", "optional": null, "role": null}
+  ]
+ },
+ {
+  "id": 23309606,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "永續效果", "optional": null, "role": null}
+  ]
+ },
+ {
+  "id": 23454876,
+  "section": "main",
+  "clauses": [
+   {"index": "①", "kind": "誘發效果(1速)", "optional": "必發", "role": null},
+   {"index": "②", "kind": "效果外文本", "optional": null, "role": null},
+   {"index": "②-●1", "kind": "誘發效果(1速)", "optional": "選發", "role": null}
+  ]
+ }
+]

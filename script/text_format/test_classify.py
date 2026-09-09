@@ -273,7 +273,8 @@ class SameRulerRegressionTest(unittest.TestCase):
         (text-rewrite#08);§4.1×怪獸子批2 進站 50 段後 3,578 段
         (text-rewrite#11);子批3 進站 50 段後 3,528 段
         (text-rewrite#12);子批4 進站 50 段後 3,478 段
-        (text-rewrite#15),資料更新或改寫批進站後兩邊會一起動。
+        (text-rewrite#15);子批5 進站 50 段後 3,428 段
+        (text-rewrite#16),資料更新或改寫批進站後兩邊會一起動。
 
         扣掉的張數一起釘住:排除判準放寬(如 role 正規式擴張)會讓這個數字
         先動,而不是靜靜地從改寫佇列多吃掉幾張真有效果的卡。
@@ -289,7 +290,7 @@ class SameRulerRegressionTest(unittest.TestCase):
                   if seg["tier"] == TIER_OLD)
         self.assertEqual(old, len(pending))
         self.assertEqual(len(report["pending_split"]) - len(pending), 88)
-        self.assertEqual(old, 3478)
+        self.assertEqual(old, 3428)
 
 
 if __name__ == "__main__":

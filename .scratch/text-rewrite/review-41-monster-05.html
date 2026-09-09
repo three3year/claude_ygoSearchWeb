@@ -1,0 +1,650 @@
+<title>§4.1×怪獸 子批 5 審查台</title>
+<style>
+:root{
+  --paper:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f5;
+  --ink:#1b1f27; --muted:#5c6472; --faint:#8b93a1;
+  --rule:#dce0e7; --rule-soft:#e8ebf0;
+  --accent:#96661a; --accent-soft:#f3e6cd; --accent-line:#c99a3f;
+  --ok:#2c7359; --ok-soft:#dfeee8;
+  --back:#a8412c; --back-soft:#f7e2dc;
+  --skip:#5c6472; --skip-soft:#e6e9ee;
+  --ins:#e8f0d9; --ins-ink:#3f5c1c;
+  --del-ink:#EEEEEE;
+  --shadow:0 1px 2px rgba(27,31,39,.06), 0 8px 24px -16px rgba(27,31,39,.28);
+  --serif:"Noto Serif TC","Source Han Serif TC","Songti TC","PMingLiU",
+    "MingLiU",Georgia,serif;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",
+    system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#10131a; --surface:#181c24; --surface-2:#1f242e;
+    --ink:#e6e9ee; --muted:#98a1b0; --faint:#6d7686;
+    --rule:#2a303b; --rule-soft:#232935;
+    --accent:#dda953; --accent-soft:#3a2f19; --accent-line:#9a7430;
+    --ok:#63b596; --ok-soft:#1c3830;
+    --back:#e28b74; --back-soft:#3d251e;
+    --skip:#98a1b0; --skip-soft:#232935;
+    --ins:#2b3a1c; --ins-ink:#b6d189;
+    --del-ink:#EEEEEE;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="light"]{
+  --paper:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f5;
+  --ink:#1b1f27; --muted:#5c6472; --faint:#8b93a1;
+  --rule:#dce0e7; --rule-soft:#e8ebf0;
+  --accent:#96661a; --accent-soft:#f3e6cd; --accent-line:#c99a3f;
+  --ok:#2c7359; --ok-soft:#dfeee8;
+  --back:#a8412c; --back-soft:#f7e2dc;
+  --skip:#5c6472; --skip-soft:#e6e9ee;
+  --ins:#e8f0d9; --ins-ink:#3f5c1c; --del-ink:#EEEEEE;
+  --shadow:0 1px 2px rgba(27,31,39,.06), 0 8px 24px -16px rgba(27,31,39,.28);
+}
+:root[data-theme="dark"]{
+  --paper:#10131a; --surface:#181c24; --surface-2:#1f242e;
+  --ink:#e6e9ee; --muted:#98a1b0; --faint:#6d7686;
+  --rule:#2a303b; --rule-soft:#232935;
+  --accent:#dda953; --accent-soft:#3a2f19; --accent-line:#9a7430;
+  --ok:#63b596; --ok-soft:#1c3830;
+  --back:#e28b74; --back-soft:#3d251e;
+  --skip:#98a1b0; --skip-soft:#232935;
+  --ins:#2b3a1c; --ins-ink:#b6d189; --del-ink:#EEEEEE;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+.page{
+  background:var(--paper); color:var(--ink); font-family:var(--sans);
+  font-size:16px; line-height:1.75; margin:0 auto; padding:0 0 7rem;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--serif); text-wrap:balance; margin:0; font-weight:600}
+code{font-family:var(--mono); font-size:.86em; background:var(--surface-2);
+  padding:.08em .35em; border-radius:3px}
+.term{font-style:normal; border-bottom:1px dotted var(--accent-line);
+  padding-bottom:1px}
+
+/* ── 頁首 ───────────────────────────── */
+.masthead{
+  border-bottom:1px solid var(--rule); background:var(--surface);
+  padding:2.6rem 1.5rem 1.6rem;
+}
+.masthead-in{max-width:1180px; margin:0 auto;
+  display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-end;
+  justify-content:space-between}
+.eyebrow{
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:.5rem;
+}
+.masthead h1{font-size:clamp(1.6rem,3.4vw,2.3rem); line-height:1.3}
+.masthead .sub{color:var(--muted); font-size:.92rem; margin-top:.4rem}
+.progress-wrap{min-width:230px}
+.progress-nums{display:flex; align-items:baseline; gap:.4rem;
+  font-family:var(--mono); font-variant-numeric:tabular-nums}
+.progress-nums b{font-size:1.9rem; font-weight:600; letter-spacing:-.02em}
+.progress-nums span{color:var(--muted); font-size:.85rem}
+.bar{height:6px; border-radius:3px; background:var(--surface-2);
+  margin-top:.55rem; overflow:hidden; display:flex}
+.bar i{display:block; height:100%}
+.bar .b-ok{background:var(--ok)} .bar .b-back{background:var(--back)}
+
+/* ── 摘要 ───────────────────────────── */
+.wrap{max-width:1180px; margin:0 auto; padding:0 1.5rem}
+.stats{display:grid; gap:1px; background:var(--rule-soft);
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  border:1px solid var(--rule-soft); border-radius:8px; overflow:hidden;
+  margin:1.8rem 0}
+.stat{background:var(--surface); padding:1rem 1.15rem}
+.stat dt{font-size:.75rem; letter-spacing:.06em; color:var(--muted);
+  margin-bottom:.25rem}
+.stat dd{margin:0; font-family:var(--mono); font-size:1.45rem;
+  font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.stat dd small{font-size:.72rem; color:var(--faint); letter-spacing:0;
+  margin-left:.3rem; font-family:var(--sans)}
+.stat.good dd{color:var(--ok)}
+
+/* ── 版面 ───────────────────────────── */
+.layout{display:grid; grid-template-columns:250px minmax(0,1fr); gap:2.5rem}
+@media (max-width:900px){.layout{grid-template-columns:1fr; gap:1.5rem}}
+
+.rail{position:sticky; top:1rem; align-self:start; max-height:calc(100vh - 2rem);
+  display:flex; flex-direction:column; gap:.7rem}
+@media (max-width:900px){.rail{position:static; max-height:none}}
+.rail h2{font-size:.78rem; font-family:var(--mono); letter-spacing:.14em;
+  text-transform:uppercase; color:var(--faint)}
+.filters{display:flex; flex-wrap:wrap; gap:.35rem}
+.filters button{
+  font:inherit; font-size:.76rem; padding:.25rem .6rem; cursor:pointer;
+  background:var(--surface); color:var(--muted);
+  border:1px solid var(--rule); border-radius:999px;
+}
+.filters button[aria-pressed="true"]{
+  background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.index{list-style:none; margin:0; padding:0; overflow-y:auto; flex:1;
+  border-top:1px solid var(--rule-soft)}
+.index li{border-bottom:1px solid var(--rule-soft)}
+.index a{
+  display:grid; grid-template-columns:2.1rem 1fr auto; gap:.5rem;
+  align-items:center; padding:.42rem .3rem; text-decoration:none;
+  color:var(--ink); font-size:.85rem;
+}
+.index a:hover,.index a:focus-visible{background:var(--surface-2)}
+.index .n{font-family:var(--mono); font-size:.75rem; color:var(--faint);
+  font-variant-numeric:tabular-nums; text-align:right}
+.index .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--rule);
+  box-shadow:0 0 0 1px var(--rule)}
+.dot.ok{background:var(--ok); box-shadow:none}
+.dot.back{background:var(--back); box-shadow:none}
+.dot.skip{background:transparent; box-shadow:0 0 0 1px var(--faint)}
+
+/* ── 群級裁示 ────────────────────────── */
+.calls{border:1px solid var(--accent-line); border-radius:8px;
+  background:var(--surface); margin-bottom:2.2rem; overflow:hidden}
+.calls > h2{font-size:1.02rem; padding:.9rem 1.2rem; background:var(--accent-soft);
+  color:var(--accent); border-bottom:1px solid var(--accent-line)}
+.call{padding:1.15rem 1.2rem; border-bottom:1px solid var(--rule-soft)}
+.call:last-child{border-bottom:0}
+.call h3{font-size:.98rem; margin-bottom:.4rem}
+.call p{margin:.35rem 0; color:var(--muted); font-size:.9rem}
+.call p.opt{color:var(--ink)}
+.call .tag{font-family:var(--mono); font-size:.7rem; letter-spacing:.1em;
+  color:var(--accent); text-transform:uppercase; display:block;
+  margin-bottom:.3rem}
+.call-list{margin:.5rem 0; padding-left:1.25rem; color:var(--muted);
+  font-size:.9rem}
+.call-list li{margin:.4rem 0; line-height:1.8}
+.call-list li::marker{color:var(--accent-line)}
+.call-table{overflow-x:auto; margin:.55rem 0}
+.call-table table{border-collapse:collapse; font-size:.84rem; min-width:100%}
+.call-table th,.call-table td{border:1px solid var(--rule); padding:.35rem .55rem;
+  text-align:left; vertical-align:top; color:var(--muted)}
+.call-table th{background:var(--surface-2); color:var(--ink); white-space:nowrap;
+  font-weight:600}
+
+/* ── 卡片 ───────────────────────────── */
+.card{background:var(--surface); border:1px solid var(--rule);
+  border-radius:8px; box-shadow:var(--shadow); margin-bottom:1.6rem;
+  scroll-margin-top:1rem; overflow:hidden}
+.card[data-state="ok"]{border-color:var(--ok)}
+.card[data-state="back"]{border-color:var(--back)}
+.card.is-skip{background:var(--surface-2); box-shadow:none}
+.card-head{display:flex; flex-wrap:wrap; gap:.5rem 1rem; align-items:baseline;
+  padding:1rem 1.3rem; border-bottom:1px solid var(--rule-soft)}
+.card-head .no{font-family:var(--mono); font-size:.8rem; color:var(--faint);
+  font-variant-numeric:tabular-nums}
+.card-head h3{font-size:1.12rem}
+.card-head .ja{color:var(--faint); font-size:.85rem}
+.card-head .pw{font-family:var(--mono); font-size:.8rem; color:var(--muted);
+  margin-left:auto; font-variant-numeric:tabular-nums}
+.chip{font-size:.72rem; padding:.1rem .5rem; border-radius:999px;
+  letter-spacing:.04em; white-space:nowrap}
+.chip.ok{background:var(--ok-soft); color:var(--ok)}
+.chip.back{background:var(--back-soft); color:var(--back)}
+.chip.skip{background:var(--skip-soft); color:var(--skip)}
+.chip.wait{background:var(--accent-soft); color:var(--accent)}
+
+.texts{padding:.3rem 1.3rem 1rem}
+.text-row{padding:.85rem 0; border-bottom:1px dashed var(--rule-soft)}
+.text-row:last-child{border-bottom:0}
+.text-row > .lab{font-family:var(--mono); font-size:.7rem; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--faint); display:block;
+  margin-bottom:.3rem}
+.text-row p{margin:0; white-space:pre-wrap}
+.t-ja p{font-size:.94rem; color:var(--muted); line-height:1.85}
+.t-old p{color:var(--muted)}
+.t-ja > .lab{color:var(--accent)}
+.t-faq p{font-size:.9rem; color:var(--faint); line-height:1.8}
+.segwarn{color:var(--back); font-weight:600; letter-spacing:0;
+  text-transform:none; margin-left:.5rem}
+.t-new{background:var(--surface-2); border-left:3px solid var(--accent-line);
+  padding:.8rem 1rem; border-radius:0 5px 5px 0; margin-top:.3rem}
+.t-new > .lab{color:var(--accent)}
+.t-new p{font-size:1.04rem; line-height:1.9}
+ins{background:var(--ins); color:var(--ins-ink); text-decoration:none;
+  border-radius:2px; padding:0 .06em}
+del{color:var(--del-ink); opacity:.75}
+
+.notes{list-style:none; margin:0; padding:.9rem 1.3rem 1rem;
+  border-top:1px solid var(--rule-soft)}
+.notes > li{display:grid; grid-template-columns:5.2rem 1fr; gap:.9rem;
+  padding:.4rem 0; font-size:.88rem}
+@media (max-width:640px){.notes > li{grid-template-columns:1fr; gap:.2rem}}
+.notes .lab{font-size:.78rem; color:var(--faint); text-align:right;
+  padding-top:.12rem}
+@media (max-width:640px){.notes .lab{text-align:left}}
+.notes .lab.wait{color:var(--accent); font-weight:600}
+.notes ol{margin:.4rem 0 0; padding-left:1.3rem; color:var(--muted)}
+.notes ol li{margin:.2rem 0}
+.notes .body{color:var(--muted)}
+
+.verdict{display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;
+  padding:.9rem 1.3rem; background:var(--surface-2);
+  border-top:1px solid var(--rule-soft)}
+.verdict button{font:inherit; font-size:.86rem; padding:.34rem .95rem;
+  border-radius:5px; cursor:pointer; border:1px solid var(--rule);
+  background:var(--surface); color:var(--muted)}
+.verdict button:hover{border-color:var(--faint)}
+.verdict button[aria-pressed="true"].v-ok{background:var(--ok);
+  border-color:var(--ok); color:#fff}
+.verdict button[aria-pressed="true"].v-back{background:var(--back);
+  border-color:var(--back); color:#fff}
+.verdict input{flex:1; min-width:200px; font:inherit; font-size:.86rem;
+  padding:.34rem .6rem; border-radius:5px; border:1px solid var(--rule);
+  background:var(--surface); color:var(--ink)}
+.verdict input::placeholder{color:var(--faint)}
+
+/* ── 匯出列 ──────────────────────────── */
+.dock{position:fixed; left:0; right:0; bottom:0; z-index:20;
+  background:var(--surface); border-top:1px solid var(--rule);
+  box-shadow:0 -6px 24px -18px rgba(0,0,0,.5)}
+.dock-in{max-width:1180px; margin:0 auto; padding:.7rem 1.5rem;
+  display:flex; flex-wrap:wrap; gap:.8rem; align-items:center}
+.dock .tally{font-family:var(--mono); font-size:.82rem; color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.dock .tally b{color:var(--ink)}
+.dock .spacer{flex:1}
+.dock button{font:inherit; font-size:.86rem; padding:.42rem 1rem;
+  border-radius:5px; cursor:pointer; border:1px solid var(--rule);
+  background:var(--surface); color:var(--ink)}
+.dock button.primary{background:var(--ink); color:var(--paper);
+  border-color:var(--ink)}
+.dock button:hover{border-color:var(--faint)}
+
+dialog{border:1px solid var(--rule); border-radius:8px; padding:0;
+  background:var(--surface); color:var(--ink); max-width:min(760px,92vw);
+  width:100%; box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(10,12,16,.55)}
+.dlg-head{display:flex; align-items:center; gap:1rem; padding:.9rem 1.2rem;
+  border-bottom:1px solid var(--rule-soft)}
+.dlg-head h2{font-size:1rem; flex:1}
+dialog textarea{width:100%; min-height:46vh; border:0; resize:vertical;
+  font-family:var(--mono); font-size:.8rem; line-height:1.65; padding:1rem 1.2rem;
+  background:var(--surface); color:var(--ink)}
+dialog textarea:focus{outline:none}
+.dlg-foot{padding:.8rem 1.2rem; border-top:1px solid var(--rule-soft);
+  display:flex; gap:.6rem; justify-content:flex-end; align-items:center}
+.dlg-foot .hint{margin-right:auto; font-size:.82rem; color:var(--muted)}
+
+:where(a,button,input,textarea,summary):focus-visible{
+  outline:2px solid var(--accent-line); outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){
+  .card{transition:border-color .18s ease}
+  .verdict button{transition:background .15s ease,border-color .15s ease,
+    color .15s ease}
+}
+.hidden{display:none !important}
+</style>
+
+<div class="page">
+<header class="masthead">
+  <div class="masthead-in">
+    <div>
+      <div class="eyebrow">text-rewrite #16 · 舊卡文翻新</div>
+      <h1>僅基礎條目(§4.1)× 怪獸 — 子批 5</h1>
+      <p class="sub">50 張改寫待逐行審查。放行後才寫入 <code>data/text_rewrites.json</code>,依慣例只在你明說 commit 才提交。</p>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-nums"><b id="doneN">0</b><span>/ 50 已裁</span></div>
+      <div class="bar"><i class="b-ok" id="barOk" style="width:0"></i><i
+        class="b-back" id="barBack" style="width:0"></i></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <dl class="stats">
+    <div class="stat"><dt>進站候選</dt><dd>50<small>張</small></dd></div><div class="stat"><dt>建議不進站</dt><dd>0<small>張</small></dd></div><div class="stat good"><dt>詞彙表改寫引入</dt><dd>0<small>筆</small></dd></div><div class="stat"><dt>詞彙表殘留</dt><dd>0<small>筆待裁</small></dd></div><div class="stat"><dt>逐卡待裁點</dt><dd>0<small>處</small></dd></div><div class="stat good"><dt>官方分層不符</dt><dd>0<small>張</small></dd></div>
+  </dl>
+
+  <section class="calls" id="calls">
+    <h2>群級判斷點 — 先決事項,再進逐卡</h2>
+<div class="call"><span class="tag">群級判斷點</span><h3>跳過的 8 張(票10 殘留清單直接比對,票11 起固定作法)</h3><p>範圍內命中 8 張票10 清單卡,照票10 操作預設跳過、往後遞補取滿 50 筆:開頭 5 張與子批 4 的跳過清單相同;<strong>範圍內另有 3 張</strong>——<code>25236056</code> 稀有金屬龍(33 張清單內,票10 本票的 3 張之一)、<code>25833572</code> 門之守護者(裸「可以特殊召喚」型)、<code>28151978</code> 疾行機人 多米諾蝴蝶(欄位層級 3 張之一,【怪獸效果】欄全效果外文本),皆清單直接比對、不現場重判。票13 交代的雲魔物/代用定式 11 張皆不在本批(首張 <code>30451366</code> 幻像綿羊為群內第 51 名,落子批 6)。</p></div>
+<div class="call"><span class="tag">群級判斷點</span><h3>二重怪獸 1 張:map 霧區「②-●拆句」本批落地</h3><p>本批 21 二重槍兵為舊式二重怪獸(全庫 21 張的其中 1 張)。照 2026-08-26 站主裁示的官方裁定形狀處理:領起句採庫內 <strong>21 張多數形</strong>(=本卡舊譯原句)、<code>[②]效果外文本 + [②-●1]永續</code> 形狀。官方現行文本自帶①②●分層,與裁示形狀一致。<strong>補足引號錨在舊文本</strong>(『…攻撃した時、…超えていれば』,現行文本為「攻撃した場合、…超えた分だけ」)——同拜融/艾蕾莎,●拆句授權預期讀不到,照霧區處置<strong>取●實質類型</strong>(永續,官方明示『●…』モンスター効果は永続効果),正形修復歸霧區另案;若成立,拆句霧區 7 → 8 張,進站時在票裡記錄。</p></div>
+<div class="call"><span class="tag">群級判斷點</span><h3>規範未載句型:全庫計數與逐字先例(2026-09-08,母體含①卡 9,716 張)</h3><p>沿票11/12/15 慣例,動筆前逐句查證;逐卡「依據條目」各有出處,下表只收<strong>做過選擇</strong>的 row(兩形以上並存、0 例需回答、或逐字先例定案的):</p><div class="call-table"><table><thead><tr><th>句型</th><th>採用</th><th>計數/先例</th><th>適用卡</th></tr></thead><tbody><tr><td>破壊した/送られたバトルフェイズ終了時</td><td>「…的戰鬥階段結束時發動/可以發動」單句形</td><td>吸血鬼 紅男爵 <code>6917479</code> ②同構;「的戰鬥階段結束時」73 例</td><td>1、35</td></tr><tr><td>可能な限り特殊召喚</td><td>從墓地盡可能在我方場上特殊召喚</td><td>紅男爵②逐字;「盡可能」63 例</td><td>1</td></tr><tr><td>直接攻擊句</td><td>此卡可以直接攻擊。</td><td>64 例(票15 沿用);電力客邁拉 <code>2772236</code> ①逐字</td><td>3①、47</td></tr><tr><td>直攻傷害觸發</td><td>此卡直接攻擊給予對手戰鬥傷害的場合發動。</td><td>電力客邁拉②等 7 例逐字</td><td>3②</td></tr><tr><td>攻撃しなければならない</td><td>此卡可以攻擊的場合必須攻擊。</td><td>機偶蛤蟆 四六二四 <code>75690317</code> ①逐字(家族先例=現成答案)</td><td>4①、48②</td></tr><tr><td>攻撃対象に選択された場合に発動する</td><td>被選擇作為攻擊對象的場合發動</td><td>9 例(燃燒拳手 玻璃下巴等);處理句「此卡變成守備表示。」召喚僧 <code>423585</code> ①逐字</td><td>4③、48③</td></tr><tr><td>このカードを対象とする…を相手が発動した時</td><td>對手發動以此卡為對象的魔法、陷阱、怪獸的效果時</td><td>同構 14 例(天照大神 <code>20073910</code> ①等);「以此卡為對象的魔法、陷阱、怪獸的效果」4 例</td><td>5</td></tr><tr><td>貫通句</td><td>此卡向守備表示怪獸攻擊的場合，給予對手攻擊力超過那個守備力的數值的戰鬥傷害。</td><td>132 例(票14/15 同定式)</td><td>6①、21●</td></tr><tr><td>他のモンスター１体をリリースして発動できる</td><td>將我方場上1隻其他怪獸解放可以發動</td><td>同 ja 句 4:1(心靈交錯惡魔②等 vs 記憶體摩莉甘特)</td><td>7</td></tr><tr><td>２体分のリリースにできる</td><td>〜怪獸上級召喚的場合，此卡可以當作2隻解放。</td><td>15 例逐字構(雙生天使 <code>11662742</code> ①等)</td><td>9</td></tr><tr><td>相手フィールドにのみ</td><td>只有對手場上有怪獸存在的場合</td><td>29 例(票15 電子龍同裁)</td><td>11</td></tr><tr><td>戦闘を行うダメージステップの間</td><td>和〜進行戰鬥的傷害步驟期間</td><td>稀有金屬騎士 <code>1412158</code> ①同構,8 例</td><td>13</td></tr><tr><td>モンスターと戦闘を行ったダメージステップ終了時</td><td>和怪獸進行戰鬥的傷害步驟結束時發動</td><td>冥界龍 龍亡 <code>8198620</code> ③逐字;「的傷害步驟結束時發動」18 例</td><td>14</td></tr><tr><td>デッキの一番上に置く</td><td>放置在牌組最上方</td><td>置く 33 ja 卡多數形(「放到」僅 3)</td><td>14、28</td></tr><tr><td>その後、バトルフェイズを終了する</td><td>那之後，戰鬥階段結束。</td><td>PSY骨架裝備β <code>2810642</code> 同構;「那次攻擊無效」78 例</td><td>15</td></tr><tr><td>が召喚した時に発動できる(龍盟①)</td><td>此卡召喚成功時可以發動</td><td>家族逐字先例:龍盟-小標槍龍 <code>36870345</code> ①(同構整句含裝備尾);「當作裝備魔法卡」58 例</td><td>16①</td></tr><tr><td>装備モンスターをチューナーとして扱う</td><td>裝備怪獸當作協調。</td><td>蓋亞推進器 <code>56727340</code> ①片語(該句獨立成②全庫唯一,R1 有答)</td><td>16②</td></tr><tr><td>度に発動する</td><td>每次〈事件〉發動。</td><td>35 例(蜀葵天使③等);兩卡日文事件句全庫唯一,零件另有據</td><td>17、39</td></tr><tr><td>召喚成功時にお互いは…発動できない</td><td>在此卡的召喚成功時，雙方不能發動〜。</td><td>歐西里斯/歐貝利斯克②逐字構(神之卡三張同式)</td><td>18</td></tr><tr><td>１ターンに１度 前置</td><td>①：1回合1次，〜(§3.10 起手形)</td><td>官方現行把段尾限制改前置,643 例</td><td>20、27</td></tr><tr><td>二重怪獸領起句</td><td>21 張多數形(=舊譯原句)</td><td>2026-08-26 裁示+票15 三張同式</td><td>21②</td></tr><tr><td>Ｓ召喚した場合に発動する</td><td>此卡同步召喚的場合發動。</td><td>朱羅紀隕星龍 <code>17548456</code> ①逐字,6 例</td><td>22</td></tr><tr><td>相手の手札の数まで</td><td>最多到對手的手牌數量</td><td>地縛神 Wiraqocha Rasca <code>41181774</code> ②唯一同構(=舊譯)</td><td>22</td></tr><tr><td>Ｓ素材として墓地へ送られた場合に発動できる</td><td>此卡作為同步素材送去墓地的場合可以發動。</td><td>噴射同步者 <code>9742784</code> ①逐字,同構 54 卡</td><td>23</td></tr><tr><td>種類を宣言して発動する</td><td>宣言卡的種類（怪獸、魔法、陷阱）發動</td><td>吸血鬼領主 <code>53839837</code> ①同構(帶「1個」形,本卡日文無１つ故不帶);「對手從牌組將1張宣言種類的卡送去墓地」照領主語序刪「自身」</td><td>24</td></tr><tr><td>相手は次のターン〜発動できない</td><td>對手在下個回合不能發動魔法卡。</td><td>該句日文全庫唯一;「在下個回合」24 例;刪「玩家」=官方現行刪プレイヤー</td><td>25</td></tr><tr><td>このカード名はルール上</td><td>這個卡名在規則上當作「神鷹女郎」。</td><td>「規則上當作」11 例(傳說之都 亞特蘭提斯等)</td><td>34</td></tr><tr><td>破壊した場合、…存在する限り効果が無効化される</td><td>戰鬥破壞〜的場合，只要那隻被破壞的怪獸在場上、墓地存在，效果無效化。</td><td>元素魔鬼 <code>23118924</code> ●地逐字構(票15 進站)</td><td>34</td></tr><tr><td>発動と処理を行う 括號構造</td><td>段末尾句、強制不帶「可以」</td><td>guide §3.4 通則(票15 立);刀鋒傘蜥蜴 <code>18372968</code> ①模板</td><td>32①</td></tr><tr><td>破壊される場合、代わりに…破壊できる</td><td>場上的此卡被破壞的場合，可以將〜破壞作為代替。</td><td>武裝海洋獵手 <code>20470500</code> ②同構;「破壞作為代替」77 例</td><td>32②</td></tr><tr><td>さらにそれらの</td><td>〜存在的場合，隨後那些怪獸〜</td><td>冰結界的還零龍 三叉龍 <code>70980824</code> ②逐字構;「那些怪獸的攻擊力」14 例</td><td>40</td></tr><tr><td>１ターンに２度まで戦闘では破壊されない</td><td>此卡1回合有2次不會被戰鬥破壞。</td><td>ABF-雨隱之小夜刀 <code>17994645</code> ②逐字(=舊譯)</td><td>41</td></tr><tr><td>以下の効果から１つを選択して発動できる</td><td>可以從以下效果選擇1個發動。</td><td>221 例</td><td>42①</td></tr><tr><td>この効果で装備されているこのカードを攻撃表示で特殊召喚</td><td>裝備狀態的此卡攻擊表示特殊召喚。</td><td>金屬化寄生生物-月之衣 <code>7369217</code> ●2 逐字(ja 同句)</td><td>42●2</td></tr><tr><td>このカードの効果でこのカードを装備したモンスター</td><td>用此卡的效果裝備此卡的怪獸</td><td>時間魔術鎚 <code>10960419</code> ②逐字</td><td>42②</td></tr><tr><td>した時に適用する</td><td>此卡召喚時適用。這個回合，〜</td><td>靈獸使的長老 <code>14513016</code> ①逐字構,「時適用」19 例</td><td>38</td></tr><tr><td>融合召喚した場合に発動する</td><td>此卡融合召喚的場合發動。</td><td>奇美拉聚合超載龍 <code>64599569</code>(唯一同 ja 形)</td><td>43②</td></tr><tr><td>除外状態</td><td>除外狀態的卡</td><td>16 例;「除外狀態的卡片數量」8 例</td><td>30、43②</td></tr><tr><td>が召喚した場合に発動する</td><td>此卡召喚的場合發動。</td><td>魔導騎士 防禦者 <code>2525268</code> ①逐字,10 例</td><td>48①</td></tr><tr><td>１つずつ宣言して発動できる</td><td>宣言種族和屬性各1個可以發動。</td><td>驚喜結合 <code>35167375</code> ①等 5 例逐字構</td><td>50</td></tr><tr><td>メインフェイズ１でのみ→現行重寫</td><td><strong>兩卡皆刪「主要階段1」</strong>(2026-09-09 站主裁示:效果內容為戰鬥階段相關,MP2 後無戰鬥階段,MP1 限定規則天然內建、可省略;原★待裁已定案)</td><td>詳各卡「審查批改」欄;guide §3.4 已追記</td><td>46、47</td></tr></tbody></table></div></div>
+<div class="call"><span class="tag">群級判斷點</span><h3>改寫依據與判斷點處理</h3><ul class="call-list"><li>全批共同對應:<strong>§4.1</strong> 缺圈號分層 → <strong>§3.1/§3.2</strong>;分層照官方現行文本自帶圈號寫(guide §4.1「分層來源」段,50/50 自帶);效果句依 §3.4/§3.5補「發動。/可以發動。」收尾;成品回 §3 逐條自檢。</li><li><strong>強制/任意</strong>(§3.5)與<strong>取對象</strong>(§3.7):50 張全部有官方補足情報逐卡明示,無 llm 判準卡。</li><li><strong>無種類效果進圈號</strong>(票11 裁示):本批 6 處——9 瑪雅機械、11 大塊石魔、21①(二重怪獸①)、29①(手牌特召許可)、38①(召喚時適用);官方現行文本全部自帶圈號背書,不冠發動。</li><li><strong>官方現行文本的系統性改寫</strong>(全批,R6/R7 會大量命中,逐卡已答):時→場合(3②、6②、24、33、36、48①)、限り形「只要」(2、21①、31②、34)、ゲームから除外→除外(22、29②、30、49)、官方刪字不補譯(1 墓地へ送った/裏側守備表示のまま、3① 相手プレイヤーに、6② デッキから、14 持ち主の、19 カードの、22/24/29② 選択して/選び、25 プレイヤー、36 シャッフル、38 表側、43② 持ち主の+シャッフル、47 對手玩家、50 違った場合は元に戻す)、段尾次數限制改 §3.10 起手形(20、27)、觸發位整句重構(16、23、42、46、47)。</li><li><strong>R7 漏譯補回</strong>:37 妖精王 艾爾柏德——舊譯漏「全てのモンスター」的「全部」,照現行文本補回(「地屬性以外的場上的全部怪獸」)。</li><li><strong>§3.4 主要階段</strong>:46 灰翼與 47 機動城的齒輪石魔——<strong>2026-09-09 站主裁示兩卡皆照現行刪「主要階段1」</strong>(效果內容為戰鬥階段相關〔2回攻擊/直接攻擊〕,只有主要階段1 之後有戰鬥階段,MP1 限定由規則天然內建、可省略;guide §3.4已追記通則),原★待裁定案,詳各卡「審查批改」欄。</li><li>卡名與術語沿用庫內既有譯名,未動任何卡名。</li></ul></div>
+<div class="call"><span class="tag">群級判斷點</span><h3>擬稿 × 卡文詞彙表(進站前機檢)</h3><p><code>python script/text_glossary/check_draft.py .scratch/text-rewrite/review-41-monster-05.md</code>——報告全文:glossary-41-monster-05.md。</p><p><strong>50 張進站候選、命中 1 張 / 1 筆(改寫引入 0 筆);舊譯同尺 27 筆。</strong>唯一一筆是 40 真海皇 特萊頓的句式檢查「が存在する場合→有〜存在的場合」——成因是 2026-09-09 站主裁示條件子句不譯出(尾句回到「那之後」依序骨架),裁示即依據,已在該卡「詞彙表殘留」欄寫明理由,隨放行入檔(初稿原為 0 命中,批改後 0 → 1 命中 1 殘留,非擬稿瑕疵)。</p></div>
+<div class="call"><span class="tag">群級判斷點</span><h3>反向檢查(進站前機檢)</h3><p><code>python script/text_rewrite/check_reverse.py .scratch/text-rewrite/review-41-monster-05.md</code>——報告全文:reverse-41-monster-05.md。</p><p><strong>命中 27 張 / 48 筆(R1 21、R2 3、R3 3、R4 3、R6 8、R7 10;卡40 批改後R1 −1、卡46 批改後 R3 +1),逐筆回答寫在各卡「反向檢查」欄,實質改稿 0 筆</strong>。命中大宗是官方現行文本系統性改寫的既知面(R6/R7 18 筆:段尾限制改起手形、戻す→置く、洗牌句刪除、括號構造等,判斷點各有交代);R1 22 筆皆為「零件有先例、組合全庫首見」型(現行文本新句構的直譯,無自造句式);R2 3 筆全是官方段落重排造成的位置錯配(卡4/48)與●內嵌造成的段數差(卡42),非缺發動;R3 2 筆即 46/47 的主要階段點——<strong>2026-09-09 站主裁示兩卡皆刪(戰鬥階段相關效果的 MP1 限定規則天然內建、可省略),原★待裁已定案</strong>,詳各卡「審查批改」欄。</p></div>
+  </section>
+
+  <div class="layout">
+    <nav class="rail" aria-label="卡片索引">
+      <h2>索引</h2>
+      <div class="filters" role="group" aria-label="篩選">
+        <button type="button" data-filter="all" aria-pressed="true">全部</button>
+        <button type="button" data-filter="todo" aria-pressed="false">未裁</button>
+        <button type="button" data-filter="wait" aria-pressed="false">待裁點</button>
+        <button type="button" data-filter="back" aria-pressed="false">退回</button>
+      </div>
+      <ul class="index" id="index"></ul>
+    </nav>
+    <main id="stream"></main>
+  </div>
+</div>
+
+<div class="dock">
+  <div class="dock-in">
+    <span class="tally" id="tally"></span>
+    <span class="spacer"></span>
+    <button type="button" id="btnDiff" aria-pressed="true">對照舊譯:開</button>
+    <button type="button" id="btnReset">清除所有裁示</button>
+    <button type="button" class="primary" id="btnExport">匯出審查結果</button>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-head"><h2>審查結果</h2>
+    <button type="button" id="dlgClose">關閉</button></div>
+  <textarea id="out" readonly></textarea>
+  <div class="dlg-foot">
+    <span class="hint" id="copyHint">整段複製後貼回對話,我依此進站。</span>
+    <button type="button" class="primary" id="btnCopy">複製</button>
+  </div>
+</dialog>
+</div>
+
+<script id="data" type="application/json">{"cards": [{"no": 1, "id": "24104865", "name": "外星人之母", "nameJa": "エーリアン・マザー", "ja": ["①：このカードが戦闘でＡカウンターが置かれているモンスターを破壊したバトルフェイズ終了時に発動する。", "そのモンスターを墓地から可能な限り自分フィールドに特殊召喚する。", "この効果で特殊召喚したモンスターは、このカードがフィールドから離れる時に全て破壊される。"], "jaFaq": ["このカードが戦闘によってAカウンターが乗ったモンスターを破壊し墓地へ送った場合、そのバトルフェイズ終了時に発動する。破壊したそのモンスターを自分フィールド上に特殊召喚する。この効果で特殊召喚したモンスターは、このカードがフィールド上から離れた場合、全て破壊される。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡戰鬥破壞已放置A計數器的怪獸送去墓地的場合，那次戰鬥階段結束時發動。破壞的怪獸在我方場上特殊召喚。此效果特殊召喚的怪獸在此卡從場上離開的場合全部破壞。"], "draft": ["①：此卡戰鬥破壞已放置A計數器的怪獸的戰鬥階段結束時發動。將那些被破壞的怪獸從墓地盡可能在我方場上特殊召喚。此效果特殊召喚的怪獸在此卡從場上離開時全部破壞。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.5(必發→「發動」收尾);觸發句與處理句照吸血鬼 紅男爵 \u003ccode>6917479\u003c/code> ②同構(「此卡戰鬥破壞〜怪獸的戰鬥階段結束時」+「從墓地盡可能在我方場上特殊召喚」逐字);「已放置A計數器」3 例(外星人爆裂兵 \u003ccode>58066722\u003c/code> 等);「從場上離開時」拷問車輪 \u003ccode>54704216\u003c/code> ①同構。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2016-06-30)——誘發效果、必發(そのバトルフェイズ終了時に必ず発動)、不取對象(但處理後持續 take 對象,規則面不入卡文)。官方現行三處重構:(a)刪「墓地へ送った場合、その」——觸發合併為單句「破壊したバトルフェイズ終了時」,舊「送去墓地的場合，那次」不補譯(R6);(b)處理句加寫「墓地から可能な限り」(舊文本無)——照現行補「從墓地盡可能」(R7);(c)尾句「離れた場合」→「離れる時」=「離開時」(時/場合 §3.6 照譯)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1×3——「戰鬥破壞〜的戰鬥階段結束時」紅男爵②同構+「已放置A計數器」3 例代入(組合首見);「從墓地盡可能在我方場上特殊召喚」紅男爵②逐字(回指詞代入致窗口 0 例);「從場上離開時」拷問車輪①同構+「全部破壞」定式(舊譯同段組件)。零件皆有先例,無自造句式。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 2, "id": "24128274", "name": "深海的戰士", "nameJa": "深海の戦士", "ja": ["①：フィールドに「海」が存在する限り、このカードは魔法カードの効果を受けない。"], "jaFaq": ["「海」がフィールド上に存在する限り、このカードは魔法の効果を受けない。"], "jaSegs": 1, "draftSegs": 1, "old": ["只要場上有「海」存在，此卡不受魔法卡的效果影響。"], "draft": ["①：只要場上有「海」存在，此卡不受魔法卡的效果影響。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「只要場上有…存在」§3 限り定式(1,159 例);舊譯句構本就新式,僅補圈號。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-05-28)——永續效果,不冠發動。官方現行「魔法→魔法カード」,舊譯本就譯「魔法卡」,無字面變動。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 3, "id": "24137081", "name": "鑽頭藤壺", "nameJa": "ドリル・バーニカル", "ja": ["①：このカードは直接攻撃できる。", "②：このカードが直接攻撃で相手に戦闘ダメージを与えた場合に発動する。", "このカードの攻撃力は１０００アップする。"], "jaFaq": ["このカードは相手プレイヤーに直接攻撃する事ができる。このカードが直接攻撃によって相手ライフに戦闘ダメージを与える度に、このカードの攻撃力は１０００ポイントアップする。"], "jaSegs": 2, "draftSegs": 2, "old": ["此卡可以向對手玩家直接攻擊。", "此卡直接攻擊給予對手戰鬥傷害時，此卡的攻擊力上升1000。"], "draft": ["①：此卡可以直接攻擊。", "②：此卡直接攻擊給予對手戰鬥傷害的場合發動。此卡的攻擊力上升1000。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;①直攻句定式 64 例(電力客邁拉 \u003ccode>2772236\u003c/code> ①逐字,票11 裁示不寫「玩家」+官方現行已刪相手プレイヤーに);②電力客邁拉②等7 例逐字(「此卡直接攻擊給予對手戰鬥傷害的場合發動。」);§3.5(必發)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-07-09)——①永續、②誘發必發(ダメージ計算後発動)、不取對象。官方現行②「与える度に」→「与えた場合に発動する」=「的場合發動」(度に構造官方自己改掉,照現行);官方分層①②與舊譯換行一致。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 4, "id": "24150026", "name": "機偶無雙 八一八", "nameJa": "カラクリ無双 八壱八", "ja": ["①：このカードは攻撃可能な場合には攻撃しなければならない。", "②：このカードは攻撃した場合、バトルフェイズ終了時に守備表示になる。", "③：攻撃表示のこのカードが攻撃対象に選択された場合に発動する。", "このカードを守備表示にする。"], "jaFaq": ["このカードは攻撃可能な場合には攻撃しなければならない。フィールド上に表側攻撃表示で存在するこのカードが攻撃対象に選択された時、このカードの表示形式を守備表示にする。このカードは攻撃した場合、バトルフェイズ終了時に守備表示になる。"], "jaSegs": 3, "draftSegs": 3, "old": ["此卡可以攻擊的場合必須攻擊。", "場上表側攻擊表示的此卡被選擇作為攻擊對象時，此卡的表示形式變成守備表示。", "此卡攻擊的場合，戰鬥階段結束時變成守備表示。"], "draft": ["①：此卡可以攻擊的場合必須攻擊。", "②：此卡攻擊的場合，戰鬥階段結束時變成守備表示。", "③：攻擊表示的此卡被選擇作為攻擊對象的場合發動。此卡變成守備表示。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;①機偶蛤蟆 四六二四 \u003ccode>75690317\u003c/code> ①逐字(家族先例);③「被選擇作為攻擊對象的場合發動」9 例+處理句「此卡變成守備表示。」召喚僧\u003ccode>423585\u003c/code> ①逐字;「攻擊表示的此卡」22 例;§3.5(③必發)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-11-26)——①③永續/誘發必發、②永續,皆官方明示。②③順序照官方現行文本(與舊譯相反);③官方現行「表側攻撃表示で存在するこのカード」→「攻撃表示のこのカード」、「選択された時」→「された場合」、處理「表示形式を守備表示にする」→「このカードを守備表示にする」,皆照現行譯(時→場合、刪「表側」「表示形式」屬官方改寫,R6 有答)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R2——新②「攻擊的場合，戰鬥階段結束時變成守備表示」被對到標記表 2是\u003cstrong>位置錯配\u003c/strong>:官方現行把段落順序對調,新②對應舊第 3 行(補足明示『このカードは攻撃した場合、…守備表示になる』効果は\u003cstrong>永続\u003c/strong>),不發動不冠「發動」;誘發段是新③、已以「發動」收尾。無改稿。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 5, "id": "24644634", "name": "大植然白橡樹", "nameJa": "ナチュル・ホワイトオーク", "ja": ["①：このカードを対象とする魔法・罠・モンスターの効果を相手が発動した時、フィールドのこのカードを墓地へ送って発動できる。", "デッキからレベル４以下の「ナチュル」モンスター２体を特殊召喚する。", "この効果で特殊召喚したモンスターは攻撃宣言できず、自分エンドフェイズに破壊される。"], "jaFaq": ["このカードが相手のカードの効果の対象になった時、フィールド上のこのカードを墓地へ送って発動できる。デッキからレベル４以下の「ナチュル」と名のついたモンスター２体を特殊召喚する。この効果で特殊召喚したモンスターは攻撃宣言できず、自分のエンドフェイズ時に破壊される。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡成為對手的效果的對象時，將場上的此卡送去墓地可以發動。從牌組將2隻等級4以下的「大植然」怪獸特殊召喚。此效果特殊召喚的怪獸不能攻擊宣言，在我方結束階段破壞。"], "draft": ["①：對手發動以此卡為對象的魔法、陷阱、怪獸的效果時，將場上的此卡送去墓地可以發動。從牌組將2隻等級4以下的「大植然」怪獸特殊召喚。此效果特殊召喚的怪獸不能攻擊宣言，在我方結束階段破壞。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;觸發句「對手發動以〜為對象的魔法、陷阱、怪獸的效果時」同構 14 例(天照大神 \u003ccode>20073910\u003c/code> ①等,「以此卡為對象的魔法、陷阱、怪獸的效果」4 例);§3.6(時照譯);「在我方結束階段破壞」照舊譯(人造人-念力回歸者 \u003ccode>9418534\u003c/code> 同句)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2014-10-30)——誘發即時效果(2速)、選發、不取對象、cost=此卡送去墓地。官方現行把觸發位「相手のカードの効果の対象になった時」重寫為「〜を相手が発動した時」(限定為魔陷怪效果、直接連鎖),照現行譯;「自分のエンドフェイズ時」→「自分エンドフェイズ」舊譯本就作「在我方結束階段」,不動。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「對手發動以此卡為對象的」——同構 14 例(天照大神①等,對象槽代入「此卡」後全庫首見,零件皆有先例);R7——官方重寫觸發位(対象になった時→〜を相手が発動した時),新文本照現行譯出,未漏。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 6, "id": "24943456", "name": "T.G. 強力角鬥士", "nameJa": "ＴＧ パワー・グラディエイター", "ja": ["チューナー＋チューナー以外の「ＴＧ」モンスター１体以上", "①：このカードが守備表示モンスターを攻撃した場合、その守備力を攻撃力が超えた分だけ相手に戦闘ダメージを与える。", "②：フィールドのこのカードが破壊された場合に発動する。", "自分は１枚ドローする。"], "jaFaq": ["チューナー＋チューナー以外の「TG」と名のついたモンスター１体以上", "このカードが守備表示モンスターを攻撃した時、その守備力を攻撃力が超えていれば、その数値だけ相手ライフに戦闘ダメージを与える。フィールド上に存在するこのカードが破壊された時、自分のデッキからカードを１枚ドローする。"], "jaSegs": 2, "draftSegs": 2, "old": ["協調+協調以外的「T.G.」怪獸1隻以上", "此卡向守備表示怪獸攻擊時，給予對手攻擊力超過那個守備力的數值的戰鬥傷害。", "場上的此卡被破壞時，從我方牌組抽1張卡。"], "draft": ["協調+協調以外的「T.G.」怪獸1隻以上", "①：此卡向守備表示怪獸攻擊的場合，給予對手攻擊力超過那個守備力的數值的戰鬥傷害。", "②：場上的此卡被破壞的場合發動。我方抽1張卡。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2(素材行效果外);①貫通句定式 132 例(時→場合照現行);②「場上的此卡被破壞的場合」月影龍 奎拉 \u003ccode>66818682\u003c/code> ②同構;「發動。我方抽1張卡」73 例;§3.5(必發)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-02-12)——①永續、②誘發必發(傷害步驟亦可發動)。官方現行②「デッキからカードを」→「自分は１枚ドローする」,刪「從我方牌組」不補譯(R6);①「超えていれば、その数値だけ」→「超えた分だけ」,中文貫通定式本就同義。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 7, "id": "25109950", "name": "荒島的小劍士", "nameJa": "アイルの小剣士", "ja": ["①：自分フィールドの他のモンスター１体をリリースして発動できる。", "このカードの攻撃力はターン終了時まで７００アップする。"], "jaFaq": ["自分のフィールド上に存在するこのカードを除くモンスター１体を生け贄に捧げる度に、このカードの攻撃力はターン終了時まで７００ポイントアップする。"], "jaSegs": 1, "draftSegs": 1, "old": ["解放此卡以外的我方場上1隻怪獸可以發動。此卡的攻擊力直到回合結束時上升700。"], "draft": ["①：將我方場上1隻其他怪獸解放可以發動。此卡的攻擊力直到回合結束時上升700。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;cost 句「將我方場上1隻其他怪獸解放可以發動」——同 ja 句(自分フィールドの他のモンスター１体をリリースして発動できる)庫內 5 卡,4 卡作「將我方場上1隻其他怪獸解放」(心靈交錯惡魔 \u003ccode>52644170\u003c/code> ②等)vs 1 卡「解放我方場上1隻其他怪獸」,取多數形(R4);「直到回合結束時上升700」照舊譯。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2020-04-01)——啟動效果、不取對象、cost=解放(裡側亦可)。官方現行「このカードを除く」→「他の」=「其他」;舊日文的「度に」古式官方已改為標準起動句,照現行。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 8, "id": "25132288", "name": "光之終結龍", "nameJa": "ライトエンド・ドラゴン", "ja": ["チューナー＋チューナー以外の光属性モンスター１体以上", "①：このカードが相手モンスターと戦闘を行う攻撃宣言時に発動できる。", "このカードの攻撃力・守備力を５００ダウンし、戦闘を行う相手モンスターの攻撃力・守備力はターン終了時まで１５００ダウンする。"], "jaFaq": ["チューナー＋チューナー以外の光属性モンスター１体以上", "このカードが相手モンスターと戦闘を行う攻撃宣言時に発動できる。このカードの攻撃力・守備力を５００ポイントダウンし、戦闘を行う相手モンスターの攻撃力・守備力はエンドフェイズ時まで１５００ポイントダウンする。"], "jaSegs": 1, "draftSegs": 1, "old": ["協調+協調以外的光屬性怪獸1隻以上", "此卡和對手怪獸進行戰鬥的攻擊宣言時可以發動。此卡的攻擊力、守備力下降500，進行戰鬥的對手怪獸的攻擊力、守備力直到回合結束時下降1500。"], "draft": ["協調+協調以外的光屬性怪獸1隻以上", "①：此卡和對手怪獸進行戰鬥的攻擊宣言時可以發動。此卡的攻擊力、守備力下降500，進行戰鬥的對手怪獸的攻擊力、守備力直到回合結束時下降1500。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2;舊譯句構本就新式,僅補圈號。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2016-11-17)——誘發效果、選發、不取對象;「攻撃力・守備力を５００ダウンし」補足明示為\u003cstrong>處理\u003c/strong>非 cost(処理時に…同時に行われる扱い),舊譯放在處理位正確,不動。官方讀替(エンドフェイズ時→ターン終了時)舊譯本就作「直到回合結束時」,現行文本已同步。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 9, "id": "25163248", "name": "先史遺產 瑪雅機械", "nameJa": "先史遺産マヤン・マシーン", "ja": ["①：機械族モンスターをＡ召喚する場合、このカードは２体分のリリースにできる。"], "jaFaq": ["機械族モンスターをアドバンス召喚する場合、このカードは２体分のリリースとする事ができる。"], "jaSegs": 1, "draftSegs": 1, "old": ["機械族怪獸上級召喚的場合，此卡可以當作2隻解放。"], "draft": ["①：機械族怪獸上級召喚的場合，此卡可以當作2隻解放。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「〜怪獸上級召喚的場合，此卡可以當作2隻解放。」15 例逐字構(雙生天使 \u003ccode>11662742\u003c/code> ①、暴風小子 \u003ccode>15090429\u003c/code> ①等);舊譯=定式,僅補圈號。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-10-15)——無種類效果(四類皆非、不組連鎖),照票11裁示進圈號、不冠發動,官方現行文本自帶①背書。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 10, "id": "25206027", "name": "異界的棘紫龍", "nameJa": "異界の棘紫竜", "ja": ["①：自分フィールドのモンスターが戦闘・効果で破壊され墓地へ送られた場合に発動できる。", "このカードを手札から特殊召喚する。"], "jaFaq": ["自分フィールド上のモンスターが戦闘またはカードの効果によって破壊され墓地へ送られた場合、このカードを手札から特殊召喚できる。"], "jaSegs": 1, "draftSegs": 1, "old": ["我方場上的怪獸被戰鬥或效果破壞送去墓地的場合，此卡可以從手牌特殊召喚。"], "draft": ["①：我方場上的怪獸被戰鬥、效果破壞送去墓地的場合可以發動。此卡從手牌特殊召喚。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§4.4(誘發缺發動→補「可以發動。」收尾、處理句另起);「被戰鬥、效果破壞送去墓地的場合可以發動」10 例;處理句「此卡從手牌特殊召喚。」504 例(§4.4 庫內實證:誘發 1速 手牌特召 201 條全有「發動」)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2016-10-27)——手牌發動的誘發效果、選發(発動する事ができる)、不取對象、傷害步驟亦可。官方現行「戦闘またはカードの効果によって」→「戦闘・効果で」=「被戰鬥、效果破壞」(舊譯「或」改「、」照現行);「特殊召喚できる」→「発動できる。特殊召喚する」拆發動句+處理句,照現行。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 11, "id": "25247218", "name": "大塊石魔", "nameJa": "ビッグ・ピース・ゴーレム", "ja": ["①：相手フィールドにのみモンスターが存在する場合、このカードはリリースなしで召喚できる。"], "jaFaq": ["相手フィールド上にモンスターが存在し、自分フィールド上にモンスターが存在しない場合、このカードはリリースなしで召喚する事ができる。"], "jaSegs": 1, "draftSegs": 1, "old": ["對手場上有怪獸存在，我方場上沒有怪獸存在的場合，此卡可以不用解放來召喚。"], "draft": ["①：只有對手場上有怪獸存在的場合，此卡可以不用解放來召喚。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「只有對手場上有怪獸存在的場合」29 例(票15 依電子龍 \u003ccode>70095154\u003c/code> 同裁,地翔星 疾風 \u003ccode>7443908\u003c/code> ①同構);「可以不用解放來召喚」照舊譯(11 例,票15 沿用)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2016-11-17)——無種類效果,照票11 裁示進圈號、不冠發動,官方現行自帶①。官方現行把兩子句條件合併為「相手フィールドにのみ」,照現行改「只有對手場上」;舊譯的雙子句形不補譯(R6)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 12, "id": "25654671", "name": "大植然蜘蛛牙", "nameJa": "ナチュル・スパイダーファング", "ja": ["①：このカードは、相手が魔法・罠・モンスターの効果を発動したターンでなければ攻撃宣言できない。"], "jaFaq": ["このカードは、相手が魔法・罠・効果モンスターの効果を発動したターンでなければ攻撃宣言できない。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡除了在對手已發動魔法、陷阱、怪獸的效果的回合以外不能攻擊宣言。"], "draft": ["①：此卡除了在對手已發動魔法、陷阱、怪獸的效果的回合以外不能攻擊宣言。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「以外不能攻擊宣言」26 例;舊譯句構照留、僅補圈號(該 ja 句形庫內僅 2 卡且皆為它形,無定式可對齊,保守照譯)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-09-24)——永續效果,不冠發動。官方現行「効果モンスター」→「モンスター」,舊譯本就譯「怪獸的效果」,無字面變動。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 13, "id": "25771826", "name": "正義盟軍 螺旋雷劍", "nameJa": "Ａ・Ｏ・Ｊ ガラドホルグ", "ja": ["①：このカードは光属性モンスターと戦闘を行うダメージステップの間、攻撃力が２００アップする。"], "jaFaq": ["このカードは光属性モンスターと戦闘を行う場合、ダメージステップの間、攻撃力が２００ポイントアップする。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡和光屬性怪獸進行戰鬥的場合，傷害步驟期間攻擊力上升200。"], "draft": ["①：此卡和光屬性怪獸進行戰鬥的傷害步驟期間，攻擊力上升200。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「和〜進行戰鬥的傷害步驟期間」稀有金屬騎士\u003ccode>1412158\u003c/code> ①同構(同 ja 句形 8 例)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-04-16)——永續效果,不冠發動。官方現行把「行う場合、ダメージステップの間」合併為「行うダメージステップの間」,照現行合併;舊譯的「的場合，」不補譯(R6)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 14, "id": "25773409", "name": "傳說的柔術家", "nameJa": "伝説の柔術家", "ja": ["①：守備表示のこのカードがモンスターと戦闘を行ったダメージステップ終了時に発動する。", "そのモンスターをデッキの一番上に置く。"], "jaFaq": ["フィールド上に守備表示で存在するこのカードと戦闘を行ったモンスターは、ダメージステップ終了時に持ち主のデッキの一番上に戻る。"], "jaSegs": 1, "draftSegs": 1, "old": ["與場上守備表示存在的此卡進行戰鬥的怪獸，在傷害步驟結束時，回到持有者的牌組最上方。"], "draft": ["①：守備表示的此卡和怪獸進行戰鬥的傷害步驟結束時發動。那隻怪獸放置在牌組最上方。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.5(必發→「發動」收尾);觸發句「和怪獸進行戰鬥的傷害步驟結束時發動」冥界龍 龍亡 \u003ccode>8198620\u003c/code> ③逐字(「的傷害步驟結束時發動」18 例);「守備表示的此卡」12 例;「放置在牌組最上方」置く 33 ja 卡多數形。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-02-12)——誘發效果、必發、不取對象。官方現行整句重構:主語從「戦闘を行ったモンスター」改為「守備表示のこのカード」+誘發句式、「持ち主のデッキの一番上に戻る」→「デッキの一番上に置く」(刪「持有者的」、戻る→置く),照現行譯,舊句形不補譯(R6/R7 有答)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1×2——「守備表示的此卡和怪獸進行戰鬥的傷害步驟結束時發動」=「守備表示的此卡」12 例+冥界龍 龍亡③逐字觸發句的組合;「放置在牌組最上方」置く 33 ja 卡多數形(光來的奇蹟等,窗口跨「那隻怪獸」致 0 例)。R4「回到持有者的→放置在」——\u003cstrong>非用詞替換\u003c/strong>:官方現行把 戻る 改寫為 置く,「回到」對應 戻る、「放置在」對應 置く,各司其職;舊形 6 例全是 戻る 句的譯文,不適用本卡。無改稿。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 15, "id": "25866285", "name": "大植然椿象", "nameJa": "ナチュル・スティンクバグ", "ja": ["①：自分の「ナチュル」モンスターが攻撃対象に選択された時、フィールドのこのカードを墓地へ送って発動できる。", "その攻撃を無効にする。", "その後、バトルフェイズを終了する。"], "jaFaq": ["自分フィールド上の「ナチュル」と名のついたモンスターが攻撃対象になった時、フィールド上のこのカードを墓地へ送って発動できる。その攻撃を無効にし、バトルフェイズを終了する。"], "jaSegs": 1, "draftSegs": 1, "old": ["我方場上的「大植然」怪獸成為攻擊對象時，將場上的此卡送去墓地可以發動。那次攻擊無效，戰鬥階段結束。"], "draft": ["①：我方的「大植然」怪獸被選擇作為攻擊對象時，將場上的此卡送去墓地可以發動。那次攻擊無效。那之後，戰鬥階段結束。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「被選擇作為攻擊對象時」海晶少女 水晶之心\u003ccode>67712104\u003c/code> ③同構;「那次攻擊無效」78 例;§3.15(その後→「那之後，」另起句,PSY骨架裝備β \u003ccode>2810642\u003c/code> ①「那之後，戰鬥階段結束。」同構)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2014-11-14)——誘發即時效果(2速)、選發、不取對象、cost=此卡送去墓地。官方現行「攻撃対象になった時」→「攻撃対象に選択された時」=「被選擇作為攻擊對象時」;「無効にし、終了する」拆為「無効にする。その後、終了する」兩句(依序結算),照現行拆「。那之後，」;「自分フィールド上の」→「自分の」=「我方的」(刪「場上」照現行,R6)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 16, "id": "25988873", "name": "龍盟-長槍龍", "nameJa": "ドラグニティ－パルチザン", "ja": ["①：このカードが召喚した時に発動できる。", "手札から鳥獣族の「ドラグニティ」モンスター１体を特殊召喚する。", "その後、自分フィールドのこのカードを装備魔法カード扱いでそのモンスターに装備する。", "②：装備モンスターをチューナーとして扱う。"], "jaFaq": ["このカードが召喚に成功した時に発動できる。手札から「ドラグニティ」と名のついた鳥獣族モンスター１体を特殊召喚し、さらにこのカードを装備カード扱いとして装備する。このカードが装備カード扱いとして装備されている場合、装備モンスターをチューナーとして扱う。"], "jaSegs": 2, "draftSegs": 2, "old": ["此卡召喚成功時可以發動。從手牌將1隻鳥獸族的「龍盟」怪獸特殊召喚，那之後將此卡當作裝備卡來裝備。", "此卡已當作裝備卡裝備的場合，裝備怪獸當作協調。"], "draft": ["①：此卡召喚成功時可以發動。從手牌將1隻鳥獸族的「龍盟」怪獸特殊召喚。那之後，我方場上的此卡當作裝備魔法卡給那隻怪獸裝備。", "②：裝備怪獸當作協調。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;①家族逐字先例:龍盟-小標槍龍 \u003ccode>36870345\u003c/code> ①(ja 同構「が召喚した時に発動できる。…その後、自分フィールドの…このカードを装備魔法カード扱いでその…モンスターに装備する」,zh「此卡召喚成功時可以發動。…那之後，我方場上的…此卡當作裝備卡給那隻…怪獸裝備。」)——「召喚成功時」照家族先例與舊譯;「當作裝備魔法卡」58 例(装備魔法カード扱い的正對應;小標槍龍的「裝備卡」對應寬鬆,本卡照字面);§3.15(その後 另起句)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-11-23)——①誘發、選發、不取對象(召喚直後限定);②官方明示「装備魔法カードの、チェーンブロックの作られない効果」=\u003cem class=\"term\">裝備魔法卡效果\u003c/em>(現行標記表 src=llm,kind 補判時有官方明示可據)。官方現行①處理拆兩句(さらに→その後、),②的前提子句「装備されている場合」官方已刪、獨立成②,照現行不補譯(R6);②該句獨立成段全庫唯一,片語照蓋亞推進器 \u003ccode>56727340\u003c/code>(「裝備怪獸當作協調」)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R7——官方新寫「その後、自分フィールドのこのカードを装備魔法カード扱いでそのモンスターに装備する」,新文本已照現行譯出(「那之後，我方場上的此卡當作裝備魔法卡給那隻怪獸裝備」,小標槍龍①家族同構),未漏。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 17, "id": "26046205", "name": "惡忍", "nameJa": "悪シノビ", "ja": ["①：攻撃表示のこのカードが攻撃対象に選択される度に発動する。", "自分は１枚ドローする。"], "jaFaq": ["フィールド上に表側攻撃表示で存在するこのカードが攻撃対象に選択された時、自分のデッキからカードを１枚ドローする。"], "jaSegs": 1, "draftSegs": 1, "old": ["場上的表側攻擊表示的此卡被選擇作為攻擊對象時，從我方牌組抽1張卡。"], "draft": ["①：每次攻擊表示的此卡被選擇作為攻擊對象發動。我方抽1張卡。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.5(必發);「每次〈事件〉發動。」度に定式 35 例(花樣明星 蜀葵天使 \u003ccode>32448765\u003c/code> ③同構);「攻擊表示的此卡」22 例、「被選擇作為攻擊對象」定式;「發動。我方抽1張卡」73 例。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-02-26)——誘發效果、必發、不取對象;補足明示同回合複數次被選擇則每次發動(=度に),官方現行文本從「された時」改寫「される度に」正是此意,照現行用「每次」。「表側攻撃表示で存在する」→「攻撃表示の」、「デッキから」刪除,照現行(R6)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「每次攻擊表示的此卡」——「每次〈事件〉發動」度に定式 35 例×「攻擊表示的此卡」22 例×「被選擇作為攻擊對象」定式的組合;本卡日文「選択される度に発動する」全庫唯一,零件皆有先例。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 18, "id": "26082229", "name": "侵略的炎", "nameJa": "侵略の炎", "ja": ["①：このカードの召喚成功時にお互いは罠カードを発動できない。"], "jaFaq": ["このカードが召喚に成功した時、罠カードを発動する事はできない。"], "jaSegs": 1, "draftSegs": 1, "old": ["在此卡召喚成功時，陷阱卡不能發動。"], "draft": ["①：在此卡召喚成功時，雙方不能發動陷阱卡。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「在此卡的召喚成功時，雙方不能發動〜」歐西里斯的天空龍 \u003ccode>10000020\u003c/code> /歐貝利斯克的巨神兵 \u003ccode>10000000\u003c/code> ②逐字構(ja 同為「このカードの召喚成功時にお互いは〜を発動できない」,神之卡三張同式)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-11-05)——永續效果,不冠發動;僅召喚成功那個時點雙方不可發動(補足明示お互いのプレイヤー),官方現行加寫「お互いは」=「雙方」,照現行補(R7);舊譯無主語形不沿用。", "items": []}, {"label": "互查", "flag": "", "text": "舊譯「陷阱卡不能發動」缺「雙方」主語——官方現行已明寫,補回。", "items": []}]}, {"no": 19, "id": "26084285", "name": "守墓的監視者", "nameJa": "墓守の監視者", "ja": ["①：相手が自身の手札を捨てる効果を含むモンスターの効果・魔法・罠カードを発動した時、このカードを手札から墓地へ送って発動できる。", "その発動を無効にし破壊する。"], "jaFaq": ["相手プレイヤーが自らの手札を捨てる効果を含むカードを発動した時、このカードを手札から墓地に送る事で、その発動と効果を無効にしてそのカードを破壊する。"], "jaSegs": 1, "draftSegs": 1, "old": ["對手發動包含捨棄自身手牌的效果的怪獸的效果、魔法、陷阱卡時，將此卡從手牌送去墓地可以發動。那個發動無效並破壞。"], "draft": ["①：對手發動包含捨棄自身手牌的效果的怪獸的效果、魔法、陷阱卡時，將此卡從手牌送去墓地可以發動。那個發動無效並破壞。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;舊譯句構本就新式(§4.6 藉由句在舊日文,查牌網已照現行文本現代化),僅補圈號;「那個發動無效並破壞」定式(聖刻天龍-九柱神\u003ccode>3292267\u003c/code> ①等)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2020-04-01)——手牌發動的誘發即時效果(2速)、選發、不取對象、cost=此卡送去墓地、傷害步驟亦可;不可連鎖魔陷「效果的發動」(規則面,不入卡文)。舊譯與現行文本逐位對應,零字面變動。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 20, "id": "26157485", "name": "鐵鍊射手", "nameJa": "Ｃ・シューター", "ja": ["①：１ターンに１度、自分フィールドの「Ｃ」モンスター１体を墓地へ送って発動できる。", "相手に８００ダメージを与える。"], "jaFaq": ["自分フィールド上に存在する「C」と名のついたモンスター１体を墓地へ送って発動する。相手ライフに８００ポイントダメージを与える。この効果は１ターンに１度しか使用できない。"], "jaSegs": 1, "draftSegs": 1, "old": ["將我方場上的1隻「鐵鍊」怪獸送去墓地可以發動。給予對手800傷害。這個效果1回合只能使用1次。"], "draft": ["①：1回合1次，將我方場上的1隻「鐵鍊」怪獸送去墓地可以發動。給予對手800傷害。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.10 起手形「①：1回合1次，」643 例;cost 句照舊譯(「1回合1次，將我方場上」29 例)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-05-11)——啟動效果、不取對象、cost=送墓(表側限定,可送自身)。官方現行把段尾「この効果は１ターンに１度しか使用できない」改寫為段首「１ターンに１度、」,照現行改 §3.10 起手形,段尾句不保留(R6)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R6「この効果は１ターンに１度しか使用できない」——官方現行已把段尾限制改寫為段首「１ターンに１度、」,新文本以起手形承載同一限制,非漏譯亦非保留舊句(判斷點已載)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 21, "id": "26254876", "name": "二重槍兵", "nameJa": "デュアル・ランサー", "ja": ["①：このカードはフィールド・墓地に存在する限り、通常モンスターとして扱う。", "②：フィールドの通常モンスター扱いのこのカードを通常召喚としてもう１度召喚できる。", "その場合このカードは効果モンスター扱いとなり以下の効果を得る。", "●このカードが守備表示モンスターを攻撃した場合、その守備力を攻撃力が超えた分だけ相手に戦闘ダメージを与える。"], "jaFaq": ["このカードは墓地またはフィールド上に表側表示で存在する場合、通常モンスターとして扱う。フィールド上に表側表示で存在するこのカードを通常召喚扱いとして再度召喚する事で、このカードは効果モンスター扱いとなり以下の効果を得る。", "●このカードが守備表示モンスターを攻撃した時、その守備力を攻撃力が超えていれば、その数値だけ相手ライフに戦闘ダメージを与える。"], "jaSegs": 2, "draftSegs": 2, "old": ["只要此卡在場上、墓地存在，此卡當作通常怪獸。", "可以將場上的當作通常怪獸的此卡作為通常召喚再次召喚。那個場合此卡變成當作效果怪獸並得到以下效果。", "●此卡攻擊守備表示怪獸時，給予對手攻擊力超過那個守備力的數值的戰鬥傷害。"], "draft": ["①：只要此卡在場上、墓地存在，此卡當作通常怪獸。", "②：可以將場上的當作通常怪獸的此卡作為通常召喚再次召喚。那個場合此卡變成當作效果怪獸並得到以下效果。", "●此卡向守備表示怪獸攻擊的場合，給予對手攻擊力超過那個守備力的數值的戰鬥傷害。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;二重怪獸 2026-08-26 站主裁示形狀(領起句採 21 張多數形=舊譯原句;票15 三張同式);①舊譯原句照留;●貫通句定式 132 例(「攻擊守備表示怪獸時」→「向守備表示怪獸攻擊的場合」對齊定式,時→場合照現行)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-09-10)——①無種類效果(官方明示四類皆非)、②領起句「モンスターの効果の扱いではありません」=效果外文本、●永續效果,標記表現形 \u003ccode>[1]無種類+[0]效果外+[2]永續\u003c/code> 已合裁示。\u003cstrong>補足引號錨在舊文本\u003c/strong>(●引『攻撃した時、…超えていれば』,現行為「した場合、…超えた分だけ」)——同拜融/艾蕾莎,●拆句授權預期讀不到,kind 補判照霧區處置取●實質類型(永續,官方明示),正形修復歸霧區另案(拆句霧區屆時 7 → 8 張)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 22, "id": "26304459", "name": "上古炎獄之神", "nameJa": "エンシェント・ゴッド・フレムベル", "ja": ["炎属性チューナー＋チューナー以外の炎族モンスター１体以上", "①：このカードがＳ召喚した場合に発動する。", "相手の手札の数まで相手の墓地のカードを除外する。", "このカードの攻撃力は、この効果で除外したカードの数×２００アップする。"], "jaFaq": ["炎属性チューナー＋チューナー以外の炎族モンスター１体以上", "このカードがシンクロ召喚に成功した時、相手の手札の枚数分まで相手の墓地のカードを選択してゲームから除外する。このカードの攻撃力は、この効果で除外したカードの数×２００ポイントアップする。"], "jaSegs": 1, "draftSegs": 1, "old": ["炎屬性協調+協調以外的炎族怪獸1隻以上", "此卡同步召喚成功時，最多到對手的手牌數量，選對手墓地的卡除外。此卡的攻擊力上升此效果除外的卡片數量×200。"], "draft": ["炎屬性協調+協調以外的炎族怪獸1隻以上", "①：此卡同步召喚的場合發動。最多到對手的手牌數量，將對手墓地的卡除外。此卡的攻擊力上升此效果除外的卡片數量×200。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2;§3.5(必發);「此卡同步召喚的場合發動。」朱羅紀隕星龍 \u003ccode>17548456\u003c/code> ①逐字(同 ja 形 6 例);「最多到對手的手牌數量」地縛神 Wiraqocha Rasca \u003ccode>41181774\u003c/code> ②唯一同構(=舊譯);「此效果除外的卡片數量」5 例。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-11-23)——誘發效果、必發、不取對象(処理時に選び)。官方現行「成功した時」→「した場合に発動する」(時→場合+補發動句)、刪「選択して」與「ゲームから」——舊譯「選」不保留(R6,選擇動作官方改寫時已收進處理內);兩段處理補足明示同時執行,句序照現行。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「將對手墓地的卡除外」——官方現行刪「選択して」後的直譯;「對手墓地〜除外」組件常見(三叉龍的鼓動●2「對手墓地1張卡除外」等),本卡無數量詞(手牌數上限制)故窗口 0 例,零件皆有先例。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 23, "id": "26381750", "name": "紅蓮地帶的飛鷹", "nameJa": "紅蓮地帯を飛ぶ鷹", "ja": ["①：このカードがＳ素材として墓地へ送られた場合に発動できる。", "自分の墓地の「ラヴァル」モンスターが３種類以上の場合、このカードを墓地から特殊召喚する。", "この効果で特殊召喚したこのカードは、フィールドから離れた場合に除外される。"], "jaFaq": ["このカードがシンクロモンスターのシンクロ召喚に使用され墓地へ送られた場合に自分の墓地の「ラヴァル」と名のついたモンスターが３種類以上の場合、このカードを墓地から特殊召喚できる。この効果で特殊召喚したこのカードは、フィールド上から離れた場合ゲームから除外される。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡被同步怪獸的同步召喚使用送去墓地的場合，我方墓地有3種以上「熔岩」怪獸存在的場合，此卡可以從墓地特殊召喚。此效果特殊召喚的此卡從場上離開的場合被除外。"], "draft": ["①：此卡作為同步素材送去墓地的場合可以發動。我方墓地有3種以上「熔岩」怪獸存在的場合，此卡從墓地特殊召喚。此效果特殊召喚的此卡從場上離開的場合被除外。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「此卡作為同步素材送去墓地的場合可以發動。」噴射同步者 \u003ccode>9742784\u003c/code> ①逐字(同構 54 卡);條件子句照舊譯(「有3種以上」7 例);「此卡從墓地特殊召喚」106 例;「從場上離開的場合被除外」234 例。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-06-04)——墓地發動的誘發效果、選發(発動する事ができる)、發動時即需 3 種類條件,處理=特殊召喚完結。官方現行「シンクロモンスターのシンクロ召喚に使用され」→「Ｓ素材として」=「作為同步素材」;發動句與條件子句拆開照現行(発動できる。→條件、特殊召喚する)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 24, "id": "26495087", "name": "吸血鬼淑女", "nameJa": "ヴァンパイア・レディ", "ja": ["①：このカードが相手に戦闘ダメージを与えた場合、カードの種類（モンスター・魔法・罠）を宣言して発動する。", "相手は宣言された種類のカード１枚をデッキから墓地へ送る。"], "jaFaq": ["このカードが相手プレイヤーに戦闘ダメージを与える度に、カードの種類（モンスター、魔法、罠）を宣言する。相手はデッキからその種類のカード１枚を選択して墓地に送る。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡給予對手戰鬥傷害時，宣言卡的種類（怪獸、魔法、陷阱）發動。對手從牌組選1張那個種類的卡送去墓地。"], "draft": ["①：此卡給予對手戰鬥傷害的場合，宣言卡的種類（怪獸、魔法、陷阱）發動。對手從牌組將1張宣言種類的卡送去墓地。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.5(必發);家族同構先例:吸血鬼領主 \u003ccode>53839837\u003c/code> ①(「①：此卡給予對手戰鬥傷害的場合，宣言1個卡的種類（怪獸、魔法、陷阱）發動。對手從自身牌組將1張宣言種類的卡送去墓地。」)——本卡日文無「１つ」「自身の」,對應處不譯出;「宣言的種類」8 例。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2016-01-21)——誘發效果、必發(ダメージ計算後)、不取對象。官方現行「与える度に」→「与えた場合」=「的場合」(時→場合照現行);「選択して」官方已刪,舊譯「選」不保留(R6);「その種類」→「宣言された種類」=「宣言種類」照領主。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R7——官方新寫「相手は宣言された種類のカード１枚をデッキから墓地へ送る」,新文本照吸血鬼領主①同構句譯出(「對手從牌組將1張宣言種類的卡送去墓地」),未漏。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 25, "id": "26669055", "name": "靜寂的聖者", "nameJa": "静寂の聖者", "ja": ["①：このカードが戦闘で相手モンスターを破壊した場合に発動する。", "相手は次のターン魔法カードを発動できない。"], "jaFaq": ["このカードが戦闘によって相手モンスターを破壊した場合、相手プレイヤーは次のターン魔法カードを発動できない。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡戰鬥破壞對手怪獸的場合，對手玩家在下個回合不能發動魔法卡。"], "draft": ["①：此卡戰鬥破壞對手怪獸的場合發動。對手在下個回合不能發動魔法卡。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.5(必發→「的場合發動」531 例);「此卡戰鬥破壞對手怪獸」定式;處理句日文全庫唯一,「在下個回合」24 例、「不能發動魔法卡」組件直譯。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-03-05)——傷害步驟結束時發動的誘發效果、必發、不取對象;禁的是魔法卡的「卡的發動」(規則面,不入卡文)。官方現行「相手プレイヤーは」→「相手は」,刪「玩家」照現行(R6);觸發句補「發動」收尾照 §4.4 對應。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「對手在下個回合不能發動魔法卡」——本卡處理句日文全庫唯一,照現行直譯;「在下個回合」24 例、「不能發動魔法卡」組件有據,刪「玩家」對應官方現行刪プレイヤー。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 26, "id": "26704411", "name": "魔轟神獸 石化雞", "nameJa": "魔轟神獣コカトル", "ja": ["①：このカードが戦闘で相手モンスターを破壊し墓地へ送った時、手札から「魔轟神」モンスター１体を捨てて発動できる。", "自分は１枚ドローする。"], "jaFaq": ["このカードが戦闘によって相手モンスターを破壊し墓地へ送った時、手札から「魔轟神」と名のついたモンスター１体を捨てて発動できる。デッキからカードを１枚ドローする。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡戰鬥破壞對手怪獸送去墓地時，從手牌捨棄1隻「魔轟神」怪獸可以發動。從牌組抽1張卡。"], "draft": ["①：此卡戰鬥破壞對手怪獸送去墓地時，從手牌捨棄1隻「魔轟神」怪獸可以發動。我方抽1張卡。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;發動句照舊譯(句構本就新式);處理句「可以發動。我方抽1張卡」55 例。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-07-13)——誘發效果、選發(任意に発動)、不取對象、cost=手牌捨棄。官方現行「デッキからカードを１枚ドローする」→「自分は１枚ドローする」=「我方抽1張卡」,舊譯「從牌組」不保留(R6)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 27, "id": "26842483", "name": "正義使者", "nameJa": "ジャスティス・ブリンガー", "ja": ["①：１ターンに１度、相手フィールドの特殊召喚されたモンスターの効果が発動した時に発動できる。", "その発動を無効にする。"], "jaFaq": ["相手フィールド上に存在する特殊召喚したモンスターの効果が発動した時に発動する事ができる。その発動を無効にする。この効果は１ターンに１度しか使用できない。"], "jaSegs": 1, "draftSegs": 1, "old": ["1回合1次，對手場上的特殊召喚的怪獸的效果發動時可以發動。那個發動無效。"], "draft": ["①：1回合1次，對手場上的特殊召喚的怪獸的效果發動時可以發動。那個發動無效。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.10 起手形;「的效果發動時可以發動」73 例;舊譯已把段尾次數限制譯成起手形,與官方現行文本一致,僅補圈號。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2018-01-25)——誘發即時效果(2速)、不取對象、直接連鎖、傷害步驟亦可;同名複數各自 1 次(=效果內限制,非卡名計,§3.10 段內形正確)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R6「この効果は１ターンに１度しか使用できない」——官方現行已改寫為段首「１ターンに１度、」,舊譯本就譯成起手形、新文本沿用,非漏譯亦非保留舊句。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 28, "id": "26993374", "name": "X-軍刀 烏魯玆", "nameJa": "Ｘ－セイバー ウルズ", "ja": ["①：このカードが戦闘で相手モンスターを破壊し墓地へ送った時、このカードをリリースして発動できる。", "その破壊したモンスターをデッキの一番上に置く。"], "jaFaq": ["このカードが戦闘によって相手モンスターを破壊し墓地へ送った時、このカードをリリースして発動できる。破壊したそのカードを持ち主のデッキの一番上に戻す。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡戰鬥破壞對手怪獸送去墓地時，解放此卡可以發動。破壞的卡回到持有者的牌組最上方。"], "draft": ["①：此卡戰鬥破壞對手怪獸送去墓地時，解放此卡可以發動。那隻破壞的怪獸放置在牌組最上方。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;發動句照舊譯(「解放此卡可以發動」43 例合法形,不改動);處理句「放置在牌組最上方」置く 33 ja 卡多數形;「那隻破壞的怪獸」照現行その破壊したモンスター(明亮火花 \u003ccode>3105404\u003c/code> ①「那隻怪獸」同式回指)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2016-12-01)——誘發效果、選發、不取對象、傷害步驟結束時。官方現行「破壊したそのカードを持ち主のデッキの一番上に戻す」→「その破壊したモンスターをデッキの一番上に置く」:カード→モンスター=「怪獸」、刪「持有者的」、戻す→置く=「放置」,皆照現行(R6 有答)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「那隻破壞的怪獸放置在牌組最上方」——「那隻破壞的怪獸」照現行その破壊したモンスター回指+「放置在牌組最上方」置く 33 ja 卡多數形,組合首見、零件有據。R4「回到持有者的→放置在」——非用詞替換:官方把戻す 改寫為 置く,舊形 253 例全是 戻す 句的譯文;「放置在」16 例正是置く 句的既有對應,照官方現行改寫走。無改稿。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 29, "id": "27407330", "name": "光芒使者 古雷法", "nameJa": "ライトレイ グレファー", "ja": ["①：このカードは手札からレベル５以上の光属性モンスター１体を捨てて、手札から特殊召喚できる。", "②：１ターンに１度、手札から光属性モンスター１体を捨てて発動できる。", "デッキから光属性モンスター１体を除外する。"], "jaFaq": ["このカードは手札からレベル５以上の光属性モンスター１体を捨てて、手札から特殊召喚できる。１ターンに１度、手札から光属性モンスター１体を捨てて発動できる。デッキから光属性モンスター１体を選び、ゲームから除外する。"], "jaSegs": 2, "draftSegs": 2, "old": ["此卡可以從手牌捨棄1隻等級5以上的光屬性怪獸，從手牌特殊召喚。", "1回合1次，從手牌捨棄1隻光屬性怪獸可以發動。從牌組選1隻光屬性怪獸除外。"], "draft": ["①：此卡可以從手牌捨棄1隻等級5以上的光屬性怪獸，從手牌特殊召喚。", "②：1回合1次，從手牌捨棄1隻光屬性怪獸可以發動。從牌組將1隻光屬性怪獸除外。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;①舊譯照留(無種類效果的手牌特召許可句,§4.4排除族);②起手形照舊譯;處理句「從牌組將1隻〜除外」定式。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2019-01-28)——①無種類效果(官方明示四類皆非、不組連鎖),照票11 裁示進圈號、官方現行自帶①;②啟動效果、不取對象、cost=手牌捨棄。官方現行②刪「選び」與「ゲームから」——舊譯「選」不保留(R6)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 30, "id": "27408609", "name": "黃金人工生命體", "nameJa": "黄金のホムンクルス", "ja": ["①：このカードの攻撃力・守備力は、自分の除外状態のカードの数×３００アップする。"], "jaFaq": ["このカードの攻撃力・守備力は、ゲームから除外されている自分のカードの数×３００ポイントアップする。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡的攻擊力、守備力上升被除外的我方的卡片數量×300。"], "draft": ["①：此卡的攻擊力、守備力上升我方的除外狀態的卡片數量×300。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「除外狀態」16 例、「除外狀態的卡片數量」8 例(破壞龍 鋼多拉G \u003ccode>2333466\u003c/code> 等);「我方的除外狀態的」心靈交錯惡魔\u003ccode>52644170\u003c/code> ①同構。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-10-08)——永續效果,不冠發動;裡側除外亦計入(規則面,不入卡文)。官方現行「ゲームから除外されている自分のカード」→「自分の除外状態のカード」,照現行改「我方的除外狀態的卡片」(R4:新詞「除外狀態」對應官方現行新詞,非自造)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「上升我方的除外狀態的〜」——「除外狀態的卡片數量」8 例(破壞龍 鋼多拉G等)+「我方的除外狀態的」心靈交錯惡魔①同構,窗口跨「上升」致 0 例,零件皆有先例。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 31, "id": "27618634", "name": "薄幸的少女", "nameJa": "薄幸の乙女", "ja": ["①：攻撃表示のこのカードは戦闘では破壊されない。", "②：このカードがモンスターゾーンに表側攻撃表示で存在する限り、このカードと戦闘を行ったモンスターは攻撃できず、表示形式の変更もできない。"], "jaFaq": ["このカードは表側攻撃表示で存在する限り戦闘によっては破壊されない。このカードが表側攻撃表示でフィールド上に存在する限り、このカードと戦闘を行ったモンスターは表示形式の変更と攻撃ができなくなる。"], "jaSegs": 2, "draftSegs": 2, "old": ["只要此卡在場上表側攻擊表示存在，此卡不會被戰鬥破壞。", "只要此卡在場上表側攻擊表示存在，與此卡進行戰鬥的怪獸不能變更表示形式，也不能攻擊。"], "draft": ["①：攻擊表示的此卡不會被戰鬥破壞。", "②：只要此卡在怪獸區域表側攻擊表示存在，和此卡進行過戰鬥的怪獸不能攻擊，也不能變更表示形式。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;①「攻擊表示的此卡不會被戰鬥破壞。」重生殭屍\u003ccode>23421244\u003c/code> /No.54 反骨鬥士 獅心 \u003ccode>54366836\u003c/code> ①逐字;②§4.8(モンスターゾーン→「怪獸區域」,官方現行自帶區域詞);「不能攻擊，也不能變更表示形式」闇之咒縛 \u003ccode>29267084\u003c/code> /拷問車輪 \u003ccode>54704216\u003c/code> ①逐字;「和此卡進行戰鬥的」10 例(「與」僅 1 例,取多數形 R4)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2016-04-07)——①②皆永續效果,不冠發動。①官方現行把「表側攻撃表示で存在する限り」前提壓縮為「攻撃表示のこのカードは」,照現行;②「フィールド上に」→「モンスターゾーンに」=「怪獸區域」(§4.8 現代化,官方現行自帶),禁止項順序官方對調(変更と攻撃→攻撃できず、変更も),照現行語序。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「〜戰鬥的怪獸不能攻擊」——「不能攻擊，也不能變更表示形式」闇之咒縛/拷問車輪①逐字,窗口跨接合處致 0 例,零件皆有先例。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 32, "id": "27782503", "name": "六武眾-意牢", "nameJa": "六武衆－イロウ", "ja": ["①：このカードが裏側守備表示モンスターを攻撃するダメージステップ開始時に発動する（この効果は自分フィールドに「六武衆－イロウ」以外の「六武衆」モンスターが存在する場合に発動と処理を行う）。", "その裏側守備表示モンスターを破壊する。", "②：フィールドのこのカードが破壊される場合、代わりに自分フィールドの「六武衆」モンスター１体を破壊できる。"], "jaFaq": ["自分フィールド上に「六武衆－イロウ」以外の「六武衆」と名のついたモンスターが存在し、このカードが裏側守備表示のモンスターを攻撃した場合、ダメージ計算を行わず裏側守備表示のままそのモンスターを破壊する。また、フィールド上に表側表示で存在するこのカードが破壊される場合、代わりにこのカード以外の自分フィールド上に表側表示で存在する「六武衆」と名のついたモンスター１体を破壊できる。"], "jaSegs": 2, "draftSegs": 2, "old": ["我方場上有「六武眾-意牢」以外的「六武眾」怪獸存在，此卡向裡側守備怪獸攻擊的場合，不進行傷害計算，那隻裡側守備表示怪獸破壞。", "場上的此卡被戰鬥、效果破壞的場合，可以將我方場上1隻「六武眾」怪獸破壞作為代替。"], "draft": ["①：此卡向裡側守備表示怪獸攻擊的傷害步驟開始時發動。那隻裡側守備表示怪獸破壞。此效果在我方場上有「六武眾-意牢」以外的「六武眾」怪獸存在的場合發動和處理。", "②：場上的此卡被破壞的場合，可以將我方場上1隻「六武眾」怪獸破壞作為代替。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;①\u003cstrong>guide §3.4「発動と処理を行う 括號構造譯尾句」通則\u003c/strong>(2026-09-08 站主定為通則,票15)——刀鋒傘蜥蜴 \u003ccode>18372968\u003c/code> ①模板逐字(同為「攻撃する/したダメージステップ開始時に発動する（この効果は…存在する場合に発動と処理を行う）」),強制(行う+発動する)形尾句不帶「可以」;「攻擊的傷害步驟開始時發動」5 例;②「場上的此卡被破壞的場合，可以將〜破壞作為代替」武裝海洋獵手 \u003ccode>20470500\u003c/code> ②同構(「破壞作為代替」77 例)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-03-05)——①誘發效果、必發、不取對象、傷害步驟開始時,補足明示「存在する場合に、発動と処理を行う効果」正是括號條件的兩驗語意;②永續效果(官方明示)。①官方現行把前置條件改寫為発動と処理括號、刪「ダメージ計算を行わず」(折進傷害步驟開始時時點,票12 封魔之傳承者先例)與「裏側守備表示のまま」,照現行不補譯(R6);②官方現行無「戦闘・効果で」字樣,舊譯「被戰鬥、效果破壞」的列舉不保留、照現行「被破壞」(語意相同,補足明示戰鬥與效果破壞皆適用)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R6——舊日文前置條件句官方已整句重寫為発動と処理括號,「ダメージ計算を行わず」「裏側守備表示のまま」皆官方刪除,不補譯(判斷點已載);R7——括號構造照 guide §3.4 通則譯段末尾句(刀鋒傘蜥蜴①模板),未漏官方新寫內容。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 33, "id": "27870033", "name": "追緝巡邏機", "nameJa": "チェイス・スカッド", "ja": ["①：守備表示モンスターが戦闘で破壊され墓地へ送られた場合に発動する。", "相手に５００ダメージを与える。"], "jaFaq": ["フィールド上に守備表示で存在するモンスターが戦闘によって破壊され墓地へ送られた時、相手ライフに５００ポイントダメージを与える。"], "jaSegs": 1, "draftSegs": 1, "old": ["場上守備表示的怪獸被戰鬥破壞送去墓地時，給予對手500傷害。"], "draft": ["①：守備表示怪獸被戰鬥破壞送去墓地的場合發動。給予對手500傷害。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.5(必發→「的場合發動」);「守備表示怪獸被」3 例;「被戰鬥破壞送去墓地的場合」定式;「給予對手500傷害」定式。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-11-26)——誘發效果、必發、不取對象、傷害步驟結束時;自身被破壞不發動(規則面)。官方現行「フィールド上に守備表示で存在するモンスター」→「守備表示モンスター」(刪場上字樣)、時→場合,皆照現行(R6)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 34, "id": "27927359", "name": "神鷹女郎2", "nameJa": "ハーピィ・レディ２", "ja": ["このカード名はルール上「ハーピィ・レディ」として扱う。", "①：このカードが戦闘でリバースモンスターを破壊した場合、その破壊されたモンスターはフィールド・墓地に存在する限り効果が無効化される。"], "jaFaq": ["このカードのカード名は「ハーピィ・レディ」として扱う。このモンスターが戦闘によって破壊したリバース効果モンスターの効果は無効化される。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡的卡名在規則上當作「神鷹女郎」。", "此卡戰鬥破壞的反轉怪獸的效果無效化。"], "draft": ["這個卡名在規則上當作「神鷹女郎」。", "①：此卡戰鬥破壞反轉怪獸的場合，只要那隻被破壞的怪獸在場上、墓地存在，效果無效化。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2(卡名規則行=效果外文本,置圈號前);「這個卡名在規則上當作」亞特蘭提斯 \u003ccode>295517\u003c/code> 同式(「規則上當作」11 例);①元素魔鬼 \u003ccode>23118924\u003c/code> ●地逐字構(票15 進站:「此卡戰鬥破壞怪獸的場合，只要那隻被破壞的怪獸在場上、墓地存在，效果無效化。」,本卡多「反轉」限定詞)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-08-17)——卡名行「モンスターの効果の扱いではありません」=效果外文本;①永續效果(官方明示)。官方現行①加寫「フィールド・墓地に存在する限り」的無效化範圍(舊文本無)——照現行補(R7);「リバース効果モンスター」→「リバースモンスター」=「反轉怪獸」照現行。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「此卡戰鬥破壞反轉怪獸的場合」——元素魔鬼●地逐字構(「此卡戰鬥破壞怪獸的場合」,票15 進站)+「反轉怪獸」限定詞代入,組合首見、零件有據;R7——官方加寫的「フィールド・墓地に存在する限り」無效化範圍已照現行補回(「只要〜在場上、墓地存在」),未漏。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 35, "id": "28066831", "name": "薰風雷獸", "nameJa": "ガスタ・サンボルト", "ja": ["①：このカードが戦闘で破壊され墓地へ送られたバトルフェイズ終了時、自分の墓地から「ガスタ」モンスター１体を除外して発動できる。", "デッキから守備力１５００以下のサイキック族・風属性モンスター１体を特殊召喚する。"], "jaFaq": ["このカードが戦闘によって破壊され墓地へ送られた場合、そのバトルフェイズ終了時に自分の墓地の「ガスタ」と名のついたモンスター１体をゲームから除外して発動できる。デッキから守備力１５００以下のサイキック族・風属性モンスター１体を特殊召喚する。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡被戰鬥破壞送去墓地的場合，那次戰鬥階段結束時，將我方墓地的1隻「薰風」怪獸除外可以發動。從牌組將1隻守備力1500以下的超能族、風屬性怪獸特殊召喚。"], "draft": ["①：此卡被戰鬥破壞送去墓地的戰鬥階段結束時，將我方墓地的1隻「薰風」怪獸除外可以發動。從牌組將1隻守備力1500以下的超能族、風屬性怪獸特殊召喚。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;觸發句「〜的戰鬥階段結束時」73 例(紅男爵 ②同構,卡1 同式);cost 句與處理句照舊譯。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-06-15)——墓地發動的誘發效果、選發、不取對象、cost=墓地「薰風」除外(可除自身)。官方現行把「場合、その」兩子句合併為單句「送られたバトルフェイズ終了時」,照現行合併,舊「的場合，那次」不補譯(R6);「ゲームから」刪除照現行。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「〜破壞送去墓地的戰鬥階段結束時」——官方合併句的直譯;「被戰鬥破壞送去墓地的」定式+「的戰鬥階段結束時」73 例(紅男爵②同構),窗口跨接合處致 0 例,零件皆有先例。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 36, "id": "28143906", "name": "霞谷的大怪鳥", "nameJa": "霞の谷の大怪鳥", "ja": ["①：このカードが手札から墓地へ送られた場合に発動する。", "このカードをデッキに戻す。"], "jaFaq": ["このカードが手札から墓地に送られた時、このカードをデッキに加えてシャッフルする。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡從手牌送去墓地時，此卡回到牌組並洗牌。"], "draft": ["①：此卡從手牌送去墓地的場合發動。此卡回到牌組。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.5(必發→「的場合發動」);「此卡回到牌組」60 例(デッキに戻す定式)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-04-13)——墓地發動的誘發效果、必發、不取對象、cost 送墓亦觸發、傷害步驟亦可。官方現行時→場合、「デッキに加えてシャッフルする」→「デッキに戻す」——洗牌句官方已刪,舊譯「並洗牌」不保留(R6,同票12 骷髏騎士裁示先例)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 37, "id": "28290705", "name": "妖精王 艾爾柏德", "nameJa": "妖精王 アルヴェルド", "ja": ["地属性レベル４モンスター×２", "①：１ターンに１度、このカードのＸ素材を１つ取り除いて発動できる。", "地属性以外のフィールドの全てのモンスターの攻撃力・守備力は５００ダウンする。"], "jaFaq": ["地属性レベル４モンスター×２", "１ターンに１度、このカードのエクシーズ素材を１つ取り除いて発動できる。地属性以外のフィールド上の全てのモンスターの攻撃力・守備力は５００ポイントダウンする。"], "jaSegs": 1, "draftSegs": 1, "old": ["地屬性等級4怪獸×2", "1回合1次，去除此卡的1個超量素材可以發動。場上的地屬性以外的怪獸的攻擊力、守備力下降500。"], "draft": ["地屬性等級4怪獸×2", "①：1回合1次，去除此卡的1個超量素材可以發動。地屬性以外的場上的全部怪獸的攻擊力、守備力下降500。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2;發動句照舊譯;「場上的全部怪獸」84 例;「地屬性以外的」9 例;修飾語序照日文受事前置(§2)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2018-05-24)——啟動效果、不取對象、cost=去除超量素材;處理時對雙方場上全部非地屬性表側怪獸適用。\u003cstrong>舊譯漏「全てのモンスター」的「全部」\u003c/strong>——新舊日文皆有,照現行文本補回(R7 漏譯補回,進站 reason 註明)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「地屬性以外的場上的全〜」——「地屬性以外的」9 例+「場上的全部怪獸」84 例組合(修飾語疊加致窗口 0 例),零件皆有先例。", "items": []}, {"label": "互查", "flag": "", "text": "舊譯「怪獸的攻擊力」漏「全部」,已補(見判斷點)。", "items": []}]}, {"no": 38, "id": "28348537", "name": "暴風雪公主", "nameJa": "ブリザード・プリンセス", "ja": ["このカードは魔法使い族モンスター１体をリリースして攻撃表示でＡ召喚できる。", "①：このカードが召喚した時に適用する。", "このターン、相手は魔法・罠カードを発動できない。"], "jaFaq": ["このカードは魔法使い族モンスター１体をリリースして表側攻撃表示でアドバンス召喚する事ができる。このカードが召喚に成功したターン、相手は魔法・罠カードを発動する事ができない。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡可以解放1隻魔法使族怪獸以表側攻擊表示上級召喚。", "此卡召喚成功的回合，對手不能發動魔法、陷阱卡。"], "draft": ["此卡可以解放1隻魔法使族怪獸以攻擊表示上級召喚。", "①：此卡召喚時適用。這個回合，對手不能發動魔法、陷阱卡。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2(召喚手順行=效果外文本,補足明示「効果の扱いではありません」,置圈號前不帶圈號);「攻擊表示上級召喚」8 例;①「此卡召喚時適用。這個回合，〜」靈獸使的長老 \u003ccode>14513016\u003c/code> ①逐字構(「時適用」19 例);\u003cstrong>2026-09-09 站主裁示:「〜に適用する」宣告句以本卡形為正典,已立 guide §3.18a\u003c/strong>(既有合寫形歸票09 新卡合規總檢)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2016-07-07)——效果外行=召喚手順;①無種類效果(官方明示四類皆非),照票11 裁示進圈號、不冠發動,官方現行自帶①與「適用する」句式。官方現行效果外行刪「表側」(攻撃表示でＡ召喚)照現行;①「召喚に成功したターン」→「召喚した時に適用する。このターン、」重構,照現行拆兩句。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「魔法使族怪獸以攻擊表〜」——「攻擊表示上級召喚」8 例(種族詞代入致窗口 0 例);R4「成功的→時適用」——非用詞倒退:官方把「召喚に成功したターン」重寫為「召喚した時に適用する」,「時適用」19 例、靈獸使的長老①逐字構,舊形 784 例對應的是 成功した 句,不適用本卡現行文本。無改稿。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 39, "id": "28725004", "name": "魔鬼的智慧", "nameJa": "悪魔の知恵", "ja": ["①：このカードが攻撃表示から表側守備表示になる度に発動する。", "自分のデッキをシャッフルする。"], "jaFaq": ["このカードの表示形式が攻撃表示から表側守備表示に変わった時、自分のデッキをシャッフルする。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡由攻擊表示變成守備表示時，將我方牌組重新洗牌。"], "draft": ["①：每次此卡由攻擊表示變成表側守備表示發動。我方牌組洗牌。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;§3.5(必發);「每次〈事件〉發動。」度に定式 35 例;「由」照舊譯(該事件句日文全庫唯一,「變成表側守備表示」37 例);處理句「我方牌組洗牌。」時間次元空洞 \u003ccode>90615639\u003c/code> 逐字(自分のデッキをシャッフルする同句)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2020-04-01)——誘發效果、必發、不取對象、傷害步驟亦發動。官方現行「変わった時」→「なる度に発動する」=「每次〜發動」照現行;舊譯漏「表側」(表側守備表示),照現行補回;「重新洗牌」→「洗牌」對齊庫內定式(「牌組洗牌」45 例,「重新洗牌」為舊形)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「每次此卡由攻擊表示〜」——本卡事件句日文全庫唯一;「每次〈事件〉發動」度に定式 35 例+「變成表側守備表示」37 例+「由」照舊譯,零件皆有先例;處理句「我方牌組洗牌。」時間次元空洞逐字。", "items": []}, {"label": "互查", "flag": "", "text": "舊譯「變成守備表示」漏「表側」,已補(見判斷點)。", "items": []}]}, {"no": 40, "id": "28754338", "name": "真海皇 特萊頓", "nameJa": "真海皇 トライドン", "ja": ["①：このカードと自分フィールドの海竜族モンスター１体をリリースして発動できる。", "手札・デッキから「海皇龍 ポセイドラ」１体を特殊召喚する。", "相手フィールドに表側表示モンスターが存在する場合、さらにそれらのモンスターの攻撃力は３００ダウンする。"], "jaFaq": ["このカードと自分フィールド上の海竜族モンスター１体をリリースして発動できる。手札・デッキから「海皇龍 ポセイドラ」１体を特殊召喚する。その後、相手フィールド上の全てのモンスターの攻撃力は３００ポイントダウンする。"], "jaSegs": 1, "draftSegs": 1, "old": ["將此卡和我方場上1隻海龍族怪獸解放可以發動。從手牌、牌組將1隻「海皇龍 波塞德拉」特殊召喚。那之後，對手場上的全部怪獸的攻擊力下降300。"], "draft": ["①：將此卡和我方場上1隻海龍族怪獸解放可以發動。從手牌、牌組將1隻「海皇龍 波塞德拉」特殊召喚。那之後，對手場上的全部表側表示怪獸的攻擊力下降300。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;發動句與特召句照舊譯;尾句 §3.15(「那之後，」依序結算——補足明示兩段處理\u003cstrong>非同時\u003c/strong>,語意面「那之後」正確);「對手場上的全部怪獸的攻擊力」38 例+「場上的全部表側表示」55 例(「全部表側表示怪獸」42 例)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-12-08)——啟動效果、不取對象、cost=此卡+海龍族 1 隻解放;\u003cstrong>兩段處理非同時\u003c/strong>(補足明示,無表側怪獸則特召即完結)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1(改稿前)「隨後那些怪獸的攻擊〜」——已隨審查批改改形;改稿後尾句零件:「那之後，」定式 1,336 例+「對手場上的全部怪獸的攻擊力」38 例+「全部表側表示怪獸」42 例。R7——官方新寫的表側表示限定已以「全部表側表示怪獸」承載,未漏;條件子句不譯出屬站主裁示(見審查批改)。", "items": []}, {"label": "詞彙表殘留", "flag": "", "text": "〔句式〕「が存在する場合→有〜存在的場合」1 筆——現行日文的條件子句「相手フィールドに表側表示モンスターが存在する場合」依 2026-09-09站主裁示\u003cstrong>不譯出\u003c/strong>(尾句回到「那之後」依序結算骨架,「沒有就不執行」語意內建、表側表示限定由「全部表側表示怪獸」承載),非漏譯;隨放行入檔。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 41, "id": "28859794", "name": "盾翼鳥", "nameJa": "シールド・ウィング", "ja": ["①：このカードは１ターンに２度まで戦闘では破壊されない。"], "jaFaq": ["このカードは１ターンに２度まで、戦闘では破壊されない。"], "jaSegs": 1, "draftSegs": 1, "old": ["此卡1回合有2次不會被戰鬥破壞。"], "draft": ["①：此卡1回合有2次不會被戰鬥破壞。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;ABF-雨隱之小夜刀 \u003ccode>17994645\u003c/code> ②逐字(ja 同句「このカードは１ターンに２度まで戦闘では破壊されない」,zh 同舊譯),僅補圈號。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-03-26)——永續效果,不冠發動、玩家不可選擇不適用(規則面)。官方現行僅刪讀點,無字面變動。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 42, "id": "29071332", "name": "支援武器", "nameJa": "アームズ・エイド", "ja": ["チューナー＋チューナー以外のモンスター１体以上", "①：１ターンに１度、以下の効果から１つを選択して発動できる。", "●フィールドの表側表示モンスター１体を対象とし、このカードを攻撃力１０００アップの装備魔法カード扱いで装備する。", "●この効果で装備されているこのカードを攻撃表示で特殊召喚する。", "②：このカードの効果でこのカードを装備したモンスターが戦闘でモンスターを破壊し墓地へ送った場合に発動する。", "その破壊したモンスターの元々の攻撃力分のダメージを相手に与える。"], "jaFaq": ["チューナー＋チューナー以外のモンスター１体以上", "１ターンに１度、自分のメインフェイズ時に装備カード扱いとしてモンスターに装備、または装備を解除して表側攻撃表示で特殊召喚できる。この効果で装備カード扱いになっている場合のみ、装備モンスターの攻撃力は１０００ポイントアップする。また、装備モンスターが戦闘によってモンスターを破壊し墓地へ送った時、破壊したモンスターの元々の攻撃力分のダメージを相手ライフに与える。"], "jaSegs": 2, "draftSegs": 2, "old": ["協調+協調以外的怪獸1隻以上", "1回合1次，在我方的主要階段可以當作裝備卡給怪獸裝備，或是解除裝備表側攻擊表示特殊召喚。", "用此效果當作裝備卡的場合，裝備怪獸的攻擊力上升1000。", "裝備怪獸戰鬥破壞怪獸送去墓地時，給予對手破壞的怪獸其原攻擊力數值的傷害。"], "draft": ["協調+協調以外的怪獸1隻以上", "①：1回合1次，可以從以下效果選擇1個發動。", "●以場上1隻表側表示怪獸為對象，將此卡當作攻擊力上升1000的裝備魔法卡裝備。", "●裝備狀態的此卡攻擊表示特殊召喚。", "②：用此卡的效果裝備此卡的怪獸戰鬥破壞怪獸送去墓地的場合發動。給予對手那隻破壞的怪獸的原攻擊力數值的傷害。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2;①「可以從以下效果選擇1個發動」221 例;●1 同構:金屬化寄生生物-月之衣 \u003ccode>7369217\u003c/code> ●1(「以〜為對象，將此卡當作裝備魔法卡裝備」)+「當作攻擊力〜上升1000的裝備魔法卡」龍盟騎士-魯格魔槍\u003ccode>12496261\u003c/code> ②同式;●2 月之衣 ●2 \u003cstrong>逐字\u003c/strong>(ja 同句「この効果で装備されているこのカードを攻撃表示で特殊召喚する」→「裝備狀態的此卡攻擊表示特殊召喚。」);②「用此卡的效果裝備此卡的怪獸」時間魔術鎚 \u003ccode>10960419\u003c/code> ②逐字;「原攻擊力數值的傷害」73 例(明亮火花 \u003ccode>3105404\u003c/code> ①同式);§3.5(②必發)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-10-05)——●1 啟動效果(\u003cstrong>取對象\u003c/strong>,自分または相手,現行「フィールドの」不限我方,照現行不加「我方」)、●2 裝備魔法卡效果(1速)、攻擊力上升=裝備魔法卡的不組連鎖效果(官方現行把它併進●1 的「攻撃力１０００アップの」修飾)、②裝備魔法卡效果(1速)、必發。官方現行整卡重構(舊一段散文→①二擇+②),分層與●皆照現行文本;舊譯「在我方的主要階段」官方現行已刪(①改為二擇選發句,主要階段限制歸啟動效果規則面)——\u003cstrong>與 46/47 同型的 MP 待裁點,但本卡官方連句構都重寫、無保留位置,照現行\u003c/strong>。②舊譯「其原攻擊力」→「的原攻擊力」對齊定式。標記表現形 [1]啟動+[2][3]裝備魔法卡效果,改寫後①含●,kind 補判時照官方補足拆列;補足引號錨在舊文本,●拆句授權預期讀不到,屆時照霧區處置(同卡21 交代)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「〜的裝備魔法卡裝〜」——「當作攻擊力〜上升1000的裝備魔法卡」魯格魔槍②同式(數字正規化致窗口 0 例)、「將此卡當作〜裝備魔法卡裝備」月之衣●1 同構;R2「段數對不上」——官方現行為①(含兩●)+②共 2 圈號,標記表舊形 3 列效果句是舊分段,kind 補判時照官方補足拆列(判斷點已載),非缺發動;R3——舊譯「在我方的主要階段」官方現行整卡重構後已無此位置,且①為啟動效果、規則本就限我方主要階段(§3.4 待裁串聯見 46/47,本卡無MP1/MP2 之別、語意無損失);R6「装備カード扱いになっている場合のみ〜アップする」——官方把攻擊力上升句併進●1 的「攻撃力１０００アップの」修飾,新文本照現行承載,非漏譯;R7×2——兩個●皆照現行譯出(月之衣逐字),未漏。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 43, "id": "29343734", "name": "E.HERO 萬靈賢俠", "nameJa": "Ｅ・ＨＥＲＯ エリクシーラー", "ja": ["「Ｅ・ＨＥＲＯ フェザーマン」＋「Ｅ・ＨＥＲＯ バーストレディ」＋「Ｅ・ＨＥＲＯ クレイマン」＋「Ｅ・ＨＥＲＯ バブルマン」", "このカードは融合召喚でしか特殊召喚できない。", "①：フィールドのこのカードの属性は「地」「水」「炎」「風」としても扱う。", "②：このカードが融合召喚した場合に発動する。", "除外状態のカードを全てデッキに戻す。", "③：このカードの攻撃力は、このカードと同じ属性を持つ相手フィールドのモンスターの数×３００アップする。"], "jaFaq": ["「E・HERO フェザーマン」＋「E・HERO バーストレディ」＋「E・HERO クレイマン」＋「E・HERO バブルマン」", "このモンスターは融合召喚でしか特殊召喚できない。このカードの属性は「風」「水」「炎」「地」としても扱う。このカードが融合召喚に成功した時、ゲームから除外された全てのカードを持ち主のデッキに戻し、デッキをシャッフルする。相手フィールド上に存在するこのカードと同じ属性のモンスター１体につき、このカードの攻撃力は３００ポイントアップする。"], "jaSegs": 3, "draftSegs": 3, "old": ["「E.HERO 羽毛人」+「E.HERO 爆炎女郎」+「E.HERO 黏土人」+「E.HERO 泡沫人」", "此卡只能用融合召喚來特殊召喚。", "此卡的屬性也當作「地」「水」「炎」「風」。", "此卡融合召喚成功時，除外的卡全部回到持有者的牌組。", "此卡的攻擊力上升對手場上和此卡屬性相同的怪獸數量×300。"], "draft": ["「E.HERO 羽毛人」+「E.HERO 爆炎女郎」+「E.HERO 黏土人」+「E.HERO 泡沫人」", "此卡只能用融合召喚來特殊召喚。", "①：場上的此卡的屬性也當作「地」「水」「炎」「風」。", "②：此卡融合召喚的場合發動。除外狀態的卡全部回到牌組。", "③：此卡的攻擊力上升對手場上和此卡屬性相同的怪獸數量×300。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2/§3.13(素材行與召喚條件=效果外文本);①「屬性也當作」14 例(召喚獸 埃律西昂 \u003ccode>11270236\u003c/code> ①同式);②「此卡融合召喚的場合發動」奇美拉聚合超載龍 \u003ccode>64599569\u003c/code> 同 ja 形;「除外狀態」16 例;③照舊譯;§3.5(②必發)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-02-16)——召喚條件行「効果として扱いません」=效果外文本;①③永續、②誘發必發、不取對象,皆官方明示。①官方現行加「フィールドの」=「場上的」(R7 補);屬性順序照現行「地」「水」「炎」「風」(舊譯同,舊日文為風水炎地、官方已改);②「ゲームから除外された全てのカードを持ち主のデッキに戻し、デッキをシャッフルする」→「除外状態のカードを全てデッキに戻す」:除外狀態照現行新詞、刪「持有者的」與洗牌句不保留(R6);②裡側除外亦回牌組(補足,規則面)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1×2——「場上的此卡的屬性也當作」=「屬性也當作」14 例+官方加寫「フィールドの」的直譯;「除外狀態的卡全部回到牌組」=「除外狀態」16 例+「全部回到〜牌組」定式(刪「持有者的」後窗口 0 例),零件皆有先例;R6「持ち主のデッキに戻し、デッキをシャッフルする」——官方已刪「持有者的」與洗牌句,不補譯(判斷點已載)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 44, "id": "29455728", "name": "雙頭光子蜥蜴", "nameJa": "ツイン・フォトン・リザード", "ja": ["「フォトン」モンスター×２", "①：このカードをリリースして発動できる。", "リリースしたこのカードの融合召喚に使用した融合素材モンスター一組を自分の墓地から特殊召喚する。"], "jaFaq": ["「フォトン」と名のついたモンスター×２", "このカードをリリースして発動できる。リリースしたこのカードの融合召喚に使用した融合素材モンスター一組を自分の墓地から特殊召喚する。"], "jaSegs": 1, "draftSegs": 1, "old": ["「光子」怪獸×2", "將此卡解放可以發動。解放的此卡的融合召喚使用過的整組融合素材怪獸從我方墓地特殊召喚。"], "draft": ["「光子」怪獸×2", "①：將此卡解放可以發動。解放的此卡的融合召喚使用過的整組融合素材怪獸從我方墓地特殊召喚。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2;舊譯句構本就新式(「將此卡解放可以發動」102 例),僅補圈號;處理句逐字先例:\u003cstrong>超越融合 \u003ccode>76647978\u003c/code> ②\u003c/strong>「那隻怪獸的融合召喚使用過的整組融合素材怪獸從我方墓地特殊召喚。」(ja 同構、僅主語そのモンスター↔リリースしたこのカード之差;「整組融合素材」新卡 6 例)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-10-27)——啟動效果、不取對象、cost=解放自身;素材一組不齊則不能發動。官方現行僅刪「と名のついた」,舊譯無字面變動。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 45, "id": "29515122", "name": "重機王 土木扎克", "nameJa": "重機王ドボク・ザーク", "ja": ["レベル５モンスター×３", "①：１ターンに１度、このカードのＸ素材を１つ取り除いて発動できる。", "相手のデッキの上からカードを３枚墓地へ送る。", "この効果で墓地へ送ったカードの中にモンスターカードがあった場合、その数まで相手フィールドのカードを破壊する。"], "jaFaq": ["レベル５モンスター×３", "１ターンに１度、このカードのエクシーズ素材を１つ取り除いて発動できる。相手のデッキの上からカードを３枚墓地へ送る。この効果で墓地へ送ったカードの中にモンスターカードがあった場合、その数まで相手フィールド上のカードを破壊する。"], "jaSegs": 1, "draftSegs": 1, "old": ["等級5怪獸×3", "1回合1次，去除此卡的1個超量素材可以發動。從對手牌組上方將3張卡送去墓地。此效果送去墓地的卡之中有怪獸卡的場合，最多到那個數量，選對手場上的卡破壞。"], "draft": ["等級5怪獸×3", "①：1回合1次，去除此卡的1個超量素材可以發動。從對手牌組上方將3張卡送去墓地。此效果送去墓地的卡之中有怪獸卡的場合，最多到那個數量，選對手場上的卡破壞。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2;舊譯句構本就新式(「最多到那個數量」12 例),僅補圈號。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-06-22)——啟動效果、不取對象(処理が適用される際に破壊するカードを選ぶ——舊譯處理句的「選」對應此補足明示的處理時選擇,保留)、cost=去除超量素材;兩段處理非同時。官方現行僅フィールド上→フィールド,舊譯無字面變動。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 46, "id": "29618570", "name": "灰翼", "nameJa": "グレイ・ウイング", "ja": ["①：１ターンに１度、手札を１枚捨てて発動できる。", "このターン、このカードは１度のバトルフェイズ中に２回攻撃できる。"], "jaFaq": ["メインフェイズ１で手札からカードを１枚捨てる。このカードはそのターンのバトルフェイズ中に２回攻撃をする事ができる。"], "jaSegs": 1, "draftSegs": 1, "old": ["我方的主要階段1，從手牌捨棄1張卡可以發動。這個回合，此卡在1次戰鬥階段中可以攻擊2次。"], "draft": ["①：1回合1次，從手牌捨棄1張卡可以發動。這個回合，此卡在1次戰鬥階段中可以攻擊2次。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「1回合1次」照官方現行(§3.10 起手形);後段照舊譯(2回攻擊句庫內定式);MP1 省略依 2026-09-09 站主裁示(見審查批改)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2020-04-01)——啟動效果、不取對象、cost=手牌捨棄;現行補足的「自分のメインフェイズ１に１度」屬規則內建的重述(見審查批改)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R3——舊譯有「我方的主要階段1」、新文本沒有:2026-09-09站主裁示移除(規則內建,見審查批改),非漏改;R7「①：１ターンに１度、手札を１枚捨てて発動できる」——官方新寫的 1タ1度與 cost 句已照現行譯出,未漏。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 47, "id": "30190809", "name": "機動城的齒輪石魔", "nameJa": "機動砦のギア・ゴーレム", "ja": ["①：１ターンに１度、８００ＬＰを払って発動できる。", "このターン、このカードは直接攻撃できる。"], "jaFaq": ["メインフェイズ１でのみ発動する事ができる。８００ライフポイントを払う。このターンこのカードは相手プレイヤーに直接攻撃をする事ができる。"], "jaSegs": 1, "draftSegs": 1, "old": ["主要階段1，支付800生命值可以發動。這個回合此卡可以直接攻擊對手玩家。"], "draft": ["①：1回合1次，支付800生命值可以發動。這個回合，此卡可以直接攻擊。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;「支付800生命值可以發動」13 例;「這個回合，此卡可以直接攻擊。」No.9 天蓋星 戴森球 \u003ccode>1992816\u003c/code> ①同句(直攻句 64 例定式+票11 不寫「玩家」+官方現行已刪相手プレイヤーに)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2020-04-01)——啟動效果、不取對象、cost=支付 800、「１ターンに１度のみ発動する事ができる」——現行補足只載 1タ1度、未載 MP1。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R3——刪「主要階段1」是站主裁示(規則內建,見審查批改),非漏改;R6×2——舊「メインフェイズ１でのみ発動する事ができる。８００ライフポイントを払う。」官方整句重寫為「１ターンに１度、８００ＬＰを払って発動できる」,cost 已進發動句,非漏譯;R7——官方新寫句已照現行譯出,未漏。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 48, "id": "30230789", "name": "機偶商人 一七七", "nameJa": "カラクリ商人 壱七七", "ja": ["①：このカードが召喚した場合に発動する。", "デッキから「カラクリ」カード１枚を手札に加える。", "②：このカードは攻撃可能な場合には攻撃しなければならない。", "③：攻撃表示のこのカードが攻撃対象に選択された場合に発動する。", "このカードを守備表示にする。"], "jaFaq": ["このカードは攻撃可能な場合には攻撃しなければならない。フィールド上に表側攻撃表示で存在するこのカードが攻撃対象に選択された時、このカードの表示形式を守備表示にする。このカードが召喚に成功した時、自分のデッキから「カラクリ」と名のついたカード１枚を手札に加える。"], "jaSegs": 3, "draftSegs": 3, "old": ["此卡可以攻擊的場合必須攻擊。", "場上表側攻擊表示的此卡被選擇作為攻擊對象時，此卡的表示形式變成守備表示。", "此卡召喚成功時，從牌組將1張「機偶」卡片加入手牌。"], "draft": ["①：此卡召喚的場合發動。從牌組將1張「機偶」卡片加入手牌。", "②：此卡可以攻擊的場合必須攻擊。", "③：攻擊表示的此卡被選擇作為攻擊對象的場合發動。此卡變成守備表示。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;①「此卡召喚的場合發動。」魔導騎士 防禦者\u003ccode>2525268\u003c/code> ①逐字(10 例);「從牌組將1張「機偶」卡片加入手牌」照舊譯;②機偶蛤蟆 四六二四 ①逐字(家族先例);③同卡4③(「被選擇作為攻擊對象的場合發動」9 例+召喚僧處理句逐字);§3.5(①③必發)。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2015-02-19)——三段皆官方明示(①誘發必發、②永續、③誘發必發、皆不取對象)。段落順序照官方現行(搜尋效果升為①,與舊譯相反);①「召喚に成功した時」→「召喚した場合」=「召喚的場合」(時→場合照現行)、刪「自分の」;③同卡4③的官方改寫(R6 有答)。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R2——新②「可以攻擊的場合必須攻擊」被對到標記表 2是\u003cstrong>位置錯配\u003c/strong>:官方現行把段落順序重排(搜尋效果升為①),新②對應舊第 1 行(補足明示永續),不發動不冠「發動」;誘發段是新①③、皆已以「發動」收尾。無改稿。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 49, "id": "30299166", "name": "蠕蟲 坦塔克爾斯", "nameJa": "ワーム・テンタクルス", "ja": ["①：１ターンに１度、自分の墓地から爬虫類族の「ワーム」モンスター１体を除外して発動できる。", "このターン、このカードは１度のバトルフェイズ中に２回攻撃できる。"], "jaFaq": ["１ターンに１度、自分の墓地の「ワーム」と名のついた爬虫類族モンスター１体をゲームから除外して発動できる。このターン、このカードは１度のバトルフェイズ中に２回攻撃する事ができる。"], "jaSegs": 1, "draftSegs": 1, "old": ["1回合1次，將我方墓地的1隻爬蟲類族的「蠕蟲」怪獸除外可以發動。這個回合，此卡在1次戰鬥階段中可以攻擊2次。"], "draft": ["①：1回合1次，將我方墓地的1隻爬蟲類族的「蠕蟲」怪獸除外可以發動。這個回合，此卡在1次戰鬥階段中可以攻擊2次。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1;舊譯句構本就新式(ゲームから除外→「除外」舊譯已現代化),僅補圈號。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2016-12-22)——啟動效果、不取對象、cost=墓地除外;補足另載 MP1 限定(卡文無)——依 §3.4 第 2 句「舊譯沒寫就不硬加」,不加。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}, {"no": 50, "id": "30334522", "name": "禁咒法 心靈女妖", "nameJa": "イビリチュア・プシュケローネ", "ja": ["「リチュア」儀式魔法カードにより降臨", "①：１ターンに１度、種族と属性を１つずつ宣言して発動できる。", "相手の手札をランダムに１枚確認し、宣言した種族・属性のモンスターだった場合、そのモンスターをデッキに戻す。"], "jaFaq": ["「リチュア」と名のついた儀式魔法カードにより降臨。１ターンに１度、モンスターの種族・属性を宣言して発動できる。相手の手札をランダムに１枚確認し、宣言した種族・属性のモンスターだった場合、そのカードを持ち主のデッキに戻す。違った場合は元に戻す。"], "jaSegs": 1, "draftSegs": 1, "old": ["藉由「咒法」儀式魔法卡降臨。", "1回合1次，宣言怪獸的種族、屬性可以發動。隨機確認1張對手的手牌，如果是宣言的種族、屬性的怪獸，那隻怪獸回到持有者的牌組。如果不是，則回復原狀。"], "draft": ["藉由「咒法」儀式魔法卡降臨。", "①：1回合1次，宣言種族和屬性各1個可以發動。隨機確認1張對手的手牌，是宣言的種族、屬性的怪獸的場合，那隻怪獸回到牌組。"], "skipped": false, "backfill": false, "notes": [{"label": "依據條目", "flag": "", "text": "§4.1→§3.1/§3.2(降臨行=效果外文本);「宣言種族和屬性各1個可以發動」驚喜結合 \u003ccode>35167375\u003c/code> ①等 5 例逐字構(１つずつ宣言=「各1個」);「隨機確認1張對手的手牌」百臂無形手 布瑞撕 \u003ccode>21637502\u003c/code> ②逐字;「宣言的種族、屬性」8 例;「だった場合」→「的場合」照 §3.6。", "items": []}, {"label": "判斷點", "flag": "", "text": "補足(2017-01-26)——啟動效果、不取對象、發動時宣言;非宣言種類或魔陷則留在手牌(補足,官方現行已刪「違った場合は元に戻す」,舊譯「如果不是，則回復原狀」不保留,R6);「持ち主の」刪除照現行;舊譯「如果是〜」條件式改「〜的場合」對齊定式。", "items": []}, {"label": "反向檢查", "flag": "", "text": "R1「〜族、屬性的怪獸的場合」——「宣言的種族、屬性」8 例+「だった場合」→「的場合」§3.6 定式(窗口跨接合處致 0 例),零件皆有先例;R6「違った場合は元に戻す」——官方已刪,舊譯「如果不是，則回復原狀」不保留(判斷點已載)。", "items": []}, {"label": "互查", "flag": "", "text": "無缺漏。", "items": []}]}]}</script>
+<script>
+(function(){
+  "use strict";
+  var DATA = JSON.parse(document.getElementById("data").textContent);
+  var CARDS = DATA.cards;
+  var KEY = "text-rewrite-16-verdicts";
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+  var showDiff = true, filter = "all";
+
+  function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;"); }
+
+  /* 字元級 diff:LCS 回溯,舊譯→新文本。新增標 ins,刪去標 del。 */
+  function diff(a, b){
+    var n = a.length, m = b.length;
+    if (!n || !m || n * m > 400000) return esc(b);
+    var prev = new Uint32Array(m + 1), cur = new Uint32Array(m + 1), rows = [];
+    for (var i = 1; i <= n; i++){
+      for (var j = 1; j <= m; j++){
+        cur[j] = a[i-1] === b[j-1] ? prev[j-1] + 1 : Math.max(prev[j], cur[j-1]);
+      }
+      rows.push(cur.slice()); prev = cur; cur = new Uint32Array(m + 1);
+    }
+    var out = [], i2 = n, j2 = m;
+    function row(r){ return r === 0 ? new Uint32Array(m + 1) : rows[r-1]; }
+    while (i2 > 0 || j2 > 0){
+      if (i2 > 0 && j2 > 0 && a[i2-1] === b[j2-1]){
+        out.push(["=", b[j2-1]]); i2--; j2--;
+      } else if (j2 > 0 && (i2 === 0 || row(i2)[j2-1] >= row(i2-1)[j2])){
+        out.push(["+", b[j2-1]]); j2--;
+      } else { out.push(["-", a[i2-1]]); i2--; }
+    }
+    out.reverse();
+    var html = "", mode = "", buf = "";
+    function flush(){
+      if (!buf) return;
+      if (mode === "+") html += "<ins>" + esc(buf) + "</ins>";
+      else if (mode === "-") html += "<del>" + esc(buf) + "</del>";
+      else html += esc(buf);
+      buf = "";
+    }
+    out.forEach(function(t){
+      if (t[0] !== mode){ flush(); mode = t[0]; }
+      buf += t[1];
+    });
+    flush();
+    return html;
+  }
+
+  function newHtml(c){
+    var draft = c.draft.join("\n");
+    if (!showDiff || c.skipped) return esc(draft);
+    return diff(c.old.join("\n"), draft);
+  }
+
+  function waitCount(c){
+    return c.notes.filter(function(n){ return n.flag; }).length;
+  }
+
+  /* 舊日文(faq_info 的官方 Q&A 頁文本)。改寫基底是「日文原文」欄的官方現行
+     文本,這一欄只在兩份有落差時出現、供查漏翻與多翻;沒有落差就不佔版面。 */
+  function faqHtml(c){
+    if (!c.jaFaq.length) return "";
+    return '<div class="text-row t-faq"><span class="lab">' +
+      "舊日文 · faq_info(對照組)" + '</span><p>' +
+      esc(c.jaFaq.join("\n")) + "</p></div>";
+  }
+
+  function cardHtml(c){
+    var v = state[c.id] || {};
+    var chips = "";
+    if (c.backfill) chips += '<span class="chip wait">遞補</span>';
+    if (c.skipped) chips += '<span class="chip skip">建議不進站</span>';
+    else if (v.verdict === "ok") chips += '<span class="chip ok">放行</span>';
+    else if (v.verdict === "back") chips += '<span class="chip back">退回</span>';
+    if (waitCount(c)) chips += '<span class="chip wait">待裁 ' +
+      waitCount(c) + '</span>';
+
+    var notes = c.notes.map(function(n){
+      var body = n.text ? '<span class="body">' + n.text + "</span>" : "";
+      if (n.items.length) body += "<ol>" + n.items.map(function(x){
+        return "<li>" + x.replace(/^\d+\.\s*/, "") + "</li>"; }).join("") + "</ol>";
+      return '<li><span class="lab' + (n.flag ? " wait" : "") + '">' +
+        esc(n.label) + "</span>" + body + "</li>";
+    }).join("");
+
+    return '<article class="card' + (c.skipped ? " is-skip" : "") +
+      (match(c) ? "" : " hidden") +
+      '" id="c' + c.no + '" data-no="' + c.no + '" data-state="' +
+      (v.verdict || "") + '">' +
+      '<div class="card-head"><span class="no">' +
+        String(c.no).padStart(2, "0") + "</span>" +
+        "<h3>" + esc(c.name) + "</h3>" +
+        '<span class="ja">' + esc(c.nameJa) + "</span>" + chips +
+        '<span class="pw">' + c.id + "</span></div>" +
+      '<div class="texts">' +
+        '<div class="text-row t-ja"><span class="lab">' +
+          /* 有舊日文欄才代表這一批已換基底;子批 2 以前的審查檔不加註 */
+          (c.jaFaq.length ? "日文原文 · ja-JP.cdb(官方現行)" : "日文原文") +
+          ((c.jaSegs && c.jaSegs !== c.draftSegs)
+            ? '<span class="segwarn">官方 ' + c.jaSegs + " 段 / 新文本 " +
+              c.draftSegs + " 段,分層不符</span>"
+            : "") + "</span><p>" +
+          esc(c.ja.join("\n")) + "</p></div>" +
+        faqHtml(c) +
+        '<div class="text-row t-old"><span class="lab">查牌網舊譯</span><p>' +
+          esc(c.old.join("\n")) + "</p></div>" +
+        '<div class="text-row t-new"><span class="lab">新文本</span><p>' +
+          newHtml(c) + "</p></div>" +
+      "</div>" +
+      '<ul class="notes">' + notes + "</ul>" +
+      (c.skipped ? "" :
+      '<div class="verdict" data-id="' + c.id + '">' +
+        '<button type="button" class="v-ok" data-v="ok" aria-pressed="' +
+          (v.verdict === "ok") + '">放行</button>' +
+        '<button type="button" class="v-back" data-v="back" aria-pressed="' +
+          (v.verdict === "back") + '">退回</button>' +
+        '<input type="text" placeholder="批註(退回請說明;裁示也可寫在這)" ' +
+          'value="' + esc(v.note || "").replace(/"/g, "&quot;") + '">' +
+      "</div>") +
+      "</article>";
+  }
+
+  function match(c){
+    var v = state[c.id] || {};
+    if (filter === "todo") return !c.skipped && !v.verdict;
+    if (filter === "wait") return waitCount(c) > 0;
+    if (filter === "back") return v.verdict === "back";
+    return true;
+  }
+
+  function renderIndex(){
+    document.getElementById("index").innerHTML = CARDS.map(function(c){
+      var v = state[c.id] || {};
+      var cls = c.skipped ? "skip" : (v.verdict === "ok" ? "ok" :
+        v.verdict === "back" ? "back" : "");
+      return '<li class="' + (match(c) ? "" : "hidden") + '"><a href="#c' +
+        c.no + '"><span class="n">' + String(c.no).padStart(2, "0") +
+        '</span><span class="nm">' + esc(c.name) + '</span><span class="dot ' +
+        cls + '"></span></a></li>';
+    }).join("");
+  }
+
+  function renderStream(){
+    document.getElementById("stream").innerHTML = CARDS.map(cardHtml).join("");
+  }
+
+  function tally(){
+    var live = CARDS.filter(function(c){ return !c.skipped; });
+    var ok = 0, back = 0;
+    live.forEach(function(c){
+      var v = state[c.id] || {};
+      if (v.verdict === "ok") ok++; else if (v.verdict === "back") back++;
+    });
+    document.getElementById("doneN").textContent = ok + back;
+    document.getElementById("barOk").style.width =
+      (ok / live.length * 100) + "%";
+    document.getElementById("barBack").style.width =
+      (back / live.length * 100) + "%";
+    document.getElementById("tally").innerHTML = "放行 <b>" + ok +
+      "</b> · 退回 <b>" + back + "</b> · 未裁 <b>" +
+      (live.length - ok - back) + "</b> · 排除 <b>" +
+      (CARDS.length - live.length) + "</b>";
+  }
+
+  function save(){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function refresh(){ renderIndex(); renderStream(); tally(); }
+
+  document.getElementById("stream").addEventListener("click", function(e){
+    var btn = e.target.closest(".verdict button");
+    if (!btn) return;
+    var id = btn.closest(".verdict").dataset.id;
+    var v = state[id] || (state[id] = {});
+    v.verdict = v.verdict === btn.dataset.v ? "" : btn.dataset.v;
+    save();
+    var card = btn.closest(".card");
+    card.dataset.state = v.verdict || "";
+    card.querySelectorAll(".verdict button").forEach(function(b){
+      b.setAttribute("aria-pressed", String(b.dataset.v === v.verdict));
+    });
+    var head = card.querySelector(".card-head");
+    var old = head.querySelector(".chip.ok, .chip.back");
+    if (old) old.remove();
+    if (v.verdict){
+      var chip = document.createElement("span");
+      chip.className = "chip " + v.verdict;
+      chip.textContent = v.verdict === "ok" ? "放行" : "退回";
+      head.insertBefore(chip, head.querySelector(".chip.wait") ||
+        head.querySelector(".pw"));
+    }
+    renderIndex(); tally();
+  });
+
+  document.getElementById("stream").addEventListener("input", function(e){
+    if (!e.target.matches(".verdict input")) return;
+    var id = e.target.closest(".verdict").dataset.id;
+    (state[id] || (state[id] = {})).note = e.target.value;
+    save();
+  });
+
+  document.querySelectorAll(".filters button").forEach(function(b){
+    b.addEventListener("click", function(){
+      filter = b.dataset.filter;
+      document.querySelectorAll(".filters button").forEach(function(o){
+        o.setAttribute("aria-pressed", String(o === b));
+      });
+      refresh();
+    });
+  });
+
+  document.getElementById("btnDiff").addEventListener("click", function(){
+    showDiff = !showDiff;
+    this.setAttribute("aria-pressed", String(showDiff));
+    this.textContent = "對照舊譯:" + (showDiff ? "開" : "關");
+    renderStream();
+  });
+
+  document.getElementById("btnReset").addEventListener("click", function(){
+    if (!confirm("清除全部裁示與批註?")) return;
+    state = {}; save(); refresh();
+  });
+
+  function report(){
+    var lines = ["## text-rewrite#16 子批 5 審查結果", ""];
+    var ok = [], back = [], todo = [];
+    CARDS.forEach(function(c){
+      if (c.skipped) return;
+      var v = state[c.id] || {};
+      (v.verdict === "ok" ? ok : v.verdict === "back" ? back : todo).push(c);
+    });
+    /* 排除清單由審查檔決定,不寫死:子批 2 的兩張曾被寫死在模板裡,
+       子批 3 沒有排除卡,匯出的結果照樣說「排除 2 張」。 */
+    var skipped = CARDS.filter(function(c){ return c.skipped; });
+    var line = "放行 " + ok.length + " 張、退回 " + back.length +
+      " 張、未裁 " + todo.length + " 張";
+    line += skipped.length
+      ? ";排除 " + skipped.length + " 張(" +
+        skipped.map(function(c){ return c.id + " " + c.name; }).join("、") + ")。"
+      : ";無排除卡。";
+    lines.push(line, "");
+    if (back.length){
+      lines.push("### 退回(" + back.length + ")", "");
+      back.forEach(function(c){
+        lines.push("- " + c.no + " `" + c.id + "` " + c.name + " — " +
+          ((state[c.id] || {}).note || "(未寫批註)"));
+      });
+      lines.push("");
+    }
+    var noted = ok.filter(function(c){ return (state[c.id] || {}).note; });
+    if (noted.length){
+      lines.push("### 放行帶批註(" + noted.length + ")", "");
+      noted.forEach(function(c){
+        lines.push("- " + c.no + " `" + c.id + "` " + c.name + " — " +
+          state[c.id].note);
+      });
+      lines.push("");
+    }
+    if (todo.length){
+      lines.push("### 未裁(" + todo.length + ")", "");
+      lines.push(todo.map(function(c){ return c.no + " " + c.name; })
+        .join("、"));
+      lines.push("");
+    }
+    if (ok.length && !back.length && !todo.length){
+      lines.push("### 全數放行", "",
+        ok.length + " 張全數放行,可進站。");
+    }
+    return lines.join("\n");
+  }
+
+  var dlg = document.getElementById("dlg");
+  document.getElementById("btnExport").addEventListener("click", function(){
+    document.getElementById("out").value = report();
+    document.getElementById("copyHint").textContent =
+      "整段複製後貼回對話,我依此進站。";
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+  });
+  document.getElementById("dlgClose").addEventListener("click", function(){
+    if (dlg.close) dlg.close(); else dlg.removeAttribute("open");
+  });
+  document.getElementById("btnCopy").addEventListener("click", function(){
+    var ta = document.getElementById("out");
+    ta.select();
+    var done = function(){
+      document.getElementById("copyHint").textContent = "已複製。";
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ta.value).then(done, function(){
+        try { document.execCommand("copy"); done(); } catch (e) {}
+      });
+    } else {
+      try { document.execCommand("copy"); done(); } catch (e) {}
+    }
+  });
+
+  refresh();
+})();
+</script>

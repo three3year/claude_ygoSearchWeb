@@ -22,7 +22,6 @@
 {"id": 11481610, "from": "我方從牌組抽那個數量的卡。", "to": "依照那個數量，我方抽牌。", "reason": "卡文詞彙表全掃(ドローする)站主核可之改寫,見 text-glossary#03 審閱頁", "ticket": "text-errata#06"},
 {"id": 12215894, "from": "我方依照回到牌組的數量從牌組抽牌。", "to": "依照回去的數量，我方抽牌。", "reason": "卡文詞彙表全掃(ドローする)站主核可之改寫,見 text-glossary#03 審閱頁", "ticket": "text-errata#06"},
 {"id": 12948099, "from": "我方從牌組抽1牌。", "to": "我方抽1張卡。", "reason": "卡文詞彙表全掃(ドローする)站主核可之改寫,見 text-glossary#03 審閱頁", "ticket": "text-errata#06"},
-{"id": 13647631, "from": "原本的攻擊力、守備力", "to": "原攻擊力、原守備力", "reason": "卡文詞彙表全掃(元々の攻撃力)站主核可之改寫,見 text-glossary#03 審閱頁", "ticket": "text-errata#06"},
 {"id": 13764881, "from": "此卡召喚時可以發動", "to": "此卡召喚成功時可以發動", "reason": "卡文詞彙表全掃(召喚に成功した)站主核可之改寫,見 text-glossary#03 審閱頁", "ticket": "text-errata#06"},
 {"id": 14386013, "from": "我方依照回去的數量從牌組抽牌。", "to": "依照回去的數量，我方抽牌。", "reason": "卡文詞彙表全掃(ドローする)站主核可之改寫,見 text-glossary#03 審閱頁", "ticket": "text-errata#06"},
 {"id": 14554127, "from": "在怪獸區特殊召喚", "to": "在怪獸區域特殊召喚", "reason": "卡文詞彙表全掃(モンスターゾーン)站主核可之改寫,見 text-glossary#03 審閱頁", "ticket": "text-errata#06"},

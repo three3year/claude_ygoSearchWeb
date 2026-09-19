@@ -11,9 +11,8 @@ import unittest
 
 # 先 import classify:tag_card 的搜尋路徑由它在載入時 append,tagcard 那行
 # 才找得到模組——這兩行的順序是依賴,不是字母序巧合
-from classify import (TIER_NEW, TIER_OLD, TIER_REWRITTEN,
-                      TIER_SITE_REWRITTEN, TIER_UNDATED, classify_card,
-                      is_effectless_monster)
+from classify import (TIER_NEW, TIER_OLD, TIER_REWRITTEN, TIER_UNDATED,
+                      classify_card, is_effectless_monster)
 from tagcard import (TYPE_EFFECT, TYPE_FUSION, TYPE_LINK, TYPE_MONSTER,
                      TYPE_NORMAL, TYPE_PENDULUM, TYPE_RITUAL, build_tag_cards)
 
@@ -44,11 +43,6 @@ def _tiers(card, ocg_date):
             for seg in classify_card(card, ocg_date)]
 
 
-def _tiers_rw(card, ocg_date):
-    return [(seg["section"], seg["tier"])
-            for seg in classify_card(card, ocg_date, site_rewritten=True)]
-
-
 class DateBoundaryTest(unittest.TestCase):
     def test_day_before_era9_is_rewritten(self):
         """有①且界日前一日首發 → 官方已改寫(優先稽核佇列)。"""
@@ -70,40 +64,6 @@ class DateBoundaryTest(unittest.TestCase):
         for date in (None, ""):
             self.assertEqual(_tiers(_card(NEW_DESC), date),
                              [("main", TIER_UNDATED)])
-
-
-class SiteRewrittenTest(unittest.TestCase):
-    """「本站已改寫」級(text-rewrite 票02):已改寫輸入 → 第五級,日期不參與。"""
-
-    def test_rewritten_before_era9_is_site_not_official(self):
-        """界日前首發+已改寫 → 本站已改寫,不再誤歸「官方已改寫」。"""
-        self.assertEqual(_tiers_rw(_card(NEW_DESC), "2000-01-01"),
-                         [("main", TIER_SITE_REWRITTEN)])
-
-    def test_rewritten_after_era9_is_still_site(self):
-        """界日後首發+已改寫 → 一樣是本站已改寫(改寫與首發日無關)。"""
-        self.assertEqual(_tiers_rw(_card(NEW_DESC), "2020-01-01"),
-                         [("main", TIER_SITE_REWRITTEN)])
-
-    def test_rewritten_undated_is_site(self):
-        """查無日期+已改寫 → 本站已改寫:改寫是本站的動作,不必猜日期。"""
-        self.assertEqual(_tiers_rw(_card(NEW_DESC), None),
-                         [("main", TIER_SITE_REWRITTEN)])
-
-    def test_not_rewritten_control_group_unchanged(self):
-        """未改寫對照組:同卡同日期照舊走日期分級。"""
-        self.assertEqual(_tiers(_card(NEW_DESC), "2000-01-01"),
-                         [("main", TIER_REWRITTEN)])
-
-    def test_site_rewritten_segment_has_no_labels(self):
-        """本站已改寫的段不帶對應條目標籤——對應表只服務改寫佇列。"""
-        segs = classify_card(_card(NEW_DESC), None, site_rewritten=True)
-        self.assertEqual(segs[0]["labels"], [])
-
-    def test_unnumbered_segment_stays_old_despite_flag(self):
-        """已改寫旗標不動無①段:舊文本段=pending_split 的同尺等式不動搖。"""
-        self.assertEqual(_tiers_rw(_card(OLD_DESC), "2000-01-01"),
-                         [("main", TIER_OLD)])
 
 
 class OldTextTest(unittest.TestCase):
@@ -267,15 +227,10 @@ class SameRulerRegressionTest(unittest.TestCase):
 
         pending_split 的定義就是「無編號整團」,但拆句表套用後那些段會離開
         清單,所以要對「不套拆句表」的報告比;日期不參與舊文本判定,全部
-        餵 None 即可。基準集合 3,805 段(票02);試點批改寫進站 49 段後
-        3,756 段(text-rewrite#05);§4.1×怪獸子批1 進站 40 段後 3,716 段
-        (text-rewrite#07);無效果怪獸 88 張排除後 3,628 段
-        (text-rewrite#08);§4.1×怪獸子批2 進站 50 段後 3,578 段
-        (text-rewrite#11);子批3 進站 50 段後 3,528 段
-        (text-rewrite#12);子批4 進站 50 段後 3,478 段
-        (text-rewrite#15);子批5 進站 50 段後 3,428 段
-        (text-rewrite#16);子批6 進站 50 段後 3,378 段
-        (text-rewrite#17),資料更新或改寫批進站後兩邊會一起動。
+        餵 None 即可。基準集合 3,805 段(票02);無效果怪獸 88 張排除後
+        3,717 段(text-rewrite#08 建立的排除,舊卡翻新全數還原後回到此值
+        ——翻新期間曾隨各改寫批遞減,還原詳見 text-rewrite-revert),
+        資料更新後兩邊會一起動。
 
         扣掉的張數一起釘住:排除判準放寬(如 role 正規式擴張)會讓這個數字
         先動,而不是靜靜地從改寫佇列多吃掉幾張真有效果的卡。
@@ -291,7 +246,7 @@ class SameRulerRegressionTest(unittest.TestCase):
                   if seg["tier"] == TIER_OLD)
         self.assertEqual(old, len(pending))
         self.assertEqual(len(report["pending_split"]) - len(pending), 88)
-        self.assertEqual(old, 3378)
+        self.assertEqual(old, 3717)
 
 
 if __name__ == "__main__":

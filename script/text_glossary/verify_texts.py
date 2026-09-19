@@ -33,11 +33,10 @@ DEFAULT_TAGS = os.path.join(_ROOT, "data", "tag_cards.json")
 DEFAULT_DATES = os.path.join(_ROOT, "data", "sources", "ocg-dates.json")
 DEFAULT_OFFICIAL_DATES = os.path.join(_ROOT, "data", "sources",
                                       "official-dates.json")
-DEFAULT_REWRITES = os.path.join(_ROOT, "data", "text_rewrites.json")
 DEFAULT_OUT = os.path.join(_ROOT, ".scratch", "text-glossary", "report.md")
 
 
-def collect_records(cards, tag_cards, dates, rewritten_ids, limit=0):
+def collect_records(cards, tag_cards, dates, limit=0):
     """新格式新卡層的卡 → 效果標記表句對照記錄(卡片密碼升冪)。
 
     limit > 0 時取該層前 limit 張(demo 用);句對照含段內全部效果句
@@ -48,7 +47,7 @@ def collect_records(cards, tag_cards, dates, rewritten_ids, limit=0):
     records, card_count = [], 0
     for card in sorted(cards, key=lambda c: c["id"]):
         cid = card["id"]
-        segs = classify_card(card, dates.get(cid), cid in rewritten_ids)
+        segs = classify_card(card, dates.get(cid))
         new_sections = {seg["section"] for seg in segs
                         if seg["tier"] == TIER_NEW}
         if not new_sections:
@@ -152,8 +151,6 @@ def main(argv=None):
                         help="官方 DB 収録シリーズ後備日期 JSON "
                              "(預設 data/sources/official-dates.json,"
                              "檔案不存在時只用 YGOPRODeck)")
-    parser.add_argument("--rewrites", default=DEFAULT_REWRITES,
-                        help="文本改寫表路徑 (預設 data/text_rewrites.json)")
     parser.add_argument("--limit", type=int, default=0,
                         help="只掃該層前 N 張(卡片密碼升冪;0=全掃)")
     parser.add_argument("--out", default=DEFAULT_OUT,
@@ -173,13 +170,7 @@ def main(argv=None):
     if os.path.exists(args.official_dates):
         fallback = align_ocg_dates(cards, load_ocg_dates(args.official_dates))
         dates, _ = merge_aligned_dates(dates, fallback)
-    rewritten_ids = set()
-    if os.path.exists(args.rewrites):
-        with open(args.rewrites, encoding="utf-8") as f:
-            rewritten_ids = {entry["id"] for entry in json.load(f)}
-
-    records, card_count = collect_records(cards, tag_cards, dates,
-                                          rewritten_ids, args.limit)
+    records, card_count = collect_records(cards, tag_cards, dates, args.limit)
     findings = check_texts(glossary_md, records)
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)

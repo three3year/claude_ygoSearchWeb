@@ -1,0 +1,2770 @@
+[
+ {
+  "id": 613013,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 1490690,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 1528054,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "自身",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 1759808,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 2273734,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 2656842,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 3806388,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 3966653,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 4398189,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 5821478,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 6355563,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 6908161,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "雙方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 7305060,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 7305060,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 7382007,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 7496001,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 7782069,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 8529136,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 8763963,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 8837932,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 8903700,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9030160,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9396662,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9433350,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9547962,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9617996,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9677699,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 10979723,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 11327848,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 11962031,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 12421694,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 14212201,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 14457896,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 14478717,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "對手",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 16693934,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 17315396,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 17725109,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 19403423,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 20568404,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 20612097,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 21056275,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 21105106,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 21364070,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 21495657,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 22125101,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 22200403,
+  "section": "main",
+  "index": "①-●3",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 22211622,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 22624373,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "表示形式",
+    "side": "自身",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 23085002,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 23442438,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 23856331,
+  "section": "main",
+  "index": "③",
+  "tags": []
+ },
+ {
+  "id": 24573625,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 24861088,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 24874630,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 25573115,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 25807544,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 27415516,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 27946124,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 28642461,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 29047353,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 29085954,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 29417188,
+  "section": "main",
+  "index": "①-●3",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 29726552,
+  "section": "main",
+  "index": "④",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 30913809,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 31002402,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 31149212,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 31643613,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 32175429,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 32231618,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 32687071,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 33475154,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 33491462,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 33543890,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 33814281,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "對手",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 34492631,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 34522216,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 34522216,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 34974462,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 35129241,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 35269904,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 35552985,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 36609518,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 36709484,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 37613663,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 37663536,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 38173725,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 38783169,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 40318957,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 40352445,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 41524885,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "雙方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 41578483,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 41790641,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 42307760,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 42469671,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 43138260,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "表示形式",
+    "side": "我方",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 43577607,
+  "section": "main",
+  "index": "①-●3",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 43994202,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 44716748,
+  "section": "main",
+  "index": "①",
+  "tags": []
+ },
+ {
+  "id": 45215225,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 48642904,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "表示形式",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 49299410,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 50078509,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 50588353,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 51779204,
+  "section": "main",
+  "index": "①-●2",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 51822687,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 52340444,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 52653092,
+  "section": "main",
+  "index": "④",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 52709508,
+  "section": "main",
+  "index": "①-●1",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 52947044,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 53183600,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "自身",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 53266486,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 53797637,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 54498517,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 55031170,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 56049970,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 56364287,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 57031794,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "自身",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 57450198,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "自身",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 57511992,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 57815601,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 57835716,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 58288218,
+  "section": "main",
+  "index": "①",
+  "tags": []
+ },
+ {
+  "id": 58569561,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 58809685,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 59011257,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 59281922,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 59463312,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 59822133,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 60623203,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 61190918,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "自身",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 63060238,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 63492244,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 63519819,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "表示形式",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 63845230,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "自身",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 63881033,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 64414267,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 64583600,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 65261141,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 66384688,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 66523544,
+  "section": "main",
+  "index": "①",
+  "tags": []
+ },
+ {
+  "id": 67234805,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 67584223,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 68431965,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 68508433,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 69211541,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 69381150,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 70917315,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 71607202,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 72181263,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 72634965,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 73341839,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "自身",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74168099,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74271714,
+  "section": "main",
+  "index": "①-●1",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74605254,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74689476,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 75364199,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "雙方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 75622824,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 76218313,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 76685519,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 77075360,
+  "section": "main",
+  "index": "①",
+  "tags": []
+ },
+ {
+  "id": 77590412,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 77610503,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "對手",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 77714963,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 78084378,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "雙方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 79015062,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 79519259,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 79582540,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 79850798,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 80054655,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 80101899,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 80559548,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "自身",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 81587028,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 81684048,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 82045034,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 82359538,
+  "section": "main",
+  "index": "①",
+  "tags": []
+ },
+ {
+  "id": 82791472,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 83190280,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 83962752,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 84031359,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 84171830,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 85431040,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 85507811,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "自身",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 86401517,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 86809440,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "雙方",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 87327776,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 87880531,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "雙方",
+    "term": "單回合",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 88307361,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 88975532,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "side": "對手",
+    "term": "持續",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 89238128,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "自身",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 89571015,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "自身",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 91135480,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "term": "單回合",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "發動效果",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 91907707,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 95401059,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 95500396,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "對手",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 96214561,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 96223501,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 97007933,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "其他",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 97662494,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 98937206,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "攻擊",
+    "side": "我方",
+    "pos": "效果"
+   },
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 99599062,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "行動限制",
+    "what": "特殊召喚",
+    "side": "我方",
+    "term": "單回合",
+    "pos": "效果"
+   }
+  ]
+ }
+]

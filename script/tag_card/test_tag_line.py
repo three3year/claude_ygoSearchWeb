@@ -295,6 +295,127 @@ class TestPhase3Rules(unittest.TestCase):
         self.assertTrue(any(t.get("side") == "對手" for t in tags))
 
 
+class TestPhase4Rules(unittest.TestCase):
+    """第4期(票18):行動限制與耐性/保護的規則直貼邊界。"""
+
+    def cat_tags(self, entries, cat):
+        clause = clauses_of(entries, 1000)[0]
+        return [t for t in clause["tags"] if t.get("cat") == cat]
+
+    def test_opponent_special_summon_lock(self):
+        entries, _ = build(
+            "①:此卡在怪獸區存在期間,對手不能特殊召喚怪獸。",
+            "①：このカードがモンスターゾーンに存在する限り、"
+            "相手はモンスターを特殊召喚できない。")
+        tags = self.cat_tags(entries, "行動限制")
+        self.assertTrue(any(t.get("what") == "特殊召喚"
+                            and t.get("side") == "對手"
+                            and t["pos"] == "效果" for t in tags))
+        self.assertTrue(any(t.get("term") == "持續" for t in tags))
+
+    def test_oath_self_restriction_is_tagged(self):
+        """誓約尾句是行動限制動作(側=我方,批2 裁定)。"""
+        entries, _ = build(
+            "①:從牌組將1隻怪獸加入手牌。此效果發動後直到回合結束,"
+            "自己不能特殊召喚怪獸。",
+            "①：デッキからモンスター１体を手札に加える。"
+            "この効果の発動後、ターン終了時まで自分はモンスターを"
+            "特殊召喚できない。")
+        tags = self.cat_tags(entries, "行動限制")
+        self.assertTrue(any(t.get("what") == "特殊召喚"
+                            and t.get("side") == "我方" for t in tags))
+        self.assertTrue(any(t.get("term") == "單回合" for t in tags))
+
+    def test_summon_modifier_form_is_not_tagged(self):
+        """「通常召喚できないモンスター」是對象修飾非限制動作。"""
+        text_ja = ("①：自分の墓地の通常召喚できないモンスター１体を"
+                   "対象として発動できる。そのモンスターを特殊召喚する。")
+        entries, _ = build("①:以墓地1隻不能通常召喚的怪獸為對象發動。"
+                           "特殊召喚那隻怪獸。", text_ja)
+        self.assertEqual(self.cat_tags(entries, "行動限制"), [])
+        self.assertFalse(tag_rules.screen_hit("行動限制", text_ja))
+
+    def test_self_restriction_with_negation_immunity(self):
+        """「自分は〜しか特殊召喚できない。この効果は無効化されない」:
+        前半行動限制(我方)、後半無效化保護(what 缺值只貼類別)。"""
+        entries, _ = build(
+            "①:自己只能特殊召喚「機關」怪獸。此效果不會被無效化。",
+            "①：自分は「クリフォート」モンスターしか特殊召喚できない。"
+            "この効果は無効化されない。")
+        rs = self.cat_tags(entries, "行動限制")
+        self.assertTrue(any(t.get("what") == "特殊召喚"
+                            and t.get("side") == "我方" for t in rs))
+        pt = self.cat_tags(entries, "耐性/保護")
+        self.assertTrue(any("what" not in t for t in pt))
+
+    def test_direct_attack_is_not_restriction(self):
+        """「直接攻撃できない」歸戰鬥規則(批2),行動限制不開火不圈。"""
+        text_ja = "①：このカードは直接攻撃できない。"
+        entries, _ = build("①:此卡不能直接攻擊。", text_ja)
+        self.assertEqual(self.cat_tags(entries, "行動限制"), [])
+        self.assertFalse(tag_rules.screen_hit("行動限制", text_ja))
+
+    def test_attack_lock_on_self(self):
+        entries, _ = build(
+            "①:此卡不能攻擊。",
+            "①：このカードは攻撃できない。")
+        tags = self.cat_tags(entries, "行動限制")
+        self.assertTrue(any(t.get("what") == "攻擊"
+                            and t.get("side") == "自身" for t in tags))
+
+    def test_battle_and_effect_destruction_protection(self):
+        """合記「戦闘・効果では破壊されない」戰鬥/效果兩面各貼。"""
+        entries, _ = build(
+            "①:此卡不會被戰鬥、效果破壞。",
+            "①：このカードは戦闘・効果では破壊されない。")
+        tags = self.cat_tags(entries, "耐性/保護")
+        whats = {t.get("what") for t in tags}
+        self.assertIn("戰鬥破壞", whats)
+        self.assertIn("效果破壞", whats)
+        self.assertTrue(any(t.get("side") == "自身" for t in tags))
+
+    def test_active_target_protection(self):
+        """「効果の対象にできない」是「にならない」的能動寫法,歸耐性。"""
+        entries, _ = build(
+            "①:對手不能以自己場上的魔法師族怪獸為效果對象。",
+            "①：このカードがモンスターゾーンに存在する限り、自分フィールド"
+            "の魔法使い族モンスターを相手は効果の対象にできない。")
+        tags = self.cat_tags(entries, "耐性/保護")
+        self.assertTrue(any(t.get("what") == "效果對象" for t in tags))
+        self.assertTrue(any(t.get("side") == "我方" for t in tags))
+
+    def test_replacement_destroy_protection(self):
+        entries, _ = build(
+            "①:場上怪獸被破壞的場合,可以改為破壞此卡。",
+            "①：フィールドのモンスターが戦闘で破壊される場合、"
+            "代わりにこのカードを破壊する事ができる。")
+        tags = self.cat_tags(entries, "耐性/保護")
+        self.assertTrue(any(t.get("what") == "代替破壞" for t in tags))
+
+    def test_toll_restriction_both_faces(self):
+        """通行費「払わなければ〜できない」:支付面 LP支付、限制面行動限制,
+        兩面各自成立。"""
+        entries, _ = build(
+            "①:對手不支付600基本分就不能發動卡片效果。",
+            "①：このカードがモンスターゾーンに存在する限り、相手は"
+            "６００LPを払わなければ、カードの効果を発動できない。")
+        self.assertTrue(any(t.get("side") == "對手" for t in
+                            self.cat_tags(entries, "LP支付")))
+        rs = self.cat_tags(entries, "行動限制")
+        self.assertTrue(any(t.get("what") == "發動效果"
+                            and t.get("side") == "對手" for t in rs))
+
+    def test_self_effect_usage_condition_is_not_tagged(self):
+        """「この効果は…にしか発動できない」是自我使用條件非限制動作。"""
+        text_ja = ("①：フィールドの表側表示モンスター１体を対象として"
+                   "発動できる。そのモンスターの表示形式を変更する。"
+                   "この効果は自分ターンにしか発動できない。")
+        entries, _ = build("①:變更場上1隻怪獸的表示形式。此效果只能在"
+                           "自己回合發動。", text_ja)
+        self.assertEqual(self.cat_tags(entries, "行動限制"), [])
+        self.assertFalse(tag_rules.screen_hit("行動限制", text_ja))
+
+
 class TestTagPreservation(unittest.TestCase):
     """llm/manual 的 tag 走「判定一次就算數」,rule 的 tag 每次重算。"""
 

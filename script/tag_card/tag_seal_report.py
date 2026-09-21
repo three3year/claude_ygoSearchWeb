@@ -45,6 +45,8 @@ MASKED_SETS = {
     tag_rules.CAT_HEAL: ("hp-sample.json",),
     tag_rules.CAT_LP_PAY: ("lpp-sample.json",),
     tag_rules.CAT_LP_LOSE: ("lpl-sample.json",),
+    tag_rules.CAT_RESTRICT: ("rs-sample.json", "rs-sample-supplement.json"),
+    tag_rules.CAT_PROTECT: ("pt-sample.json", "pt-sample-supplement.json"),
 }
 LIST_PREVIEW = 10
 

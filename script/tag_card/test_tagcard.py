@@ -87,7 +87,7 @@ class TestNumberedSplitting(unittest.TestCase):
         self.assertEqual(list(clause), [
             "index", "section", "text_zh", "text_ja", "text_hash", "kind",
             "optional", "role", "source", "needs_review", "rule_predicted",
-            "confidence", "tags"])
+            "confidence", "tags", "tags_checked", "timing", "timing_src"])
         self.assertIsNone(clause["kind"])
         self.assertIsNone(clause["optional"])
         self.assertIsNone(clause["role"])
@@ -95,6 +95,9 @@ class TestNumberedSplitting(unittest.TestCase):
         self.assertFalse(clause["needs_review"])
         self.assertIsNone(clause["rule_predicted"])
         self.assertEqual(clause["tags"], [])
+        self.assertEqual(clause["tags_checked"], [])
+        self.assertIsNone(clause["timing"])
+        self.assertIsNone(clause["timing_src"])
 
     def test_japanese_without_newlines_still_splits(self):
         """官方日文卡文常整段不換行,切割不能只靠行首。"""
@@ -2728,8 +2731,10 @@ class TestLateOfficialAttestation(unittest.TestCase):
 
     def test_upgrading_keeps_the_existing_tags(self):
         """tags 不是官方明示決定的欄位,升級不得把它洗掉。"""
-        entries, _ = self.rerun_with("啟動效果", "llm", tags=["從牌組特招"])
-        self.assertEqual(clauses_of(entries, 1000)[0]["tags"], ["從牌組特招"])
+        tag = {"cat": "區域移動", "from": "牌組", "to": "場上",
+               "pos": "效果", "src": "llm"}
+        entries, _ = self.rerun_with("啟動效果", "llm", tags=[dict(tag)])
+        self.assertEqual(clauses_of(entries, 1000)[0]["tags"], [tag])
 
     def test_upgrading_keeps_an_optional_this_run_cannot_produce(self):
         """規則層算不出來的欄位不得在升級時被洗成 null。"""
@@ -4168,10 +4173,11 @@ class TestRejudgement(unittest.TestCase):
 
     def test_rejudge_keeps_the_tags_of_the_row_it_replaces(self):
         """[[效果 Tag]]是另一條軸,不隨效果類型改判而消失。"""
+        tag = {"cat": "破壞", "what": "魔陷", "pos": "效果", "src": "llm"}
         existing = self.judged_sheet()
-        mark(existing, 1000, "①", tags=["破壞魔法陷阱"])
+        mark(existing, 1000, "①", tags=[dict(tag)])
         entries, _ = self.build(self.rows("永續效果"), existing=existing)
-        self.assertEqual(clauses_of(entries, 1000)[0]["tags"], ["破壞魔法陷阱"])
+        self.assertEqual(clauses_of(entries, 1000)[0]["tags"], [tag])
 
     def test_a_refused_rejudge_is_reported_once_not_twice(self):
         existing = self.judged_sheet(source="manual")

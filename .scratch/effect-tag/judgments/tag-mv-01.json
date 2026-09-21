@@ -1,0 +1,1500 @@
+[
+  {
+    "id": 59080,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "墓地"
+      }
+    ]
+  },
+  {
+    "id": 365213,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 1149109,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 1340142,
+    "section": "main",
+    "index": "③",
+    "tags": []
+  },
+  {
+    "id": 1637760,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 3598351,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 4227096,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 4538826,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "牌組",
+        "side": "自身"
+      }
+    ]
+  },
+  {
+    "id": 4663194,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 4993187,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外",
+        "side": "自身"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 5008836,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 6182103,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 7480763,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 7987191,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 8315896,
+    "section": "main",
+    "index": "③",
+    "tags": []
+  },
+  {
+    "id": 8873112,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 9272381,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 9763474,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 10300821,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 11958188,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "墓地",
+        "side": "自身"
+      }
+    ]
+  },
+  {
+    "id": 12021072,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 13090893,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外",
+        "side": "自身"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 13235258,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 14556954,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 15291624,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 17550376,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "額外牌組",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 20292186,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 21123811,
+    "section": "main",
+    "index": "①-●2",
+    "tags": []
+  },
+  {
+    "id": 21377582,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 21495657,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "牌組",
+        "side": "自身"
+      }
+    ]
+  },
+  {
+    "id": 23434538,
+    "section": "main",
+    "index": "①-●1",
+    "tags": []
+  },
+  {
+    "id": 24878656,
+    "section": "main",
+    "index": "①-●1",
+    "tags": []
+  },
+  {
+    "id": 25614410,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "額外牌組"
+      }
+    ]
+  },
+  {
+    "id": 29223325,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 29251488,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "牌組",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 30888983,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 32126000,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "牌組",
+        "to": "場上"
+      }
+    ]
+  },
+  {
+    "id": 32687071,
+    "section": "pendulum",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 32975247,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 34267821,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 34365442,
+    "section": "main",
+    "index": "①-●1",
+    "tags": []
+  },
+  {
+    "id": 34695290,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 34995106,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 35261759,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "牌組",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 35306215,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 35546670,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "墓地"
+      }
+    ]
+  },
+  {
+    "id": 35561352,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "額外牌組",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 36111775,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 36197902,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 37021315,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 37582948,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 38625110,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "牌組",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "牌組",
+        "to": "除外",
+        "side": "對手"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "額外牌組",
+        "to": "除外",
+        "side": "對手"
+      }
+    ]
+  },
+  {
+    "id": 40366667,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 40605147,
+    "section": "main",
+    "index": "①-●2",
+    "tags": []
+  },
+  {
+    "id": 41420027,
+    "section": "main",
+    "index": "①-●2",
+    "tags": []
+  },
+  {
+    "id": 42035044,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "墓地"
+      }
+    ]
+  },
+  {
+    "id": 42141493,
+    "section": "main",
+    "index": "①-●1",
+    "tags": []
+  },
+  {
+    "id": 43944080,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "額外牌組",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 44901281,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 45171524,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "墓地"
+      }
+    ]
+  },
+  {
+    "id": 45591967,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "額外牌組",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 46412900,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 46640168,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "牌組"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "額外牌組"
+      }
+    ]
+  },
+  {
+    "id": 46708514,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 47027714,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "除外",
+        "side": "對手"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 47910940,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 47914440,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 49238328,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "額外牌組",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 50323155,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 50696588,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 51194046,
+    "section": "pendulum",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 53318263,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 53770666,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "墓地",
+        "to": "場上"
+      }
+    ]
+  },
+  {
+    "id": 56311997,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 57355219,
+    "section": "main",
+    "index": "①-●2",
+    "tags": []
+  },
+  {
+    "id": 57761191,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 58069384,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 58468105,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "額外牌組",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 58570206,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "額外牌組",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 58938528,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "墓地",
+        "side": "自身"
+      }
+    ]
+  },
+  {
+    "id": 59305593,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 59509952,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "牌組",
+        "side": "自身"
+      }
+    ]
+  },
+  {
+    "id": 61089209,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 61459246,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 61888819,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 63362460,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外",
+        "side": "自身"
+      }
+    ]
+  },
+  {
+    "id": 63972571,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 64233143,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 64726269,
+    "section": "main",
+    "index": "②-●1",
+    "tags": []
+  },
+  {
+    "id": 65504487,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 65898344,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外",
+        "side": "自身"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外",
+        "side": "自身"
+      }
+    ]
+  },
+  {
+    "id": 66425726,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 66698383,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 68005187,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "墓地",
+        "side": "對手"
+      }
+    ]
+  },
+  {
+    "id": 68199168,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "手牌",
+        "to": "墓地",
+        "side": "對手"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "墓地",
+        "side": "對手"
+      }
+    ]
+  },
+  {
+    "id": 68941332,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 69304426,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 69750546,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "墓地"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "牌組",
+        "to": "墓地"
+      }
+    ]
+  },
+  {
+    "id": 69925461,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 71564252,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 72064891,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 72883039,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 73360025,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 73680966,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 74063034,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 74139959,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 74294676,
+    "section": "main",
+    "index": "①-●2",
+    "tags": []
+  },
+  {
+    "id": 75191028,
+    "section": "main",
+    "index": "①-●3",
+    "tags": []
+  },
+  {
+    "id": 77584012,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 78360952,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 79400597,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 79407975,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 79559912,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 79791695,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 79864860,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 80230510,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "墓地",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 80237445,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 80320877,
+    "section": "main",
+    "index": "①-●1",
+    "tags": []
+  },
+  {
+    "id": 81210420,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "牌組",
+        "to": "場上"
+      }
+    ]
+  },
+  {
+    "id": 82159583,
+    "section": "main",
+    "index": "①-●1",
+    "tags": []
+  },
+  {
+    "id": 82159583,
+    "section": "main",
+    "index": "①-●2",
+    "tags": []
+  },
+  {
+    "id": 82319644,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 82382815,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 82706696,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 83199011,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外",
+        "side": "自身"
+      }
+    ]
+  },
+  {
+    "id": 84025439,
+    "section": "main",
+    "index": "①-●3",
+    "tags": []
+  },
+  {
+    "id": 84192580,
+    "section": "main",
+    "index": "①-●1",
+    "tags": []
+  },
+  {
+    "id": 84462118,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "手牌",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "場上",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 84749824,
+    "section": "main",
+    "index": "①-●1",
+    "tags": []
+  },
+  {
+    "id": 84749824,
+    "section": "main",
+    "index": "①-●2",
+    "tags": []
+  },
+  {
+    "id": 85103922,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 87126721,
+    "section": "main",
+    "index": "①-●1",
+    "tags": []
+  },
+  {
+    "id": 89208725,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "牌組",
+        "to": "手牌"
+      },
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "牌組",
+        "to": "場上"
+      }
+    ]
+  },
+  {
+    "id": 90162951,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 91337277,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "牌組",
+        "to": "除外"
+      }
+    ]
+  },
+  {
+    "id": 91512835,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "墓地"
+      }
+    ]
+  },
+  {
+    "id": 92512625,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 93871599,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "成本",
+        "from": "墓地",
+        "to": "除外",
+        "side": "自身"
+      }
+    ]
+  },
+  {
+    "id": 94317736,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 96162588,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "區域移動",
+        "pos": "效果",
+        "from": "場上",
+        "to": "墓地",
+        "side": "對手"
+      }
+    ]
+  },
+  {
+    "id": 97045737,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 97836203,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 98127546,
+    "section": "main",
+    "index": "③",
+    "tags": []
+  },
+  {
+    "id": 98301564,
+    "section": "pendulum",
+    "index": "①-●2",
+    "tags": []
+  }
+]

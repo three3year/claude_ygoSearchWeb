@@ -65,6 +65,7 @@ const DRIVER = `
   return Query.nextState(a.st, a.states);
 }
 ;function __optAvail(json) { return JSON.stringify(Query.optionalAvailable(JSON.parse(json))); }
+;function __timingAvail(json) { return JSON.stringify(Query.timingAvailable(JSON.parse(json))); }
 ;function __critCount(json) { return Query.count(JSON.parse(json)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }

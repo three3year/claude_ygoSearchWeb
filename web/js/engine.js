@@ -207,6 +207,62 @@ function kindAt(c, i) {
   return [code];
 }
 
+/* [[效果 Tag]]的索引短碼:「類別碼:槽位碼:…」,槽位序由[[值域正典]]宣告
+   (`VOCAB.tag.slots`)——在這裡抄一份欄位序的話,正典動槽位時解碼會安靜地
+   錯位(ADR-0008)。第一期搜尋只命中**位置=效果**的 tag(裁定批1:搜「除外」
+   不撈自家代價),`成本` 的 tag 照樣在索引裡,未來開位置開關時零遷移。 */
+const TAG_SLOTS = {};
+const TAG_POS_AT = {};
+for (const cat in ((VOCAB.tag || {}).slots || {})) {
+  TAG_SLOTS[cat] = VOCAB.tag.slots[cat].map(s => s[0]);
+  TAG_POS_AT[cat] = TAG_SLOTS[cat].indexOf('pos');
+}
+const TAG_COST = 'c';
+const MV = 'mv';
+
+function tagsAt(c, i) {
+  return (c.tg && c.tg[i]) || [];
+}
+
+/* 一句對動作類別軸的值集合(位置=成本的 tag 不算——它是代價不是效果)。
+   正典沒宣告 pos 槽位的類別(LP支付,裁定票15)位置軸對它無意義,一律命中;
+   槽位表完全查不到的類別才是正典外,防禦性跳過。 */
+function tagCatsAt(c, i) {
+  const out = [];
+  for (const t of tagsAt(c, i)) {
+    const parts = t.split(':');
+    const pos = TAG_POS_AT[parts[0]];
+    if (pos == null) continue;
+    if (pos >= 0 && parts[1 + pos] === TAG_COST) continue;
+    if (out.indexOf(parts[0]) < 0) out.push(parts[0]);
+  }
+  return out;
+}
+
+/* 區域移動的起點/終點下拉:這一句有沒有符合的 mv tag(位置=效果)。
+   from/to 是 tag_zone 短碼,空字串=該端未設;**槽位缺值的 tag 不被設了值的
+   那一端命中**——「回到手牌(起點不明)」不該被「墓地→手牌」撈到。 */
+function mvHit(c, i, from, to) {
+  const keys = TAG_SLOTS[MV] || [];
+  for (const t of tagsAt(c, i)) {
+    const parts = t.split(':');
+    if (parts[0] !== MV) continue;
+    const val = {};
+    keys.forEach((k, j) => { val[k] = parts[1 + j] || ''; });
+    if (val.pos === TAG_COST) continue;
+    if (from && val.from !== from) continue;
+    if (to && val.to !== to) continue;
+    return true;
+  }
+  return false;
+}
+
+/* 一句對[[觸發時機]]軸的值集合(句層單值;不承載或未貼是空陣列)。 */
+function timingAt(c, i) {
+  const code = c.tm && c.tm[i];
+  return code ? [code] : [];
+}
+
 /* 素材指定行(`role = mat`,2,358 行)**預設不掃**:搜「融合」時,574 張融合怪獸
    的素材寫法會把真正的答案淹掉。`q.textMat` 開了才掃——效果文框搜「青眼白龍」
    要撈得到把它寫在素材行的融合怪獸(2026-08-21 使用者裁示:原本的固定規則改成
@@ -225,12 +281,18 @@ function sel(o) {
    回傳命中的效果句索引;一句都沒中即這張卡不命中。
    三態排除在這一層的語意是**這一句不是那個類型**,而不是「這張卡沒有那種句子」
    ——同一顆鈕在同一個軸上不能有兩種語意,而句層的單位是句。 */
-function clauseRows(c, parts, kindSel, optSel, matOn) {
+function clauseRows(c, parts, kindSel, optSel, matOn, tagSel, timingSel,
+                    mvFrom, mvTo) {
   const tx = c.tx || [];
   const rows = [];
   for (let i = 0; i < tx.length; i++) {
     if (kindSel && !triHit(kindAt(c, i), kindSel)) continue;
     if (optSel && !triHit(optAt(c, i), optSel)) continue;
+    if (tagSel && !triHit(tagCatsAt(c, i), tagSel)) continue;
+    if (timingSel && !triHit(timingAt(c, i), timingSel)) continue;
+    // 起點/終點下拉自成一個句層條件:設了任一端就要有符合的 mv tag——
+    // 沒點類別鈕也一樣(下拉本身就是「找區域移動」的問法)
+    if ((mvFrom || mvTo) && !mvHit(c, i, mvFrom, mvTo)) continue;
     if (parts.length) {
       // 開關只管**關鍵字**掃不掃素材行(見上方 ROLE_MAT):效果類型與必發/選發
       // 照樣看得到它,找效果外文本的人不受影響
@@ -263,12 +325,19 @@ function runQuery(db, q) {
   const textParts = likeParts(text);
   const kindSel = sel(q.kind);
   const optSel = sel(q.opt);
+  const tagSel = sel(q.tag);
+  const timingSel = sel(q.timing);
+  // 區域移動的起點/終點(tag_zone 短碼;空字串或缺席=未設)
+  const mvFrom = term(q.mvFrom);
+  const mvTo = term(q.mvTo);
   // 生效中的句層條件。效果文帶關鍵字本身(每一行都一樣),效果類型與必發/選發
   // 只報「這個條件生效中」——badge 上寫的是**那一行自己的值**,而那逐行不同。
   const marks = [];
   if (textParts.length) marks.push({ type: 'text', value: text });
   if (kindSel) marks.push({ type: 'kind' });
   if (optSel) marks.push({ type: 'opt' });
+  if (tagSel || mvFrom || mvTo) marks.push({ type: 'tag' });
+  if (timingSel) marks.push({ type: 'timing' });
   const cards = [];
   for (const c of db) {
     if (name && !nameHit(c, name, q.nameLang)) continue;
@@ -276,7 +345,8 @@ function runQuery(db, q) {
     if (!paramHit(c, q)) continue;
     let rows = null;
     if (marks.length) {
-      rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
+      rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat,
+                        tagSel, timingSel, mvFrom, mvTo);
       if (!rows.length) continue;
     }
     cards.push({ card: c, rows });

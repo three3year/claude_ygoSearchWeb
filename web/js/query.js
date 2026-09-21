@@ -48,6 +48,11 @@ const FIELDS = [
   { tri: 'cat', dom: 'cat', states: 2 },
   { tri: 'kind', dom: 'kind' },
   { tri: 'opt', dom: 'optional' },
+  // [[效果 Tag]]兩軸(票08/13):動作類別三態鈕(區域移動另有起點/終點下拉,
+  // 生成於軸內,見 tagExtraHtml)與觸發時機三態鈕。都是句層條件,與效果類型/
+  // 必發選發同句耦合。時機軸照承載關係連動(syncTiming,與必發/選發同構)。
+  { tri: 'tag', dom: 'tag' },
+  { tri: 'timing', dom: 'timing' },
   // `parent`:檔案總管式的樹狀內縮——子軸的整個區塊**巢狀在父軸的摺疊體裡**,
   // 收起父軸,整棵子樹跟著消失(各自的展開狀態保留,再展開時原樣回來)。
   // 子類組掛在大類下;怪獸參數八軸掛在怪獸子類型下。
@@ -190,6 +195,23 @@ function headHtml(zh) {
       title="清除這一組條件">×</button></div>`;
 }
 
+/* 動作類別軸的加掛(票08):區域移動的起點/終點下拉(選項由 VOCAB.tag_zone
+   生成,ADR-0008)與已貼範圍說明(第一期僅新式卡文,使用者才知道為什麼某張
+   舊卡搜不到)。下拉是句層條件的一部分,讀寫都走 read()/write()。 */
+function tagExtraHtml() {
+  const zones = (VOCAB.tag_zone || {}).items || [];
+  const options = ['<option value="">—</option>']
+    .concat(zones.map(z => `<option value="${esc(z.code)}">${esc(z.zh)}</option>`))
+    .join('');
+  return `<div class="tag-mv-row"><span class="group-label">區域移動</span>
+    <label>起點 <select class="tag-mv" data-mv="from">${options}</select></label>
+    <span class="range-sep">→</span>
+    <label>終點 <select class="tag-mv" data-mv="to">${options}</select></label>
+    </div><p class="tag-scope-note">已貼範圍:第一期=新式卡文(帶①編號)的
+    區域移動與觸發時機。其餘類別分期推進中,按鈕會隨該期資料進版自動出現;
+    舊式卡文的效果句另期補判。</p>`;
+}
+
 function axisHtml(ax, kids) {
   kids = kids || [];
   // `groupAfter` 宣告了插點的分組區塊,先按目的地(子軸區塊鍵)收著
@@ -227,6 +249,7 @@ function axisHtml(ax, kids) {
   // 插點沒對上任何子軸(值域或欄位表漂移)的分組落到最後——寧可排錯位置,
   // 不能讓一組鈕安靜地消失
   for (const dest in anchored) body += anchored[dest].join('');
+  if (ax.key === 'tag') body += tagExtraHtml();
   return `<div class="axis" data-axis="${ax.key}" data-side="${ax.side}"
     data-states="${ax.states}"${ax.side || ax.mon ? ' hidden' : ''}>
     ${headHtml(ax.zh)}<div class="axis-body" hidden>${body}</div></div>`;
@@ -339,6 +362,10 @@ function read() {
     if (f.group) return;   // 僅摺疊分組的父層沒有條件可讀
     (f.tri ? readTri : readRange)(q, f);
   });
+  // 區域移動的起點/終點下拉(票08):設了才有鍵,值是 tag_zone 短碼
+  all('select.tag-mv').forEach(sel => {
+    if (sel.value) q[sel.dataset.mv === 'from' ? 'mvFrom' : 'mvTo'] = sel.value;
+  });
   return q;
 }
 
@@ -400,6 +427,10 @@ function axisCounts(q) {
       const sel = q[f.tri] || {};
       out[blockKey(f)] = Object.keys(sel).filter(k => sel[k] &&
         (!f.side || k.indexOf(f.side + ':') === 0)).length;
+      // 區域移動的起點/終點下拉住在 tag 軸的區塊裡,各算一顆
+      if (f.tri === 'tag') {
+        out[blockKey(f)] += (q.mvFrom ? 1 : 0) + (q.mvTo ? 1 : 0);
+      }
       // 具名分組升級成區塊的軸(groupBlocks):每個分組多發一個鍵
       // (`值域名/分組序`),數的是**該組的碼**——它是同一批選擇的分組視圖,
       // 不是另一批條件,所以不進 treeCounts 的父子加總(會重複計)
@@ -610,6 +641,23 @@ function showGroup(el, show) {
   el.hidden = !show;
 }
 
+/** [[觸發時機]]軸出不出得來:已選(包含)的效果類型全都不是承載者時收起
+    (與 optionalAvailable 同一條規則;carriers 由值域正典宣告)。一顆都沒
+    包含時照樣出得來——「被破壞時」自己就是有結果的條件。 */
+function timingAvailable(kindSel) {
+  const carriers = (VOCAB.timing || {}).carriers || [];
+  const included = Object.keys(kindSel || {}).filter(c => kindSel[c] > 0);
+  return !included.length ||
+    included.some(c => carriers.indexOf(c) >= 0);
+}
+
+function syncTiming() {
+  const el = axisEl('timing', '');
+  if (!el) return;
+  showAxis(el, timingAvailable(triSel(FIELDS.find(f => f.tri === 'kind'))),
+           true);
+}
+
 /* 「必發/選發」的兩組各自只在選得出結果時出現(規則見 optionalAvailable);
    兩組都收起時整軸跟著藏,任一組在則軸在(出現時照舊自動展開)。組以**位置序**
    對上答案:tri-group 的文件序就是分組的宣告序,而 optionalAvailable 回傳的
@@ -679,6 +727,10 @@ function write(q) {
     .forEach(f => writeTri(q, f));
   syncSubs();
   syncOptional();
+  syncTiming();
+  all('select.tag-mv').forEach(sel => {
+    sel.value = (sel.dataset.mv === 'from' ? q.mvFrom : q.mvTo) || '';
+  });
   FIELDS.forEach(f => {
     if (f.group) return;   // 僅摺疊分組的父層沒有條件可寫
     (f.tri ? writeTri : writeRange)(q, f);
@@ -703,8 +755,10 @@ function clear() {
   showLang($('fNameLang'), LANGS[0].v);
   all('.tri').forEach(btn => setTri(btn, ''));
   all('.range-in').forEach(input => { input.value = ''; });
+  all('select.tag-mv').forEach(sel => { sel.value = ''; });
   syncSubs();
   syncOptional();
+  syncTiming();
   // 收合放在連動之後:必發/選發那一組若因連動從隱藏轉回可見,轉換會讓它自動
   // 展開——清除要的是初始狀態,最後一律收回(分組區塊也是)
   all('.axis, .range, .axis-group').forEach(box => setAxisOpen(box, false));
@@ -721,9 +775,11 @@ function clear() {
 function clearBlock(box) {
   box.querySelectorAll('.tri').forEach(b => setTri(b, ''));
   box.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
-  // 清掉的可能是大類或效果類型:連動的子類組/怪獸參數/必發選發要跟著藏或現
+  box.querySelectorAll('select.tag-mv').forEach(sel => { sel.value = ''; });
+  // 清掉的可能是大類或效果類型:連動的子類組/怪獸參數/必發選發/時機要跟著藏或現
   syncSubs();
   syncOptional();
+  syncTiming();
   updateCounts();
 }
 
@@ -738,6 +794,7 @@ function init() {
   build();
   syncSubs();
   syncOptional();
+  syncTiming();
   // 委派在容器上:按鈕是生成的,一顆一顆綁事件等於把生成的好處還回去
   $('critParams').addEventListener('click', e => {
     const clr = e.target.closest('.axis-clear');
@@ -759,8 +816,12 @@ function init() {
     // 大類的容器,直接用選擇器會把子軸的點擊誤判成大類的
     const ax = (btn.closest('.axis') || {}).dataset || {};
     if (ax.axis === 'cat') syncSubs();
-    if (ax.axis === 'kind') syncOptional();
+    if (ax.axis === 'kind') { syncOptional(); syncTiming(); }
     updateCounts();
+  });
+  // 區域移動下拉:變更也要讓標題列的已選數跟上
+  $('critParams').addEventListener('change', e => {
+    if (e.target.closest('select.tag-mv')) updateCounts();
   });
   // 範圍輸入框打字也要讓標題列的已選數跟上(收起時看得見自己設了範圍)
   $('critParams').addEventListener('input', e => {
@@ -769,6 +830,7 @@ function init() {
 }
 
   return Object.freeze({ read, write, clear, init, axes, optionalAvailable,
+                         timingAvailable,
                          nextState, count, axisCounts, treeCounts, expandedAxes,
                          summarize, collapse: () => setOpen(false),
                          LANGS, FIELDS });

@@ -184,6 +184,26 @@ def _entry(card, clauses):
                  for cl in clauses]
         if any(roles):
             out["ro"] = roles
+        # [[效果 Tag]]:句層短碼陣列的陣列(spec 票08)。tag 的形狀由
+        # `vocab.tag_code` 編碼(類別碼:槽位碼…,槽位序照 TAG_SLOTS 宣告),
+        # 解不進正典的 tag 記進 unknown → 建置失敗(ADR-0008 的同一道閘門)
+        tags = []
+        for cl in clauses:
+            row = []
+            for tag in cl.get("tags") or ():
+                code, problem = vocab.tag_code(tag)
+                if code is None:
+                    unknown.append({"field": "tg", "value": problem,
+                                    "reason": "tag 解不進正典"})
+                else:
+                    row.append(code)
+            tags.append(row)
+        if any(tags):
+            out["tg"] = tags
+        timings = [_coded(unknown, "tm", vocab.TIMING, cl.get("timing")) or ""
+                   for cl in clauses]
+        if any(timings):
+            out["tm"] = timings
         pz = [i for i, cl in enumerate(clauses)
               if cl.get("section") == PENDULUM_SECTION]
         if pz:
@@ -437,6 +457,35 @@ def _cross_type_counts(cards, clauses_by_id):
     return counts
 
 
+def _tag_category_counts(tag_cards):
+    """各動作類別在全庫的 tag 數(含成本位)。0 = 該類尚未開貼。"""
+    counts = dict.fromkeys(vocab.codes(vocab.TAG), 0)
+    for entry in tag_cards:
+        for clause in entry.get("clauses") or ():
+            for tag in clause.get("tags") or ():
+                code = vocab.code_of(vocab.TAG, tag.get("cat"))
+                if code:
+                    counts[code] += 1
+    return counts
+
+
+def _drop_untagged_tag_categories(exported, counts):
+    """貼標分期:還沒開貼(全庫 0 筆)的動作類別不生成按鈕。
+
+    留著就是一顆永遠 0 筆的鈕(Story 13 的反面);期次進版、資料長出該類
+    tag 後按鈕自動出現(票12「每期 UI 補該類按鈕」由這裡承接,前端零推導)。
+    只動 groups,items 留作顯示詞彙表——與 `_drop_buttonless_kinds` 同一條
+    規則。"""
+    dropped = sorted(code for code, n in counts.items() if not n)
+    if not dropped:
+        return dropped
+    tag = exported[vocab.TAG]
+    tag["groups"] = [
+        dict(g, codes=codes) for g in tag["groups"]
+        if (codes := [c for c in g["codes"] if c not in dropped])]
+    return dropped
+
+
 def _drop_buttonless_kinds(exported, cross):
     """跨類型 0 張的值從按鈕分組移除;整組空了連組標題一起拿掉。
 
@@ -466,6 +515,8 @@ def _summarise_problems(report):
         ("效果句缺效果類型", checks["clauses_without_kind"]),
         ("必發/選發出現在不承載的效果類型上",
          checks["optional_on_non_carrier"]),
+        ("觸發時機出現在不承載的效果類型上",
+         checks["timing_on_non_carrier"]),
         ("效果句串接後出現已知兩種以外的覆蓋缺口", checks["coverage_gaps"]),
         ("效果句在卡文裡找不到", checks["clauses_not_in_desc"]),
         ("type 出現值域正典沒解釋的位元", checks["unexplained_type_bits"]),
@@ -514,10 +565,12 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
               "clauses_without_kind": [], "coverage_gaps": [],
               "clauses_not_in_desc": [], "unexplained_type_bits": [],
               "alias_gap_not_extracted": [], "optional_on_non_carrier": [],
+              "timing_on_non_carrier": [],
               "errata_not_reversible": [], "rewrite_desc_mismatch": [],
               "rewrite_overlaps_errata": []}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
     carriers = set(vocab.carriers(vocab.OPTIONAL))
+    timing_carriers = set(vocab.carriers(vocab.TIMING))
     entries = {}
     clause_total = 0
     for card in cards:
@@ -558,6 +611,12 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
                 checks["optional_on_non_carrier"].append(
                     {"id": cid, "index": clause.get("index", i),
                      "kind": entry["k"][i], "o": opts[i]})
+            # [[觸發時機]]只長在誘發系承載類型上(裁定批4;carriers 由正典宣告)
+            tms = entry.get("tm") or ()
+            if tms and tms[i] and entry["k"][i] not in timing_carriers:
+                checks["timing_on_non_carrier"].append(
+                    {"id": cid, "index": clause.get("index", i),
+                     "kind": entry["k"][i], "tm": tms[i]})
         pieces = list(entry.get("tx", []))
         if entry.get("d"):
             pieces.append(entry["d"])
@@ -582,6 +641,8 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     exported = vocab.export()
     cross = _cross_type_counts(cards, clauses_by_id)
     dropped = _drop_buttonless_kinds(exported, cross)
+    tag_counts = _tag_category_counts(tag_cards)
+    tag_dropped = _drop_untagged_tag_categories(exported, tag_counts)
     checks["missing_cards"] = sorted({c["id"] for c in cards} - set(entries))
     checks["unknown_values"].extend(_unexported_codes(index_cards, exported))
     index = {
@@ -604,6 +665,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
                             for name in vocab.DOMAINS}},
         "census": _census(cards, clauses_by_id),
         "kind_cross": {"cards": cross, "dropped": dropped},
+        "tag_census": {"tags": tag_counts, "dropped": tag_dropped},
         "known_gaps": known_gaps,
         "checks": checks,
         "monster_invariant": _monster_invariant(cards),

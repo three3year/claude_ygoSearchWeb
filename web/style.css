@@ -598,3 +598,30 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
      會被擠到第二排,分頁器整個變成三排 */
   .pg-txt { display: none; }
 }
+
+/* ── 效果 Tag(票08):區域移動起點/終點下拉與已貼範圍說明 ── */
+.tag-mv-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px;
+  flex-wrap: wrap;
+}
+.tag-mv-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+}
+select.tag-mv {
+  padding: 2px 4px;
+  background: var(--bg, #fff);
+  color: inherit;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 4px;
+}
+.tag-scope-note {
+  margin: 6px 0 0;
+  font-size: 0.78em;
+  opacity: 0.75;
+}

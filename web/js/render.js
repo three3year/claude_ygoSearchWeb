@@ -63,10 +63,40 @@ function setSort(key, dir) {
    效果類型選了誘發即時+誘發兩顆時,命中的兩行寫的不是同一個詞。
    **效果文不進 badge**:關鍵字已經在行內上色,badge 再寫一次「效果文」是重複資訊
    ——只搜效果文時整顆 badge 因此不長。 */
+const TAG_ZH = Util.zhTable('tag');
+const TIMING_ZH = Util.zhTable('timing');
+const ZONE_ZH = Util.zhTable('tag_zone');
+/* tag 短碼「類別碼:槽位碼…」→ badge 字面。槽位序由正典宣告(VOCAB.tag.slots),
+   位置=成本的 tag 不上 badge(第一期搜尋只命中效果,見 engine.js)。區域移動
+   帶起點→終點,其他類別只寫類別名。 */
+const TAG_SLOT_KEYS = {};
+for (const cat in ((Util.VOCAB.tag || {}).slots || {})) {
+  TAG_SLOT_KEYS[cat] = Util.VOCAB.tag.slots[cat].map(s => s[0]);
+}
+
+function tagBadge(c, i) {
+  const out = [];
+  for (const t of ((c.tg || [])[i] || [])) {
+    const parts = t.split(':');
+    const keys = TAG_SLOT_KEYS[parts[0]] || [];
+    const val = {};
+    keys.forEach((k, j) => { val[k] = parts[1 + j] || ''; });
+    if (val.pos === 'c') continue;
+    let label = TAG_ZH[parts[0]] || parts[0];
+    if (parts[0] === 'mv' && (val.from || val.to)) {
+      label += ` ${ZONE_ZH[val.from] || '?'}→${ZONE_ZH[val.to] || '?'}`;
+    }
+    if (out.indexOf(label) < 0) out.push(label);
+  }
+  return out.slice(0, 3).join('・');
+}
+
 const MARK_ZH = {
   text: () => '',
   kind: (c, i) => KIND_ZH[(c.k || [])[i]],
   opt: (c, i) => OPT_ZH[(c.o || [])[i]],
+  tag: (c, i) => tagBadge(c, i),
+  timing: (c, i) => TIMING_ZH[(c.tm || [])[i]],
 };
 
 /* 句層條件 → 畫命中行要的兩樣東西:關鍵字的比對段(行內上色用)與生效中的條件。

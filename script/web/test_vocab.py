@@ -36,6 +36,32 @@ class CanonTest(unittest.TestCase):
             self.assertEqual(vocab.zh(name, "s"), "準限制")
             self.assertEqual(vocab.code_of(name, "限制"), "l")
 
+    def test_tag_slot_unknown_category_is_caught(self):
+        """槽位宣告指到不存在的類別:索引短碼會編不出來。"""
+        slots = dict(vocab.TAG_SLOTS)
+        slots["zz"] = (("pos", "tag_pos"),)
+        problems = vocab.problems(tag_slots=slots)
+        self.assertIn("tag: 槽位宣告的類別 'zz' 不是動作類別的成員", problems)
+
+    def test_tag_category_without_slots_is_caught(self):
+        slots = dict(vocab.TAG_SLOTS)
+        del slots["mv"]
+        problems = vocab.problems(tag_slots=slots)
+        self.assertIn("tag: 類別 'mv' 沒有槽位宣告", problems)
+
+    def test_tag_slot_missing_pos_is_caught(self):
+        """通用槽位「位置」是裁定批1 的硬約束,漏了要吵。"""
+        slots = dict(vocab.TAG_SLOTS)
+        slots["mv"] = (("from", "tag_zone"), ("to", "tag_zone"))
+        problems = vocab.problems(tag_slots=slots)
+        self.assertIn("tag: 類別 'mv' 缺通用槽位「位置」", problems)
+
+    def test_tag_slot_unknown_domain_is_caught(self):
+        slots = dict(vocab.TAG_SLOTS)
+        slots["mv"] = (("from", "tag_nowhere"), ("pos", "tag_pos"))
+        problems = vocab.problems(tag_slots=slots)
+        self.assertTrue(any("tag_nowhere" in p for p in problems), problems)
+
     def test_duplicate_code_is_caught(self):
         dom = broken(vocab.RACE, entries=vocab.entries(vocab.RACE) + (
             vocab.entry("dragon", "亞龍族", 0x8000000),))

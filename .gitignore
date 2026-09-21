@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 data/sources/
 .scratch/tag-card/batches/
+.playwright-mcp/

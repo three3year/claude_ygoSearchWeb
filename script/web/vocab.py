@@ -39,6 +39,8 @@ OT = "ot"
 BAN_O = "ban_o"
 BAN_T = "ban_t"
 BAN_M = "ban_m"
+TAG = "tag"
+TIMING = "timing"
 
 
 def entry(code, zh, src=None, filterable=True):
@@ -251,6 +253,222 @@ _ROLE = domain("效果外文本種別", SRC_TEXT, (
     entry("limit", "使用次數限制"),
 ))
 
+# ── 效果 Tag:動作類別與槽位(2026-09-20 體系凍結,.scratch/effect-tag/rulings.md)──
+# 動作類別 21 值。值住在效果句的 tags 陣列(`cat` 欄),來源值即中文(SRC_TEXT)。
+# 分組是側欄按鈕的排列;凍結後追加類別需新裁定票(LP支付/LP失去即 2026-09-21
+# 站主覆核裁定票15 增補——支付/失去/傷害三分)。
+_TAG = domain("動作類別", SRC_TEXT, (
+    entry("mv", "區域移動"),
+    entry("dw", "抽牌/手牌交換"),
+    entry("ng", "無效"),
+    entry("ds", "破壞"),
+    entry("rs", "行動限制"),
+    entry("pt", "耐性/保護"),
+    entry("st", "攻守調整"),
+    entry("dm", "效果傷害"),
+    entry("hp", "生命回復"),
+    entry("lpp", "LP支付"),
+    entry("lpl", "LP失去"),
+    entry("ps", "表示形式變更"),
+    entry("ct", "控制權轉移"),
+    entry("pp", "性質變更"),
+    entry("cnt", "計數器操作"),
+    entry("tf", "放置轉換"),
+    entry("su", "素材代用/召喚放寬"),
+    entry("se", "召喚執行"),
+    entry("bt", "戰鬥規則"),
+    entry("in", "情報操作"),
+    entry("misc", "其他"),
+), groups=(
+    ("移動與資源", ("mv", "dw")),
+    ("妨害", ("ng", "ds", "rs", "pt")),
+    ("數值與狀態", ("st", "dm", "hp", "lpp", "lpl", "ps", "ct", "pp", "cnt")),
+    ("轉換與召喚", ("tf", "su", "se")),
+    ("其他", ("bt", "in", "misc")),
+))
+
+# 槽位值域(逐類宣告於 TAG_SLOTS)。這些值域不是卡片欄位,不進 CODED_FIELDS 那張
+# 表;索引側對 tags 的驗證走 webindex 的 tag 專屬檢查,失效模式與卡片欄位相同
+# (正典外值即建置失敗)。
+_TAG_ZONE = domain("區域", SRC_TEXT, (
+    entry("h", "手牌"),
+    entry("d", "牌組"),
+    entry("e", "額外牌組"),
+    entry("g", "墓地"),
+    entry("b", "除外"),
+    entry("f", "場上"),
+    entry("p", "靈擺區"),
+))
+_TAG_SIDE = domain("對象方", SRC_TEXT, (
+    entry("s", "自身"),
+    entry("m", "我方"),
+    entry("o", "對手"),
+    entry("w", "雙方"),
+))
+_TAG_POS = domain("位置", SRC_TEXT, (
+    entry("c", "成本"),
+    entry("e", "效果"),
+))
+_TAG_CARRY = domain("抽牌附帶", SRC_TEXT, (
+    entry("dc", "捨棄"),
+    entry("db", "回牌組"),
+))
+_TAG_STAT_ITEM = domain("攻守項目", SRC_TEXT, (
+    entry("a", "攻擊"),
+    entry("d", "守備"),
+    entry("ad", "攻守"),
+))
+_TAG_STAT_DIR = domain("攻守方向", SRC_TEXT, (
+    entry("up", "上升"),
+    entry("dn", "下降"),
+    entry("bc", "變成"),
+))
+_TAG_FORM = domain("數值型態", SRC_TEXT, (
+    entry("fx", "固定值"),
+    entry("rf", "參照值"),
+    entry("rt", "比例"),
+))
+_TAG_NG_WHAT = domain("無效對象", SRC_TEXT, (
+    entry("ac", "發動"),
+    entry("ef", "效果"),
+    entry("cn", "持續無效化"),
+))
+_TAG_NG_EXTRA = domain("無效附帶", SRC_TEXT, (
+    entry("ds", "破壞"),
+    entry("bn", "除外"),
+))
+_TAG_DS_WHAT = domain("破壞對象", SRC_TEXT, (
+    entry("mo", "怪獸"),
+    entry("st", "魔陷"),
+    entry("cd", "卡"),
+))
+_TAG_SCOPE = domain("範圍", SRC_TEXT, (
+    entry("one", "單體"),
+    entry("mult", "複數"),
+    entry("all", "全體"),
+))
+_TAG_RS_WHAT = domain("限制內容", SRC_TEXT, (
+    entry("sp", "特殊召喚"),
+    entry("ac", "發動效果"),
+    entry("at", "攻擊"),
+    entry("ps", "表示形式"),
+    entry("x", "其他"),
+))
+_TAG_TERM = domain("期間型態", SRC_TEXT, (
+    entry("ct", "持續"),
+    entry("tn", "單回合"),
+))
+_TAG_PT_WHAT = domain("耐性內容", SRC_TEXT, (
+    entry("bd", "戰鬥破壞"),
+    entry("ed", "效果破壞"),
+    entry("tg", "效果對象"),
+    entry("bn", "除外"),
+    entry("ae", "全效果"),
+    entry("rp", "代替破壞"),
+))
+_TAG_PS_TO = domain("變更為", SRC_TEXT, (
+    entry("a", "攻擊表示"),
+    entry("d", "守備表示"),
+    entry("fd", "裡側表示"),
+))
+_TAG_CT_DIR = domain("控制權方向", SRC_TEXT, (
+    entry("get", "取得"),
+    entry("give", "移交"),
+))
+_TAG_PP_ITEM = domain("性質項目", SRC_TEXT, (
+    entry("nm", "卡名"),
+    entry("rc", "種族"),
+    entry("at", "屬性"),
+    entry("lv", "等級"),
+    entry("rk", "階級"),
+    entry("sc", "刻度"),
+))
+_TAG_CNT_ACT = domain("計數器動作", SRC_TEXT, (
+    entry("put", "放置"),
+    entry("rm", "去除"),
+))
+_TAG_TF_TO = domain("轉換為", SRC_TEXT, (
+    entry("eq", "裝備卡"),
+    entry("cs", "永續魔法"),
+    entry("ctp", "永續陷阱"),
+    entry("set", "魔陷覆蓋"),
+))
+_TAG_SE_METHOD = domain("召喚法", SRC_TEXT, (
+    entry("rit", "儀式"),
+    entry("fus", "融合"),
+    entry("syn", "同步"),
+    entry("xyz", "超量"),
+    entry("lnk", "連結"),
+))
+_TAG_BT_WHAT = domain("戰鬥規則內容", SRC_TEXT, (
+    entry("pi", "貫通"),
+    entry("ma", "連續攻擊"),
+    entry("da", "直接攻擊"),
+    entry("ta", "攻擊對象操作"),
+))
+_TAG_IN_WHAT = domain("情報操作內容", SRC_TEXT, (
+    entry("pk", "確認"),
+    entry("rv", "展示"),
+    entry("rd", "隨機決定"),
+))
+
+# 各類別的槽位宣告:(槽位鍵, 槽位值域名) 的序列,順序即索引短碼的欄位序。
+# 「位置」是通用槽位(裁定批1),每一類都有;凍結後增刪槽位需新裁定票。
+# 例外(裁定票15):LP支付不設「位置」——支付本身就是代價,位置軸對它無意義,
+# 搜尋一律命中(前端從 slots 缺 pos 這件事自己看出來,不另立旗標)。
+TAG_POS_EXEMPT = frozenset({"lpp"})
+TAG_SLOTS = {
+    "mv": (("from", "tag_zone"), ("to", "tag_zone"), ("side", "tag_side"),
+           ("pos", "tag_pos")),
+    "dw": (("side", "tag_side"), ("extra", "tag_carry"), ("pos", "tag_pos")),
+    "ng": (("what", "tag_ng_what"), ("extra", "tag_ng_extra"),
+           ("pos", "tag_pos")),
+    "ds": (("what", "tag_ds_what"), ("scope", "tag_scope"),
+           ("side", "tag_side"), ("pos", "tag_pos")),
+    "rs": (("what", "tag_rs_what"), ("side", "tag_side"),
+           ("term", "tag_term"), ("pos", "tag_pos")),
+    "pt": (("what", "tag_pt_what"), ("side", "tag_side"), ("pos", "tag_pos")),
+    "st": (("item", "tag_stat_item"), ("dir", "tag_stat_dir"),
+           ("pos", "tag_pos")),
+    "dm": (("side", "tag_side"), ("form", "tag_form"), ("pos", "tag_pos")),
+    "hp": (("side", "tag_side"), ("form", "tag_form"), ("pos", "tag_pos")),
+    "lpp": (("side", "tag_side"), ("form", "tag_form")),
+    "lpl": (("side", "tag_side"), ("form", "tag_form"), ("pos", "tag_pos")),
+    "ps": (("to", "tag_ps_to"), ("side", "tag_side"), ("pos", "tag_pos")),
+    "ct": (("dir", "tag_ct_dir"), ("pos", "tag_pos")),
+    "pp": (("item", "tag_pp_item"), ("term", "tag_term"), ("pos", "tag_pos")),
+    "cnt": (("act", "tag_cnt_act"), ("pos", "tag_pos")),
+    "tf": (("to", "tag_tf_to"), ("pos", "tag_pos")),
+    "su": (("pos", "tag_pos"),),
+    "se": (("method", "tag_se_method"), ("pos", "tag_pos")),
+    "bt": (("what", "tag_bt_what"), ("pos", "tag_pos")),
+    "in": (("what", "tag_in_what"), ("pos", "tag_pos")),
+    "misc": (("pos", "tag_pos"),),
+}
+
+# 觸發時機:句層單值軸,只長在誘發系承載類型上(裁定批4:carriers 與必發/選發
+# 完全同一組,理由同 ADR-0004——有觸發事件的發動句才有時機可言)。
+_TIMING = domain("觸發時機", SRC_TEXT, (
+    entry("ns", "召喚成功時"),
+    entry("sp", "特殊召喚成功時"),
+    entry("fp", "反轉時"),
+    entry("dd", "被破壞時"),
+    entry("gy", "被送去墓地時"),
+    entry("lv", "從場上離開時"),
+    entry("bn", "被除外時"),
+    entry("ad", "攻擊宣言時"),
+    entry("dst", "傷害步驟時點"),
+    entry("bd", "給予戰鬥傷害時"),
+    entry("td", "受到傷害時"),
+    entry("sb", "準備階段"),
+    entry("mp", "主要階段"),
+    entry("bp", "戰鬥階段"),
+    entry("ep", "結束階段"),
+    entry("oa", "對手發動效果時"),
+    entry("x", "其他"),
+), carriers=("q", "t", "sn", "sq", "sr", "sc", "se", "sf", "sp", "tn", "tc",
+             "tk"))
+
 # ── 其餘卡面欄位 ─────────────────────────────────────────────
 # 連結標記:宣告序＝九宮格的讀法(左上到右下),呈現層直接照序擺格子。
 _LINK_MARKER = domain("連結標記", SRC_BITMASK, (
@@ -302,6 +520,18 @@ DOMAINS = {
     KIND: _KIND, OPTIONAL: _OPTIONAL, ROLE: _ROLE,
     LINK_MARKER: _LINK_MARKER, RARITY: _RARITY, OT: _OT,
     BAN_O: _BAN_O, BAN_T: _BAN_T, BAN_M: _BAN_M,
+    TAG: _TAG, TIMING: _TIMING,
+    "tag_zone": _TAG_ZONE, "tag_side": _TAG_SIDE, "tag_pos": _TAG_POS,
+    "tag_carry": _TAG_CARRY, "tag_stat_item": _TAG_STAT_ITEM,
+    "tag_stat_dir": _TAG_STAT_DIR, "tag_form": _TAG_FORM,
+    "tag_ng_what": _TAG_NG_WHAT, "tag_ng_extra": _TAG_NG_EXTRA,
+    "tag_ds_what": _TAG_DS_WHAT, "tag_scope": _TAG_SCOPE,
+    "tag_rs_what": _TAG_RS_WHAT, "tag_term": _TAG_TERM,
+    "tag_pt_what": _TAG_PT_WHAT, "tag_ps_to": _TAG_PS_TO,
+    "tag_ct_dir": _TAG_CT_DIR, "tag_pp_item": _TAG_PP_ITEM,
+    "tag_cnt_act": _TAG_CNT_ACT, "tag_tf_to": _TAG_TF_TO,
+    "tag_se_method": _TAG_SE_METHOD, "tag_bt_what": _TAG_BT_WHAT,
+    "tag_in_what": _TAG_IN_WHAT,
 }
 
 # 各值域的成員數。與 CONTEXT.md / spec 記的值域規模對帳用:少一個成員代表某批卡
@@ -313,6 +543,13 @@ EXPECTED_SIZES = {
     KIND: 16, OPTIONAL: 2, ROLE: 3,
     LINK_MARKER: 8, RARITY: 4, OT: 3,
     BAN_O: 3, BAN_T: 3, BAN_M: 3,
+    TAG: 21, TIMING: 17,
+    "tag_zone": 7, "tag_side": 4, "tag_pos": 2, "tag_carry": 2,
+    "tag_stat_item": 3, "tag_stat_dir": 3, "tag_form": 3,
+    "tag_ng_what": 3, "tag_ng_extra": 2, "tag_ds_what": 3, "tag_scope": 3,
+    "tag_rs_what": 5, "tag_term": 2, "tag_pt_what": 6, "tag_ps_to": 3,
+    "tag_ct_dir": 2, "tag_pp_item": 6, "tag_cnt_act": 2, "tag_tf_to": 4,
+    "tag_se_method": 5, "tag_bt_what": 4, "tag_in_what": 3,
 }
 
 # cdb `type` 的位元由大類與三個子類型值域共同解釋;沒有被解釋的位元會讓建置倒
@@ -390,7 +627,7 @@ def subtypes(type_value, domains=None):
     return cat, bitmask_codes(SUB[cat], type_value, domains)
 
 
-def problems(domains=None):
+def problems(domains=None, tag_slots=None):
     """正典自檢:回傳問題字串清單(空 = 合法)。
 
     測的是**正典這份資料本身**合不合法,不是管線的中間產物。十種:成員數與
@@ -398,10 +635,13 @@ def problems(domains=None):
     兩顆長一樣的)、來源值重複或位元重疊(解碼時對到兩個成員)、fallback 指向
     不存在的成員、分組沒有恰好蓋過全部可篩選成員(宣告序有空洞)、分組列了
     不存在的成員、承載者不是效果類型的成員、本類對應解不動(ADR-0010)、
-    組合條件解不動(spec-optional-combo)。
+    組合條件解不動(spec-optional-combo)。外加槽位宣告的四種
+    (`_tag_slot_problems`,效果 Tag 線)。
     """
     domains = domains or DOMAINS
-    found = []
+    found = list(_tag_slot_problems(domains,
+                                    TAG_SLOTS if tag_slots is None
+                                    else tag_slots))
     for name in sorted(set(domains) | set(EXPECTED_SIZES)):
         dom = domains.get(name)
         if dom is None:
@@ -442,6 +682,33 @@ def problems(domains=None):
         found.extend(_combo_problems(name, dom, domains))
         found.extend(_own_problems(name, dom, domains))
     return found
+
+
+def _tag_slot_problems(domains, tag_slots):
+    """槽位宣告必須兩側都解得動:類別是動作類別的成員、值域存在、鍵不重複、
+    每一類都有宣告且含通用槽位「位置」(裁定批1;TAG_POS_EXEMPT 列名的類別
+    除外——裁定票15)。
+
+    寫壞的下場與其他宣告同族:索引短碼照這份宣告的欄位序編出來,類別對不上或
+    值域缺席時,那一類的 tag 要嘛編不出來、要嘛前端解不回中文——都是無聲失效。
+    """
+    if TAG not in domains:
+        return
+    tag_codes = {e["code"] for e in domains[TAG]["entries"]}
+    for code in sorted(set(tag_slots) - tag_codes):
+        yield f"tag: 槽位宣告的類別 {code!r} 不是動作類別的成員"
+    for code in sorted(tag_codes - set(tag_slots)):
+        yield f"tag: 類別 {code!r} 沒有槽位宣告"
+    for code, slots in tag_slots.items():
+        keys = [key for key, _ in slots]
+        if len(set(keys)) != len(keys):
+            yield f"tag: 類別 {code!r} 的槽位鍵重複"
+        if "pos" not in keys and code not in TAG_POS_EXEMPT:
+            yield f"tag: 類別 {code!r} 缺通用槽位「位置」"
+        for key, domain_name in slots:
+            if domain_name not in domains:
+                yield (f"tag: 類別 {code!r} 槽位 {key!r} 的值域 "
+                       f"{domain_name!r} 不存在")
 
 
 def _own_problems(name, dom, domains):
@@ -574,10 +841,70 @@ def export(domains=None):
         if dom["own"]:
             out[name]["own"] = {code: f"{cat}:{sub}"
                                 for code, cat, sub in dom["own"]}
+    if TAG in out:
+        # 槽位宣告隨 VOCAB 出去:索引短碼的欄位序、前端下拉與 badge 的解碼
+        # 都讀這一份(ADR-0008——抄第二份就會漂移)
+        out[TAG]["slots"] = {code: [[key, domain_name]
+                                    for key, domain_name in slots]
+                             for code, slots in TAG_SLOTS.items()}
     return out
 
 
 def digest(domains=None):
     """正典的雜湊:值域改了,索引的 META 就跟著改,看 diff 就知道。"""
     payload = json.dumps(export(domains), ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
+# ── 效果 Tag 的短碼編解 ─────────────────────────────────────
+
+def tag_code(tag, domains=None):
+    """一個 tag 物件(中文值)→ 索引短碼;解不動時回 (None, 問題字串)。
+
+    形狀:`類別碼:槽位碼:…`,槽位照 TAG_SLOTS 宣告序,缺值留空欄。`src` 與
+    來歷欄位(rule / ticket)不進索引——搜尋不問判定是誰做的。
+    """
+    domains = domains or DOMAINS
+    cat = code_of(TAG, tag.get("cat"), domains)
+    if cat is None:
+        return None, f"cat {tag.get('cat')!r} 不在動作類別值域"
+    parts = [cat]
+    slots = dict(TAG_SLOTS)[cat]
+    known = {key for key, _ in slots} | {"cat", "src", "rule", "ticket"}
+    for key in tag:
+        if key not in known:
+            return None, f"{tag.get('cat')} 有宣告外的槽位 {key!r}"
+    for key, domain_name in slots:
+        value = tag.get(key)
+        if value is None:
+            parts.append("")
+            continue
+        code = code_of(domain_name, value, domains)
+        if code is None:
+            return None, (f"{tag.get('cat')} 槽位 {key} 的值 {value!r} "
+                          f"不在 {domain_name} 值域")
+        parts.append(code)
+    return ":".join(parts), None
+
+
+def tag_digest(domains=None, tag_slots=None):
+    """效果 Tag 體系定稿的指紋(動作類別、槽位值域、槽位宣告、觸發時機)。
+
+    tag seal 的「體系定稿無異動」對的就是這個數字——動作類別或任何槽位值域
+    動了它就變,其他值域(種族、禁限)動了它不變。
+    """
+    domains = domains or DOMAINS
+    tag_slots = TAG_SLOTS if tag_slots is None else tag_slots
+    names = sorted([TAG, TIMING] + [d for _, d in
+                                    {(k, d) for slots in tag_slots.values()
+                                     for k, d in slots}])
+    payload = json.dumps({
+        "domains": {name: [[e["code"], e["zh"]]
+                           for e in domains[name]["entries"]]
+                    for name in names if name in domains},
+        "slots": {code: list(map(list, slots))
+                  for code, slots in tag_slots.items()},
+        "timing_carriers": list(domains[TIMING]["carriers"])
+        if TIMING in domains else [],
+    }, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]

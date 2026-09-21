@@ -786,5 +786,60 @@ class SerializeTest(unittest.TestCase):
         self.assertEqual(serialize_index(first), serialize_index(second))
 
 
+
+
+class TagAxisTest(unittest.TestCase):
+    """[[效果 Tag]]的索引匯出與零筆類別的按鈕退場(票08/12)。"""
+
+    MV = {"cat": "區域移動", "from": "牌組", "to": "手牌", "side": "我方",
+          "pos": "效果", "src": "rule", "rule": "T1"}
+    COST = {"cat": "區域移動", "from": "墓地", "to": "除外", "pos": "成本",
+            "src": "rule", "rule": "T32"}
+
+    def build(self, tag=None, timing=None, kind="誘發效果(1速)"):
+        row = clause("①:效果甲。", kind=kind)
+        if tag is not None:
+            row["tags"] = [dict(tag)]
+        row["timing"] = timing
+        cards = [card(1, desc="①:效果甲。")]
+        return build_index(cards, [tagged(1, row)])
+
+    def test_tags_export_as_slot_ordered_codes(self):
+        index, report = self.build(tag=self.MV, timing="召喚成功時")
+        entry = index["cards"][0]
+        self.assertEqual(entry["tg"], [["mv:d:h:m:e"]])
+        self.assertEqual(entry["tm"], ["ns"])
+        self.assertEqual(report["problems"], [])
+
+    def test_out_of_canon_tag_fails_the_build(self):
+        bad = dict(self.MV, **{"from": "牌組頂"})
+        _, report = self.build(tag=bad)
+        self.assertTrue(any("tg" == u["field"]
+                            for u in report["checks"]["unknown_values"]))
+        self.assertTrue(report["problems"])
+
+    def test_timing_on_non_carrier_fails_the_build(self):
+        _, report = self.build(timing="召喚成功時", kind="永續效果")
+        self.assertEqual(len(report["checks"]["timing_on_non_carrier"]), 1)
+        self.assertTrue(report["problems"])
+
+    def test_untagged_categories_lose_their_buttons(self):
+        """還沒開貼的類別不生成按鈕;資料長出該類 tag 後自動回來。"""
+        index, report = self.build(tag=self.MV)
+        groups = index["vocab"]["tag"]["groups"]
+        self.assertEqual([g["codes"] for g in groups], [["mv"]])
+        self.assertIn("ds", report["tag_census"]["dropped"])
+        self.assertNotIn("mv", report["tag_census"]["dropped"])
+        # items 是顯示詞彙表,不隨按鈕退場
+        self.assertEqual(len(index["vocab"]["tag"]["items"]), 21)
+
+    def test_cost_only_tags_still_count_for_buttons(self):
+        """成本位的 tag 也算「該類已開貼」——按鈕的去留看資料有沒有,
+        搜尋只命中效果位是引擎層的事。"""
+        index, _ = self.build(tag=self.COST)
+        groups = index["vocab"]["tag"]["groups"]
+        self.assertEqual([g["codes"] for g in groups], [["mv"]])
+
+
 if __name__ == "__main__":
     unittest.main()

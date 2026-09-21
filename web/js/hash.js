@@ -31,6 +31,10 @@ const { VOCAB } = Util;
    先查一份對照表——少一份對照表就少一個會漂掉的東西。 */
 const TEXTS = ['name', 'code', 'text'];
 const LANG = 'nameLang';
+/* 區域移動的起點/終點下拉(票08):值是 tag_zone 短碼。合法碼由 VOCAB 導出
+   ——值域改過之後的舊網址(某個碼沒了)當未知碼忽略,與三態軸同一條規則。 */
+const MV_PARAMS = [['mvFrom', 'mvf'], ['mvTo', 'mvt']];
+const ZONE_CODES = ((VOCAB.tag_zone || {}).items || []).map(it => it.code);
 
 /* 條件軸的參數表,**由 `Query.FIELDS` 導出**。子類型的三段(怪獸/魔法/陷阱)在
    查詢條件裡本來就是同一個軸(碼帶大類前綴),所以在網址上也是同一個參數。 */
@@ -59,6 +63,24 @@ function schema() {
 const SCHEMA = schema();
 const DEFAULT_LANG = Query.LANGS[0].v;
 const DEFAULT_SORT = Sort.KEYS[0].key;
+
+/* 所有參數名,長的在前——`text` 不該在交替比對時先吃掉 `textMat` 的位置。 */
+const PARAM_NAMES = [].concat(
+  TEXTS, ['textMat', LANG, 'sort', 'dir'],
+  MV_PARAMS.map(p => p[1]),
+  SCHEMA.tri.map(a => a.key),
+  SCHEMA.range.map(f => f.key),
+  SCHEMA.range.map(f => f.unknown).filter(Boolean)
+).sort((a, b) => b.length - a.length);
+
+/* 被轉傳端動過手腳的段分隔符:`&` 被多編一次成 `%26`(信箱、聊天軟體的連結
+   包裝),或手打網址時輸入法吐出全形 `＆`/`＝`(瀏覽器會把它們編成
+   `%EF%BC%86`/`%EF%BC%9D`)。不認回來的話,後面的整串條件會黏進文字欄位——
+   效果文變成「墓地%…&kind=q,i」,一張卡都搜不到。
+   只在後面跟著「認得的參數名＋等號」時才視同 `&`:自家 stringify 把文字裡的
+   `=` 編成 `%3D`,所以真的想搜「A&kind=B」這種字面的網址不會被誤拆。 */
+const MANGLED_SEP = new RegExp(
+  '(?:%26|%EF%BC%86|＆)(' + PARAM_NAMES.join('|') + ')(?:=|＝|%EF%BC%9D)', 'gi');
 
 /* ── 正規化 ───────────────────────────────────────────── */
 
@@ -93,6 +115,11 @@ function stringify(state) {
   });
   // 素材行開關:勾了才寫,與其他預設值同一條「可省略的一律省略」
   if (q.textMat) parts.push('textMat=1');
+  MV_PARAMS.forEach(([key, name]) => {
+    if (q[key] && ZONE_CODES.indexOf(q[key]) >= 0) {
+      parts.push(name + '=' + q[key]);
+    }
+  });
   if (langOf(q[LANG]) !== DEFAULT_LANG) parts.push(LANG + '=' + langOf(q[LANG]));
   SCHEMA.tri.forEach(ax => {
     const sel = q[ax.key];
@@ -121,10 +148,15 @@ function stringify(state) {
 
 /* ── 解析 ─────────────────────────────────────────────── */
 
-/* 壞掉的百分比編碼會讓 `decodeURIComponent` 丟例外。**一段壞掉不該讓整頁崩掉**
-   ——那一段忽略,其餘條件照常生效(過期的網址通常只有一段對不上)。 */
+/* 壞掉的百分比編碼會讓 `decodeURIComponent` 丟例外。最常見的壞法是網址在轉傳
+   途中被解碼過一次(聊天軟體、信箱把 `%25` 還原成 `%` 再交給瀏覽器,瀏覽器只把
+   中文編回去、裸 `%` 留著)——把不成對的 `%` 補回 `%25` 再解一次,萬用字元就
+   救得回來。補救後仍解不開的才忽略該段:**一段壞掉不該讓整頁崩掉**,其餘條件
+   照常生效(過期的網址通常只有一段對不上)。 */
 function dec(v) {
-  try { return decodeURIComponent(v); } catch (e) { return null; }
+  try { return decodeURIComponent(v); } catch (e) {}
+  try { return decodeURIComponent(String(v).replace(/%(?![0-9A-Fa-f]{2})/g, '%25')); }
+  catch (e) { return null; }
 }
 
 function toNum(s) {
@@ -164,7 +196,8 @@ function toTri(v, ax) {
 function parse(hash) {
   const q = { name: '', nameLang: DEFAULT_LANG, code: '', text: '' };
   const raw = {};
-  String(hash == null ? '' : hash).replace(/^#/, '').split('&').forEach(seg => {
+  String(hash == null ? '' : hash).replace(/^#/, '')
+    .replace(MANGLED_SEP, '&$1=').split('&').forEach(seg => {
     const i = seg.indexOf('=');
     if (i < 0) return;
     const key = seg.slice(0, i);
@@ -174,6 +207,11 @@ function parse(hash) {
     if (TEXTS.indexOf(key) >= 0) { q[key] = v.trim(); return; }
     // 素材行開關只有「開」寫得出來(`textMat=1`),別的值視同壞段忽略
     if (key === 'textMat') { if (v === '1') q.textMat = 1; return; }
+    const mv = MV_PARAMS.find(([, name]) => name === key);
+    if (mv) {
+      if (ZONE_CODES.indexOf(v) >= 0) q[mv[0]] = v;
+      return;
+    }
     if (key === LANG) { q[LANG] = langOf(v); return; }
     if (key === 'sort' || key === 'dir') { raw[key] = v; return; }
     const ax = SCHEMA.tri.find(a => a.key === key);

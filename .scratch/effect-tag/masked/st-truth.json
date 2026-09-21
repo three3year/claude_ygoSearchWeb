@@ -1,0 +1,2644 @@
+[
+  {
+    "id": 1118137,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2091298,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2099841,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2333466,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2665273,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 3134857,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 4019153,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 4059313,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5041348,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 6195332,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 6696168,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 6812770,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7198399,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7540107,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7841921,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7845138,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7914843,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7934362,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8491961,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8576764,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8602351,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8662794,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8763963,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10002346,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10282757,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10547580,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12307878,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12600382,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12760674,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 14124483,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 14442329,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 14886190,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 16269385,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 17932494,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 17979378,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 18563744,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 18752707,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 19153590,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 19301729,
+    "section": "main",
+    "index": "③-●1",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 19652159,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 21113684,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22011689,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22211622,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22501005,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22555834,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 23116808,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 23249029,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 24635329,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 24907044,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 25586143,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      },
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 26050548,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 26773909,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27015862,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27918963,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28002611,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28297833,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28645123,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28957126,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29088922,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29601381,
+    "section": "main",
+    "index": "③-●1",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30314994,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30336082,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30552375,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 31461282,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 31472884,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 31539614,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32056070,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32061192,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32268901,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 33282498,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 33460840,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 33971095,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 34143852,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 34884015,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 35756798,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 35770983,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 36442179,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 36668118,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 37426272,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 37531679,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 37991342,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 38601126,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 39512984,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 40352445,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 41002238,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 42302563,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 42596828,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "守備",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 43534808,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 43986064,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 45002991,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 45184165,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 45742626,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 45943123,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46104361,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46500985,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46640168,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46647144,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47028805,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47198668,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47598941,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 48745395,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49161188,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49658464,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      },
+      {
+        "cat": "攻守調整",
+        "item": "守備",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49928686,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50186558,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50546029,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50554729,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50915474,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50954680,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 51644030,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 52222372,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 52340444,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 53813120,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55168550,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55359571,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55421040,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55553602,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 56132807,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 56832966,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 57707471,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 58069384,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 58363151,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 58699500,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 59765225,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 60162470,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 60681103,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 60884672,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 62314831,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 64025981,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 64496451,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 64881644,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65170459,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      },
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65541655,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65711558,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65889305,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 66393507,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 67037924,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 67045745,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 67159705,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 67775894,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68316358,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68507541,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68957925,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      },
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 69031175,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 69529337,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 70597485,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 70914287,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71036835,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71133680,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71612253,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71832012,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 72566043,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 72632190,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 72843899,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      },
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 73665146,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74640994,
+    "section": "main",
+    "index": "①-●3",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74711057,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 75672051,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 76029419,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "守備",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 76672730,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 76990617,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 78211862,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 78836195,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 80831721,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 80949182,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 81615450,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 81866673,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82134632,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 83257450,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 83610035,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84332527,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84569886,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84845628,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84903021,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 86066372,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 87676171,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 87911394,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88177324,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      },
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88305705,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 90512490,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      },
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91019775,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91237821,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91438994,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91512835,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92341815,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 93927067,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "下降",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 94344242,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "守備",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 94503794,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 94693857,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 96227613,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 96592102,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 96693371,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 96699830,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 97091969,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 97818130,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 98434877,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "變成",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 98931003,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻守",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 99469936,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 99597615,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 99634927,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "攻守調整",
+        "item": "攻擊",
+        "dir": "上升",
+        "pos": "效果"
+      }
+    ]
+  }
+]

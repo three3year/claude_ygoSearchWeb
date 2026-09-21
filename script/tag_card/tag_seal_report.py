@@ -40,6 +40,11 @@ MASKED_SETS = {
                          "mv-sample-supplement2.json"),
     tag_rules.CAT_DESTROY: ("ds-sample.json", "ds-sample-supplement.json"),
     tag_rules.CAT_NEGATE: ("ng-sample.json", "ng-sample-supplement.json"),
+    tag_rules.CAT_STAT: ("st-sample.json", "st-sample-supplement.json"),
+    tag_rules.CAT_DAMAGE: ("dm-sample.json", "dm-sample-supplement.json"),
+    tag_rules.CAT_HEAL: ("hp-sample.json",),
+    tag_rules.CAT_LP_PAY: ("lpp-sample.json",),
+    tag_rules.CAT_LP_LOSE: ("lpl-sample.json",),
 }
 LIST_PREVIEW = 10
 
@@ -202,7 +207,9 @@ def main(argv=None):
     gates, summaries = all_gates(entries, report, args.sheet)
 
     def render(file):
-        print("# 效果 Tag 定版報告(第1期:區域移動 + 觸發時機)", file=file)
+        cats = "、".join(sorted(tag_rules.PHASES,
+                                key=lambda c: tag_rules.PHASES[c]))
+        print(f"# 效果 Tag 定版報告(已開貼:{cats} + 觸發時機)", file=file)
         print("", file=file)
         ok = print_gates(gates, lambda *a: print(*a, file=file))
         print_stats(report, summaries, file=file)

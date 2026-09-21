@@ -1,0 +1,105 @@
+[
+  {
+    "id": 3064425,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "效果傷害",
+        "side": "雙方",
+        "form": "固定值",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 4807253,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "效果傷害",
+        "side": "雙方",
+        "form": "固定值",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 6783559,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "效果傷害",
+        "side": "雙方",
+        "form": "固定值",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7852509,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "效果傷害",
+        "side": "雙方",
+        "form": "固定值",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12527118,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "效果傷害",
+        "side": "對手",
+        "form": "參照值",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 20735371,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "效果傷害",
+        "side": "對手",
+        "form": "參照值",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 42427230,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "效果傷害",
+        "side": "對手",
+        "form": "固定值",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91706817,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "效果傷害",
+        "form": "參照值",
+        "pos": "效果"
+      }
+    ]
+  }
+]

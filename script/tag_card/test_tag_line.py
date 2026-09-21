@@ -55,7 +55,10 @@ class TestRuleDirectWrite(unittest.TestCase):
             "①：怪獸被特殊召喚時可以發動。攻擊力上升500。",
             "①：モンスターが特殊召喚された場合に発動できる。"
             "攻撃力は５００アップする。")
-        self.assertEqual(clauses_of(entries, 1000)[0]["tags"], [])
+        tags = clauses_of(entries, 1000)[0]["tags"]
+        self.assertEqual([t for t in tags if t["cat"] == "區域移動"], [])
+        # 處理段的「攻撃力は…アップ」自第3期起照貼攻守調整
+        self.assertTrue(all(t["cat"] == "攻守調整" for t in tags))
 
     def test_old_style_clauses_are_out_of_scope(self):
         """第一期只貼新式卡文(index 帶①編號)。"""
@@ -146,6 +149,150 @@ class TestPhase2Rules(unittest.TestCase):
         self.assertEqual(self.cat_tags(entries, "無效"), [])
         self.assertFalse(tag_rules.screen_hit(
             "無效", "このカードの発動と効果は無効化されない。"))
+
+
+class TestPhase3Rules(unittest.TestCase):
+    """第3期(票17):數值向五類的規則直貼邊界。"""
+
+    def cat_tags(self, entries, cat):
+        clause = clauses_of(entries, 1000)[0]
+        return [t for t in clause["tags"] if t.get("cat") == cat]
+
+    def test_atk_up_fixed(self):
+        entries, _ = build(
+            "①:場上龍族怪獸的攻擊力上升300。",
+            "①：フィールドのドラゴン族モンスターの攻撃力は３００アップする。")
+        tags = self.cat_tags(entries, "攻守調整")
+        self.assertTrue(any(t.get("item") == "攻擊" and t.get("dir") == "上升"
+                            and t["pos"] == "效果" for t in tags))
+
+    def test_atk_def_down_combined(self):
+        entries, _ = build(
+            "①:對手場上怪獸的攻擊力、守備力下降500。",
+            "①：相手フィールドのモンスターの攻撃力・守備力は"
+            "５００ダウンする。")
+        tags = self.cat_tags(entries, "攻守調整")
+        self.assertTrue(any(t.get("item") == "攻守" and t.get("dir") == "下降"
+                            for t in tags))
+        self.assertFalse(any(t.get("item") in ("攻擊", "守備") for t in tags))
+
+    def test_atk_becomes_doubled(self):
+        entries, _ = build(
+            "①:此卡的攻擊力直到回合結束時變成倍。",
+            "①：このカードの攻撃力はターン終了時まで倍になる。")
+        tags = self.cat_tags(entries, "攻守調整")
+        self.assertTrue(any(t.get("item") == "攻擊" and t.get("dir") == "變成"
+                            for t in tags))
+
+    def test_mixed_directions_do_not_cross(self):
+        """「攻撃力は…アップし、守備力は…ダウン」不得配成 攻擊×下降。"""
+        entries, _ = build(
+            "①:攻擊力上升500、守備力下降500。",
+            "①：このカードの攻撃力は５００アップし、守備力は５００ダウン"
+            "する。")
+        tags = self.cat_tags(entries, "攻守調整")
+        pairs = {(t.get("item"), t.get("dir")) for t in tags}
+        self.assertIn(("攻擊", "上升"), pairs)
+        self.assertIn(("守備", "下降"), pairs)
+        self.assertNotIn(("攻擊", "下降"), pairs)
+        self.assertNotIn(("守備", "上升"), pairs)
+
+    def test_equip_modifier_form_is_not_tagged(self):
+        """「攻撃力６００アップの装備魔法カード扱い」是賦予效果的修飾,
+        不是攻守調整動作(動作歸放置轉換)。"""
+        text_ja = ("①：自分の墓地からこのカードを攻撃力６００アップの"
+                   "装備魔法カード扱いで自分のモンスターに装備する。")
+        entries, _ = build("①:把此卡當作攻擊力上升600的裝備卡裝備。", text_ja)
+        self.assertEqual(self.cat_tags(entries, "攻守調整"), [])
+        self.assertFalse(tag_rules.screen_hit("攻守調整", text_ja))
+
+    def test_damage_to_opponent_fixed(self):
+        entries, _ = build(
+            "①:給對手500傷害。",
+            "①：相手に５００ダメージを与える。")
+        tags = self.cat_tags(entries, "效果傷害")
+        self.assertTrue(any(t.get("side") == "對手" for t in tags))
+        self.assertTrue(any(t.get("form") == "固定值" for t in tags))
+
+    def test_reference_damage_inverted_order(self):
+        entries, _ = build(
+            "①:給對手場上怪獸數量×100傷害。",
+            "①：フィールドのモンスターの数×１００ダメージを相手に与える。")
+        tags = self.cat_tags(entries, "效果傷害")
+        self.assertTrue(any(t.get("side") == "對手" for t in tags))
+        self.assertTrue(any(t.get("form") == "參照值" for t in tags))
+        self.assertFalse(any(t.get("form") == "固定值" for t in tags))
+
+    def test_self_damage_action(self):
+        entries, _ = build(
+            "①:我方準備階段發動。自己受到1000傷害。",
+            "①：自分スタンバイフェイズに発動する。"
+            "自分は１０００ダメージを受ける。")
+        tags = self.cat_tags(entries, "效果傷害")
+        self.assertTrue(any(t.get("side") == "我方" for t in tags))
+
+    def test_battle_damage_modifier_is_not_tagged(self):
+        """「戦闘ダメージは倍になる」是戰鬥傷害修飾,歸「其他」(批3)。"""
+        text_ja = ("①：このカードの戦闘で発生する相手への戦闘ダメージは"
+                   "倍になる。")
+        entries, _ = build("①:此卡戰鬥發生的對對手戰鬥傷害變成倍。", text_ja)
+        self.assertEqual(self.cat_tags(entries, "效果傷害"), [])
+        self.assertFalse(tag_rules.screen_hit("效果傷害", text_ja))
+
+    def test_heal_self_fixed(self):
+        entries, _ = build(
+            "①:自己回復1000基本分。",
+            "①：自分は１０００LP回復する。")
+        tags = self.cat_tags(entries, "生命回復")
+        self.assertTrue(any(t.get("side") == "我方" for t in tags))
+        self.assertTrue(any(t.get("form") == "固定值" for t in tags))
+
+    def test_lp_pay_cost_has_no_pos(self):
+        entries, _ = build(
+            "①:支付800基本分才能發動。抽1張卡。",
+            "①：８００LPを払って発動できる。自分はデッキから１枚ドロー"
+            "する。")
+        tags = self.cat_tags(entries, "LP支付")
+        self.assertTrue(any(t.get("side") == "我方"
+                            and t.get("form") == "固定值" for t in tags))
+        self.assertTrue(all("pos" not in t for t in tags))
+
+    def test_lp_pay_half_is_ratio(self):
+        entries, _ = build(
+            "①:支付一半基本分才能發動。",
+            "①：LPを半分払って発動できる。フィールドのカードを全て破壊"
+            "する。")
+        tags = self.cat_tags(entries, "LP支付")
+        self.assertTrue(any(t.get("form") == "比例" for t in tags))
+
+    def test_lp_toll_on_opponent(self):
+        """通行費形「相手は…払わなければ〜できない」貼 LP支付(對手)。"""
+        entries, _ = build(
+            "①:對手不支付600基本分就不能發動卡片效果。",
+            "①：このカードがモンスターゾーンに存在する限り、相手は"
+            "６００LPを払わなければ、カードの効果を発動できない。")
+        tags = self.cat_tags(entries, "LP支付")
+        self.assertTrue(any(t.get("side") == "對手" for t in tags))
+
+    def test_lp_lose_self_reference(self):
+        entries, _ = build(
+            "①:自己失去回去的怪獸數量×1000基本分。",
+            "①：その後、自分は戻したモンスターの数×１０００LPを失う。")
+        tags = self.cat_tags(entries, "LP失去")
+        self.assertTrue(any(t.get("side") == "我方" for t in tags))
+        self.assertTrue(any(t.get("form") == "參照值" for t in tags))
+
+    def test_opponent_pay_trigger_is_not_lpp(self):
+        """「相手がLPを払って…発動する度に」是觸發敘述非支付動作;
+        後段「相手は５００LPを失う」照貼 LP失去。"""
+        entries, _ = build(
+            "①:每次對手支付基本分發動效果,對手失去500基本分。",
+            "①：自分フィールドに他の「氷結界」モンスターが存在する限り、"
+            "相手がLPを払ってカードの効果を発動する度に相手は５００LPを"
+            "失う。")
+        self.assertEqual(self.cat_tags(entries, "LP支付"), [])
+        tags = self.cat_tags(entries, "LP失去")
+        self.assertTrue(any(t.get("side") == "對手" for t in tags))
 
 
 class TestTagPreservation(unittest.TestCase):

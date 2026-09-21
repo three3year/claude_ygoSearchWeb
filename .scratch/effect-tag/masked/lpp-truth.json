@@ -1,0 +1,2364 @@
+[
+  {
+    "id": 402416,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 1164211,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 1274455,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 1295111,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 1845204,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 2333466,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 2362787,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 2674965,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 3739500,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 3739500,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 3819470,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 4167084,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 4408198,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 4538826,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 4538826,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 4606229,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 4779823,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 5560911,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 5795882,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 5848934,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 6039967,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方"
+      }
+    ]
+  },
+  {
+    "id": 6351147,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 6795211,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 6855503,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 7336745,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 8267140,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 8843569,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 10000010,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "參照值"
+      }
+    ]
+  },
+  {
+    "id": 10000010,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 10000090,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 10136446,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 10218411,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 11441009,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 12408276,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 12682213,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 12931061,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 13258285,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 13258285,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 14554127,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 15177750,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 15520842,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 15758127,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 16229315,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 16306932,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 16306932,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 17188206,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 17484499,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 19144622,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 19535693,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 19959563,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 20938824,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 21438286,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 21848500,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 22082432,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 22125101,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 22669793,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 22796548,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 23581825,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 23851033,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 24484270,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 24506253,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 24874630,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 25339070,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 25401880,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 25419323,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 26631975,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 27170599,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 27345070,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 27995943,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 29570824,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 30118701,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 30275298,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 30581601,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 30888983,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 31434645,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 31709826,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 33438265,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 35112613,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 35606858,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 37115575,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 37383714,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 38369349,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 38775407,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 39238953,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 40237839,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 40450317,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 41420027,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 41424250,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 41442341,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 41659072,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 42444868,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 43218406,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 43262273,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 44133040,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 44265115,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 44716748,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 46186135,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 46497537,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方"
+      }
+    ]
+  },
+  {
+    "id": 47504322,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 48832775,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 49370016,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 49655592,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 50243722,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 51053997,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 51728779,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 52020510,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 52807032,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 53183600,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 53194323,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 53535814,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 53754104,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 55965529,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 56187077,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 56700100,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 56870908,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 56870908,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 56907986,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 57496978,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 57774843,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 57995165,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 58330108,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 58695102,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 58787301,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 59913418,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 60023855,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 61245672,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 61944066,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 62200831,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "參照值"
+      }
+    ]
+  },
+  {
+    "id": 62606805,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 62606805,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 63854005,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 63956833,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 64280356,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 64681432,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 64734921,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 64927055,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 65331686,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 65458948,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 65518099,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 66015185,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 66059345,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 68299524,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方"
+      }
+    ]
+  },
+  {
+    "id": 69015963,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 69272449,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 69452756,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 69757518,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 70219023,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方"
+      }
+    ]
+  },
+  {
+    "id": 70389815,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 70493141,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 70659412,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 70828912,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 71440209,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 71459861,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 72426662,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 74139959,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方"
+      }
+    ]
+  },
+  {
+    "id": 74694807,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 75886890,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 76823930,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 76823930,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 77157846,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 77432167,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "參照值"
+      }
+    ]
+  },
+  {
+    "id": 77913594,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 78114463,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 78114463,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 79523365,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 79582540,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 79766336,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 80036543,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 80073414,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 80921533,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 81571633,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 81758313,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 81794107,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 82041999,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 82103466,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 82270047,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 82301904,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 85150300,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "參照值"
+      }
+    ]
+  },
+  {
+    "id": 85668449,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 86013171,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 86532744,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "參照值"
+      }
+    ]
+  },
+  {
+    "id": 86762958,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "對手",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 87880531,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 87910978,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 88234365,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 89397517,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 90299015,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 91002901,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 91842653,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 92266279,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 93302695,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 94016752,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 95091919,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 96782886,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 98204536,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 99054885,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方"
+      }
+    ]
+  },
+  {
+    "id": 99414629,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  },
+  {
+    "id": 99597615,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 99733359,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "固定值"
+      }
+    ]
+  },
+  {
+    "id": 99789342,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "LP支付",
+        "side": "我方",
+        "form": "比例"
+      }
+    ]
+  }
+]

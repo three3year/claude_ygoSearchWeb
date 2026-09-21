@@ -1,0 +1,76 @@
+{
+  "batch": "tag-ps-01",
+  "series": "tag-ps",
+  "category": "表示形式變更",
+  "number": 1,
+  "remaining_batches": 1,
+  "clauses": 1,
+  "guide": "docs/effect_tag_guide.md",
+  "taxonomy": {
+    "類別": "表示形式變更",
+    "槽位": {
+      "to": [
+        "攻擊表示",
+        "守備表示",
+        "裡側表示"
+      ],
+      "side": [
+        "自身",
+        "我方",
+        "對手",
+        "雙方"
+      ],
+      "pos": [
+        "成本",
+        "效果"
+      ]
+    },
+    "通則": "位置=成本只標發動子句內的代價,其餘一律效果;對象方判得準才填;複合起點逐起點各貼一個 tag;槽位不確定就留空。"
+  },
+  "taxonomy_digest": "8ec3094b72b16cff",
+  "tag_rules_digest": "d513dd7f9814ecc2",
+  "result_format": {
+    "說明": "一效果句一物件,鍵 id / section / index 照批次檔抄。tag 系列:tags 給該句**該類別的全部** tag(槽位值照 docs/effect_tag_guide.md 的中文值域);該句沒有該類動作時 tags 給空陣列(= 判空,收票會記進 tags_checked)。timing 系列:timing 給觸發時機單值,判不進具名值時給「其他」;該句其實沒有觸發事件時 timing 給 null(收票記判空)。判不出時 tags/timing 留空並寫 note,不猜。",
+    "改判": "批次檔標了 rejudge 的行,結果檔也要寫 rejudge: true,否則整批不寫入;批次沒標的行不准自己寫。",
+    "範例": [
+      {
+        "id": 12345,
+        "section": "main",
+        "index": "①",
+        "tags": [
+          {
+            "cat": "區域移動",
+            "from": "牌組",
+            "to": "手牌",
+            "side": "我方",
+            "pos": "效果"
+          }
+        ]
+      },
+      {
+        "id": 12345,
+        "section": "main",
+        "index": "②",
+        "tags": [],
+        "note": ""
+      },
+      {
+        "id": 67890,
+        "section": "main",
+        "index": "①",
+        "timing": "召喚成功時"
+      }
+    ]
+  },
+  "entries": [
+    {
+      "id": 72302403,
+      "section": "main",
+      "index": "①",
+      "name_zh": "光之護封劍",
+      "kind": "通常魔法卡效果",
+      "text_zh": "①：作為此卡的發動時的效果處理，對手場上有裡側表示怪獸存在的場合，那些全部變成表側表示。",
+      "text_ja": "①：このカードの発動時の効果処理として、相手フィールドに裏側表示モンスターが存在する場合、それらを全て表側表示にする。"
+    }
+  ]
+}

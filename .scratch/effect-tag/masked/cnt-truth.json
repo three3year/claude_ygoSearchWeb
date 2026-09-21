@@ -1,0 +1,2416 @@
+[
+  {
+    "id": 975299,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 1118137,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 1118137,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 1340142,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2525268,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2606417,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2606417,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 3048768,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 3611830,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 3611830,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      },
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5121528,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5121528,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 5148778,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5208118,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5399521,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5640330,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5640330,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 6061630,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 7602800,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8025950,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8025950,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8445808,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8837932,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 9634146,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 10239627,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10239627,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 10239627,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10239627,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 11163040,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 14556954,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 15185344,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 15893860,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 17621695,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 17825378,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 21113684,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 21984400,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      },
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22070401,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22790789,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22923081,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 24429467,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 24793135,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 25221249,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 26308721,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27354732,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27354732,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 27548199,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 27918963,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27918963,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 27970830,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 28454232,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28531163,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28570310,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29570824,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30432463,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 31292357,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32245230,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32245230,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 32453837,
+    "section": "main",
+    "index": "③-●1",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32692693,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 33904024,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 34884015,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 37414347,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 38325384,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 38943357,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 39000945,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 39000945,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      },
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 39910367,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 40089744,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 40089744,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 40732515,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 40785230,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 40785230,
+    "section": "pendulum",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 41516133,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 41516133,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 42719764,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 42719764,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 43930492,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 44640691,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 44716748,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 44857722,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 44994712,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 45819647,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 45819647,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 47436247,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47873397,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 48015771,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 48995978,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49776811,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 52792430,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 53842431,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 54040484,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 54842941,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 54965929,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 54965929,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 54965929,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55034079,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55034079,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 55063751,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 55424270,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55965529,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 56074358,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 56111151,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 60600821,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 61156777,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 63092423,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 63378869,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 63941210,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 65338781,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65342096,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65496951,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 66104644,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 66104644,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 66104644,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 66750703,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 67234805,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 67547370,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68319538,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 68441986,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68934651,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68934651,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 69031175,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 69170557,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 70791313,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71071546,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71071546,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 71331215,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71413901,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71413901,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 71442223,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71459017,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 72129804,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 73218989,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 73665146,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 73853830,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74402414,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 74752631,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74974229,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 75014062,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 75304793,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 75304793,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 75433814,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 75433814,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 76137614,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 76821171,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 80959027,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 80959027,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 81237046,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 81758313,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 81758313,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 81758313,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82359538,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82735249,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82735249,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 82821760,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 83008724,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 83035296,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 83035296,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 84055227,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84257883,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84769941,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 85638822,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 85668449,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 85668449,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 86607583,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 86607583,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88210105,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88232397,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 88901771,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88901771,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 89086647,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 89264428,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 89264428,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 91182675,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91182675,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91231901,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91336701,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91336701,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 91438994,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91740879,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91740879,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92001300,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92171126,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92327802,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92559258,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92559258,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92559258,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      },
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92562411,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92650749,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92650749,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 94243005,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 94599451,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 94599451,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 94599451,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 94807487,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 96367119,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  },
+  {
+    "id": 97223101,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 97254001,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 98167225,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 98986900,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "放置",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 98986900,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "計數器操作",
+        "act": "去除",
+        "pos": "成本"
+      }
+    ]
+  }
+]

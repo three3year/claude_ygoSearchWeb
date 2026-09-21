@@ -1,0 +1,407 @@
+[
+  {
+    "id": 4398189,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 4632019,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 5399521,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "刻度"
+      }
+    ]
+  },
+  {
+    "id": 7150545,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 8243121,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "階級"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 8809344,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "階級"
+      }
+    ]
+  },
+  {
+    "id": 12743620,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 13364097,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "階級",
+        "term": "單回合"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 14169843,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 17086528,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "刻度"
+      }
+    ]
+  },
+  {
+    "id": 17330916,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "刻度"
+      }
+    ]
+  },
+  {
+    "id": 17979378,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "刻度"
+      }
+    ]
+  },
+  {
+    "id": 20409757,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "刻度"
+      }
+    ]
+  },
+  {
+    "id": 21364070,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "刻度",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 24610207,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 26638543,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "刻度",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 34568783,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      },
+      {
+        "cat": "性質變更",
+        "item": "屬性",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 35167375,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 45538320,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性",
+        "term": "單回合"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 48739627,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 52254878,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 55697723,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 61052897,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 61496006,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 73046708,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性"
+      }
+    ]
+  },
+  {
+    "id": 75059201,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "階級"
+      }
+    ]
+  },
+  {
+    "id": 80796456,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "階級"
+      }
+    ]
+  },
+  {
+    "id": 83566725,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "階級"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 92015800,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性"
+      }
+    ]
+  }
+]

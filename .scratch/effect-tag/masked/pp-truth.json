@@ -1,0 +1,2404 @@
+[
+  {
+    "id": 863795,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 1142880,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 1187243,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 1280391,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 1769875,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 2372506,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      }
+    ]
+  },
+  {
+    "id": 3752422,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 4064256,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 4786063,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 5574510,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 6442944,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 6764709,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 7721912,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8129306,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 8522996,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性"
+      }
+    ]
+  },
+  {
+    "id": 8736823,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 8978197,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 9798352,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 10441498,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 10602628,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 10632284,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性",
+        "term": "單回合"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 11035075,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "階級"
+      },
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 11035075,
+    "section": "main",
+    "index": "③",
+    "tags": []
+  },
+  {
+    "id": 11035075,
+    "section": "main",
+    "index": "④",
+    "tags": []
+  },
+  {
+    "id": 11234702,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 13014905,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 13203964,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 13518809,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 14391625,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 14505685,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 16246535,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 16769305,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 16828633,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      }
+    ]
+  },
+  {
+    "id": 18859369,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 19093698,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 19462747,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 20579538,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 21846145,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 22586618,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 23338098,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 23657016,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 24892828,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 25096909,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 25484449,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 25784595,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 26308721,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 26462013,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 26920296,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 27285068,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 27657173,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 28617139,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 29253591,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 29975188,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 30037118,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 30079770,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 30291086,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 31114334,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 31444249,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 31809476,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      }
+    ]
+  },
+  {
+    "id": 33325951,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 33491462,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 34034150,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 34244455,
+    "section": "main",
+    "index": "①-●4",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 34813443,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 34873741,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 35187185,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 35645105,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 37129797,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 37260946,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 37678339,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 37991342,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 38264974,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 38391684,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 39122311,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 39153655,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 39321065,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 39357122,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 39392286,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 39987731,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 40061558,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 40380686,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 40551410,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 41306080,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 41908872,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 42377643,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 42382265,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 43857222,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 43930492,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 44760562,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 44994712,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 45103815,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 45667991,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 46425662,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 47060528,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      }
+    ]
+  },
+  {
+    "id": 47120245,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 47247792,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 47840168,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 48421595,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 48654267,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 49139666,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 49139666,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 49655592,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 49959355,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 50139096,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 51916032,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 52198054,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 52354896,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 53257892,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 54573517,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 55168550,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 56824871,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 57238939,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      }
+    ]
+  },
+  {
+    "id": 57662975,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 57964143,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 58680635,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 58753372,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 58793369,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 59281922,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 59913418,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 60110982,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 60283232,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 60306277,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 60619435,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 60832978,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 61248471,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 61470213,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      }
+    ]
+  },
+  {
+    "id": 61777313,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 63626024,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      }
+    ]
+  },
+  {
+    "id": 64211118,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性"
+      }
+    ]
+  },
+  {
+    "id": 64327901,
+    "section": "main",
+    "index": "③-●1",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 64496451,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 64603351,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 64635042,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 65342096,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 65737274,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 65961304,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 66386380,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 67045745,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 67045745,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 67322708,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 67441879,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 68184115,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 69170403,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 69299029,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 69488544,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 69601012,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 70252926,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 70369116,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 70417076,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 70417076,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 70456282,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 70856343,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 71278040,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 71750854,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 73104892,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性"
+      }
+    ]
+  },
+  {
+    "id": 73218792,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 74627016,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74644400,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 74839123,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 74889525,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 75676192,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 76500786,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 77152542,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 78021082,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      }
+    ]
+  },
+  {
+    "id": 78021082,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 78642798,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名"
+      }
+    ]
+  },
+  {
+    "id": 80570228,
+    "section": "main",
+    "index": "③-●1",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 81599449,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 81881839,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 81974607,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 83315222,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 84054556,
+    "section": "main",
+    "index": "③",
+    "tags": []
+  },
+  {
+    "id": 84171830,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 84462118,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 84755744,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84797028,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 85154941,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 85457355,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 86124104,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 86527709,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 87451661,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "卡名",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 87640391,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 88232397,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 88757791,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "刻度",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 89181134,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 89362180,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "屬性"
+      }
+    ]
+  },
+  {
+    "id": 89362180,
+    "section": "main",
+    "index": "②-●2",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "種族"
+      }
+    ]
+  },
+  {
+    "id": 89594399,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 90243945,
+    "section": "main",
+    "index": "③",
+    "tags": []
+  },
+  {
+    "id": 91434208,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 91907707,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 94973028,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 95888876,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 96872283,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "term": "持續"
+      }
+    ]
+  },
+  {
+    "id": 98143165,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 98154550,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  },
+  {
+    "id": 98555327,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 98777036,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 98875863,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級",
+        "term": "單回合"
+      }
+    ]
+  },
+  {
+    "id": 98888032,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "性質變更",
+        "pos": "效果",
+        "item": "等級"
+      }
+    ]
+  }
+]

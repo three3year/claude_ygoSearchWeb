@@ -416,6 +416,186 @@ class TestPhase4Rules(unittest.TestCase):
         self.assertFalse(tag_rules.screen_hit("行動限制", text_ja))
 
 
+class TestPhase5Rules(unittest.TestCase):
+    """第5期(票19):狀態向四類的規則直貼邊界。"""
+
+    def cat_tags(self, entries, cat):
+        clause = clauses_of(entries, 1000)[0]
+        return [t for t in clause["tags"] if t.get("cat") == cat]
+
+    def test_free_position_change_has_no_to(self):
+        """「表示形式を変更する」自由選,to 缺值只貼類別(裁定批3)。"""
+        entries, _ = build(
+            "①:以場上1隻怪獸為對象發動。變更那隻怪獸的表示形式。",
+            "①：フィールドのモンスター１体を対象として発動できる。"
+            "そのモンスターの表示形式を変更する。")
+        tags = self.cat_tags(entries, "表示形式變更")
+        self.assertTrue(any("to" not in t and t["pos"] == "效果"
+                            for t in tags))
+
+    def test_face_down_defense_maps_to_face_down(self):
+        """裏側守備表示=裡側表示,不是守備表示(to 映射照字面)。"""
+        entries, _ = build(
+            "①:對手特殊召喚怪獸時可以發動。那隻怪獸變成裡側守備表示。",
+            "①：相手がモンスターを特殊召喚した時に発動できる。"
+            "そのモンスターを裏側守備表示にする。")
+        tags = self.cat_tags(entries, "表示形式變更")
+        self.assertTrue(any(t.get("to") == "裡側表示" for t in tags))
+        self.assertFalse(any(t.get("to") == "守備表示" for t in tags))
+
+    def test_self_defense_position_change(self):
+        entries, _ = build(
+            "①:此卡召喚的場合發動。此卡變成守備表示。",
+            "①：このカードが召喚した場合に発動する。"
+            "このカードを守備表示にする。")
+        tags = self.cat_tags(entries, "表示形式變更")
+        self.assertTrue(any(t.get("to") == "守備表示"
+                            and t.get("side") == "自身" for t in tags))
+
+    def test_position_at_summon_is_not_a_change(self):
+        """「守備表示で特殊召喚」是召喚時表示指定(に/で 粒子切分),不貼不圈。"""
+        text_ja = ("①：自分の墓地のモンスター１体を対象として発動できる。"
+                   "そのモンスターを守備表示で特殊召喚する。")
+        entries, _ = build("①:以墓地1隻怪獸為對象發動。將那隻怪獸守備表示"
+                           "特殊召喚。", text_ja)
+        self.assertEqual(self.cat_tags(entries, "表示形式變更"), [])
+        self.assertFalse(tag_rules.screen_hit("表示形式變更", text_ja))
+
+    def test_position_or_choice_tags_both(self):
+        """或格「表側攻撃表示か裏側守備表示にする」兩面各貼(第3期先例)。"""
+        entries, _ = build(
+            "①:此卡反轉的場合以場上1隻怪獸為對象發動。那隻怪獸變成表側"
+            "攻擊表示或裡側守備表示。",
+            "①：このカードがリバースした場合、フィールドの他のモンスター"
+            "１体を対象として発動できる。そのモンスターを表側攻撃表示か"
+            "裏側守備表示にする。")
+        tos = {t.get("to") for t in self.cat_tags(entries, "表示形式變更")}
+        self.assertIn("攻擊表示", tos)
+        self.assertIn("裡側表示", tos)
+
+    def test_control_gain(self):
+        entries, _ = build(
+            "①:以對手場上1隻怪獸為對象發動。直到結束階段得到那隻怪獸的"
+            "控制權。",
+            "①：相手フィールドのモンスター１体を対象として発動できる。"
+            "そのモンスターのコントロールをエンドフェイズまで得る。")
+        tags = self.cat_tags(entries, "控制權轉移")
+        self.assertTrue(any(t.get("dir") == "取得" and t["pos"] == "效果"
+                            for t in tags))
+
+    def test_control_give_and_swap(self):
+        """「相手に移す」=移交;「入れ替える」互換兩向各貼(代行裁定)。"""
+        entries, _ = build(
+            "①:此卡的控制權轉移給對手。",
+            "①：自分スタンバイフェイズに発動する。"
+            "このカードのコントロールを相手に移す。")
+        self.assertTrue(any(t.get("dir") == "移交" for t in
+                            self.cat_tags(entries, "控制權轉移")))
+        entries, _ = build(
+            "①:交換那2隻怪獸的控制權。",
+            "①：自分及び相手フィールドの表側表示モンスターを１体ずつ対象"
+            "として発動できる。そのモンスター２体のコントロールを"
+            "入れ替える。")
+        dirs = {t.get("dir") for t in self.cat_tags(entries, "控制權轉移")}
+        self.assertEqual(dirs, {"取得", "移交"})
+
+    def test_control_gained_modifier_is_not_tagged(self):
+        """「この効果でコントロールを得たモンスター」完成/修飾形非動作。"""
+        text_ja = ("①：この効果でコントロールを得たモンスターは"
+                   "攻撃できない。")
+        entries, _ = build("①:以此效果得到控制權的怪獸不能攻擊。", text_ja)
+        self.assertEqual(self.cat_tags(entries, "控制權轉移"), [])
+        self.assertFalse(tag_rules.screen_hit("控制權轉移", text_ja))
+
+    def test_card_name_treatment_with_continuous_term(self):
+        entries, _ = build(
+            "①:此卡在怪獸區存在期間,卡名當作「死亡青蛙」使用。",
+            "①：このカードはモンスターゾーンに存在する限り、"
+            "カード名を「デスガエル」として扱う。")
+        tags = self.cat_tags(entries, "性質變更")
+        self.assertTrue(any(t.get("item") == "卡名"
+                            and t.get("term") == "持續" for t in tags))
+
+    def test_declared_race_and_attribute_tags_both(self):
+        """「宣言した種族・属性になる」合記兩面各貼。"""
+        entries, _ = build(
+            "①:那隻怪獸直到回合結束變成宣言的種族、屬性。",
+            "①：種族と属性を１つずつ宣言し、フィールドの表側表示モンスター"
+            "１体を対象として発動できる。そのモンスターはターン終了時まで"
+            "宣言した種族・属性になる。")
+        items = {t.get("item") for t in self.cat_tags(entries, "性質變更")}
+        self.assertIn("種族", items)
+        self.assertIn("屬性", items)
+
+    def test_level_becomes_and_raises(self):
+        entries, _ = build(
+            "①:這個效果特殊召喚的怪獸等級變成1。",
+            "①：この効果で特殊召喚したモンスターのレベルは１になり、"
+            "効果は無効化される。")
+        self.assertTrue(any(t.get("item") == "等級" for t in
+                            self.cat_tags(entries, "性質變更")))
+        entries, _ = build(
+            "①:以場上1隻怪獸為對象發動。那隻怪獸的等級上升1個。",
+            "①：フィールドの表側表示モンスター１体を対象として発動できる。"
+            "そのモンスターのレベルを１つ上げる。")
+        self.assertTrue(any(t.get("item") == "等級" for t in
+                            self.cat_tags(entries, "性質變更")))
+
+    def test_tuner_treatment_has_no_item_value(self):
+        """值域無對應 item 值的扱う形(チューナー等)缺值只貼類別+term。"""
+        entries, _ = build(
+            "①:以我方場上1隻怪獸為對象發動。這個回合,那隻怪獸當作調整"
+            "怪獸使用。",
+            "①：自分フィールドのモンスター１体を対象として発動できる。"
+            "このターン、そのモンスターをチューナーとして扱う。")
+        tags = self.cat_tags(entries, "性質變更")
+        self.assertTrue(any("item" not in t and t.get("term") == "單回合"
+                            for t in tags))
+
+    def test_treat_annotation_is_not_tagged(self):
+        """「(罠カードとしては扱わない)」括弧註記非動作,不圈。"""
+        text_ja = ("①：このカードは発動後、効果モンスター（機械族・地・"
+                   "星４・攻１８００／守１０００）となり、モンスターゾーンに"
+                   "特殊召喚する（罠カードとしては扱わない）。")
+        entries, _ = build("①:此卡發動後,變成效果怪獸特殊召喚(不當作"
+                           "陷阱卡使用)。", text_ja)
+        self.assertEqual(self.cat_tags(entries, "性質變更"), [])
+        self.assertFalse(tag_rules.screen_hit("性質變更", text_ja))
+
+    def test_counter_place_and_cost_removal(self):
+        entries, _ = build(
+            "①:在此卡放置1個魔力指示物。",
+            "①：装備モンスターが戦闘を行う攻撃宣言時に発動する。"
+            "このカードに魔力カウンターを１つ置く。")
+        self.assertTrue(any(t.get("act") == "放置" and t["pos"] == "效果"
+                            for t in self.cat_tags(entries, "計數器操作")))
+        entries, _ = build(
+            "①:取除此卡2個魔力指示物,以場上1張蓋卡為對象發動。破壞那"
+            "張卡。",
+            "①：このカードの魔力カウンターを２つ取り除き、フィールドの"
+            "カード１枚を対象として発動できる。そのカードを破壊する。")
+        self.assertTrue(any(t.get("act") == "去除" and t["pos"] == "成本"
+                            for t in self.cat_tags(entries, "計數器操作")))
+
+    def test_xyz_material_detach_is_not_counter(self):
+        """「X素材を取り除く」不是計數器操作(カウンター 錨天然不配)。"""
+        text_ja = ("①：このカードのX素材を１つ取り除いて発動できる。"
+                   "フィールドのカード１枚を対象として破壊する。")
+        entries, _ = build("①:取除此卡1個X素材可以發動。破壞場上1張卡。",
+                           text_ja)
+        self.assertEqual(self.cat_tags(entries, "計數器操作"), [])
+        self.assertFalse(tag_rules.screen_hit("計數器操作", text_ja))
+
+    def test_counter_placed_trigger_is_not_tagged(self):
+        """「カウンターが置かれた場合」是觸發事件非動作。"""
+        text_ja = ("①：このカードに魔力カウンターが置かれた場合に発動"
+                   "できる。自分はデッキから１枚ドローする。")
+        entries, _ = build("①:此卡被放置魔力指示物的場合可以發動。自己從"
+                           "牌組抽1張卡。", text_ja)
+        self.assertEqual(self.cat_tags(entries, "計數器操作"), [])
+        self.assertFalse(tag_rules.screen_hit("計數器操作", text_ja))
+
+
 class TestTagPreservation(unittest.TestCase):
     """llm/manual 的 tag 走「判定一次就算數」,rule 的 tag 每次重算。"""
 

@@ -47,6 +47,10 @@ MASKED_SETS = {
     tag_rules.CAT_LP_LOSE: ("lpl-sample.json",),
     tag_rules.CAT_RESTRICT: ("rs-sample.json", "rs-sample-supplement.json"),
     tag_rules.CAT_PROTECT: ("pt-sample.json", "pt-sample-supplement.json"),
+    tag_rules.CAT_POSITION: ("ps-sample.json", "ps-sample-supplement.json"),
+    tag_rules.CAT_CONTROL: ("ct-sample.json",),
+    tag_rules.CAT_PROPERTY: ("pp-sample.json", "pp-sample-supplement.json"),
+    tag_rules.CAT_COUNTER: ("cnt-sample.json",),
 }
 LIST_PREVIEW = 10
 

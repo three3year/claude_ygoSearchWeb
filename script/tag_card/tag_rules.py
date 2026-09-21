@@ -90,6 +90,8 @@ SCOPES = (SCOPE_PROCESS, SCOPE_COST, SCOPE_TARGET)
 # 零空缺檢查。第二期起照 .scratch/effect-tag/phase-plan.md 增列。
 PHASES = {
     CAT_MOVE: "第1期",
+    CAT_DESTROY: "第2期",
+    CAT_NEGATE: "第2期",
 }
 
 # 遮蔽測試門檻(rulings.md 批4)
@@ -138,6 +140,33 @@ _V_RET_DECK = r"(?<!EX)(?<!ラ)デッキに戻(す(?!事(は|が|も)?でき(な
 _V_RET_EXTRA = r"(EXデッキ|エクストラデッキ)に戻(す(?!事(は|が|も)?でき(ない|ず))|し)"
 _V_BANISH = r"除外(する(?!事(は|が|も)?でき(ない|ず)|効果|場合)|し、|できる)"
 _V_SET = r"セット(する(?!事(は|が|も)?でき(ない|ず)|効果|場合)|できる|し、|し。)"
+
+# ── 第2期(票16):破壞/無效的動詞形與排除 ──
+# 破壞動作形:完成式(破壊した=觸發)、被動(破壊され=狀態/耐性)、條件
+# (破壊する場合)、描述(破壊する効果)都不算動作。
+_V_DS = (r"破壊(する(?!事(は|が|も)?でき(ない|ず)|効果|場合|モンスター|カード)"
+         r"|し、|し。|できる)")
+# 「代わりに破壊」=代替破壞歸耐性,破壞規則與粗篩讓路(裁定批2);
+# 「リリースの代わりに破壊」是儀式召喚的代價替代,是真破壞動作,不排除。
+# 「無効にし破壊」不排除:附帶處置也是動作(第一期 mv 對附帶除外的先例),
+# 無效帶 extra 槽位、破壞照貼(T127)。
+_DS_EXCLUDE = r"(?<!リリースの)代わりに[^。]{0,30}?破壊|破壊する効果"
+# 「無効化されない/無効にされない」=耐性,不是無效動作。
+_NG_EXCLUDE = (r"無効化され(ない|ず)|無効に(され|でき)(ない|ず)"
+               r"|無効にならない")
+
+# 破壞/無效的槽位中文值
+DS_MONSTER = "怪獸"
+DS_SPELLTRAP = "魔陷"
+DS_CARD = "卡"
+RANGE_ONE = "單體"
+RANGE_MULT = "複數"
+RANGE_ALL = "全體"
+NG_ACTIVATION = "發動"
+NG_EFFECT = "效果"
+NG_CONTINUOUS = "持續無效化"
+NG_X_DESTROY = "破壞"
+NG_X_BANISH = "除外"
 
 # 起點詞(複合起點「手札・墓地から」由專屬規則發多個 tag,單一起點規則以
 # 負向後看擋在「・」之後誤配半邊)
@@ -690,6 +719,149 @@ RULES = (
            "墓地回牌組代價「墓地の…をデッキに戻して発動」",
            _S_GRAVE + _sp() + r"デッキに戻(し|して)",
            {"from": ZONE_GRAVE, "to": ZONE_DECK}, "票10"),
+    # ══ 第2期(票16):破壞 ══════════════════════════════════
+    # 「無効にし(、|て)破壊」是無效的附帶槽位(裁定批2),破壞規則與粗篩都
+    # 讓路;「代わりに破壊」是代替破壞歸耐性,一律排除。
+    define("T110", CAT_DESTROY, SCOPE_PROCESS,
+           "泛用效果破壞「…を破壊する」(無槽位,可被吸收)",
+           _V_DS,
+           {}, "票16",
+           exclude=_DS_EXCLUDE),
+    define("T111", CAT_DESTROY, SCOPE_PROCESS,
+           "全體怪獸破壞「モンスターを全て破壊」",
+           r"モンスターを全て破壊",
+           {"what": DS_MONSTER, "scope": RANGE_ALL}, "票16",
+           exclude=_DS_EXCLUDE),
+    define("T112", CAT_DESTROY, SCOPE_PROCESS,
+           "全體卡破壞「カードを全て破壊」(不限種;魔陷區限定句歸 T113 面)",
+           r"(?<!罠)(?<!法)カードを全て破壊",
+           {"what": DS_CARD, "scope": RANGE_ALL}, "票16",
+           exclude=_DS_EXCLUDE + r"|魔法＆罠ゾーン|宣言した種類"),
+    define("T113", CAT_DESTROY, SCOPE_PROCESS,
+           "全體魔陷破壞「魔法・罠カード/魔法＆罠ゾーンのカードを全て破壊」",
+           r"(魔法・罠(カード|ゾーンのカード)|魔法＆罠ゾーンのカード)を全て破壊",
+           {"what": DS_SPELLTRAP, "scope": RANGE_ALL}, "票16",
+           exclude=_DS_EXCLUDE),
+    define("T114", CAT_DESTROY, SCOPE_PROCESS,
+           "對手場破壞「相手フィールドの…破壊」(處理段直述)",
+           r"相手フィールドの(?:(?!(?:自分|お互い|" + _VERBS + r"))[^。]){0,50}?"
+           + _V_DS,
+           {"side": SIDE_OPP}, "票16",
+           exclude=_DS_EXCLUDE),
+    define("T115", CAT_DESTROY, SCOPE_PROCESS,
+           "自壞「このカードを破壊する」",
+           r"このカードを破壊(する|し、|し。|できる)",
+           {"side": SIDE_SELF}, "票16",
+           exclude=r"代わりに"),
+    define("T117", CAT_DESTROY, SCOPE_PROCESS,
+           "單體怪獸破壞「モンスター１体を…破壊」(處理段直述)",
+           r"モンスター１体を[^。、]{0,15}?破壊(する|し、|し。|できる)",
+           {"what": DS_MONSTER, "scope": RANGE_ONE}, "票16",
+           exclude=_DS_EXCLUDE),
+    define("T118", CAT_DESTROY, SCOPE_PROCESS,
+           "單體卡破壞「カード１枚を…破壊」(處理段直述,不限種)",
+           r"(?<!罠)(?<!法)(?<!ー)カード１枚を[^。、]{0,15}?破壊(する|し、|し。|できる)",
+           {"what": DS_CARD, "scope": RANGE_ONE}, "票16",
+           exclude=_DS_EXCLUDE + r"|フィールドゾーンのカード"),
+    define("T119", CAT_DESTROY, SCOPE_PROCESS,
+           "單體魔陷破壞「魔法・罠カード１枚を…破壊」(處理段直述)",
+           r"魔法・罠カード１枚を[^。、]{0,15}?破壊(する|し、|し。|できる)",
+           {"what": DS_SPELLTRAP, "scope": RANGE_ONE}, "票16",
+           exclude=_DS_EXCLUDE),
+    define("T127", CAT_DESTROY, SCOPE_PROCESS,
+           "無效附帶破壞的破壞面「無効にし(、|て)破壊」(破壞那一張=單體)",
+           r"無効にし(、|て)?破壊(する|し、|し。|できる)",
+           {"scope": RANGE_ONE}, "票16"),
+    define("T116", CAT_DESTROY, SCOPE_COST,
+           "破壞代價「…を破壊して発動」(戰鬥破壞的觸發敘述不算)",
+           r"破壊し(て|、)",
+           {}, "票16",
+           exclude=r"戦闘[でに]|破壊された|破壊されな"),
+    define("T120", CAT_DESTROY, SCOPE_TARGET,
+           "對象單怪破壞「モンスター１体を対象…→ その…破壊」",
+           r"モンスター１体を対象",
+           {"what": DS_MONSTER, "scope": RANGE_ONE}, "票16",
+           action=_anaphora(_V_DS)),
+    define("T121", CAT_DESTROY, SCOPE_TARGET,
+           "對象複數怪破壞「モンスター(を)〜体(まで)対象…→ その…破壊」",
+           r"モンスター(を)?[２-９]体(まで)?(を)?対象",
+           {"what": DS_MONSTER, "scope": RANGE_MULT}, "票16",
+           action=_anaphora(_V_DS)),
+    define("T122", CAT_DESTROY, SCOPE_TARGET,
+           "對象單卡破壞「カード１枚を対象…→ その…破壊」"
+           "(不限種;場地區限定=魔陷,排除)",
+           r"(?<!罠)(?<!法)(?<!ー)カード１枚を対象",
+           {"what": DS_CARD, "scope": RANGE_ONE}, "票16",
+           exclude=r"フィールドゾーンのカード",
+           action=_anaphora(_V_DS)),
+    define("T123", CAT_DESTROY, SCOPE_TARGET,
+           "對象複數卡破壞「カード(を)〜枚(まで)対象…→ その…破壊」(不限種)",
+           r"(?<!罠)(?<!法)(?<!ー)カード(を)?[２-９]枚(まで)?(を)?対象",
+           {"what": DS_CARD, "scope": RANGE_MULT}, "票16",
+           action=_anaphora(_V_DS)),
+    define("T124", CAT_DESTROY, SCOPE_TARGET,
+           "對象單魔陷破壞「魔法・罠カード１枚を対象…→ その…破壊」",
+           r"魔法・罠カード１枚を対象",
+           {"what": DS_SPELLTRAP, "scope": RANGE_ONE}, "票16",
+           action=_anaphora(_V_DS)),
+    define("T125", CAT_DESTROY, SCOPE_TARGET,
+           "對象複數魔陷破壞「魔法・罠カード(を)〜枚(まで)対象…→ その…破壊」",
+           r"魔法・罠カード(を)?[２-９]枚(まで)?(を)?対象",
+           {"what": DS_SPELLTRAP, "scope": RANGE_MULT}, "票16",
+           action=_anaphora(_V_DS)),
+    define("T126", CAT_DESTROY, SCOPE_TARGET,
+           "對象對手單怪破壞「相手フィールドのモンスター１体を対象…→ 破壊」",
+           r"相手フィールドの(?:(?!自分)[^。]){0,30}?モンスター１体を対象",
+           {"what": DS_MONSTER, "scope": RANGE_ONE, "side": SIDE_OPP},
+           "票16",
+           action=_anaphora(_V_DS)),
+    # ══ 第2期(票16):無效 ══════════════════════════════════
+    define("T140", CAT_NEGATE, SCOPE_PROCESS,
+           "泛用無效「…を無効にする/無効化される」(無槽位,可被吸收)",
+           r"無効に(する(?!事(は|が|も)?でき|効果)|し|できる)|無効化され(る|、)",
+           {}, "票16",
+           exclude=_NG_EXCLUDE),
+    define("T141", CAT_NEGATE, SCOPE_PROCESS,
+           "發動無效「発動を無効に」(連鎖上)",
+           r"発動を無効に(する|し|できる)",
+           {"what": NG_ACTIVATION}, "票16",
+           exclude=_NG_EXCLUDE),
+    define("T142", CAT_NEGATE, SCOPE_PROCESS,
+           "效果無效「効果を無効に」(を形=一次性;召喚修飾形歸 T148)",
+           r"効果を無効に(する|し|できる)",
+           {"what": NG_EFFECT}, "票16",
+           exclude=_NG_EXCLUDE
+           + r"|効果を無効にして[^。、]{0,8}?(特殊召喚|セット)"),
+    define("T143", CAT_NEGATE, SCOPE_PROCESS,
+           "發動無效附帶破壞「発動を無効にし(、|て)破壊」",
+           r"発動を無効にし(、|て)?破壊",
+           {"what": NG_ACTIVATION, "extra": NG_X_DESTROY}, "票16"),
+    define("T144", CAT_NEGATE, SCOPE_PROCESS,
+           "發動無效附帶除外「発動を無効にし…除外」",
+           r"発動を無効にし(、|て)?(そのカードを|それを|「[^」]+」を)?除外",
+           {"what": NG_ACTIVATION, "extra": NG_X_BANISH}, "票16"),
+    define("T145", CAT_NEGATE, SCOPE_PROCESS,
+           "效果無效附帶破壞「効果を無効にし(、|て)破壊」",
+           r"効果を無効にし(、|て)?破壊",
+           {"what": NG_EFFECT, "extra": NG_X_DESTROY}, "票16"),
+    define("T146", CAT_NEGATE, SCOPE_PROCESS,
+           "持續無效化「効果は/が(〜まで)無効化される」",
+           r"効果[はが][^。、]{0,16}?無効化され(る|、)",
+           {"what": NG_CONTINUOUS}, "票16",
+           exclude=_NG_EXCLUDE),
+    define("T147", CAT_NEGATE, SCOPE_PROCESS,
+           "召喚無效附帶破壞「召喚を無効にし…破壊」(值域無召喚值,what 缺值)",
+           r"召喚を無効にし(、|て)?[^。]{0,10}?破壊",
+           {"extra": NG_X_DESTROY}, "票16"),
+    define("T148", CAT_NEGATE, SCOPE_PROCESS,
+           "封效特召「効果を無効にして特殊召喚/セット」(修飾形=持續無效化;"
+           "被召喚者即被封效者,無逗點短距限定)",
+           r"効果を無効にして[^。、]{0,8}?(特殊召喚|セット)",
+           {"what": NG_CONTINUOUS}, "票16"),
+    define("T149", CAT_NEGATE, SCOPE_PROCESS,
+           "效果無效附帶除外「効果を無効にし…除外」",
+           r"効果を無効にし(、|て)?(そのカードを|それを|そのモンスターを)?除外",
+           {"what": NG_EFFECT, "extra": NG_X_BANISH}, "票16"),
 )
 
 # ── 觸發時機規則(掃描發動子句;同句多個時機取最先寫出的)──
@@ -883,6 +1055,22 @@ _SCREENS = {
                    r"|リリースして(表側表示で)?(召喚|A召喚|アドバンス召喚)"
                    r"|リリースして[^。]{0,10}?召喚する事もできる"),
     ),
+    # 第2期(票16):破壞——動作形與代價形;「無効にし破壊」讓給無效的附帶
+    # 槽位、「代わりに破壊」讓給耐性(代替破壞),與規則排除同一組樣式。
+    CAT_DESTROY: (
+        re.compile(r"破壊(する(?!事(は|が|も)?でき(ない|ず)|効果|場合"
+                   r"|モンスター|カード)"
+                   r"|し、|し。|できる|し(て|、)[^。]{0,30}?発動できる)"),
+        re.compile(r"(?<!リリースの)代わりに[^。]{0,30}?破壊"
+                   r"|破壊する効果|戦闘[でに][^。]{0,15}?破壊し"),
+    ),
+    # 第2期(票16):無效——「無効化されない/無効にされない」是耐性不圈。
+    CAT_NEGATE: (
+        re.compile(r"無効に(する(?!事(は|が|も)?でき)|し|できる)"
+                   r"|無効化され(る|、)"),
+        re.compile(r"無効化され(ない|ず)|無効に(され|でき)(ない|ず)"
+                   r"|無効にならない"),
+    ),
 }
 
 
@@ -909,9 +1097,10 @@ def problems(rules=RULES, timing_rules=TIMING_RULES):
     for rid in sorted({rid for rid in ids if ids.count(rid) > 1}):
         found.append(f"{rid}: 編號重複")
     cats = {CAT_MOVE, CAT_DRAW, CAT_NEGATE, CAT_DESTROY, CAT_RESTRICT,
-            CAT_PROTECT, CAT_STAT, CAT_DAMAGE, CAT_HEAL, CAT_POSITION,
-            CAT_CONTROL, CAT_PROPERTY, CAT_COUNTER, CAT_TRANSFORM,
-            CAT_SUBSTITUTE, CAT_SUMMON_EXEC, CAT_BATTLE, CAT_INFO, CAT_MISC}
+            CAT_PROTECT, CAT_STAT, CAT_DAMAGE, CAT_HEAL, CAT_LP_PAY,
+            CAT_LP_LOSE, CAT_POSITION, CAT_CONTROL, CAT_PROPERTY, CAT_COUNTER,
+            CAT_TRANSFORM, CAT_SUBSTITUTE, CAT_SUMMON_EXEC, CAT_BATTLE,
+            CAT_INFO, CAT_MISC}
     for rule in rules:
         rid = rule["id"]
         if not _ID_RE.match(rid):

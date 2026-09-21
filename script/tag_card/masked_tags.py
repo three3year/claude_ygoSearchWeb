@@ -128,8 +128,7 @@ def score_tag_masked(entries, sample, answers, rules=None,
 
     per_rule = {rule["id"]: {"fired": 0, "wrong": 0, "wrong_rows": []}
                 for rule in rules}
-    template_of = {rule["id"]: [_content({"cat": rule["cat"], **template,
-                                          "pos": _rule_pos(rule)})
+    template_of = {rule["id"]: [_content(_with_pos(rule, template))
                                 for template in rule["tags"]]
                    for rule in rules}
     truth_total = 0
@@ -195,3 +194,11 @@ def score_tag_masked(entries, sample, answers, rules=None,
 def _rule_pos(rule):
     return (tag_rules.POS_COST if rule["scope"] == tag_rules.SCOPE_COST
             else tag_rules.POS_EFFECT)
+
+
+def _with_pos(rule, template):
+    """規則樣板 → 含框架補欄的完整 tag(位置豁免類別不補 pos,與 emit 一致)。"""
+    tag = {"cat": rule["cat"], **template}
+    if rule["cat"] not in tag_rules._POS_EXEMPT_CATS:
+        tag["pos"] = _rule_pos(rule)
+    return tag

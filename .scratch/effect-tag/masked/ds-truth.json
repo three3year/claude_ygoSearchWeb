@@ -1,0 +1,2765 @@
+[
+  {
+    "id": 561300,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 1186447,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 1186447,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "side": "自身",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 1508649,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 1953925,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2314238,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2994495,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 3103067,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 3715284,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "side": "自身",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 4178474,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 4754691,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5128859,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5168381,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 5640330,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 6568731,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 6967870,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 6983839,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 6990577,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7127502,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "自身",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7811875,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7852509,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7868571,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7987191,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8085950,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "全體",
+        "side": "雙方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10000000,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10383554,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10666000,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12444060,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12682213,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "全體",
+        "side": "雙方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 13035077,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 15130912,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 15609017,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 15939229,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "全體",
+        "side": "雙方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 17655904,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 18511599,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 18585765,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 18967507,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 19025379,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 19221310,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 19302550,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "side": "自身",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 20071842,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 21223277,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "複數",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22219822,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22723778,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22862454,
+    "section": "main",
+    "index": "①",
+    "tags": []
+  },
+  {
+    "id": 22866836,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 23213239,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "全體",
+        "side": "雙方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 23526128,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 24215921,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 24454387,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 24878656,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "複數",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 25524823,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 26116996,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 26364381,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27268998,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27354732,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27813661,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28265983,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "複數",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28596933,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "全體",
+        "side": "雙方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28715905,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29479265,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29981921,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29981921,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 30095833,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "複數",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30118200,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30888983,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30945251,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30998403,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 31531914,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 31588572,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 31969219,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32986898,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 33055499,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 33438265,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "side": "自身",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 33776843,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 34487429,
+    "section": "main",
+    "index": "①-●3",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 35595518,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "複數",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 35697544,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 36974120,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 37115575,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 38331564,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 38459905,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 39016067,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "side": "自身",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 39761418,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "全體",
+        "side": "雙方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 40522482,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 40998517,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "複數",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 41420027,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 43785278,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 44009443,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 44146295,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 44487250,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 44901281,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 45112597,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 45591967,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 45877457,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46060017,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46259438,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "全體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46593546,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46660187,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47128571,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "side": "我方",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47606319,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "全體",
+        "side": "雙方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 48179391,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49366157,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49702428,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50147815,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50643638,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50669347,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 51028231,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 51091138,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 51497409,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 51534754,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 52553102,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 53094821,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 53265336,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 54178659,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 54974237,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55241609,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55326322,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55538156,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55608151,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 56043446,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 56322832,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "side": "自身",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 57282724,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "全體",
+        "side": "雙方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 57554544,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 57831349,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 58058134,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 58374719,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "複數",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 59353647,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 59741415,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 59785059,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 61307542,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 63180841,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 63972571,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 64550682,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 64867422,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65172015,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65261141,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65515667,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65877963,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 66788016,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 66970002,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 67159705,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 67725394,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68464358,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68630939,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 69162969,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 69191257,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 69488544,
+    "section": "main",
+    "index": "②-●2",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 70825459,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 70902743,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71095768,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71164684,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71564252,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71768839,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 72578374,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 72589042,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 72867001,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 73539069,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 73734821,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74605254,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74860293,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 75672051,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "side": "自身",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 75983808,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 76725398,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 76794549,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "side": "自身",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 77946022,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 78783557,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 81066751,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 81237046,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82140600,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "全體",
+        "side": "雙方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82385847,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82697249,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "全體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 83656563,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84330567,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84749824,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 84903021,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 85101097,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 85121942,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 86066372,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 87955518,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88086137,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88316955,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88581108,
+    "section": "main",
+    "index": "②",
+    "tags": []
+  },
+  {
+    "id": 90809975,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91668401,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92332424,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92487128,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92512625,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 93014827,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 94620082,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 95136979,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 95245571,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "複數",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 95784714,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 96802306,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "全體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 97396380,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 97642679,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "對手",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "全體",
+        "side": "我方",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 97692972,
+    "section": "pendulum",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 98319530,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "side": "自身",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 99414629,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "怪獸",
+        "scope": "單體",
+        "side": "我方",
+        "pos": "效果"
+      },
+      {
+        "cat": "破壞",
+        "what": "卡",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 99724761,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "破壞",
+        "what": "魔陷",
+        "scope": "單體",
+        "side": "對手",
+        "pos": "效果"
+      }
+    ]
+  }
+]

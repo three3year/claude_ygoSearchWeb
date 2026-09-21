@@ -65,6 +65,89 @@ class TestRuleDirectWrite(unittest.TestCase):
         self.assertEqual(report["tag_scope_clauses"], 0)
 
 
+class TestPhase2Rules(unittest.TestCase):
+    """第2期(票16):破壞與無效的規則直貼邊界。"""
+
+    def cat_tags(self, entries, cat):
+        clause = clauses_of(entries, 1000)[0]
+        return [t for t in clause["tags"] if t.get("cat") == cat]
+
+    def test_targeted_single_monster_destroy(self):
+        entries, _ = build(
+            "①:以場上1隻怪獸為對象發動。破壞那隻怪獸。",
+            "①：フィールドのモンスター１体を対象として発動できる。"
+            "そのモンスターを破壊する。")
+        tags = self.cat_tags(entries, "破壞")
+        self.assertTrue(any(t.get("what") == "怪獸"
+                            and t.get("scope") == "單體"
+                            and t["pos"] == "效果" for t in tags))
+
+    def test_destroy_all_opponent_cards(self):
+        entries, _ = build(
+            "①:此卡召喚成功時發動。破壞對手場上全部的卡。",
+            "①：このカードが召喚に成功した時に発動できる。"
+            "相手フィールドのカードを全て破壊する。")
+        tags = self.cat_tags(entries, "破壞")
+        self.assertTrue(any(t.get("what") == "卡" and t.get("scope") == "全體"
+                            for t in tags))
+        self.assertTrue(any(t.get("side") == "對手" for t in tags))
+
+    def test_negate_and_destroy_tags_both_categories(self):
+        """「無効にし破壊」:無效帶附帶槽位,破壞照貼(第一期 mv 對附帶除外
+        的先例——附帶處置也是動作)。"""
+        entries, _ = build(
+            "①:魔法卡發動時可以發動。使那次發動無效並破壞。",
+            "①：魔法カードが発動した時に発動できる。"
+            "その発動を無効にし破壊する。")
+        ng = self.cat_tags(entries, "無效")
+        self.assertTrue(any(t.get("what") == "發動"
+                            and t.get("extra") == "破壞" for t in ng))
+        ds = self.cat_tags(entries, "破壞")
+        self.assertTrue(any(t.get("scope") == "單體" for t in ds))
+        self.assertTrue(tag_rules.screen_hit(
+            "破壞", "その発動を無効にし破壊する。"))
+
+    def test_replacement_destroy_is_not_tagged(self):
+        """「代わりに破壊」歸耐性(代替破壞),破壞規則不開火。"""
+        entries, _ = build(
+            "①:場上怪獸被破壞的場合,可以改為破壞此卡。",
+            "①：フィールドのモンスターが戦闘で破壊される場合、"
+            "代わりにこのカードを破壊する事ができる。")
+        self.assertEqual(self.cat_tags(entries, "破壞"), [])
+
+    def test_destroy_cost_in_activation_clause(self):
+        entries, _ = build(
+            "①:破壞我方場上1張魔法卡發動。抽1張卡。",
+            "①：自分フィールドの魔法・罠カード１枚を破壊して発動できる。"
+            "自分はデッキから１枚ドローする。")
+        tags = self.cat_tags(entries, "破壞")
+        self.assertTrue(any(t["pos"] == "成本" for t in tags))
+
+    def test_chained_effect_negate(self):
+        entries, _ = build(
+            "①:對手怪獸效果發動時發動。使那個效果無效。",
+            "①：相手モンスターの効果が発動した時に発動できる。"
+            "その効果を無効にする。")
+        tags = self.cat_tags(entries, "無效")
+        self.assertTrue(any(t.get("what") == "效果" for t in tags))
+
+    def test_continuous_negation(self):
+        entries, _ = build(
+            "①:裝備怪獸的效果無效化。",
+            "①：装備モンスターの効果は無効化される。")
+        tags = self.cat_tags(entries, "無效")
+        self.assertTrue(any(t.get("what") == "持續無效化" for t in tags))
+
+    def test_negation_immunity_is_not_tagged(self):
+        """「無効化されない」是耐性,無效規則不開火、粗篩不圈。"""
+        entries, _ = build(
+            "①:此卡的發動與效果不會被無效化。",
+            "①：このカードの発動と効果は無効化されない。")
+        self.assertEqual(self.cat_tags(entries, "無效"), [])
+        self.assertFalse(tag_rules.screen_hit(
+            "無效", "このカードの発動と効果は無効化されない。"))
+
+
 class TestTagPreservation(unittest.TestCase):
     """llm/manual 的 tag 走「判定一次就算數」,rule 的 tag 每次重算。"""
 

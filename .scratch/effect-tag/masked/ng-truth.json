@@ -1,0 +1,2435 @@
+[
+  {
+    "id": 1174075,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 1712616,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 1861629,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2339825,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 2645637,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 3167439,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 4606229,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 4810828,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "extra": "除外",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 4993187,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "extra": "除外",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 4997565,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 6150044,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7443908,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 7478431,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8165596,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8837932,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8953369,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 9061682,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 9349094,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 9581215,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 9753964,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10552026,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10793085,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10802915,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 10833828,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 11067666,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12018201,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12067160,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12148078,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12181376,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12219047,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 14556954,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 14943837,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 15155568,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 15721392,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 16172067,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 16699558,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 19096726,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 19502505,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 19578592,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22423493,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 22938501,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 23187256,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 23869735,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 24299458,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 24799107,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27170599,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 27660735,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28637168,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 28653611,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29053656,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29353756,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29374928,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 29726552,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30013902,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30604579,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30845999,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30888983,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 30913809,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 31971040,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32422602,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32617464,
+    "section": "main",
+    "index": "①-●3",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "除外",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 32965616,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 33026283,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 34198387,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 34487429,
+    "section": "main",
+    "index": "①-●3",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 34614289,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 34695290,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "除外",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 35011819,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 35697544,
+    "section": "main",
+    "index": "①-●3",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 35952884,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 36415522,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      },
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 37839434,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 38001022,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 38148100,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 38904695,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 39321065,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 39468724,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "除外",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 39507162,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 40702028,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 41420027,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 42421606,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 43138260,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 43175027,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 43436049,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 43450363,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 44201739,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 44822037,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 44886582,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46005939,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46290741,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 46935289,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47128571,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47355498,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47387961,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 47870325,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 48152161,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49275969,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49415281,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49456901,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49678559,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 49725936,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50323155,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50619462,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50669347,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50947142,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 50954680,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 52707042,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 52904476,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 53573406,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 53618293,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 53813120,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 54178659,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 54903668,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55416843,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 55888045,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 56588755,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 56655675,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 56677752,
+    "section": "pendulum",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 57232301,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 57355219,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 58374502,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 58707981,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 59576447,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 59765225,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 60158866,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 60439482,
+    "section": "main",
+    "index": "①-●2",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 60942444,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 61344030,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 62104532,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 62587693,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 62829077,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 63746411,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 64554883,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 64797746,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65268179,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68045685,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68140974,
+    "section": "main",
+    "index": "④",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68441986,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 68630939,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 69248256,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 69802283,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 70913714,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71036835,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71089030,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 71692913,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 72630549,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 72648810,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "除外",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 73129314,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 73534250,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74003290,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74011784,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 74762582,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 75223115,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 75874514,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 76045757,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 76587747,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 76636978,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 78422252,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 78785392,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 78936551,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 79606837,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 80044027,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 80143954,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 80776622,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 80870883,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 81846453,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82044279,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82257671,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82419869,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82616239,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 82744076,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 83257450,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 83880473,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 85314178,
+    "section": "main",
+    "index": "②-●2",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 85763457,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 85888377,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 85991529,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 86331741,
+    "section": "main",
+    "index": "②-●1",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 87639778,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 87804365,
+    "section": "main",
+    "index": "①-●1",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 87814728,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 87955518,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88069597,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88307361,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88875132,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 88926295,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 89974904,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 90728287,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92385016,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92595825,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 92936364,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 93453053,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 93665266,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "持續無效化",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 94113093,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 95824983,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 96404912,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 97489701,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 97864322,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "extra": "破壞",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 98049934,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "效果",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 98127546,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "無效",
+        "what": "發動",
+        "pos": "效果"
+      }
+    ]
+  }
+]

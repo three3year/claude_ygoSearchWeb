@@ -35,8 +35,12 @@ from tagcard import build_tag_cards  # noqa: E402
 MASKED_DIR = os.path.join(ROOT, ".scratch", "effect-tag", "masked")
 DIGEST_FILE = os.path.join(MASKED_DIR, "taxonomy-digest.txt")
 # 遮蔽樣本與標準答案(入版控;類別 → 檔名前綴)
-MASKED_SETS = {tag_rules.CAT_MOVE: ("mv-sample.json", "mv-sample-supplement.json",
-                                    "mv-sample-supplement2.json")}
+MASKED_SETS = {
+    tag_rules.CAT_MOVE: ("mv-sample.json", "mv-sample-supplement.json",
+                         "mv-sample-supplement2.json"),
+    tag_rules.CAT_DESTROY: ("ds-sample.json", "ds-sample-supplement.json"),
+    tag_rules.CAT_NEGATE: ("ng-sample.json", "ng-sample-supplement.json"),
+}
 LIST_PREVIEW = 10
 
 

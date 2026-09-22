@@ -1,0 +1,2430 @@
+[
+ {
+  "id": 1426714,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 1546123,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 1942635,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 2434862,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 3643300,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 3966653,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 4754691,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 4881365,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 4998619,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 5067884,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   },
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 5614808,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 5969957,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 6186304,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 6552938,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 6628343,
+  "section": "main",
+  "index": "①-●2",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 6772168,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 6772168,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 7198399,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 7628844,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   },
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 7864030,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 8252010,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9978697,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   },
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 10731333,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 10875327,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 11125718,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 11508758,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   },
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 11825276,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 12508268,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 12510878,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 12678601,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 14512825,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 14624296,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 16110708,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 16114248,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 16625614,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 17832359,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 18558867,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 18597560,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 18963306,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 19050066,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 19636995,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 19882096,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 19963185,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 20515672,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 21686473,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 22160245,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 22900219,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 23093373,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 23790299,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 23804920,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 24435369,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 25123713,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 25919316,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 26420373,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 27134209,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 28593329,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 29477860,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 29669359,
+  "section": "main",
+  "index": "①",
+  "tags": []
+ },
+ {
+  "id": 30118200,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 30270176,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 30275298,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 30286474,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   },
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 30314994,
+  "section": "main",
+  "index": "①-●2",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 31320433,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 32216688,
+  "section": "main",
+  "index": "①-●2",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 32491822,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 33872334,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 34475451,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 34822850,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 36319131,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 39299733,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 39317553,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 39618799,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 39848658,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 39880350,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 40101111,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 40227329,
+  "section": "main",
+  "index": "①-●1",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 40636712,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 41359411,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 42110604,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 42166000,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 42237854,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 43490025,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 43839002,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 43940008,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 44376395,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 44481227,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 44874522,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 45627618,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 47471667,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 47705572,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 47819246,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 48179391,
+  "section": "main",
+  "index": "④",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 48608796,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   },
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 48928529,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 48940337,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 49121795,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 49161188,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 49328340,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 49375719,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 49597193,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 49725936,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 50281477,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 50933533,
+  "section": "main",
+  "index": "①-●1",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 52768390,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 53054164,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 53134520,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 53212882,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 53246495,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 54423935,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 56003780,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 56725612,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 57312333,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 58272005,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 59277750,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 59531356,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 60577362,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 60879050,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 61190918,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 62517849,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 63533837,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 63749102,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 64104037,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 64184058,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 65285459,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 65500515,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 65676461,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 69039982,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 69105797,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 69514125,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 70405001,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 70576413,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 70709488,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 71071546,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 71808988,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 72083436,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 72167543,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 72926163,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 72989439,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 73121813,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 73483491,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74157028,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74311226,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74665651,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74825788,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 75215744,
+  "section": "main",
+  "index": "①-●2",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 75220074,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 75840616,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 76821171,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 76909279,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 77967790,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 78225596,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 78316184,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 78835747,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 79441381,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 79473793,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 79636594,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 80143954,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 80280944,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 80949182,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 81670445,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 81769387,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 82035781,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 82944432,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 83340560,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 83629030,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 83723605,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 83743222,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 83880473,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 85004150,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 85289965,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 88093706,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 88124568,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 88177324,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 88540324,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 89571015,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 90311614,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 90361010,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 90880453,
+  "section": "main",
+  "index": "②-●1",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 90960358,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   },
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 91499077,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 91499077,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 91842653,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   },
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 92781606,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 92932860,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 93053159,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 93108839,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 93298460,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "直接攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 93896655,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 94664694,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 94770493,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 95134948,
+  "section": "main",
+  "index": "①",
+  "tags": []
+ },
+ {
+  "id": 95515058,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 95735217,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 95888876,
+  "section": "main",
+  "index": "②-●1",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 95943058,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 97792247,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "貫通",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 98452268,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "連續攻擊",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 98477480,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 99348756,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "戰鬥規則",
+    "what": "攻擊對象操作",
+    "pos": "效果"
+   }
+  ]
+ }
+]

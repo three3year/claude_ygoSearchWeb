@@ -596,6 +596,207 @@ class TestPhase5Rules(unittest.TestCase):
         self.assertFalse(tag_rules.screen_hit("計數器操作", text_ja))
 
 
+class TestPhase6Rules(unittest.TestCase):
+    """第6期(票20):轉換與其他六類的規則直貼邊界。"""
+
+    def cat_tags(self, entries, cat):
+        clause = clauses_of(entries, 1000)[0]
+        return [t for t in clause["tags"] if t.get("cat") == cat]
+
+    def test_equip_treatment_tags_transform(self):
+        """「装備カード扱いとして装備する」=放置轉換(裝備卡)。"""
+        entries, _ = build(
+            "①:以墓地1隻怪獸為對象發動。將那隻怪獸當作裝備卡裝備到此卡。",
+            "①：自分の墓地のモンスター１体を対象として発動できる。"
+            "そのモンスターを装備カード扱いとしてこのカードに装備する。")
+        tags = self.cat_tags(entries, "放置轉換")
+        self.assertTrue(any(t.get("to") == "裝備卡" and t["pos"] == "效果"
+                            for t in tags))
+
+    def test_continuous_spell_treatment_tags_transform(self):
+        """「永続魔法カード扱いで置く」=放置轉換(永續魔法);「永続罠カード
+        扱いの場合」條件形無動詞不圈。"""
+        entries, _ = build(
+            "①:此卡不去墓地,當作永續魔法卡放置到魔法與陷阱區。",
+            "①：発動後このカードは墓地へ送らずに永続魔法カード扱いで"
+            "自分の魔法＆罠ゾーンに表側表示で置く事ができる。")
+        self.assertTrue(any(t.get("to") == "永續魔法" for t in
+                            self.cat_tags(entries, "放置轉換")))
+        cond_ja = ("①：このカードが永続罠カード扱いの場合、"
+                   "自分・相手のメインフェイズに発動できる。"
+                   "このカードは効果モンスターとなり特殊召喚する。")
+        self.assertFalse(tag_rules.screen_hit("放置轉換", cond_ja))
+
+    def test_spell_treatment_set_tags_transform(self):
+        entries, _ = build(
+            "①:此卡當作魔法卡從手牌覆蓋到魔法與陷阱區。",
+            "①：このカードは魔法カード扱いとして手札から魔法＆罠ゾーンに"
+            "セットできる。")
+        self.assertTrue(any(t.get("to") == "魔陷覆蓋" for t in
+                            self.cat_tags(entries, "放置轉換")))
+
+    def test_ignore_summon_condition_tags_substitute_and_move(self):
+        """「召喚条件を無視して特殊召喚」=素材代用/召喚放寬;特召照貼 mv。"""
+        entries, _ = build(
+            "①:從手牌將1隻怪獸無視召喚條件特殊召喚。",
+            "①：手札を１枚捨てて発動できる。手札から「古代の機械巨人」"
+            "１体を召喚条件を無視して特殊召喚する。")
+        self.assertTrue(any(t["pos"] == "效果" for t in
+                            self.cat_tags(entries, "素材代用/召喚放寬")))
+        self.assertTrue(any(t.get("cat") == "區域移動"
+                            and t.get("to") == "場上"
+                            for t in clauses_of(entries, 1000)[0]["tags"]))
+
+    def test_no_release_summon_tags_substitute(self):
+        """「リリースなしで召喚できる」照貼;完成形「召喚した」不貼不圈。"""
+        entries, _ = build(
+            "①:對手場上有怪獸存在的場合,此卡可以不解放作召喚。",
+            "①：相手フィールドにモンスターが存在する場合、このカードは"
+            "リリースなしで召喚できる。")
+        self.assertTrue(self.cat_tags(entries, "素材代用/召喚放寬"))
+        done_ja = ("①：リリースなしで召喚したこのカードのレベルは４になる。")
+        self.assertFalse(tag_rules.screen_hit("素材代用/召喚放寬", done_ja))
+
+    def test_ritual_summon_execution(self):
+        """「儀式召喚する」動作形=召喚執行(儀式);「儀式召喚するモンスター
+        のレベル」修飾形天然不配。"""
+        entries, _ = build(
+            "①:將手牌的儀式怪獸1隻儀式召喚。",
+            "①：「高等儀式術」の発動時に、手札から儀式モンスター１体を"
+            "儀式召喚する。")
+        self.assertTrue(any(t.get("method") == "儀式" for t in
+                            self.cat_tags(entries, "召喚執行")))
+        mod_ja = ("①：レベルの合計が儀式召喚するモンスターのレベル以上に"
+                  "なるように、自分フィールドのモンスターをリリースする。")
+        self.assertFalse(tag_rules.screen_hit("召喚執行", mod_ja))
+
+    def test_fusion_summon_execution_and_trigger_form(self):
+        """「融合召喚する」=召喚執行(融合);「融合召喚した場合」完成式是
+        觸發不貼。"""
+        entries, _ = build(
+            "①:將融合怪獸1隻融合召喚。",
+            "①：自分の手札・フィールドから、融合モンスターカードによって"
+            "決められた融合素材モンスターを墓地へ送り、その融合モンスター"
+            "１体をEXデッキから融合召喚する。")
+        self.assertTrue(any(t.get("method") == "融合" for t in
+                            self.cat_tags(entries, "召喚執行")))
+        trig_ja = ("①：このカードが融合召喚した場合に発動できる。"
+                   "デッキからカード１枚を手札に加える。")
+        self.assertFalse(tag_rules.screen_hit("召喚執行", trig_ja))
+
+    def test_xyz_treated_summon_execution(self):
+        """RUM 重ねて形「X召喚扱いとして特殊召喚」=召喚執行(超量)+mv。"""
+        entries, _ = build(
+            "①:以自己場上的X怪獸為對象發動。將比它高1階的怪獸重疊在上面"
+            "當作X召喚從額外牌組特殊召喚。",
+            "①：自分フィールドのXモンスター１体を対象として発動できる。"
+            "そのモンスターよりランクが１つ高いXモンスター１体を、対象の"
+            "モンスターの上に重ねてX召喚扱いとしてEXデッキから特殊召喚"
+            "する。")
+        self.assertTrue(any(t.get("method") == "超量" for t in
+                            self.cat_tags(entries, "召喚執行")))
+        self.assertTrue(any(t.get("cat") == "區域移動"
+                            and t.get("from") == "額外牌組"
+                            for t in clauses_of(entries, 1000)[0]["tags"]))
+
+    def test_piercing_tags_battle_not_damage(self):
+        """貫通句歸戰鬥規則,不是效果傷害(票17)。"""
+        entries, _ = build(
+            "①:此卡攻擊守備表示怪獸的場合,給予對手超出守備力的戰鬥傷害。",
+            "①：このカードが守備表示モンスターを攻撃した場合、その守備力を"
+            "攻撃力が超えた分だけ相手に戦闘ダメージを与える。")
+        self.assertTrue(any(t.get("what") == "貫通" for t in
+                            self.cat_tags(entries, "戰鬥規則")))
+        self.assertEqual(self.cat_tags(entries, "效果傷害"), [])
+
+    def test_multi_attack_tags_battle(self):
+        entries, _ = build(
+            "①:此卡在每次戰鬥階段可以作2次攻擊。",
+            "①：このカードは１度のバトルフェイズ中に２回攻撃できる。")
+        self.assertTrue(any(t.get("what") == "連續攻擊" for t in
+                            self.cat_tags(entries, "戰鬥規則")))
+
+    def test_direct_attack_permit_and_forbid_are_battle(self):
+        """直接攻擊的許可與禁止都是戰鬥規則(批2),禁止不落行動限制。"""
+        entries, _ = build("①:此卡可以直接攻擊。",
+                           "①：このカードは直接攻撃できる。")
+        self.assertTrue(any(t.get("what") == "直接攻擊" for t in
+                            self.cat_tags(entries, "戰鬥規則")))
+        entries, _ = build("①:此卡不能直接攻擊。",
+                           "①：このカードは直接攻撃できない。")
+        self.assertTrue(any(t.get("what") == "直接攻擊" for t in
+                            self.cat_tags(entries, "戰鬥規則")))
+        self.assertEqual(self.cat_tags(entries, "行動限制"), [])
+
+    def test_attack_target_shield_is_battle_not_protect(self):
+        """「攻撃対象に選択できない」歸戰鬥規則(攻擊對象操作),非耐性。"""
+        entries, _ = build(
+            "①:對手不能將此卡以外的怪獸作為攻擊對象。",
+            "①：このカードがモンスターゾーンに存在する限り、相手はこの"
+            "カード以外のモンスターを攻撃対象に選択できない。")
+        self.assertTrue(any(t.get("what") == "攻擊對象操作" for t in
+                            self.cat_tags(entries, "戰鬥規則")))
+        self.assertEqual(self.cat_tags(entries, "耐性/保護"), [])
+
+    def test_confirm_tags_info(self):
+        entries, _ = build(
+            "①:確認對手的手牌。",
+            "①：相手の手札を確認し、その中からカード１枚を選んで捨てる。")
+        self.assertTrue(any(t.get("what") == "確認" for t in
+                            self.cat_tags(entries, "情報操作")))
+
+    def test_show_in_activation_is_reveal_cost(self):
+        """「相手に見せて発動」=展示×成本。"""
+        entries, _ = build(
+            "①:將手牌1隻怪獸給對手看發動。",
+            "①：手札の「E・HERO」モンスター１体を相手に見せて発動できる。"
+            "このカードを手札から特殊召喚する。")
+        self.assertTrue(any(t.get("what") == "展示" and t["pos"] == "成本"
+                            for t in self.cat_tags(entries, "情報操作")))
+
+    def test_random_discard_tags_info_and_move(self):
+        """手牌妨害=區域移動+隨機決定兩個 tag(批4)。"""
+        entries, _ = build(
+            "①:隨機捨棄對手1張手牌。",
+            "①：相手の手札が４枚以上の場合に発動できる。"
+            "相手の手札をランダムに１枚捨てる。")
+        self.assertTrue(any(t.get("what") == "隨機決定" for t in
+                            self.cat_tags(entries, "情報操作")))
+
+    def test_coin_toss_tags_misc_and_modifier_not_screened(self):
+        entries, _ = build(
+            "①:擲1次硬幣。",
+            "①：このカードが特殊召喚した場合に発動する。コイントスを"
+            "１回行い、その裏表によって以下の効果を適用する。")
+        self.assertTrue(any(t["pos"] == "效果" for t in
+                            self.cat_tags(entries, "其他")))
+        mod_ja = ("①：デッキからコイントスを行う効果を持つカード１枚を"
+                  "手札に加える。")
+        self.assertFalse(tag_rules.screen_hit("其他", mod_ja))
+
+    def test_battle_damage_zero_is_misc_not_stat(self):
+        """「戦闘ダメージは０になる」傷害修飾歸其他(票17)。"""
+        entries, _ = build(
+            "①:此卡戰鬥發生的對自己的戰鬥傷害變成0。",
+            "①：このカードの戦闘で発生する自分への戦闘ダメージは０になる。")
+        self.assertTrue(self.cat_tags(entries, "其他"))
+        self.assertEqual(self.cat_tags(entries, "攻守調整"), [])
+        self.assertEqual(self.cat_tags(entries, "效果傷害"), [])
+
+    def test_existence_limit_and_phase_skip_are_misc(self):
+        """存在限制(票18)與跳過階段歸其他。"""
+        entries, _ = build(
+            "①:「沼地」只能有1隻表側表示存在。",
+            "①：「ベビーマッド」は自分フィールドに１体しか表側表示で"
+            "存在できない。")
+        self.assertTrue(self.cat_tags(entries, "其他"))
+        entries, _ = build(
+            "①:跳過下個對手的抽牌階段。",
+            "①：相手に戦闘ダメージを与えた場合に発動する。次の相手ドロー"
+            "フェイズをスキップする。")
+        self.assertTrue(self.cat_tags(entries, "其他"))
+
+
 class TestTagPreservation(unittest.TestCase):
     """llm/manual 的 tag 走「判定一次就算數」,rule 的 tag 每次重算。"""
 

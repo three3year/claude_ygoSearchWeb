@@ -51,6 +51,12 @@ MASKED_SETS = {
     tag_rules.CAT_CONTROL: ("ct-sample.json",),
     tag_rules.CAT_PROPERTY: ("pp-sample.json", "pp-sample-supplement.json"),
     tag_rules.CAT_COUNTER: ("cnt-sample.json",),
+    tag_rules.CAT_TRANSFORM: ("tf-sample.json", "tf-sample-supplement.json"),
+    tag_rules.CAT_SUBSTITUTE: ("su-sample.json", "su-sample-supplement.json"),
+    tag_rules.CAT_SUMMON_EXEC: ("se-sample.json", "se-sample-supplement.json"),
+    tag_rules.CAT_BATTLE: ("bt-sample.json", "bt-sample-supplement.json"),
+    tag_rules.CAT_INFO: ("in-sample.json", "in-sample-supplement.json"),
+    tag_rules.CAT_MISC: ("misc-sample.json", "misc-sample-supplement.json"),
 }
 LIST_PREVIEW = 10
 

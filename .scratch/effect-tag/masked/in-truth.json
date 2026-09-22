@@ -1,0 +1,2507 @@
+[
+ {
+  "id": 1463589,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 1769875,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 2139640,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 2144946,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 2295831,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   },
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 2403771,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 2992467,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 3248469,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 3739500,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 4931121,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 5121528,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 5128859,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 5298175,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 5373478,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 6498706,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 7166709,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 7582066,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 8252010,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9251497,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9283801,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 9491461,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 10312660,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 10441498,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 10691144,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 11449436,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 11802691,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 11895663,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 12215894,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 12931061,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 12975671,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 13093792,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 13173832,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 15521027,
+  "section": "main",
+  "index": "①-●1",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 15590355,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 15983048,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 16024176,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 16209941,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 16404809,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 17194258,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 17955766,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 18386170,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 18474999,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 18616294,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 18795635,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 19159413,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 21143940,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 21522601,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 21637502,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 21903613,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 22404570,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 22593417,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 23270035,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 23856331,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 24393683,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 24940422,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 25811989,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 26205777,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 26223582,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 26557451,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 26582143,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 27268998,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 27564031,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 28306253,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 29099860,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 29302858,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 30382214,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 30741334,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 31525442,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 31706048,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 32013448,
+  "section": "main",
+  "index": "①-●2",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 32759190,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 33225925,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 35027493,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 35550352,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 36092504,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 37405032,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 37426272,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 38114652,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 38648860,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 38669664,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 39537362,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 39576656,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 39706423,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 39987731,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 40352445,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 40460013,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 41181774,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 42201897,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 42444868,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 42461852,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 43316238,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 44293356,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 44595286,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 44663232,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 44716748,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 45951104,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 46123974,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 46232525,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 46985799,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 47077318,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 47222536,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 47439573,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 47647354,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 47674738,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 47960073,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 49511705,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 49587034,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 50005218,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 50179591,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 50251045,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 50366775,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 52553471,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 53323475,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 53860621,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 54239282,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 55168550,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 55171412,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 56187077,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 56187077,
+  "section": "pendulum",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 56350972,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 56981417,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 57261568,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 57728570,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 57985393,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 58761791,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 58844135,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 59546528,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 59983249,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 61307542,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 62632427,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 62850093,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 63748694,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 64961254,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 65515667,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 66059345,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 66206748,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 66712905,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 67218327,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 67225377,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 67237709,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 67768675,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 68078978,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 69217334,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 69230391,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 69394324,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 69873498,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 70088809,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 70551291,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 71108540,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 71705144,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 72129804,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 72813401,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 73079836,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 73218792,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 73820802,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74191528,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74202664,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74426895,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 74644400,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 74879881,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 75364199,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 75448086,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 75748977,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 76981308,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 77066768,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 77456448,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 78642798,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 81558967,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 82128978,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 82706696,
+  "section": "main",
+  "index": "②-●1",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 83008724,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   },
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 83445539,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 83838727,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 85523502,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 85555787,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 85590798,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 87557188,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 87800375,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 87897777,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 88021907,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 88757791,
+  "section": "pendulum",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 89312388,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 90276649,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 90508760,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 90615639,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 90969892,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 91654806,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 91880660,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 91957038,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 92171126,
+  "section": "main",
+  "index": "③",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 92223430,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 92447211,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 92895501,
+  "section": "main",
+  "index": "②",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 93542102,
+  "section": "main",
+  "index": "①-●1",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 94096018,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 94410955,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "隨機決定",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 94431029,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 94845588,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "效果"
+   },
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ },
+ {
+  "id": 97769122,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "展示",
+    "pos": "成本"
+   }
+  ]
+ },
+ {
+  "id": 97809599,
+  "section": "main",
+  "index": "①",
+  "tags": [
+   {
+    "cat": "情報操作",
+    "what": "確認",
+    "pos": "效果"
+   }
+  ]
+ }
+]

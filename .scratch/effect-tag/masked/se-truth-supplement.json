@@ -1,0 +1,163 @@
+[
+  {
+    "id": 458748,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "融合",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 3580032,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "超量",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 8454126,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "儀式",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 9102835,
+    "section": "main",
+    "index": "③",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "融合",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 12989604,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "連結",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 15447747,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "連結",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 17473466,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "融合",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 20934683,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "融合",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 40493210,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "同步",
+        "pos": "效果"
+      },
+      {
+        "cat": "召喚執行",
+        "method": "超量",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 65351555,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "連結",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 80627281,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "連結",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 83723605,
+    "section": "main",
+    "index": "①",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "連結",
+        "pos": "效果"
+      }
+    ]
+  },
+  {
+    "id": 91946859,
+    "section": "main",
+    "index": "②",
+    "tags": [
+      {
+        "cat": "召喚執行",
+        "method": "儀式",
+        "pos": "效果"
+      }
+    ]
+  }
+]

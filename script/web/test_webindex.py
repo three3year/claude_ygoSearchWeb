@@ -789,12 +789,12 @@ class SerializeTest(unittest.TestCase):
 
 
 class TagAxisTest(unittest.TestCase):
-    """[[效果 Tag]]的索引匯出與零筆類別的按鈕退場(票08/12)。"""
+    """[[效果 Tag]]兩維已撤出前端(2026-10-01 effect-tokenize 拆除票):
+    索引不再寫入 `tg` / `tm`,VOCAB 不再輸出對應值域。標記表本體照舊是
+    clauses 的來源;tag 的正典驗證歸 tag seal,不經前端建置。"""
 
     MV = {"cat": "區域移動", "from": "牌組", "to": "手牌", "side": "我方",
           "pos": "效果", "src": "rule", "rule": "T1"}
-    COST = {"cat": "區域移動", "from": "墓地", "to": "除外", "pos": "成本",
-            "src": "rule", "rule": "T32"}
 
     def build(self, tag=None, timing=None, kind="誘發效果(1速)"):
         row = clause("①:效果甲。", kind=kind)
@@ -804,41 +804,35 @@ class TagAxisTest(unittest.TestCase):
         cards = [card(1, desc="①:效果甲。")]
         return build_index(cards, [tagged(1, row)])
 
-    def test_tags_export_as_slot_ordered_codes(self):
+    def test_tags_and_timing_stay_out_of_the_index(self):
+        """帶 tag 與時機的效果句照常建置,索引條目沒有 `tg` / `tm` 欄。"""
         index, report = self.build(tag=self.MV, timing="召喚成功時")
         entry = index["cards"][0]
-        self.assertEqual(entry["tg"], [["mv:d:h:m:e"]])
-        self.assertEqual(entry["tm"], ["ns"])
+        self.assertNotIn("tg", entry)
+        self.assertNotIn("tm", entry)
+        self.assertEqual(entry["tx"], ["①:效果甲。"])
         self.assertEqual(report["problems"], [])
 
-    def test_out_of_canon_tag_fails_the_build(self):
+    def test_vocab_export_in_index_has_no_tag_domains(self):
+        """`window.VOCAB` 不含動作類別/觸發時機/槽位值域:鈕由 VOCAB 生成
+        (ADR-0008),值域不出、鈕自然消失。"""
+        index, _ = self.build(tag=self.MV)
+        for name in ("tag", "timing", "tag_zone", "tag_pos", "tag_side"):
+            self.assertNotIn(name, index["vocab"])
+
+    def test_out_of_canon_tag_no_longer_fails_the_web_build(self):
+        """前端建置不再讀 tags:正典外 tag 的把關歸 tag seal
+        (tag_seal_report.py),web 這一側不重複設閘。"""
         bad = dict(self.MV, **{"from": "牌組頂"})
         _, report = self.build(tag=bad)
-        self.assertTrue(any("tg" == u["field"]
-                            for u in report["checks"]["unknown_values"]))
-        self.assertTrue(report["problems"])
+        self.assertEqual(report["problems"], [])
 
-    def test_timing_on_non_carrier_fails_the_build(self):
+    def test_timing_check_and_tag_census_are_gone(self):
+        """觸發時機不進索引,對應的承載檢查與 tag 開貼統計一併退場。"""
         _, report = self.build(timing="召喚成功時", kind="永續效果")
-        self.assertEqual(len(report["checks"]["timing_on_non_carrier"]), 1)
-        self.assertTrue(report["problems"])
-
-    def test_untagged_categories_lose_their_buttons(self):
-        """還沒開貼的類別不生成按鈕;資料長出該類 tag 後自動回來。"""
-        index, report = self.build(tag=self.MV)
-        groups = index["vocab"]["tag"]["groups"]
-        self.assertEqual([g["codes"] for g in groups], [["mv"]])
-        self.assertIn("ds", report["tag_census"]["dropped"])
-        self.assertNotIn("mv", report["tag_census"]["dropped"])
-        # items 是顯示詞彙表,不隨按鈕退場
-        self.assertEqual(len(index["vocab"]["tag"]["items"]), 21)
-
-    def test_cost_only_tags_still_count_for_buttons(self):
-        """成本位的 tag 也算「該類已開貼」——按鈕的去留看資料有沒有,
-        搜尋只命中效果位是引擎層的事。"""
-        index, _ = self.build(tag=self.COST)
-        groups = index["vocab"]["tag"]["groups"]
-        self.assertEqual([g["codes"] for g in groups], [["mv"]])
+        self.assertNotIn("timing_on_non_carrier", report["checks"])
+        self.assertNotIn("tag_census", report)
+        self.assertEqual(report["problems"], [])
 
 
 if __name__ == "__main__":

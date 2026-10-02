@@ -1513,7 +1513,7 @@ def _process_text(text_ja):
 
     切法與 `_activation_clause` 同一把尺(第一個不在括號內的句號):第一句含
     「発動」時它是發動子句、其餘是處理段;不含時整句都是處理段——觸發條件與
-    成本住在發動子句裡,處理段規則因此天然咬不到它們(tag_rules 的骨幹前提)。
+    代價住在發動子句裡,處理段規則因此天然咬不到它們(tag_rules 的骨幹前提)。
     """
     text = text_ja.strip()
     if text[:1] in NUMERALS:
@@ -1581,8 +1581,10 @@ def _merge_rule_tags(cid, clause, rule_tags, report):
 
     - 內容相同的 tag 已由 llm/manual 給出 → 升 `llm_then_rule`(雙重確認;
       manual 保留來歷不升,理由同效果類型線)。
-    - 類別在 tags_checked(LLM 判過該類且沒給這個 tag)→ 不寫入,進
-      `tag_rule_vs_llm` 清單——這正是 ADR-0013 要的免費對照。
+    - 類別在 tags_checked(LLM 判過該類)→ 不寫入;規則 tag 是該句某個
+      已判 tag 的**子集**(判定者把規則不猜的槽位也填上)算弱確認,其餘
+      進 `tag_rule_vs_llm` 清單——這正是 ADR-0013 要的免費對照,子集語意
+      與遮蔽計分同一把尺(票15修訂)。
     - 其餘照寫(`src: "rule"`,直貼)。
     """
     by_key = {_tag_content_key(tag): tag for tag in clause["tags"]}
@@ -1597,6 +1599,8 @@ def _merge_rule_tags(cid, clause, rule_tags, report):
                 report["tag_rule_confirms"] += 1
             continue
         if tag["cat"] in checked:
+            if any(set(key) <= set(k) for k in by_key):
+                continue
             report["tag_rule_vs_llm"].append(
                 {"id": cid, "section": clause["section"],
                  "index": clause["index"], "rule": tag["rule"],

@@ -115,7 +115,7 @@ def taxonomy_block(series, category):
         "類別": category,
         "槽位": {key: [e["zh"] for e in vocab.entries(domain_name)]
                for key, domain_name in vocab.TAG_SLOTS[code]},
-        "通則": "位置=成本只標發動子句內的代價,其餘一律效果;對象方判得準"
+        "通則": "位置=代價只標發動子句內的代價,其餘一律效果;對象方判得準"
               "才填;複合起點逐起點各貼一個 tag;槽位不確定就留空。",
     }
 

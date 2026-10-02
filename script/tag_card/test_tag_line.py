@@ -46,7 +46,7 @@ class TestRuleDirectWrite(unittest.TestCase):
         clause = clauses_of(entries, 1000)[0]
         poses = {(t.get("from"), t.get("to"), t["pos"])
                  for t in clause["tags"]}
-        self.assertIn(("手牌", "墓地", "成本"), poses)
+        self.assertIn(("手牌", "墓地", "代價"), poses)
         self.assertIn(("牌組", "手牌", "效果"), poses)
 
     def test_trigger_condition_is_not_tagged_as_movement(self):
@@ -124,7 +124,7 @@ class TestPhase2Rules(unittest.TestCase):
             "①：自分フィールドの魔法・罠カード１枚を破壊して発動できる。"
             "自分はデッキから１枚ドローする。")
         tags = self.cat_tags(entries, "破壞")
-        self.assertTrue(any(t["pos"] == "成本" for t in tags))
+        self.assertTrue(any(t["pos"] == "代價" for t in tags))
 
     def test_chained_effect_negate(self):
         entries, _ = build(
@@ -247,7 +247,8 @@ class TestPhase3Rules(unittest.TestCase):
         self.assertTrue(any(t.get("side") == "我方" for t in tags))
         self.assertTrue(any(t.get("form") == "固定值" for t in tags))
 
-    def test_lp_pay_cost_has_no_pos(self):
+    def test_lp_pay_activation_cost_is_tagged_as_cost(self):
+        """票15修訂:LP支付照一般位置判準,發動子句支付=代價。"""
         entries, _ = build(
             "①:支付800基本分才能發動。抽1張卡。",
             "①：８００LPを払って発動できる。自分はデッキから１枚ドロー"
@@ -255,7 +256,7 @@ class TestPhase3Rules(unittest.TestCase):
         tags = self.cat_tags(entries, "LP支付")
         self.assertTrue(any(t.get("side") == "我方"
                             and t.get("form") == "固定值" for t in tags))
-        self.assertTrue(all("pos" not in t for t in tags))
+        self.assertTrue(all(t["pos"] == "代價" for t in tags))
 
     def test_lp_pay_half_is_ratio(self):
         entries, _ = build(
@@ -263,16 +264,19 @@ class TestPhase3Rules(unittest.TestCase):
             "①：LPを半分払って発動できる。フィールドのカードを全て破壊"
             "する。")
         tags = self.cat_tags(entries, "LP支付")
-        self.assertTrue(any(t.get("form") == "比例" for t in tags))
+        self.assertTrue(any(t.get("form") == "比例"
+                            and t["pos"] == "代價" for t in tags))
 
     def test_lp_toll_on_opponent(self):
-        """通行費形「相手は…払わなければ〜できない」貼 LP支付(對手)。"""
+        """通行費形「相手は…払わなければ〜できない」貼 LP支付(對手);
+        票15修訂:無發動子句的支付歸效果位。"""
         entries, _ = build(
             "①:對手不支付600基本分就不能發動卡片效果。",
             "①：このカードがモンスターゾーンに存在する限り、相手は"
             "６００LPを払わなければ、カードの効果を発動できない。")
         tags = self.cat_tags(entries, "LP支付")
         self.assertTrue(any(t.get("side") == "對手" for t in tags))
+        self.assertTrue(all(t["pos"] == "效果" for t in tags))
 
     def test_lp_lose_self_reference(self):
         entries, _ = build(
@@ -574,7 +578,7 @@ class TestPhase5Rules(unittest.TestCase):
             "張卡。",
             "①：このカードの魔力カウンターを２つ取り除き、フィールドの"
             "カード１枚を対象として発動できる。そのカードを破壊する。")
-        self.assertTrue(any(t.get("act") == "去除" and t["pos"] == "成本"
+        self.assertTrue(any(t.get("act") == "去除" and t["pos"] == "代價"
                             for t in self.cat_tags(entries, "計數器操作")))
 
     def test_xyz_material_detach_is_not_counter(self):
@@ -746,12 +750,12 @@ class TestPhase6Rules(unittest.TestCase):
                             self.cat_tags(entries, "情報操作")))
 
     def test_show_in_activation_is_reveal_cost(self):
-        """「相手に見せて発動」=展示×成本。"""
+        """「相手に見せて発動」=展示×代價。"""
         entries, _ = build(
             "①:將手牌1隻怪獸給對手看發動。",
             "①：手札の「E・HERO」モンスター１体を相手に見せて発動できる。"
             "このカードを手札から特殊召喚する。")
-        self.assertTrue(any(t.get("what") == "展示" and t["pos"] == "成本"
+        self.assertTrue(any(t.get("what") == "展示" and t["pos"] == "代價"
                             for t in self.cat_tags(entries, "情報操作")))
 
     def test_random_discard_tags_info_and_move(self):
@@ -841,6 +845,21 @@ class TestTagPreservation(unittest.TestCase):
         self.assertGreaterEqual(len(report["tag_rule_vs_llm"]), 1)
         self.assertTrue(all(row["id"] == 1000
                             for row in report["tag_rule_vs_llm"]))
+
+    def test_rule_subset_of_llm_tag_is_confirmation_not_conflict(self):
+        """判過的類別裡,規則 tag 是既有判定 tag 的子集(判定者把規則不猜
+        的槽位也填上)→ 弱確認不寫入也不算衝突——與遮蔽計分的子集語意
+        同一把尺(票15修訂實測:LP支付泛用規則對上 llm 的全槽位 tag)。"""
+        llm_tag = {"cat": "區域移動", "from": "牌組", "to": "手牌",
+                   "side": "我方", "pos": "效果", "src": "llm",
+                   "ticket": "票T"}
+        existing, _ = build(SEARCH, SEARCH_JA)
+        mark(existing, 1000, "①", tags=[llm_tag], tags_checked=["區域移動"])
+        entries, report = build(SEARCH, SEARCH_JA, existing=existing)
+        clause = clauses_of(entries, 1000)[0]
+        # 檢索規則發 {from:牌組, to:手牌}——是 llm tag 的子集:不衝突、不另寫
+        self.assertEqual(report["tag_rule_vs_llm"], [])
+        self.assertEqual([t["src"] for t in clause["tags"]], ["llm"])
 
 
 class TestTiming(unittest.TestCase):

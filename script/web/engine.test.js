@@ -168,36 +168,6 @@ const CARDS = [
   },
 ];
 
-// 效果 Tag 樣本(票08/13):句層 tag 短碼(類別碼:槽位碼…,槽位序由
-// VOCAB.tag.slots 宣告)與時機短碼。30302 的 mv tag 是位置=成本——
-// Story 6:搜「除外/移動」不得撈到把自家卡除外當代價的卡
-const TAG_CARDS = [
-  {
-    id: 30301, n: '蘇生檢索樣本', c: 's', s: ['normal'],
-    tx: ['①：從牌組將1隻怪獸加入手牌。', '②：從墓地將1隻怪獸特殊召喚。'],
-    k: ['sn', 'sn'],
-    tg: [['mv:d:h:m:e'], ['mv:g:f::e']],
-  },
-  {
-    id: 30302, n: '誘發破壞樣本', c: 'm', s: ['effect'], at: 'dark',
-    r: 'fiend', lv: 4, atk: 1500, df: 1000,
-    tx: ['①：此卡召喚成功時,將墓地1張卡除外發動。破壞場上1張卡。'],
-    k: ['t'], o: ['m'],
-    tg: [['mv:g:b::c', 'ds:cd:one::e']], tm: ['ns'],
-  },
-  {
-    id: 30303, n: '彈回樣本', c: 's', s: ['quick'],
-    tx: ['①：把場上1張卡回到手牌。'], k: ['sq'],
-    tg: [['mv:f:h::e']],
-  },
-  {
-    // LP支付沒有位置槽位(裁定票15):支付本身就是代價,類別軸一律命中
-    id: 30304, n: 'LP支付樣本', c: 's', s: ['normal'],
-    tx: ['①：支付800基本分發動。從牌組將1張卡加入手牌。'], k: ['sn'],
-    tg: [['lpp:m:fx', 'mv:d:h:m:c']],
-  },
-];
-
 const item = (code, zh) => ({ code, zh });
 
 const VOCAB = {
@@ -252,31 +222,6 @@ const VOCAB = {
   role: { zh: '效果外文本種別',
           items: [item('mat', '素材指定'), item('cond', '召喚條件'),
                   item('limit', '使用次數限制')] },
-  // [[效果 Tag]](票08/13):動作類別 + 槽位宣告 + 區域值域 + 觸發時機。
-  // 槽位序由正典宣告(slots),索引短碼與引擎解碼共用這一份
-  tag: { zh: '動作類別',
-         items: [item('mv', '區域移動'), item('ds', '破壞'),
-                 item('ng', '無效'), item('lpp', 'LP支付')],
-         groups: [{ zh: '移動與資源', codes: ['mv'] },
-                  { zh: '妨害', codes: ['ds', 'ng'] },
-                  { zh: '數值與狀態', codes: ['lpp'] }],
-         slots: { mv: [['from', 'tag_zone'], ['to', 'tag_zone'],
-                       ['side', 'tag_side'], ['pos', 'tag_pos']],
-                  ds: [['what', 'tag_ds_what'], ['scope', 'tag_scope'],
-                       ['side', 'tag_side'], ['pos', 'tag_pos']],
-                  ng: [['what', 'tag_ng_what'], ['extra', 'tag_ng_extra'],
-                       ['pos', 'tag_pos']],
-                  // 無 pos 槽位:位置排除對這一類不適用(裁定票15)
-                  lpp: [['side', 'tag_side'], ['form', 'tag_form']] } },
-  tag_zone: { zh: '區域',
-              items: [item('h', '手牌'), item('d', '牌組'),
-                      item('e', '額外牌組'), item('g', '墓地'),
-                      item('b', '除外'), item('f', '場上'),
-                      item('p', '靈擺區')] },
-  timing: { zh: '觸發時機',
-            items: [item('ns', '召喚成功時'), item('dd', '被破壞時'),
-                    item('ep', '結束階段'), item('x', '其他')],
-            carriers: ['q', 't', 'sn', 'sr', 'se', 'sp', 'tn', 'tc'] },
   lm: { zh: '連結標記',
         items: [item('TL', '↖'), item('T', '↑'), item('TR', '↗'), item('L', '←'),
                 item('R', '→'), item('BL', '↙'), item('B', '↓'), item('BR', '↘')] },
@@ -299,8 +244,6 @@ const META = {
 };
 
 const sandbox = harness.load({ cards: CARDS, vocab: VOCAB, meta: META });
-// tag/時機測試用獨立沙箱:枚舉全集的既有測試不受樣本卡影響
-const tagSandbox = harness.load({ cards: TAG_CARDS, vocab: VOCAB, meta: META });
 const ids = q => harness.ids(sandbox, q);
 const rowsOf = (q, id) => (harness.search(sandbox, q).find(e => e.id === id) || {}).rows;
 const ALL = CARDS.map(c => c.id);
@@ -830,7 +773,7 @@ test('必發/選發的兩組各自只在承載的效果類型被選時出得來(
 test('分類類條件的按鈕清單由 window.VOCAB 導出', () => {
   const axes = harness.axes(sandbox);
   assert.deepStrictEqual(axes.map(a => a.key + '/' + a.side),
-                         ['cat/', 'kind/', 'opt/', 'tag/', 'timing/',
+                         ['cat/', 'kind/', 'opt/',
                           'sub/m', 'sub/s', 'sub/t',
                           'attr/', 'race/', 'lm/', 'rarity/', 'ot/',
                           'ban_o/', 'ban_t/', 'ban_m/']);
@@ -1603,93 +1546,24 @@ test('禁限:還原展開連同父層開,空著不開', () => {
   assert.ok(expanded(EMPTY_Q).indexOf('ban') < 0);
 });
 
-/* ── 效果 Tag 與觸發時機(票08/13) ───────────────────────── */
+/* ── 已拆條件的舊網址(2026-10-01 effect-tokenize 拆除票) ──
+   效果 Tag 兩維(動作類別/觸發時機/區域下拉/位置/對象方)撤出之後,舊網址
+   仍可能帶著那些參數——走「認不得的欄位名一律忽略該段」的既有規則:安靜
+   略過、不報錯,其餘條件照常生效,條件物件裡也不留殘骸。 */
 
-test('動作類別三態:包含收效果位,成本位的 tag 不算值(Story 6)', () => {
-  const hits = harness.search(tagSandbox, { tag: { mv: 1 } });
-  // 30301 兩句都有效果位的 mv;30302 的 mv 是成本位,不得命中
-  assert.deepStrictEqual(hits.map(e => e.id), [30301, 30303]);
-  assert.deepStrictEqual(hits[0].rows, [0, 1]);
-});
-
-test('LP支付無位置槽位:支付本身是代價,類別軸一律命中(裁定票15)', () => {
-  const hits = harness.search(tagSandbox, { tag: { lpp: 1 } });
-  assert.deepStrictEqual(hits.map(e => e.id), [30304]);
-  assert.deepStrictEqual(hits[0].rows, [0]);
-  // 例外只開給無 pos 槽位的類別:30304 同句的 mv 是成本位,mv 軸照舊不命中
-  assert.deepStrictEqual(harness.ids(tagSandbox, { tag: { mv: 1 } }),
-                         [30301, 30303]);
-  // 排除態也認得它
-  assert.deepStrictEqual(harness.ids(tagSandbox, { tag: { lpp: -1, mv: 1 } }),
-                         [30301, 30303]);
-});
-
-test('動作類別排除優先:同軸包含+排除,排除為準', () => {
-  const ids = harness.ids(tagSandbox, { tag: { mv: 1, ds: -1 } });
-  assert.deepStrictEqual(ids, [30301, 30303]);
-  // 排除破壞擋的是「這一句是破壞」:30302 的那一句有 ds → 出局
-  assert.deepStrictEqual(harness.ids(tagSandbox, { tag: { ds: -1, ns: 1 } }), []);
-});
-
-test('區域移動起點/終點下拉:槽位缺值不被設了值的那一端命中', () => {
-  let hits = harness.search(tagSandbox, { mvFrom: 'd', mvTo: 'h' });
-  assert.deepStrictEqual(hits.map(e => e.id), [30301]);
-  assert.deepStrictEqual(hits[0].rows, [0]);
-  hits = harness.search(tagSandbox, { mvTo: 'f' });
-  assert.deepStrictEqual(hits.map(e => e.id), [30301]);
-  assert.deepStrictEqual(hits[0].rows, [1]);
-  // 成本位的 g→b 不被「起點=墓地」撈到
-  assert.deepStrictEqual(harness.ids(tagSandbox, { mvFrom: 'g', mvTo: 'b' }), []);
-});
-
-test('tag 與效果類型/時機在同一句上耦合(句層 AND)', () => {
-  assert.deepStrictEqual(
-    harness.ids(tagSandbox, { tag: { ds: 1 }, kind: { t: 1 } }), [30302]);
-  assert.deepStrictEqual(
-    harness.ids(tagSandbox, { tag: { ds: 1 }, kind: { q: 1 } }), []);
-  // 時機×動作(票13):被破壞時×區域移動這型的組合問得出來
-  assert.deepStrictEqual(
-    harness.ids(tagSandbox, { timing: { ns: 1 }, tag: { ds: 1 } }), [30302]);
-  assert.deepStrictEqual(
-    harness.ids(tagSandbox, { timing: { dd: 1 }, tag: { ds: 1 } }), []);
-});
-
-test('觸發時機三態:未貼時機的句子不被包含命中、也不被排除擋掉', () => {
-  assert.deepStrictEqual(harness.ids(tagSandbox, { timing: { ns: 1 } }), [30302]);
-  const ids = harness.ids(tagSandbox, { tag: { mv: 1 }, timing: { ns: -1 } });
-  assert.deepStrictEqual(ids, [30301, 30303]);
-});
-
-test('tag 與時機的命中標記進 marks(呈現層畫 badge 用)', () => {
-  assert.deepStrictEqual(
-    harness.marks(tagSandbox, { tag: { mv: 1 } }), [{ type: 'tag' }]);
-  assert.deepStrictEqual(
-    harness.marks(tagSandbox, { mvFrom: 'd' }), [{ type: 'tag' }]);
-  assert.deepStrictEqual(
-    harness.marks(tagSandbox, { timing: { ns: 1 } }), [{ type: 'timing' }]);
-});
-
-test('tag / 時機 / 區域下拉進 #hash 且往返一致(票08)', () => {
-  const state = { q: { tag: { mv: 1, ds: -1 }, timing: { ns: 1 },
-                       mvFrom: 'd', mvTo: 'h' } };
-  const hash = tagSandbox.__hash(JSON.stringify(state));
-  assert.strictEqual(hash, 'mvf=d&mvt=h&tag=mv,-ds&timing=ns');
-  const back = JSON.parse(tagSandbox.__unhash(hash));
-  assert.deepStrictEqual(back.q.tag, { mv: 1, ds: -1 });
-  assert.deepStrictEqual(back.q.timing, { ns: 1 });
-  assert.strictEqual(back.q.mvFrom, 'd');
-  assert.strictEqual(back.q.mvTo, 'h');
-  assert.strictEqual(tagSandbox.__canonHash(hash), hash);
-  // 值域外的區域碼當未知碼忽略(過期網址不該變成看不見的條件)
-  const bad = JSON.parse(tagSandbox.__unhash('mvf=zz&mvt=h'));
-  assert.strictEqual(bad.q.mvFrom, undefined);
-  assert.strictEqual(bad.q.mvTo, 'h');
-});
-
-test('時機軸照承載關係連動(carriers 由值域正典宣告)', () => {
-  const avail = sel => JSON.parse(tagSandbox.__timingAvail(JSON.stringify(sel)));
-  assert.strictEqual(avail({}), true);              // 沒選類型時出得來
-  assert.strictEqual(avail({ t: 1 }), true);        // 誘發承載
-  assert.strictEqual(avail({ c: 1 }), false);       // 永續效果不承載
-  assert.strictEqual(avail({ c: -1 }), true);       // 排除不算已選
+test('舊網址帶已拆的 tag/時機/區域/槽位參數時安靜忽略', () => {
+  const good = 'name=' + encodeURIComponent('青眼') + '&attr=dark';
+  const legacy = ['tag=mv,-ds', 'timing=ns', 'mvf=d', 'mvt=h',
+                  'tgp=c', 'tgs=o,w'];
+  for (const seg of legacy) {
+    const st = parseHash(good + '&' + seg);
+    assert.deepStrictEqual(st, parseHash(good), seg);
+  }
+  // 整串一起帶也一樣
+  const st = parseHash(good + '&' + legacy.join('&'));
+  assert.deepStrictEqual(st.q.name, '青眼');
+  assert.deepStrictEqual(st.q.attr, { dark: 1 });
+  for (const key of ['tag', 'timing', 'mvFrom', 'mvTo', 'tagPos', 'tagSide']) {
+    assert.ok(!(key in st.q), key);
+  }
 });

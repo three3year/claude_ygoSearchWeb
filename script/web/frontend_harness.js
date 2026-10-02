@@ -65,7 +65,6 @@ const DRIVER = `
   return Query.nextState(a.st, a.states);
 }
 ;function __optAvail(json) { return JSON.stringify(Query.optionalAvailable(JSON.parse(json))); }
-;function __timingAvail(json) { return JSON.stringify(Query.timingAvailable(JSON.parse(json))); }
 ;function __critCount(json) { return Query.count(JSON.parse(json)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
@@ -82,6 +81,11 @@ const DRIVER = `
 ;function __canonHash(s) { return Hash.canon(s); }
 ;function __fmtTime(v) { return Util.fmtTime(v); }
 ;function __cardHtml(json) { return View.cardHtml(JSON.parse(json), null); }
+;function __cardHtmlHl(json) {
+  var a = JSON.parse(json);
+  return View.cardHtml(a.entry,
+                       a.marks ? { parts: [], marks: a.marks } : null);
+}
 `;
 
 /**
@@ -237,6 +241,13 @@ function cardHtml(sandbox, entry) {
   return sandbox.__cardHtml(JSON.stringify(entry));
 }
 
-module.exports = { load, search, ids, marks, axes, optionalAvailable, nextState,
+/** 同一條呈現縫,帶生效中的句層條件(marks)——命中行的 badge 字面由此驗。 */
+function cardHtmlHl(sandbox, entry, marks) {
+  return sandbox.__cardHtmlHl(JSON.stringify({ entry, marks }));
+}
+
+module.exports = { load, search, ids, marks, axes,
+                   optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
-                   sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml };
+                   sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml,
+                   cardHtmlHl };

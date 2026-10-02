@@ -36,6 +36,24 @@ class CanonTest(unittest.TestCase):
             self.assertEqual(vocab.zh(name, "s"), "準限制")
             self.assertEqual(vocab.code_of(name, "限制"), "l")
 
+    def test_tag_pos_renamed_to_price(self):
+        """位置值「成本」正名「代價」(spec tag-pos-side-search):
+        短碼 `c` 與值域大小 2 不變,改的只是中文名。"""
+        self.assertEqual(vocab.codes("tag_pos"), ("c", "e"))
+        self.assertEqual(vocab.zh("tag_pos", "c"), "代價")
+        self.assertEqual(vocab.code_of("tag_pos", "代價"), "c")
+        self.assertEqual(vocab.code_of("tag_pos", "成本"), None)
+
+    def test_lp_pay_slots_include_pos_and_exemption_is_gone(self):
+        """票15修訂:LP支付槽位表含位置,位置豁免集合已移除——
+        從此任何類別缺「位置」都要吵,LP支付不再例外。"""
+        self.assertIn(("pos", "tag_pos"), vocab.TAG_SLOTS["lpp"])
+        self.assertFalse(hasattr(vocab, "TAG_POS_EXEMPT"))
+        slots = dict(vocab.TAG_SLOTS)
+        slots["lpp"] = (("side", "tag_side"), ("form", "tag_form"))
+        self.assertIn("tag: 類別 'lpp' 缺通用槽位「位置」",
+                      vocab.problems(tag_slots=slots))
+
     def test_tag_slot_unknown_category_is_caught(self):
         """槽位宣告指到不存在的類別:索引短碼會編不出來。"""
         slots = dict(vocab.TAG_SLOTS)
@@ -234,6 +252,24 @@ class DecodeTest(unittest.TestCase):
 
 
 class ExportTest(unittest.TestCase):
+    def test_withdrawn_domains_stay_out_of_the_export(self):
+        """搜尋介面已撤出的值域不隨 VOCAB 出到前端(2026-10-01 拆除票):
+        動作類別、觸發時機與全部槽位值域——值域不出、鈕就不生成(ADR-0008
+        機制不變)。值域本身保留:tag seal 與規則層照舊讀得到。"""
+        exported = vocab.export()
+        self.assertIn(vocab.TAG, vocab.FRONTEND_WITHDRAWN)
+        self.assertIn(vocab.TIMING, vocab.FRONTEND_WITHDRAWN)
+        self.assertIn("tag_zone", vocab.FRONTEND_WITHDRAWN)
+        for name in vocab.FRONTEND_WITHDRAWN:
+            self.assertNotIn(name, exported)
+            self.assertIn(name, vocab.DOMAINS)   # 正典本身保留
+        # 槽位宣告也不再出去(以前掛在 tag 值域下)
+        for dom in exported.values():
+            self.assertNotIn("slots", dom)
+        # 保留的軸照舊
+        for name in ("cat", "kind", "optional", "race", "ban_o"):
+            self.assertIn(name, exported)
+
     def test_export_shape(self):
         exported = vocab.export()
         self.assertEqual([i["code"] for i in exported["cat"]["items"]],

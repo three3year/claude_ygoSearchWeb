@@ -197,8 +197,5 @@ def _rule_pos(rule):
 
 
 def _with_pos(rule, template):
-    """規則樣板 → 含框架補欄的完整 tag(位置豁免類別不補 pos,與 emit 一致)。"""
-    tag = {"cat": rule["cat"], **template}
-    if rule["cat"] not in tag_rules._POS_EXEMPT_CATS:
-        tag["pos"] = _rule_pos(rule)
-    return tag
+    """規則樣板 → 含框架補欄的完整 tag(pos 由掃描範圍補,與 emit 一致)。"""
+    return {"cat": rule["cat"], **template, "pos": _rule_pos(rule)}

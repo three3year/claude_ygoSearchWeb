@@ -306,7 +306,7 @@ _TAG_SIDE = domain("對象方", SRC_TEXT, (
     entry("w", "雙方"),
 ))
 _TAG_POS = domain("位置", SRC_TEXT, (
-    entry("c", "成本"),
+    entry("c", "代價"),
     entry("e", "效果"),
 ))
 _TAG_CARRY = domain("抽牌附帶", SRC_TEXT, (
@@ -414,9 +414,8 @@ _TAG_IN_WHAT = domain("情報操作內容", SRC_TEXT, (
 
 # 各類別的槽位宣告:(槽位鍵, 槽位值域名) 的序列,順序即索引短碼的欄位序。
 # 「位置」是通用槽位(裁定批1),每一類都有;凍結後增刪槽位需新裁定票。
-# 例外(裁定票15):LP支付不設「位置」——支付本身就是代價,位置軸對它無意義,
-# 搜尋一律命中(前端從 slots 缺 pos 這件事自己看出來,不另立旗標)。
-TAG_POS_EXEMPT = frozenset({"lpp"})
+# LP支付原豁免位置(裁定票15)已於票15修訂取消(spec tag-pos-side-search):
+# 改走一般判準——發動子句支付=代價、維持費/通行費等無發動子句形=效果。
 TAG_SLOTS = {
     "mv": (("from", "tag_zone"), ("to", "tag_zone"), ("side", "tag_side"),
            ("pos", "tag_pos")),
@@ -432,7 +431,7 @@ TAG_SLOTS = {
            ("pos", "tag_pos")),
     "dm": (("side", "tag_side"), ("form", "tag_form"), ("pos", "tag_pos")),
     "hp": (("side", "tag_side"), ("form", "tag_form"), ("pos", "tag_pos")),
-    "lpp": (("side", "tag_side"), ("form", "tag_form")),
+    "lpp": (("side", "tag_side"), ("form", "tag_form"), ("pos", "tag_pos")),
     "lpl": (("side", "tag_side"), ("form", "tag_form"), ("pos", "tag_pos")),
     "ps": (("to", "tag_ps_to"), ("side", "tag_side"), ("pos", "tag_pos")),
     "ct": (("dir", "tag_ct_dir"), ("pos", "tag_pos")),
@@ -686,8 +685,7 @@ def problems(domains=None, tag_slots=None):
 
 def _tag_slot_problems(domains, tag_slots):
     """槽位宣告必須兩側都解得動:類別是動作類別的成員、值域存在、鍵不重複、
-    每一類都有宣告且含通用槽位「位置」(裁定批1;TAG_POS_EXEMPT 列名的類別
-    除外——裁定票15)。
+    每一類都有宣告且含通用槽位「位置」(裁定批1;票15修訂後 LP支付也不例外)。
 
     寫壞的下場與其他宣告同族:索引短碼照這份宣告的欄位序編出來,類別對不上或
     值域缺席時,那一類的 tag 要嘛編不出來、要嘛前端解不回中文——都是無聲失效。
@@ -703,7 +701,7 @@ def _tag_slot_problems(domains, tag_slots):
         keys = [key for key, _ in slots]
         if len(set(keys)) != len(keys):
             yield f"tag: 類別 {code!r} 的槽位鍵重複"
-        if "pos" not in keys and code not in TAG_POS_EXEMPT:
+        if "pos" not in keys:
             yield f"tag: 類別 {code!r} 缺通用槽位「位置」"
         for key, domain_name in slots:
             if domain_name not in domains:
@@ -814,14 +812,27 @@ def _group_problems(name, dom):
     return found
 
 
+# 搜尋介面已撤出的值域(2026-10-01,effect-tokenize 拆除票):動作類別、槽位
+# 各值域與觸發時機不再隨 VOCAB 出到前端——值域不出、鈕就不生成,ADR-0008 的
+# 機制一個字沒動。值域本身保留:tag seal 與規則層照舊讀它們(`tag_code` /
+# `tag_digest` / `problems`),動作類別將以效果文分詞線重新推導
+# (.scratch/effect-tokenize/spec.md)。
+FRONTEND_WITHDRAWN = frozenset(
+    {TAG, TIMING} | {domain_name for slots in TAG_SLOTS.values()
+                     for _, domain_name in slots})
+
+
 def export(domains=None):
     """給 `window.VOCAB` 的形態:值域名 → 成員陣列(宣告序)+ 分組。
 
     前端只需要碼、中文、能不能做成按鈕與分組;cdb 位元不出去(那是建置期的事)。
+    搜尋介面已撤出的值域(FRONTEND_WITHDRAWN)整個不出去。
     """
     domains = domains or DOMAINS
     out = {}
     for name, dom in domains.items():
+        if name in FRONTEND_WITHDRAWN:
+            continue
         out[name] = {
             "zh": dom["zh"],
             "items": [{"code": e["code"], "zh": e["zh"]}
@@ -841,12 +852,6 @@ def export(domains=None):
         if dom["own"]:
             out[name]["own"] = {code: f"{cat}:{sub}"
                                 for code, cat, sub in dom["own"]}
-    if TAG in out:
-        # 槽位宣告隨 VOCAB 出去:索引短碼的欄位序、前端下拉與 badge 的解碼
-        # 都讀這一份(ADR-0008——抄第二份就會漂移)
-        out[TAG]["slots"] = {code: [[key, domain_name]
-                                    for key, domain_name in slots]
-                             for code, slots in TAG_SLOTS.items()}
     return out
 
 

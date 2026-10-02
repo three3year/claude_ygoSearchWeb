@@ -11,7 +11,7 @@ tag(槽位中文值,`pos` 由掃描範圍決定)、新增票號、遮蔽測試�
 - 「處理」—— 效果句的處理段(發動子句之後的文字;無發動子句時是整句)。
   發出的 tag `pos: "效果"`。觸發條件(「〜が特殊召喚された場合」)住在發動
   子句裡,處理段規則因此天然咬不到它——這是直貼精度的第一道結構保證。
-- 「成本」—— 發動子句(含「発動」時才掃)。發出的 tag `pos: "成本"`。
+- 「代價」—— 發動子句(含「発動」時才掃)。發出的 tag `pos: "代價"`。
 - 「時機」—— 發動子句,產出的是[[觸發時機]]單值而不是 tag;同句多個時機取
   **最先寫出的**(裁定批4)。
 
@@ -59,11 +59,8 @@ ZONE_BANISH = "除外"
 ZONE_FIELD = "場上"
 ZONE_PZONE = "靈擺區"
 
-POS_COST = "成本"
+POS_COST = "代價"
 POS_EFFECT = "效果"
-# 位置豁免類別(vocab.TAG_POS_EXEMPT 的中文面,裁定票15):正典沒有 pos
-# 槽位。兩邊漂移時建置會倒在「宣告外的槽位」,不會無聲
-_POS_EXEMPT_CATS = frozenset({CAT_LP_PAY})
 SIDE_SELF = "自身"
 SIDE_OWN = "我方"
 SIDE_OPP = "對手"
@@ -78,7 +75,7 @@ TAG_SRC_MANUAL = "manual"
 TAG_PRESERVED_SRC = (TAG_SRC_LLM, TAG_SRC_LLM_THEN_RULE, TAG_SRC_MANUAL)
 
 SCOPE_PROCESS = "處理"
-SCOPE_COST = "成本"
+SCOPE_COST = "代價"
 # 「對象」範圍:起點寫在發動子句的對象指定裡(「墓地の…を対象として発動できる」)
 # 、動作寫在處理段的指示詞上(「そのモンスターを特殊召喚する」)。pattern 掃
 # 發動子句、action 掃處理段,兩者都命中才開火;pos 一律「效果」——對象指定
@@ -236,6 +233,9 @@ _V_TAKE = (r"(?<!戦闘)ダメージを受け(る(?!事(は|が|も)?でき|効�
            r"|ダメージ計算)|、|。)")
 _V_HEAL = r"回復(する(?!事(は|が|も)?でき|効果|場合|度)|し、|し。|できる)"
 _LP = r"(?:LP|ＬＰ)"
+# 處理段「払って〜できる」可能形(票15修訂):發動子句不在處理段掃描範圍,
+# (?!発動) 再擋「払って…発動する度」這型觸發敘述
+_PAY_CAN = r"って(?:(?!発動)[^。]){0,30}?できる"
 # 數值形:固定值的數字前不得是 ×/數字(「数×１００ダメージ」是參照值)
 _NO_MUL = r"(?<![×Ｘ×ｘ０-９])"
 _S_HAND = r"(?<!・)手札[かの]ら?"
@@ -669,7 +669,7 @@ RULES = (
            _S_FIELD + _sp(60) + r"対象",
            {"from": ZONE_FIELD, "to": ZONE_BANISH}, "票10",
            action=_anaphora(_V_BANISH)),
-    # ── 區域移動:發動子句(pos=成本)──
+    # ── 區域移動:發動子句(pos=代價)──
     define("T30", CAT_MOVE, SCOPE_COST,
            "解放代價「…をリリースして発動」(場上→墓地)",
            r"リリースし",
@@ -1136,7 +1136,8 @@ RULES = (
            r"(×[０-９]+" + _LP + r"?を?"
            r"|分(だけ|の)(?:(?!。)[^。]){0,20}?)" + _V_HEAL,
            {"form": FORM_REF}, "票17"),
-    # ══ 第3期(票17):LP支付(無位置槽位,裁定票15)══════════════
+    # ══ 第3期(票17):LP支付(票15修訂後照一般位置判準:發動子句支付=
+    # 代價、維持費/通行費等處理段形=效果,不另寫「支付就是代價」特例)══
     # 發動代價的支付方恆為發動者(=我方);處理段的維持/通行費形支付方照
     # 句面錨,錨不到留空。
     define("T200", CAT_LP_PAY, SCOPE_COST,
@@ -1156,9 +1157,11 @@ RULES = (
            {"side": SIDE_OWN, "form": FORM_RATIO}, "票17",
            exclude=r"相手が(LP|ＬＰ)を払"),
     define("T203", CAT_LP_PAY, SCOPE_PROCESS,
-           "維持/通行費支付「LPを払う。/払う事ができる/払わなければ/払えば」"
-           "(處理段;「払って…発動する度」「払う場合」是觸發敘述不配)",
-           _LP + r"を[^。]{0,12}?払(う[。、（]|う事ができる|わなければ|えば)",
+           "維持/通行費支付「LPを払う。/払う事ができる/払わなければ/払えば/"
+           "払って〜できる」(處理段;「払って…発動する度」「払う場合」是"
+           "觸發敘述不配)",
+           _LP + r"を[^。]{0,12}?払(う[。、（]|う事ができる|わなければ|えば|"
+           + _PAY_CAN + r")",
            {}, "票17"),
     define("T204", CAT_LP_PAY, SCOPE_PROCESS,
            "對手通行費「相手は…LPを払わなければ/払う」",
@@ -1166,14 +1169,15 @@ RULES = (
            + r"を払(わなければ|う[。、]|う事ができる|えば)",
            {"side": SIDE_OPP}, "票17"),
     define("T205", CAT_LP_PAY, SCOPE_PROCESS,
-           "處理段固定值支付「N LPを払う。/払わなければ」",
+           "處理段固定值支付「N LPを払う。/払わなければ/払って〜できる」",
            _NO_MUL + r"[０-９]+" + _LP
-           + r"を払(う[。、]|う事ができる|わなければ|えば)",
+           + r"を払(う[。、]|う事ができる|わなければ|えば|" + _PAY_CAN + r")",
            {"form": FORM_FIXED}, "票17"),
     define("T206", CAT_LP_PAY, SCOPE_PROCESS,
-           "自我通行費「自分は…LPを払わなければならない」(攻擊宣言稅等)",
-           r"自分[はも](?:(?!相手)[^。]){0,15}?" + _LP
-           + r"を払(わなければ|う[。、]|えば)",
+           "自我通行費「自分は…LPを払わなければならない」(攻擊宣言稅等;"
+           "「このカードは…払って特殊召喚できる」自我程序支付同歸我方)",
+           r"(自分|このカード)[はも](?:(?!相手)[^。]){0,15}?" + _LP
+           + r"を払(わなければ|う[。、]|えば|" + _PAY_CAN + r")",
            {"side": SIDE_OWN}, "票17"),
     # ══ 第3期(票17):LP失去 ══════════════════════════════════
     define("T210", CAT_LP_LOSE, SCOPE_PROCESS,
@@ -1837,13 +1841,8 @@ def emit(text, scope_rules, pos, action_text=None):
                 action_text and rule["action"].search(action_text)):
             continue
         for template in rule["tags"]:
-            tag = {"cat": rule["cat"], **template, "pos": pos,
-                   "src": TAG_SRC_RULE, "rule": rule["id"]}
-            # 位置豁免類別(LP支付,裁定票15):正典沒有 pos 槽位,帶著會
-            # 編不進索引短碼——在源頭拿掉,不是留給 webindex 炸
-            if rule["cat"] in _POS_EXEMPT_CATS:
-                del tag["pos"]
-            tags.append(tag)
+            tags.append({"cat": rule["cat"], **template, "pos": pos,
+                         "src": TAG_SRC_RULE, "rule": rule["id"]})
     return tags
 
 
@@ -1871,7 +1870,7 @@ def _absorb(tags):
 def match_tags(activation, process, rules=None):
     """效果句的切段 → 規則層發出的 tag 清單(已做內容吸收)。
 
-    activation 是**含「発動」的**發動子句(不含時傳 None,成本與對象規則不掃);
+    activation 是**含「発動」的**發動子句(不含時傳 None,代價與對象規則不掃);
     process 是處理段(發動子句之後的文字;無發動子句時是整句)。
     """
     rules = active(RULES) if rules is None else rules

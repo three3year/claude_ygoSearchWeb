@@ -1,0 +1,380 @@
+<meta charset="utf-8">
+<title>效果文分詞檢視</title>
+<style>
+:root{
+  --bg:#F4F6F5; --panel:#FFFFFF; --ink:#22303A; --muted:#5F6E79;
+  --line:#DCE3E1; --accent:#2F6D7A; --accent-ink:#FFFFFF;
+  --chip-lex-bg:#E9EEEB; --chip-lex-ink:#2C3A44;
+  --chip-p-bg:#ECE8F6; --chip-p-ink:#5B4EA0;
+  --chip-name-bg:#E2F0EC; --chip-name-ink:#256B5B;
+  --chip-num-bg:#F5EDDC; --chip-num-ink:#8A5F10;
+  --chip-c-bg:#E7ECF1; --chip-c-ink:#4A5E70;
+  --chip-oov-bg:#F8E4E6; --chip-oov-ink:#A63B44;
+  --chip-dem-bg:#E3EDF6; --chip-dem-ink:#35608C;
+  --bar:#BFD2D6;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#12181C; --panel:#1A2228; --ink:#D8E1E6; --muted:#8CA0AC;
+  --line:#2A353D; --accent:#5FA3B0; --accent-ink:#0E1518;
+  --chip-lex-bg:#242F36; --chip-lex-ink:#C7D3DA;
+  --chip-p-bg:#2B2740; --chip-p-ink:#B4A8E8;
+  --chip-name-bg:#1F352F; --chip-name-ink:#7FC6B2;
+  --chip-num-bg:#383020; --chip-num-ink:#D9B36A;
+  --chip-c-bg:#26303A; --chip-c-ink:#9FB2C2;
+  --chip-oov-bg:#402428; --chip-oov-ink:#E39099;
+  --chip-dem-bg:#223240; --chip-dem-ink:#9CC0DE;
+  --bar:#33505A;
+}}
+:root[data-theme="light"]{
+  --bg:#F4F6F5; --panel:#FFFFFF; --ink:#22303A; --muted:#5F6E79;
+  --line:#DCE3E1; --accent:#2F6D7A; --accent-ink:#FFFFFF;
+  --chip-lex-bg:#E9EEEB; --chip-lex-ink:#2C3A44;
+  --chip-p-bg:#ECE8F6; --chip-p-ink:#5B4EA0;
+  --chip-name-bg:#E2F0EC; --chip-name-ink:#256B5B;
+  --chip-num-bg:#F5EDDC; --chip-num-ink:#8A5F10;
+  --chip-c-bg:#E7ECF1; --chip-c-ink:#4A5E70;
+  --chip-oov-bg:#F8E4E6; --chip-oov-ink:#A63B44;
+  --chip-dem-bg:#E3EDF6; --chip-dem-ink:#35608C;
+  --bar:#BFD2D6;
+}
+:root[data-theme="dark"]{
+  --bg:#12181C; --panel:#1A2228; --ink:#D8E1E6; --muted:#8CA0AC;
+  --line:#2A353D; --accent:#5FA3B0; --accent-ink:#0E1518;
+  --chip-lex-bg:#242F36; --chip-lex-ink:#C7D3DA;
+  --chip-p-bg:#2B2740; --chip-p-ink:#B4A8E8;
+  --chip-name-bg:#1F352F; --chip-name-ink:#7FC6B2;
+  --chip-num-bg:#383020; --chip-num-ink:#D9B36A;
+  --chip-c-bg:#26303A; --chip-c-ink:#9FB2C2;
+  --chip-oov-bg:#402428; --chip-oov-ink:#E39099;
+  --chip-dem-bg:#223240; --chip-dem-ink:#9CC0DE;
+  --bar:#33505A;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC","Microsoft JhengHei",Meiryo,"Hiragino Sans",sans-serif;
+  font-size:15px;line-height:1.65}
+.wrap{max-width:1060px;margin:0 auto;padding:28px 20px 80px}
+header h1{font-size:1.45rem;margin:0 0 4px;text-wrap:balance}
+header .sub{color:var(--muted);font-size:.9rem;margin:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;margin:20px 0 6px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:10px 14px}
+.tile .k{font-size:.78rem;color:var(--muted)}
+.tile .v{font-size:1.3rem;font-weight:700;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:.8rem;font-weight:400;color:var(--muted)}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin:22px 0 14px}
+nav button{border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  border-radius:20px;padding:6px 16px;font-size:.9rem;cursor:pointer;font-family:inherit}
+nav button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);
+  border-color:var(--accent)}
+nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  font-size:.8rem;color:var(--muted);margin:0 0 14px}
+.chip{display:inline-block;border-radius:5px;padding:1px 7px;margin:1px 2px;
+  font-size:.88rem;white-space:nowrap}
+.t-lex{background:var(--chip-lex-bg);color:var(--chip-lex-ink)}
+.t-particle{background:var(--chip-p-bg);color:var(--chip-p-ink)}
+.t-dem{background:var(--chip-dem-bg);color:var(--chip-dem-ink)}
+.t-name{background:var(--chip-name-bg);color:var(--chip-name-ink)}
+.t-num{background:var(--chip-num-bg);color:var(--chip-num-ink)}
+.t-counter{background:var(--chip-c-bg);color:var(--chip-c-ink)}
+.t-oov{background:var(--chip-oov-bg);color:var(--chip-oov-ink);font-weight:600}
+.t-punct{color:var(--muted);padding:1px 2px}
+input[type="search"]{width:100%;max-width:420px;padding:8px 12px;
+  border:1px solid var(--line);border-radius:8px;background:var(--panel);
+  color:var(--ink);font-family:inherit;font-size:.92rem;margin:0 0 12px}
+input[type="search"]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tpl{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  margin:0 0 8px;overflow:hidden}
+.tpl>button{all:unset;display:grid;grid-template-columns:52px 86px 1fr;gap:10px;
+  width:100%;padding:9px 14px;cursor:pointer;align-items:start}
+.tpl>button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tpl .rank{color:var(--muted);font-size:.82rem;font-variant-numeric:tabular-nums;
+  padding-top:3px}
+.tpl .cnt{font-variant-numeric:tabular-nums;font-weight:700;padding-top:1px}
+.tpl .cnt .bar{height:4px;background:var(--bar);border-radius:2px;margin-top:5px}
+.tpl .seq{min-width:0}
+.examples{border-top:1px solid var(--line);padding:10px 14px 12px;
+  display:flex;flex-direction:column;gap:12px}
+.ex .orig{font-size:.9rem;color:var(--muted);margin:0 0 3px;overflow-wrap:anywhere}
+.ex .orig b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;background:var(--panel);
+  border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.scroll{overflow-x:auto}
+th,td{text-align:left;padding:7px 14px;border-top:1px solid var(--line);
+  font-variant-numeric:tabular-nums}
+thead th{border-top:none;font-size:.8rem;color:var(--muted);font-weight:600}
+td.n{text-align:right}
+.note{color:var(--muted);font-size:.85rem;margin:6px 0 14px}
+section[hidden]{display:none}
+h2{font-size:1.05rem;margin:26px 0 8px}
+.md{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:18px 22px;max-width:760px}
+.md h2{font-size:1.15rem;margin:4px 0 10px}
+.md h3{font-size:1.02rem;margin:20px 0 6px}
+.md h4{font-size:.95rem;margin:16px 0 4px}
+.md p{margin:6px 0}
+.md ul{margin:6px 0;padding-left:22px}
+.md code{background:var(--chip-lex-bg);border-radius:4px;padding:0 4px;
+  font-size:.88em}
+table.oov td.exc{max-width:520px}
+.expos{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.extext{font-size:.85rem;overflow-wrap:anywhere}
+mark.oovmark{background:var(--chip-oov-bg);color:var(--chip-oov-ink);
+  border-radius:3px;padding:0 2px;font-weight:600}
+@media (prefers-reduced-motion: no-preference){
+  .examples{animation:fade .15s ease-out}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>效果文分詞檢視</h1>
+  <p class="sub">新格式新卡層・日文側種子詞典 <span id="lexcount">—</span> 詞・切分慣例第一版+R5 指示綁定裁定(2026-10-01)。
+  模板=NAME/NUM 正規化後的詞 ID 序列(指示綁定不收斂);本頁供質性驗收:翻模板讀例句,判斷「讀不讀得出這張卡在做什麼」。</p>
+</header>
+
+<div class="stats" id="stats"></div>
+<p class="note">OOV 佔比=未收錄段 token 數/內容 token 數;效果句長尾極長(top-100 覆蓋僅 6.6%)主因是 OOV 段保留字面與活用尾未收斂,對應 conventions.md 的 12 條裁定點。</p>
+
+<nav id="tabs" role="tablist"></nav>
+<div class="legend">圖例:
+  <span class="chip t-lex">詞典詞</span>
+  <span class="chip t-dem">指示綁定(この/その+詞)</span>
+  <span class="chip t-particle">助詞</span>
+  <span class="chip t-name">卡名/計數器名(〈名〉カウンター)</span>
+  <span class="chip t-num">數字/數量約束(レベル〈n〉以下)</span>
+  <span class="chip t-counter">量詞</span>
+  <span class="chip t-oov">OOV 未收錄</span>
+</div>
+<main id="main"></main>
+</div>
+
+<script src="view_data.js"></script>
+<script>
+(function(){
+"use strict";
+var D=window.VIEW_DATA, LEX=D.lexicon;
+var main=document.getElementById("main");
+document.getElementById("lexcount").textContent=Object.keys(LEX).length;
+
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function demText(pay){
+  var m=pay.split(":");           // "この:W0067"
+  return m[0]+(LEX[m[1]]||m[1]);
+}
+function quantText(pay){
+  var m=pay.split(":");           // "W0139:4::以下" / ":2:体:以上" / 模板形 n
+  var w=m[0]?(LEX[m[0]]||m[0]):"";
+  return w+"〈"+(m[1]==="n"?"n":m[1])+"〉"+m[2]+m[3];
+}
+function chip(tok){
+  var kind=tok[0], pay=tok[1];
+  if(kind==="lex") pay=LEX[pay]||pay;
+  if(kind==="dem") pay=demText(pay);
+  if(kind==="quant") return '<span class="chip t-num">'+esc(quantText(pay))+'</span>';
+  if(kind==="cname") return '<span class="chip t-name">'+esc("〈"+(pay||"名")+"〉カウンター")+'</span>';
+  if(kind==="attr") return '<span class="chip t-lex">'+esc(pay)+'</span>';
+  if(kind==="method") return '<span class="chip t-lex">'+esc(pay)+'</span>';
+  if(kind==="name") pay="〈"+(pay==="名"?"卡名":pay)+"〉";
+  if(kind==="num") pay="〈"+(pay==="n"?"n":pay)+"〉";
+  if(kind==="punct") return '<span class="t-punct">'+esc(pay)+'</span>';
+  return '<span class="chip t-'+kind+'">'+esc(pay)+'</span>';
+}
+function seqHtml(toks){var h="";for(var i=0;i<toks.length;i++)h+=chip(toks[i]);return h}
+function surfaceText(toks){
+  var s="";
+  for(var i=0;i<toks.length;i++){
+    var t=toks[i];
+    s+=(t[0]==="lex"?(LEX[t[1]]||t[1])
+      :t[0]==="dem"?demText(t[1])
+      :t[0]==="quant"?quantText(t[1])
+      :t[0]==="cname"?("〈"+(t[1]||"名")+"〉カウンター")
+      :t[0]==="attr"?t[1]
+      :t[0]==="method"?t[1]:t[1]);
+  }
+  return s;
+}
+function fmt(n){return n.toLocaleString("zh-TW")}
+
+// ---- 統計磚 ----
+(function(){
+  var el=document.getElementById("stats"), h="";
+  ["effect","extra"].forEach(function(k){
+    var s=D.strata[k], st=s.stats;
+    var oov=(100*st.oov_tokens/st.content_tokens).toFixed(2);
+    var zero=(100*st.zero_oov_sentences/st.sentences).toFixed(1);
+    h+='<div class="tile"><div class="k">'+s.label+'・句數</div><div class="v">'+fmt(s.sentences)+' <small>'+fmt(s.cards)+' 張卡</small></div></div>'
+     + '<div class="tile"><div class="k">'+s.label+'・OOV 佔比</div><div class="v">'+oov+'% <small>零 OOV 句 '+zero+'%</small></div></div>'
+     + '<div class="tile"><div class="k">'+s.label+'・模板數</div><div class="v">'+fmt(s.templates)+' <small>top-100 覆蓋 '+s.top100_coverage+'%</small></div></div>';
+  });
+  el.innerHTML=h;
+})();
+
+// ---- 分頁 ----
+var TABS=[
+ {id:"tpl-effect",label:"效果句模板"},
+ {id:"tpl-extra",label:"效果外模板"},
+ {id:"oov",label:"OOV 高頻段"},
+ {id:"freq",label:"詞頻"},
+ {id:"hist",label:"長尾形狀"},
+ {id:"conv",label:"慣例與裁定點"}
+];
+var nav=document.getElementById("tabs");
+nav.innerHTML=TABS.map(function(t,i){
+  return '<button role="tab" data-tab="'+t.id+'" aria-selected="'+(i===0)+'">'+t.label+'</button>';
+}).join("");
+nav.addEventListener("click",function(e){
+  var b=e.target.closest("button"); if(!b)return;
+  nav.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-selected","false")});
+  b.setAttribute("aria-selected","true");
+  show(b.getAttribute("data-tab"));
+});
+
+function tplSection(key){
+  var s=D.strata[key];
+  var rows=s.top_templates.map(function(t,i){
+    return {i:i,t:t,text:surfaceText(t.tokens)};
+  });
+  var max=rows.length?rows[0].t.count:1;
+  var box=document.createElement("section");
+  box.innerHTML='<input type="search" placeholder="過濾模板(輸入日文字面,如 破壊/墓地へ)">'
+    +'<p class="note">'+s.label+'模板 top '+rows.length+'(共 '+fmt(s.templates)+' 種)。點一列展開例句。</p>'
+    +'<div class="list"></div>';
+  var list=box.querySelector(".list");
+  function render(q){
+    var h="";
+    rows.forEach(function(r){
+      if(q && r.text.indexOf(q)<0) return;
+      h+='<div class="tpl" data-k="'+key+'" data-i="'+r.i+'"><button aria-expanded="false">'
+        +'<span class="rank">#'+(r.i+1)+'</span>'
+        +'<span class="cnt">'+fmt(r.t.count)+' 句<span class="bar" style="width:'+Math.max(4,Math.round(100*r.t.count/max))+'%"></span></span>'
+        +'<span class="seq">'+seqHtml(r.t.tokens)+'</span>'
+        +'</button></div>';
+    });
+    list.innerHTML=h||'<p class="note">沒有符合的模板。</p>';
+  }
+  render("");
+  box.querySelector("input").addEventListener("input",function(){render(this.value.trim())});
+  list.addEventListener("click",function(e){
+    var btn=e.target.closest("button"); if(!btn)return;
+    var tplEl=btn.parentElement, open=btn.getAttribute("aria-expanded")==="true";
+    var exBox=tplEl.querySelector(".examples");
+    if(open){ if(exBox)exBox.remove(); btn.setAttribute("aria-expanded","false"); return; }
+    var t=D.strata[tplEl.getAttribute("data-k")].top_templates[+tplEl.getAttribute("data-i")];
+    var h='<div class="examples">'+t.examples.map(function(ex){
+      return '<div class="ex"><p class="orig"><b>'+ex.card+'</b> '+esc(ex.text)+'</p>'
+        +'<div>'+seqHtml(ex.tokens)+'</div></div>';
+    }).join("")+'</div>';
+    tplEl.insertAdjacentHTML("beforeend",h);
+    btn.setAttribute("aria-expanded","true");
+  });
+  return box;
+}
+
+function markSeg(text,seg){
+  // 原句裡的 OOV 段以玫瑰色標出(全部出現處)
+  return text.split(seg).map(esc).join('<mark class="oovmark">'+esc(seg)+'</mark>');
+}
+function posLabel(ex){
+  return (ex.section==="pendulum"?"靈擺 ":"")+ex.index;
+}
+function oovSection(){
+  var box=document.createElement("section");
+  var h='';
+  ["effect","extra"].forEach(function(k){
+    var s=D.strata[k];
+    h+='<h2>'+s.label+'・OOV top '+s.top_oov.length+'</h2><div class="scroll"><table class="oov"><thead><tr><th>#</th><th>未收錄段</th><th>次數</th><th>首見例句(卡片密碼・效果位置)</th></tr></thead><tbody>';
+    s.top_oov.forEach(function(r,i){
+      var exCell='—';
+      if(r.ex){
+        exCell='<span class="expos">'+r.ex.card+'・'+esc(posLabel(r.ex))+'</span><br>'
+          +'<span class="extext">'+markSeg(r.ex.text,r.seg)+'</span>';
+      }
+      h+='<tr><td>'+(i+1)+'</td><td><span class="chip t-oov">'+esc(r.seg)+'</span></td><td class="n">'+fmt(r.count)+'</td><td class="exc">'+exCell+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+  });
+  box.innerHTML=h+'<p class="note">這份就是補詞迭代的輸入:高頻段裁定入典或併入慣例(活用尾/指示詞/種族封閉類見 conventions.md 裁定點)。例句為該段在語料順序中的首見處。</p>';
+  return box;
+}
+
+function freqSection(){
+  var box=document.createElement("section");
+  var h='';
+  ["effect","extra"].forEach(function(k){
+    var s=D.strata[k];
+    h+='<h2>'+s.label+'・詞頻 top '+s.top_freq.length+'</h2><div class="scroll"><table><thead><tr><th>#</th><th>詞</th><th>類別</th><th>次數</th></tr></thead><tbody>';
+    s.top_freq.forEach(function(r,i){
+      h+='<tr><td>'+(i+1)+'</td><td>'+esc(r[2])+'</td><td>'+esc(r[1])+'</td><td class="n">'+fmt(r[0])+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+  });
+  box.innerHTML=h;
+  return box;
+}
+
+function histSection(){
+  var box=document.createElement("section");
+  var h='';
+  ["effect","extra"].forEach(function(k){
+    var s=D.strata[k];
+    h+='<h2>'+s.label+'・模板大小分佈</h2><div class="scroll"><table><thead><tr><th>桶</th><th>模板數</th><th>句數</th></tr></thead><tbody>';
+    s.histogram.forEach(function(r){
+      h+='<tr><td>'+esc(r.bucket)+'</td><td class="n">'+fmt(r.templates)+'</td><td class="n">'+fmt(r.sentences)+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+  });
+  box.innerHTML=h+'<p class="note">效果句的單句模板(長尾底部)是收斂目標;效果外文本已高度公式化。</p>';
+  return box;
+}
+
+function convSection(){
+  // 極簡 Markdown 轉換:標題/粗體/行內碼/引用/清單/段落,夠讀 conventions.md
+  var box=document.createElement("section");
+  var lines=(D.conventions||"(conventions.md 未打包)").split("\n");
+  var h="", inList=false;
+  function inline(s){
+    return esc(s)
+      .replace(/`([^`]+)`/g,"<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>");
+  }
+  lines.forEach(function(ln){
+    var m;
+    if(inList && !/^\s*-\s+/.test(ln)){h+="</ul>";inList=false}
+    if((m=ln.match(/^(#{1,4})\s+(.*)/))){
+      var lv=Math.min(m[1].length+1,5);
+      h+="<h"+lv+">"+inline(m[2])+"</h"+lv+">";
+    }else if((m=ln.match(/^\s*-\s+(.*)/))){
+      if(!inList){h+="<ul>";inList=true}
+      h+="<li>"+inline(m[1])+"</li>";
+    }else if(/^>\s?/.test(ln)){
+      h+='<p class="note">'+inline(ln.replace(/^>\s?/,""))+"</p>";
+    }else if(ln.trim()===""){
+      h+="";
+    }else{
+      h+="<p>"+inline(ln)+"</p>";
+    }
+  });
+  if(inList)h+="</ul>";
+  box.innerHTML='<div class="md">'+h+'</div>';
+  return box;
+}
+
+var cache={};
+function show(id){
+  if(!cache[id]){
+    cache[id]= id==="tpl-effect"?tplSection("effect")
+      : id==="tpl-extra"?tplSection("extra")
+      : id==="oov"?oovSection()
+      : id==="freq"?freqSection()
+      : id==="conv"?convSection()
+      : histSection();
+  }
+  main.innerHTML=""; main.appendChild(cache[id]);
+}
+show("tpl-effect");
+})();
+</script>

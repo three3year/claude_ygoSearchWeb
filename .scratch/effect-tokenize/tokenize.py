@@ -66,7 +66,7 @@ _ATTR_CHAIN = re.compile(r"[闇光地水炎風神](?:・[闇光地水炎風神])
 _METHOD = r"(?:リンク|融合|儀式|S|X|P|L)"
 _METHOD_RE = re.compile(_METHOD)
 _METHOD_CHAIN = re.compile(
-    _METHOD + r"(?:・" + _METHOD + r")*(?:素材|モンスター|召喚)"
+    _METHOD + r"(?:・" + _METHOD + r")*(?:素材|モンスター|召喚|効果)"
     r"|" + _METHOD + r"(?:・" + _METHOD + r")+")
 PUNCT_KEEP = "。、：・（）『』／"
 # 圈號與列點是段落標號、空白是排版——靜默邊界,不入序列

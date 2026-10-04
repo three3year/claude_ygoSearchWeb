@@ -26,6 +26,7 @@ OUT_MD = os.path.join(_HERE, "report.md")
 OUT_FREQ = os.path.join(_HERE, "wordfreq.json")
 
 STRATA = (("effect", "效果句"), ("extra", "效果外文本"))
+FREQ_TOP = {"effect": 100, "extra": 50}   # 詞頻表列數(prepare_view.py 共用)
 # 模板大小分佈的桶(句數下限,遞減檢查)
 BUCKETS = ((100, "≥100 句"), (50, "50–99 句"), (20, "20–49 句"),
            (10, "10–19 句"), (5, "5–9 句"), (2, "2–4 句"), (1, "1 句"))
@@ -331,7 +332,7 @@ def main():
         subset, stats, freq, oov_freq, templates = packs[key]
         ordered = template_order(templates)
         top_n = 50 if key == "effect" else 20
-        freq_top = 100 if key == "effect" else 50
+        freq_top = FREQ_TOP[key]
         lines += ["## %s" % label, ""]
 
         # 1. 詞頻表

@@ -69,7 +69,7 @@ def _all_jp(text):
 # または/及び 是並列接續詞、しか/では 是係助詞與複合形:regex 片段裡它們把
 # 兩個內容詞黏成一團(手札または自分、デッキ及び相手),比照助詞切開。
 PARTICLES_MULTI = ("として", "または", "から", "まで", "より", "など",
-                   "では", "及び", "しか")
+                   "では", "及び", "しか", "のみ")
 PARTICLES_SINGLE = "にでをはがとのへもや"
 PARTICLES = set(PARTICLES_MULTI) | set(PARTICLES_SINGLE)
 
@@ -417,6 +417,14 @@ def main():
         "フィールド魔法", "儀式魔法", "通常罠", "永続罠",
     )
     for word in subtypes:
+        merged.setdefault(word, set()).add("manual")
+    # 效果外文本檢視裁定(2026-10-03 站主):それぞれ/いずれか(使用次數
+    # 限制句骨架)與 ＋/×(素材行的加號、數值運算的乘號)整詞入典——
+    # 符號不屬字面字元,只能走 manual;のみ 歸助詞封閉類(分詞器端)
+    for word in ("それぞれ", "いずれか", "＋", "×"):
+        merged.setdefault(word, set()).add("manual")
+    # 同じ/全て 入典(2026-10-03 站主裁定)
+    for word in ("同じ", "全て"):
         merged.setdefault(word, set()).add("manual")
     # R9 定案(2026-10-02 站主):召喚法七法(リンク/融合/儀式/S/X/P/L)
     # 由分詞器出 m: token,「法+素材/モンスター/召喚」全矩陣統一兩格——

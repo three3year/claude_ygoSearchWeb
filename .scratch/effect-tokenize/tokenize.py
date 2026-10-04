@@ -10,7 +10,7 @@ clauses,取每句 text_ja。效果外文本(kind=效果外文本,素材行/使�
 - 數字(半形/全形/漢數字+つ体枚度回量詞)→ NUM token(帶正規化後的數值);
   NUM 後緊接的量詞(つ/体/枚/度/回)→ 量詞 token
 - 助詞(に/で/を/は/が/と/の/へ/も/や/から/まで/より/など/として/または/
-  及び/しか)→ 獨立 token(封閉類,不占詞典 ID)
+  及び/しか/のみ)→ 獨立 token(封閉類,不占詞典 ID)
 - 句讀(。、:・()『』)→ 邊界,不編 ID 但保留在序列裡(模板的結構訊號);
   圈號(①②…)、●、空白 → 靜默邊界(丟棄)
 - 詞典最長匹配;匹配不到的連續段合併成 OOV token(前一字是平假名時 OOV 段
@@ -52,11 +52,12 @@ OUT = os.path.join(_HERE, "tokens.json")
 
 # ── 封閉類(與 extract_seed.py 的切分慣例同一套)──
 PARTICLES = ("として", "または", "から", "まで", "より", "など", "及び",
-             "しか", "に", "で", "を", "は", "が", "と", "の", "へ", "も",
-             "や")
+             "しか", "のみ", "に", "で", "を", "は", "が", "と", "の", "へ",
+             "も", "や")
 COUNTERS = "つ体枚度回"
 DEMONSTRATIVES = ("この", "その")
 COMPARATORS = ("以下", "以上", "未満")
+OPERATORS = ("＋", "×")   # 詞典詞(manual),但不當比較詞綁定的前詞
 ATTRIBUTES = "闇光地水炎風神"   # 七值封閉集合(屬性裁定)
 # 屬性字成詞的前瞻條件:後面(可隔著・列舉)最終接到 属性——
 # 擋 墓地/水族 這類含同字的詞被誤切
@@ -127,7 +128,9 @@ class Tokenizer:
                          if text.startswith(c, i)), None)
         if cmp_word:
             word = ""
-            if not counter and tokens and tokens[-1].startswith("W"):
+            # 運算符號(＋/×)不是屬性名:Pスケール×〈n〉以上 的 × 不綁入
+            if (not counter and tokens and tokens[-1].startswith("W")
+                    and self.surface_of[tokens[-1]] not in OPERATORS):
                 word = tokens.pop()
             tokens.append("q:%s:%d:%s:%s" % (word, value, counter, cmp_word))
             return i + len(cmp_word)

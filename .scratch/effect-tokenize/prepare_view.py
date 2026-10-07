@@ -48,6 +48,10 @@ def split_token(token):
         return [kind, token[2:]]      # 屬性("闇")
     if kind == "method":
         return [kind, token[2:]]      # 召喚法("融合"/"S")
+    if kind == "elided":
+        return [kind, token[2:]]      # 列舉前項("通常:魔法")
+    if kind == "range":
+        return [kind, token[2:]]      # 數字範圍("2:5:体";模板形 n:n:体)
     if kind == "punct":
         return [kind, token]
     return [kind, token.split(":", 1)[1]]
@@ -145,7 +149,9 @@ CLASSES = [
     {"id": "punct", "label": "句讀"},
     {"id": "oov", "label": "OOV 未收錄", "warn": True},
 ]
-CLASS_OF = {"lex": "lex", "attr": "lex", "method": "lex", "dem": "dem",
+CLASS_OF = {"lex": "lex", "attr": "lex", "method": "lex", "elided": "lex",
+            "range": "num",
+            "dem": "dem",
             "particle": "p", "name": "name", "cname": "name", "num": "num",
             "quant": "num", "counter": "ctr", "punct": "punct", "oov": "oov"}
 # 待裁:全て/同じ 的兩種粒度(conventions.md 決策段)
@@ -177,6 +183,12 @@ def token_cell(token, surface_of):
         surface = "「%s」" % token.split(":", 1)[1]
     elif kind == "punct":
         surface = token
+    elif kind == "elided":
+        _, head, tail = token.split(":", 2)
+        surface = "%s(%s)" % (head, tail)
+    elif kind == "range":
+        _, lo, hi, counter = token.split(":", 3)
+        surface = ("〈n～n〉" if lo == "n" else "%s～%s" % (lo, hi)) + counter
     else:                               # attr/method/particle/num/counter/oov
         surface = token.split(":", 1)[1]
     return [CLASS_OF[kind], surface]
@@ -267,7 +279,9 @@ def write_mirror_data(lexicon, sentences):
     tables["evidence-all-same.json"] = evidence_table(
         lexicon, sentences, surface_of)
     tables["r12-words.json"] = r12_words_table(
-        lexicon, sentences, surface_of)
+        extract_seed.R12B_WORDS, lexicon, sentences, surface_of)
+    tables["r12a-words.json"] = r12_words_table(
+        extract_seed.R12A_WORDS, lexicon, sentences, surface_of)
 
     os.makedirs(MIRROR_DIR, exist_ok=True)
     for name, table in sorted(tables.items()):
@@ -340,13 +354,14 @@ def evidence_table(lexicon, sentences, surface_of):
     }
 
 
-# R12(b) 收錄表(2026-10-07 站主核可全收):清單在 extract_seed.py 的
-# R12B_WORDS,這裡依詞元列落地後的次數與例句
+# R12 收錄表(2026-10-07 站主核可 (b)、(a) 兩份清單全收):清單在
+# extract_seed.py 的 R12B_WORDS/R12A_WORDS,這裡依詞元列落地後的次數與例句;
+# 「剝除」類不列(已不在詞典)
 R12_EXAMPLES = 5
 
 
-def r12_words_table(lexicon, sentences, surface_of):
-    """R12(b) 落地後:每個詞元一列——詞形(含只補 lemma 的既有詞形)、
+def r12_words_table(words, lexicon, sentences, surface_of):
+    """R12 落地後:每個詞元一列——詞形(含只補 lemma 的既有詞形)、
     次數(含指示綁定裡的出現)、句數;展開看例句切分。"""
     id_of = {e["surface"]: e["id"] for e in lexicon}
     lemma_of = {e["id"]: e["lemma"] for e in lexicon if "lemma" in e}
@@ -367,7 +382,9 @@ def r12_words_table(lexicon, sentences, surface_of):
                 p["hits"].append(i)
 
     rows = []
-    for lemma, cat, forms in extract_seed.R12B_WORDS:
+    for lemma, cat, forms in words:
+        if cat == "剝除":
+            continue
         family = [e["surface"] for e in lexicon if e.get("lemma") == lemma]
         p = per.get(lemma, {"count": 0, "hits": []})
         examples = []
@@ -387,8 +404,7 @@ def r12_words_table(lexicon, sentences, surface_of):
                                    column("切分", "tokens")],
                        "rows": examples},
         })
-    assert all(f in id_of for _l, _c, fs in extract_seed.R12B_WORDS
-               for f in fs)
+    assert all(f in id_of for _l, c, fs in words if c != "剝除" for f in fs)
     return {
         "columns": [column("詞元", "text"), column("類別", "text"),
                     column("新增詞形", "text"), column("既有詞形(補 lemma)", "text"),

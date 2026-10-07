@@ -53,6 +53,10 @@ def token_kind(token):
         return "attr"
     if token.startswith("m:"):
         return "method"
+    if token.startswith("s:"):
+        return "elided"
+    if token.startswith("r:"):
+        return "range"
     if token.startswith("p:"):
         return "particle"
     if token.startswith("NAME:"):
@@ -85,6 +89,11 @@ def make_render(surface_of):
             return token[2:]
         if kind == "method":
             return token[2:]
+        if kind == "elided":
+            _, head, tail = token.split(":", 2)
+            return "%s(%s)" % (head, tail)
+        if kind == "range":
+            return "〈n～n〉" + token.split(":", 3)[3]
         if kind == "particle":
             return "[%s]" % token[2:]
         if kind == "name":
@@ -111,6 +120,8 @@ def normalize(token):
         return "q:%s:n:%s:%s" % (wid, counter, cmp_word)
     if kind == "cname":
         return "k:"
+    if kind == "range":
+        return "r:n:n:" + token.split(":", 3)[3]
     return token
 
 
@@ -169,6 +180,13 @@ def scan_stratum(sentences, surface_len):
             elif kind == "method":
                 chars = len(token) - 2
                 freq[("召喚法", token)] += 1
+            elif kind == "elided":
+                chars = len(token.split(":", 2)[1])
+                freq[("列舉前項", token)] += 1
+            elif kind == "range":
+                _, lo, hi, counter = token.split(":", 3)
+                chars = len(lo) + 1 + len(hi) + len(counter)
+                freq[("數字範圍", normalize(token))] += 1
             else:
                 chars = token_chars(token, kind)
                 if kind == "particle":
@@ -215,6 +233,13 @@ def freq_rows(freq, surface_of):
             label = surface
         elif cat == "召喚法":
             surface = token[2:]
+            label = surface
+        elif cat == "數字範圍":
+            surface = "〈n～n〉" + token.split(":", 3)[3]
+            label = surface
+        elif cat == "列舉前項":
+            _, head, tail = token.split(":", 2)
+            surface = "%s(%s)" % (head, tail)
             label = surface
         elif cat == "助詞":
             surface = token[2:]

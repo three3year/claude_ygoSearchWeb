@@ -170,6 +170,14 @@ function quantText(pay){
   var w=m[0]?(LEX[m[0]]||m[0]):"";
   return w+"〈"+(m[1]==="n"?"n":m[1])+"〉"+m[2]+m[3];
 }
+function rangeText(pay){
+  var m=pay.split(":");           // "2:5:体" → 2～5体;模板形 n:n:体 → 〈n～n〉体
+  return (m[0]==="n"?"〈n～n〉":m[0]+"～"+m[1])+m[2];
+}
+function elidedText(pay){
+  var m=pay.split(":");           // "通常:魔法" → 通常(魔法)
+  return m[0]+"("+m[1]+")";
+}
 function chip(tok){
   var kind=tok[0], pay=tok[1];
   if(kind==="lex") pay=LEX[pay]||pay;
@@ -178,6 +186,8 @@ function chip(tok){
   if(kind==="cname") return '<span class="chip t-name">'+esc("〈"+(pay||"名")+"〉カウンター")+'</span>';
   if(kind==="attr") return '<span class="chip t-lex">'+esc(pay)+'</span>';
   if(kind==="method") return '<span class="chip t-lex">'+esc(pay)+'</span>';
+  if(kind==="range") return '<span class="chip t-num">'+esc(rangeText(pay))+'</span>';
+  if(kind==="elided") return '<span class="chip t-lex">'+esc(elidedText(pay))+'</span>';
   if(kind==="name") pay="〈"+(pay==="名"?"卡名":pay)+"〉";
   if(kind==="num") pay="〈"+(pay==="n"?"n":pay)+"〉";
   if(kind==="punct") return '<span class="t-punct">'+esc(pay)+'</span>';
@@ -193,7 +203,9 @@ function surfaceText(toks){
       :t[0]==="quant"?quantText(t[1])
       :t[0]==="cname"?("〈"+(t[1]||"名")+"〉カウンター")
       :t[0]==="attr"?t[1]
-      :t[0]==="method"?t[1]:t[1]);
+      :t[0]==="method"?t[1]
+      :t[0]==="elided"?elidedText(t[1])
+      :t[0]==="range"?rangeText(t[1]):t[1]);
   }
   return s;
 }

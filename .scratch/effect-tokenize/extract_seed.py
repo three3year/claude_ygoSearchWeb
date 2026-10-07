@@ -543,6 +543,11 @@ def main():
     # 大きい 比照 R12(b) 的 高い/多い
     for word in ("左端", "右端", "左側", "右側", "大きい"):
         merged.setdefault(word, set()).add("manual")
+    # 殘餘 OOV 補詞(2026-10-07 站主裁定):個 另進量詞集合(分詞器端),
+    # ヵ所 只當量詞(語料全接數字)
+    for word in ("対", "降臨", "毎", "デュエル", "勝利", "どちらも", "個",
+                 "先", "合わせ"):
+        merged.setdefault(word, set()).add("manual")
     # 裸 その 入典(2026-10-07 站主裁定,改 R5 第三款):接不上詞典詞的
     # その 不再落 OOV;接得上時分詞器照舊出指示綁定
     merged.setdefault("その", set()).add("manual")

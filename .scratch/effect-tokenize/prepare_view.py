@@ -19,6 +19,7 @@ _spec = importlib.util.spec_from_file_location(
     "effect_tokenize", os.path.join(HERE, "tokenize.py"))
 effect_tokenize = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(effect_tokenize)
+import extract_seed  # noqa: E402
 
 MIRROR_DIR = os.path.join(HERE, "mirror-data")
 
@@ -265,6 +266,8 @@ def write_mirror_data(lexicon, sentences):
 
     tables["evidence-all-same.json"] = evidence_table(
         lexicon, sentences, surface_of)
+    tables["r12-words.json"] = r12_words_table(
+        lexicon, sentences, surface_of)
 
     os.makedirs(MIRROR_DIR, exist_ok=True)
     for name, table in sorted(tables.items()):
@@ -335,6 +338,79 @@ def evidence_table(lexicon, sentences, surface_of):
         "classes": CLASSES,
         "rows": rows,
     }
+
+
+# R12(b) 收錄表(2026-10-07 站主核可全收):清單在 extract_seed.py 的
+# R12B_WORDS,這裡依詞元列落地後的次數與例句
+R12_EXAMPLES = 5
+
+
+def r12_words_table(lexicon, sentences, surface_of):
+    """R12(b) 落地後:每個詞元一列——詞形(含只補 lemma 的既有詞形)、
+    次數(含指示綁定裡的出現)、句數;展開看例句切分。"""
+    id_of = {e["surface"]: e["id"] for e in lexicon}
+    lemma_of = {e["id"]: e["lemma"] for e in lexicon if "lemma" in e}
+
+    def seq(tokens):
+        return [token_cell(t, surface_of) for t in tokens]
+
+    per = {}
+    for i, s in enumerate(sentences):
+        for t in s["tokens"]:
+            wid = t.split(":", 2)[2] if t.startswith("d:") else t
+            lemma = lemma_of.get(wid)
+            if lemma is None:
+                continue
+            p = per.setdefault(lemma, {"count": 0, "hits": []})
+            p["count"] += 1
+            if not p["hits"] or p["hits"][-1] != i:
+                p["hits"].append(i)
+
+    rows = []
+    for lemma, cat, forms in extract_seed.R12B_WORDS:
+        family = [e["surface"] for e in lexicon if e.get("lemma") == lemma]
+        p = per.get(lemma, {"count": 0, "hits": []})
+        examples = []
+        for i in examples_of_idx(p["hits"], sentences, R12_EXAMPLES):
+            s = sentences[i]
+            examples.append({"cells": [
+                str(s["card"]),
+                {"text": s["text_ja"],
+                 "marks": [f for f in family if f in s["text_ja"]]},
+                seq(s["tokens"])]})
+        rows.append({
+            "cells": [lemma, cat, "/".join(forms),
+                      "/".join(f for f in family if f not in forms) or None,
+                      p["count"], len(p["hits"])],
+            "detail": {"columns": [column("卡號", "text"),
+                                   column("原文", "quote"),
+                                   column("切分", "tokens")],
+                       "rows": examples},
+        })
+    assert all(f in id_of for _l, _c, fs in extract_seed.R12B_WORDS
+               for f in fs)
+    return {
+        "columns": [column("詞元", "text"), column("類別", "text"),
+                    column("新增詞形", "text"), column("既有詞形(補 lemma)", "text"),
+                    column("次數", "number"), column("句數", "number")],
+        "key": "詞元",
+        "classes": CLASSES,
+        "rows": rows,
+    }
+
+
+def examples_of_idx(indices, sentences, limit):
+    """examples_of 的索引版:依給定順序、原文去重,取前 limit 句的索引。"""
+    out, seen = [], set()
+    for i in indices:
+        text = sentences[i]["text_ja"]
+        if text in seen:
+            continue
+        seen.add(text)
+        out.append(i)
+        if len(out) == limit:
+            break
+    return out
 
 
 if __name__ == "__main__":

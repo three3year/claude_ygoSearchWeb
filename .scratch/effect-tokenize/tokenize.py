@@ -7,10 +7,10 @@ clauses,取每句 text_ja。效果外文本(kind=效果外文本,素材行/使�
 
 切分慣例(第一版,詳 conventions.md;裁定點清單也在該檔):
 - 「卡名」→ NAME token(帶原文);『』非卡名引用,照原文處理(裁定點)
-- 數字(半形/全形/漢數字+つ体枚度回量詞)→ NUM token(帶正規化後的數值);
-  NUM 後緊接的量詞(つ/体/枚/度/回)→ 量詞 token
-- 助詞(に/で/を/は/が/と/の/へ/も/や/から/まで/より/など/として/または/
-  及び/しか/のみ)→ 獨立 token(封閉類,不占詞典 ID)
+- 數字(半形/全形/漢數字+つ体枚度回組量詞)→ NUM token(帶正規化後的數值);
+  NUM 後緊接的量詞(つ/体/枚/度/回/組)→ 量詞 token
+- 助詞(に/で/を/は/が/と/の/へ/も/や/か/から/まで/より/など/として/または/
+  及び/しか/のみ/だけ/ずつ)→ 獨立 token(封閉類,不占詞典 ID)
 - 句讀(。、:・()『』)→ 邊界,不編 ID 但保留在序列裡(模板的結構訊號);
   圈號(①②…)、●、空白 → 靜默邊界(丟棄)
 - 詞典最長匹配;匹配不到的連續段合併成 OOV token(前一字是平假名時 OOV 段
@@ -51,10 +51,14 @@ LEXICON = os.path.join(_HERE, "lexicon.json")
 OUT = os.path.join(_HERE, "tokens.json")
 
 # ── 封閉類(與 extract_seed.py 的切分慣例同一套)──
+# R7 裁定(2026-10-07):だけ/ずつ/か 比照 しか 收入;か 排在 から/しか 之後
+# (tuple 依序比對,長的先中)
 PARTICLES = ("として", "または", "から", "まで", "より", "など", "及び",
-             "しか", "のみ", "に", "で", "を", "は", "が", "と", "の", "へ",
-             "も", "や")
-COUNTERS = "つ体枚度回"
+             "しか", "のみ", "だけ", "ずつ", "に", "で", "を", "は", "が",
+             "と", "の", "へ", "も", "や", "か")
+# か 的護欄:後接 れ/ず/っ 是動詞活用(置かれ/行かず/なかった),不當助詞
+_KA_VERB_NEXT = "れずっ"
+COUNTERS = "つ体枚度回組"   # 組:R10 裁定(2026-10-07),一組 → NUM:1+c:組
 DEMONSTRATIVES = ("この", "その")
 COMPARATORS = ("以下", "以上", "未満")
 OPERATORS = ("＋", "×")   # 詞典詞(manual),但不當比較詞綁定的前詞
@@ -250,6 +254,9 @@ class Tokenizer:
             if not (oov and _is_hira(oov[-1])):
                 particle = next((p for p in PARTICLES
                                  if text.startswith(p, i)), None)
+                if (particle == "か" and i + 1 < n
+                        and text[i + 1] in _KA_VERB_NEXT):
+                    particle = None
             if particle and len(particle) > len(surface or ""):
                 close_oov()
                 tokens.append("p:" + particle)

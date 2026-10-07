@@ -373,13 +373,16 @@ class Tokenizer:
                     continue
             # 3.95 屬性字(2026-10-01 裁定修訂):屬性字與 属性 拆成兩詞,
             # 列舉形 光・闇属性 → 光|・|闇|属性;属性 歸詞典詞。
-            # 衍生物規格括弧(種族・闇・星１)的屬性字也算:後接 ・星 成詞
-            # 規格括弧沒有星級的寫法(アンデット族・闇・攻／守０)後接 ・攻 也算
-            # (2026-10-07 站主裁定)
-            if ch in ATTRIBUTES and (_ATTR_CHAIN.match(text, i)
-                                     or text.startswith("・星", i + 1)
-                                     or (i and text[i - 1] == "・"
-                                         and text.startswith("・攻", i + 1))):
+            # 屬性字在列舉裡自成一項也算(2026-10-07 站主裁定,取代 後接 ・星/
+            # ・攻 的特例):前是 ・/(/●/句首、後是 ・/)/：/句尾——衍生物規格
+            # 括弧(種族・闇・星１、アンデット族・闇・攻／守０)與 ●炎・炎： 都歸這條;
+            # 列舉前項省略優先(水・炎族 的 水 是 水族,不是屬性);●選項標籤範圍
+            # 內不適用,只聽 3.9x 的標籤規則(前文提到 属性 才算)
+            if ch in ATTRIBUTES and (_ATTR_CHAIN.match(text, i) or (
+                    not label
+                    and (i == 0 or text[i - 1] in "・（●")
+                    and (i + 1 == n or text[i + 1] in "・）：")
+                    and not self._elided_head(text, i))):
                 close_oov()
                 tokens.append("a:" + ch)
                 i += 1

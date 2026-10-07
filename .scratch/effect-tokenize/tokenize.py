@@ -100,6 +100,12 @@ def _is_hira(ch):
     return "ぁ" <= ch <= "ゟ"
 
 
+def _name_char(ch):
+    """計數器名可含的字:非平假名、非句讀/靜默邊界/引號/圈號。"""
+    return not (_is_hira(ch) or ch in PUNCT_KEEP or ch in SILENT
+                or ch in "「」")
+
+
 def _num_value(run):
     """數字字串 → 正規化數值(全形→半形、漢數字→阿拉伯)。"""
     if run[0] in _DIGITS:
@@ -133,6 +139,15 @@ class Tokenizer:
         for surface in self.by_first.get(text[i], ()):
             if text.startswith(surface, i):
                 return surface
+        return None
+
+    def _plain_surface(self, token):
+        """可併進計數器名的 token 的原文字面(詞典詞/OOV/屬性字/召喚法);
+        其餘類別回 None。"""
+        if token.startswith("W"):
+            return self.surface_of[token]
+        if token[:2] in ("?:", "a:", "m:"):
+            return token[2:]
         return None
 
     @staticmethod
@@ -267,6 +282,13 @@ class Tokenizer:
                 i = self._emit_num(tokens, text, j + len(counter),
                                    _num_value(text[i:j]), counter)
                 continue
+            # ？:攻撃力/守備力 的未定值(攻？/守０、攻撃力が？以外;2026-10-07
+            # 站主裁定)→ NUM:?(語料 18 處全是這個用法)
+            if ch == "？":
+                close_oov()
+                tokens.append("NUM:?")
+                i += 1
+                continue
             if ch in _KANJI_NUM:
                 j = i
                 while j < n and text[j] in _KANJI_NUM:
@@ -291,12 +313,29 @@ class Tokenizer:
                         j -= 1
                     name, oov = oov[j:], oov[:j]
                     close_oov()
-                elif (w_end == i and tokens
-                        and tokens[-1].startswith("W")
-                        and not _is_hira(self.surface_of[tokens[-1]][-1])):
-                    # 平假名結尾的詞典詞是活用形(する/いた/取り除いた),
-                    # 不是名字——同 OOV 側「活用殘尾不綁進名字」
-                    name = self.surface_of[tokens.pop()]
+                # 名的全長=原文 カウンター 前緊鄰的非平假名連續段(2026-10-07
+                # 站主裁定):名字被詞典切開時(方|界、万|倍)往前把整段併回;
+                # 平假名結尾的詞典詞是活用形(する/いた),不併
+                run = i
+                while run > 0 and _name_char(text[run - 1]):
+                    run -= 1
+                popped = []
+                while len(name) < i - run and tokens:
+                    piece = self._plain_surface(tokens[-1])
+                    if (piece is None or any(_is_hira(c) for c in piece)
+                            or len(name) + len(piece) > i - run):
+                        break
+                    popped.append(tokens.pop())
+                    name = piece + name
+                if name != text[i - len(name):i] or len(name) != i - run:
+                    # 拼不回原文整段:還原,只留 OOV 側取到的名
+                    for t in reversed(popped):
+                        tokens.append(t)
+                        name = name[len(self._plain_surface(t)):]
+                    if (not name and w_end == i and tokens
+                            and tokens[-1].startswith("W")
+                            and not _is_hira(self.surface_of[tokens[-1]][-1])):
+                        name = self.surface_of[tokens.pop()]
                 if name:
                     tokens.append("k:" + name)
                     i += len("カウンター")
@@ -335,8 +374,12 @@ class Tokenizer:
             # 3.95 屬性字(2026-10-01 裁定修訂):屬性字與 属性 拆成兩詞,
             # 列舉形 光・闇属性 → 光|・|闇|属性;属性 歸詞典詞。
             # 衍生物規格括弧(種族・闇・星１)的屬性字也算:後接 ・星 成詞
+            # 規格括弧沒有星級的寫法(アンデット族・闇・攻／守０)後接 ・攻 也算
+            # (2026-10-07 站主裁定)
             if ch in ATTRIBUTES and (_ATTR_CHAIN.match(text, i)
-                                     or text.startswith("・星", i + 1)):
+                                     or text.startswith("・星", i + 1)
+                                     or (i and text[i - 1] == "・"
+                                         and text.startswith("・攻", i + 1))):
                 close_oov()
                 tokens.append("a:" + ch)
                 i += 1

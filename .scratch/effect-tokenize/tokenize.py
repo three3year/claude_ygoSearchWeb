@@ -65,8 +65,11 @@ _KA_VERB_NEXT = "れずっ"
 # ヵ所/個:2026-10-07 站主補詞時併入(１ヵ所、１２個)
 COUNTERS = ("種類", "ヵ所", "つ", "体", "枚", "度", "回", "組", "個")
 DEMONSTRATIVES = ("この", "その")
+# 名字含平假名的計數器名(例外清單,2026-10-08 站主裁定):一般規則只取 カウンター
+# 前的非平假名段,這幾個會被切斷;新卡再出現時從 OOV 表補進來
+COUNTER_NAMES_HIRA = ("かっとビング", "皇の鍵", "お皿")
 COMPARATORS = ("以下", "以上", "未満")
-OPERATORS = ("＋", "×")   # 詞典詞(manual),但不當比較詞綁定的前詞
+OPERATORS = ("＋", "×", "－")   # 詞典詞(manual),但不當比較詞綁定的前詞
 ATTRIBUTES = "闇光地水炎風神"   # 七值封閉集合(屬性裁定)
 # 屬性字成詞的前瞻條件:後面(可隔著・列舉)最終接到 属性——
 # 擋 墓地/水族 這類含同字的詞被誤切
@@ -74,7 +77,9 @@ _ATTR_CHAIN = re.compile(r"[闇光地水炎風神](?:・[闇光地水炎風神])
 # 召喚法七法(R9 裁定):成詞條件=後接 素材/モンスター/召喚,或 ・並列鏈
 # (融合・S・X・P・L);並列尾項由「前一格是法+・」回看補救
 # A:アドバンス召喚 的縮寫(A召喚,2026-10-07 站主裁定加入,召喚法八法)
-_METHOD = r"(?:リンク|融合|儀式|[SXPLAＳＸＰＬＡ])"
+# 通常:只在後接 召喚 時是召喚法(通常召喚 → 法:通常|召喚;2026-10-08 站主
+# 裁定)——通常モンスター/通常魔法/通常罠 是卡片種類,照 R9 維持整詞
+_METHOD = r"(?:リンク|融合|儀式|通常(?=召喚)|[SXPLAＳＸＰＬＡ])"
 # 全形召喚法字母(融合・Ｓ・Ｘ)輸出統一成半形
 _FULL_ASCII = {"Ｓ": "S", "Ｘ": "X", "Ｐ": "P", "Ｌ": "L", "Ａ": "A"}
 _METHOD_RE = re.compile(_METHOD)
@@ -150,9 +155,15 @@ class Tokenizer:
             return token[2:]
         return None
 
-    @staticmethod
-    def _counter_at(text, j):
-        return next((c for c in COUNTERS if text.startswith(c, j)), "")
+    def _counter_at(self, text, j):
+        """j 起的量詞;量詞和後文組成更長的詞典詞、且那個詞不是「量詞+詞典詞」
+        時不算(１０００回復 的 回:復 不是詞;２体分 的 体 照算:分 是詞)。"""
+        counter = next((c for c in COUNTERS if text.startswith(c, j)), "")
+        word = self._lex_match(text, j) if counter else None
+        if (word and len(word) > len(counter)
+                and word[len(counter):] not in self.id_of):
+            return ""
+        return counter
 
     def _emit_num(self, tokens, text, i, value, counter):
         """數字(+量詞)落 token;後接比較詞時綁成數量約束 q: token。
@@ -179,7 +190,7 @@ class Tokenizer:
     def _elided_head(self, text, i):
         """列舉前項省略(2026-10-07 站主裁定):・鏈的一項 X 不是詞典詞,但補上
         鏈尾詞 W 的尾巴 T 能組成詞典詞(通常・速攻魔法 的 通常+魔法=通常魔法)
-        → 回 (X, T);否則 None。鏈尾詞取最後一項開頭的最長匹配。呼叫端只在
+        → 回 (X, T);否則 None。鏈尾詞取最後一項開頭的詞典詞(由長到短)。呼叫端只在
         token 邊界(OOV 段未開)呼叫;X 從 i 起算到下一個列舉邊界。"""
         j = i
         while j < len(text) and text[j] not in _ITEM_STOP:
@@ -196,12 +207,16 @@ class Tokenizer:
                 k = m + 1
                 continue
             break
-        last = self._lex_match(text, k) if k < len(text) else None
-        if not last:
+        if k >= len(text):
             return None
-        for cut in range(1, len(last)):
-            if head + last[cut:] in self.id_of:
-                return head, last[cut:]
+        # 最後一項開頭的詞典詞由長到短都試:フィールド魔法カード 補不出,
+        # フィールド魔法 補 魔法 → 通常魔法
+        for last in self.by_first.get(text[k], ()):
+            if not text.startswith(last, k):
+                continue
+            for cut in range(1, len(last)):
+                if head + last[cut:] in self.id_of:
+                    return head, last[cut:]
         return None
 
     def tokenize(self, text, context=""):
@@ -251,6 +266,14 @@ class Tokenizer:
                     tokens.append("NAME:" + text[i + 1:j - 1])
                     i = j
                     continue
+            # 1.5 例外清單的計數器名(名字含平假名):整段綁成計數器名
+            hira_name = next((nm for nm in COUNTER_NAMES_HIRA
+                              if text.startswith(nm + "カウンター", i)), None)
+            if hira_name:
+                close_oov()
+                tokens.append("k:" + hira_name)
+                i += len(hira_name) + len("カウンター")
+                continue
             # 2. 邊界
             if ch in SILENT:
                 close_oov()

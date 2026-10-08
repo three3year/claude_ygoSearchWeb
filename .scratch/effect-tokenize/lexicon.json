@@ -64,6 +64,14 @@
  },
  {
   "id": "W0009",
+  "surface": "EXリンク",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "EXリンク"
+ },
+ {
+  "id": "W0010",
   "surface": "LP",
   "sources": [
    "glossary",
@@ -71,14 +79,14 @@
   ]
  },
  {
-  "id": "W0010",
+  "id": "W0011",
   "surface": "Pスケール",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0011",
+  "id": "W0012",
   "surface": "Pゾーン",
   "sources": [
    "glossary",
@@ -86,28 +94,28 @@
   ]
  },
  {
-  "id": "W0012",
+  "id": "W0013",
   "surface": "S召喚扱い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0013",
+  "id": "W0014",
   "surface": "X召喚扱い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0014",
+  "id": "W0015",
   "surface": "×",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0015",
+  "id": "W0016",
   "surface": "あった",
   "sources": [
    "manual"
@@ -115,7 +123,7 @@
   "lemma": "ある"
  },
  {
-  "id": "W0016",
+  "id": "W0017",
   "surface": "ある",
   "sources": [
    "manual"
@@ -123,7 +131,7 @@
   "lemma": "ある"
  },
  {
-  "id": "W0017",
+  "id": "W0018",
   "surface": "あれば",
   "sources": [
    "manual"
@@ -131,7 +139,7 @@
   "lemma": "ある"
  },
  {
-  "id": "W0018",
+  "id": "W0019",
   "surface": "いずれ",
   "sources": [
    "manual"
@@ -139,14 +147,14 @@
   "lemma": "いずれ"
  },
  {
-  "id": "W0019",
+  "id": "W0020",
   "surface": "いずれか",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0020",
+  "id": "W0021",
   "surface": "いた",
   "sources": [
    "manual"
@@ -154,7 +162,15 @@
   "lemma": "いる"
  },
  {
-  "id": "W0021",
+  "id": "W0022",
+  "surface": "いつでも",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "いつでも"
+ },
+ {
+  "id": "W0023",
   "surface": "いない",
   "sources": [
    "manual"
@@ -162,7 +178,7 @@
   "lemma": "いる"
  },
  {
-  "id": "W0022",
+  "id": "W0024",
   "surface": "いる",
   "sources": [
    "manual"
@@ -170,7 +186,7 @@
   "lemma": "いる"
  },
  {
-  "id": "W0023",
+  "id": "W0025",
   "surface": "いれば",
   "sources": [
    "manual"
@@ -178,7 +194,7 @@
   "lemma": "いる"
  },
  {
-  "id": "W0024",
+  "id": "W0026",
   "surface": "お互い",
   "sources": [
    "glossary",
@@ -186,21 +202,21 @@
   ]
  },
  {
-  "id": "W0025",
+  "id": "W0027",
   "surface": "お互いのプレイヤー",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0026",
+  "id": "W0028",
   "surface": "この",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0027",
+  "id": "W0029",
   "surface": "さらに",
   "sources": [
    "manual"
@@ -208,14 +224,14 @@
   "lemma": "さらに"
  },
  {
-  "id": "W0028",
+  "id": "W0030",
   "surface": "され",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0029",
+  "id": "W0031",
   "surface": "されず",
   "sources": [
    "manual",
@@ -223,21 +239,21 @@
   ]
  },
  {
-  "id": "W0030",
+  "id": "W0032",
   "surface": "された",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0031",
+  "id": "W0033",
   "surface": "されて",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0032",
+  "id": "W0034",
   "surface": "されない",
   "sources": [
    "manual",
@@ -245,84 +261,92 @@
   ]
  },
  {
-  "id": "W0033",
+  "id": "W0035",
   "surface": "される",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0034",
+  "id": "W0036",
   "surface": "し",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0035",
+  "id": "W0037",
   "surface": "した",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0036",
+  "id": "W0038",
   "surface": "したレベル",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0037",
+  "id": "W0039",
   "surface": "して",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0038",
+  "id": "W0040",
   "surface": "し続け",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0039",
+  "id": "W0041",
   "surface": "する",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0040",
+  "id": "W0042",
   "surface": "する事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0041",
+  "id": "W0043",
   "surface": "する度",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0042",
+  "id": "W0044",
   "surface": "する状態",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0043",
+  "id": "W0045",
   "surface": "する際",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0044",
+  "id": "W0046",
+  "surface": "すれば",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "する"
+ },
+ {
+  "id": "W0047",
   "surface": "ず",
   "sources": [
    "manual"
@@ -330,7 +354,7 @@
   "lemma": "ず"
  },
  {
-  "id": "W0045",
+  "id": "W0048",
   "surface": "せず",
   "sources": [
    "manual"
@@ -338,21 +362,21 @@
   "lemma": "せず"
  },
  {
-  "id": "W0046",
+  "id": "W0049",
   "surface": "その",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0047",
+  "id": "W0050",
   "surface": "その後",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0048",
+  "id": "W0051",
   "surface": "それ",
   "sources": [
    "manual"
@@ -360,14 +384,14 @@
   "lemma": "それ"
  },
  {
-  "id": "W0049",
+  "id": "W0052",
   "surface": "それぞれ",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0050",
+  "id": "W0053",
   "surface": "それら",
   "sources": [
    "manual"
@@ -375,7 +399,7 @@
   "lemma": "それ"
  },
  {
-  "id": "W0051",
+  "id": "W0054",
   "surface": "た",
   "sources": [
    "manual"
@@ -383,7 +407,7 @@
   "lemma": "た"
  },
  {
-  "id": "W0052",
+  "id": "W0055",
   "surface": "ため",
   "sources": [
    "manual"
@@ -391,7 +415,7 @@
   "lemma": "ため"
  },
  {
-  "id": "W0053",
+  "id": "W0056",
   "surface": "だった",
   "sources": [
    "manual"
@@ -399,7 +423,7 @@
   "lemma": "だ"
  },
  {
-  "id": "W0054",
+  "id": "W0057",
   "surface": "った",
   "sources": [
    "manual"
@@ -407,7 +431,7 @@
   "lemma": "った"
  },
  {
-  "id": "W0055",
+  "id": "W0058",
   "surface": "つき",
   "sources": [
    "manual"
@@ -415,7 +439,7 @@
   "lemma": "つき"
  },
  {
-  "id": "W0056",
+  "id": "W0059",
   "surface": "て",
   "sources": [
    "manual"
@@ -423,7 +447,7 @@
   "lemma": "て"
  },
  {
-  "id": "W0057",
+  "id": "W0060",
   "surface": "でき",
   "sources": [
    "manual"
@@ -431,35 +455,51 @@
   "lemma": "でき"
  },
  {
-  "id": "W0058",
+  "id": "W0061",
   "surface": "できず",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0059",
+  "id": "W0062",
   "surface": "できない",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0060",
+  "id": "W0063",
   "surface": "できる",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0061",
+  "id": "W0064",
+  "surface": "どこ",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "どこ"
+ },
+ {
+  "id": "W0065",
+  "surface": "どちらか",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "どちらか"
+ },
+ {
+  "id": "W0066",
   "surface": "どちらも",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0062",
+  "id": "W0067",
   "surface": "な",
   "sources": [
    "manual"
@@ -467,14 +507,14 @@
   "lemma": "な"
  },
  {
-  "id": "W0063",
+  "id": "W0068",
   "surface": "ない",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0064",
+  "id": "W0069",
   "surface": "なかった",
   "sources": [
    "manual"
@@ -482,7 +522,15 @@
   "lemma": "なる"
  },
  {
-  "id": "W0065",
+  "id": "W0070",
+  "surface": "なく",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "ない"
+ },
+ {
+  "id": "W0071",
   "surface": "なくす",
   "sources": [
    "manual"
@@ -490,7 +538,7 @@
   "lemma": "なくす"
  },
  {
-  "id": "W0066",
+  "id": "W0072",
   "surface": "なければ",
   "sources": [
    "manual"
@@ -498,7 +546,7 @@
   "lemma": "なる"
  },
  {
-  "id": "W0067",
+  "id": "W0073",
   "surface": "なった",
   "sources": [
    "manual"
@@ -506,7 +554,7 @@
   "lemma": "なる"
  },
  {
-  "id": "W0068",
+  "id": "W0074",
   "surface": "なって",
   "sources": [
    "manual"
@@ -514,7 +562,7 @@
   "lemma": "なる"
  },
  {
-  "id": "W0069",
+  "id": "W0075",
   "surface": "なら",
   "sources": [
    "manual"
@@ -522,7 +570,7 @@
   "lemma": "なる"
  },
  {
-  "id": "W0070",
+  "id": "W0076",
   "surface": "なり",
   "sources": [
    "manual"
@@ -530,14 +578,14 @@
   "lemma": "なる"
  },
  {
-  "id": "W0071",
+  "id": "W0077",
   "surface": "なる",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0072",
+  "id": "W0078",
   "surface": "また",
   "sources": [
    "manual"
@@ -545,7 +593,7 @@
   "lemma": "また"
  },
  {
-  "id": "W0073",
+  "id": "W0079",
   "surface": "まま",
   "sources": [
    "manual"
@@ -553,7 +601,7 @@
   "lemma": "まま"
  },
  {
-  "id": "W0074",
+  "id": "W0080",
   "surface": "めくった",
   "sources": [
    "manual"
@@ -561,7 +609,7 @@
   "lemma": "めくる"
  },
  {
-  "id": "W0075",
+  "id": "W0081",
   "surface": "めくって",
   "sources": [
    "manual"
@@ -569,7 +617,7 @@
   "lemma": "めくる"
  },
  {
-  "id": "W0076",
+  "id": "W0082",
   "surface": "めくられ",
   "sources": [
    "manual"
@@ -577,7 +625,7 @@
   "lemma": "めくる"
  },
  {
-  "id": "W0077",
+  "id": "W0083",
   "surface": "めくられた",
   "sources": [
    "manual"
@@ -585,7 +633,7 @@
   "lemma": "めくる"
  },
  {
-  "id": "W0078",
+  "id": "W0084",
   "surface": "めくられて",
   "sources": [
    "manual"
@@ -593,7 +641,7 @@
   "lemma": "めくる"
  },
  {
-  "id": "W0079",
+  "id": "W0085",
   "surface": "めくり",
   "sources": [
    "manual"
@@ -601,7 +649,7 @@
   "lemma": "めくる"
  },
  {
-  "id": "W0080",
+  "id": "W0086",
   "surface": "めくる",
   "sources": [
    "manual"
@@ -609,7 +657,7 @@
   "lemma": "めくる"
  },
  {
-  "id": "W0081",
+  "id": "W0087",
   "surface": "もう",
   "sources": [
    "manual"
@@ -617,7 +665,7 @@
   "lemma": "もう"
  },
  {
-  "id": "W0082",
+  "id": "W0088",
   "surface": "もう片方",
   "sources": [
    "manual"
@@ -625,7 +673,15 @@
   "lemma": "もう片方"
  },
  {
-  "id": "W0083",
+  "id": "W0089",
+  "surface": "やり直す",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "やり直す"
+ },
+ {
+  "id": "W0090",
   "surface": "よう",
   "sources": [
    "manual"
@@ -633,7 +689,7 @@
   "lemma": "よう"
  },
  {
-  "id": "W0084",
+  "id": "W0091",
   "surface": "よって",
   "sources": [
    "manual"
@@ -641,7 +697,7 @@
   "lemma": "よる"
  },
  {
-  "id": "W0085",
+  "id": "W0092",
   "surface": "よらず",
   "sources": [
    "manual"
@@ -649,7 +705,7 @@
   "lemma": "よる"
  },
  {
-  "id": "W0086",
+  "id": "W0093",
   "surface": "よる",
   "sources": [
    "manual"
@@ -657,7 +713,7 @@
   "lemma": "よる"
  },
  {
-  "id": "W0087",
+  "id": "W0094",
   "surface": "る",
   "sources": [
    "manual"
@@ -665,7 +721,7 @@
   "lemma": "る"
  },
  {
-  "id": "W0088",
+  "id": "W0095",
   "surface": "アップ",
   "sources": [
    "glossary",
@@ -673,14 +729,14 @@
   ]
  },
  {
-  "id": "W0089",
+  "id": "W0096",
   "surface": "アドバンス召喚",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0090",
+  "id": "W0097",
   "surface": "アンデット族",
   "sources": [
    "glossary",
@@ -688,14 +744,14 @@
   ]
  },
  {
-  "id": "W0091",
+  "id": "W0098",
   "surface": "エクストラ",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0092",
+  "id": "W0099",
   "surface": "エクストラデッキ",
   "sources": [
    "glossary",
@@ -703,7 +759,7 @@
   ]
  },
  {
-  "id": "W0093",
+  "id": "W0100",
   "surface": "エンドフェイズ",
   "sources": [
    "glossary",
@@ -711,7 +767,7 @@
   ]
  },
  {
-  "id": "W0094",
+  "id": "W0101",
   "surface": "カウンター",
   "sources": [
    "glossary",
@@ -719,14 +775,14 @@
   ]
  },
  {
-  "id": "W0095",
+  "id": "W0102",
   "surface": "カウンター罠",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0096",
+  "id": "W0103",
   "surface": "カード",
   "sources": [
    "glossary",
@@ -734,21 +790,21 @@
   ]
  },
  {
-  "id": "W0097",
+  "id": "W0104",
   "surface": "カード名",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0098",
+  "id": "W0105",
   "surface": "カード扱い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0099",
+  "id": "W0106",
   "surface": "コイントス",
   "sources": [
    "glossary",
@@ -756,14 +812,14 @@
   ]
  },
  {
-  "id": "W0100",
+  "id": "W0107",
   "surface": "コントローラー",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0101",
+  "id": "W0108",
   "surface": "コントロール",
   "sources": [
    "glossary",
@@ -771,14 +827,14 @@
   ]
  },
  {
-  "id": "W0102",
+  "id": "W0109",
   "surface": "サイキック族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0103",
+  "id": "W0110",
   "surface": "サイコロ",
   "sources": [
    "glossary",
@@ -786,7 +842,7 @@
   ]
  },
  {
-  "id": "W0104",
+  "id": "W0111",
   "surface": "サイバース族",
   "sources": [
    "glossary",
@@ -794,28 +850,36 @@
   ]
  },
  {
-  "id": "W0105",
+  "id": "W0112",
   "surface": "シャッフル",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0106",
+  "id": "W0113",
+  "surface": "ジャンケン",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "ジャンケン"
+ },
+ {
+  "id": "W0114",
   "surface": "スキップ",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0107",
+  "id": "W0115",
   "surface": "スケール",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0108",
+  "id": "W0116",
   "surface": "スタンバイフェイズ",
   "sources": [
    "glossary",
@@ -823,14 +887,14 @@
   ]
  },
  {
-  "id": "W0109",
+  "id": "W0117",
   "surface": "スピリットモンスター",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0110",
+  "id": "W0118",
   "surface": "セット",
   "sources": [
    "glossary",
@@ -838,21 +902,21 @@
   ]
  },
  {
-  "id": "W0111",
+  "id": "W0119",
   "surface": "セットする事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0112",
+  "id": "W0120",
   "surface": "ゾーン",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0113",
+  "id": "W0121",
   "surface": "ターン",
   "sources": [
    "glossary",
@@ -860,7 +924,7 @@
   ]
  },
  {
-  "id": "W0114",
+  "id": "W0122",
   "surface": "ターン終了",
   "sources": [
    "glossary",
@@ -868,7 +932,7 @@
   ]
  },
  {
-  "id": "W0115",
+  "id": "W0123",
   "surface": "ダウン",
   "sources": [
    "glossary",
@@ -876,7 +940,7 @@
   ]
  },
  {
-  "id": "W0116",
+  "id": "W0124",
   "surface": "ダメージ",
   "sources": [
    "glossary",
@@ -884,7 +948,7 @@
   ]
  },
  {
-  "id": "W0117",
+  "id": "W0125",
   "surface": "ダメージステップ",
   "sources": [
    "glossary",
@@ -892,7 +956,7 @@
   ]
  },
  {
-  "id": "W0118",
+  "id": "W0126",
   "surface": "ダメージ計算",
   "sources": [
    "glossary",
@@ -900,7 +964,7 @@
   ]
  },
  {
-  "id": "W0119",
+  "id": "W0127",
   "surface": "チェーン",
   "sources": [
    "manual"
@@ -908,7 +972,7 @@
   "lemma": "チェーン"
  },
  {
-  "id": "W0120",
+  "id": "W0128",
   "surface": "チューナー",
   "sources": [
    "glossary",
@@ -916,14 +980,22 @@
   ]
  },
  {
-  "id": "W0121",
+  "id": "W0129",
   "surface": "チューナー以外",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0122",
+  "id": "W0130",
+  "surface": "テキスト",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "テキスト"
+ },
+ {
+  "id": "W0131",
   "surface": "デッキ",
   "sources": [
    "glossary",
@@ -931,7 +1003,7 @@
   ]
  },
  {
-  "id": "W0123",
+  "id": "W0132",
   "surface": "デッキに戻さず",
   "sources": [
    "manual"
@@ -939,7 +1011,7 @@
   "lemma": "デッキに戻す"
  },
  {
-  "id": "W0124",
+  "id": "W0133",
   "surface": "デッキに戻さなければ",
   "sources": [
    "manual"
@@ -947,7 +1019,7 @@
   "lemma": "デッキに戻す"
  },
  {
-  "id": "W0125",
+  "id": "W0134",
   "surface": "デッキに戻し",
   "sources": [
    "manual"
@@ -955,7 +1027,7 @@
   "lemma": "デッキに戻す"
  },
  {
-  "id": "W0126",
+  "id": "W0135",
   "surface": "デッキに戻した",
   "sources": [
    "manual"
@@ -963,7 +1035,7 @@
   "lemma": "デッキに戻す"
  },
  {
-  "id": "W0127",
+  "id": "W0136",
   "surface": "デッキに戻して",
   "sources": [
    "manual"
@@ -971,7 +1043,7 @@
   "lemma": "デッキに戻す"
  },
  {
-  "id": "W0128",
+  "id": "W0137",
   "surface": "デッキに戻す",
   "sources": [
    "manual"
@@ -979,7 +1051,7 @@
   "lemma": "デッキに戻す"
  },
  {
-  "id": "W0129",
+  "id": "W0138",
   "surface": "デッキに戻った",
   "sources": [
    "manual"
@@ -987,7 +1059,7 @@
   "lemma": "デッキに戻る"
  },
  {
-  "id": "W0130",
+  "id": "W0139",
   "surface": "デッキに戻る",
   "sources": [
    "manual"
@@ -995,56 +1067,56 @@
   "lemma": "デッキに戻る"
  },
  {
-  "id": "W0131",
+  "id": "W0140",
   "surface": "デュアルモンスター",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0132",
+  "id": "W0141",
   "surface": "デュエル",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0133",
+  "id": "W0142",
   "surface": "デュエル中",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0134",
+  "id": "W0143",
   "surface": "トゥーン",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0135",
+  "id": "W0144",
   "surface": "トゥーンモンスター",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0136",
+  "id": "W0145",
   "surface": "トークン",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0137",
+  "id": "W0146",
   "surface": "ドラゴン族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0138",
+  "id": "W0147",
   "surface": "ドロー",
   "sources": [
    "glossary",
@@ -1052,28 +1124,36 @@
   ]
  },
  {
-  "id": "W0139",
+  "id": "W0148",
   "surface": "ドローフェイズ",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0140",
+  "id": "W0149",
   "surface": "ドロー以外",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0141",
+  "id": "W0150",
+  "surface": "ハズレ",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "ハズレ"
+ },
+ {
+  "id": "W0151",
   "surface": "バトルステップ",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0142",
+  "id": "W0152",
   "surface": "バトルフェイズ",
   "sources": [
    "glossary",
@@ -1081,7 +1161,7 @@
   ]
  },
  {
-  "id": "W0143",
+  "id": "W0153",
   "surface": "フィールド",
   "sources": [
    "glossary",
@@ -1089,7 +1169,7 @@
   ]
  },
  {
-  "id": "W0144",
+  "id": "W0154",
   "surface": "フィールドゾーン",
   "sources": [
    "glossary",
@@ -1097,35 +1177,35 @@
   ]
  },
  {
-  "id": "W0145",
+  "id": "W0155",
   "surface": "フィールド魔法",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0146",
+  "id": "W0156",
   "surface": "フィールド魔法カード",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0147",
+  "id": "W0157",
   "surface": "フェイズ",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0148",
+  "id": "W0158",
   "surface": "プレイヤー",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0149",
+  "id": "W0159",
   "surface": "メインフェイズ",
   "sources": [
    "glossary",
@@ -1133,21 +1213,21 @@
   ]
  },
  {
-  "id": "W0150",
+  "id": "W0160",
   "surface": "メインフェイズ１",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0151",
+  "id": "W0161",
   "surface": "メインフェイズ２",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0152",
+  "id": "W0162",
   "surface": "メインモンスターゾーン",
   "sources": [
    "manual"
@@ -1155,7 +1235,7 @@
   "lemma": "メインモンスターゾーン"
  },
  {
-  "id": "W0153",
+  "id": "W0163",
   "surface": "モンスター",
   "sources": [
    "glossary",
@@ -1163,28 +1243,28 @@
   ]
  },
  {
-  "id": "W0154",
+  "id": "W0164",
   "surface": "モンスターゾーン",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0155",
+  "id": "W0165",
   "surface": "ユニオンモンスター",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0156",
+  "id": "W0166",
   "surface": "ライフポイント",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0157",
+  "id": "W0167",
   "surface": "ランク",
   "sources": [
    "glossary",
@@ -1192,7 +1272,7 @@
   ]
  },
  {
-  "id": "W0158",
+  "id": "W0168",
   "surface": "ランダム",
   "sources": [
    "glossary",
@@ -1200,7 +1280,7 @@
   ]
  },
  {
-  "id": "W0159",
+  "id": "W0169",
   "surface": "リバース",
   "sources": [
    "glossary",
@@ -1208,14 +1288,14 @@
   ]
  },
  {
-  "id": "W0160",
+  "id": "W0170",
   "surface": "リバースモンスター",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0161",
+  "id": "W0171",
   "surface": "リリース",
   "sources": [
    "glossary",
@@ -1223,84 +1303,84 @@
   ]
  },
  {
-  "id": "W0162",
+  "id": "W0172",
   "surface": "リリースしてA召喚",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0163",
+  "id": "W0173",
   "surface": "リリースしてアドバンス召喚",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0164",
+  "id": "W0174",
   "surface": "リリースして召喚",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0165",
+  "id": "W0175",
   "surface": "リリースして表側表示",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0166",
+  "id": "W0176",
   "surface": "リリースする事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0167",
+  "id": "W0177",
   "surface": "リリースなしで召喚",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0168",
+  "id": "W0178",
   "surface": "リンク",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0169",
+  "id": "W0179",
   "surface": "リンクマーカー",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0170",
+  "id": "W0180",
   "surface": "リンク先",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0171",
+  "id": "W0181",
   "surface": "リンク召喚扱い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0172",
+  "id": "W0182",
   "surface": "リンク状態",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0173",
+  "id": "W0183",
   "surface": "ルール上",
   "sources": [
    "manual"
@@ -1308,7 +1388,7 @@
   "lemma": "ルール上"
  },
  {
-  "id": "W0174",
+  "id": "W0184",
   "surface": "レベル",
   "sources": [
    "glossary",
@@ -1316,14 +1396,14 @@
   ]
  },
  {
-  "id": "W0175",
+  "id": "W0185",
   "surface": "一番",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0176",
+  "id": "W0186",
   "surface": "一番上",
   "sources": [
    "glossary",
@@ -1331,14 +1411,14 @@
   ]
  },
  {
-  "id": "W0177",
+  "id": "W0187",
   "surface": "一番下",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0178",
+  "id": "W0188",
   "surface": "上",
   "sources": [
    "manual"
@@ -1346,7 +1426,23 @@
   "lemma": "上"
  },
  {
-  "id": "W0179",
+  "id": "W0189",
+  "surface": "上がり",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "上がる"
+ },
+ {
+  "id": "W0190",
+  "surface": "上がる",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "上がる"
+ },
+ {
+  "id": "W0191",
   "surface": "上げ",
   "sources": [
    "manual"
@@ -1354,7 +1450,7 @@
   "lemma": "上げる"
  },
  {
-  "id": "W0180",
+  "id": "W0192",
   "surface": "上げた",
   "sources": [
    "manual"
@@ -1362,7 +1458,7 @@
   "lemma": "上げる"
  },
  {
-  "id": "W0181",
+  "id": "W0193",
   "surface": "上げる",
   "sources": [
    "manual"
@@ -1370,7 +1466,7 @@
   "lemma": "上げる"
  },
  {
-  "id": "W0182",
+  "id": "W0194",
   "surface": "上記",
   "sources": [
    "manual"
@@ -1378,7 +1474,7 @@
   "lemma": "上記"
  },
  {
-  "id": "W0183",
+  "id": "W0195",
   "surface": "下",
   "sources": [
    "manual"
@@ -1386,7 +1482,23 @@
   "lemma": "下"
  },
  {
-  "id": "W0184",
+  "id": "W0196",
+  "surface": "下がり",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "下がる"
+ },
+ {
+  "id": "W0197",
+  "surface": "下がる",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "下がる"
+ },
+ {
+  "id": "W0198",
   "surface": "下げ",
   "sources": [
    "manual"
@@ -1394,7 +1506,7 @@
   "lemma": "下げる"
  },
  {
-  "id": "W0185",
+  "id": "W0199",
   "surface": "下げた",
   "sources": [
    "manual"
@@ -1402,7 +1514,7 @@
   "lemma": "下げる"
  },
  {
-  "id": "W0186",
+  "id": "W0200",
   "surface": "下げる",
   "sources": [
    "manual"
@@ -1410,35 +1522,35 @@
   "lemma": "下げる"
  },
  {
-  "id": "W0187",
+  "id": "W0201",
   "surface": "与え",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0188",
+  "id": "W0202",
   "surface": "与えた",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0189",
+  "id": "W0203",
   "surface": "与える",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0190",
+  "id": "W0204",
   "surface": "両",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0191",
+  "id": "W0205",
   "surface": "両隣",
   "sources": [
    "manual"
@@ -1446,7 +1558,7 @@
   "lemma": "両隣"
  },
  {
-  "id": "W0192",
+  "id": "W0206",
   "surface": "中",
   "sources": [
    "manual"
@@ -1454,7 +1566,7 @@
   "lemma": "中"
  },
  {
-  "id": "W0193",
+  "id": "W0207",
   "surface": "中央",
   "sources": [
    "manual"
@@ -1462,7 +1574,7 @@
   "lemma": "中央"
  },
  {
-  "id": "W0194",
+  "id": "W0208",
   "surface": "事",
   "sources": [
    "manual"
@@ -1470,7 +1582,7 @@
   "lemma": "事"
  },
  {
-  "id": "W0195",
+  "id": "W0209",
   "surface": "他",
   "sources": [
    "manual"
@@ -1478,42 +1590,50 @@
   "lemma": "他"
  },
  {
-  "id": "W0196",
+  "id": "W0210",
   "surface": "代わり",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0197",
+  "id": "W0211",
   "surface": "代用",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0198",
+  "id": "W0212",
   "surface": "以上",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0199",
+  "id": "W0213",
   "surface": "以下",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0200",
+  "id": "W0214",
   "surface": "以外",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0201",
+  "id": "W0215",
+  "surface": "以降",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "以降"
+ },
+ {
+  "id": "W0216",
   "surface": "任意",
   "sources": [
    "manual"
@@ -1521,7 +1641,7 @@
   "lemma": "任意"
  },
  {
-  "id": "W0202",
+  "id": "W0217",
   "surface": "位置",
   "sources": [
    "manual"
@@ -1529,7 +1649,7 @@
   "lemma": "位置"
  },
  {
-  "id": "W0203",
+  "id": "W0218",
   "surface": "低い",
   "sources": [
    "manual"
@@ -1537,7 +1657,7 @@
   "lemma": "低い"
  },
  {
-  "id": "W0204",
+  "id": "W0219",
   "surface": "低く",
   "sources": [
    "manual"
@@ -1545,21 +1665,21 @@
   "lemma": "低い"
  },
  {
-  "id": "W0205",
+  "id": "W0220",
   "surface": "体",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0206",
+  "id": "W0221",
   "surface": "体分",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0207",
+  "id": "W0222",
   "surface": "使用",
   "sources": [
    "glossary",
@@ -1567,14 +1687,14 @@
   ]
  },
  {
-  "id": "W0208",
+  "id": "W0223",
   "surface": "個",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0209",
+  "id": "W0224",
   "surface": "倍",
   "sources": [
    "manual"
@@ -1582,7 +1702,7 @@
   "lemma": "倍"
  },
  {
-  "id": "W0210",
+  "id": "W0225",
   "surface": "倍数",
   "sources": [
    "manual"
@@ -1590,7 +1710,15 @@
   "lemma": "倍数"
  },
  {
-  "id": "W0211",
+  "id": "W0226",
+  "surface": "値",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "値"
+ },
+ {
+  "id": "W0227",
   "surface": "偶数",
   "sources": [
    "manual"
@@ -1598,70 +1726,70 @@
   "lemma": "偶数"
  },
  {
-  "id": "W0212",
+  "id": "W0228",
   "surface": "儀式",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0213",
+  "id": "W0229",
   "surface": "儀式召喚扱い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0214",
+  "id": "W0230",
   "surface": "儀式魔法",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0215",
+  "id": "W0231",
   "surface": "元",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0216",
+  "id": "W0232",
   "surface": "元々",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0217",
+  "id": "W0233",
   "surface": "先",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0218",
+  "id": "W0234",
   "surface": "入れ替",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0219",
+  "id": "W0235",
   "surface": "入れ替え",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0220",
+  "id": "W0236",
   "surface": "入れ替える",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0221",
+  "id": "W0237",
   "surface": "入れ替わった",
   "sources": [
    "manual"
@@ -1669,7 +1797,7 @@
   "lemma": "入れ替わる"
  },
  {
-  "id": "W0222",
+  "id": "W0238",
   "surface": "入れ替わる",
   "sources": [
    "manual"
@@ -1677,28 +1805,28 @@
   "lemma": "入れ替わる"
  },
  {
-  "id": "W0223",
+  "id": "W0239",
   "surface": "全て",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0224",
+  "id": "W0240",
   "surface": "公開",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0225",
+  "id": "W0241",
   "surface": "公開し続け",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0226",
+  "id": "W0242",
   "surface": "内",
   "sources": [
    "manual"
@@ -1706,7 +1834,7 @@
   "lemma": "内"
  },
  {
-  "id": "W0227",
+  "id": "W0243",
   "surface": "処理",
   "sources": [
    "manual"
@@ -1714,7 +1842,7 @@
   "lemma": "処理"
  },
  {
-  "id": "W0228",
+  "id": "W0244",
   "surface": "出す",
   "sources": [
    "manual"
@@ -1722,7 +1850,7 @@
   "lemma": "出す"
  },
  {
-  "id": "W0229",
+  "id": "W0245",
   "surface": "出せ",
   "sources": [
    "manual"
@@ -1730,7 +1858,7 @@
   "lemma": "出す"
  },
  {
-  "id": "W0230",
+  "id": "W0246",
   "surface": "出せる",
   "sources": [
    "manual"
@@ -1738,7 +1866,7 @@
   "lemma": "出す"
  },
  {
-  "id": "W0231",
+  "id": "W0247",
   "surface": "出た",
   "sources": [
    "manual"
@@ -1746,7 +1874,7 @@
   "lemma": "出る"
  },
  {
-  "id": "W0232",
+  "id": "W0248",
   "surface": "出る",
   "sources": [
    "manual"
@@ -1754,7 +1882,7 @@
   "lemma": "出る"
  },
  {
-  "id": "W0233",
+  "id": "W0249",
   "surface": "分",
   "sources": [
    "manual"
@@ -1762,7 +1890,15 @@
   "lemma": "分"
  },
  {
-  "id": "W0234",
+  "id": "W0250",
+  "surface": "制限",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "制限"
+ },
+ {
+  "id": "W0251",
   "surface": "前",
   "sources": [
    "manual"
@@ -1770,35 +1906,43 @@
   "lemma": "前"
  },
  {
-  "id": "W0235",
+  "id": "W0252",
   "surface": "創造神族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0236",
+  "id": "W0253",
   "surface": "加え",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0237",
+  "id": "W0254",
   "surface": "加えて",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0238",
+  "id": "W0255",
+  "surface": "加えられ",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "加える"
+ },
+ {
+  "id": "W0256",
   "surface": "加える",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0239",
+  "id": "W0257",
   "surface": "加わった",
   "sources": [
    "manual"
@@ -1806,7 +1950,7 @@
   "lemma": "加わる"
  },
  {
-  "id": "W0240",
+  "id": "W0258",
   "surface": "加わる",
   "sources": [
    "manual"
@@ -1814,7 +1958,7 @@
   "lemma": "加わる"
  },
  {
-  "id": "W0241",
+  "id": "W0259",
   "surface": "効果",
   "sources": [
    "glossary",
@@ -1822,28 +1966,28 @@
   ]
  },
  {
-  "id": "W0242",
+  "id": "W0260",
   "surface": "効果モンスター",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0243",
+  "id": "W0261",
   "surface": "効果処理",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0244",
+  "id": "W0262",
   "surface": "勝利",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0245",
+  "id": "W0263",
   "surface": "半分",
   "sources": [
    "glossary",
@@ -1851,7 +1995,7 @@
   ]
  },
  {
-  "id": "W0246",
+  "id": "W0264",
   "surface": "反転召喚",
   "sources": [
    "glossary",
@@ -1859,7 +2003,7 @@
   ]
  },
  {
-  "id": "W0247",
+  "id": "W0265",
   "surface": "取り除",
   "sources": [
    "glossary",
@@ -1867,7 +2011,7 @@
   ]
  },
  {
-  "id": "W0248",
+  "id": "W0266",
   "surface": "取り除いた",
   "sources": [
    "manual"
@@ -1875,14 +2019,22 @@
   "lemma": "取り除く"
  },
  {
-  "id": "W0249",
+  "id": "W0267",
   "surface": "取り除いて",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0250",
+  "id": "W0268",
+  "surface": "取り除か",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "取り除く"
+ },
+ {
+  "id": "W0269",
   "surface": "取り除かれ",
   "sources": [
    "manual"
@@ -1890,7 +2042,7 @@
   "lemma": "取り除く"
  },
  {
-  "id": "W0251",
+  "id": "W0270",
   "surface": "取り除かれた",
   "sources": [
    "manual"
@@ -1898,28 +2050,28 @@
   "lemma": "取り除く"
  },
  {
-  "id": "W0252",
+  "id": "W0271",
   "surface": "取り除き",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0253",
+  "id": "W0272",
   "surface": "取り除く",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0254",
+  "id": "W0273",
   "surface": "取り除く事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0255",
+  "id": "W0274",
   "surface": "取り除け",
   "sources": [
    "manual"
@@ -1927,35 +2079,35 @@
   "lemma": "取り除く"
  },
  {
-  "id": "W0256",
+  "id": "W0275",
   "surface": "取り除ける",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0257",
+  "id": "W0276",
   "surface": "受け",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0258",
+  "id": "W0277",
   "surface": "受けず",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0259",
+  "id": "W0278",
   "surface": "受けた",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0260",
+  "id": "W0279",
   "surface": "受けない",
   "sources": [
    "glossary",
@@ -1963,7 +2115,7 @@
   ]
  },
  {
-  "id": "W0261",
+  "id": "W0280",
   "surface": "受ける",
   "sources": [
    "glossary",
@@ -1971,7 +2123,7 @@
   ]
  },
  {
-  "id": "W0262",
+  "id": "W0281",
   "surface": "召喚",
   "sources": [
    "glossary",
@@ -1979,21 +2131,21 @@
   ]
  },
  {
-  "id": "W0263",
+  "id": "W0282",
   "surface": "召喚する事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0264",
+  "id": "W0283",
   "surface": "召喚条件",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0265",
+  "id": "W0284",
   "surface": "可能",
   "sources": [
    "manual"
@@ -2001,28 +2153,28 @@
   "lemma": "可能"
  },
  {
-  "id": "W0266",
+  "id": "W0285",
   "surface": "右側",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0267",
+  "id": "W0286",
   "surface": "右端",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0268",
+  "id": "W0287",
   "surface": "合わせ",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0269",
+  "id": "W0288",
   "surface": "合計",
   "sources": [
    "manual"
@@ -2030,14 +2182,14 @@
   "lemma": "合計"
  },
  {
-  "id": "W0270",
+  "id": "W0289",
   "surface": "同じ",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0271",
+  "id": "W0290",
   "surface": "同一",
   "sources": [
    "manual"
@@ -2045,7 +2197,7 @@
   "lemma": "同一"
  },
  {
-  "id": "W0272",
+  "id": "W0291",
   "surface": "同名",
   "sources": [
    "manual"
@@ -2053,7 +2205,7 @@
   "lemma": "同名"
  },
  {
-  "id": "W0273",
+  "id": "W0292",
   "surface": "同士",
   "sources": [
    "manual"
@@ -2061,14 +2213,22 @@
   "lemma": "同士"
  },
  {
-  "id": "W0274",
+  "id": "W0293",
   "surface": "同時",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0275",
+  "id": "W0294",
+  "surface": "名",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "名"
+ },
+ {
+  "id": "W0295",
   "surface": "含まれる",
   "sources": [
    "manual"
@@ -2076,7 +2236,7 @@
   "lemma": "含む"
  },
  {
-  "id": "W0276",
+  "id": "W0296",
   "surface": "含む",
   "sources": [
    "manual"
@@ -2084,7 +2244,7 @@
   "lemma": "含む"
  },
  {
-  "id": "W0277",
+  "id": "W0297",
   "surface": "回復",
   "sources": [
    "glossary",
@@ -2092,7 +2252,7 @@
   ]
  },
  {
-  "id": "W0278",
+  "id": "W0298",
   "surface": "回数",
   "sources": [
    "manual"
@@ -2100,21 +2260,21 @@
   "lemma": "回数"
  },
  {
-  "id": "W0279",
+  "id": "W0299",
   "surface": "場合",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0280",
+  "id": "W0300",
   "surface": "墓地",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0281",
+  "id": "W0301",
   "surface": "墓地へ送った",
   "sources": [
    "manual"
@@ -2122,7 +2282,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0282",
+  "id": "W0302",
   "surface": "墓地へ送って",
   "sources": [
    "manual"
@@ -2130,7 +2290,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0283",
+  "id": "W0303",
   "surface": "墓地へ送らず",
   "sources": [
    "manual"
@@ -2138,7 +2298,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0284",
+  "id": "W0304",
   "surface": "墓地へ送らなかった",
   "sources": [
    "manual"
@@ -2146,7 +2306,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0285",
+  "id": "W0305",
   "surface": "墓地へ送らなければ",
   "sources": [
    "manual"
@@ -2154,7 +2314,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0286",
+  "id": "W0306",
   "surface": "墓地へ送られ",
   "sources": [
    "manual"
@@ -2162,7 +2322,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0287",
+  "id": "W0307",
   "surface": "墓地へ送られた",
   "sources": [
    "manual"
@@ -2170,7 +2330,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0288",
+  "id": "W0308",
   "surface": "墓地へ送られて",
   "sources": [
    "manual"
@@ -2178,7 +2338,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0289",
+  "id": "W0309",
   "surface": "墓地へ送られる",
   "sources": [
    "manual"
@@ -2186,7 +2346,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0290",
+  "id": "W0310",
   "surface": "墓地へ送り",
   "sources": [
    "manual"
@@ -2194,7 +2354,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0291",
+  "id": "W0311",
   "surface": "墓地へ送る",
   "sources": [
    "manual"
@@ -2202,7 +2362,7 @@
   "lemma": "墓地へ送る"
  },
  {
-  "id": "W0292",
+  "id": "W0312",
   "surface": "変更",
   "sources": [
    "glossary",
@@ -2210,14 +2370,14 @@
   ]
  },
  {
-  "id": "W0293",
+  "id": "W0313",
   "surface": "変更する事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0294",
+  "id": "W0314",
   "surface": "多い",
   "sources": [
    "manual"
@@ -2225,7 +2385,7 @@
   "lemma": "多い"
  },
  {
-  "id": "W0295",
+  "id": "W0315",
   "surface": "多く",
   "sources": [
    "manual"
@@ -2233,7 +2393,7 @@
   "lemma": "多い"
  },
  {
-  "id": "W0296",
+  "id": "W0316",
   "surface": "多けれ",
   "sources": [
    "manual"
@@ -2241,35 +2401,43 @@
   "lemma": "多い"
  },
  {
-  "id": "W0297",
+  "id": "W0317",
+  "surface": "多ければ",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "多い"
+ },
+ {
+  "id": "W0318",
   "surface": "大きい",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0298",
+  "id": "W0319",
   "surface": "天使族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0299",
+  "id": "W0320",
   "surface": "失い",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0300",
+  "id": "W0321",
   "surface": "失う",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0301",
+  "id": "W0322",
   "surface": "奇数",
   "sources": [
    "manual"
@@ -2277,14 +2445,14 @@
   "lemma": "奇数"
  },
  {
-  "id": "W0302",
+  "id": "W0323",
   "surface": "好きな順番",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0303",
+  "id": "W0324",
   "surface": "存在",
   "sources": [
    "glossary",
@@ -2292,14 +2460,14 @@
   ]
  },
  {
-  "id": "W0304",
+  "id": "W0325",
   "surface": "存在する状態",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0305",
+  "id": "W0326",
   "surface": "存在する限り",
   "sources": [
    "glossary",
@@ -2307,7 +2475,7 @@
   ]
  },
  {
-  "id": "W0306",
+  "id": "W0327",
   "surface": "守",
   "sources": [
    "manual"
@@ -2315,14 +2483,14 @@
   "lemma": "守"
  },
  {
-  "id": "W0307",
+  "id": "W0328",
   "surface": "守備",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0308",
+  "id": "W0329",
   "surface": "守備力",
   "sources": [
    "glossary",
@@ -2330,7 +2498,7 @@
   ]
  },
  {
-  "id": "W0309",
+  "id": "W0330",
   "surface": "守備表示",
   "sources": [
    "glossary",
@@ -2338,7 +2506,7 @@
   ]
  },
  {
-  "id": "W0310",
+  "id": "W0331",
   "surface": "宣言",
   "sources": [
    "glossary",
@@ -2346,21 +2514,21 @@
   ]
  },
  {
-  "id": "W0311",
+  "id": "W0332",
   "surface": "宣言した種類",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0312",
+  "id": "W0333",
   "surface": "対",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0313",
+  "id": "W0334",
   "surface": "対象",
   "sources": [
    "glossary",
@@ -2368,7 +2536,15 @@
   ]
  },
  {
-  "id": "W0314",
+  "id": "W0335",
+  "surface": "小さい",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "小さい"
+ },
+ {
+  "id": "W0336",
   "surface": "少ない",
   "sources": [
    "manual"
@@ -2376,7 +2552,7 @@
   "lemma": "少ない"
  },
  {
-  "id": "W0315",
+  "id": "W0337",
   "surface": "少なく",
   "sources": [
    "manual"
@@ -2384,35 +2560,43 @@
   "lemma": "少ない"
  },
  {
-  "id": "W0316",
+  "id": "W0338",
   "surface": "属性",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0317",
+  "id": "W0339",
   "surface": "岩石族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0318",
+  "id": "W0340",
+  "surface": "左",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "左"
+ },
+ {
+  "id": "W0341",
   "surface": "左側",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0319",
+  "id": "W0342",
   "surface": "左端",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0320",
+  "id": "W0343",
   "surface": "差",
   "sources": [
    "manual"
@@ -2420,35 +2604,43 @@
   "lemma": "差"
  },
  {
-  "id": "W0321",
+  "id": "W0344",
   "surface": "幻想魔族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0322",
+  "id": "W0345",
   "surface": "幻神獣族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0323",
+  "id": "W0346",
   "surface": "幻竜族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0324",
+  "id": "W0347",
   "surface": "度",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0325",
+  "id": "W0348",
+  "surface": "引き分け",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "引き分け"
+ },
+ {
+  "id": "W0349",
   "surface": "当たった",
   "sources": [
    "manual"
@@ -2456,7 +2648,7 @@
   "lemma": "当たる"
  },
  {
-  "id": "W0326",
+  "id": "W0350",
   "surface": "当てる",
   "sources": [
    "manual"
@@ -2464,7 +2656,7 @@
   "lemma": "当てる"
  },
  {
-  "id": "W0327",
+  "id": "W0351",
   "surface": "後",
   "sources": [
    "manual"
@@ -2472,7 +2664,7 @@
   "lemma": "後"
  },
  {
-  "id": "W0328",
+  "id": "W0352",
   "surface": "得た",
   "sources": [
    "manual"
@@ -2480,7 +2672,7 @@
   "lemma": "得る"
  },
  {
-  "id": "W0329",
+  "id": "W0353",
   "surface": "得て",
   "sources": [
    "tag_rules"
@@ -2488,7 +2680,7 @@
   "lemma": "得る"
  },
  {
-  "id": "W0330",
+  "id": "W0354",
   "surface": "得る",
   "sources": [
    "glossary",
@@ -2497,7 +2689,7 @@
   "lemma": "得る"
  },
  {
-  "id": "W0331",
+  "id": "W0355",
   "surface": "必要",
   "sources": [
    "manual"
@@ -2505,28 +2697,28 @@
   "lemma": "必要"
  },
  {
-  "id": "W0332",
+  "id": "W0356",
   "surface": "必要なくなる",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0333",
+  "id": "W0357",
   "surface": "恐竜族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0334",
+  "id": "W0358",
   "surface": "悪魔族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0335",
+  "id": "W0359",
   "surface": "成功",
   "sources": [
    "glossary",
@@ -2534,14 +2726,14 @@
   ]
  },
  {
-  "id": "W0336",
+  "id": "W0360",
   "surface": "戦士族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0337",
+  "id": "W0361",
   "surface": "戦闘",
   "sources": [
    "glossary",
@@ -2549,7 +2741,7 @@
   ]
  },
  {
-  "id": "W0338",
+  "id": "W0362",
   "surface": "戦闘ダメージ",
   "sources": [
    "glossary",
@@ -2557,56 +2749,56 @@
   ]
  },
  {
-  "id": "W0339",
+  "id": "W0363",
   "surface": "戻",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0340",
+  "id": "W0364",
   "surface": "戻された",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0341",
+  "id": "W0365",
   "surface": "戻し",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0342",
+  "id": "W0366",
   "surface": "戻した数",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0343",
+  "id": "W0367",
   "surface": "戻して",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0344",
+  "id": "W0368",
   "surface": "戻す",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0345",
+  "id": "W0369",
   "surface": "戻せない",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0346",
+  "id": "W0370",
   "surface": "戻った",
   "sources": [
    "manual"
@@ -2614,7 +2806,7 @@
   "lemma": "戻る"
  },
  {
-  "id": "W0347",
+  "id": "W0371",
   "surface": "戻り",
   "sources": [
    "manual"
@@ -2622,7 +2814,7 @@
   "lemma": "戻る"
  },
  {
-  "id": "W0348",
+  "id": "W0372",
   "surface": "戻る",
   "sources": [
    "manual"
@@ -2630,7 +2822,7 @@
   "lemma": "戻る"
  },
  {
-  "id": "W0349",
+  "id": "W0373",
   "surface": "手札",
   "sources": [
    "glossary",
@@ -2638,7 +2830,7 @@
   ]
  },
  {
-  "id": "W0350",
+  "id": "W0374",
   "surface": "手札に戻さなければ",
   "sources": [
    "manual"
@@ -2646,7 +2838,7 @@
   "lemma": "手札に戻す"
  },
  {
-  "id": "W0351",
+  "id": "W0375",
   "surface": "手札に戻し",
   "sources": [
    "manual"
@@ -2654,7 +2846,7 @@
   "lemma": "手札に戻す"
  },
  {
-  "id": "W0352",
+  "id": "W0376",
   "surface": "手札に戻した",
   "sources": [
    "manual"
@@ -2662,7 +2854,7 @@
   "lemma": "手札に戻す"
  },
  {
-  "id": "W0353",
+  "id": "W0377",
   "surface": "手札に戻して",
   "sources": [
    "manual"
@@ -2670,7 +2862,7 @@
   "lemma": "手札に戻す"
  },
  {
-  "id": "W0354",
+  "id": "W0378",
   "surface": "手札に戻す",
   "sources": [
    "manual"
@@ -2678,7 +2870,7 @@
   "lemma": "手札に戻す"
  },
  {
-  "id": "W0355",
+  "id": "W0379",
   "surface": "手札に戻った",
   "sources": [
    "manual"
@@ -2686,7 +2878,7 @@
   "lemma": "手札に戻る"
  },
  {
-  "id": "W0356",
+  "id": "W0380",
   "surface": "手札に戻らず",
   "sources": [
    "manual"
@@ -2694,7 +2886,7 @@
   "lemma": "手札に戻る"
  },
  {
-  "id": "W0357",
+  "id": "W0381",
   "surface": "手札に戻る",
   "sources": [
    "manual"
@@ -2702,49 +2894,49 @@
   "lemma": "手札に戻る"
  },
  {
-  "id": "W0358",
+  "id": "W0382",
   "surface": "払",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0359",
+  "id": "W0383",
   "surface": "払い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0360",
+  "id": "W0384",
   "surface": "払う",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0361",
+  "id": "W0385",
   "surface": "払うLP",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0362",
+  "id": "W0386",
   "surface": "払う事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0363",
+  "id": "W0387",
   "surface": "払えば",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0364",
+  "id": "W0388",
   "surface": "払った",
   "sources": [
    "manual"
@@ -2752,14 +2944,22 @@
   "lemma": "払う"
  },
  {
-  "id": "W0365",
+  "id": "W0389",
   "surface": "払って",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0366",
+  "id": "W0390",
+  "surface": "払わ",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "払う"
+ },
+ {
+  "id": "W0391",
   "surface": "払わず",
   "sources": [
    "manual"
@@ -2767,14 +2967,14 @@
   "lemma": "払う"
  },
  {
-  "id": "W0367",
+  "id": "W0392",
   "surface": "払わなければ",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0368",
+  "id": "W0393",
   "surface": "扱い",
   "sources": [
    "tag_rules"
@@ -2782,7 +2982,7 @@
   "lemma": "扱う"
  },
  {
-  "id": "W0369",
+  "id": "W0394",
   "surface": "扱う",
   "sources": [
    "glossary",
@@ -2791,14 +2991,14 @@
   "lemma": "扱う"
  },
  {
-  "id": "W0370",
+  "id": "W0395",
   "surface": "扱う事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0371",
+  "id": "W0396",
   "surface": "扱わ",
   "sources": [
    "manual"
@@ -2806,7 +3006,7 @@
   "lemma": "扱う"
  },
  {
-  "id": "W0372",
+  "id": "W0397",
   "surface": "持た",
   "sources": [
    "manual"
@@ -2814,7 +3014,15 @@
   "lemma": "持つ"
  },
  {
-  "id": "W0373",
+  "id": "W0398",
+  "surface": "持ち",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "持つ"
+ },
+ {
+  "id": "W0399",
   "surface": "持ち主",
   "sources": [
    "glossary",
@@ -2822,7 +3030,7 @@
   ]
  },
  {
-  "id": "W0374",
+  "id": "W0400",
   "surface": "持った",
   "sources": [
    "manual"
@@ -2830,7 +3038,7 @@
   "lemma": "持つ"
  },
  {
-  "id": "W0375",
+  "id": "W0401",
   "surface": "持って",
   "sources": [
    "manual"
@@ -2838,7 +3046,7 @@
   "lemma": "持つ"
  },
  {
-  "id": "W0376",
+  "id": "W0402",
   "surface": "持つ",
   "sources": [
    "manual"
@@ -2846,14 +3054,14 @@
   "lemma": "持つ"
  },
  {
-  "id": "W0377",
+  "id": "W0403",
   "surface": "指定",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0378",
+  "id": "W0404",
   "surface": "振った",
   "sources": [
    "manual"
@@ -2861,28 +3069,36 @@
   "lemma": "振る"
  },
  {
-  "id": "W0379",
+  "id": "W0405",
+  "surface": "振ら",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "振る"
+ },
+ {
+  "id": "W0406",
   "surface": "振り",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0380",
+  "id": "W0407",
   "surface": "振り直す",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0381",
+  "id": "W0408",
   "surface": "振る",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0382",
+  "id": "W0409",
   "surface": "捨て",
   "sources": [
    "glossary",
@@ -2890,21 +3106,29 @@
   ]
  },
  {
-  "id": "W0383",
+  "id": "W0410",
   "surface": "捨てられ",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0384",
+  "id": "W0411",
   "surface": "捨てられた",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0385",
+  "id": "W0412",
+  "surface": "揃った",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "揃う"
+ },
+ {
+  "id": "W0413",
   "surface": "揃って",
   "sources": [
    "manual"
@@ -2912,7 +3136,7 @@
   "lemma": "揃う"
  },
  {
-  "id": "W0386",
+  "id": "W0414",
   "surface": "攻",
   "sources": [
    "manual"
@@ -2920,7 +3144,7 @@
   "lemma": "攻"
  },
  {
-  "id": "W0387",
+  "id": "W0415",
   "surface": "攻撃",
   "sources": [
    "glossary",
@@ -2928,14 +3152,14 @@
   ]
  },
  {
-  "id": "W0388",
+  "id": "W0416",
   "surface": "攻撃しなければならない",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0389",
+  "id": "W0417",
   "surface": "攻撃力",
   "sources": [
    "glossary",
@@ -2943,7 +3167,7 @@
   ]
  },
  {
-  "id": "W0390",
+  "id": "W0418",
   "surface": "攻撃宣言",
   "sources": [
    "glossary",
@@ -2951,7 +3175,7 @@
   ]
  },
  {
-  "id": "W0391",
+  "id": "W0419",
   "surface": "攻撃対象",
   "sources": [
    "glossary",
@@ -2959,7 +3183,7 @@
   ]
  },
  {
-  "id": "W0392",
+  "id": "W0420",
   "surface": "攻撃表示",
   "sources": [
    "glossary",
@@ -2967,14 +3191,14 @@
   ]
  },
  {
-  "id": "W0393",
+  "id": "W0421",
   "surface": "数",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0394",
+  "id": "W0422",
   "surface": "数えて",
   "sources": [
    "manual"
@@ -2982,21 +3206,21 @@
   "lemma": "数える"
  },
  {
-  "id": "W0395",
+  "id": "W0423",
   "surface": "数値",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0396",
+  "id": "W0424",
   "surface": "数値分",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0397",
+  "id": "W0425",
   "surface": "数字",
   "sources": [
    "manual"
@@ -3004,7 +3228,7 @@
   "lemma": "数字"
  },
  {
-  "id": "W0398",
+  "id": "W0426",
   "surface": "方",
   "sources": [
    "manual"
@@ -3012,7 +3236,7 @@
   "lemma": "方"
  },
  {
-  "id": "W0399",
+  "id": "W0427",
   "surface": "方法",
   "sources": [
    "manual"
@@ -3020,7 +3244,7 @@
   "lemma": "方法"
  },
  {
-  "id": "W0400",
+  "id": "W0428",
   "surface": "既に",
   "sources": [
    "manual"
@@ -3028,14 +3252,14 @@
   "lemma": "既に"
  },
  {
-  "id": "W0401",
+  "id": "W0429",
   "surface": "昆虫族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0402",
+  "id": "W0430",
   "surface": "星",
   "sources": [
    "manual"
@@ -3043,14 +3267,22 @@
   "lemma": "星"
  },
  {
-  "id": "W0403",
+  "id": "W0431",
   "surface": "時",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0404",
+  "id": "W0432",
+  "surface": "時計回り",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "時計回り"
+ },
+ {
+  "id": "W0433",
   "surface": "最大",
   "sources": [
    "manual"
@@ -3058,42 +3290,74 @@
   "lemma": "最大"
  },
  {
-  "id": "W0405",
+  "id": "W0434",
+  "surface": "最小",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "最小"
+ },
+ {
+  "id": "W0435",
   "surface": "未満",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0406",
+  "id": "W0436",
+  "surface": "条件",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "条件"
+ },
+ {
+  "id": "W0437",
   "surface": "枚",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0407",
+  "id": "W0438",
   "surface": "植物族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0408",
+  "id": "W0439",
   "surface": "機械族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0409",
+  "id": "W0440",
   "surface": "次",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0410",
+  "id": "W0441",
+  "surface": "正しい",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "正しい"
+ },
+ {
+  "id": "W0442",
+  "surface": "正規",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "正規"
+ },
+ {
+  "id": "W0443",
   "surface": "正面",
   "sources": [
    "manual"
@@ -3101,7 +3365,7 @@
   "lemma": "正面"
  },
  {
-  "id": "W0411",
+  "id": "W0444",
   "surface": "残り",
   "sources": [
    "manual"
@@ -3109,49 +3373,49 @@
   "lemma": "残り"
  },
  {
-  "id": "W0412",
+  "id": "W0445",
   "surface": "毎",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0413",
+  "id": "W0446",
   "surface": "水族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0414",
+  "id": "W0447",
   "surface": "永続罠",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0415",
+  "id": "W0448",
   "surface": "永続罠カード扱い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0416",
+  "id": "W0449",
   "surface": "永続魔法",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0417",
+  "id": "W0450",
   "surface": "永続魔法カード扱い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0418",
+  "id": "W0451",
   "surface": "決められた",
   "sources": [
    "manual"
@@ -3159,14 +3423,30 @@
   "lemma": "決める"
  },
  {
-  "id": "W0419",
+  "id": "W0452",
   "surface": "海竜族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0420",
+  "id": "W0453",
+  "surface": "渡さ",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "渡す"
+ },
+ {
+  "id": "W0454",
+  "surface": "渡して",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "渡す"
+ },
+ {
+  "id": "W0455",
   "surface": "満たさ",
   "sources": [
    "manual"
@@ -3174,7 +3454,7 @@
   "lemma": "満たす"
  },
  {
-  "id": "W0421",
+  "id": "W0456",
   "surface": "満たした",
   "sources": [
    "manual"
@@ -3182,7 +3462,7 @@
   "lemma": "満たす"
  },
  {
-  "id": "W0422",
+  "id": "W0457",
   "surface": "満たして",
   "sources": [
    "manual"
@@ -3190,7 +3470,7 @@
   "lemma": "満たす"
  },
  {
-  "id": "W0423",
+  "id": "W0458",
   "surface": "満たす",
   "sources": [
    "manual"
@@ -3198,14 +3478,14 @@
   "lemma": "満たす"
  },
  {
-  "id": "W0424",
+  "id": "W0459",
   "surface": "炎族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0425",
+  "id": "W0460",
   "surface": "無い",
   "sources": [
    "manual"
@@ -3213,7 +3493,7 @@
   "lemma": "無い"
  },
  {
-  "id": "W0426",
+  "id": "W0461",
   "surface": "無かった",
   "sources": [
    "manual"
@@ -3221,7 +3501,7 @@
   "lemma": "無い"
  },
  {
-  "id": "W0427",
+  "id": "W0462",
   "surface": "無効",
   "sources": [
    "glossary",
@@ -3229,7 +3509,7 @@
   ]
  },
  {
-  "id": "W0428",
+  "id": "W0463",
   "surface": "無効化",
   "sources": [
    "glossary",
@@ -3237,28 +3517,28 @@
   ]
  },
  {
-  "id": "W0429",
+  "id": "W0464",
   "surface": "無視",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0430",
+  "id": "W0465",
   "surface": "爬虫類族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0431",
+  "id": "W0466",
   "surface": "特殊",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0432",
+  "id": "W0467",
   "surface": "特殊召喚",
   "sources": [
    "glossary",
@@ -3266,21 +3546,21 @@
   ]
  },
  {
-  "id": "W0433",
+  "id": "W0468",
   "surface": "特殊召喚する事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0434",
+  "id": "W0469",
   "surface": "特殊召喚する際",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0435",
+  "id": "W0470",
   "surface": "状態",
   "sources": [
    "manual"
@@ -3288,21 +3568,21 @@
   "lemma": "状態"
  },
  {
-  "id": "W0436",
+  "id": "W0471",
   "surface": "獣戦士族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0437",
+  "id": "W0472",
   "surface": "獣族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0438",
+  "id": "W0473",
   "surface": "異なり",
   "sources": [
    "manual"
@@ -3310,7 +3590,7 @@
   "lemma": "異なる"
  },
  {
-  "id": "W0439",
+  "id": "W0474",
   "surface": "異なる",
   "sources": [
    "manual"
@@ -3318,7 +3598,7 @@
   "lemma": "異なる"
  },
  {
-  "id": "W0440",
+  "id": "W0475",
   "surface": "発動",
   "sources": [
    "glossary",
@@ -3326,7 +3606,7 @@
   ]
  },
  {
-  "id": "W0441",
+  "id": "W0476",
   "surface": "発生",
   "sources": [
    "manual"
@@ -3334,7 +3614,7 @@
   "lemma": "発生"
  },
  {
-  "id": "W0442",
+  "id": "W0477",
   "surface": "目",
   "sources": [
    "manual"
@@ -3342,14 +3622,14 @@
   "lemma": "目"
  },
  {
-  "id": "W0443",
+  "id": "W0478",
   "surface": "直接",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0444",
+  "id": "W0479",
   "surface": "直接攻撃",
   "sources": [
    "glossary",
@@ -3357,14 +3637,14 @@
   ]
  },
  {
-  "id": "W0445",
+  "id": "W0480",
   "surface": "相互リンク",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0446",
+  "id": "W0481",
   "surface": "相手",
   "sources": [
    "glossary",
@@ -3372,14 +3652,14 @@
   ]
  },
  {
-  "id": "W0447",
+  "id": "W0482",
   "surface": "相手フィールド",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0448",
+  "id": "W0483",
   "surface": "破壊",
   "sources": [
    "glossary",
@@ -3387,28 +3667,28 @@
   ]
  },
  {
-  "id": "W0449",
+  "id": "W0484",
   "surface": "破壊されるカード",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0450",
+  "id": "W0485",
   "surface": "破壊されるモンスター",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0451",
+  "id": "W0486",
   "surface": "破壊する効果",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0452",
+  "id": "W0487",
   "surface": "確認",
   "sources": [
    "glossary",
@@ -3416,28 +3696,28 @@
   ]
  },
  {
-  "id": "W0453",
+  "id": "W0488",
   "surface": "移し",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0454",
+  "id": "W0489",
   "surface": "移し替え",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0455",
+  "id": "W0490",
   "surface": "移す",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0456",
+  "id": "W0491",
   "surface": "移った",
   "sources": [
    "manual"
@@ -3445,7 +3725,7 @@
   "lemma": "移る"
  },
  {
-  "id": "W0457",
+  "id": "W0492",
   "surface": "移動",
   "sources": [
    "manual"
@@ -3453,14 +3733,14 @@
   "lemma": "移動"
  },
  {
-  "id": "W0458",
+  "id": "W0493",
   "surface": "種族",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0459",
+  "id": "W0494",
   "surface": "種類",
   "sources": [
    "manual"
@@ -3468,7 +3748,7 @@
   "lemma": "種類"
  },
  {
-  "id": "W0460",
+  "id": "W0495",
   "surface": "積まれ",
   "sources": [
    "manual"
@@ -3476,7 +3756,7 @@
   "lemma": "積む"
  },
  {
-  "id": "W0461",
+  "id": "W0496",
   "surface": "積まれて",
   "sources": [
    "manual"
@@ -3484,21 +3764,21 @@
   "lemma": "積む"
  },
  {
-  "id": "W0462",
+  "id": "W0497",
   "surface": "素材",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0463",
+  "id": "W0498",
   "surface": "素材モンスター",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0464",
+  "id": "W0499",
   "surface": "終了",
   "sources": [
    "manual"
@@ -3506,7 +3786,7 @@
   "lemma": "終了"
  },
  {
-  "id": "W0465",
+  "id": "W0500",
   "surface": "組み合わせ",
   "sources": [
    "manual"
@@ -3514,7 +3794,15 @@
   "lemma": "組み合わせ"
  },
  {
-  "id": "W0466",
+  "id": "W0501",
+  "surface": "結果",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "結果"
+ },
+ {
+  "id": "W0502",
   "surface": "続け",
   "sources": [
    "manual"
@@ -3522,7 +3810,7 @@
   "lemma": "続ける"
  },
  {
-  "id": "W0467",
+  "id": "W0503",
   "surface": "続けて",
   "sources": [
    "manual"
@@ -3530,7 +3818,7 @@
   "lemma": "続ける"
  },
  {
-  "id": "W0468",
+  "id": "W0504",
   "surface": "続ける",
   "sources": [
    "manual"
@@ -3538,14 +3826,22 @@
   "lemma": "続ける"
  },
  {
-  "id": "W0469",
+  "id": "W0505",
   "surface": "縦列",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0470",
+  "id": "W0506",
+  "surface": "繰り返す",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "繰り返す"
+ },
+ {
+  "id": "W0507",
   "surface": "罠",
   "sources": [
    "manual"
@@ -3553,7 +3849,7 @@
   "lemma": "罠"
  },
  {
-  "id": "W0471",
+  "id": "W0508",
   "surface": "罠カード",
   "sources": [
    "glossary",
@@ -3561,14 +3857,14 @@
   ]
  },
  {
-  "id": "W0472",
+  "id": "W0509",
   "surface": "罠ゾーン",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0473",
+  "id": "W0510",
   "surface": "置いた",
   "sources": [
    "manual"
@@ -3576,7 +3872,7 @@
   "lemma": "置く"
  },
  {
-  "id": "W0474",
+  "id": "W0511",
   "surface": "置いて",
   "sources": [
    "tag_rules"
@@ -3584,7 +3880,7 @@
   "lemma": "置く"
  },
  {
-  "id": "W0475",
+  "id": "W0512",
   "surface": "置かれ",
   "sources": [
    "manual"
@@ -3592,7 +3888,7 @@
   "lemma": "置く"
  },
  {
-  "id": "W0476",
+  "id": "W0513",
   "surface": "置かれた",
   "sources": [
    "manual"
@@ -3600,7 +3896,7 @@
   "lemma": "置く"
  },
  {
-  "id": "W0477",
+  "id": "W0514",
   "surface": "置かれて",
   "sources": [
    "manual"
@@ -3608,7 +3904,7 @@
   "lemma": "置く"
  },
  {
-  "id": "W0478",
+  "id": "W0515",
   "surface": "置かれる",
   "sources": [
    "manual"
@@ -3616,7 +3912,7 @@
   "lemma": "置く"
  },
  {
-  "id": "W0479",
+  "id": "W0516",
   "surface": "置き",
   "sources": [
    "tag_rules"
@@ -3624,7 +3920,7 @@
   "lemma": "置く"
  },
  {
-  "id": "W0480",
+  "id": "W0517",
   "surface": "置く",
   "sources": [
    "glossary",
@@ -3633,28 +3929,28 @@
   "lemma": "置く"
  },
  {
-  "id": "W0481",
+  "id": "W0518",
   "surface": "置く事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0482",
+  "id": "W0519",
   "surface": "自分",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0483",
+  "id": "W0520",
   "surface": "自分フィールド",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0484",
+  "id": "W0521",
   "surface": "自身",
   "sources": [
    "manual"
@@ -3662,21 +3958,21 @@
   "lemma": "自身"
  },
  {
-  "id": "W0485",
+  "id": "W0522",
   "surface": "融合",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0486",
+  "id": "W0523",
   "surface": "融合召喚扱い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0487",
+  "id": "W0524",
   "surface": "行い",
   "sources": [
    "tag_rules"
@@ -3684,7 +3980,7 @@
   "lemma": "行う"
  },
  {
-  "id": "W0488",
+  "id": "W0525",
   "surface": "行う",
   "sources": [
    "glossary",
@@ -3693,7 +3989,7 @@
   "lemma": "行う"
  },
  {
-  "id": "W0489",
+  "id": "W0526",
   "surface": "行え",
   "sources": [
    "manual"
@@ -3701,7 +3997,7 @@
   "lemma": "行う"
  },
  {
-  "id": "W0490",
+  "id": "W0527",
   "surface": "行かず",
   "sources": [
    "manual"
@@ -3709,7 +4005,7 @@
   "lemma": "行く"
  },
  {
-  "id": "W0491",
+  "id": "W0528",
   "surface": "行った",
   "sources": [
    "manual"
@@ -3717,7 +4013,7 @@
   "lemma": "行う"
  },
  {
-  "id": "W0492",
+  "id": "W0529",
   "surface": "行って",
   "sources": [
    "manual"
@@ -3725,7 +4021,7 @@
   "lemma": "行う"
  },
  {
-  "id": "W0493",
+  "id": "W0530",
   "surface": "行わず",
   "sources": [
    "manual"
@@ -3733,7 +4029,7 @@
   "lemma": "行う"
  },
  {
-  "id": "W0494",
+  "id": "W0531",
   "surface": "表",
   "sources": [
    "manual"
@@ -3741,35 +4037,35 @@
   "lemma": "表"
  },
  {
-  "id": "W0495",
+  "id": "W0532",
   "surface": "表側",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0496",
+  "id": "W0533",
   "surface": "表側守備表示",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0497",
+  "id": "W0534",
   "surface": "表側表示",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0498",
+  "id": "W0535",
   "surface": "表示",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0499",
+  "id": "W0536",
   "surface": "表示形式",
   "sources": [
    "glossary",
@@ -3777,7 +4073,7 @@
   ]
  },
  {
-  "id": "W0500",
+  "id": "W0537",
   "surface": "装備",
   "sources": [
    "glossary",
@@ -3785,35 +4081,35 @@
   ]
  },
  {
-  "id": "W0501",
+  "id": "W0538",
   "surface": "装備カード",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0502",
+  "id": "W0539",
   "surface": "装備カード扱い",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0503",
+  "id": "W0540",
   "surface": "装備魔法",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0504",
+  "id": "W0541",
   "surface": "装備魔法カード",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0505",
+  "id": "W0542",
   "surface": "裏",
   "sources": [
    "manual"
@@ -3821,21 +4117,21 @@
   "lemma": "裏"
  },
  {
-  "id": "W0506",
+  "id": "W0543",
   "surface": "裏側",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0507",
+  "id": "W0544",
   "surface": "裏側守備",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0508",
+  "id": "W0545",
   "surface": "裏側守備表示",
   "sources": [
    "glossary",
@@ -3843,14 +4139,14 @@
   ]
  },
  {
-  "id": "W0509",
+  "id": "W0546",
   "surface": "裏側表示",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0510",
+  "id": "W0547",
   "surface": "複数",
   "sources": [
    "manual"
@@ -3858,7 +4154,15 @@
   "lemma": "複数"
  },
  {
-  "id": "W0511",
+  "id": "W0548",
+  "surface": "複数回",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "複数回"
+ },
+ {
+  "id": "W0549",
   "surface": "見せ",
   "sources": [
    "glossary",
@@ -3866,28 +4170,28 @@
   ]
  },
  {
-  "id": "W0512",
+  "id": "W0550",
   "surface": "見せて",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0513",
+  "id": "W0551",
   "surface": "見せる",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0514",
+  "id": "W0552",
   "surface": "見せる事",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0515",
+  "id": "W0553",
   "surface": "見て",
   "sources": [
    "manual"
@@ -3895,7 +4199,7 @@
   "lemma": "見る"
  },
  {
-  "id": "W0516",
+  "id": "W0554",
   "surface": "記された",
   "sources": [
    "manual"
@@ -3903,7 +4207,7 @@
   "lemma": "記す"
  },
  {
-  "id": "W0517",
+  "id": "W0555",
   "surface": "記されて",
   "sources": [
    "manual"
@@ -3911,56 +4215,87 @@
   "lemma": "記す"
  },
  {
-  "id": "W0518",
+  "id": "W0556",
+  "surface": "負け",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "負ける"
+ },
+ {
+  "id": "W0557",
+  "surface": "超え",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "超える"
+ },
+ {
+  "id": "W0558",
   "surface": "超えた分",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0519",
+  "id": "W0559",
+  "surface": "近づく",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "近づく"
+ },
+ {
+  "id": "W0560",
   "surface": "送って",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0520",
+  "id": "W0561",
   "surface": "送らず",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0521",
+  "id": "W0562",
   "surface": "送られ",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0522",
+  "id": "W0563",
   "surface": "送られた",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0523",
+  "id": "W0564",
   "surface": "送り",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0524",
+  "id": "W0565",
   "surface": "送る",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0525",
+  "id": "W0566",
+  "surface": "通常の",
+  "sources": [
+   "manual"
+  ]
+ },
+ {
+  "id": "W0567",
   "surface": "通常モンスター",
   "sources": [
    "glossary",
@@ -3968,35 +4303,28 @@
   ]
  },
  {
-  "id": "W0526",
-  "surface": "通常召喚",
-  "sources": [
-   "tag_rules"
-  ]
- },
- {
-  "id": "W0527",
+  "id": "W0568",
   "surface": "通常罠",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0528",
+  "id": "W0569",
   "surface": "通常魔法",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0529",
+  "id": "W0570",
   "surface": "速攻魔法",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0530",
+  "id": "W0571",
   "surface": "違う",
   "sources": [
    "manual"
@@ -4004,7 +4332,7 @@
   "lemma": "違う"
  },
  {
-  "id": "W0531",
+  "id": "W0572",
   "surface": "違った",
   "sources": [
    "manual"
@@ -4012,14 +4340,14 @@
   "lemma": "違う"
  },
  {
-  "id": "W0532",
+  "id": "W0573",
   "surface": "適用",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0533",
+  "id": "W0574",
   "surface": "選ば",
   "sources": [
    "manual"
@@ -4027,7 +4355,7 @@
   "lemma": "選ぶ"
  },
  {
-  "id": "W0534",
+  "id": "W0575",
   "surface": "選び",
   "sources": [
    "manual"
@@ -4035,7 +4363,7 @@
   "lemma": "選ぶ"
  },
  {
-  "id": "W0535",
+  "id": "W0576",
   "surface": "選ぶ",
   "sources": [
    "manual"
@@ -4043,7 +4371,15 @@
   "lemma": "選ぶ"
  },
  {
-  "id": "W0536",
+  "id": "W0577",
+  "surface": "選べ",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "選ぶ"
+ },
+ {
+  "id": "W0578",
   "surface": "選んだ",
   "sources": [
    "manual"
@@ -4051,7 +4387,7 @@
   "lemma": "選ぶ"
  },
  {
-  "id": "W0537",
+  "id": "W0579",
   "surface": "選んで",
   "sources": [
    "manual"
@@ -4059,21 +4395,21 @@
   "lemma": "選ぶ"
  },
  {
-  "id": "W0538",
+  "id": "W0580",
   "surface": "選択",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0539",
+  "id": "W0581",
   "surface": "重ね",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0540",
+  "id": "W0582",
   "surface": "開始",
   "sources": [
    "manual"
@@ -4081,28 +4417,28 @@
   "lemma": "開始"
  },
  {
-  "id": "W0541",
+  "id": "W0583",
   "surface": "間",
   "sources": [
    "glossary"
   ]
  },
  {
-  "id": "W0542",
+  "id": "W0584",
   "surface": "降臨",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0543",
+  "id": "W0585",
   "surface": "限り",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0544",
+  "id": "W0586",
   "surface": "除かれ",
   "sources": [
    "manual"
@@ -4110,7 +4446,7 @@
   "lemma": "除く"
  },
  {
-  "id": "W0545",
+  "id": "W0587",
   "surface": "除かれた",
   "sources": [
    "manual"
@@ -4118,7 +4454,7 @@
   "lemma": "除く"
  },
  {
-  "id": "W0546",
+  "id": "W0588",
   "surface": "除き",
   "sources": [
    "manual"
@@ -4126,7 +4462,7 @@
   "lemma": "除く"
  },
  {
-  "id": "W0547",
+  "id": "W0589",
   "surface": "除く",
   "sources": [
    "manual"
@@ -4134,7 +4470,7 @@
   "lemma": "除く"
  },
  {
-  "id": "W0548",
+  "id": "W0590",
   "surface": "除け",
   "sources": [
    "manual"
@@ -4142,7 +4478,7 @@
   "lemma": "除く"
  },
  {
-  "id": "W0549",
+  "id": "W0591",
   "surface": "除外",
   "sources": [
    "glossary",
@@ -4150,14 +4486,14 @@
   ]
  },
  {
-  "id": "W0550",
+  "id": "W0592",
   "surface": "除外されている",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0551",
+  "id": "W0593",
   "surface": "除外状態",
   "sources": [
    "glossary",
@@ -4165,7 +4501,7 @@
   ]
  },
  {
-  "id": "W0552",
+  "id": "W0594",
   "surface": "際",
   "sources": [
    "manual"
@@ -4173,7 +4509,7 @@
   "lemma": "際"
  },
  {
-  "id": "W0553",
+  "id": "W0595",
   "surface": "隣",
   "sources": [
    "manual"
@@ -4181,7 +4517,7 @@
   "lemma": "隣"
  },
  {
-  "id": "W0554",
+  "id": "W0596",
   "surface": "離れ",
   "sources": [
    "manual"
@@ -4189,7 +4525,7 @@
   "lemma": "離れる"
  },
  {
-  "id": "W0555",
+  "id": "W0597",
   "surface": "離れた",
   "sources": [
    "glossary",
@@ -4198,7 +4534,7 @@
   "lemma": "離れる"
  },
  {
-  "id": "W0556",
+  "id": "W0598",
   "surface": "離れる",
   "sources": [
    "manual"
@@ -4206,14 +4542,30 @@
   "lemma": "離れる"
  },
  {
-  "id": "W0557",
+  "id": "W0599",
   "surface": "雷族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0558",
+  "id": "W0600",
+  "surface": "順",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "順"
+ },
+ {
+  "id": "W0601",
+  "surface": "順番",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "順番"
+ },
+ {
+  "id": "W0602",
   "surface": "高い",
   "sources": [
    "manual"
@@ -4221,7 +4573,7 @@
   "lemma": "高い"
  },
  {
-  "id": "W0559",
+  "id": "W0603",
   "surface": "高く",
   "sources": [
    "manual"
@@ -4229,7 +4581,7 @@
   "lemma": "高い"
  },
  {
-  "id": "W0560",
+  "id": "W0604",
   "surface": "魔法",
   "sources": [
    "glossary",
@@ -4237,21 +4589,21 @@
   ]
  },
  {
-  "id": "W0561",
+  "id": "W0605",
   "surface": "魔法カード扱い",
   "sources": [
    "tag_rules"
   ]
  },
  {
-  "id": "W0562",
+  "id": "W0606",
   "surface": "魔法使い族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0563",
+  "id": "W0607",
   "surface": "魔法＆罠ゾーン",
   "sources": [
    "glossary",
@@ -4259,28 +4611,36 @@
   ]
  },
  {
-  "id": "W0564",
+  "id": "W0608",
   "surface": "魚族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0565",
+  "id": "W0609",
   "surface": "鳥獣族",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0566",
+  "id": "W0610",
   "surface": "＋",
   "sources": [
    "manual"
   ]
  },
  {
-  "id": "W0567",
+  "id": "W0611",
+  "surface": "－",
+  "sources": [
+   "manual"
+  ],
+  "lemma": "－"
+ },
+ {
+  "id": "W0612",
   "surface": "ＬＰ",
   "sources": [
    "tag_rules"

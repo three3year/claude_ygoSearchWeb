@@ -108,7 +108,7 @@ FUNCTIONAL = (SURU_FAMILY | NEGATORS | AUXILIARY | TAILS
 HIRAGANA_VERBS = {"なる", "めくる", "なくす"}
 # 定語動詞只吸收這些格的片語(其餘動詞:往前吸到讀點或主題 は 為止)——
 # 「カード名が記されたモンスター」的 が 屬定語,前面的 から 是主句的來源
-RELATIVE_SCOPE = {"記す": {"が", "に"}, "持つ": {"を"}, "含む": {"を"},
+RELATIVE_SCOPE = {"記す": {"が", "に"}, "持つ": {"を", "として"}, "含む": {"を"},
                   "異なる": {"が"}, "受ける": {"が"}, "違う": {"が"},
                   "決める": {"に"}, "存在": {"に", "で", "が"},
                   "なる": {"と", "に", "が", "で"}, "な": {"に", "が"},
@@ -526,6 +526,11 @@ class FrameExtractor:
                 if p == "は" and cur and cur[-1] == "p:と":
                     cur.append(t)
                     continue
+                # 〜としている:として+補助動詞 是一個述語(定語用法留在片語裡)
+                if (p == "として" and k + 1 < stop
+                        and self.word(tokens[k + 1]) in AUXILIARY):
+                    cur.append(t)
+                    continue
                 if p in CASE_ROLE and not cur:
                     continue              # 開頭副詞被剝掉後的裸助詞(このターンに)
                 # 通常召喚に加えて:慣用,整組不是論元
@@ -634,7 +639,9 @@ class FrameExtractor:
             for m in range(k - 1, -1, -1):
                 v = self.word(chunk[m])
                 if v is None:
-                    return None
+                    # 〜としている+名詞:として+いる 是定語(X素材としているモンスター)
+                    return "とする" if chunk[m] == "p:として" and w in AUXILIARY \
+                        else None
                 if v in TAILS or v in AUXILIARY or v in NEGATORS:
                     continue
                 if v in SURU_FAMILY:
@@ -982,7 +989,15 @@ class FrameExtractor:
             w = self.word(t)
             if w is None:
                 continue
+            # 〜を素材として持っている、元々の種族が…のXモンスター:いる 後隔讀點
+            # 接名詞片語也是定語(round6)
+            if w in ("いる", "いた", "いない") and tokens[k + 1] == "、" \
+                    and k + 2 < stop and self.is_noun_like(tokens[k + 2]):
+                return True
+            # 補助動詞 いる/いた 收尾也是定語(〜を素材として持っているXモンスター、
+            # 〜X素材としているモンスター;round5)
             attributive = (w in SURU_FAMILY and w not in NON_ATTRIBUTIVE_SURU) \
+                or (w in AUXILIARY and w not in CONDITIONAL_FORMS) \
                 or (self.lex.is_verb(t) and verb_form(
                     w, self.lex.lemma_of[t]) in ("dict", "past"))
             if attributive and self.is_noun_like(tokens[k + 1]):

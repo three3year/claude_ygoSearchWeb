@@ -581,5 +581,48 @@ class TestOptions(unittest.TestCase):
              ("加える", "效果", 2, "罠")])
 
 
+class TestRound5Fixes(unittest.TestCase):
+    """票 16:受影響卡檢驗(round5)高頻錯誤的回歸例子。"""
+
+    def test_motte_iru_relative_clause_is_not_an_action(self):
+        """〜を素材として持っているXモンスター:いる 收尾的定語子句,不出 素材とする。"""
+        self.assertEqual(
+            extract("②：このカードを素材として持っているXモンスターは以下の効果を"
+                    "得る。\n●１つ：自分は１枚ドローする。"),
+            [("得る", "以下の効果", None, None, "效果", "肯定"),
+             ("ドロー", None, None, None, "效果", "肯定")])
+
+    def test_motte_iru_before_comma_is_still_attributive(self):
+        """持っている、元々の種族が…のXモンスター:隔讀點的 いる 定語(round6)。"""
+        self.assertEqual(
+            extract("②：このカードを素材として持っている、元々の種族が獣戦士族のXモンスター"
+                    "は以下の効果を得る。\n●このカードのX素材を１つ取り除いて発動できる。"
+                    "その発動を無効にする。"),
+            [("得る", "以下の効果", None, None, "效果", "肯定"),
+             ("取り除く", "このカードのX素材", None, None, "代價", "肯定"),
+             ("無効にする", "その発動", None, None, "效果", "肯定")])
+
+    def test_toshite_iru_relative_clause_is_not_an_action(self):
+        self.assertEqual(
+            extract("①：このカードがX素材としているモンスターの数×１００アップする。"),
+            [("アップ", None, None, None, "效果", "肯定")])
+
+    def test_relative_motte_iru_absorbs_its_arguments(self):
+        self.assertEqual(
+            extract("①：このカードをX素材として持っているXモンスター１体を対象として"
+                    "発動できる。そのモンスターを破壊する。"),
+            [("対象とする", "このカードをX素材として持っているXモンスター1体", None,
+              None, "條件", "肯定"),
+             ("破壊", "そのモンスター", None, None, "效果", "肯定")])
+
+    def test_relative_toshite_iru_absorbs_its_arguments(self):
+        self.assertEqual(
+            extract("①：このカードがX素材としているモンスターを対象として発動できる。"
+                    "そのモンスターを破壊する。"),
+            [("対象とする", "このカードがX素材としているモンスター", None, None,
+              "條件", "肯定"),
+             ("破壊", "そのモンスター", None, None, "效果", "肯定")])
+
+
 if __name__ == "__main__":
     unittest.main()

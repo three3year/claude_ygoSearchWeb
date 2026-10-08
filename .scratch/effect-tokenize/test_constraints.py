@@ -92,5 +92,109 @@ class TestActivationCount(unittest.TestCase):
             [A("加える", "效果", "肯定")])
 
 
+class TestCountNotes(unittest.TestCase):
+    """票 02:使用次數註記、卡片發動次數註記、括弧註記、期間變體——都是限制·次數,
+    註記句原本的 使用/発動/特殊召喚 否定動作框架不再出現。"""
+
+    def test_each_effect_once_per_turn(self):
+        self.assertEqual(
+            rows("このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。"),
+            [count("回合", 1, "このカード名の①②の効果", "それぞれ")])
+
+    def test_either_one_shared_once_per_turn(self):
+        self.assertEqual(
+            rows("このカード名の①②の効果は１ターンに１度、いずれか１つしか使用できない。"),
+            [count("回合", 1, "このカード名の①②の効果", "いずれか１つ")])
+
+    def test_card_activation_once_per_turn(self):
+        self.assertEqual(
+            rows("このカード名のカードは１ターンに１枚しか発動できない。"),
+            [count("回合", 1, "このカード名のカード")])
+
+    def test_once_per_duel(self):
+        self.assertEqual(
+            rows("「セイクリッド・テンペスト」の①の効果はデュエル中に１度しか使用できない。"),
+            [count("決鬥", 1, "「セイクリッド・テンペスト」の①の効果")])
+
+    def test_once_per_chain_in_parenthesis(self):
+        self.assertEqual(
+            rows("①：相手が効果を発動した時に発動できる（同一チェーン上では１度まで）。"
+                 "自分は１枚ドローする。"),
+            [A("発動", "條件", "肯定"),
+             count("同一連鎖", 1, "この効果"),
+             A("ドロー", "效果", "肯定")])
+
+    def test_once_per_turn_only_in_parenthesis(self):
+        self.assertEqual(
+            rows("②：このカードを裏側守備表示にする（１ターンに１度のみ）。"),
+            [A("裏側守備表示にする", "效果", "肯定"),
+             count("回合", 1, "この効果")])
+
+    def test_this_effect_once_per_turn_note(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果は１ターンに１度しか使用できない。"),
+            [A("ドロー", "效果", "肯定"), count("回合", 1, "この効果")])
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果は１ターンに１度まで使用できる。"),
+            [A("ドロー", "效果", "肯定"), count("回合", 1, "この効果")])
+
+    def test_summon_method_count_takes_topic_as_target(self):
+        self.assertEqual(
+            rows("このカード名の①の方法による特殊召喚は１ターンに１度しかできない。"),
+            [count("回合", 1, "このカード名の①の方法による特殊召喚")])
+
+    def test_summoning_a_named_card_once_per_turn(self):
+        self.assertEqual(
+            rows("自分は「精霊獣 カンナホーク」を１ターンに１度しか特殊召喚できず、"
+                 "その②の効果は１ターンに１度しか使用できない。"),
+            [count("回合", 1, "「精霊獣 カンナホーク」の特殊召喚"),
+             count("回合", 1, "その②の効果")])
+
+    def test_two_notes_joined_by_dekizu(self):
+        self.assertEqual(
+            rows("このカード名の、①の方法による特殊召喚は１ターンに１度しかできず、"
+                 "②の効果はデュエル中に１度しか使用できない。"),
+            [count("回合", 1, "このカード名の、①の方法による特殊召喚"),
+             count("決鬥", 1, "②の効果")])
+
+    def test_not_in_same_chain_is_a_chain_count(self):
+        self.assertEqual(
+            rows("このカード名の①②の効果は、それぞれ１ターンに１度しか使用できず、"
+                 "同一チェーン上では発動できない。"),
+            [count("回合", 1, "このカード名の①②の効果", "それぞれ"),
+             count("同一連鎖", 1, "このカード名の①②の効果", "それぞれ")])
+
+    def test_selection_note_in_activation_parenthesis(self):
+        self.assertEqual(
+            rows("①：以下の効果から１つを選択して発動できる（このカード名の以下の効果は"
+                 "それぞれ１ターンに１度しか選択できない）。\n●自分は１枚ドローする。"),
+            [A("選択", "條件", "肯定"),
+             count("回合", 1, "このカード名の以下の効果", "それぞれ"),
+             A("ドロー", "效果", "肯定")])
+
+    def test_pendulum_zone_prefix_without_activation(self):
+        self.assertEqual(
+            rows("①：１ターンに１度、自分フィールドの魔法使い族・闇属性モンスターを対象と"
+                 "して発動した効果を無効にできる。その後、このカードを破壊する。"),
+            [count("回合", 1, "この効果"),
+             A("無効にする", "效果", "可能"),
+             A("破壊", "效果", "肯定")])
+
+    def test_replacement_destruction_prefix(self):
+        self.assertEqual(
+            rows("②：１ターンに１度、自分フィールドの闇属性モンスターが戦闘・効果で破壊"
+                 "される場合、代わりに自分フィールドの黒羽カウンターを１つ取り除く事が"
+                 "できる。"),
+            [count("回合", 1, "この効果"),
+             A("破壊", "條件", "肯定"),
+             A("取り除く", "效果", "可能")])
+
+    def test_field_only_count_is_not_a_usage_count(self):
+        """「自分フィールドに１枚しか存在できない」:期間不是回合/決鬥/連鎖,照舊是動作。"""
+        self.assertEqual(
+            rows("①：「試作機」は自分フィールドに１枚しか表側表示で存在できない。"),
+            [A("存在", "效果", "否定")])
+
+
 if __name__ == "__main__":
     unittest.main()

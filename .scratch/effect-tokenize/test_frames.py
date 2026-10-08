@@ -177,10 +177,12 @@ class TestPredicatesAndPolarity(unittest.TestCase):
              ("破壊", None, None, None, "效果", "肯定")])
 
     def test_bare_dekinai_takes_topic_as_action(self):
+        """約束框架票 02 起:使用次數註記整句是限制·次數框架(test_constraints.py),
+        不再出 特殊召喚 動作框架。"""
         self.assertEqual(
             extract("このカード名の①の方法による特殊召喚は１ターンに１度しか"
                     "できない。"),
-            [("特殊召喚", None, None, None, "效果", "否定")])
+            [])
 
     def test_koto_ga_dekiru_is_potential(self):
         self.assertEqual(
@@ -299,9 +301,14 @@ class TestRound1Fixes(unittest.TestCase):
              ("アドバンス召喚", None, None, None, "效果", "可能")])
 
     def test_bare_number_of_time_phrase_stays_out_of_object(self):
+        """約束框架票 02 起:「〜を１ターンに１度しか特殊召喚できない」是限制·次數框架
+        (對象 〜の特殊召喚),不再出動作框架;裸數字不進對象的規則改由本例驗:"""
         self.assertEqual(
             extract("「精霊獣 カンナホーク」を１ターンに１度しか特殊召喚できない。"),
-            [("特殊召喚", "「精霊獣 カンナホーク」", None, None, "效果", "否定")])
+            [])
+        self.assertEqual(
+            extract("①：「精霊獣 カンナホーク」を１ターンに１体まで特殊召喚できる。"),
+            [("特殊召喚", "「精霊獣 カンナホーク」", None, None, "效果", "可能")])
 
     def test_otagai_ni_is_not_a_goal(self):
         self.assertEqual(

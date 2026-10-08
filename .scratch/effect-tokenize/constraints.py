@@ -38,6 +38,7 @@ FIELD_LABEL = {"period": "期間", "count": "次數", "target": "對象", "shari
 PERIOD_TURN, PERIOD_DUEL, PERIOD_CHAIN = "回合", "決鬥", "同一連鎖"
 THIS_EFFECT = "この効果"
 COUNT_UNITS = {"度", "回", "枚"}
+POTENTIAL_ALL = {"できる", "でき", "できない", "できず"}
 OPTION = "●"
 
 
@@ -119,12 +120,12 @@ class ConstraintFinder:
     # ── 規則 ──
     def count_prefix(self, tokens, sentence, anchors):
         """子句開頭的「期間に N 度、」(票 01/02):發動句、P 區、代破、場地魔法一律
-        是限制·次數。回 (框架清單, 吃掉的範圍清單);同時把緊接其後的錨點的子句
-        起點推到字首之後(動作框架的子句不含它)。"""
+        是限制·次數(對象 この効果);同時把緊接其後的錨點的子句起點推到字首之後
+        (動作框架的子句不含它)。"""
         start, end = sentence
-        found, consumed = [], []
+        found = []
         for p in range(start, end):
-            if not (p == start or tokens[p - 1] in ("、", "：", OPTION)):
+            if not (p == start or tokens[p - 1] in ("、", "：", OPTION))                     or not self._free(p):
                 continue
             hit = self.period_count(tokens, p, end)
             if hit is None:
@@ -132,14 +133,14 @@ class ConstraintFinder:
             period, value, _unit, j = hit
             if j >= end or tokens[j] != "、":
                 continue
-            found.append({"category": CAT_LIMIT, "subtype": SUB_COUNT,
-                          "period": period, "count": value, "target": THIS_EFFECT,
-                          "sharing": None, "span": [p, j + 1]})
-            consumed.append((p, j + 1))
+            found.append(self._take(
+                {"category": CAT_LIMIT, "subtype": SUB_COUNT, "period": period,
+                 "count": value, "target": THIS_EFFECT, "sharing": None},
+                p, j + 1))
             for a in anchors:
                 if a["clause_start"] <= p < a["head"]:
                     a["clause_start"] = j + 1
-        return found, consumed
+        return found
 
     def find(self, tokens, sentence, anchors, marker_idx, depth_at, extra=False,
              card_type=None, text_of=None):
@@ -150,9 +151,101 @@ class ConstraintFinder:
         框架只帶類別/子類/專屬欄位與 span,其餘共有欄位由 frames.py 補。"""
         self.text_of = text_of or (
             lambda a, b: "".join(self.x.surface(t) for t in tokens[a:b]))
-        frames, consumed = [], []
-        for rule in (self.count_prefix,):
-            found, used = rule(tokens, sentence, anchors)
-            frames += found
-            consumed += used
-        return frames, consumed
+        self.consumed = []
+        frames = []
+        for rule in (self.count_notes, self.count_prefix):
+            frames += rule(tokens, sentence, anchors)
+        return frames, self.consumed
+
+    def _free(self, p):
+        return not any(lo <= p < hi for lo, hi in self.consumed)
+
+    def _take(self, frame, start, end):
+        """登記框架的範圍(span)並把它吃掉(範圍內的錨點不出動作框架)。"""
+        frame["span"] = [start, end]
+        self.consumed.append((start, end))
+        return frame
+
+    def _text(self, start, end):
+        """詞序列範圍的原文字面,去掉兩端的讀點與空白。"""
+        return self.text_of(start, end).strip("、 　\n")
+
+    def count_notes(self, tokens, sentence, anchors):
+        """使用次數/發動次數註記(票 02):「X は (それぞれ) 期間に N 度 (、いずれか１つ)
+        しか/まで (動作) できない/できず/できる」、「自分は X を 期間に N 度しか 特殊召喚
+        できない」(對象 X の特殊召喚)、「同一チェーン上では発動できない」(同一連鎖 1 次),
+        與括弧註記「（期間に N 度 まで/のみ）」(對象 この効果)。一句可有多個(できず、相連),
+        主題從上一個註記結束處(或句首、括弧、●標籤)起算到 は。"""
+        x = self.x
+        start, end = sentence
+        found = []
+        seg_start = start
+        i = start
+        while i < end:
+            t = tokens[i]
+            if t in ("（", "：", OPTION):
+                seg_start = i + 1
+            hit = self.period_count(tokens, i, end)
+            chain_only = hit is None and x.word(t) == "同一" and i + 4 < end                 and x.word(tokens[i + 1]) == "チェーン" and tokens[i + 3] == "p:で"
+            if hit is None and not chain_only:
+                i += 1
+                continue
+            if hit:
+                period, value, _unit, j = hit
+            else:
+                period, value, j = PERIOD_CHAIN, 1, i + 4
+                if j < end and tokens[j] == "p:は":
+                    j += 1
+            sharing = None
+            k = j
+            if k + 1 < end and tokens[k] == "、" and x.word(tokens[k + 1]) == "いずれか":
+                sharing = "いずれか１つ"
+                while k < end and tokens[k] not in ("p:しか", "p:まで", "p:のみ"):
+                    k += 1
+            if hit:
+                if k >= end or tokens[k] not in ("p:しか", "p:まで", "p:のみ"):
+                    i = j                         # 「期間に N 度、」字首 → count_prefix
+                    continue
+                k += 1
+            # 括弧註記:（期間に N 度 まで/のみ）
+            if k < end and tokens[k] == "）" and seg_start == i and tokens[i - 1] == "（":
+                found.append(self._take(
+                    {"category": CAT_LIMIT, "subtype": SUB_COUNT, "period": period,
+                     "count": value, "target": THIS_EFFECT, "sharing": None},
+                    i - 1, k + 1))
+                seg_start = i = k + 1
+                continue
+            verbs, m = [], k
+            while m < end and m - k < 5 and tokens[m] not in ("。", "）", "（")                     and x.word(tokens[m]) not in POTENTIAL_ALL:
+                verbs.append(tokens[m])
+                m += 1
+            if m >= end or x.word(tokens[m]) not in POTENTIAL_ALL:
+                i = j
+                continue
+            m += 1
+            # 主題(は 前)與對象(自分は X を 形)
+            topic_end = next((h for h in range(i - 1, seg_start - 1, -1)
+                              if tokens[h] == "p:は"), None)
+            topic = self._text(seg_start, topic_end) if topic_end is not None else ""
+            action = "".join(x.surface(v) for v in verbs)
+            if topic in ("", "自分", "お互い") and "p:を" in tokens[seg_start:i]:
+                obj_start = topic_end + 1 if topic_end is not None else seg_start
+                obj_end = tokens.index("p:を", obj_start, i)
+                target = self._text(obj_start, obj_end) + "の" + (action or "できる")
+            elif topic:
+                target = topic
+            elif found and found[-1]["span"][1] == seg_start:
+                # 〜しか使用できず、同一チェーン上では発動できない:承接前一個註記的主題
+                target, sharing = found[-1]["target"], found[-1]["sharing"]
+            else:
+                target = THIS_EFFECT
+            if sharing is None and any(x.word(v) == "それぞれ"
+                                       for v in tokens[seg_start:m]):
+                sharing = "それぞれ"
+            stop = m + 1 if m < end and tokens[m] == "、" else m
+            found.append(self._take(
+                {"category": CAT_LIMIT, "subtype": SUB_COUNT, "period": period,
+                 "count": value, "target": target, "sharing": sharing},
+                seg_start, stop))
+            seg_start = i = stop
+        return found

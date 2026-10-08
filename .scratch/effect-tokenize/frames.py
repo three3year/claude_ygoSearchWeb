@@ -806,9 +806,11 @@ class FrameExtractor:
             if text is not None else None
 
         def text_of(start, end):
-            """詞序列範圍的原文字面(對不回原文時退回 token 字面相連)。"""
+            """詞序列範圍的原文字面(對不回原文時退回 token 字面相連)。從前一個 token
+            的結尾起算,分詞器丟掉的圈號(②の効果 的 ②)才留得住;呼叫端自己去頭尾。"""
             if offsets is not None and start < end <= len(offsets):
-                return text[offsets[start][0]:offsets[end - 1][1]]
+                lead = offsets[start - 1][1] if start else offsets[0][0]
+                return text[lead:offsets[end - 1][1]]
             return "".join(self.surface(t) for t in tokens[start:end])
         sentences = []
         start = 0

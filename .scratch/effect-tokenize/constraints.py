@@ -101,7 +101,8 @@ class ConstraintFinder:
     # ── 片段讀取 ──
     def period_count(self, tokens, i, stop):
         """tokens[i] 起是否為「期間 に/で N 度/回/枚」(１ターンに１度、デュエル中に
-        １度、同一チェーン上では１度)→ (期間, 次數, 量詞, 結束位置) 或 None。"""
+        １度、同一チェーン上では１度、自分・相手のメインフェイズ１に１度)→ (期間, 次數,
+        結束位置) 或 None。"""
         x = self.x
         words = []
         k = i
@@ -131,7 +132,7 @@ class ConstraintFinder:
         else:
             return None
         value = tokens[k][4:]
-        return period, int(value) if value.isdigit() else value, counter[2:], k + 2
+        return period, int(value) if value.isdigit() else value, k + 2
 
     # ── 規則 ──
     def count_prefix(self, tokens, sentence, anchors):
@@ -141,32 +142,28 @@ class ConstraintFinder:
         start, end = sentence
         found = []
         for p in range(start, end):
-            if not (p == start or tokens[p - 1] in ("、", "：", OPTION, "p:は")) \
-                    or not self._free(p):
+            if not (p == start or tokens[p - 1] in ("、", "：", OPTION)
+                    or tokens[p - 1] == "p:は" and self.extra) or not self._free(p):
                 continue
             hit = self.period_count(tokens, p, end)
             if hit is None:
                 continue
-            period, value, _unit, j = hit
+            period, value, j = hit
             if j < end and tokens[j] == "p:まで":
                 j += 1                    # １ターンに３度まで、
             if j >= end or tokens[j] != "、":
                 continue
             # 「名」は１ターンに１度、…:對象是主題(召喚條件句再補上 の特殊召喚)
             topic = self._text(start, p - 1) if tokens[p - 1] == "p:は" else None
-            found.append(self._take(
-                {"category": CAT_LIMIT, "subtype": SUB_COUNT, "period": period,
-                 "count": value, "target": topic or THIS_EFFECT, "sharing": None,
-                 "topic": topic},
-                p, j + 1))
+            frame = self._count(period, value, topic or THIS_EFFECT)
+            frame["topic"] = topic
+            found.append(self._take(frame, p, j + 1))
             # 「相手ターンに１度、」「自分・相手のメインフェイズ１に１度、」:玩家/階段另出
             # 時機框架(限定)
             window = self.window_at(tokens, p, j)
             if window is not None and (window[0] is not None or window[1] != "ターン"):
-                found.append({"category": CAT_TIMING, "subtype": None,
-                              "player": window[0], "window": window[1],
-                              "mode": MODE_LIMIT, "polarity": POL_AFFIRM,
-                              "span": [p, j]})
+                found.append(dict(self._timing(window[0], window[1], MODE_LIMIT),
+                                  span=[p, j]))
             for a in anchors:
                 if a["clause_start"] <= p < a["head"]:
                     a["clause_start"] = j + 1
@@ -184,6 +181,7 @@ class ConstraintFinder:
         self.consumed = []
         frames = []
         self.depth_at = depth_at
+        self.extra = extra
         # 誓約先於次數註記:「〜まで自分は…を１ターンに１度しか発動できない」是帶次數的誓約
         frames += self.pledges(tokens, sentence, anchors)
         frames += self.count_notes(tokens, sentence, anchors)
@@ -197,6 +195,8 @@ class ConstraintFinder:
         if marker_idx is not None:
             frames += self.activation_windows(tokens, sentence, anchors,
                                               anchors[marker_idx]["head"])
+        for fr in frames:
+            fr.pop("topic", None)         # 字首規則給召喚條件規則看的內部欄位,不入產物
         return frames, self.consumed
 
     def _free(self, p):
@@ -207,6 +207,16 @@ class ConstraintFinder:
         frame["span"] = [start, end]
         self.consumed.append((start, end))
         return frame
+
+    @staticmethod
+    def _timing(player, window, mode, polarity=POL_AFFIRM):
+        return {"category": CAT_TIMING, "subtype": None, "player": player,
+                "window": window, "mode": mode, "polarity": polarity}
+
+    @staticmethod
+    def _count(period, value, target, sharing=None):
+        return {"category": CAT_LIMIT, "subtype": SUB_COUNT, "period": period,
+                "count": value, "target": target, "sharing": sharing}
 
     def _text(self, start, end):
         """詞序列範圍的原文字面,去掉兩端的讀點與空白。"""
@@ -247,10 +257,10 @@ class ConstraintFinder:
         if not has_window or k >= stop or k == i:
             return None
         particle = tokens[k]
+        window = "".join(x.surface(t) for t in rest)
+        player = BOTH if len(players) >= 2 or BOTH in players else (
+            next(iter(players)) if players else None)
         if particle == "、" and x.word(tokens[k - 1]) == "時":
-            window = "".join(x.surface(t) for t in rest)
-            player = BOTH if len(players) == 2 or BOTH in players else (
-                next(iter(players)) if players else None)
             return player, window, MODE_LIMIT, k + 1       # 〜終了時、…発動できる
         if particle not in ("p:に", "p:で"):
             return None
@@ -261,9 +271,6 @@ class ConstraintFinder:
             end += 1
         elif particle == "p:で":
             return None
-        window = "".join(x.surface(t) for t in rest)
-        player = BOTH if len(players) == 2 or BOTH in players else (
-            next(iter(players)) if players else None)
         return player, window, mode, end
 
     def activation_windows(self, tokens, sentence, anchors, marker_head):
@@ -289,9 +296,7 @@ class ConstraintFinder:
                 i += 1
                 continue
             player, window, mode, end = hit
-            found.append(self._take(
-                {"category": CAT_TIMING, "subtype": None, "player": player,
-                 "window": window, "mode": mode, "polarity": POL_AFFIRM}, i, end))
+            found.append(self._take(self._timing(player, window, mode), i, end))
             i = end
         return found
 
@@ -333,14 +338,11 @@ class ConstraintFinder:
                     continue
                 player, window, mode, w_end = hit
                 if w_end < seg_end and x.word(tokens[w_end]) == "発動" \
-                        and w_end + 1 < seg_end + 1 \
                         and x.word(tokens[w_end + 1]) in POTENTIAL_ALL:
                     polarity = POL_NEG if x.word(tokens[w_end + 1]) in (
                         "できない", "できず") else POL_AFFIRM
-                    seg_frames.append({"category": CAT_TIMING, "subtype": None,
-                                       "player": player, "window": window,
-                                       "mode": mode, "polarity": polarity,
-                                       "span": [k, w_end + 2]})
+                    seg_frames.append(dict(self._timing(player, window, mode, polarity),
+                                           span=[k, w_end + 2]))
                     k = w_end + 2
                 else:
                     k = w_end
@@ -414,7 +416,7 @@ class ConstraintFinder:
             if not preds:
                 continue
             # 觸發裡有主題(この効果で特殊召喚したモンスターはこのターン、)是效果內容
-            if "は" in trigger:
+            if "p:は" in tokens[trig_start:k]:
                 continue
             # 主體:述語之前的「X は」;自分 不記,このカード/自分の… 記在主體欄,
             # 其他(相手は…できない)或條件子句(〜場合には)不是誓約
@@ -490,10 +492,7 @@ class ConstraintFinder:
             if w_end + 2 < end and x.word(tokens[w_end]) == "発動" \
                     and x.word(tokens[w_end + 1]) in ("可能", "できる") \
                     and tokens[w_end + 2] == "）":
-                found.append(self._take(
-                    {"category": CAT_TIMING, "subtype": None, "player": player,
-                     "window": window, "mode": mode, "polarity": POL_AFFIRM},
-                    i, w_end + 3))
+                found.append(self._take(self._timing(player, window, mode), i, w_end + 3))
         return found
 
     # ── 召喚條件 ──
@@ -532,8 +531,9 @@ class ConstraintFinder:
                 continue
             args = self._anchor_args(tokens, a, a["clause_start"])
             action = self._action_name(tokens, a)
-            rng = tokens[seg_start:a["head"]]
-            only = "p:のみ" in rng or "p:しか" in rng
+            only = any(tokens[h] in ("p:のみ", "p:しか") and (
+                tokens[h - 1] == "p:で" or x.word(tokens[h - 1]) in ("場合", "時"))
+                for h in range(seg_start + 1, a["head"]))
             form = (SUMMON_MUST if a.get("obligation") else SUMMON_ONLY if only
                     else SUMMON_CAN if a["polarity"] == POL_CAN else SUMMON_CANNOT) + action
             method = None
@@ -631,7 +631,9 @@ class ConstraintFinder:
             # １度だけ / もう１度(召喚できる)
             if tokens[k].startswith("NUM:") and tokens[k + 1] == "c:度" and (
                     k + 2 < head and tokens[k + 2] == "p:だけ"
-                    or k - 1 >= clause_start and x.word(tokens[k - 1]) == "もう"):
+                    or k - 1 >= clause_start and x.word(tokens[k - 1]) == "もう"
+                    or k + 2 < head and tokens[k + 2] == "、"
+                    and "p:は" in tokens[clause_start:k]):
                 out["count"] = int(tokens[k][4:])
                 hit = self.period_count(tokens, k - 3, head) if k - 3 >= clause_start \
                     else None
@@ -675,7 +677,7 @@ class ConstraintFinder:
                 i += 1
                 continue
             if hit:
-                period, value, _unit, j = hit
+                period, value, j = hit
             else:
                 period, value, j = PERIOD_CHAIN, 1, i + 4
                 if j < end and tokens[j] == "p:は":
@@ -693,10 +695,8 @@ class ConstraintFinder:
                 k += 1
             # 括弧註記:（期間に N 度 まで/のみ）
             if k < end and tokens[k] == "）" and seg_start == i and tokens[i - 1] == "（":
-                found.append(self._take(
-                    {"category": CAT_LIMIT, "subtype": SUB_COUNT, "period": period,
-                     "count": value, "target": THIS_EFFECT, "sharing": None},
-                    i - 1, k + 1))
+                found.append(self._take(self._count(period, value, THIS_EFFECT),
+                                        i - 1, k + 1))
                 seg_start = i = k + 1
                 continue
             verbs, m = [], k
@@ -728,9 +728,7 @@ class ConstraintFinder:
                                        for v in tokens[seg_start:m]):
                 sharing = "それぞれ"
             stop = m + 1 if m < end and tokens[m] == "、" else m
-            found.append(self._take(
-                {"category": CAT_LIMIT, "subtype": SUB_COUNT, "period": period,
-                 "count": value, "target": target, "sharing": sharing},
-                seg_start, stop))
+            found.append(self._take(self._count(period, value, target, sharing),
+                                    seg_start, stop))
             seg_start = i = stop
         return found

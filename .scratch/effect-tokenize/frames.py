@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
-"""動作框架抽取(票 effect-tokenize#04,實作票 05〜07):分詞結果 → 每句的動作框架。
+"""框架抽取(票 effect-tokenize#04,實作票 05〜07;約束框架線票 01〜06):分詞結果 →
+每句的框架清單——動作框架與約束框架混排、依原文位置排序。
 
 接在分詞鏈之後:讀 tokens.json(tokenize.py 的輸出)逐句抽框架,寫 frames.json
-(決定性建置產物,不入版控)。測試接縫是 extract(text, context):一句效果文
-原文(帶同卡同段上文)→ 動作框架清單,內部呼叫真的分詞器與詞典。
+(決定性建置產物,不入版控)。測試接縫是 extract(text, context, extra=None,
+card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外文本,沒給時看字首
+①：/● 判;card_type 是卡片子類型 融合/儀式/同調/超量/連結,主程式從 data/cards.json
+帶入)→ 框架清單,內部呼叫真的分詞器與詞典。
 
-框架(一個動作一個框架,依原文順序):
+每個框架帶 kind:動作 或 約束。約束框架(constraints.py)由句型認出——限制(次數/
+事件回合禁用/誓約/召喚條件)、時機、素材——被認成約束的句子/子句不再出動作框架
+(取代規則:約束框架吃掉的詞序列範圍內的錨點不出框架)。
+
+動作框架(一個動作一個框架,依原文順序):
     action    動作(詞元):動詞以 lexicon.json 的 lemma 歸詞元;サ変名詞+する
               家族記名詞(破壊|する → 破壊);召喚法+召喚記 法+召喚(特殊召喚);
               「N に する/なる」的單詞補語併入動作(無効にする、対象になる);
@@ -22,6 +29,9 @@
     option    選項(ADR-0015):出自第 n 個 ● 選項的框架記 n,第一個 ● 之前為 None;
               label 是「●自分ターン：」這類標籤冒號前的值(沒有標籤時 None),
               標籤本身不出框架
+    count/period/window  可選(約束框架票 06):效果內容的次數(１度だけ、もう１度、
+              主題後的 １ターンに１度、)與期間、非發動句的階段窗口(追加召喚的
+              自分メインフェイズに)——這些不是約束框架
 
 單位是效果句(一個編號效果的全文,連同它的 ● 選項;tokenize.py 的 assemble 把
 拆開的領起句與子效果句接回一段):選項邊界 token「●」與「。」同樣結束一句,
@@ -1086,7 +1096,7 @@ class FrameExtractor:
     def extract(self, text, context="", extra=None, card_type=None):
         if extra is None:
             # 沒說是不是效果外文本時看字首:編號效果(①：/●)是效果,其餘當效果外
-            extra = not (text[:1] in (OPTION,) or 0x2460 <= ord(text[:1] or " ") < 0x2500)
+            extra = not (text[:1] == OPTION or 0x2460 <= ord(text[:1] or " ") < 0x2500)
         return self.frames_of_tokens(self.tokenizer.tokenize(text, context),
                                      text=text, extra=extra, card_type=card_type)
 

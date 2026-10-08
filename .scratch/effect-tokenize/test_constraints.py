@@ -742,5 +742,34 @@ class TestConstraintRound3Fixes(unittest.TestCase):
                     subject="自分のモンスター")])
 
 
+class TestCodeReviewFixes(unittest.TestCase):
+    """code review(Spec 軸)指出的正確性問題。"""
+
+    DRAW = A("ドロー", "效果", "肯定")
+
+    def test_card_name_containing_wa_does_not_block_pledge(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。「はぐれ者」を特殊召喚したターン、自分は"
+                 "「はぐれ者」モンスターしか特殊召喚できない。"),
+            [self.DRAW, pledge("「はぐれ者」を特殊召喚したターン", "特殊召喚", "只能",
+                               "「はぐれ者」モンスター")])
+
+    def test_nomi_inside_procedure_is_not_the_only_form(self):
+        self.assertEqual(
+            rows("自分フィールドの「試作機」のみをリリースした場合に特殊召喚できる。"),
+            [summon("可以某方式特殊召喚",
+                    procedure=[{"action": "リリース", "object": "自分フィールドの「試作機」"}])])
+
+    def test_topic_count_prefix_in_effect_is_action_content(self):
+        text = "①：このカードは１ターンに１度、戦闘では破壊されない。"
+        self.assertEqual(rows(text), [A("破壊", "效果", "否定")])
+        self.assertEqual(action_fields(text), [("破壊", 1, "回合", None)])
+
+    def test_internal_topic_field_is_not_exported(self):
+        for f in frames.extract("「終焉龍 カオス・エンペラー」は１ターンに１度、自分の墓地の"
+                                "モンスター１体を除外した場合のみ特殊召喚できる。"):
+            self.assertNotIn("topic", f)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -162,7 +162,8 @@
   "surface": "され",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "される"
  },
  {
   "id": "W0022",
@@ -170,21 +171,24 @@
   "sources": [
    "manual",
    "tag_rules"
-  ]
+  ],
+  "lemma": "される"
  },
  {
   "id": "W0023",
   "surface": "された",
   "sources": [
    "manual"
-  ]
+  ],
+  "lemma": "される"
  },
  {
   "id": "W0024",
   "surface": "されて",
   "sources": [
    "manual"
-  ]
+  ],
+  "lemma": "される"
  },
  {
   "id": "W0025",
@@ -192,42 +196,48 @@
   "sources": [
    "manual",
    "tag_rules"
-  ]
+  ],
+  "lemma": "される"
  },
  {
   "id": "W0026",
   "surface": "される",
   "sources": [
    "manual"
-  ]
+  ],
+  "lemma": "される"
  },
  {
   "id": "W0027",
   "surface": "し",
   "sources": [
    "manual"
-  ]
+  ],
+  "lemma": "する"
  },
  {
   "id": "W0028",
   "surface": "した",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "する"
  },
  {
   "id": "W0029",
   "surface": "して",
   "sources": [
    "manual"
-  ]
+  ],
+  "lemma": "する"
  },
  {
   "id": "W0030",
   "surface": "する",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "する"
  },
  {
   "id": "W0031",
@@ -351,21 +361,24 @@
   "surface": "できず",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "できる"
  },
  {
   "id": "W0047",
   "surface": "できない",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "できる"
  },
  {
   "id": "W0048",
   "surface": "できる",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "できる"
  },
  {
   "id": "W0049",
@@ -403,7 +416,8 @@
   "surface": "ない",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "ない"
  },
  {
   "id": "W0054",
@@ -474,7 +488,8 @@
   "surface": "なる",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "なる"
  },
  {
   "id": "W0063",
@@ -1277,21 +1292,24 @@
   "surface": "与え",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "与える"
  },
  {
   "id": "W0164",
   "surface": "与えた",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "与える"
  },
  {
   "id": "W0165",
   "surface": "与える",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "与える"
  },
  {
   "id": "W0166",
@@ -1495,7 +1513,8 @@
   "surface": "入れ替える",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "入れ替える"
  },
  {
   "id": "W0193",
@@ -1612,14 +1631,16 @@
   "surface": "加え",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "加える"
  },
  {
   "id": "W0208",
   "surface": "加えて",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "加える"
  },
  {
   "id": "W0209",
@@ -1634,7 +1655,8 @@
   "surface": "加える",
   "sources": [
    "glossary"
-  ]
+  ],
+  "lemma": "加える"
  },
  {
   "id": "W0211",
@@ -1704,7 +1726,8 @@
   "surface": "取り除いて",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "取り除く"
  },
  {
   "id": "W0220",
@@ -1735,14 +1758,16 @@
   "surface": "取り除き",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "取り除く"
  },
  {
   "id": "W0224",
   "surface": "取り除く",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "取り除く"
  },
  {
   "id": "W0225",
@@ -1757,21 +1782,24 @@
   "surface": "受け",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "受ける"
  },
  {
   "id": "W0227",
   "surface": "受けず",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "受ける"
  },
  {
   "id": "W0228",
   "surface": "受けた",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "受ける"
  },
  {
   "id": "W0229",
@@ -1779,7 +1807,8 @@
   "sources": [
    "glossary",
    "tag_rules"
-  ]
+  ],
+  "lemma": "受ける"
  },
  {
   "id": "W0230",
@@ -1787,7 +1816,8 @@
   "sources": [
    "glossary",
    "tag_rules"
-  ]
+  ],
+  "lemma": "受ける"
  },
  {
   "id": "W0231",
@@ -1824,7 +1854,8 @@
   "surface": "合わせ",
   "sources": [
    "manual"
-  ]
+  ],
+  "lemma": "合わせる"
  },
  {
   "id": "W0236",
@@ -1978,14 +2009,16 @@
   "surface": "失い",
   "sources": [
    "manual"
-  ]
+  ],
+  "lemma": "失う"
  },
  {
   "id": "W0256",
   "surface": "失う",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "失う"
  },
  {
   "id": "W0257",
@@ -2351,14 +2384,16 @@
   "surface": "払い",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "払う"
  },
  {
   "id": "W0303",
   "surface": "払う",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "払う"
  },
  {
   "id": "W0304",
@@ -2373,7 +2408,8 @@
   "surface": "払って",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "払う"
  },
  {
   "id": "W0306",
@@ -2396,7 +2432,8 @@
   "surface": "払わなければ",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "払う"
  },
  {
   "id": "W0309",
@@ -2499,21 +2536,24 @@
   "surface": "振り",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "振る"
  },
  {
   "id": "W0322",
   "surface": "振り直す",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "振り直す"
  },
  {
   "id": "W0323",
   "surface": "振る",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "振る"
  },
  {
   "id": "W0324",
@@ -2521,14 +2561,16 @@
   "sources": [
    "glossary",
    "tag_rules"
-  ]
+  ],
+  "lemma": "捨てる"
  },
  {
   "id": "W0325",
   "surface": "捨てられた",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "捨てる"
  },
  {
   "id": "W0326",
@@ -3022,21 +3064,24 @@
   "surface": "移し",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "移す"
  },
  {
   "id": "W0389",
   "surface": "移し替え",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "移し替える"
  },
  {
   "id": "W0390",
   "surface": "移す",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "移す"
  },
  {
   "id": "W0391",
@@ -3441,21 +3486,24 @@
   "sources": [
    "glossary",
    "tag_rules"
-  ]
+  ],
+  "lemma": "見せる"
  },
  {
   "id": "W0442",
   "surface": "見せて",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "見せる"
  },
  {
   "id": "W0443",
   "surface": "見せる",
   "sources": [
    "tag_rules"
-  ]
+  ],
+  "lemma": "見せる"
  },
  {
   "id": "W0444",
@@ -3722,7 +3770,8 @@
   "surface": "重ね",
   "sources": [
    "glossary"
-  ]
+  ],
+  "lemma": "重ねる"
  },
  {
   "id": "W0477",

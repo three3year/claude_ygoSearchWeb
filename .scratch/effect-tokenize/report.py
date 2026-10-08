@@ -6,6 +6,8 @@
    ——補詞迭代的輸入)
 3. 正規化後句型模板分佈(NAME/NUM 收斂成佔位、OOV 段保留字面;同一 token
    序列=同一模板;top 50 各附例句+模板大小分佈直方圖)
+4. 動作框架覆蓋率(frames.json 存在時;票 05):有抽到框架的句比例、位置/極性
+   分佈、動作詞元 top 50——儀表板參考,不是通過門檻
 
 效果外文本(stratum=extra,素材行/使用次數限制等)與效果句(effect)全程
 分開統計——素材行句型單一,混著算會稀釋效果句的模板分佈。
@@ -22,6 +24,7 @@ from collections import Counter, defaultdict
 _HERE = os.path.dirname(os.path.abspath(__file__))
 LEXICON = os.path.join(_HERE, "lexicon.json")
 TOKENS = os.path.join(_HERE, "tokens.json")
+FRAMES = os.path.join(_HERE, "frames.json")
 OUT_MD = os.path.join(_HERE, "report.md")
 OUT_FREQ = os.path.join(_HERE, "wordfreq.json")
 
@@ -281,6 +284,59 @@ def pct(x):
     return "%.2f%%" % (x * 100)
 
 
+def frames_section():
+    """動作框架覆蓋率(票 05):frames.json 不存在時略過。"""
+    if not os.path.exists(FRAMES):
+        return []
+    with open(FRAMES, encoding="utf-8") as f:
+        frames = json.load(f)
+    stats = {k: {"records": 0, "covered": 0, "frames": 0}
+             for k, _ in STRATA}
+    position, polarity, actions = Counter(), Counter(), Counter()
+    for r in frames:
+        st = stats[r["stratum"]]
+        st["records"] += 1
+        st["covered"] += bool(r["frames"])
+        st["frames"] += len(r["frames"])
+        for fr in r["frames"]:
+            position[fr["position"]] += 1
+            polarity[fr["polarity"]] += 1
+            actions[fr["action"]] += 1
+    lines = [
+        "## 動作框架覆蓋率(票 05;儀表板參考)",
+        "",
+        "框架抽取 `frames.py` 讀 tokens.json 逐句抽述語錨點與論元;覆蓋率=有抽到"
+        "至少一個框架的句數比例。效果外文本的素材行(レベル８モンスター×２)沒有"
+        "述語,天然抽不到。",
+        "",
+        "| 項目 | 效果句 | 效果外文本 |",
+        "|---|---|---|",
+        "| 有框架的句 | {:,} / {:,}({}) | {:,} / {:,}({}) |".format(
+            stats["effect"]["covered"], stats["effect"]["records"],
+            pct(stats["effect"]["covered"] / max(1, stats["effect"]["records"])),
+            stats["extra"]["covered"], stats["extra"]["records"],
+            pct(stats["extra"]["covered"] / max(1, stats["extra"]["records"]))),
+        "| 框架數 | {:,} | {:,} |".format(stats["effect"]["frames"],
+                                          stats["extra"]["frames"]),
+        "",
+        "位置分佈:" + "、".join("%s %s" % (k, format(v, ","))
+                                for k, v in sorted(position.items())),
+        "",
+        "極性分佈:" + "、".join("%s %s" % (k, format(v, ","))
+                                for k, v in sorted(polarity.items())),
+        "",
+        "動作詞元 top 50(相異 %d 種):" % len(actions),
+        "",
+        "| # | 動作 | 框架數 |",
+        "|---|---|---|",
+    ]
+    ordered = sorted(actions.items(), key=lambda kv: (-kv[1], kv[0]))
+    for pos, (action, count) in enumerate(ordered[:50], 1):
+        lines.append("| %d | %s | %s |" % (pos, action, format(count, ",")))
+    lines.append("")
+    return lines
+
+
 def main():
     lexicon, sentences = load()
     surface_of = {e["id"]: e["surface"] for e in lexicon}
@@ -445,6 +501,8 @@ def main():
                 bucket_label, format(n_templates, ","),
                 format(n_sentences, ",")))
         lines.append("")
+
+    lines += frames_section()
 
     with open(OUT_MD, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))

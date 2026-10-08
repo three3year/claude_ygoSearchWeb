@@ -123,6 +123,33 @@ table.oov td.exc{max-width:520px}
 .extext{font-size:.85rem;overflow-wrap:anywhere}
 mark.oovmark{background:var(--chip-oov-bg);color:var(--chip-oov-ink);
   border-radius:3px;padding:0 2px;font-weight:600}
+/* 卡片拆解 */
+.search-row{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;
+  padding:8px 14px;font-family:inherit;font-size:.9rem;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+button.link{all:unset;cursor:pointer;color:var(--accent);font-family:inherit}
+button.link:hover{text-decoration:underline}
+ul.hits{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:3px}
+.muted{color:var(--muted);font-weight:400}
+.card-head{font-size:1.05rem;margin:8px 0 10px;overflow-wrap:anywhere}
+.rec{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin:0 0 10px;padding:10px 14px}
+.rec-pos{font-size:.8rem;color:var(--muted);margin:0 0 6px}
+.rec-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:14px}
+@media (max-width:760px){.rec-grid{grid-template-columns:1fr}}
+.rec-text{font-size:.92rem;line-height:1.75;overflow-wrap:anywhere}
+table.frames{border:none;font-size:.88rem}
+table.frames th,table.frames td{padding:4px 8px;vertical-align:top;overflow-wrap:anywhere}
+table.frames tr.clause{display:none}
+table.frames tr.clause.on{display:table-row}
+table.frames tr.clause td{border-top:none;padding-top:0;font-size:.8rem;color:var(--muted)}
+table.frames .sent{display:block;font-size:.7rem}
+.f-cost{background:var(--chip-num-bg);color:var(--chip-num-ink)}
+.f-eff{background:var(--chip-name-bg);color:var(--chip-name-ink)}
+.f-cond{background:var(--chip-dem-bg);color:var(--chip-dem-ink)}
+.pol-neg{color:var(--chip-oov-ink);font-weight:600}
+.pol-can{color:var(--chip-p-ink)}
+.pol-aff{color:var(--muted)}
 @media (prefers-reduced-motion: no-preference){
   .examples{animation:fade .15s ease-out}
   @keyframes fade{from{opacity:0}to{opacity:1}}
@@ -132,20 +159,24 @@ mark.oovmark{background:var(--chip-oov-bg);color:var(--chip-oov-ink);
 <div class="wrap">
 <header>
   <h1>效果文分詞檢視</h1>
-  <p class="sub">新格式新卡層・日文側種子詞典 <span id="lexcount">—</span> 詞・切分慣例第一版+R5 指示綁定裁定(2026-10-01)。
-  模板=NAME/NUM 正規化後的詞 ID 序列(指示綁定不收斂);本頁供質性驗收:翻模板讀例句,判斷「讀不讀得出這張卡在做什麼」。</p>
+  <p class="sub">新格式新卡層・分詞詞典 <span id="lexcount">—</span> 詞・粒度原則最小可拆(ADR-0014,2026-10-08)。
+  「卡片拆解」分頁(票 04/05〜08):每張卡的效果句拆成動作框架——動作(詞元)、對象/來源/目的、位置(代價/效果/條件)、極性(肯定/否定/可能),依原文順序;本頁供質性驗收:翻卡讀框架,判斷「讀不讀得出這張卡在做什麼」。</p>
 </header>
 
 <div class="stats" id="stats"></div>
-<p class="note">OOV 佔比=未收錄段 token 數/內容 token 數;效果句長尾極長(top-100 覆蓋僅 6.6%)主因是 OOV 段保留字面與活用尾未收斂,對應 conventions.md 的 12 條裁定點。</p>
+<p class="note">框架覆蓋率=有抽到至少一個框架的句比例(儀表板參考,不是通過門檻);OOV 佔比=未收錄段 token 數/內容 token 數(全語料已歸零)。</p>
 
 <nav id="tabs" role="tablist"></nav>
 <div class="legend">圖例:
+  <span class="chip f-cost">代價</span>
+  <span class="chip f-eff">效果</span>
+  <span class="chip f-cond">條件</span>
   <span class="chip t-lex">詞典詞</span>
   <span class="chip t-dem">指示綁定(この/その+詞)</span>
   <span class="chip t-particle">助詞</span>
   <span class="chip t-name">卡名/計數器名(〈名〉カウンター)</span>
-  <span class="chip t-num">數字/數量約束(レベル〈n〉以下)</span>
+  <span class="chip t-num">數字/數量約束/範圍(レベル〈n〉以下、2～5)</span>
+  <span class="chip t-lex">屬性字/召喚法/列舉前項(通常(魔法))</span>
   <span class="chip t-counter">量詞</span>
   <span class="chip t-oov">OOV 未收錄</span>
 </div>
@@ -218,7 +249,9 @@ function fmt(n){return n.toLocaleString("zh-TW")}
     var s=D.strata[k], st=s.stats;
     var oov=(100*st.oov_tokens/st.content_tokens).toFixed(2);
     var zero=(100*st.zero_oov_sentences/st.sentences).toFixed(1);
+    var fs=D.frames&&D.frames.stats[k];
     h+='<div class="tile"><div class="k">'+s.label+'・句數</div><div class="v">'+fmt(s.sentences)+' <small>'+fmt(s.cards)+' 張卡</small></div></div>'
+     + (fs?'<div class="tile"><div class="k">'+s.label+'・框架覆蓋率</div><div class="v">'+(100*fs.covered/fs.records).toFixed(2)+'% <small>'+fmt(fs.frames)+' 個框架</small></div></div>':'')
      + '<div class="tile"><div class="k">'+s.label+'・OOV 佔比</div><div class="v">'+oov+'% <small>零 OOV 句 '+zero+'%</small></div></div>'
      + '<div class="tile"><div class="k">'+s.label+'・模板數</div><div class="v">'+fmt(s.templates)+' <small>top-100 覆蓋 '+s.top100_coverage+'%</small></div></div>';
   });
@@ -227,6 +260,8 @@ function fmt(n){return n.toLocaleString("zh-TW")}
 
 // ---- 分頁 ----
 var TABS=[
+ {id:"cards",label:"卡片拆解"},
+ {id:"cover",label:"框架覆蓋與盲區"},
  {id:"tpl-effect",label:"效果句模板"},
  {id:"tpl-extra",label:"效果外模板"},
  {id:"oov",label:"OOV 高頻段"},
@@ -375,6 +410,137 @@ function convSection(){
   return box;
 }
 
+// ---- 卡片拆解(票 05/08):索引在 D.frames,逐卡資料在 view_frames_<k>.js 按需載入 ----
+var FR=D.frames, CARDS=FR?FR.cards:[], shardLoading={};
+var cardById={};
+CARDS.forEach(function(c){cardById[c[0]]=c});
+function loadShard(k,cb){
+  window.VIEW_FRAMES=window.VIEW_FRAMES||{};
+  if(window.VIEW_FRAMES[k]){cb(null);return}
+  if(shardLoading[k]){shardLoading[k].push(cb);return}
+  shardLoading[k]=[cb];
+  var s=document.createElement("script");
+  s.src="view_frames_"+k+".js";
+  s.onload=function(){var q=shardLoading[k];delete shardLoading[k];q.forEach(function(f){f(null)})};
+  s.onerror=function(){var q=shardLoading[k];delete shardLoading[k];q.forEach(function(f){f("載入 view_frames_"+k+".js 失敗")})};
+  document.head.appendChild(s);
+}
+function posChip(p){
+  var cls=p==="代價"?"f-cost":p==="條件"?"f-cond":"f-eff";
+  return '<span class="chip '+cls+'">'+esc(p)+'</span>';
+}
+function polText(p){
+  return p==="肯定"?'<span class="pol-aff">肯定</span>':p==="否定"?'<span class="pol-neg">否定</span>':'<span class="pol-can">可能</span>';
+}
+function recLabel(r){
+  var extra=r.st==="extra";
+  return (r.s==="pendulum"?"靈擺 ":"")+(extra?"效果外文本 "+r.i:r.i)+(r.k&&!extra?"・"+r.k:"");
+}
+function cardHtml(c,recs){
+  var h='<div class="card-head"><b>'+c[0]+'</b> '+esc(c[1])+' <span class="muted">'+esc(c[2])+'</span>'
+    +' <span class="muted">・'+recs.length+' 句・'+c[5]+' 個框架'+(c[6]?'・'+c[6]+' 句無框架':'')+'</span></div>';
+  recs.forEach(function(r){
+    h+='<div class="rec"><div class="rec-pos">'+esc(recLabel(r))+'</div>'
+      +'<div class="rec-grid"><div class="rec-text">'+esc(r.t).replace(/\n/g,"<br>")+'</div><div class="rec-frames">';
+    if(!r.f.length){h+='<p class="note">(抽不到框架)</p>';}
+    else{
+      h+='<table class="frames"><thead><tr><th>#</th><th>位置</th><th>動作</th><th>極性</th><th>對象</th><th>來源</th><th>目的</th></tr></thead><tbody>';
+      r.f.forEach(function(f,i){
+        h+='<tr title="'+esc(f[7])+'"><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+posChip(f[1])+'</td><td><b>'+esc(f[2])+'</b></td><td>'+polText(f[3])+'</td>'
+          +'<td>'+esc(f[4]||"")+'</td><td>'+esc(f[5]||"")+'</td><td>'+esc(f[6]||"")+'</td></tr>'
+          +'<tr class="clause"><td></td><td colspan="6"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
+      });
+      h+='</tbody></table>';
+    }
+    h+='</div></div></div>';
+  });
+  return h;
+}
+function cardsSection(){
+  var box=document.createElement("section");
+  if(!FR){box.innerHTML='<p class="note">view_data.js 未含框架資料(先跑 frames.py 與 prepare_view.py)。</p>';return box}
+  box.innerHTML='<div class="search-row"><input type="search" placeholder="卡號或卡名(日文/繁中,子字串)"><button class="btn" id="rnd">隨機一張</button></div>'
+    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。左原文、右框架表(動作=詞元;對象/來源/目的=を/から/に・へ 前的詞;位置=代價/效果/條件);滑過一列看對應子句。</p>'
+    +'<div class="results"></div><div class="card-view"></div>';
+  var input=box.querySelector("input"), results=box.querySelector(".results"), view=box.querySelector(".card-view");
+  function openCard(id){
+    var c=cardById[id]; if(!c)return;
+    view.innerHTML='<p class="note">載入中…</p>';
+    loadShard(c[3],function(err){
+      if(err){view.innerHTML='<p class="note">'+esc(err)+'</p>';return}
+      var recs=window.VIEW_FRAMES[c[3]][String(id)]||[];
+      view.innerHTML=cardHtml(c,recs);
+      view.scrollIntoView({block:"start"});
+    });
+  }
+  function search(q){
+    results.innerHTML="";
+    if(!q)return;
+    var hits=[], isNum=/^\d+$/.test(q);
+    for(var i=0;i<CARDS.length&&hits.length<60;i++){
+      var c=CARDS[i];
+      if(isNum?String(c[0]).indexOf(q)===0:(c[1].indexOf(q)>=0||c[2].indexOf(q)>=0))hits.push(c);
+    }
+    if(isNum&&cardById[+q]){openCard(+q);}
+    results.innerHTML=hits.length?'<ul class="hits">'+hits.map(function(c){
+      return '<li><button class="link" data-id="'+c[0]+'"><b>'+c[0]+'</b> '+esc(c[1])+' <span class="muted">'+esc(c[2])+'</span></button></li>';
+    }).join("")+'</ul>'+(hits.length===60?'<p class="note">只列前 60 筆,請縮小條件。</p>':''):'<p class="note">沒有符合的卡。</p>';
+  }
+  var timer=null;
+  input.addEventListener("input",function(){clearTimeout(timer);var v=this.value.trim();timer=setTimeout(function(){search(v)},150)});
+  results.addEventListener("click",function(e){var b=e.target.closest("button[data-id]");if(b)openCard(+b.getAttribute("data-id"))});
+  box.querySelector("#rnd").addEventListener("click",function(){
+    var c=CARDS[Math.floor(Math.random()*CARDS.length)];
+    input.value=String(c[0]); results.innerHTML=""; openCard(c[0]);
+  });
+  view.addEventListener("mouseover",function(e){
+    var tr=e.target.closest("tr[title]"); if(!tr)return;
+    var next=tr.nextElementSibling; if(next&&next.classList.contains("clause"))next.classList.add("on");
+  });
+  view.addEventListener("mouseout",function(e){
+    var tr=e.target.closest("tr[title]"); if(!tr)return;
+    var next=tr.nextElementSibling; if(next&&next.classList.contains("clause"))next.classList.remove("on");
+  });
+  return box;
+}
+function coverSection(){
+  var box=document.createElement("section");
+  if(!FR){box.innerHTML='<p class="note">無框架資料。</p>';return box}
+  var st=FR.stats, h='<div class="stats">';
+  [["effect","效果句"],["extra","效果外文本"]].forEach(function(kv){
+    var s=st[kv[0]];
+    h+='<div class="tile"><div class="k">'+kv[1]+'・有框架的句</div><div class="v">'+(100*s.covered/s.records).toFixed(2)+'% <small>'+fmt(s.covered)+' / '+fmt(s.records)+'</small></div></div>'
+      +'<div class="tile"><div class="k">'+kv[1]+'・框架數</div><div class="v">'+fmt(s.frames)+'</div></div>';
+  });
+  h+='</div><p class="note">覆蓋率是儀表板參考,不是通過門檻;效果外文本的素材行(レベル８モンスター×２)沒有述語,天然抽不到。</p>';
+  h+='<h2>位置與極性分佈</h2><div class="scroll"><table><thead><tr><th>位置</th><th>框架數</th></tr></thead><tbody>'
+    +FR.position.map(function(r){return '<tr><td>'+posChip(r[0])+'</td><td class="n">'+fmt(r[1])+'</td></tr>'}).join("")+'</tbody></table></div>'
+    +'<div class="scroll" style="margin-top:8px"><table><thead><tr><th>極性</th><th>框架數</th></tr></thead><tbody>'
+    +FR.polarity.map(function(r){return '<tr><td>'+polText(r[0])+'</td><td class="n">'+fmt(r[1])+'</td></tr>'}).join("")+'</tbody></table></div>';
+  h+='<h2>動作詞元 top '+FR.top_actions.length+'(相異 '+fmt(FR.distinct_actions)+' 種)</h2><div class="scroll"><table><thead><tr><th>#</th><th>動作</th><th>框架數</th></tr></thead><tbody>'
+    +FR.top_actions.map(function(r,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(r[0])+'</td><td class="n">'+fmt(r[1])+'</td></tr>'}).join("")+'</tbody></table></div>';
+  var unc=FR.uncovered;
+  h+='<h2>抽不到任何框架的句子('+fmt(unc.length)+' 句)</h2><input type="search" id="uncq" placeholder="過濾(卡號或原文子字串);預設只列效果句"><div id="unclist"></div>';
+  box.innerHTML=h;
+  var list=box.querySelector("#unclist");
+  function render(q){
+    var rows=unc.filter(function(u){return q?(String(u.card).indexOf(q)>=0||u.text.indexOf(q)>=0):u.stratum==="effect"});
+    var shown=rows.slice(0,400);
+    list.innerHTML='<p class="note">'+fmt(rows.length)+' 句'+(rows.length>400?'(只列前 400)':'')+(q?'':';效果外文本的 '+fmt(unc.length-rows.length)+' 句請輸入條件再看')+'</p>'
+      +'<div class="scroll"><table><thead><tr><th>卡號</th><th>位置</th><th>原文</th></tr></thead><tbody>'
+      +shown.map(function(u){return '<tr><td><button class="link" data-id="'+u.card+'">'+u.card+'</button></td><td>'+esc((u.section==="pendulum"?"靈擺 ":"")+u.index)+'</td><td class="extext">'+esc(u.text)+'</td></tr>'}).join("")
+      +'</tbody></table></div>';
+  }
+  render("");
+  box.querySelector("#uncq").addEventListener("input",function(){render(this.value.trim())});
+  list.addEventListener("click",function(e){
+    var b=e.target.closest("button[data-id]"); if(!b)return;
+    nav.querySelector('button[data-tab="cards"]').click();
+    var sec=cache["cards"]; var input=sec.querySelector("input"); input.value=b.getAttribute("data-id"); input.dispatchEvent(new Event("input"));
+  });
+  return box;
+}
+
 var cache={};
 function show(id){
   if(!cache[id]){
@@ -383,10 +549,12 @@ function show(id){
       : id==="oov"?oovSection()
       : id==="freq"?freqSection()
       : id==="conv"?convSection()
+      : id==="cards"?cardsSection()
+      : id==="cover"?coverSection()
       : histSection();
   }
   main.innerHTML=""; main.appendChild(cache[id]);
 }
-show("tpl-effect");
+show(FR?"cards":"tpl-effect");
 })();
 </script>

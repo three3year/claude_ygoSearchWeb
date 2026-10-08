@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
-"""產生檢視頁資料 view_data.js(window.VIEW_DATA=...),以及 conventions.md
-審閱鏡像的資料塊 JSON(mirror-data/,格式見 review-mirror skill 的「資料塊」)。
+"""產生檢視頁資料 view_data.js(window.VIEW_DATA=...)、卡片拆解分頁的分片
+view_frames_<k>.js(window.VIEW_FRAMES[k]=...,依卡號分片、按需載入),以及
+conventions.md 審閱鏡像的資料塊 JSON(mirror-data/,格式見 review-mirror skill
+的「資料塊」)。
 
-重用 report.py 的 token_kind/normalize/scan_stratum,保證與報表同一把尺。
-決定性輸出:排序穩定、不讀時鐘。
+重用 report.py 的 token_kind/normalize/scan_stratum,保證與報表同一把尺;
+框架資料讀 frames.json(frames.py 的輸出)。
+決定性輸出:排序穩定、不讀時鐘;全部純 ASCII(\\uXXXX 轉義)避開伺服器 charset。
 """
 import importlib.util
 import json
 import os
 import sys
+from collections import Counter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -22,6 +26,10 @@ _spec.loader.exec_module(effect_tokenize)
 import extract_seed  # noqa: E402
 
 MIRROR_DIR = os.path.join(HERE, "mirror-data")
+FRAMES = os.path.join(HERE, "frames.json")
+CARDS = os.path.join(HERE, "..", "..", "data", "cards.json")
+FRAME_SHARDS = 12
+TOP_ACTIONS = 80
 
 TOP_TEMPLATES = {"effect": 300, "extra": 150}
 EXAMPLES_PER_TEMPLATE = 4
@@ -125,6 +133,8 @@ def main():
             "top_freq": freq_rows,
         }
 
+    out["frames"] = write_frame_shards(sentences)
+
     # ensure_ascii=True:全檔純 ASCII(\uXXXX 轉義),不受伺服器 charset 影響
     js = "window.VIEW_DATA=" + json.dumps(
         out, ensure_ascii=True, separators=(",", ":"), sort_keys=True) + ";"
@@ -134,6 +144,77 @@ def main():
     print("written", path, len(js), "bytes")
 
     write_mirror_data(lexicon, sentences)
+
+
+# ── 卡片拆解(票 05/08):frames.json → 分片 + 索引/覆蓋率/盲區 ──
+
+def write_frame_shards(sentences):
+    """frames.json 逐卡打包成 FRAME_SHARDS 個 view_frames_<k>.js;回傳要放進
+    view_data.js 的索引(卡號/卡名/分片號)、覆蓋率與「抽不到框架的句子」。"""
+    with open(FRAMES, encoding="utf-8") as f:
+        frames = json.load(f)
+    with open(CARDS, encoding="utf-8") as f:
+        names = {c["id"]: (c["name_ja"], c["name_zh"]) for c in json.load(f)}
+    by_key = {(s["card"], s["section"], s["index"]): s for s in sentences}
+
+    per_card = {}
+    stats = {k: {"records": 0, "covered": 0, "frames": 0}
+             for k in ("effect", "extra")}
+    position = Counter()
+    polarity = Counter()
+    actions = Counter()
+    uncovered = []
+    for r in frames:
+        s = by_key[(r["card"], r["section"], r["index"])]
+        rec = {"s": r["section"], "i": r["index"], "k": s["kind"],
+               "st": r["stratum"], "t": s["text_ja"],
+               "f": [[fr["sentence"], fr["position"], fr["action"],
+                      fr["polarity"], fr.get("object"), fr.get("source"),
+                      fr.get("goal"), fr["clause"]] for fr in r["frames"]]}
+        per_card.setdefault(r["card"], []).append(rec)
+        st = stats[r["stratum"]]
+        st["records"] += 1
+        st["covered"] += bool(r["frames"])
+        st["frames"] += len(r["frames"])
+        for fr in r["frames"]:
+            position[fr["position"]] += 1
+            polarity[fr["polarity"]] += 1
+            actions[fr["action"]] += 1
+        if not r["frames"]:
+            uncovered.append({"card": r["card"], "section": r["section"],
+                              "index": r["index"], "stratum": r["stratum"],
+                              "text": s["text_ja"]})
+
+    card_ids = sorted(per_card)
+    per_shard = -(-len(card_ids) // FRAME_SHARDS)
+    index = []
+    for k in range(FRAME_SHARDS):
+        chunk = card_ids[k * per_shard:(k + 1) * per_shard]
+        shard = {str(cid): per_card[cid] for cid in chunk}
+        js = ("window.VIEW_FRAMES=window.VIEW_FRAMES||{};window.VIEW_FRAMES[%d]="
+              % k) + json.dumps(shard, ensure_ascii=True,
+                                separators=(",", ":"), sort_keys=True) + ";"
+        path = os.path.join(HERE, "view_frames_%d.js" % k)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(js)
+        print("written", path, len(js), "bytes")
+        for cid in chunk:
+            recs = per_card[cid]
+            ja, zh = names.get(cid, ("", ""))
+            index.append([cid, ja, zh, k, len(recs),
+                          sum(len(r["f"]) for r in recs),
+                          sum(1 for r in recs if not r["f"])])
+    return {
+        "shards": FRAME_SHARDS,
+        "cards": index,
+        "stats": stats,
+        "position": [[k, v] for k, v in sorted(position.items())],
+        "polarity": [[k, v] for k, v in sorted(polarity.items())],
+        "top_actions": [[a, c] for a, c in sorted(
+            actions.items(), key=lambda kv: (-kv[1], kv[0]))[:TOP_ACTIONS]],
+        "distinct_actions": len(actions),
+        "uncovered": uncovered,
+    }
 
 
 # ── 審閱鏡像的資料塊(conventions.md 引用;一個檔一張表)──

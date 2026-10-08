@@ -182,9 +182,12 @@ class Tokenizer:
                          if text.startswith(c, i)), None)
         if cmp_word:
             word = ""
-            # 運算符號(＋/×)不是屬性名:Pスケール×〈n〉以上 的 × 不綁入
+            # 運算符號(＋/×)不是屬性名:Pスケール×〈n〉以上 的 × 不綁入;
+            # 純平假名的前詞是活用尾/功能詞(合わせ|て|１００００以上),也不綁
             if (not counter and tokens and tokens[-1].startswith("W")
-                    and self.surface_of[tokens[-1]] not in OPERATORS):
+                    and self.surface_of[tokens[-1]] not in OPERATORS
+                    and not all(_is_hira(c)
+                                for c in self.surface_of[tokens[-1]])):
                 word = tokens.pop()
             tokens.append("q:%s:%d:%s:%s" % (word, value, counter, cmp_word))
             return i + len(cmp_word)

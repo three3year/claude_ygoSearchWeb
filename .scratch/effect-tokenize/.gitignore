@@ -1,7 +1,9 @@
-# 決定性建置產物,由 extract_seed.py → tokenize.py → report.py →
+# 決定性建置產物,由 extract_seed.py → tokenize.py → frames.py → report.py →
 # prepare_view.py 重生;lexicon.json 與 report.md 入版控供翻閱
 tokens.json
+frames.json
 view_data.js
+view_frames_*.js
 wordfreq.json
 # 審閱鏡像的資料塊 JSON,prepare_view.py 重生
 mirror-data/

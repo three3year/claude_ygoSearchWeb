@@ -51,6 +51,14 @@ QUOTA_AFFECTED = {"賦予型": 22, "發動時選": 18, "處理時選": 8, "適�
                   "依條件發動": 8, "其他": 4, "未拆●": 25}
 BATCHES_AFFECTED = 4
 ERROR_TYPES = ("漏抽動作", "論元抽錯", "位置判錯", "極性判錯", "多抽(不是動作)")
+# 約束框架(票 07):分層 → 配額(合計 300;一張卡依序歸入第一個符合的層)
+STRATA_CONSTRAINT = ("事件回合禁用", "誓約", "召喚條件", "素材", "時機", "發動句內次數",
+                     "只有註記次數")
+QUOTA_CONSTRAINT = {"事件回合禁用": 20, "誓約": 50, "召喚條件": 50, "素材": 40, "時機": 60,
+                    "發動句內次數": 50, "只有註記次數": 30}
+BATCHES_CONSTRAINT = 8
+ERROR_TYPES_CONSTRAINT = ("漏認約束", "誤認約束", "類別/子類判錯", "欄位抽錯", "取代錯誤",
+                          "次數歸屬判錯")
 TYPE_PENDULUM, TYPE_SPELL, TYPE_TRAP = 0x1000000, 0x2, 0x4
 OPTION = "●"
 
@@ -143,6 +151,46 @@ def sample_affected(seed):
     return picked
 
 
+# ── 約束框架(票 07)──
+
+def constraint_stratum(records):
+    """一張卡的框架紀錄 → 約束框架分層(依 STRATA_CONSTRAINT 順序取第一個符合的;
+    沒有任何約束框架回 None)。發動句內次數=效果句裡對象是 この効果 的次數框架;
+    只有註記次數=只有前言段註記那種次數框架。"""
+    labels = set()
+    for r in records:
+        for f in r["frames"]:
+            if f.get("kind") != constraints.KIND_CONSTRAINT:
+                continue
+            if f["subtype"] == constraints.SUB_COUNT:
+                labels.add("發動句內次數" if f["target"] == constraints.THIS_EFFECT
+                           else "只有註記次數")
+            else:
+                labels.add(f["subtype"] or f["category"])
+    return next((k for k in STRATA_CONSTRAINT if k in labels), None)
+
+
+def sample_constraints(seed):
+    _cards, _tokens, frames = load()
+    by_card = defaultdict(list)
+    for r in frames:
+        by_card[r["card"]].append(r)
+    pools = defaultdict(list)
+    for cid in sorted(by_card):
+        stratum = constraint_stratum(by_card[cid])
+        if stratum:
+            pools[stratum].append(cid)
+    rng = random.Random(seed)
+    picked = []
+    for key in STRATA_CONSTRAINT:
+        pool = pools.get(key, [])
+        chosen = sorted(rng.sample(pool, min(QUOTA_CONSTRAINT[key], len(pool))))
+        picked += [{"card": cid, "stratum": key} for cid in chosen]
+    print("母體:" + "、".join("%s %d" % (k, len(pools.get(k, [])))
+                            for k in STRATA_CONSTRAINT))
+    return picked
+
+
 # ── 批次檔 ──
 
 def record_lines(s, fr):
@@ -227,6 +275,11 @@ def read_meta(round_dir):
     return {"mode": "sample", "batches": BATCHES, "strata": list(QUOTA)}
 
 
+def round_dir_of(line, round_no):
+    prefix = "constraint-round" if line == "constraints" else "round"
+    return os.path.join(CHECK_DIR, "%s%d" % (prefix, round_no))
+
+
 # ── 報告 ──
 
 def report(round_dir):
@@ -244,6 +297,7 @@ def report(round_dir):
     with open(os.path.join(round_dir, "sample.json"), encoding="utf-8") as f:
         picked = json.load(f)
     strata = meta["strata"]
+    error_types = tuple(meta.get("error_types", ERROR_TYPES))
     label = {k: STRATUM_LABEL.get(k, k) for k in strata}
     stratum_of_card = {p["card"]: p["stratum"] for p in picked}
     quota = Counter(p["stratum"] for p in picked)
@@ -262,11 +316,11 @@ def report(round_dir):
         "| 錯誤類型 | 筆數 | " + " | ".join(label[k] for k in strata) + " |",
         "|---|---|" + "---|" * len(strata),
     ]
-    for t in ERROR_TYPES:
+    for t in error_types:
         lines.append("| %s | %d | %s |" % (
             t, by_type.get(t, 0),
             " | ".join(str(by_type_stratum.get((t, k), 0)) for k in strata)))
-    other = [f for f in findings if f["type"] not in ERROR_TYPES]
+    other = [f for f in findings if f["type"] not in error_types]
     if other:
         lines.append("| (其他) | %d | %s |" % (len(other), " | ".join(
             str(sum(1 for f in other if stratum_of_card.get(f["card"]) == k))
@@ -287,9 +341,9 @@ def report(round_dir):
                 len(findings) - len(merge_related)),
             "",
         ]
-    for t in ERROR_TYPES + ("其他",):
+    for t in error_types + ("其他",):
         items = [f for f in findings
-                 if (f["type"] == t if t != "其他" else f["type"] not in ERROR_TYPES)]
+                 if (f["type"] == t if t != "其他" else f["type"] not in error_types)]
         if not items:
             continue
         lines += ["## %s(%d 筆)" % (t, len(items)), ""]
@@ -307,13 +361,21 @@ def report(round_dir):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("command", choices=("sample", "affected", "report", "recheck"))
+    ap.add_argument("command", choices=("sample", "affected", "constraints", "report",
+                                        "recheck"))
     ap.add_argument("--round", type=int, required=True)
     ap.add_argument("--seed", type=int, default=20261009)
     ap.add_argument("--from", dest="from_round", type=int)
+    ap.add_argument("--line", choices=("frames", "constraints"), default="frames")
     args = ap.parse_args()
-    round_dir = os.path.join(CHECK_DIR, "round%d" % args.round)
-    if args.command == "sample":
+    line = "constraints" if args.command == "constraints" else args.line
+    round_dir = round_dir_of(line, args.round)
+    if args.command == "constraints":
+        write_batches(round_dir, sample_constraints(args.seed),
+                      {"mode": "constraints", "seed": args.seed,
+                       "batches": BATCHES_CONSTRAINT, "strata": list(STRATA_CONSTRAINT),
+                       "error_types": list(ERROR_TYPES_CONSTRAINT)})
+    elif args.command == "sample":
         write_batches(round_dir, sample(args.seed),
                       {"mode": "sample", "seed": args.seed, "batches": BATCHES,
                        "strata": list(QUOTA)})
@@ -322,7 +384,7 @@ def main():
                       {"mode": "affected", "seed": args.seed,
                        "batches": BATCHES_AFFECTED, "strata": list(FAMILIES)})
     elif args.command == "recheck":
-        src = os.path.join(CHECK_DIR, "round%d" % args.from_round)
+        src = round_dir_of(line, args.from_round)
         with open(os.path.join(src, "sample.json"), encoding="utf-8") as f:
             picked = json.load(f)
         meta = dict(read_meta(src), recheck_of=args.from_round)

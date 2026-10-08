@@ -25,7 +25,8 @@ token 編碼(tokens.json 的 tokens 陣列,一律字串):
     "NUM:1000"   數字(數值正規化:全形→半形、漢數字→阿拉伯)
     "c:体"       NUM 後的量詞
     "r:2:5:体"    數字範圍(２～５体,含兩端;量詞可空)
-    "s:通常:魔法"  列舉前項省略(通常・速攻魔法 的 通常,顯示 通常(魔法))
+    "s:通常:W0123" 列舉前項省略(通常・速攻魔法 的 通常,連到被補全詞
+                 通常魔法 的詞典 ID;顯示 通常(魔法))
     "?:xxx"      OOV 段
     "。"/"、"/…  句讀邊界(照原字)
 
@@ -77,9 +78,11 @@ _ATTR_CHAIN = re.compile(r"[闇光地水炎風神](?:・[闇光地水炎風神])
 # 召喚法七法(R9 裁定):成詞條件=後接 素材/モンスター/召喚,或 ・並列鏈
 # (融合・S・X・P・L);並列尾項由「前一格是法+・」回看補救
 # A:アドバンス召喚 的縮寫(A召喚,2026-10-07 站主裁定加入,召喚法八法)
-# 通常:只在後接 召喚 時是召喚法(通常召喚 → 法:通常|召喚;2026-10-08 站主
-# 裁定)——通常モンスター/通常魔法/通常罠 是卡片種類,照 R9 維持整詞
-_METHOD = r"(?:リンク|融合|儀式|通常(?=召喚)|[SXPLAＳＸＰＬＡ])"
+# 通常/反転/特殊/アドバンス:只在後接 召喚 時是召喚法(通常召喚 → 法:通常|
+# 召喚;2026-10-08 站主裁定,所有「X召喚」統一成 法+召喚 兩格)——
+# 通常モンスター/通常魔法/通常罠 是卡片種類,照 R9 維持整詞
+_METHOD = (r"(?:リンク|融合|儀式|(?:通常|反転|特殊|アドバンス)(?=召喚)"
+           r"|[SXPLAＳＸＰＬＡ])")
 # 全形召喚法字母(融合・Ｓ・Ｘ)輸出統一成半形
 _FULL_ASCII = {"Ｓ": "S", "Ｘ": "X", "Ｐ": "P", "Ｌ": "L", "Ａ": "A"}
 _METHOD_RE = re.compile(_METHOD)
@@ -132,6 +135,9 @@ def _num_value(run):
 class Tokenizer:
     def __init__(self, lexicon_entries):
         self.id_of = {e["surface"]: e["id"] for e in lexicon_entries}
+        # 封閉值域的值(ADR-0014):列舉前項本身是詞時,補全詞須是封閉值
+        self.closed = {e["surface"] for e in lexicon_entries
+                       if e.get("closed")}
         self.surface_of = {e["id"]: e["surface"] for e in lexicon_entries}
         self.by_first = {}
         for e in lexicon_entries:
@@ -196,8 +202,11 @@ class Tokenizer:
         while j < len(text) and text[j] not in _ITEM_STOP:
             j += 1
         head = text[i:j]
-        if not head or j >= len(text) or text[j] != "・" or head in self.id_of:
+        if not head or j >= len(text) or text[j] != "・":
             return None
+        # 前項本身是詞時(魔法・罠カード 的 魔法),只在補全詞是封閉值時成立
+        # (ADR-0014);不是詞時(通常・速攻魔法 的 通常)補全詞在詞典即可
+        need_closed = head in self.id_of
         k = j + 1
         while True:                       # 跳過中段各項,停在最後一項開頭
             m = k
@@ -215,8 +224,10 @@ class Tokenizer:
             if not text.startswith(last, k):
                 continue
             for cut in range(1, len(last)):
-                if head + last[cut:] in self.id_of:
-                    return head, last[cut:]
+                full = head + last[cut:]
+                if full in self.id_of and (not need_closed
+                                           or full in self.closed):
+                    return head, full
         return None
 
     def tokenize(self, text, context=""):
@@ -424,8 +435,9 @@ class Tokenizer:
             # 通常 → s:通常:魔法(顯示 通常(魔法)),模板不收斂
             elided = self._elided_head(text, i) if not oov else None
             if elided:
-                tokens.append("s:%s:%s" % elided)
-                i += len(elided[0])
+                head, full = elided
+                tokens.append("s:%s:%s" % (head, self.id_of[full]))
+                i += len(head)
                 continue
             # 4. 詞典與助詞跨類最長匹配(R2 後 し 入典,不可吃掉 しか——
             # 助詞較長時助詞優先;OOV 開著且尾字是平假名時助詞照舊不切)

@@ -175,8 +175,8 @@ function rangeText(pay){
   return (m[0]==="n"?"〈n～n〉":m[0]+"～"+m[1])+m[2];
 }
 function elidedText(pay){
-  var m=pay.split(":");           // "通常:魔法" → 通常(魔法)
-  return m[0]+"("+m[1]+")";
+  var m=pay.split(":");           // "通常:W0123" → 通常(魔法)
+  return m[0]+"("+(LEX[m[1]]||m[1]).slice(m[0].length)+")";
 }
 function chip(tok){
   var kind=tok[0], pay=tok[1];

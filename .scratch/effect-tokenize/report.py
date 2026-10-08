@@ -90,8 +90,8 @@ def make_render(surface_of):
         if kind == "method":
             return token[2:]
         if kind == "elided":
-            _, head, tail = token.split(":", 2)
-            return "%s(%s)" % (head, tail)
+            _, head, wid = token.split(":", 2)
+            return "%s(%s)" % (head, surface_of[wid][len(head):])
         if kind == "range":
             return "〈n～n〉" + token.split(":", 3)[3]
         if kind == "particle":
@@ -238,8 +238,8 @@ def freq_rows(freq, surface_of):
             surface = "〈n～n〉" + token.split(":", 3)[3]
             label = surface
         elif cat == "列舉前項":
-            _, head, tail = token.split(":", 2)
-            surface = "%s(%s)" % (head, tail)
+            _, head, wid = token.split(":", 2)
+            surface = "%s(%s)" % (head, surface_of[wid][len(head):])
             label = surface
         elif cat == "助詞":
             surface = token[2:]

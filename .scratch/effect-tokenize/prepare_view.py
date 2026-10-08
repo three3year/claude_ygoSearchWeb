@@ -49,7 +49,7 @@ def split_token(token):
     if kind == "method":
         return [kind, token[2:]]      # 召喚法("融合"/"S")
     if kind == "elided":
-        return [kind, token[2:]]      # 列舉前項("通常:魔法")
+        return [kind, token[2:]]      # 列舉前項("通常:W0123",前端查表)
     if kind == "range":
         return [kind, token[2:]]      # 數字範圍("2:5:体";模板形 n:n:体)
     if kind == "punct":
@@ -184,8 +184,8 @@ def token_cell(token, surface_of):
     elif kind == "punct":
         surface = token
     elif kind == "elided":
-        _, head, tail = token.split(":", 2)
-        surface = "%s(%s)" % (head, tail)
+        _, head, wid = token.split(":", 2)
+        surface = "%s(%s)" % (head, surface_of[wid][len(head):])
     elif kind == "range":
         _, lo, hi, counter = token.split(":", 3)
         surface = ("〈n～n〉" if lo == "n" else "%s～%s" % (lo, hi)) + counter
@@ -395,8 +395,10 @@ def r12_words_table(words, lexicon, sentences, surface_of):
                 {"text": s["text_ja"],
                  "marks": [f for f in family if f in s["text_ja"]]},
                 seq(s["tokens"])]})
+        # ADR-0014 拆掉的詞形(両隣/倍数 等)不在詞典了,標「已拆」
+        shown = "/".join(f if f in id_of else f + "(已拆)" for f in forms)
         rows.append({
-            "cells": [lemma, cat, "/".join(forms),
+            "cells": [lemma, cat, shown,
                       "/".join(f for f in family if f not in forms) or None,
                       p["count"], len(p["hits"])],
             "detail": {"columns": [column("卡號", "text"),
@@ -404,7 +406,6 @@ def r12_words_table(words, lexicon, sentences, surface_of):
                                    column("切分", "tokens")],
                        "rows": examples},
         })
-    assert all(f in id_of for _l, c, fs in words if c != "剝除" for f in fs)
     return {
         "columns": [column("詞元", "text"), column("類別", "text"),
                     column("新增詞形", "text"), column("既有詞形(補 lemma)", "text"),

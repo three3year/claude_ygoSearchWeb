@@ -330,6 +330,67 @@ class TestRound1Fixes(unittest.TestCase):
              ("対象とする", "自分の墓地の罠カード1枚", None, None, "條件", "可能"),
              ("加える", "そのカード", None, "手札", "效果", "肯定")])
 
+    def test_onaji_and_adjective_relative_clauses(self):
+        self.assertEqual(
+            extract("①：そのモンスターと元々のレベルが同じモンスター１体をデッキ"
+                    "から手札に加える。除外したモンスターよりレベルが高い天使族"
+                    "モンスター１体を手札から特殊召喚する。"),
+            [("加える", "そのモンスターと元々のレベルが同じモンスター1体", "デッキ",
+              "手札", "效果", "肯定"),
+             ("特殊召喚", "除外したモンスターよりレベルが高い天使族モンスター1体",
+              "手札", None, "效果", "肯定")])
+
+    def test_comma_separated_name_list_stays_one_phrase(self):
+        self.assertEqual(
+            extract("①：手札から「ガガガ」、「ドドド」、「ゴゴゴ」モンスターを"
+                    "合計２体まで守備表示で特殊召喚できる。"),
+            [("特殊召喚", "「ガガガ」「ドドド」「ゴゴゴ」モンスター", "手札", None,
+              "效果", "可能")])
+
+
+class TestRound2Fixes(unittest.TestCase):
+    """票 10:同批複檢(round2)剩餘高頻錯誤的回歸例子。"""
+
+    def test_scoped_relative_absorbs_only_nearest_wo(self):
+        self.assertEqual(
+            extract("①：そのモンスター以外の、自分の墓地のXモンスター１体を以下の"
+                    "効果を持つ装備魔法カード扱いで対象のモンスターに装備する。"),
+            [("装備", "そのモンスター以外の自分の墓地のXモンスター1体", None,
+              "対象のモンスター", "效果", "肯定")])
+
+    def test_method_chain_summons_each_framed(self):
+        self.assertEqual(
+            extract("①：モンスターが儀式・融合・S・X召喚された場合に発動できる。"
+                    "自分は１枚ドローする。"),
+            [("儀式召喚", None, None, None, "條件", "肯定"),
+             ("融合召喚", None, None, None, "條件", "肯定"),
+             ("S召喚", None, None, None, "條件", "肯定"),
+             ("X召喚", None, None, None, "條件", "肯定"),
+             ("ドロー", None, None, None, "效果", "肯定")])
+
+    def test_leading_time_phrase_dropped_with_its_particle(self):
+        self.assertEqual(
+            extract("●このターンに戦闘を行った相手フィールドのモンスター１体を"
+                    "破壊する。"),
+            [("破壊", "戦闘を行った相手フィールドのモンスター1体", None, None,
+              "效果", "肯定")])
+
+    def test_renyo_potential_before_comma_is_an_action(self):
+        self.assertEqual(
+            extract("●このカードは相手モンスターに続けて攻撃でき、守備表示モンスター"
+                    "を攻撃した場合、戦闘ダメージを与える。"),
+            [("攻撃", None, None, "相手モンスター", "效果", "可能"),
+             ("攻撃", "守備表示モンスター", None, None, "條件", "肯定"),
+             ("与える", "戦闘ダメージ", None, None, "效果", "肯定")])
+
+    def test_result_clause_before_comma_is_not_a_condition(self):
+        self.assertEqual(
+            extract("①：このカードの攻撃力は１０００アップし、相手フィールドに"
+                    "モンスターが存在する場合、その攻撃力はダウンする。"),
+            [("アップ", None, None, None, "效果", "肯定"),
+             ("存在", None, None, "相手フィールド", "條件", "肯定"),
+             ("ダウン", None, None, None, "效果", "肯定")])
+
 
 if __name__ == "__main__":
     unittest.main()

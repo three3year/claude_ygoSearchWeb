@@ -105,7 +105,10 @@ RELATIVE_SCOPE = {"記す": {"が", "に"}, "持つ": {"を"}, "含む": {"を"}
                   "異なる": {"が"}, "受ける": {"が"}, "違う": {"が"},
                   "決める": {"に"}, "存在": {"に", "で", "が"},
                   "なる": {"と", "に", "が", "で"}, "な": {"に", "が"},
-                  "同じ": {"と", "が"}}
+                  "同じ": {"と", "が"}, "高い": {"が", "より", "と"},
+                  "低い": {"が", "より", "と"}, "多い": {"が", "より", "と"},
+                  "少ない": {"が", "より", "と"}, "無い": {"が", "に"},
+                  "ない": {"が", "に"}}
 # 定語吸收不越過的片語(方式/手段副詞、●標籤)
 NON_ABSORB_ROLES = {"に(方式)", "によって", "に対して", "に加えて", "：", "は"}
 # 連用形/て形不當定語(選んで特殊召喚、リリースして発動)
@@ -361,7 +364,7 @@ class FrameExtractor:
         if form is None:
             form = {"し": "stem", "して": "te", "され": "stem", "されて": "te",
                     "せず": "stem", "されず": "stem",
-                    "できず": "stem"}.get(suru_form, "dict")
+                    "できず": "stem", "でき": "stem"}.get(suru_form, "dict")
             if suru_form in ("した", "された"):
                 form = "past"
         if j < n and self.word(tokens[j]) in TAILS:
@@ -375,6 +378,8 @@ class FrameExtractor:
             polarity = POL_NEG
             if self.word(tokens[j]) == "なく":
                 form = "te"
+            elif self.word(tokens[j]) in ("ない", "なかった"):
+                form = "neg"           # 存在しない+名詞 是定語
             j += 1
             # 〜しなければならない:義務,不是否定
             if (j + 1 < n and self.word(tokens[j - 1]) == "なければ"
@@ -452,6 +457,10 @@ class FrameExtractor:
                 fold, clause_start, conditional=False):
         n = len(tokens)
         nominalizer = None
+        if j < n and self.word(tokens[j]) in AUXILIARY and j + 1 < n \
+                and self.word(tokens[j + 1]) in NOMINALIZERS:
+            j += 1                    # 〜としている場合
+            form = "dict"
         if j < n and self.word(tokens[j]) in NOMINALIZERS:
             nominalizer = self.word(tokens[j])
             j += 1
@@ -489,10 +498,16 @@ class FrameExtractor:
                 if p != "の" and k + 1 < stop and tokens[k + 1] == "p:の":
                     cur.append(t)
                     continue
-                # 後綴助詞後接格助詞(１体のみを):不切
+                # 後綴助詞後接格助詞(１体のみを):不切;〜とは(そのモンスターとは
+                # 種族が異なる)的 は 是定語子句的主題,不切
                 if p in CASE_SUFFIX and k + 1 < stop and token_kind(
                         tokens[k + 1]) == "particle" and tokens[k + 1][2:] in CASE_ROLE:
                     continue
+                if p == "は" and cur and cur[-1] == "p:と":
+                    cur.append(t)
+                    continue
+                if p in CASE_ROLE and not cur:
+                    continue              # 開頭副詞被剝掉後的裸助詞(このターンに)
                 # 通常召喚に加えて:慣用,整組不是論元
                 if (p == "に" and k + 1 < stop and self.word(tokens[k + 1]) == "加えて"
                         and cur and self.word(cur[-1]) == "召喚"):
@@ -514,6 +529,11 @@ class FrameExtractor:
                     cur, hard = [], False
                     k += 1
                     continue
+                if p == "で" and cur and token_kind(cur[-1]) == "lex" \
+                        and self.lex.closed_of[cur[-1]] == "種族" and any(
+                            tokens[m] == "p:の" for m in range(k + 1, min(stop, k + 4))):
+                    cur.append(t)         # 種族で属性の:並列修飾
+                    continue
                 if p == "に" and cur and self.word(cur[-1]) in MANNER_NI:
                     out.append(["に(方式)", cur, hard])
                     cur, hard = [], False
@@ -531,7 +551,9 @@ class FrameExtractor:
                     if lead and token_kind(cur[lead - 1]) == "num":
                         lead = 0
                     if 0 < lead < len(cur) and out and out[-1][0] == "を":
-                        out[-1][1] = out[-1][1] + cur[:lead]
+                        out[-1][1] = out[-1][1] + [
+                            t for t in cur[:lead]
+                            if self.word(t) not in ("全て", "それぞれ")]
                         cur = cur[lead:]
                     out.append([p, cur, hard])
                     cur, hard = [], False
@@ -549,9 +571,17 @@ class FrameExtractor:
                 continue
             if kind == "punct":
                 if t == "、":
-                    # 定語動詞後的讀點(「X」を除く、…モンスター)在名詞片語裡
+                    # 定語動詞後的讀點(「X」を除く、…モンスター)在名詞片語裡;
+                    # 卡名列舉的讀點(「A」、「B」、「C」モンスター)也是
                     if cur and self._predicate_lemma(cur, len(cur) - 1) is not None:
                         continue
+                    if (cur and token_kind(cur[-1]) == "name" and k + 1 < stop
+                            and token_kind(tokens[k + 1]) == "name"):
+                        continue
+                    if k + 1 < stop and tokens[k + 1] in ("p:または", "p:及び"):
+                        continue
+                    if cur and cur[-1] == "p:の":
+                        continue          # そのモンスター以外の、…
                     if cur:
                         out.append([None, cur, hard])
                     cur, hard = [], True
@@ -592,8 +622,10 @@ class FrameExtractor:
         if w in SURU_FAMILY and w not in NON_ATTRIBUTIVE_SURU:
             prev = self.word(chunk[k - 1]) if k else None
             return prev or w
-        if w in NEGATORS or w == "な":
+        if w in NEGATORS or w == "な" or w == "同じ":
             return w
+        if self.lex.lemma_of[chunk[k]] in ADJECTIVE_LEMMAS:
+            return self.lex.lemma_of[chunk[k]]    # レベルが高いモンスター
         if self.lex.is_verb(chunk[k]) and verb_form(
                 w, self.lex.lemma_of[chunk[k]]) not in ("te", "stem", "irrealis"):
             return self.lex.lemma_of[chunk[k]]
@@ -629,11 +661,18 @@ class FrameExtractor:
                 # 往前併到讀點或主題(は)為止;特定動詞只吸收自己的格
                 scope = RELATIVE_SCOPE.get(rel)
                 absorbed = []
+                verb_rel = rel not in ("が", "な", "同じ") \
+                    and rel not in ADJECTIVE_LEMMAS and rel not in NEGATORS \
+                    and rel not in RELATIVE_SCOPE
+                taken = set()
                 while merged and merged[-1][0] not in NON_ABSORB_ROLES:
                     r, c, h = merged.pop()
-                    if scope is not None and r not in scope:
+                    if scope is not None and (r not in scope or r in taken) or (
+                            verb_rel and r == "が" and c
+                            and self.word(c[-1]) in ATTR_NOUNS):
                         merged.append([r, c, h])
                         break
+                    taken.add(r)
                     absorbed.insert(0, c + (["p:" + r] if r else []))
                     if h or rel == "が":
                         break
@@ -729,7 +768,7 @@ class FrameExtractor:
                 # て形/連用形子句後面緊接定語動詞+名詞(〜を素材としてX召喚した
                 # モンスター):整段是名詞片語,不是動作
                 if a["form"] in ("te", "stem") and self._inside_relative(
-                        tokens, a["tail"], s_end):
+                        tokens, a["end"], s_end):
                     i = a["tail"]
                     continue
                 anchors.append(a)
@@ -779,7 +818,9 @@ class FrameExtractor:
                     k + 1 < len(anchors) and anchors[k + 1]["conditional"]
                     and (anchors[k]["action"] in STATE_LEMMAS
                          or anchors[k]["passive"]
-                         or anchors[k]["form"] in ("te", "stem")))
+                         or anchors[k]["form"] == "te"
+                         and anchors[k]["polarity"] == POL_AFFIRM
+                         and "、" not in tokens[anchors[k]["end"]:anchors[k]["tail"]]))
                 if anchors[k]["conditional"]:
                     seen = True
             carry = {}
@@ -803,7 +844,9 @@ class FrameExtractor:
                         a["nominalizer"] in (None, "ため")
                         and not ("object" in args or "source" in args)
                         or a["nominalizer"] == "ため"
-                        or args.get("object") == "このカード"
+                        or args.get("object") in ("このカード", "この効果")
+                        or a["nominalizer"] is None
+                        and (args.get("object") or "").endswith("効果")
                         or any(t.startswith("d:この:") and self.word(
                             t.split(":", 2)[2]) == "効果" for t in clause_tokens)
                         and "object" not in args):
@@ -828,8 +871,14 @@ class FrameExtractor:
                     position = POS_EFFECT
                 span = (a["clause_start"], a["end"])
                 clause = " ".join(self.surface(t) for t in tokens[span[0]:span[1]])
-                # 「・」並列的述語名詞(召喚・特殊召喚した):各出一框架,共用後綴
-                for extra in self._coordinated_actions(tokens, a):
+                # 「・」並列的述語名詞(召喚・特殊召喚した)與召喚法鏈(儀式・融合・
+                # S・X召喚):各出一框架,共用後綴
+                coordinated = self._coordinated_actions(tokens, a)
+                if "・" in a["action"] and a["action"].endswith("召喚"):
+                    methods = a["action"][:-2].split("・")
+                    coordinated += [m + "召喚" for m in methods[:-1]]
+                    a["action"] = methods[-1] + "召喚"
+                for extra in coordinated:
                     frames.append({
                         "sentence": s_idx, "action": extra,
                         "object": args.get("object"),

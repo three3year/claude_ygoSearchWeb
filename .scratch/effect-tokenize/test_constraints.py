@@ -581,7 +581,7 @@ class TestConstraintRound1Fixes(unittest.TestCase):
     def test_pledge_subject_this_card(self):
         self.assertEqual(
             rows("①：自分は１枚ドローする。この効果を発動するターン、このカードは攻撃できない。"),
-            [self.DRAW, pledge("この効果を発動するターン", "攻撃", "不能", "このカード",
+            [self.DRAW, pledge("この効果を発動するターン", "攻撃", "不能", None,
                                subject="このカード")])
         self.assertEqual(
             rows("①：自分は１枚ドローする。この効果を発動するターン、このカードしか攻撃できない。"),
@@ -678,7 +678,7 @@ class TestConstraintRound1Fixes(unittest.TestCase):
     def test_pledge_direct_attack_action_name(self):
         self.assertEqual(
             rows("①：自分は１枚ドローする。このターン、このカードは直接攻撃できない。"),
-            [self.DRAW, pledge("このターン", "直接攻撃", "不能", "このカード", subject="このカード")])
+            [self.DRAW, pledge("このターン", "直接攻撃", "不能", None, subject="このカード")])
 
     def test_must_tribute_to_normal_summon(self):
         self.assertEqual(
@@ -687,6 +687,59 @@ class TestConstraintRound1Fixes(unittest.TestCase):
             [summon("必須以某方式召喚",
                     procedure=[{"action": "リリース", "object": "自分フィールドのモンスター3体"}]),
              summon("不能特殊召喚")])
+
+
+class TestConstraintRound3Fixes(unittest.TestCase):
+    """票 09:新種子抽驗(constraint-round3)小型同型的回歸例子。"""
+
+    DRAW = A("ドロー", "效果", "肯定")
+
+    def test_parenthetical_damage_step_note(self):
+        self.assertEqual(
+            rows("②：モンスターが手札から捨てられた場合に発動できる（ダメージステップでも"
+                 "発動可能）。自分は１枚ドローする。"),
+            [A("捨てる", "條件", "肯定"), timing(None, "ダメージステップ", "追加"), self.DRAW])
+
+    def test_count_prefix_with_made(self):
+        self.assertEqual(
+            rows("①：１ターンに３度まで、相手がモンスターを召喚した場合に発動できる。"
+                 "自分は１枚ドローする。"),
+            [count("回合", 3, "この効果"), A("召喚", "條件", "肯定"), self.DRAW])
+
+    def test_phase_count_prefix_gives_count_and_timing(self):
+        self.assertEqual(
+            rows("②：自分・相手のメインフェイズ１に１度、このカードのX素材を１つ取り除いて"
+                 "発動できる。自分は１枚ドローする。"),
+            [count("回合", 1, "この効果"), timing("雙方", "メインフェイズ１"),
+             A("取り除く", "代價", "肯定"), self.DRAW])
+
+    def test_effect_on_summoned_monster_is_not_a_pledge(self):
+        self.assertEqual(
+            rows("②：自分は１枚ドローする。この効果で特殊召喚したモンスターはこのターン、"
+                 "効果が無効化され、L素材にできない。"),
+            [self.DRAW, A("無効化", "效果", "肯定"), A("L素材にする", "效果", "否定")])
+
+    def test_condition_clause_is_not_a_pledge_subject(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このターン、自分の墓地に「試作機」が存在しない"
+                 "場合には、そのカードは発動できない。"),
+            [self.DRAW, A("存在", "條件", "否定"), A("発動", "效果", "否定")])
+
+    def test_pledge_with_count_stays_a_pledge(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このカードの発動後、次のターンの終了時まで自分は"
+                 "魔法カードの効果を１ターンに１度しか発動できない。"),
+            [self.DRAW,
+             pledge("このカードの発動後、次のターンの終了時まで", "発動", "只能",
+                    "魔法カードの効果(１ターンに１度)")])
+
+    def test_each_pledge_predicate_has_its_own_subject(self):
+        self.assertEqual(
+            rows("このカードを発動するターン、自分はこのカードの効果以外ではモンスターを"
+                 "召喚・特殊召喚できず、自分のモンスターは攻撃できない。"),
+            [pledge("このカードを発動するターン", "召喚・特殊召喚", "不能", "モンスター"),
+             pledge("このカードを発動するターン", "攻撃", "不能", None,
+                    subject="自分のモンスター")])
 
 
 if __name__ == "__main__":

@@ -142,6 +142,7 @@ def main():
         }
 
     out["frames"] = write_frame_shards(sentences, surface_of)
+    print("框架字元範圍對齊失敗 %d 句" % out["frames"]["unaligned"])
 
     # ensure_ascii=True:全檔純 ASCII(\uXXXX 轉義),不受伺服器 charset 影響
     js = "window.VIEW_DATA=" + json.dumps(
@@ -154,9 +155,9 @@ def main():
     write_mirror_data(lexicon, sentences)
 
 
-# ── 卡片拆解(票 05/08):frames.json → 分片 + 索引/覆蓋率/盲區 ──
+# ── 卡片拆解(票 05/08/13/14):frames.json → 分片 + 索引/覆蓋率/盲區 ──
 
-_SILENT = set("● 　\t\n") | {chr(c) for c in range(0x2460, 0x2500)}
+_SILENT = effect_tokenize.SILENT      # ● 不是靜默字元(選項邊界 token,ADR-0015)
 _FULL = str.maketrans("０１２３４５６７８９ＳＸＰＬＡ？", "0123456789SXPLA?")
 _KANJI_NUM = set("一二三四五六七八九十")
 
@@ -247,7 +248,8 @@ def span_chars(offsets, span):
 
 def write_frame_shards(sentences, surface_of):
     """frames.json 逐卡打包成 FRAME_SHARDS 個 view_frames_<k>.js;回傳要放進
-    view_data.js 的索引(卡號/卡名/分片號)、覆蓋率與「抽不到框架的句子」。"""
+    view_data.js 的索引(卡號/卡名/分片號)、覆蓋率與「抽不到框架的句子」。
+    一筆是一句效果句(含 ● 選項);回傳值另附字元範圍對齊失敗的句數。"""
     _SURFACES.update(surface_of)
     with open(FRAMES, encoding="utf-8") as f:
         frames = json.load(f)
@@ -258,17 +260,23 @@ def write_frame_shards(sentences, surface_of):
     per_card = {}
     stats, position, polarity, actions = report.frame_stats(frames)
     uncovered = []
+    unaligned = 0
     for r in frames:
         s = by_key[(r["card"], r["section"], r["index"])]
         # 原文字元範圍:框架的詞序列範圍對回 text_ja(對不上時為 null,頁面不高亮)
         offsets = char_offsets(s["text_ja"], s["tokens"])
-        # 欄位:句序、位置、動作、極性、對象、來源、目的、子句、原文 [起,迄)
+        unaligned += offsets is None
+        # 欄位:句序、位置、動作、極性、對象、來源、目的、子句、原文 [起,迄)、
+        # 選項(第幾個 ●)、標籤;p=各段(標記句)的 index、效果類型、字元範圍
         rec = {"s": r["section"], "i": r["index"], "k": s["kind"],
                "st": r["stratum"], "t": s["text_ja"],
+               "p": [[p["index"], p["kind"], p["start"], p["end"]]
+                     for p in s["parts"]],
                "f": [[fr["sentence"], fr["position"], fr["action"],
                       fr["polarity"], fr.get("object"), fr.get("source"),
                       fr.get("goal"), fr["clause"],
-                      span_chars(offsets, fr["span"])] for fr in r["frames"]]}
+                      span_chars(offsets, fr["span"]),
+                      fr.get("option"), fr.get("label")] for fr in r["frames"]]}
         per_card.setdefault(r["card"], []).append(rec)
         if not r["frames"]:
             uncovered.append({"card": r["card"], "section": r["section"],
@@ -304,6 +312,7 @@ def write_frame_shards(sentences, surface_of):
             actions.items(), key=lambda kv: (-kv[1], kv[0]))[:TOP_ACTIONS]],
         "distinct_actions": len(actions),
         "uncovered": uncovered,
+        "unaligned": unaligned,
     }
 
 

@@ -17,8 +17,15 @@
               句)裡的付出是代價、處理段的動作是效果、觸發句(…場合/…時/…限り)
               與發動條件(対象として、狀態述語、被動)是條件
     polarity  極性:肯定/否定/可能——ない/されない/できない 系否定、できる 系可能
-    sentence  句序(。 切開的第幾句,0 起)、span 對應詞序列範圍 [start, end)、
+    sentence  句序(。 與 ● 切開的第幾句,0 起)、span 對應詞序列範圍 [start, end)、
               clause 子句字面(span 內 token 字面相連,供拆解頁對照)
+    option    選項(ADR-0015):出自第 n 個 ● 選項的框架記 n,第一個 ● 之前為 None;
+              label 是「●自分ターン：」這類標籤冒號前的值(沒有標籤時 None),
+              標籤本身不出框架
+
+單位是效果句(一個編號效果的全文,連同它的 ● 選項;tokenize.py 的 assemble 把
+拆開的領起句與子效果句接回一段):選項邊界 token「●」與「。」同樣結束一句,
+發動句、位置、極性各句照既有規則判定,選項各有自己的發動句。
 
 子句切分:一子句至多一個述語錨點——錨點(含活用尾/可能/否定/形式名詞 後綴與
 其後的助詞、讀點)結束處即下一子句的起點;定語用法(動詞後直接接名詞:
@@ -129,6 +136,8 @@ _TE_GODAN_RE = re.compile(r"(って|いて|んで|して)$")
 
 POS_COST, POS_EFFECT, POS_COND = "代價", "效果", "條件"
 POL_AFFIRM, POL_NEG, POL_CAN = "肯定", "否定", "可能"
+OPTION = "●"                  # 選項邊界 token(tokenize.OPTION)
+LABEL_MAX_CHARS = 30          # ●標籤「●…：」冒號前的最大字數(與 tokenize._LABEL 同)
 
 
 def _load_tokenizer_module():
@@ -759,6 +768,23 @@ class FrameExtractor:
         return False
 
     # ── 整句 ──
+    def _option_of_sentence(self, tokens, sentence):
+        """句子以 ● 開頭時回它的標籤值(「●自分ターン：」冒號前的字面;沒有標籤時
+        "");不是選項句回 None。"""
+        start, end = sentence
+        if start >= end or tokens[start] != OPTION:
+            return None
+        label = []
+        for k in range(start + 1, end):
+            t = tokens[k]
+            if t == "：":
+                text = "".join(label)
+                return text if 0 < len(text) <= LABEL_MAX_CHARS else ""
+            if t in ("。", OPTION):
+                break
+            label.append(self.surface(t))
+        return ""
+
     def frames_of_tokens(self, tokens):
         n = len(tokens)
         sentences = []
@@ -767,8 +793,21 @@ class FrameExtractor:
             if t == "。":
                 sentences.append((start, k + 1))
                 start = k + 1
+            elif t == OPTION and k > start:      # 選項邊界:● 開新的一句
+                sentences.append((start, k))
+                start = k
         if start < n:
             sentences.append((start, n))
+
+        # 選項:第 n 個 ● 起的句子都屬選項 n,標籤取自 ● 句自己
+        option_of, label_of = {}, {}
+        option, label = None, None
+        for s_idx, sentence in enumerate(sentences):
+            found = self._option_of_sentence(tokens, sentence)
+            if found is not None:
+                option = (option or 0) + 1
+                label = found or None
+            option_of[s_idx], label_of[s_idx] = option, label
 
         anchors_by_sentence = []
         for s_start, s_end in sentences:
@@ -776,8 +815,8 @@ class FrameExtractor:
             clause_start = s_start
             i = s_start
             while i < s_end:
-                a = self.anchor_at(tokens, i, clause_start) if tokens[i] != "。" \
-                    else None
+                a = self.anchor_at(tokens, i, clause_start) \
+                    if tokens[i] not in ("。", OPTION) else None
                 if a is None:
                     i += 1
                     continue
@@ -911,6 +950,8 @@ class FrameExtractor:
                                    "goal": args.get("goal"),
                                    "position": position,
                                    "polarity": a["polarity"],
+                                   "option": option_of[s_idx],
+                                   "label": label_of[s_idx],
                                    "span": list(span), "clause": clause})
         return frames
 
@@ -989,7 +1030,7 @@ def default_extractor():
 
 
 def extract(text, context=""):
-    """接縫:一句效果文原文(帶同卡同段上文)→ 動作框架清單。"""
+    """接縫:一句效果句原文(整段,含 ● 選項;帶同卡同段上文)→ 動作框架清單。"""
     return default_extractor().extract(text, context)
 
 
@@ -1004,7 +1045,7 @@ def main():
             fr["order"] = k
         out.append({"card": s["card"], "section": s["section"],
                     "index": s["index"], "stratum": s["stratum"],
-                    "frames": frames})
+                    "parts": s["parts"], "frames": frames})
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False, indent=0)
         f.write("\n")

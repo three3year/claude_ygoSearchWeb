@@ -2,8 +2,12 @@
 
 語料:三級分類的**新格式新卡**層(script/text_format/classify.py 的 TIER_NEW,
 與 build_report.py 同一套日期合併邏輯),逐段對上 data/tag_cards.json 的
-clauses,取每句 text_ja。效果外文本(kind=效果外文本,素材行/使用次數限制等)
-與效果句分開標 stratum,報表端分開統計。
+clauses,取每句 text_ja。分詞的單位是**效果句**(ADR-0015:一個編號效果的全文,
+連同它的 ● 選項):效果標記表把官方認可的 ● 子效果拆成獨立的標記句列
+(index 形如「②-●1」),這裡用 assemble() 把領起句與子效果句接回一段(段與段以
+換行相接),每筆帶 parts 記各段的 index、效果類型與字元範圍。效果外文本
+(kind=效果外文本,素材行/使用次數限制等)與效果層分開標 stratum,報表端分開
+統計;含子效果句的效果句一律是效果層。
 
 切分慣例(第一版,詳 conventions.md;裁定點清單也在該檔):
 - 「卡名」→ NAME token(帶原文);『』非卡名引用,照原文處理(裁定點)
@@ -12,7 +16,8 @@ clauses,取每句 text_ja。效果外文本(kind=效果外文本,素材行/使�
 - 助詞(に/で/を/は/が/と/の/へ/も/や/か/から/まで/より/など/として/または/
   及び/しか/のみ/だけ/ずつ)→ 獨立 token(封閉類,不占詞典 ID)
 - 句讀(。、:・()『』)→ 邊界,不編 ID 但保留在序列裡(模板的結構訊號);
-  圈號(①②…)、●、空白 → 靜默邊界(丟棄)
+  「●」→ 選項邊界 token(照原字保留在序列裡,框架抽取把它當句界;
+  ADR-0015);圈號(①②…)、空白、換行 → 靜默邊界(丟棄)
 - 詞典最長匹配;匹配不到的連續段合併成 OOV token(前一字是平假名時 OOV 段
   不被助詞切斷——活用殘尾不可誤斷成助詞)
 
@@ -29,6 +34,7 @@ token 編碼(tokens.json 的 tokens 陣列,一律字串):
                  通常魔法 的詞典 ID;顯示 通常(魔法))
     "?:xxx"      OOV 段
     "。"/"、"/…  句讀邊界(照原字)
+    "●"          選項邊界(照原字;句讀家族,報表不計入內容 token)
 
 決定性:卡片依密碼排序、句依 clauses 原序;同一份輸入重跑逐位元組相同。
 
@@ -96,8 +102,12 @@ _ITEM_STOP = set("。、：・（）『』／「」●\n 　") | {chr(c) for c i
 # ●選項標籤「●…：」:標籤裡的值所屬類別寫在前文(2026-10-07 站主裁定)
 _LABEL = re.compile(r"●([^●：\n]{1,30})：")
 _LABEL_METHOD_CTX = re.compile(r"リンク|融合|儀式|[SXPLAＳＸＰＬＡ]|種類")
-# 圈號與列點是段落標號、空白是排版——靜默邊界,不入序列
-SILENT = set("● 　\t\n") | {chr(c) for c in range(0x2460, 0x2500)}
+# 圈號是段落標號、空白與換行是排版——靜默邊界,不入序列
+SILENT = set(" 　\t\n") | {chr(c) for c in range(0x2460, 0x2500)}
+# ● 是選項邊界(ADR-0015):照原字入序列,框架抽取把它當句界
+OPTION = "●"
+# 子效果句的 index(效果標記表把官方認可的 ● 子效果拆成「領起句 index-●n」)
+_SUB_INDEX = re.compile(r"^(.+)-●(\d+)$")
 
 _DIGITS = "0123456789０１２３４５６７８９"
 _KANJI_NUM = "一二三四五六七八九十"
@@ -111,7 +121,7 @@ def _is_hira(ch):
 def _name_char(ch):
     """計數器名可含的字:非平假名、非句讀/靜默邊界/引號/圈號。"""
     return not (_is_hira(ch) or ch in PUNCT_KEEP or ch in SILENT
-                or ch in "「」")
+                or ch == OPTION or ch in "「」")
 
 
 def _num_value(run):
@@ -288,9 +298,14 @@ class Tokenizer:
                 tokens.append("k:" + hira_name)
                 i += len(hira_name) + len("カウンター")
                 continue
-            # 2. 邊界
+            # 2. 邊界(● 是選項邊界 token,照原字入序列)
             if ch in SILENT:
                 close_oov()
+                i += 1
+                continue
+            if ch == OPTION:
+                close_oov()
+                tokens.append(OPTION)
                 i += 1
                 continue
             if ch in PUNCT_KEEP:
@@ -492,6 +507,44 @@ class Tokenizer:
         return tokens
 
 
+def assemble(clauses):
+    """組裝接縫(ADR-0015):一張卡某段的標記句列 → 效果句列。
+
+    子效果句(index 形如「②-●1」)接回它的領起句之後(依列的順序,即 ●n 序),
+    段與段以換行相接;組裝出的效果句 index 用領起句的 index,kind 用領起句的
+    效果類型。每筆帶 parts:依序列出各段的 index、kind 與在效果句原文裡的
+    字元範圍 [start, end)——串回去等於效果句原文。沒有子效果句的效果句與前言段
+    原樣輸出(parts 只有一段)。效果層:含子效果句的效果句一律是 effect;其餘
+    效果類型是效果外文本的為 extra。沒有 text_ja 的列略過;領起句不在列裡的
+    子效果句自成一句。
+    """
+    out, by_index = [], {}
+    for clause in clauses:
+        text = clause.get("text_ja")
+        if not text:
+            continue
+        m = _SUB_INDEX.match(clause["index"])
+        lead = by_index.get(m.group(1)) if m else None
+        if lead is not None:
+            start = len(lead["text_ja"]) + 1
+            lead["text_ja"] += "\n" + text
+            lead["parts"].append({"index": clause["index"], "kind": clause["kind"],
+                                  "start": start, "end": start + len(text)})
+            lead["stratum"] = "effect"
+            continue
+        rec = {
+            "index": clause["index"],
+            "kind": clause["kind"],
+            "stratum": "extra" if clause["kind"] == "效果外文本" else "effect",
+            "text_ja": text,
+            "parts": [{"index": clause["index"], "kind": clause["kind"],
+                       "start": 0, "end": len(text)}],
+        }
+        by_index[clause["index"]] = rec
+        out.append(rec)
+    return out
+
+
 def new_tier_sections():
     """TIER_NEW 的 (卡片密碼, section) 集合(與 build_report 同一套日期)。"""
     with open(CARDS, encoding="utf-8") as f:
@@ -517,28 +570,31 @@ def main():
 
     sentences = []
     skipped_no_ja = 0
+    assembled = 0
     for card in sorted(tag_cards, key=lambda c: c["id"]):
-        context, context_key = "", None
+        by_section = {}
         for clause in card["clauses"]:
             if (card["id"], clause["section"]) not in picked:
                 continue
-            if clause["section"] != context_key:   # 上文只取同卡同段
-                context, context_key = "", clause["section"]
-            text_ja = clause.get("text_ja")
-            if not text_ja:
+            if not clause.get("text_ja"):
                 skipped_no_ja += 1
                 continue
-            stratum = ("extra" if clause["kind"] == "效果外文本" else "effect")
-            sentences.append({
-                "card": card["id"],
-                "section": clause["section"],
-                "index": clause["index"],
-                "kind": clause["kind"],
-                "stratum": stratum,
-                "text_ja": text_ja,
-                "tokens": tokenizer.tokenize(text_ja, context),
-            })
-            context += text_ja
+            by_section.setdefault(clause["section"], []).append(clause)
+        for section, clauses in by_section.items():
+            context = ""                           # 上文只取同卡同段,以效果句累積
+            for rec in assemble(clauses):
+                assembled += len(rec["parts"]) > 1
+                sentences.append({
+                    "card": card["id"],
+                    "section": section,
+                    "index": rec["index"],
+                    "kind": rec["kind"],
+                    "stratum": rec["stratum"],
+                    "text_ja": rec["text_ja"],
+                    "parts": rec["parts"],
+                    "tokens": tokenizer.tokenize(rec["text_ja"], context),
+                })
+                context += rec["text_ja"]
 
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump(sentences, f, ensure_ascii=False, indent=0)
@@ -550,9 +606,10 @@ def main():
         by_stratum[s["stratum"]] += 1
     print("TIER_NEW 段: %d(卡 %d 張)" % (len(picked),
                                            len({c for c, _ in picked})))
-    print("分詞句數: %d(效果句 %d / 效果外 %d;卡 %d 張;無 text_ja 略過 %d)"
+    print("分詞句數: %d(效果層 %d / 效果外 %d;卡 %d 張;含子效果句的效果句 %d;"
+          "無 text_ja 略過 %d)"
           % (len(sentences), by_stratum["effect"], by_stratum["extra"],
-             cards_seen, skipped_no_ja))
+             cards_seen, assembled, skipped_no_ja))
     print("已寫出 %s" % OUT)
     return 0
 

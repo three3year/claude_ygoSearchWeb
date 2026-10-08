@@ -81,6 +81,7 @@ nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .t-counter{background:var(--chip-c-bg);color:var(--chip-c-ink)}
 .t-oov{background:var(--chip-oov-bg);color:var(--chip-oov-ink);font-weight:600}
 .t-punct{color:var(--muted);padding:1px 2px}
+.t-opt{color:var(--accent);font-weight:700;padding:1px 4px}
 input[type="search"]{width:100%;max-width:420px;padding:8px 12px;
   border:1px solid var(--line);border-radius:8px;background:var(--panel);
   color:var(--ink);font-family:inherit;font-size:.92rem;margin:0 0 12px}
@@ -138,6 +139,11 @@ ul.hits{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:co
 .rec-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:14px}
 @media (max-width:760px){.rec-grid{grid-template-columns:1fr}}
 .rec-text{font-size:.92rem;line-height:1.75;overflow-wrap:anywhere}
+.part{margin:0 0 4px}
+.part.sub{padding-left:1.4em}
+.part .pk{display:block;font-size:.74rem;color:var(--muted);line-height:1.3}
+.opt{font-size:.8rem;white-space:nowrap}
+.opt b{color:var(--accent)}
 table.frames{border:none;font-size:.88rem}
 table.frames th,table.frames td{padding:4px 8px;vertical-align:top;overflow-wrap:anywhere}
 table.frames tr.clause{display:none}
@@ -163,11 +169,11 @@ table.frames tbody tr[title]{cursor:pointer}
 <header>
   <h1>效果文分詞檢視</h1>
   <p class="sub">新格式新卡層・分詞詞典 <span id="lexcount">—</span> 詞・粒度原則最小可拆(ADR-0014,2026-10-08)。
-  「卡片拆解」分頁(票 04/05〜08):每張卡的效果句拆成動作框架——動作(詞元)、對象/來源/目的、位置(代價/效果/條件)、極性(肯定/否定/可能),依原文順序;本頁供質性驗收:翻卡讀框架,判斷「讀不讀得出這張卡在做什麼」。</p>
+  「卡片拆解」分頁(票 04/05〜08、13/14):每張卡的效果句(一個編號效果的全文,連同它的 ● 選項;ADR-0015)拆成動作框架——動作(詞元)、對象/來源/目的、位置(代價/效果/條件)、極性(肯定/否定/可能)、選項(出自第幾個 ● 與標籤),依原文順序;本頁供質性驗收:翻卡讀框架,判斷「讀不讀得出這張卡在做什麼」。</p>
 </header>
 
 <div class="stats" id="stats"></div>
-<p class="note">框架覆蓋率=有抽到至少一個框架的句比例(儀表板參考,不是通過門檻);OOV 佔比=未收錄段 token 數/內容 token 數(全語料已歸零)。</p>
+<p class="note">句=效果句(含 ● 選項);框架覆蓋率=有抽到至少一個框架的效果句比例(儀表板參考,不是通過門檻);OOV 佔比=未收錄段 token 數/內容 token 數(全語料已歸零)。</p>
 
 <nav id="tabs" role="tablist"></nav>
 <div class="legend">圖例:
@@ -182,6 +188,7 @@ table.frames tbody tr[title]{cursor:pointer}
   <span class="chip t-lex">屬性字/召喚法/列舉前項(通常(魔法))</span>
   <span class="chip t-counter">量詞</span>
   <span class="chip t-oov">OOV 未收錄</span>
+  <span class="t-opt">●</span><span>選項邊界</span>
 </div>
 <main id="main"></main>
 </div>
@@ -224,7 +231,7 @@ function chip(tok){
   if(kind==="elided") return '<span class="chip t-lex">'+esc(elidedText(pay))+'</span>';
   if(kind==="name") pay="〈"+(pay==="名"?"卡名":pay)+"〉";
   if(kind==="num") pay="〈"+(pay==="n"?"n":pay)+"〉";
-  if(kind==="punct") return '<span class="t-punct">'+esc(pay)+'</span>';
+  if(kind==="punct") return pay==="●"?'<span class="t-opt">●</span>':'<span class="t-punct">'+esc(pay)+'</span>';
   return '<span class="chip t-'+kind+'">'+esc(pay)+'</span>';
 }
 function seqHtml(toks){var h="";for(var i=0;i<toks.length;i++)h+=chip(toks[i]);return h}
@@ -456,19 +463,36 @@ function textHtml(t,range){
   if(!range) return esc(t).replace(/\n/g,"<br>");
   return esc(t.slice(0,range[0])).replace(/\n/g,"<br>")+'<mark class="clausemark">'+esc(t.slice(range[0],range[1])).replace(/\n/g,"<br>")+'</mark>'+esc(t.slice(range[1])).replace(/\n/g,"<br>");
 }
+function recTextHtml(r,range){
+  // 一句效果句一塊:領起部分接各 ● 行(縮排),每段(標記句)標 index・效果類型;
+  // range 是整段原文的字元範圍,落在哪一段就在哪一段標 mark
+  if(!r.p||r.p.length<2) return textHtml(r.t,range);
+  var h="";
+  r.p.forEach(function(p,i){
+    var seg=r.t.slice(p[2],p[3]), local=null;
+    if(range&&range[1]>p[2]&&range[0]<p[3]) local=[Math.max(range[0],p[2])-p[2],Math.min(range[1],p[3])-p[2]];
+    h+='<div class="part '+(i?'sub':'lead')+'"><span class="pk">'+esc(p[0])+'・'+esc(p[1])+'</span>'+textHtml(seg,local)+'</div>';
+  });
+  return h;
+}
+function optText(f){
+  if(f[9]==null) return "";
+  return '<span class="opt"><b>●'+f[9]+'</b>'+(f[10]?' '+esc(f[10]):'')+'</span>';
+}
 function cardHtml(c,recs){
   var h='<div class="card-head"><b>'+c[0]+'</b> '+esc(c[1])+' <span class="muted">'+esc(c[2])+'</span>'
     +' <span class="muted">・'+recs.length+' 句・'+c[5]+' 個框架'+(c[6]?'・'+c[6]+' 句無框架':'')+'</span></div>';
   recs.forEach(function(r,ri){
-    h+='<div class="rec" data-ri="'+ri+'"><div class="rec-pos">'+esc(recLabel(r))+'</div>'
-      +'<div class="rec-grid"><div class="rec-text">'+textHtml(r.t,null)+'</div><div class="rec-frames">';
+    var multi=r.p&&r.p.length>1;
+    h+='<div class="rec" data-ri="'+ri+'"><div class="rec-pos">'+esc(recLabel(r))+(multi?' <span class="muted">・'+(r.p.length-1)+' 個子效果句</span>':'')+'</div>'
+      +'<div class="rec-grid"><div class="rec-text">'+recTextHtml(r,null)+'</div><div class="rec-frames">';
     if(!r.f.length){h+='<p class="note">(抽不到框架)</p>';}
     else{
-      h+='<table class="frames"><thead><tr><th>#</th><th>位置</th><th>動作</th><th>極性</th><th>對象</th><th>來源</th><th>目的</th></tr></thead><tbody>';
+      h+='<table class="frames"><thead><tr><th>#</th><th>位置</th><th>動作</th><th>極性</th><th>對象</th><th>來源</th><th>目的</th><th>選項</th></tr></thead><tbody>';
       r.f.forEach(function(f,i){
         h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+posChip(f[1])+'</td><td><b>'+esc(f[2])+'</b></td><td>'+polText(f[3])+'</td>'
-          +'<td>'+esc(f[4]||"")+'</td><td>'+esc(f[5]||"")+'</td><td>'+esc(f[6]||"")+'</td></tr>'
-          +'<tr class="clause"><td></td><td colspan="6"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
+          +'<td>'+esc(f[4]||"")+'</td><td>'+esc(f[5]||"")+'</td><td>'+esc(f[6]||"")+'</td><td>'+optText(f)+'</td></tr>'
+          +'<tr class="clause"><td></td><td colspan="7"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
       });
       h+='</tbody></table>';
     }
@@ -480,7 +504,7 @@ function cardsSection(){
   var box=document.createElement("section");
   if(!FR){box.innerHTML='<p class="note">view_data.js 未含框架資料(先跑 frames.py 與 prepare_view.py)。</p>';return box}
   box.innerHTML='<div class="search-row"><input type="search" placeholder="卡號或卡名(日文/繁中,子字串)"><button class="btn" id="rnd">隨機一張</button></div>'
-    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。左原文、右框架表(動作=詞元;對象/來源/目的=を/から/に・へ 前的詞;位置=代價/效果/條件);滑過一列在原文標出對應子句,點一下釘住。</p>'
+    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。一句效果句一塊:左原文(領起部分接各 ● 行,每段標效果類型)、右框架表(動作=詞元;對象/來源/目的=を/から/に・へ 前的詞;位置=代價/效果/條件;選項=出自第幾個 ● 與標籤);滑過一列在原文標出對應子句,點一下釘住。</p>'
     +'<div class="results"></div><div class="card-view"></div>';
   var input=box.querySelector("input"), results=box.querySelector(".results"), view=box.querySelector(".card-view");
   var currentRecs=null;
@@ -499,7 +523,7 @@ function cardsSection(){
     var rec=tr.closest(".rec"); if(!rec||!currentRecs)return;
     var r=currentRecs[+rec.getAttribute("data-ri")], f=r&&r.f[+tr.getAttribute("data-fi")];
     if(!f)return;
-    rec.querySelector(".rec-text").innerHTML=textHtml(r.t,on?f[8]:null);
+    rec.querySelector(".rec-text").innerHTML=recTextHtml(r,on?f[8]:null);
     var next=tr.nextElementSibling; if(next&&next.classList.contains("clause"))next.classList.toggle("on",on);
   }
   function search(q){
@@ -545,7 +569,7 @@ function coverSection(){
     h+='<div class="tile"><div class="k">'+kv[1]+'・有框架的句</div><div class="v">'+(100*s.covered/s.records).toFixed(2)+'% <small>'+fmt(s.covered)+' / '+fmt(s.records)+'</small></div></div>'
       +'<div class="tile"><div class="k">'+kv[1]+'・框架數</div><div class="v">'+fmt(s.frames)+'</div></div>';
   });
-  h+='</div><p class="note">覆蓋率是儀表板參考,不是通過門檻;效果外文本的素材行(レベル８モンスター×２)沒有述語,天然抽不到。</p>';
+  h+='</div><p class="note">句=效果句(一個編號效果的全文,含 ● 選項;ADR-0015),數字與合併前的版本不可直接比。覆蓋率是儀表板參考,不是通過門檻;效果外文本的素材行(レベル８モンスター×２)沒有述語,天然抽不到。</p>';
   h+='<h2>位置與極性分佈</h2><div class="scroll"><table><thead><tr><th>位置</th><th>框架數</th></tr></thead><tbody>'
     +FR.position.map(function(r){return '<tr><td>'+posChip(r[0])+'</td><td class="n">'+fmt(r[1])+'</td></tr>'}).join("")+'</tbody></table></div>'
     +'<div class="scroll" style="margin-top:8px"><table><thead><tr><th>極性</th><th>框架數</th></tr></thead><tbody>'

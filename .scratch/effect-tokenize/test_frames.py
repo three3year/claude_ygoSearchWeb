@@ -25,6 +25,12 @@ def extract(text, context=""):
     return [brief(f) for f in frames.extract(text, context)]
 
 
+def options(text, context=""):
+    """框架 → (動作, 位置, 選項, 標籤):票 14 的選項欄。"""
+    return [(f["action"], f["position"], f["option"], f["label"])
+            for f in frames.extract(text, context)]
+
+
 class TestSingleAction(unittest.TestCase):
     """票 05:單動作句——一個動詞、論元是 を/から/に、位置是效果。"""
 
@@ -479,6 +485,100 @@ class TestRound3Fixes(unittest.TestCase):
             extract("①：自分は１枚ドローする。この効果は自分フィールドに「試作機」"
                     "が存在する場合に発動と処理ができる。"),
             [("ドロー", None, None, None, "效果", "肯定")])
+
+
+class TestOptions(unittest.TestCase):
+    """票 13/14(ADR-0015):效果句含 ● 選項時,● 是句界,框架記選項與標籤。"""
+
+    def test_single_sentence_frames_have_no_option(self):
+        frame = frames.extract("①：デッキから「試作機」１体を手札に加える。")[0]
+        self.assertIsNone(frame["option"])
+        self.assertIsNone(frame["label"])
+
+    def test_labelled_options_each_with_own_activation(self):
+        """43476205 ①:兩個選項各帶選項 1/2 與標籤,対象として 照判條件。"""
+        self.assertEqual(
+            options("①：発動ターンによって以下の効果を発動できる。\n"
+                    "●自分ターン：自分フィールドの「RR」Xモンスター１体を対象として"
+                    "発動できる。ランクが１つ高い「RR」モンスター１体を、対象の自分の"
+                    "モンスターの上に重ねてX召喚扱いとしてエクストラデッキから特殊召喚"
+                    "する。\n"
+                    "●相手ターン：相手フィールドのX素材の無いXモンスター１体を対象と"
+                    "して発動できる。そのXモンスターのコントロールを得る。"),
+            [("対象とする", "條件", 1, "自分ターン"),
+             ("重ねる", "效果", 1, "自分ターン"),
+             ("特殊召喚", "效果", 1, "自分ターン"),
+             ("対象とする", "條件", 2, "相手ターン"),
+             ("得る", "效果", 2, "相手ターン")])
+
+    def test_granted_effect_option_keeps_its_activation_sentence(self):
+        """220414 ②:●１つ 的 無効にする 在選項 1、標籤 1つ、位置效果。"""
+        self.assertEqual(
+            options("②：このカードは、このカードのカウンターの数によって以下の効果を"
+                    "得る。\n"
+                    "●１つ：１ターンに１度、相手モンスターの攻撃宣言時に発動できる。"
+                    "その攻撃を無効にする。\n"
+                    "●２つ：このカードをリリースして発動できる。フィールドのモンスター"
+                    "を全て除外する。"),
+            [("得る", "效果", None, None),
+             ("攻撃宣言", "條件", 1, "1つ"),
+             ("無効にする", "效果", 1, "1つ"),
+             ("リリース", "代價", 2, "2つ"),
+             ("除外", "效果", 2, "2つ")])
+
+    def test_choose_on_activation_options_are_effects(self):
+        """59080 ①:選項裡的 特殊召喚/除外 位置是效果。"""
+        self.assertEqual(
+            options("①：魔力カウンターを２つ取り除き、以下の効果から１つを選択して"
+                    "発動できる。\n"
+                    "●自分の手札・EXデッキ（表側）・墓地から魔法使い族モンスター１体を"
+                    "特殊召喚する。\n"
+                    "●フィールドの他のカード１枚を除外する。"),
+            [("取り除く", "代價", None, None),
+             ("選択", "條件", None, None),
+             ("特殊召喚", "效果", 1, None),
+             ("除外", "效果", 2, None)])
+
+    def test_enumerated_items_do_not_frame(self):
+        """4079728 ②:選ぶ 的對象仍是「以下のモンスターの内１体」,列舉項不出框架。"""
+        self.assertEqual(
+            extract("②：このカードのX素材を２つ取り除いて発動できる。デッキから以下の"
+                    "モンスターの内１体を選び、手札に加えるか特殊召喚する。\n"
+                    "●「スプリガンズ」モンスター\n"
+                    "●「セリオンズ」モンスター\n"
+                    "●「アルバスの落胤」またはそのカード名が記されたモンスター"),
+            [("取り除く", "このカードのX素材", None, None, "代價", "肯定"),
+             ("選ぶ", "以下のモンスターの内1体", "デッキ", None, "效果", "肯定"),
+             ("加える", None, None, "手札", "效果", "肯定"),
+             ("特殊召喚", None, None, None, "效果", "肯定")])
+
+    def test_unsplit_options_same_frames_plus_option_column(self):
+        """269510 ③(未拆 ●):框架與合併前相同,只多選項欄。"""
+        text = ("③：フィールドにサイバース族リンクモンスターが２体以上存在する場合、"
+                "以下の効果を適用する。\n"
+                "●サイバース族モンスターが発動した効果は無効化される。\n"
+                "●フィールドのサイバース族モンスターは攻撃できず、攻撃対象にならず、"
+                "効果の対象にもならない。")
+        self.assertEqual(
+            extract(text),
+            [("存在", None, None, "フィールド", "條件", "肯定"),
+             ("適用", "以下の効果", None, None, "效果", "肯定"),
+             ("無効化", None, None, None, "效果", "肯定"),
+             ("攻撃", None, None, None, "效果", "否定"),
+             ("攻撃対象になる", None, None, None, "效果", "否定"),
+             ("なる", None, None, "効果の対象", "效果", "否定")])
+        self.assertEqual([(f["option"], f["label"]) for f in frames.extract(text)],
+                         [(None, None), (None, None), (1, None), (2, None),
+                          (2, None), (2, None)])
+
+    def test_option_label_values_are_not_arguments(self):
+        self.assertEqual(
+            options("①：種族を１つ宣言して発動できる。\n"
+                    "●魔法：自分の墓地から魔法カード１枚を手札に加える。\n"
+                    "●罠：自分の墓地から罠カード１枚を手札に加える。"),
+            [("宣言", "代價", None, None),
+             ("加える", "效果", 1, "魔法"),
+             ("加える", "效果", 2, "罠")])
 
 
 if __name__ == "__main__":

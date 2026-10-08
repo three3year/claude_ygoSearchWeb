@@ -175,6 +175,7 @@ class ConstraintFinder:
         frames += prefixes
         if extra:
             frames += self.summon_conditions(tokens, sentence, anchors, prefixes)
+            frames += self.materials(tokens, sentence, anchors, card_type)
         if marker_idx is not None:
             frames += self.activation_windows(tokens, sentence,
                                               anchors[marker_idx]["head"])
@@ -453,6 +454,83 @@ class ConstraintFinder:
                  "source": args.get("source")}, span_start, a["tail"]))
             seg_start, pending = a["tail"], []
         return found
+
+    # ── 素材 ──
+    def materials(self, tokens, sentence, anchors, card_type):
+        """素材(票 05,只在效果外文本):降臨句「〜により降臨」出一個素材框架(召喚法 儀式、
+        清單是那張儀式魔法);沒有述語、沒有句號的素材行(含 ＋/× 或以數量收尾)出一個,
+        ＋ 切項、每項尾端的 ×N/N体/N体以上 是數量(沒寫記 1),召喚法由卡片子類型帶入。"""
+        x = self.x
+        start, end = sentence
+        if any(self._free(a["head"]) for a in anchors):
+            return []
+        descent = next((k for k in range(start + 1, end - 2)
+                        if tokens[k] == "p:に" and tokens[k + 1] == "p:より"
+                        and x.word(tokens[k + 2]) == "降臨"), None)
+        if descent is not None:
+            return [self._take(
+                {"category": CAT_MATERIAL, "subtype": None, "method": "儀式",
+                 "materials": [{"text": self._text(start, descent), "count": 1}]},
+                start, end)]
+        body = [k for k in range(start, end) if tokens[k] not in ("。", OPTION)]
+        if not body or "。" in tokens[start:end] or "p:は" in tokens[start:end]:
+            return []
+        plus = [k for k in body if x.word(tokens[k]) == "＋"]
+        last = tokens[body[-1]]
+        quantified = token_kind(last) in ("quant", "counter") or (
+            last.startswith("NUM:") and len(body) >= 2
+            and x.word(tokens[body[-2]]) == "×")
+        if not plus and not quantified:
+            return []
+        items, item_start = [], start
+        for cut in plus + [body[-1] + 1]:
+            items.append(self._material_item(tokens, item_start, cut))
+            item_start = cut + 1
+        return [self._take(
+            {"category": CAT_MATERIAL, "subtype": None, "method": card_type,
+             "materials": items}, start, end)]
+
+    def _material_item(self, tokens, start, end):
+        """素材清單的一項:尾端的 ×N / ×N体以上 / N体 / N体以上 是數量,其餘是素材字面。"""
+        x = self.x
+        count, k = 1, end
+        last = tokens[k - 1]
+        if token_kind(last) == "quant":                      # q::2:体:以上
+            _, _wid, val, _counter, cmp_word = last.split(":", 4)
+            count, k = val + cmp_word, k - 1
+        elif token_kind(last) == "counter" and tokens[k - 2].startswith("NUM:"):
+            count, k = int(tokens[k - 2][4:]), k - 2
+        elif last.startswith("NUM:"):
+            count, k = int(last[4:]), k - 1
+        if k - 1 >= start and x.word(tokens[k - 1]) == "×":
+            k -= 1
+        return {"text": self._text(start, k), "count": count}
+
+    # ── 動作框架的可選欄位(票 06)──
+    def action_fields(self, tokens, clause_start, head, in_activation):
+        """子句裡的「(期間に)N度だけ」記次數(與期間),非發動句的窗口片語記窗口;回要併進
+        動作框架的欄位 dict(沒有時空 dict)。"""
+        x = self.x
+        out = {}
+        for k in range(clause_start, head - 2):
+            if tokens[k].startswith("NUM:") and tokens[k + 1] == "c:度" \
+                    and tokens[k + 2] == "p:だけ":
+                out["count"] = int(tokens[k][4:])
+                hit = self.period_count(tokens, k - 3, head) if k - 3 >= clause_start \
+                    else None
+                out["period"] = hit[0] if hit else None
+                break
+        if not in_activation:
+            for k in range(clause_start, head):
+                if self.depth_at[k]:
+                    continue
+                hit = self.window_at(tokens, k, head)
+                if hit is not None:
+                    player, window, _mode, _end = hit
+                    out["window"] = (player if player not in (None, BOTH) else
+                                     "自分・相手の" if player == BOTH else "") + window
+                    break
+        return out
 
     def count_notes(self, tokens, sentence, anchors):
         """使用次數/發動次數註記(票 02):「X は (それぞれ) 期間に N 度 (、いずれか１つ)

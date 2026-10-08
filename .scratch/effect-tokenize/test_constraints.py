@@ -64,6 +64,17 @@ def summon(form, method=None, procedure=None, source=None):
              source=source)
 
 
+def material(method, items):
+    return C("素材", method=method,
+             materials=[{"text": t, "count": c} for t, c in items])
+
+
+def action_fields(text, **kw):
+    """動作框架的 (動作, 次數, 期間, 窗口):票 06 的可選欄位。"""
+    return [(f["action"], f.get("count"), f.get("period"), f.get("window"))
+            for f in frames.extract(text, **kw) if f["kind"] == constraints.KIND_ACTION]
+
+
 class TestActivationCount(unittest.TestCase):
     """票 01:發動句內的「１ターンに１度、」出限制·次數,同句其餘動作框架不變。"""
 
@@ -471,6 +482,85 @@ class TestSummonConditions(unittest.TestCase):
                     procedure=[{"action": "送る",
                                 "object": "チューナー1体とチューナー以外のモンスター1体",
                                 "source": "自分フィールド", "goal": "墓地"}])])
+
+
+class TestMaterials(unittest.TestCase):
+    """票 05:效果外文本的素材行與降臨句出素材框架(召喚法由卡片子類型帶入、有序清單帶數量)。"""
+
+    def test_fusion_material_line(self):
+        self.assertEqual(
+            rows("「アマゾネス女王」＋「アマゾネス」モンスター", card_type="融合"),
+            [material("融合", [("「アマゾネス女王」", 1), ("「アマゾネス」モンスター", 1)])])
+
+    def test_times_count(self):
+        self.assertEqual(
+            rows("「双天脚の鴻鵠」＋「双天」モンスター×２", card_type="融合"),
+            [material("融合", [("「双天脚の鴻鵠」", 1), ("「双天」モンスター", 2)])])
+
+    def test_synchro_lower_bound(self):
+        self.assertEqual(
+            rows("チューナー＋チューナー以外のモンスター１体以上", card_type="同調"),
+            [material("同調", [("チューナー", 1), ("チューナー以外のモンスター", "1以上")])])
+
+    def test_xyz_times(self):
+        self.assertEqual(rows("レベル４モンスター×３", card_type="超量"),
+                         [material("超量", [("レベル４モンスター", 3)])])
+        self.assertEqual(rows("レベル１モンスター×２体以上", card_type="超量"),
+                         [material("超量", [("レベル１モンスター", "2以上")])])
+
+    def test_link_quantity(self):
+        self.assertEqual(rows("効果モンスター２体以上", card_type="連結"),
+                         [material("連結", [("効果モンスター", "2以上")])])
+        self.assertEqual(rows("「キスキル」モンスターを含むモンスター２体", card_type="連結"),
+                         [material("連結", [("「キスキル」モンスターを含むモンスター", 2)])])
+
+    def test_ritual_descent_line(self):
+        self.assertEqual(rows("「光の黄金櫃」により降臨。", card_type="儀式"),
+                         [material("儀式", [("「光の黄金櫃」", 1)])])
+        self.assertEqual(rows("「ヴェンデット」儀式魔法カードにより降臨"),
+                         [material("儀式", [("「ヴェンデット」儀式魔法カード", 1)])])
+
+    def test_without_card_type_method_is_empty(self):
+        self.assertEqual(rows("レベル４モンスター×３"),
+                         [material(None, [("レベル４モンスター", 3)])])
+
+    def test_non_material_extra_lines_stay_unframed(self):
+        self.assertEqual(rows("「御巫」モンスターにのみ装備可能。", card_type="融合"), [])
+        self.assertEqual(rows("「ヴェンデット」儀式モンスターの降臨に必要。"), [])
+
+    def test_effect_sentence_is_not_a_material_line(self):
+        self.assertEqual(rows("①：レベル４モンスター×３", card_type="超量"), [])
+
+
+class TestActionCountAndWindow(unittest.TestCase):
+    """票 06:句中「１度だけ」「もう１度だけ」與非發動句的階段窗口記在動作框架自己身上,
+    不是約束框架;句首「…度、」仍是限制·次數。"""
+
+    def test_once_per_turn_in_effect_content(self):
+        text = "①：装備モンスターは１ターンに１度だけ戦闘では破壊されない。"
+        self.assertEqual(rows(text), [A("破壊", "效果", "否定")])
+        self.assertEqual(action_fields(text), [("破壊", 1, "回合", None)])
+
+    def test_extra_normal_summon_count_and_window(self):
+        text = "①：自分は通常召喚に加えて１度だけ、自分メインフェイズにモンスター１体を召喚できる。"
+        self.assertEqual(rows(text), [A("召喚", "效果", "可能")])
+        self.assertEqual(action_fields(text), [("召喚", 1, None, "自分メインフェイズ")])
+
+    def test_one_more_attack(self):
+        text = "②：このカードはもう１度だけ続けて攻撃できる。"
+        self.assertEqual(rows(text), [A("攻撃", "效果", "可能")])
+        self.assertEqual(action_fields(text), [("攻撃", 1, None, None)])
+
+    def test_sentence_initial_count_stays_a_constraint(self):
+        text = "①：１ターンに１度、自分は１枚ドローする。"
+        self.assertEqual(rows(text), [count("回合", 1, "この効果"), A("ドロー", "效果", "肯定")])
+        self.assertEqual(action_fields(text), [("ドロー", None, None, None)])
+
+    def test_while_in_pendulum_zone_once(self):
+        text = ("①：このカードがPゾーンに存在する限り１度だけ、このカード以外の自分フィールドの"
+                "「ダイナミスト」カードを対象として発動した効果を無効にできる。")
+        self.assertEqual(action_fields(text),
+                         [("存在", None, None, None), ("無効にする", 1, None, None)])
 
 
 if __name__ == "__main__":

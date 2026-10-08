@@ -47,6 +47,15 @@ from report import frame_stats, token_kind  # noqa: E402
 LEXICON = os.path.join(HERE, "lexicon.json")
 TOKENS = os.path.join(HERE, "tokens.json")
 OUT = os.path.join(HERE, "frames.json")
+CARDS = os.path.join(HERE, "..", "..", "data", "cards.json")
+# 卡片子類型(cards.json 的 type 位元 → 素材框架的召喚法;與 script/tag_card/tagcard.py 同值)
+CARD_TYPE_BITS = (("融合", 0x40), ("儀式", 0x80), ("同調", 0x2000), ("超量", 0x800000),
+                  ("連結", 0x4000000))
+
+
+def card_type_of(type_bits):
+    """卡片的 type 位元 → 融合/儀式/同調/超量/連結,都不是時 None。"""
+    return next((label for label, bit in CARD_TYPE_BITS if type_bits & bit), None)
 
 # ── 封閉類(述語家族與功能詞)──
 SURU_ACTIVE = {"する", "した", "して", "し", "すれば"}
@@ -981,17 +990,22 @@ class FrameExtractor:
                     methods = a["action"][:-2].split("・")
                     coordinated += [m + "召喚" for m in methods[:-1]]
                     a["action"] = methods[-1] + "召喚"
+                # 效果內容的次數/窗口(１度だけ、追加召喚的 自分メインフェイズに)記在
+                # 動作框架自己身上(約束框架票 06)
+                fields = self.finder.action_fields(tokens, a["clause_start"],
+                                                   a["head"], in_activation)
                 for action in coordinated + [a["action"]]:
-                    frames.append({"kind": KIND_ACTION, "sentence": s_idx,
-                                   "action": action,
-                                   "object": args.get("object"),
-                                   "source": args.get("source"),
-                                   "goal": args.get("goal"),
-                                   "position": position,
-                                   "polarity": a["polarity"],
-                                   "option": option_of[s_idx],
-                                   "label": label_of[s_idx],
-                                   "span": list(span), "clause": clause})
+                    frames.append(dict({"kind": KIND_ACTION, "sentence": s_idx,
+                                        "action": action,
+                                        "object": args.get("object"),
+                                        "source": args.get("source"),
+                                        "goal": args.get("goal"),
+                                        "position": position,
+                                        "polarity": a["polarity"],
+                                        "option": option_of[s_idx],
+                                        "label": label_of[s_idx],
+                                        "span": list(span), "clause": clause},
+                                       **fields))
         # 依原文位置混排;同起點時約束框架在前(穩定排序保住並列述語的順序)
         frames.sort(key=lambda f: (f["sentence"], f["span"][0],
                                    f["kind"] != KIND_CONSTRAINT))
@@ -1093,11 +1107,15 @@ def main():
     extractor = default_extractor()
     with open(TOKENS, encoding="utf-8") as f:
         sentences = json.load(f)
+    with open(CARDS, encoding="utf-8") as f:
+        card_type = {c["id"]: card_type_of(c["type"]) for c in json.load(f)}
     out = []
     for s in sentences:
-        # 效果外文本看效果類型(含子效果句的領起句雖算效果層,仍是效果外文本的句型)
+        # 效果外文本看效果類型(含子效果句的領起句雖算效果層,仍是效果外文本的句型);
+        # 卡片子類型從卡片總表帶入(素材框架的召喚法)
         frames = extractor.frames_of_tokens(
-            s["tokens"], text=s["text_ja"], extra=s["kind"] == "效果外文本")
+            s["tokens"], text=s["text_ja"], extra=s["kind"] == "效果外文本",
+            card_type=card_type.get(s["card"]))
         for k, fr in enumerate(frames):
             fr["order"] = k
         out.append({"card": s["card"], "section": s["section"],

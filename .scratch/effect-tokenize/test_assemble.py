@@ -72,7 +72,7 @@ class TestAssemble(unittest.TestCase):
 
     def test_old_style_numbered_lead(self):
         out = assemble([clause("1", "啟動效果", "以下の効果から１つを選択して発動できる。"),
-                        clause("1-●1", "啟動効果", "●自分は１枚ドローする。")])
+                        clause("1-●1", "啟動效果", "●自分は１枚ドローする。")])
         self.assertEqual(len(out), 1)
         self.assertEqual([p["index"] for p in out[0]["parts"]], ["1", "1-●1"])
 

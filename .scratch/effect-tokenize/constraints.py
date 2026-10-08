@@ -25,12 +25,13 @@ LABEL_SUMMON = CAT_LIMIT + "·" + SUB_SUMMON
 FIELDS = {
     LABEL_COUNT: ("period", "count", "target", "sharing"),
     LABEL_EVENT_TURN: ("event", "banned"),
-    LABEL_PLEDGE: ("trigger", "action", "form", "scope", "source"),
+    LABEL_PLEDGE: ("trigger", "subject", "action", "form", "scope", "source"),
     LABEL_SUMMON: ("form", "method", "procedure", "source"),
     CAT_TIMING: ("player", "window", "mode", "polarity"),
     CAT_MATERIAL: ("method", "materials"),
 }
 FIELD_LABEL = {"period": "期間", "count": "次數", "target": "對象", "sharing": "共用",
+               "subject": "主體",
                "event": "事件", "banned": "禁止", "trigger": "觸發", "action": "動作",
                "form": "形式", "scope": "範圍", "source": "來源", "method": "方式",
                "procedure": "手續", "player": "回合", "window": "窗口", "mode": "型態",
@@ -42,7 +43,10 @@ WINDOW_WORDS = {"ターン", "開始", "終了", "時", "中", "次"}
 WINDOW_PARTICLES = {"p:の", "p:及び"}
 MODE_LIMIT, MODE_ADD = "限定", "追加"
 FORM_ONLY, FORM_CANNOT = "只能", "不能"
-SUMMON_ONLY, SUMMON_CAN, SUMMON_CANNOT = "只能以某方式", "可以某方式", "不能"
+SUMMON_ONLY, SUMMON_CAN, SUMMON_CANNOT, SUMMON_MUST = (
+    "只能以某方式", "可以某方式", "不能", "必須以某方式")
+# 誓約的主體:自分(預設,不記)、このカード、自分の…;相手は…できない 是效果內容
+PLEDGE_SUBJECTS = ("自分", "このカード")
 SEG_END = ("。", "）", "●")
 BOTH = "雙方"
 POL_AFFIRM, POL_NEG, POL_CAN = "肯定", "否定", "可能"
@@ -101,8 +105,8 @@ class ConstraintFinder:
         x = self.x
         words = []
         k = i
-        while k < stop and k - i < 4 and tokens[k] not in ("p:に", "p:で") \
-                and token_kind(tokens[k]) in ("num", "lex", "dem"):
+        while k < stop and k - i < 5 and tokens[k] not in ("p:に", "p:で") \
+                and (token_kind(tokens[k]) in ("num", "lex", "dem") or tokens[k] == "・"):
             words.append(x.surface(tokens[k]))
             k += 1
         if not words or k >= stop or tokens[k] not in ("p:に", "p:で"):
@@ -126,6 +130,13 @@ class ConstraintFinder:
             return None
         value = tokens[k][4:]
         return period, int(value) if value.isdigit() else value, counter[2:], k + 2
+
+    def _prefix_player(self, words):
+        """期間片語裡的玩家(相手ターン/自分・相手ターン)→ 自分/相手/雙方,沒有回 None。"""
+        players = {PLAYERS[w] for w in words if w in PLAYERS}
+        if len(players) == 2 or BOTH in players:
+            return BOTH
+        return next(iter(players), None)
 
     # ── 規則 ──
     def count_prefix(self, tokens, sentence, anchors):
@@ -151,6 +162,13 @@ class ConstraintFinder:
                  "count": value, "target": topic or THIS_EFFECT, "sharing": None,
                  "topic": topic},
                 p, j + 1))
+            # 「相手ターンに１度、」「自分・相手ターンに１度、」:玩家另出時機框架(限定)
+            player = self._prefix_player(
+                [self.x.surface(t) for t in tokens[p:j] if tokens[p:j]])
+            if player is not None and period == PERIOD_TURN:
+                found.append({"category": CAT_TIMING, "subtype": None, "player": player,
+                              "window": "ターン", "mode": MODE_LIMIT,
+                              "polarity": POL_AFFIRM, "span": [p, j]})
             for a in anchors:
                 if a["clause_start"] <= p < a["head"]:
                     a["clause_start"] = j + 1
@@ -177,7 +195,7 @@ class ConstraintFinder:
             frames += self.summon_conditions(tokens, sentence, anchors, prefixes)
             frames += self.materials(tokens, sentence, anchors, card_type)
         if marker_idx is not None:
-            frames += self.activation_windows(tokens, sentence,
+            frames += self.activation_windows(tokens, sentence, anchors,
                                               anchors[marker_idx]["head"])
         return frames, self.consumed
 
@@ -229,6 +247,11 @@ class ConstraintFinder:
         if not has_window or k >= stop or k == i:
             return None
         particle = tokens[k]
+        if particle == "、" and x.word(tokens[k - 1]) == "時":
+            window = "".join(x.surface(t) for t in rest)
+            player = BOTH if len(players) == 2 or BOTH in players else (
+                next(iter(players)) if players else None)
+            return player, window, MODE_LIMIT, k + 1       # 〜終了時、…発動できる
         if particle not in ("p:に", "p:で"):
             return None
         mode = MODE_LIMIT
@@ -243,9 +266,10 @@ class ConstraintFinder:
             next(iter(players)) if players else None)
         return player, window, mode, end
 
-    def activation_windows(self, tokens, sentence, marker_head):
+    def activation_windows(self, tokens, sentence, anchors, marker_head):
         """發動句(票 03):收尾錨點之前、括弧外的窗口片語各出一個時機框架(型態 限定,
-        でも/にも 為 追加)。"""
+        でも/にも 為 追加)。觸發子句裡的窗口(相手がバトルフェイズに…発動した時)修飾的是
+        事件,不是時機(round1)。"""
         start, _end = sentence
         found = []
         i = start
@@ -254,7 +278,14 @@ class ConstraintFinder:
                 i += 1
                 continue
             hit = self.window_at(tokens, i, marker_head)
-            if hit is None:
+            # 觸發子句裡的窗口(相手がバトルフェイズに…発動した時)不是時機;以讀點收尾的
+            # 窗口(バトルフェイズ終了時、…場合に)自成一段,仍是時機
+            standalone = hit is not None and (
+                tokens[hit[3] - 1] == "、"
+                or hit[3] < marker_head and tokens[hit[3]] == "、")
+            if hit is None or (not standalone and any(
+                    a["clause_start"] <= i < a["head"] and a["conditional"]
+                    for a in anchors)):
                 i += 1
                 continue
             player, window, mode, end = hit
@@ -326,8 +357,14 @@ class ConstraintFinder:
         return {k: v for k, v in args.items() if v}
 
     def _action_name(self, tokens, a):
-        """錨點的動作名,「・」並列(召喚・特殊召喚)串成一個。"""
+        """錨點的動作名,「・」並列(召喚・特殊召喚)串成一個;攻撃宣言 連 攻撃 一起記。"""
         a = dict(a)
+        prev = self.x.word(tokens[a["head"] - 1]) \
+            if a["head"] - 1 >= a["clause_start"] else None
+        if a["action"] == "宣言" and prev == "攻撃":
+            a["action"] = "攻撃宣言"
+        elif a["action"] == "攻撃" and prev == "直接":
+            a["action"] = "直接攻撃"
         return "・".join(self.x._coordinated_actions(tokens, a) + [a["action"]])
 
     def pledges(self, tokens, sentence, anchors):
@@ -339,8 +376,7 @@ class ConstraintFinder:
         start, end = sentence
         found = []
         for k in range(start + 2, end - 1):
-            if not (x.word(tokens[k]) == "自分" and tokens[k + 1] == "p:は") \
-                    or not self._free(k):
+            if not self._free(k):
                 continue
             prev = tokens[k - 1]
             if prev == "、" and x.surface(tokens[k - 2]).endswith("ターン"):
@@ -350,8 +386,10 @@ class ConstraintFinder:
                         and tokens[trig_start - 1] not in SEG_END + ("、", "（", "："):
                     trig_start -= 1
                 trigger = self._text(trig_start, turn_at + 1)
+                # 觸發得是發動/召喚、這一回合,或以事件界定的回合(〜したターン)
                 if not ("発動" in trigger or "召喚" in trigger
-                        or trigger in ("このターン", "そのターン")):
+                        or trigger in ("このターン", "そのターン")
+                        or trigger.endswith(("したターン", "するターン", "されたターン"))):
                     continue
             elif prev == "p:まで" and any(x.word(t) == "ターン"
                                          for t in tokens[max(start, k - 5):k]):
@@ -364,40 +402,62 @@ class ConstraintFinder:
                     continue
             else:
                 continue
-            seg_end = k + 2
+            seg_end = k
             while seg_end < end and tokens[seg_end] not in SEG_END:
                 seg_end += 1
-            preds = [a for a in anchors if k + 2 <= a["head"] < seg_end
-                     and a["polarity"] == POL_NEG and a["nominalizer"] is None]
+            # 述語得是可能形否定(攻撃できない/発動ができない);被動否定(破壊されない)是
+            # 保護效果,不是誓約
+            preds = [a for a in anchors if k <= a["head"] < seg_end
+                     and a["polarity"] == POL_NEG and a["nominalizer"] is None
+                     and any(x.word(t) in ("できない", "できず")
+                             for t in tokens[a["head"]:a["end"]])]
             if not preds:
                 continue
-            clause_start = k + 2
+            # 主體:第一個否定述語之前的「X は」;自分 不記,このカード/自分の… 記在主體欄,
+            # 其他(相手は…できない)是效果內容不是誓約
+            wa = next((h for h in range(k, preds[0]["head"]) if tokens[h] == "p:は"), None)
+            subject = self._text(k, wa) if wa is not None else None
+            if subject is not None and (not subject.startswith(PLEDGE_SUBJECTS)
+                                        or "、" in subject):
+                continue                  # 〜に対して、相手は…できない:主體是相手
+            if subject == "自分":
+                subject = None
+            clause_start = wa + 1 if wa is not None else k
             for a in preds:
                 args = self._anchor_args(tokens, a, clause_start)
                 head = a["head"] - a["fold"]
                 shika = next((h for h in range(clause_start, head)
                               if tokens[h] == "p:しか"), None)
+                wo = next((h for h in range(head - 1, clause_start - 1, -1)
+                           if tokens[h] == "p:を"), None)
                 if shika is not None:
-                    # しか 前的原文是範圍(定語子句整段保留);「〜を１度しか」「〜でしか
-                    # モンスターを」這兩型把對象放前面、しか 前的片語括在後面
+                    # しか 前的原文是範圍(定語子句整段保留);對象在 しか 前(〜を１度しか)
+                    # 或 しか 後(〜でしかモンスターを)時把對象放前面、片語括在後面
                     scope = self._text(clause_start, shika)
-                    before = tokens[clause_start:shika]
-                    if "p:を" in before and args.get("object"):
-                        scope = "%s(%s)" % (args["object"],
-                                            self._text(before.index("p:を") + clause_start + 1,
-                                                       shika))
-                    elif scope.endswith("で") and args.get("object"):
+                    if args.get("object") and wo is not None and wo < shika:
+                        scope = "%s(%s)" % (args["object"], self._text(wo + 1, shika))
+                    elif args.get("object") and (wo is not None or scope.endswith("で")):
                         scope = "%s(%s)" % (args["object"], scope)
+                elif args.get("object"):
+                    scope = args["object"]
                 else:
-                    scope = args.get("object")
+                    # 〜の効果の発動ができない:が 前的片語(去掉尾端的 の動作)是範圍;
+                    # 什麼都沒有時主體就是範圍(このカードは攻撃できない)
+                    ga = next((h for h in range(head - 1, clause_start - 1, -1)
+                               if tokens[h] == "p:が"), None)
+                    scope = self._text(clause_start, ga) if ga is not None else subject
+                    if scope and scope.endswith("の" + a["action"]):
+                        scope = scope[:-len(a["action"]) - 1]
                 found.append({"category": CAT_LIMIT, "subtype": SUB_PLEDGE,
-                              "trigger": trigger, "action": self._action_name(tokens, a),
+                              "trigger": trigger, "subject": subject,
+                              "action": self._action_name(tokens, a),
                               "form": FORM_ONLY if shika is not None else FORM_CANNOT,
                               "scope": scope, "source": args.get("source"),
                               "span": [trig_start if a is preds[0] else clause_start,
                                        a["tail"]]})
                 clause_start = a["tail"]
-            self.consumed.append((trig_start, seg_end))
+            # 吃到最後一個否定述語為止;其後的肯定述語(戦闘ダメージは０になる)照舊是動作
+            self.consumed.append((trig_start, preds[-1]["tail"]))
         return found
 
     # ── 召喚條件 ──
@@ -416,9 +476,18 @@ class ConstraintFinder:
                 seg_start, pending = a["tail"], []
                 continue
             summon = a["action"].endswith("召喚") and a["nominalizer"] is None \
-                and a["polarity"] != POL_AFFIRM
+                and (a["polarity"] != POL_AFFIRM or a.get("obligation"))
+            if summon and any(x.word(t) == "もう" or tokens[h] == "p:だけ"
+                              for h, t in enumerate(tokens[a["clause_start"]:a["head"]],
+                                                    a["clause_start"])):
+                summon = False            # 通常召喚としてもう１度召喚できる:效果內容
             if not summon:
-                pending.append(a)
+                if a["nominalizer"] == "ターン":
+                    # 〜が発動したターン、…した場合に特殊召喚できる:事件回合是條件,
+                    # 不是手續,照舊出條件動作框架
+                    seg_start, pending = a["tail"], []
+                elif not (a["action"].endswith("召喚") and a["nominalizer"] == "場合"):
+                    pending.append(a)     # このカードを通常召喚する場合:是前提,不是手續
                 continue
             topic_at = next((h for h in range(a["head"] - 1, a["clause_start"] - 1, -1)
                              if tokens[h] == "p:は"), None)
@@ -429,8 +498,8 @@ class ConstraintFinder:
             action = self._action_name(tokens, a)
             rng = tokens[seg_start:a["head"]]
             only = "p:のみ" in rng or "p:しか" in rng
-            form = (SUMMON_ONLY if only else SUMMON_CAN if a["polarity"] == POL_CAN
-                    else SUMMON_CANNOT) + action
+            form = (SUMMON_MUST if a.get("obligation") else SUMMON_ONLY if only
+                    else SUMMON_CAN if a["polarity"] == POL_CAN else SUMMON_CANNOT) + action
             method = None
             for d in range(a["head"] - 1, a["clause_start"], -1):
                 if tokens[d] == "p:で" and tokens[d + 1] in ("p:のみ", "p:しか"):
@@ -468,10 +537,15 @@ class ConstraintFinder:
                         if tokens[k] == "p:に" and tokens[k + 1] == "p:より"
                         and x.word(tokens[k + 2]) == "降臨"), None)
         if descent is not None:
+            # 「A」「B」により降臨:連續的卡名各一項
+            names = [k for k in range(start, descent) if token_kind(tokens[k]) == "name"]
+            if len(names) >= 2 and names == list(range(start, descent)):
+                items = [{"text": self._text(k, k + 1), "count": 1} for k in names]
+            else:
+                items = [{"text": self._text(start, descent), "count": 1}]
             return [self._take(
                 {"category": CAT_MATERIAL, "subtype": None, "method": "儀式",
-                 "materials": [{"text": self._text(start, descent), "count": 1}]},
-                start, end)]
+                 "materials": items}, start, end)]
         body = [k for k in range(start, end) if tokens[k] not in ("。", OPTION)]
         if not body or "。" in tokens[start:end] or "p:は" in tokens[start:end]:
             return []
@@ -504,6 +578,11 @@ class ConstraintFinder:
             count, k = int(last[4:]), k - 1
         if k - 1 >= start and x.word(tokens[k - 1]) == "×":
             k -= 1
+        # 〜モンスター１体ずつ合計４体:數量記 4(1体ずつ)
+        if k - 4 >= start and x.word(tokens[k - 1]) == "合計" and tokens[k - 2] == "p:ずつ" \
+                and tokens[k - 3] == "c:体" and tokens[k - 4].startswith("NUM:"):
+            count = "%s(%s体ずつ)" % (count, tokens[k - 4][4:])
+            k -= 4
         return {"text": self._text(start, k), "count": count}
 
     # ── 動作框架的可選欄位(票 06)──
@@ -512,9 +591,11 @@ class ConstraintFinder:
         動作框架的欄位 dict(沒有時空 dict)。"""
         x = self.x
         out = {}
-        for k in range(clause_start, head - 2):
-            if tokens[k].startswith("NUM:") and tokens[k + 1] == "c:度" \
-                    and tokens[k + 2] == "p:だけ":
+        for k in range(clause_start, head - 1):
+            # １度だけ / もう１度(召喚できる)
+            if tokens[k].startswith("NUM:") and tokens[k + 1] == "c:度" and (
+                    k + 2 < head and tokens[k + 2] == "p:だけ"
+                    or k - 1 >= clause_start and x.word(tokens[k - 1]) == "もう"):
                 out["count"] = int(tokens[k][4:])
                 hit = self.period_count(tokens, k - 3, head) if k - 3 >= clause_start \
                     else None

@@ -54,9 +54,9 @@ def event_turn(event, banned="発動"):
     return C("限制·事件回合禁用", event=event, banned=banned)
 
 
-def pledge(trigger, action, form, scope, source=None):
-    return C("限制·誓約", trigger=trigger, action=action, form=form, scope=scope,
-             source=source)
+def pledge(trigger, action, form, scope, source=None, subject=None):
+    return C("限制·誓約", trigger=trigger, subject=subject, action=action, form=form,
+             scope=scope, source=source)
 
 
 def summon(form, method=None, procedure=None, source=None):
@@ -561,6 +561,132 @@ class TestActionCountAndWindow(unittest.TestCase):
                 "「ダイナミスト」カードを対象として発動した効果を無効にできる。")
         self.assertEqual(action_fields(text),
                          [("存在", None, None, None), ("無効にする", 1, None, None)])
+
+
+class TestConstraintRound1Fixes(unittest.TestCase):
+    """票 08:第一輪 LLM 檢驗(constraint-round1)各同型錯誤的回歸例子。"""
+
+    DRAW = A("ドロー", "效果", "肯定")
+
+    def test_player_turn_count_prefix_gives_count_and_timing(self):
+        self.assertEqual(
+            rows("①：相手ターンに１度、自分は１枚ドローする。"),
+            [count("回合", 1, "この効果"), timing("相手", "ターン"), self.DRAW])
+        self.assertEqual(
+            rows("③：自分・相手ターンに１度、フィールドの魔法・罠カード１枚を対象として"
+                 "発動できる。そのカードを破壊する。"),
+            [count("回合", 1, "この効果"), timing("雙方", "ターン"),
+             A("対象とする", "條件", "肯定"), A("破壊", "效果", "肯定")])
+
+    def test_pledge_subject_this_card(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果を発動するターン、このカードは攻撃できない。"),
+            [self.DRAW, pledge("この効果を発動するターン", "攻撃", "不能", "このカード",
+                               subject="このカード")])
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果を発動するターン、このカードしか攻撃できない。"),
+            [self.DRAW, pledge("この効果を発動するターン", "攻撃", "只能", "このカード")])
+
+    def test_pledge_subject_own_monsters(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果で守備表示にしたターン、自分のモンスターは"
+                 "対象のモンスターしか攻撃できず、戦闘ダメージは０になる。"),
+            [self.DRAW,
+             pledge("この効果で守備表示にしたターン", "攻撃", "只能", "対象のモンスター",
+                    subject="自分のモンスター"),
+             A("になる", "效果", "肯定")])
+
+    def test_protection_this_turn_is_not_a_pledge(self):
+        """被動否定(破壊されない)是保護效果,不是誓約;可能形否定(攻撃できない)才是。"""
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このターン、このカードは戦闘・効果では破壊されない。"),
+            [self.DRAW, A("破壊", "效果", "否定")])
+
+    def test_opponent_restriction_this_turn_is_not_a_pledge(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このターン、相手はモンスターの効果を発動できない。"),
+            [self.DRAW, A("発動", "效果", "否定")])
+
+    def test_window_ending_with_comma(self):
+        self.assertEqual(
+            rows("②：自分・相手のバトルフェイズ終了時、自分フィールドに「試作機」が存在する"
+                 "場合に発動できる。自分は１枚ドローする。"),
+            [timing("雙方", "バトルフェイズ終了時"), A("存在", "條件", "肯定"), self.DRAW])
+
+    def test_window_inside_trigger_clause_is_not_a_timing(self):
+        self.assertEqual(
+            rows("①：相手がバトルフェイズにモンスターの効果を発動した時に発動できる。"
+                 "自分は１枚ドローする。"),
+            [A("発動", "條件", "肯定"), self.DRAW])
+        self.assertEqual(
+            rows("①：このカードがメインフェイズにリバースした場合に発動する。自分は１枚ドローする。"),
+            [A("リバース", "條件", "肯定"), self.DRAW])
+
+    def test_gemini_resummon_is_an_action_with_count(self):
+        text = "②：フィールドの通常モンスター扱いのこのカードを通常召喚としてもう１度召喚できる。"
+        self.assertEqual(rows(text, extra=True), [A("召喚", "效果", "可能")])
+        self.assertEqual(action_fields(text, extra=True), [("召喚", 1, None, None)])
+
+    def test_pledge_attack_declaration_action_name(self):
+        self.assertEqual(
+            rows("このターン、自分は「空牙団」モンスターでしか攻撃宣言できない。"),
+            [pledge("このターン", "攻撃宣言", "只能", "「空牙団」モンスターで")])
+
+    def test_pledge_scope_manner_before_shika_keeps_relative_clause(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このターン、自分は「紋章獣」モンスターのみを素材と"
+                 "したX召喚でしかEXデッキからモンスターを特殊召喚できない。"),
+            [self.DRAW,
+             pledge("このターン", "特殊召喚", "只能",
+                    "モンスター(「紋章獣」モンスターのみを素材としたX召喚で)", "EXデッキ")])
+
+    def test_pledge_scope_from_ga_subject(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このターン、自分はこの効果で手札に加えたカードの"
+                 "効果の発動ができない。"),
+            [self.DRAW,
+             pledge("このターン", "発動", "不能", "この効果で手札に加えたカードの効果")])
+
+    def test_two_ritual_spells_in_descent_line(self):
+        self.assertEqual(
+            rows("「カオス・フォーム」「超戦士の儀式」により降臨"),
+            [material("儀式", [("「カオス・フォーム」", 1), ("「超戦士の儀式」", 1)])])
+
+    def test_material_line_each_one_total(self):
+        self.assertEqual(
+            rows("ドラゴン族の融合・S・X・Pモンスター１体ずつ合計４体", card_type="融合"),
+            [material("融合", [("ドラゴン族の融合・S・X・Pモンスター", "4(1体ずつ)")])])
+
+    def test_event_turn_before_summon_procedure_stays_a_condition(self):
+        self.assertEqual(
+            rows("雷族モンスターの効果が手札で発動したターン、融合モンスター以外の自分フィールド"
+                 "の雷族の効果モンスター１体をリリースした場合にEXデッキから特殊召喚できる。"),
+            [A("発動", "條件", "肯定"),
+             summon("可以某方式特殊召喚",
+                    procedure=[{"action": "リリース",
+                                "object": "融合モンスター以外の自分フィールドの雷族の効果モンスター1体"}],
+                    source="EXデッキ")])
+
+    def test_window_with_comma_before_condition_clause(self):
+        """round2:「自分・相手ターンに、…場合、…発動できる」的窗口自成一段,是時機。"""
+        self.assertEqual(
+            rows("①：自分・相手ターンに、自分フィールドにカードが存在しない場合、このカードを"
+                 "手札から捨てて発動できる。自分は１枚ドローする。"),
+            [timing("雙方", "ターン"), A("存在", "條件", "否定"), A("捨てる", "代價", "肯定"),
+             self.DRAW])
+
+    def test_pledge_direct_attack_action_name(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このターン、このカードは直接攻撃できない。"),
+            [self.DRAW, pledge("このターン", "直接攻撃", "不能", "このカード", subject="このカード")])
+
+    def test_must_tribute_to_normal_summon(self):
+        self.assertEqual(
+            rows("このカードを通常召喚する場合、自分フィールドのモンスター３体をリリースして"
+                 "召喚しなければならず、このカードは特殊召喚できない。"),
+            [summon("必須以某方式召喚",
+                    procedure=[{"action": "リリース", "object": "自分フィールドのモンスター3体"}]),
+             summon("不能特殊召喚")])
 
 
 if __name__ == "__main__":

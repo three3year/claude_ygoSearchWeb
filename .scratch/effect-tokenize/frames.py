@@ -272,6 +272,7 @@ class FrameExtractor:
         j = i + 1
         polarity = POL_AFFIRM
         fold = 0                      # 併入動作的前置 token 數(N に する)
+        obligation = False            # 〜しなければならない(召喚條件的「必須」)
 
         def nxt(k):
             return self.word(tokens[k]) if k < n else None
@@ -411,12 +412,13 @@ class FrameExtractor:
             elif self.word(tokens[j]) == "ず":
                 form = "stem"          # 戻さず手札に加える:連用否定
             j += 1
-            # 〜しなければならない:義務,不是否定
+            # 〜しなければならない/ならず:義務,不是否定
             if (j + 1 < n and self.word(tokens[j - 1]) == "なければ"
                     and self.word(tokens[j]) == "なら"
-                    and self.word(tokens[j + 1]) == "ない"):
+                    and self.word(tokens[j + 1]) in ("ない", "ず")):
                 polarity = POL_AFFIRM
-                form = "dict"
+                form = "dict" if self.word(tokens[j + 1]) == "ない" else "stem"
+                obligation = True
                 j += 2
         aux_cond = False
         if j < n and self.word(tokens[j]) in AUXILIARY:
@@ -438,8 +440,11 @@ class FrameExtractor:
             j += 3
         conditional = suru_form in CONDITIONAL_FORMS or form == "cond" \
             or aux_cond or (w is not None and w in CONDITIONAL_FORMS)
-        return self._finish(tokens, head, i, j, action, polarity, form, passive,
-                            fold, clause_start, conditional)
+        anchor = self._finish(tokens, head, i, j, action, polarity, form, passive,
+                              fold, clause_start, conditional)
+        if anchor is not None and obligation:
+            anchor["obligation"] = True
+        return anchor
 
     def _topic_action(self, tokens, i, clause_start):
         """裸 できる/できない 的主題(は 前的名詞)是動作名詞時回它的動作名。"""

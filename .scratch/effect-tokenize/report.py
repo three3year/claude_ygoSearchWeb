@@ -288,21 +288,29 @@ def pct(x):
 
 
 def frame_stats(frames):
-    """frames.json 的紀錄 → (每 stratum 的 records/covered/frames, 位置 Counter,
-    極性 Counter, 動作 Counter)。frames.py/prepare_view.py 共用,同一把尺。"""
-    stats = {k: {"records": 0, "covered": 0, "frames": 0}
+    """frames.json 的紀錄 → (每 stratum 的 records/covered/frames/constraints,
+    位置 Counter, 極性 Counter, 動作 Counter, 約束框架 類別·子類 Counter)。
+    覆蓋=有任一種框架(動作或約束);位置/極性/動作只數動作框架。
+    frames.py/prepare_view.py/report.py 共用,同一把尺。"""
+    stats = {k: {"records": 0, "covered": 0, "frames": 0, "constraints": 0}
              for k, _ in STRATA}
     position, polarity, actions = Counter(), Counter(), Counter()
+    constraints = Counter()
     for r in frames:
         st = stats[r["stratum"]]
         st["records"] += 1
         st["covered"] += bool(r["frames"])
         st["frames"] += len(r["frames"])
         for fr in r["frames"]:
+            if fr.get("kind") == "約束":
+                st["constraints"] += 1
+                constraints[fr["category"] + (
+                    "·" + fr["subtype"] if fr["subtype"] else "")] += 1
+                continue
             position[fr["position"]] += 1
             polarity[fr["polarity"]] += 1
             actions[fr["action"]] += 1
-    return stats, position, polarity, actions
+    return stats, position, polarity, actions, constraints
 
 
 def frames_section():
@@ -311,13 +319,13 @@ def frames_section():
         return []
     with open(FRAMES, encoding="utf-8") as f:
         frames = json.load(f)
-    stats, position, polarity, actions = frame_stats(frames)
+    stats, position, polarity, actions, constraints = frame_stats(frames)
     lines = [
-        "## 動作框架覆蓋率(票 05;儀表板參考)",
+        "## 框架覆蓋率(票 05、約束框架票 01;儀表板參考)",
         "",
-        "框架抽取 `frames.py` 讀 tokens.json 逐句抽述語錨點與論元;覆蓋率=有抽到"
-        "至少一個框架的效果句比例(一句效果句含它的 ● 選項,ADR-0015)。效果外文本"
-        "的素材行(レベル８モンスター×２)沒有述語,天然抽不到。",
+        "框架抽取 `frames.py` 讀 tokens.json 逐句抽述語錨點與論元(動作框架),並由"
+        "句型認出約束框架(限制/時機/素材,`constraints.py`);覆蓋率=有抽到至少一個"
+        "框架(任一種)的效果句比例(一句效果句含它的 ● 選項,ADR-0015)。",
         "",
         "| 項目 | 效果句 | 效果外文本 |",
         "|---|---|---|",
@@ -328,12 +336,18 @@ def frames_section():
             pct(stats["extra"]["covered"] / max(1, stats["extra"]["records"]))),
         "| 框架數 | {:,} | {:,} |".format(stats["effect"]["frames"],
                                           stats["extra"]["frames"]),
+        "| 其中約束框架 | {:,} | {:,} |".format(stats["effect"]["constraints"],
+                                               stats["extra"]["constraints"]),
         "",
-        "位置分佈:" + "、".join("%s %s" % (k, format(v, ","))
-                                for k, v in sorted(position.items())),
+        "位置分佈(動作框架):" + "、".join("%s %s" % (k, format(v, ","))
+                                        for k, v in sorted(position.items())),
         "",
-        "極性分佈:" + "、".join("%s %s" % (k, format(v, ","))
-                                for k, v in sorted(polarity.items())),
+        "極性分佈(動作框架):" + "、".join("%s %s" % (k, format(v, ","))
+                                        for k, v in sorted(polarity.items())),
+        "",
+        "約束框架分佈:" + ("、".join("%s %s" % (k, format(v, ","))
+                                   for k, v in sorted(constraints.items()))
+                          or "無"),
         "",
         "動作詞元 top 50(相異 %d 種):" % len(actions),
         "",

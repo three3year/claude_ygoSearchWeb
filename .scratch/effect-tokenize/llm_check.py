@@ -32,6 +32,9 @@ import sys
 from collections import Counter, defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import constraints  # noqa: E402
+
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 CARDS = os.path.join(ROOT, "data", "cards.json")
 TOKENS = os.path.join(HERE, "tokens.json")
@@ -163,10 +166,17 @@ def record_lines(s, fr):
         if f.get("option") is not None:
             opt = " | 選項=●%d%s" % (f["option"],
                                     " " + f["label"] if f.get("label") else "")
-        lines.append("框架 %d:[%s] %s(%s)| 對象=%s | 來源=%s | 目的=%s%s | 子句=%s"
+        if f.get("kind") == constraints.KIND_CONSTRAINT:
+            lines.append("框架 %d:[約束 %s] %s%s | 子句=%s" % (
+                k, constraints.label_of(f), constraints.describe(f), opt,
+                f["clause"]))
+            continue
+        extra = constraints.describe_action(f)
+        lines.append("框架 %d:[%s] %s(%s)| 對象=%s | 來源=%s | 目的=%s%s%s | 子句=%s"
                      % (k, f["position"], f["action"], f["polarity"],
                         f.get("object") or "", f.get("source") or "",
-                        f.get("goal") or "", opt, f["clause"]))
+                        f.get("goal") or "", " | " + extra if extra else "", opt,
+                        f["clause"]))
     lines.append("")
     return lines
 

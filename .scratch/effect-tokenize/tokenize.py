@@ -507,6 +507,84 @@ class Tokenizer:
         return tokens
 
 
+# ── 詞序列對回原文(prepare_view.py 的高亮、frames.py 的約束框架對象欄共用)──
+
+_FULL = str.maketrans("０１２３４５６７８９ＳＸＰＬＡ？", "0123456789SXPLA?")
+_KANJI_NUM_SET = set(_KANJI_NUM)
+
+
+def _token_pattern(token, surface_of):
+    """token → (原文字面, 是否放寬比對)。放寬:數字可是全形/漢數字、字母可是全形。"""
+    if token.startswith("W"):
+        return surface_of[token], False
+    if token.startswith("d:"):
+        _, dem, wid = token.split(":", 2)
+        return dem + surface_of[wid], False
+    if token.startswith("NAME:"):
+        return "「" + token.split(":", 1)[1] + "」", False
+    if token.startswith("NUM:"):
+        return token.split(":", 1)[1], True
+    if token.startswith("q:"):
+        _, wid, val, counter, cmp_word = token.split(":", 4)
+        return (surface_of[wid] if wid else "") + val + counter + cmp_word, True
+    if token.startswith("r:"):
+        _, lo, hi, counter = token.split(":", 3)
+        return lo + "～" + hi + counter, True
+    if token.startswith("k:"):
+        return token[2:] + "カウンター", False
+    if token.startswith("s:"):
+        return token.split(":", 2)[1], False
+    if token.startswith("m:"):
+        return token[2:], True
+    if token[:2] in ("p:", "a:", "c:", "?:"):
+        return token[2:], False
+    return token, False                            # 句讀/●
+
+
+def _match(text, pos, pattern, flexible):
+    """pattern 從 text[pos] 起比對;回結束位置,對不上回 -1。"""
+    i, j = pos, 0
+    while j < len(pattern):
+        if i >= len(text):
+            return -1
+        ch = pattern[j]
+        if flexible and ch.isdigit():
+            while j < len(pattern) and pattern[j].isdigit():
+                j += 1
+            k = i
+            while k < len(text) and (text[k].translate(_FULL).isdigit()
+                                     or text[k] in _KANJI_NUM_SET):
+                k += 1
+            if k == i:
+                return -1
+            i = k
+            continue
+        if text[i] == ch or (flexible and text[i].translate(_FULL) == ch):
+            i, j = i + 1, j + 1
+            continue
+        return -1
+    return i
+
+
+def char_offsets(text, tokens, surface_of):
+    """每個 token 在原文 text 的 [起,迄);整句對不上回 None。"""
+    pos, out = 0, []
+    for token in tokens:
+        while pos < len(text) and text[pos] in SILENT:
+            pos += 1
+        if not out and pos < len(text) and text[pos] == "：" and token != "：":
+            pos += 1                      # 段首「①：」的冒號(分詞器剝掉)
+            while pos < len(text) and text[pos] in SILENT:
+                pos += 1
+        pattern, flexible = _token_pattern(token, surface_of)
+        end = _match(text, pos, pattern, flexible)
+        if end < 0:
+            return None
+        out.append((pos, end))
+        pos = end
+    return out
+
+
 def assemble(clauses):
     """組裝接縫(ADR-0015):一張卡某段的標記句列 → 效果句列。
 

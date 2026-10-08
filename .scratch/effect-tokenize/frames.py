@@ -41,6 +41,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+from constraints import KIND_ACTION, KIND_CONSTRAINT, ConstraintFinder  # noqa: E402
 from report import frame_stats, token_kind  # noqa: E402
 
 LEXICON = os.path.join(HERE, "lexicon.json")
@@ -193,7 +194,10 @@ def verb_form(surface, lemma):
 class FrameExtractor:
     def __init__(self, lexicon_entries):
         self.lex = Lexicon(lexicon_entries)
-        self.tokenizer = _load_tokenizer_module().Tokenizer(lexicon_entries)
+        tokenize = _load_tokenizer_module()
+        self.tokenizer = tokenize.Tokenizer(lexicon_entries)
+        self.char_offsets = tokenize.char_offsets
+        self.finder = ConstraintFinder(self)
 
     # ── token 讀取 ──
     def surface(self, token):
@@ -792,8 +796,20 @@ class FrameExtractor:
             label.append(self.surface(t))
         return ""
 
-    def frames_of_tokens(self, tokens):
+    def frames_of_tokens(self, tokens, text=None, extra=False, card_type=None):
+        """一句效果句的詞序列 → 框架清單(動作框架與約束框架混排、依原文位置排序)。
+        text 是原文(約束框架的對象欄用它取回 ①② 這類分詞器丟掉的字);extra 標
+        效果外文本(召喚條件、素材行只在效果外文本認);card_type 是卡片子類型
+        (素材框架的召喚法)。"""
         n = len(tokens)
+        offsets = self.char_offsets(text, tokens, self.lex.surface_of) \
+            if text is not None else None
+
+        def text_of(start, end):
+            """詞序列範圍的原文字面(對不回原文時退回 token 字面相連)。"""
+            if offsets is not None and start < end <= len(offsets):
+                return text[offsets[start][0]:offsets[end - 1][1]]
+            return "".join(self.surface(t) for t in tokens[start:end])
         sentences = []
         start = 0
         for k, t in enumerate(tokens):
@@ -873,6 +889,17 @@ class FrameExtractor:
         for s_idx, anchors in enumerate(anchors_by_sentence):
             marker_idx = marker_of.get(s_idx)
             in_activation = marker_idx is not None
+            # 約束框架(constraints.py):由句型認出;被吃掉範圍內的錨點不出動作框架
+            found, consumed = self.finder.find(
+                tokens, sentences[s_idx], anchors, marker_idx, depth_at,
+                extra=extra, card_type=card_type, text_of=text_of)
+            for fr in found:
+                span = fr["span"]
+                fr.update({"kind": KIND_CONSTRAINT, "sentence": s_idx,
+                           "option": option_of[s_idx], "label": label_of[s_idx],
+                           "clause": " ".join(self.surface(t)
+                                              for t in tokens[span[0]:span[1]])})
+                frames.append(fr)
             # 「この効果は…発動できない/発動できる」整句是效果本身的註記(速度/
             # 時機限制),句內的條件子句也不是這張卡的動作
             if self._topic_is_this_effect(tokens, sentences[s_idx]) and any(
@@ -900,6 +927,8 @@ class FrameExtractor:
                     seen = True
             carry = {}
             for k, a in enumerate(anchors):
+                if any(lo <= a["verb_at"] < hi for lo, hi in consumed):
+                    continue
                 is_marker = in_activation and k == marker_idx
                 before_marker = in_activation and k < marker_idx \
                     and depth_at[a["verb_at"]] == 0
@@ -951,7 +980,8 @@ class FrameExtractor:
                     coordinated += [m + "召喚" for m in methods[:-1]]
                     a["action"] = methods[-1] + "召喚"
                 for action in coordinated + [a["action"]]:
-                    frames.append({"sentence": s_idx, "action": action,
+                    frames.append({"kind": KIND_ACTION, "sentence": s_idx,
+                                   "action": action,
                                    "object": args.get("object"),
                                    "source": args.get("source"),
                                    "goal": args.get("goal"),
@@ -960,6 +990,9 @@ class FrameExtractor:
                                    "option": option_of[s_idx],
                                    "label": label_of[s_idx],
                                    "span": list(span), "clause": clause})
+        # 依原文位置混排;同起點時約束框架在前(穩定排序保住並列述語的順序)
+        frames.sort(key=lambda f: (f["sentence"], f["span"][0],
+                                   f["kind"] != KIND_CONSTRAINT))
         return frames
 
     def _topic_is_this_effect(self, tokens, sentence):
@@ -1029,8 +1062,12 @@ class FrameExtractor:
                 break
         return out
 
-    def extract(self, text, context=""):
-        return self.frames_of_tokens(self.tokenizer.tokenize(text, context))
+    def extract(self, text, context="", extra=None, card_type=None):
+        if extra is None:
+            # 沒說是不是效果外文本時看字首:編號效果(①：/●)是效果,其餘當效果外
+            extra = not (text[:1] in (OPTION,) or 0x2460 <= ord(text[:1] or " ") < 0x2500)
+        return self.frames_of_tokens(self.tokenizer.tokenize(text, context),
+                                     text=text, extra=extra, card_type=card_type)
 
 
 _DEFAULT = None
@@ -1044,9 +1081,10 @@ def default_extractor():
     return _DEFAULT
 
 
-def extract(text, context=""):
-    """接縫:一句效果句原文(整段,含 ● 選項;帶同卡同段上文)→ 動作框架清單。"""
-    return default_extractor().extract(text, context)
+def extract(text, context="", extra=None, card_type=None):
+    """接縫:一句效果句原文(整段,含 ● 選項;帶同卡同段上文;可選 效果外文本 旗標與
+    卡片子類型)→ 框架清單(動作框架與約束框架混排)。"""
+    return default_extractor().extract(text, context, extra, card_type)
 
 
 def main():
@@ -1055,7 +1093,9 @@ def main():
         sentences = json.load(f)
     out = []
     for s in sentences:
-        frames = extractor.frames_of_tokens(s["tokens"])
+        # 效果外文本看效果類型(含子效果句的領起句雖算效果層,仍是效果外文本的句型)
+        frames = extractor.frames_of_tokens(
+            s["tokens"], text=s["text_ja"], extra=s["kind"] == "效果外文本")
         for k, fr in enumerate(frames):
             fr["order"] = k
         out.append({"card": s["card"], "section": s["section"],
@@ -1064,12 +1104,15 @@ def main():
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False, indent=0)
         f.write("\n")
-    stats, _position, _polarity, _actions = frame_stats(out)
+    stats, _position, _polarity, _actions, constraints = frame_stats(out)
     for key in ("effect", "extra"):
         st = stats[key]
-        print("%s: 有框架的句 %d / %d(%.2f%%)" % (
+        print("%s: 有框架的句 %d / %d(%.2f%%);動作框架 %d、約束框架 %d" % (
             key, st["covered"], st["records"],
-            100.0 * st["covered"] / max(1, st["records"])))
+            100.0 * st["covered"] / max(1, st["records"]),
+            st["frames"] - st["constraints"], st["constraints"]))
+    print("約束框架分佈:" + "、".join(
+        "%s %d" % (k, v) for k, v in sorted(constraints.items())))
     print("框架總數 %d;已寫出 %s" % (
         sum(st["frames"] for st in stats.values()), OUT))
     return 0

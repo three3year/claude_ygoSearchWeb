@@ -23,6 +23,7 @@ _spec = importlib.util.spec_from_file_location(
     "effect_tokenize", os.path.join(HERE, "tokenize.py"))
 effect_tokenize = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(effect_tokenize)
+import constraints  # noqa: E402
 import extract_seed  # noqa: E402
 
 MIRROR_DIR = os.path.join(HERE, "mirror-data")
@@ -157,82 +158,10 @@ def main():
 
 # ── 卡片拆解(票 05/08/13/14):frames.json → 分片 + 索引/覆蓋率/盲區 ──
 
-_SILENT = effect_tokenize.SILENT      # ● 不是靜默字元(選項邊界 token,ADR-0015)
-_FULL = str.maketrans("０１２３４５６７８９ＳＸＰＬＡ？", "0123456789SXPLA?")
-_KANJI_NUM = set("一二三四五六七八九十")
-
-
-def _token_pattern(token, surface_of):
-    """token → (原文字面, 是否放寬比對)。放寬:數字可是全形/漢數字、字母可是全形。"""
-    kind = report.token_kind(token)
-    if kind == "lex":
-        return surface_of[token], False
-    if kind == "dem":
-        _, dem, wid = token.split(":", 2)
-        return dem + surface_of[wid], False
-    if kind == "name":
-        return "「" + token.split(":", 1)[1] + "」", False
-    if kind == "num":
-        return token.split(":", 1)[1], True
-    if kind == "quant":
-        _, wid, val, counter, cmp_word = token.split(":", 4)
-        return (surface_of[wid] if wid else "") + val + counter + cmp_word, True
-    if kind == "range":
-        _, lo, hi, counter = token.split(":", 3)
-        return lo + "～" + hi + counter, True
-    if kind == "cname":
-        return token[2:] + "カウンター", False
-    if kind == "elided":
-        return token.split(":", 2)[1], False
-    if kind == "method":
-        return token[2:], True
-    if kind == "punct":
-        return token, False
-    return token.split(":", 1)[1], False          # particle/attr/counter/oov
-
-
-def _match(text, pos, pattern, flexible):
-    """pattern 從 text[pos] 起比對;回結束位置,對不上回 -1。"""
-    i, j = pos, 0
-    while j < len(pattern):
-        if i >= len(text):
-            return -1
-        ch = pattern[j]
-        if flexible and ch.isdigit():
-            while j < len(pattern) and pattern[j].isdigit():
-                j += 1
-            k = i
-            while k < len(text) and (text[k].translate(_FULL).isdigit()
-                                     or text[k] in _KANJI_NUM):
-                k += 1
-            if k == i:
-                return -1
-            i = k
-            continue
-        if text[i] == ch or (flexible and text[i].translate(_FULL) == ch):
-            i, j = i + 1, j + 1
-            continue
-        return -1
-    return i
-
-
 def char_offsets(text, tokens):
-    """每個 token 在原文的 [起,迄);整句對不上回 None(頁面就不高亮)。"""
-    pos, out = 0, []
-    for token in tokens:
-        while pos < len(text) and text[pos] in _SILENT:
-            pos += 1
-        if not out and pos < len(text) and text[pos] == "：" and token != "：":
-            pos += 1                      # 段首「①：」的冒號(分詞器剝掉)
-            while pos < len(text) and text[pos] in _SILENT:
-                pos += 1
-        pattern, flexible = _token_pattern(token, _SURFACES)
-        end = _match(text, pos, pattern, flexible)
-        if end < 0:
-            return None
-        out.append((pos, end))
-        pos = end
-    return out
+    """每個 token 在原文的 [起,迄);整句對不上回 None(頁面就不高亮)。
+    實作在 tokenize.char_offsets(frames.py 的約束框架對象欄也用它)。"""
+    return effect_tokenize.char_offsets(text, tokens, _SURFACES)
 
 
 _SURFACES = {}
@@ -246,6 +175,19 @@ def span_chars(offsets, span):
         return None
     return [offsets[start][0], offsets[end - 1][1]]
 
+def frame_row(fr, offsets):
+    """一個框架 → 拆解頁的列(欄位順序見 write_frame_shards 的註解)。"""
+    chars = span_chars(offsets, fr["span"])
+    if fr.get("kind") == constraints.KIND_CONSTRAINT:
+        return [fr["sentence"], None, None, fr.get("polarity"), None, None, None,
+                fr["clause"], chars, fr.get("option"), fr.get("label"),
+                constraints.label_of(fr), constraints.describe(fr)]
+    return [fr["sentence"], fr["position"], fr["action"], fr["polarity"],
+            fr.get("object"), fr.get("source"), fr.get("goal"), fr["clause"],
+            chars, fr.get("option"), fr.get("label"), None,
+            constraints.describe_action(fr)]
+
+
 def write_frame_shards(sentences, surface_of):
     """frames.json 逐卡打包成 FRAME_SHARDS 個 view_frames_<k>.js;回傳要放進
     view_data.js 的索引(卡號/卡名/分片號)、覆蓋率與「抽不到框架的句子」。
@@ -258,7 +200,7 @@ def write_frame_shards(sentences, surface_of):
     by_key = {(s["card"], s["section"], s["index"]): s for s in sentences}
 
     per_card = {}
-    stats, position, polarity, actions = report.frame_stats(frames)
+    stats, position, polarity, actions, con_dist = report.frame_stats(frames)
     uncovered = []
     unaligned = 0
     for r in frames:
@@ -267,16 +209,14 @@ def write_frame_shards(sentences, surface_of):
         offsets = char_offsets(s["text_ja"], s["tokens"])
         unaligned += offsets is None
         # 欄位:句序、位置、動作、極性、對象、來源、目的、子句、原文 [起,迄)、
-        # 選項(第幾個 ●)、標籤;p=各段(標記句)的 index、效果類型、字元範圍
+        # 選項(第幾個 ●)、標籤、約束框架的 類別·子類(動作框架為 null)、內容
+        # (約束框架的專屬欄位併成一欄;動作框架為次數/窗口欄,沒有時 null);
+        # p=各段(標記句)的 index、效果類型、字元範圍
         rec = {"s": r["section"], "i": r["index"], "k": s["kind"],
                "st": r["stratum"], "t": s["text_ja"],
                "p": [[p["index"], p["kind"], p["start"], p["end"]]
                      for p in s["parts"]],
-               "f": [[fr["sentence"], fr["position"], fr["action"],
-                      fr["polarity"], fr.get("object"), fr.get("source"),
-                      fr.get("goal"), fr["clause"],
-                      span_chars(offsets, fr["span"]),
-                      fr.get("option"), fr.get("label")] for fr in r["frames"]]}
+               "f": [frame_row(fr, offsets) for fr in r["frames"]]}
         per_card.setdefault(r["card"], []).append(rec)
         if not r["frames"]:
             uncovered.append({"card": r["card"], "section": r["section"],
@@ -308,6 +248,7 @@ def write_frame_shards(sentences, surface_of):
         "stats": stats,
         "position": [[k, v] for k, v in sorted(position.items())],
         "polarity": [[k, v] for k, v in sorted(polarity.items())],
+        "constraints": [[k, v] for k, v in sorted(con_dist.items())],
         "top_actions": [[a, c] for a, c in sorted(
             actions.items(), key=lambda kv: (-kv[1], kv[0]))[:TOP_ACTIONS]],
         "distinct_actions": len(actions),

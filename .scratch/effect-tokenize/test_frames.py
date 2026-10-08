@@ -21,14 +21,19 @@ def brief(frame):
             frame.get("goal"), frame["position"], frame["polarity"])
 
 
+def actions(text, context=""):
+    """只看動作框架(約束框架的回歸例子在 test_constraints.py)。"""
+    return [f for f in frames.extract(text, context) if f["kind"] == "動作"]
+
+
 def extract(text, context=""):
-    return [brief(f) for f in frames.extract(text, context)]
+    return [brief(f) for f in actions(text, context)]
 
 
 def options(text, context=""):
     """框架 → (動作, 位置, 選項, 標籤):票 14 的選項欄。"""
     return [(f["action"], f["position"], f["option"], f["label"])
-            for f in frames.extract(text, context)]
+            for f in actions(text, context)]
 
 
 class TestSingleAction(unittest.TestCase):

@@ -74,7 +74,7 @@ def convergence_gates(report, digest_on_disk):
 
 
 def integrity_gates(report):
-    """完整性檢查:效果句的欄位值域與拆句表的三道驗證。"""
+    """完整性檢查:標記句的欄位值域與拆句表的三道驗證。"""
     return [
         empty_gate("全表無殘留的 kind: null", report["kind_missing"]),
         empty_gate("text_zh / text_ja 都是對應卡文的連續子字串",
@@ -134,7 +134,7 @@ def print_totals(report, p):
     clauses = report["clauses"]
     p("## 規模")
     p("")
-    p(f"  卡片 {report['cards']:,} 張,效果句 {clauses:,} 條")
+    p(f"  卡片 {report['cards']:,} 張,標記句 {clauses:,} 條")
     p(f"  純通常怪獸(空 clauses) {report['pure_normal']:,} 張,"
       f"靈擺段 {report['pendulum_sections']:,} 張")
     p(f"  前言段(效果外文本) {report['preambles']:,} 條,"
@@ -182,7 +182,7 @@ def print_zh_only(report, p):
     p("## 繁中判定卡(票55 / ADR-0006)")
     p("")
     p(f"  {len(report['no_japanese_text'])} 張 / "
-      f"{report['zh_judged_clauses']} 條效果句 —— {ZH_ONLY_NOTE}")
+      f"{report['zh_judged_clauses']} 條標記句 —— {ZH_ONLY_NOTE}")
     p(f"  {report['no_japanese_text']}")
 
 

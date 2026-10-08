@@ -30,16 +30,16 @@
 **改判票**(`make_batches.py --rejudge` 產生的批次)的結果檔多一個逐行旗標
 `"rejudge": true`:那一行的既有判定是要被換掉的東西,不是要被保留的東西(票52)。
 沒寫旗標的話 ADR-0002 的「判定一次就算數」會照舊擋下來,改判等於沒做,所以批次檔
-標了改判的效果句、結果檔卻沒寫旗標時整批不寫入。官方明示與人工修正的權威高於改判
+標了改判的標記句、結果檔卻沒寫旗標時整批不寫入。官方明示與人工修正的權威高於改判
 票,改判動不了它們——碰到了同樣整批不寫入。
 
 三道關卡,任何一道不過就整批不寫入(`--force` 可強行寫,但那等於把失敗藏起來):
 
-1. **集合一致性自檢** —— 結果檔涵蓋的效果句與拆句標的必須與批次檔完全相同,
+1. **集合一致性自檢** —— 結果檔涵蓋的標記句與拆句標的必須與批次檔完全相同,
    少一筆或多一筆即失敗。
 2. **拆句表三道驗證** —— 無遺漏覆蓋、官方 `『原文』` 引用交叉驗證、卡文變動即失效,
    由管線在套用時檢查(ADR-0003)。
-3. **判定對得回效果句** —— 結果檔的 index 對不到任何一行即失敗。
+3. **判定對得回標記句** —— 結果檔的 index 對不到任何一行即失敗。
 
 用法:
     python script/tag_card/merge_judgments.py \\
@@ -66,7 +66,7 @@ def key_of(record):
 
 
 def batch_expectations(batch):
-    """批次檔 → (該拆的段落集合, 該判的效果句集合)。"""
+    """批次檔 → (該拆的段落集合, 該判的標記句集合)。"""
     targets = set()
     clauses = set()
     for entry in batch["entries"]:
@@ -102,7 +102,7 @@ def rejudge_problems(batch, result):
 
 
 def result_coverage(result):
-    """結果檔 → (拆了哪些段落, 判了哪些效果句)。"""
+    """結果檔 → (拆了哪些段落, 判了哪些標記句)。"""
     targets = set()
     clauses = set()
     for record in result:
@@ -120,7 +120,7 @@ def set_problems(batch, result):
     got_targets, got_clauses = result_coverage(result)
     problems = []
     for label, want, got in (("拆句標的", want_targets, got_targets),
-                             ("待判效果句", want_clauses, got_clauses)):
+                             ("待判標記句", want_clauses, got_clauses)):
         for missing in sorted(want - got):
             problems.append(f"{label}少了 {missing}")
         for extra in sorted(got - want):
@@ -183,7 +183,7 @@ def merged_splits(existing, records):
 
 
 def applied_problems(report, records):
-    """本票新增的拆句紀錄有沒有被三道驗證擋下來,以及判定對不對得回效果句。"""
+    """本票新增的拆句紀錄有沒有被三道驗證擋下來,以及判定對不對得回標記句。"""
     added = {key_of(record) for record in records}
     problems = []
     for key in SPLIT_FAILURES:

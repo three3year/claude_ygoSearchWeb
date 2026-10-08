@@ -1,12 +1,12 @@
 """判定批次檔的 CLI 薄殼:跑一次管線 → 取出待判的卡 → 寫成一批一檔。
 
 批次**即時產生**:每次都跑當前的規則層與拆句表,判定票因此永遠吃到最新的影子預測
-與最新的效果句集合,不會拿著過期的批次去判(spec「批次檔即時產生」)。
+與最新的標記句集合,不會拿著過期的批次去判(spec「批次檔即時產生」)。
 
 分成兩個系列,不混在一起排票——兩種工作的輸出格式與成本差約兩倍,混編會讓每票的
 實際負擔不可預測:
 
-- `kind`「只判類型」—— 卡文已經有①②③,效果句集合已定,判定者只填類型與必發/選發。
+- `kind`「只判類型」—— 卡文已經有①②③,標記句集合已定,判定者只填類型與必發/選發。
 - `split`「要拆+判」—— 舊式無編號卡文,判定者要先依語意拆句再判類型。批次檔額外附上
   補足情報裡命中整團的 `『原文』` 引用當**拆點提示**;那只是提示,程式不會自動拆
   (理由同 `_split_bullets`:官方沒有明確分項的引用可能只是一句話的片段,ADR-0003)。
@@ -17,7 +17,7 @@
 出來的,每票報自己的批號,檔名才不會互相蓋掉。
 
 第三種批次不排票、由票逐條指名:`--rejudge` 的**改判批次**(票52)。規範改版後回頭
-修既有判定時,標的是已經判過的效果句,`collect()` 那條路(只認 `kind` 為 null 的待判
+修既有判定時,標的是已經判過的標記句,`collect()` 那條路(只認 `kind` 為 null 的待判
 行)看不到它們,所以另走 `write_rejudge_batch()`。
 
 用法:
@@ -43,7 +43,7 @@ DEFAULT_BATCH_DIR = os.path.join(ROOT, ".scratch", "tag-card", "batches")
 
 SERIES_KIND = "kind"
 SERIES_SPLIT = "split"
-# 「改判」不是排票排得到的系列:它的標的是**已經判過**的效果句,由規範改版後的
+# 「改判」不是排票排得到的系列:它的標的是**已經判過**的標記句,由規範改版後的
 # 一張改判票逐條指名(票52)。因此沒有批量、沒有批號,一次一個檔。
 SERIES_FIX = "fix"
 _ONLY_RE = re.compile(r"^\d+(,\d+)*$")
@@ -55,7 +55,7 @@ SERIES_LABEL = {SERIES_KIND: "只判類型", SERIES_SPLIT: "要拆+判",
 
 
 def pending_clauses(entry):
-    """這張卡仍待判定的效果句。效果外文本段由位置規則填好了,自然不在其中。"""
+    """這張卡仍待判定的標記句。效果外文本段由位置規則填好了,自然不在其中。"""
     return [clause for clause in entry["clauses"] if clause["kind"] is None]
 
 
@@ -77,7 +77,7 @@ def clause_row(clause):
 
 
 def card_context(entry, card, faq):
-    """一張卡的完整上下文:卡文兩側 + 不裁剪的補足情報。效果句由呼叫端填。"""
+    """一張卡的完整上下文:卡文兩側 + 不裁剪的補足情報。標記句由呼叫端填。"""
     payload = {
         "id": entry["id"],
         "name_zh": card.get("name_zh"),
@@ -101,7 +101,7 @@ def card_context(entry, card, faq):
 
 
 def card_payload(entry, card, faq, blobs):
-    """一張待判卡的上下文 + 待判效果句(+ 要拆的整團)。"""
+    """一張待判卡的上下文 + 待判標記句(+ 要拆的整團)。"""
     payload = card_context(entry, card, faq)
     payload["clauses"] = [clause_row(c) for c in pending_clauses(entry)]
     # 拆句標的的原文取自待拆清單那一份**整團**,不取標記表上那一行——● 子效果
@@ -133,9 +133,9 @@ def parse_rejudge(spec):
 
 
 def rejudge_payloads(entries, cards, faqs, keys):
-    """指名的效果句 → 改判批次的卡片酬載;對不上時回 (None, 理由)。
+    """指名的標記句 → 改判批次的卡片酬載;對不上時回 (None, 理由)。
 
-    標的必須是**已經判過**的效果句:改判是換掉一個判定,還沒判的那一行走的是
+    標的必須是**已經判過**的標記句:改判是換掉一個判定,還沒判的那一行走的是
     正常排票(判了才有東西可換)。批次帶上這一行現在的判定與來源,改判票才知道
     自己要動的是什麼、以及那一行動不動得了(官方明示與人工修正動不了,票52)。
     """
@@ -148,7 +148,7 @@ def rejudge_payloads(entries, cards, faqs, keys):
     for key in keys:
         found = clause_index.get(key)
         if found is None:
-            return None, f"{key} 不是標記表上的效果句"
+            return None, f"{key} 不是標記表上的標記句"
         entry, clause = found
         if clause["kind"] is None:
             return None, f"{key} 還沒判過,改判無從換起(走正常排票)"
@@ -168,7 +168,7 @@ def rejudge_payloads(entries, cards, faqs, keys):
 def collect(entries, report, cards, faqs):
     """→ {系列: [卡片酬載, ...]},依卡片密碼升冪。
 
-    「有沒有待判的效果句」不是唯一的入選條件:**未拆的整團就算類型已經有了也要排**
+    「有沒有待判的標記句」不是唯一的入選條件:**未拆的整團就算類型已經有了也要排**
     ——官方以 `『①』` 指名整團時它會拿到 `official` 的類型(spec 的階梯二對未拆整團
     照樣開火),`pending_clauses` 因此看不到它,那張卡就再也進不了拆句批次(票09 在
     23927567 幸運を告げるフクロウ 上發現這個缺口,全表僅此一張)。拆句與判類型是
@@ -214,9 +214,9 @@ RESULT_FORMAT = {
     "兩側語序不一致": "繁中與日文把同一批句子排成不同順序時,clauses 照繁中順序"
                 "列、另給 ja_order(段落位置的排列)說明日文怎麼讀;index 仍照"
                 "日文的序號給,官方的『①』對的是日文那一側(規範 §8 判準11)。",
-    "改判": "批次檔的效果句寫了 rejudge 的(改判批次),結果檔那一行也要寫 "
+    "改判": "批次檔的標記句寫了 rejudge 的(改判批次),結果檔那一行也要寫 "
           "rejudge: true,否則既有判定會照 ADR-0002 擋下來、改判等於沒做;"
-          "反過來,批次沒標的效果句不准自己寫這個旗標。current 是那一行現在的"
+          "反過來,批次沒標的標記句不准自己寫這個旗標。current 是那一行現在的"
           "判定,改判後仍相同也照樣寫回來(空操作,不報錯)。",
     "範例": [
         {"id": 12345, "section": "main", "split": True,
@@ -269,7 +269,7 @@ def write_batch(path, name, series, number, remaining, payload):
 def write_rejudge_batch(entries, cards, faqs, args):
     """`--rejudge` 那條路:一張改判票、一個檔,標的由票逐條指名。
 
-    不走 `collect()`——那一支只認**待判**的效果句(`kind` 為 null),而改判的標的
+    不走 `collect()`——那一支只認**待判**的標記句(`kind` 為 null),而改判的標的
     恰恰是已經判過的那些行。
     """
     if not args.name:
@@ -324,7 +324,7 @@ def main(argv=None):
                                        "補判批次取個自己的名字,才不會蓋掉正式排票的檔")
     parser.add_argument("--rejudge",
                         help="改判批次:逗號分隔的 <卡片密碼>:<section>:<index>,"
-                             "標的必須是已經判過的效果句。規範改版後回頭修既有"
+                             "標的必須是已經判過的標記句。規範改版後回頭修既有"
                              "判定用,要配 --name 自己取檔名")
     parser.add_argument("--dry-run", action="store_true",
                         help="只點數,不寫檔")
@@ -367,7 +367,7 @@ def main(argv=None):
         clauses = sum(len(c["clauses"]) for c in payloads)
         groups = batches_of(payloads, BATCH_SIZE[name])
         print(f"{SERIES_LABEL[name]}({name}): {len(payloads)} 張卡 / "
-              f"{clauses} 條待判效果句 → {len(groups)} 批,"
+              f"{clauses} 條待判標記句 → {len(groups)} 批,"
               f"每批 {BATCH_SIZE[name]} 張")
         if args.dry_run or name not in wanted:
             continue

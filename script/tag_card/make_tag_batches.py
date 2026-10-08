@@ -3,7 +3,7 @@
 與效果類型的 `make_batches.py` 同構,批次**即時產生**:每次都跑當前的規則層,
 判定票永遠吃到最新的直貼結果與待判集合。兩個系列:
 
-- `tag-<類別碼>` —— 動作 tag 的長尾判定。入選條件(ADR-0013):新式效果句、
+- `tag-<類別碼>` —— 動作 tag 的長尾判定。入選條件(ADR-0013):新式標記句、
   kind 已定、命中類別粗篩、無該類 tag、該類不在 tags_checked。判定者對每句給
   出該類**全部** tag(含空 = 判空,收票時記進 tags_checked)。
 - `timing` —— 觸發時機的長尾判定。入選條件:誘發系承載類型、發動子句帶觸發
@@ -39,7 +39,7 @@ CAT_BY_CODE = {code: vocab.zh(vocab.TAG, code)
                for code in vocab.codes(vocab.TAG)}
 
 RESULT_FORMAT = {
-    "說明": "一效果句一物件,鍵 id / section / index 照批次檔抄。tag 系列:"
+    "說明": "一標記句一物件,鍵 id / section / index 照批次檔抄。tag 系列:"
             "tags 給該句**該類別的全部** tag(槽位值照 docs/effect_tag_guide.md"
             " 的中文值域);該句沒有該類動作時 tags 給空陣列(= 判空,收票會記"
             "進 tags_checked)。timing 系列:timing 給觸發時機單值,判不進具名"
@@ -60,7 +60,7 @@ RESULT_FORMAT = {
 
 
 def pending_tag_rows(entries, report):
-    """→ {類別: [待判效果句列, ...]}(沿用管線報告的待判清單)。"""
+    """→ {類別: [待判標記句列, ...]}(沿用管線報告的待判清單)。"""
     by_key = {(cid, clause["section"], clause["index"]): clause
               for cid, clause in _tag_scope_clauses(entries)}
     series = {}
@@ -71,7 +71,7 @@ def pending_tag_rows(entries, report):
 
 
 def pending_timing_rows(entries, report):
-    """觸發時機的待判效果句(母體由管線報告給,與 seal 同一份)。"""
+    """觸發時機的待判標記句(母體由管線報告給,與 seal 同一份)。"""
     by_key = {(cid, clause["section"], clause["index"]): clause
               for cid, clause in _tag_scope_clauses(entries)}
     return [(row["id"], by_key[(row["id"], row["section"], row["index"])])

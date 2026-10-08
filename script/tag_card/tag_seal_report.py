@@ -181,7 +181,7 @@ def print_stats(report, summaries, file=sys.stdout):
     p("")
     p("## 首期統計")
     p("")
-    p(f"  管轄範圍(新式效果句): {report['tag_scope_clauses']:,} 條")
+    p(f"  管轄範圍(新式標記句): {report['tag_scope_clauses']:,} 條")
     total = sum(report["tag_counts"].values())
     p(f"  tag 總數: {total:,}(類別分布 {dict(sorted(report['tag_counts'].items()))})")
     p(f"  tag 來源分布: {report['tag_src_counts']}")

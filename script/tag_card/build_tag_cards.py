@@ -60,7 +60,7 @@ def print_splits(report, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p("")
     p(f"拆句表: 套用 {report['split_records']} 筆,"
-      f"拆出效果句 {report['split_clauses']} 條,"
+      f"拆出標記句 {report['split_clauses']} 條,"
       f"因拆句新取得官方明示 {report['split_new_official']} 條")
     for key, label in (
             ("split_coverage_failed", "驗證一・無遺漏覆蓋不成立"),
@@ -185,7 +185,7 @@ def rule_status(row):
 
 
 def clause_line(row, tail, indent="  "):
-    """報告裡指向單一效果句的一行,前綴一律是那三個穩定鍵。"""
+    """報告裡指向單一標記句的一行,前綴一律是那三個穩定鍵。"""
     return (f"{indent}id={row['id']} section={row['section']} "
             f"index={row['index']} {tail}")
 
@@ -268,7 +268,7 @@ def rules_doc_preamble(report):
         "(定義有異動時才會變,覆蓋條數變動不算)",
         "",
         f"統計基準:{report['cards']:,} 張卡 / {report['rule_targets']:,} 條"
-        "有日文原文的效果句(規則層的管轄範圍,前言段不在其中),"
+        "有日文原文的標記句(規則層的管轄範圍,前言段不在其中),"
         f"產出影子預測 {report['rule_predictions']:,} 條"
         f"(其中尚未判定 {report['rule_predictions_pending']:,} 條)。",
         "",
@@ -294,7 +294,7 @@ def rules_doc_registry(report):
 
 def rules_doc_validation(report):
     lines = [
-        "## 獨立驗證(以[[官方明示]]的效果句遮答案跑規則)",
+        "## 獨立驗證(以[[官方明示]]的標記句遮答案跑規則)",
         "",
         f"門檻 {100 * rules.AGREEMENT_THRESHOLD:.0f}%。未達門檻的規則不自動停用"
         "——那會把問題藏起來;它會一直標成 FAIL,直到判別條件收緊或使用者判定"
@@ -368,7 +368,7 @@ def print_tag_rules(report, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p("")
     p(f"效果 Tag 規則層(直接寫入,ADR-0013):管轄 "
-      f"{report['tag_scope_clauses']:,} 條新式效果句,"
+      f"{report['tag_scope_clauses']:,} 條新式標記句,"
       f"寫入 tag {report['tag_rule_tags']:,} 個、"
       f"雙重確認升級 {report['tag_rule_confirms']} 個,"
       f"指紋 {report['tag_rules_digest']}")
@@ -438,7 +438,7 @@ def write_tag_rules_doc(path, report):
 
 def print_report(report, digest_changed=False, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
-    p(f"卡片: {report['cards']} 張,效果句: {report['clauses']} 條")
+    p(f"卡片: {report['cards']} 張,標記句: {report['clauses']} 條")
     p(f"純通常怪獸(空 clauses): {report['pure_normal']} 張")
     p(f"靈擺段: {report['pendulum_sections']} 張,"
       f"丟棄怪獸敘述段: {report['flavor_dropped']} 張")
@@ -464,7 +464,7 @@ def print_report(report, digest_changed=False, file=sys.stdout):
     # 因此是繁中卡文,這些行沒有官方明示、也沒有影子預測,confidence 一律低。
     p(f"無官方日文文本(改以繁中卡文判定,ADR-0006): "
       f"{len(report['no_japanese_text'])} 張 / "
-      f"{report['zh_judged_clauses']} 條效果句")
+      f"{report['zh_judged_clauses']} 條標記句")
     p(f"  {report['no_japanese_text']}")
 
     p(f"繁中/日文編號數量不一致: {len(report['numeral_mismatch'])} 段")
@@ -531,7 +531,7 @@ def print_report(report, digest_changed=False, file=sys.stdout):
     for key, label in (("seq_missing", "序號引用對不到編號(必須為 0)"),
                        ("header_index_missing", "標頭指名的編號卡文沒有"),
                        ("quote_ambiguous", "引號同時命中多個編號區段"),
-                       ("kind_conflicts", "同一效果句被官方寫成兩種類型"),
+                       ("kind_conflicts", "同一標記句被官方寫成兩種類型"),
                        ("kind_ambiguous", "同一行寫出多種類型"),
                        ("non_effect_outside_preamble", "效果外明示不在前言段")):
         rows = report[key]

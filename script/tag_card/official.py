@@ -1,7 +1,7 @@
 """補足情報的官方明示抽取與歸屬判定。
 
 回答三件事:官方寫下的效果類型是什麼、它有沒有寫這個效果必發、它講的是哪一個
-效果句。
+標記句。
 歸屬的統一原則是**證據唯一且明確才自動套用**——引號對不回本卡、同時命中多個
 效果段、明示句只提到別張卡、卡名限定卻是多效果卡,一律不回傳判定,改記進註記
 交由後續判定,絕不猜測。
@@ -31,10 +31,10 @@ KIND_IGNITION = "啟動效果"
 KINDS = (KIND_NON_EFFECT, KIND_UNCLASSIFIED, KIND_CONTINUOUS, KIND_QUICK,
          KIND_TRIGGER, KIND_IGNITION)
 
-# 魔陷卡效果的十種值(ADR-0004/ADR-0005):**以魔法/陷阱卡身分運作**的效果句不
+# 魔陷卡效果的十種值(ADR-0004/ADR-0005):**以魔法/陷阱卡身分運作**的標記句不
 # 適用上面的分類,只有由[[卡片種類]]決定的咒語速度,值因此以卡片種類命名。判準是
-# 運作身分而不是印刷卡種——怪獸卡「當作永續陷阱卡的場合」的效果句同樣判「永續
-# 陷阱卡效果」。官方對這些效果句不給類型詞,但會以「〜カードの効果として+肯定
+# 運作身分而不是印刷卡種——怪獸卡「當作永續陷阱卡的場合」的標記句同樣判「永續
+# 陷阱卡效果」。官方對這些標記句不給類型詞,但會以「〜カードの効果として+肯定
 # 述語」寫下運作身分(票56),那是這一側的官方明示,見 _SPELLTRAP_KIND_BY_WORD。
 # 第十值「靈擺魔法卡效果」不以卡片種類命名——P 區的卡官方規則是「魔法カード
 # 扱い」但不屬於十種卡片種類的任何一種,值改以運作身分命名;官方對靈擺效果
@@ -75,7 +75,7 @@ _KIND_BY_WORD = {
 _KIND_WORD_RE = re.compile("(" + "|".join(_KIND_BY_WORD) + ")")
 _KIND_RE = re.compile("(" + "|".join(_KIND_BY_WORD) + ")です")
 # 魔陷卡效果的官方明示(票56):「〜カードの効果として+肯定述語」寫下的是這個
-# 效果句**運作時的身分**(実測 89 行:装備魔法 73/永続罠 9/永続魔法 7)。只認寫出
+# 標記句**運作時的身分**(実測 89 行:装備魔法 73/永続罠 9/永続魔法 7)。只認寫出
 # [[卡片種類]]全名的——光寫大類的「魔法/罠カードの効果として」(実測 44 行)對不出
 # 九值中的哪一個,不產生判定。述語用白名單(実測 扱います 57/適用されます 20/
 # 扱われます 9/適用します・発動します・発動・処理を行います 各 1),否定形
@@ -143,7 +143,7 @@ _TRAILING_HEADER_RE = re.compile(r"(?<=.)(【[^】]*】)[ 　\t]*$", re.M)
 _INDEX_HEADER_RE = re.compile(
     rf"^([{NUMERALS}])[のに]?(?:モンスター|ペンデュラム)?の?効果について$")
 # 標頭前面可以再掛一個編號前綴:`【①の『●３つ』の効果について】`(守星騎士 托勒密
-# 18326736)。官方用它逐項給了兩種類型,認不得標頭就整段不拆、一條效果句放不下
+# 18326736)。官方用它逐項給了兩種類型,認不得標頭就整段不拆、一條標記句放不下
 # 兩個類型(票60)。前綴只說了在哪一個編號效果底下,對位仍照 label / ordinal 走
 # ——`_resolve_bullet` 本來就要求全部的 `●` 出自同一個編號效果。
 _BULLET_HEADER_RE = re.compile(
@@ -296,7 +296,7 @@ def bullet_specs(text):
     """補足情報 → 官方用【●…について】系列標頭描述的子效果標的清單。
 
     有標的才代表官方把 ● 當成獨立的子效果來解說,拆句才有依據(spec 的
-    「官方以●分項描述的子效果拆成獨立效果句」)。
+    「官方以●分項描述的子效果拆成獨立標記句」)。
     """
     specs = []
     for header, _ in _blocks(text):
@@ -367,12 +367,12 @@ def _is_preamble(index):
 
 
 def _numbered(effects):
-    """有編號的效果句(含 ● 子效果)。用來分辨新式卡文與舊式無編號卡文。"""
+    """有編號的標記句(含 ● 子效果)。用來分辨新式卡文與舊式無編號卡文。"""
     return [c for c in effects if c["index"][:1] in NUMERALS]
 
 
 def _seq_target(index, effects, unsplit):
-    """『①』→ 效果句 index;對不到時回 None。
+    """『①』→ 標記句 index;對不到時回 None。
 
     官方對舊式無編號卡文仍以①②稱呼,[[拆句表]]拆出來的段就是它指的那幾段
     (index 規則:效果句為 "1" / "2" / "3")。整團還沒拆時整團就是官方口中的那一個。
@@ -391,7 +391,7 @@ def grant_lead(text_ja):
     """「〜は以下の効果を得る。●…」→ (領起句, 整段) 正規化後;不是這一族回 None。
 
     兩份文字都已正規化,拿來回答「官方這一句講的是領起句還是 `●`」——`●` 拆成
-    獨立效果句之後領起句那一行就不含 `●`,這裡自然收不到它,判定隨即恢復正常。
+    獨立標記句之後領起句那一行就不含 `●`,這裡自然收不到它,判定隨即恢復正常。
     拆句要不要認行內 `『●…』` 引用看的是同一族(票16),所以兩邊共用這一支。
     """
     text = text_ja or ""
@@ -404,7 +404,7 @@ def grant_lead(text_ja):
 
 
 def _grant_leads(effects):
-    """效果句清單 → {index: (領起句, 整段)},只收「賦予型領起句 + 未拆的 ●」。"""
+    """標記句清單 → {index: (領起句, 整段)},只收「賦予型領起句 + 未拆的 ●」。"""
     leads = {}
     for clause in effects:
         lead = grant_lead(clause["text_ja"])
@@ -442,8 +442,8 @@ def bullets_typed_apart(supplement, text_ja):
 
     只在**類型不只一種**時回傳 True,理由是自我限制:官方只給一種時整段判那一
     種就對了(`quoted_bullets` 那一族的既有行為,不動它);兩種以上時不拆就一定
-    有一半是錯的——一條效果句只有一個類型欄位,查詢層也就定位不到那一半。條件
-    因此只在「不拆必錯」的地方開火,不會生出官方沒有認可的效果句。
+    有一半是錯的——一條標記句只有一個類型欄位,查詢層也就定位不到那一半。條件
+    因此只在「不拆必錯」的地方開火,不會生出官方沒有認可的標記句。
 
     三道限制,少了任何一道都會誤開火:
 
@@ -478,7 +478,7 @@ def _quotes_the_lead(lead, quoted):
     """官方的 『原文』 引用是不是從領起句開始。
 
     是,才代表這一句講的是領起句(或連 `●` 一起講的整段);從 `●` 開始的引用
-    講的是那個子效果,而子效果還不是效果句,套到領起句上就是把只描述其中一段的
+    講的是那個子效果,而子效果還不是標記句,套到領起句上就是把只描述其中一段的
     明示放大成整段的判定(晴れの天気模様 89355716:領起句不形成連鎖,官方給的
     2 速是 `●` 的)。
     """
@@ -521,7 +521,7 @@ def _quote_covers_segment(quoted, text_ja):
 
 
 def _covers_whole_clause(text_ja, quoted):
-    """官方的 `『原文』` 引用涵蓋整個效果句嗎?前面最多剩編號、後面最多剩句號。
+    """官方的 `『原文』` 引用涵蓋整個標記句嗎?前面最多剩編號、後面最多剩句號。
 
     涵蓋一部分時不算數——官方常常只說**領起句**不是效果(符文眼靈擺龍
     1516510),那一句涵蓋不到整段,套上去會把 `●` 的效果一起吃掉。
@@ -538,7 +538,7 @@ def _covers_whole_clause(text_ja, quoted):
 
 
 def _match_quote(quoted, effects):
-    """『效果原文』→ 命中的效果句 index 清單(正規化後的子字串比對)。
+    """『效果原文』→ 命中的標記句 index 清單(正規化後的子字串比對)。
 
     引號可能是原文的截斷,因此用子字串而非全等;命中多個即為歧義,由呼叫端處理。
     """
@@ -550,7 +550,7 @@ def _match_quote(quoted, effects):
 
 
 def _bullet_group(effects):
-    """效果句清單 → 同一個編號效果底下的 ● 子效果;對不出唯一一組時回 []。
+    """標記句清單 → 同一個編號效果底下的 ● 子效果;對不出唯一一組時回 []。
 
     ● 散落在多個編號效果裡時,序數與全稱都無從得知官方講的是哪一組。標頭
     (`_resolve_bullet`)與行內引用(票17)問的是同一件事,共用這一支。
@@ -586,7 +586,7 @@ def _resolve_bullet(spec, effects):
 
 
 def _resolve_header(header, effects, attributable):
-    """標頭 → (效果句 index, 狀態, 對位用的引用)。
+    """標頭 → (標記句 index, 狀態, 對位用的引用)。
 
     狀態 `missing` 表示標頭指名了一個卡文沒有的編號;`unresolved` 表示標頭存在
     但對不出唯一標的——兩者都不產生判定。第三個回傳值只有引號標頭有,底下的
@@ -605,7 +605,7 @@ def _resolve_header(header, effects, attributable):
         return ((index, "index", None) if index is not None
                 else (None, "unresolved", None))
 
-    # 引號標頭本身就是歸屬標記,比照階梯三對位回效果句
+    # 引號標頭本身就是歸屬標記,比照階梯三對位回標記句
     for quoted in quotes(header):
         hits = _match_quote(quoted, attributable)
         if len(hits) == 1:
@@ -616,14 +616,14 @@ def _resolve_header(header, effects, attributable):
 # ---------------------------------------------------------------- 接縫
 
 def attest(name_ja, supplement, clauses, unsplit=()):
-    """補足情報 + 某段落的效果句 → (類型判定, 必發判定, 註記)。
+    """補足情報 + 某段落的標記句 → (類型判定, 必發判定, 註記)。
 
     類型判定為 {index: (效果類型, 對位方式)},必發判定為 {index: 對位方式}——
-    官方寫下「必ず発動」的效果句。兩者共用同一套歸屬對位。
+    官方寫下「必ず発動」的標記句。兩者共用同一套歸屬對位。
 
     clauses 需含 index / text_ja;index 為 "0" / "0-2" 者視為效果外文本段。
     unsplit 是骨架算出來的「還沒依語意拆開的舊式整團」index 集合:它們不是已經
-    成立的效果句,不得作為歸屬對位的標的(票11)。
+    成立的標記句,不得作為歸屬對位的標的(票11)。
     註記的每一項都是「官方寫了判定但歸屬不確定」或「明示句不可採用」的理由,
     由呼叫端補上卡片密碼後放進報告。
     """
@@ -635,7 +635,7 @@ def attest(name_ja, supplement, clauses, unsplit=()):
 
     effects = [c for c in clauses if not _is_preamble(c["index"])]
     preambles = [c for c in clauses if _is_preamble(c["index"])]
-    # 對得出歸屬的效果句:未拆的整團只是骨架的暫代值,不算數
+    # 對得出歸屬的標記句:未拆的整團只是骨架的暫代值,不算數
     attributable = [c for c in effects if c["index"] not in unsplit]
     unattributable = [c for c in effects if c["index"] in unsplit]
     grant_leads = _grant_leads(effects)
@@ -766,7 +766,7 @@ def attest(name_ja, supplement, clauses, unsplit=()):
             assign(clause["index"], kind, ladder, line, is_mandatory, quoted)
 
     def assign_to_match(quoted, candidates, kind, ladder, line, is_mandatory):
-        """`『原文』` 引用 → 命中的那一個效果句;命中不唯一時只記註記,不猜測。"""
+        """`『原文』` 引用 → 命中的那一個標記句;命中不唯一時只記註記,不猜測。"""
         hits = _match_quote(quoted, candidates)
         if len(hits) == 1:
             assign(hits[0], kind, ladder, line, is_mandatory, quoted)
@@ -777,10 +777,10 @@ def attest(name_ja, supplement, clauses, unsplit=()):
             note("quote_unmatched", {"kind": kind, "quote": quoted})
 
     def apply_to_sole_effect(kind, ladder, line, reason, is_mandatory):
-        """階梯四、五:這張卡只有一個效果句時整卡套用。
+        """階梯四、五:這張卡只有一個標記句時整卡套用。
 
-        「只有一個效果句」必須是已經成立的事實。舊式無編號卡文在依語意拆開之前
-        整團只算一個效果句,那是拆句骨架的暫代值而不是證據——整團套上一個類型
+        「只有一個標記句」必須是已經成立的事實。舊式無編號卡文在依語意拆開之前
+        整團只算一個標記句,那是拆句骨架的暫代值而不是證據——整團套上一個類型
         會把只描述其中一段的明示放大成整團的判定(機海竜プレシオン 40160226:
         第一段無種類、第二段啟動,官方講的是第一段),而且整團從此 `kind` 不再是
         null,再也進不了拆句用的判定批次,連自癒的機會都沒有。

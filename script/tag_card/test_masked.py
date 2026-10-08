@@ -71,7 +71,7 @@ def answer(row, kind):
 class SamplingTest(unittest.TestCase):
     """抽樣:只抽官方明示、六類分層、不足者全取。"""
 
-    def test_只抽官方明示的效果句(self):
+    def test_只抽官方明示的標記句(self):
         entries = [entry(1000, [clause(source="official"),
                                 clause(index="②", source="rule"),
                                 clause(index="③", source=None)])]
@@ -135,7 +135,7 @@ class SamplingTest(unittest.TestCase):
         self.assertEqual(report["excluded_ids"], 3)
         self.assertNotIn(1000, [row["id"] for row in sample])
 
-    def test_排除是整張卡而不是單一效果句(self):
+    def test_排除是整張卡而不是單一標記句(self):
         entries = [entry(1000, [clause(index="①"), clause(index="②")]),
                    entry(1001, [clause(index="①")])]
         cards = [card(1000), card(1001)]

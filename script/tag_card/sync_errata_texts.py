@@ -114,7 +114,7 @@ def main(argv=None):
     for problem in report["problems"]:
         print(f"問題: {problem}")
     print(f"拆句紀錄改動 {report['splits_changed']} 筆、"
-          f"標記表效果句改動 {report['clauses_changed']} 行"
+          f"標記表標記句改動 {report['clauses_changed']} 行"
           f"{'(dry-run,未寫檔)' if args.dry_run else ''}")
     if report["problems"]:
         return 1

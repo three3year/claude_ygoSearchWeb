@@ -61,7 +61,7 @@ def mark(entries, cid, index, **fields):
         if clause["index"] == index:
             clause.update(fields)
             return clause
-    raise AssertionError(f"{cid} 沒有 index={index} 的效果句")
+    raise AssertionError(f"{cid} 沒有 index={index} 的標記句")
 
 
 class TestNumberedSplitting(unittest.TestCase):
@@ -110,7 +110,7 @@ class TestNumberedSplitting(unittest.TestCase):
         self.assertEqual(report["numeral_mismatch"], [])
 
     def test_bullet_sub_effects_stay_inside_their_clause(self):
-        """● 子效果本票不拆(留給官方明示票),整段留在所屬效果句內。"""
+        """● 子效果本票不拆(留給官方明示票),整段留在所屬標記句內。"""
         entries, _ = build_tag_cards(
             [card(desc="①：可以選1個發動。\n●選項甲。\n●選項乙。")],
             [faq(card_text="①：１つを選んで発動できる。\n●選択肢甲。\n●選択肢乙。")])
@@ -538,7 +538,7 @@ class TestPreambleSplit(unittest.TestCase):
 
 
 class TestUnnumbered(unittest.TestCase):
-    """無編號舊式卡文:先當單一效果句,列入待拆清單。"""
+    """無編號舊式卡文:先當單一標記句,列入待拆清單。"""
 
     def test_old_style_text_becomes_single_pending_clause(self):
         entries, report = build_tag_cards(
@@ -664,7 +664,7 @@ class TestFieldDomainInvariants(unittest.TestCase):
                          [{"id": 1000, "section": "main", "index": "①"}])
 
     def test_a_fully_judged_table_has_no_missing_kind(self):
-        """純通常怪獸的空 `clauses` 不是殘留——那一張卡根本沒有效果句。"""
+        """純通常怪獸的空 `clauses` 不是殘留——那一張卡根本沒有標記句。"""
         _, report = build_tag_cards(
             [card(1000, desc="①：效果甲。"),
              card(2000, desc="以高攻擊力著稱的傳說之龍。", ctype=TYPE_NORMAL_MONSTER)],
@@ -984,7 +984,7 @@ class TestCardNameLimited(unittest.TestCase):
 
 
 class TestGenericSingleClause(unittest.TestCase):
-    """階梯五:無任何歸屬標記且該卡只有一個效果句。"""
+    """階梯五:無任何歸屬標記且該卡只有一個標記句。"""
 
     def test_unmarked_attestation_applies_to_the_only_clause(self):
         entries, report = build_tag_cards(
@@ -1018,9 +1018,9 @@ class TestGenericSingleClause(unittest.TestCase):
 
 
 class TestUnsplitOldStyleAttribution(unittest.TestCase):
-    """階梯四、五問的是「這張卡只有一個效果句嗎」,未拆的舊式整團答不出來。
+    """階梯四、五問的是「這張卡只有一個標記句嗎」,未拆的舊式整團答不出來。
 
-    舊式無編號卡文在依語意拆開之前整團只算一個效果句,兩道階梯會在一個假的前提
+    舊式無編號卡文在依語意拆開之前整團只算一個標記句,兩道階梯會在一個假的前提
     上開火——整團拿到一個官方類型,而那個類型其實只描述整團裡的其中一段。
     """
 
@@ -1093,7 +1093,7 @@ class TestUnsplitOldStyleAttribution(unittest.TestCase):
     def test_a_quote_pointing_at_the_unsplit_blob_defers_not_unmatched(self):
         """引用指的是整團裡的一段:那是「待拆」而不是「引號對不回本卡卡文」。
 
-        `●` 拆出去之後整團的頭仍然是未拆的,對得出歸屬的效果句於是不再是空的
+        `●` 拆出去之後整團的頭仍然是未拆的,對得出歸屬的標記句於是不再是空的
         ——但引用照樣落在那個頭上,它只是還沒被切開,不是官方引用了別張卡。
         """
         entries, report = build_tag_cards(
@@ -1174,7 +1174,7 @@ class TestNegationAndForbiddenPhrases(unittest.TestCase):
 class TestSpellTrapKindAttestation(unittest.TestCase):
     """「〜カードの効果として+肯定述語」是[[魔陷卡效果]]的官方明示(票56)。
 
-    判準是運作身分(ADR-0004):怪獸卡在裝備/魔陷狀態中運作的效果句,官方以
+    判準是運作身分(ADR-0004):怪獸卡在裝備/魔陷狀態中運作的標記句,官方以
     「装備魔法カードの効果として扱います」這一族句式給裁定。歸屬走既有階梯,
     值只認寫出[[卡片種類]]全名的——光寫大類的「魔法カードの効果として」對不出
     九值中的哪一個。
@@ -1286,7 +1286,7 @@ class TestSpellTrapKindAttestation(unittest.TestCase):
 class TestPendulumSpellKind(unittest.TestCase):
     """第十六值「靈擺魔法卡效果」(ADR-0005,票57)。
 
-    P 區的卡官方規則是「魔法カード扱い」,靈擺欄的效果句依運作身分判準
+    P 區的卡官方規則是「魔法カード扱い」,靈擺欄的標記句依運作身分判準
     (ADR-0004)不走六類;官方對靈擺效果零類型詞也零句式,值只來自判定,
     不進官方明示的對應表。行為與其他魔陷卡效果值一致:必發/選發只吃官方
     明示與判定、規則層不管轄。
@@ -1438,7 +1438,7 @@ class TestNonEffectAttestation(unittest.TestCase):
 
 
 class TestBulletSubEffects(unittest.TestCase):
-    """官方以【●の効果について】系列標頭描述的子效果拆成獨立效果句。"""
+    """官方以【●の効果について】系列標頭描述的子效果拆成獨立標記句。"""
 
     SUPPLEMENT = ("【①の効果について】\n"
                   "■１ターンに１度、２つの●のうちいずれかを発動できます。\n\n"
@@ -1520,7 +1520,7 @@ class TestBulletSubEffects(unittest.TestCase):
 class TestIndexPrefixedBulletHeader(unittest.TestCase):
     """票60:`【①の『●３つ』の効果について】` 這種帶編號前綴的標頭要認得。
 
-    官方用它逐項給了兩種類型,認不得標頭就整段不拆,而一條效果句只有一個 `kind`
+    官方用它逐項給了兩種類型,認不得標頭就整段不拆,而一條標記句只有一個 `kind`
     欄位——填哪一個都會讓另一個從查詢層消失(守星騎士 托勒密 18326736)。
     前綴只說了在哪一個編號效果底下,對位仍照 label / ordinal 走。
     """
@@ -1560,7 +1560,7 @@ class TestIndexPrefixedBulletHeader(unittest.TestCase):
         self.assertEqual([c["kind"] for c in clauses], [None, None, None])
 
     def test_a_quote_across_the_bullet_cut_still_blocks_the_split(self):
-        """引用橫跨拆點就證明那兩段是同一個效果句,標頭再明確也不拆。"""
+        """引用橫跨拆點就證明那兩段是同一個標記句,標頭再明確也不拆。"""
         entries, report = self.build(
             "【①の『●３つ』の効果について】\n"
             "■『●３つ：EXデッキから特殊召喚する。●７つ：』の処理は同時です。")
@@ -1570,9 +1570,9 @@ class TestIndexPrefixedBulletHeader(unittest.TestCase):
 
 
 class TestBulletsTypedApart(unittest.TestCase):
-    """票58:官方逐項把 `●` 判成不同類型時,那一段的 `●` 拆成獨立效果句。
+    """票58:官方逐項把 `●` 判成不同類型時,那一段的 `●` 拆成獨立標記句。
 
-    不拆的話一條效果句只有一個類型欄位,官方給的另一種必然掉在地上,查詢層也就
+    不拆的話一條標記句只有一個類型欄位,官方給的另一種必然掉在地上,查詢層也就
     定位不到那一半(電子變形龍 3657444:誘発効果 + 起動効果 ×2)。條件只在
     「不拆必錯」時開火——官方只給一種時整段判那一種就對了,照舊不拆。
     """
@@ -1597,7 +1597,7 @@ class TestBulletsTypedApart(unittest.TestCase):
         self.assertEqual(report["bullet_clauses"], 2)
 
     def test_one_kind_across_bullets_leaves_the_clause_whole(self):
-        """官方只給一種類型時整段判那一種,不製造官方沒有認可的效果句。"""
+        """官方只給一種類型時整段判那一種,不製造官方沒有認可的標記句。"""
         entries, report = self._build(
             "■１つ目の『●』はフィールドで発動できる起動効果です。\n"
             "■２つ目の『●』はフィールドで発動できる起動効果です。")
@@ -1605,7 +1605,7 @@ class TestBulletsTypedApart(unittest.TestCase):
         self.assertEqual(report["bullet_clauses"], 0)
 
     def test_a_quote_spanning_the_bullets_still_blocks_the_split(self):
-        """ADR-0003 的驗證二照樣先跑:引用橫跨拆點就證明那是同一個效果句。"""
+        """ADR-0003 的驗證二照樣先跑:引用橫跨拆點就證明那是同一個標記句。"""
         entries, report = self._build(
             "■『●効果甲。●効果乙』はフィールドで発動できる誘発効果です。\n"
             "■２つ目の『●』はフィールドで発動できる起動効果です。")
@@ -1626,7 +1626,7 @@ class TestTrailingHeader(unittest.TestCase):
     """票15:黏在行尾的【…】標頭一樣是新段的開始。
 
     官方偶爾把下一段的標頭接在前一行的尾巴。抽取器只認行首標頭時,那一行之後的
-    明示會繼續算在**上一個**編號底下,類型因此掛錯效果句。
+    明示會繼續算在**上一個**編號底下,類型因此掛錯標記句。
     """
 
     DESC = "①：效果甲。\n②：效果乙。\n③：效果丙。"
@@ -1714,7 +1714,7 @@ class TestGrantLeadWithUnsplitBullets(unittest.TestCase):
     """領起句「〜は以下の効果を得る。●…」不發動,官方給的類型多半是 ● 的。
 
     領起句只是把一組效果賦予別的東西,自己不形成連鎖;`●` 才是被賦予的效果。
-    `●` 還沒拆開之前兩者併在同一個效果句裡,官方明示講的是哪一邊要看證據——
+    `●` 還沒拆開之前兩者併在同一個標記句裡,官方明示講的是哪一邊要看證據——
     引用從領起句開始才算講的是這一段,其餘一律留待判定。
     """
 
@@ -1775,7 +1775,7 @@ class TestGrantLeadWithUnsplitBullets(unittest.TestCase):
                          ["● 子效果待拆"])
 
     def test_splitting_the_bullets_out_restores_the_attestation(self):
-        """官方以【●…について】解說時 ● 已拆成獨立效果句,領起句不再含 ●。"""
+        """官方以【●…について】解說時 ● 已拆成獨立標記句,領起句不再含 ●。"""
         entries, report = self._build(
             "【●の効果について】\n■モンスターゾーンで発動できる誘発即時効果です。")
         clauses = clauses_of(entries, 1000)
@@ -1864,7 +1864,7 @@ class TestInlineBulletQuoteSplitting(unittest.TestCase):
         self.assertEqual(report["bullet_quote_splits"], 0)
 
     def test_a_quote_spanning_the_cut_blocks_the_split(self):
-        """驗證二:官方自己的引用橫跨 ● 拆點,就證明那兩段是同一個效果句。
+        """驗證二:官方自己的引用橫跨 ● 拆點,就證明那兩段是同一個標記句。
 
         RR－スカル・イーグル(45184165)②:官方的引用從領起句一路引到 `●`,
         講的是整段——這種卡不拆,類型照樣落在整段上。
@@ -2093,7 +2093,7 @@ class TestBulletReferenceScope(unittest.TestCase):
 
 
 class TestNonEffectOnAWholeClause(unittest.TestCase):
-    """票16:效果外明示的引用涵蓋整個效果句時就自動套用,涵蓋一部分只報告。
+    """票16:效果外明示的引用涵蓋整個標記句時就自動套用,涵蓋一部分只報告。
 
     領起句拆出 ● 之後自己還是沒有類型,而官方對這一族常寫
     `『②：…以下の効果を得る』は効果の扱いではありません`——引用涵蓋的正是拆完
@@ -3077,7 +3077,7 @@ class TestBulletLeadPrecondition(unittest.TestCase):
     同一句「このカードは直接攻撃できる」放在純賦予型領起句底下是永續效果、放在
     「発動できる。以下の効果から１つを選び」底下卻繼承領起句的類型——`●` 的原文
     一個字都不差。R17 因此只在單一句子的純賦予型領起句底下開火(規則層一次只看
-    一條效果句,兩種都可能時不猜)。
+    一條標記句,兩種都可能時不猜)。
     """
 
     # 標頭只是拆句授權,底下那一行沒有類型詞,不會順帶產生官方明示
@@ -3199,7 +3199,7 @@ class TestValidationDenominator(unittest.TestCase):
 
 
 class TestRuleLayerScope(unittest.TestCase):
-    """規則層只管效果句;前言段的類型由位置規則決定,不歸規則層。"""
+    """規則層只管標記句;前言段的類型由位置規則決定,不歸規則層。"""
 
     ZH = "此卡不能通常召喚。\n①：此卡不受魔法效果影響。"
     JA = ("このカードはモンスターゾーンに存在する限り通常召喚できない。"
@@ -3937,7 +3937,7 @@ class TestSplitEnablesAttestation(unittest.TestCase):
 # ---------------------------------------------------------------- 判定結果
 
 class TestJudgmentMerge(unittest.TestCase):
-    """判定結果決定效果句上的**值**(拆句表決定集合,ADR-0003)。"""
+    """判定結果決定標記句上的**值**(拆句表決定集合,ADR-0003)。"""
 
     def judge(self, clauses, cid=1000, section="main"):
         return [{"id": cid, "section": section, "clauses": clauses}]

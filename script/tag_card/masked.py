@@ -1,7 +1,7 @@
 """遮蔽測試:量化[[效果類型]]判定的準確率(票07)。
 
-做法是拿[[官方明示]]當標準答案:從已經填好類型的效果句分層抽一批,把補足情報
-裡的類型結論句遮掉,判定者只憑卡名、繁中與日文效果句原文、以及剩下的補足情報,
+做法是拿[[官方明示]]當標準答案:從已經填好類型的標記句分層抽一批,把補足情報
+裡的類型結論句遮掉,判定者只憑卡名、繁中與日文標記句原文、以及剩下的補足情報,
 依 `docs/effect_kind_guide.md` 判一次,再對答案。
 
 兩個接縫,都是純函式,不碰網路與檔案系統:
@@ -88,7 +88,7 @@ def _mask_line(line):
     """一行補足情報 → 遮掉類型結論句之後的樣子(整行沒內容了就回空字串)。
 
     標頭 `【①の効果について】` 是歸屬標記而不是結論,保留——它告訴判定者官方在
-    講哪一個效果句,不告訴他是哪一種。
+    講哪一個標記句,不告訴他是哪一種。
     """
     match = _HEADER_PREFIX_RE.match(line)
     header, body = (match.group(0), line[match.end():]) if match else ("", line)
@@ -139,10 +139,10 @@ def _quotas(population, size, per_kind_min):
 
 
 def _candidates(entries, exclude_ids=()):
-    """標記表 → 可以當標準答案的效果句(官方明示且類型在值域內)。
+    """標記表 → 可以當標準答案的標記句(官方明示且類型在值域內)。
 
     exclude_ids 整張卡排掉:先前輪次抽過的卡,以及判定者在別處看過官方答案的卡。
-    排除的粒度是**卡**而不是效果句——同一張卡的[[補足情報]]是共用的,判過 ① 之後
+    排除的粒度是**卡**而不是標記句——同一張卡的[[補足情報]]是共用的,判過 ① 之後
     再抽到 ② 等於帶著看過的情報作答。
     """
     excluded = set(exclude_ids)
@@ -188,7 +188,7 @@ def sample_masked(entries, cards, faq_entries, size=DEFAULT_SIZE,
                   exclude_ids=()):
     """標記表 + 卡片總表 + 補足情報 → (遮蔽樣本, 抽樣報告)。
 
-    只抽 `source: "official"` 的效果句——標準答案是官方寫的,不是推論來的。
+    只抽 `source: "official"` 的標記句——標準答案是官方寫的,不是推論來的。
     六種類型分層,每類至少 per_kind_min 條,母體不足的類別全取並列進 shortfall。
 
     exclude_ids 的那些卡整張不抽(見 `_candidates`)。多輪測試靠它讓各輪樣本互斥
@@ -240,7 +240,7 @@ def _key(row):
 
 
 def _clauses_by_key(entries):
-    """標記表 → {(卡片密碼, section, index): 效果句}。"""
+    """標記表 → {(卡片密碼, section, index): 標記句}。"""
     return {(entry["id"], clause["section"], clause["index"]): clause
             for entry in entries for clause in entry["clauses"]}
 
@@ -269,7 +269,7 @@ def score_masked(entries, sample, answers, ambiguous=(), pipeline=()):
     ambiguous 是[[已知歧義清單]]:官方文本本身歧義的條目不計入分母,但超過
     AMBIGUOUS_CAP 條就代表六類邊界的定義有問題,直接判不通過。
 
-    pipeline 是[[管線缺陷]]:標準答案本身是錯的(抽取器或歸屬階梯把別的效果句的
+    pipeline 是[[管線缺陷]]:標準答案本身是錯的(抽取器或歸屬階梯把別的標記句的
     類型套了上來),同樣不計入分母。與歧義分兩個桶,因為修法完全不同——歧義改的是
     六類的定義,管線缺陷改的是程式。超過 PIPELINE_CAP 條就該先修管線再測判定。
     兩個桶的清單、「不在樣本內」與上限都各報各的,見 BUCKET_CAPS。

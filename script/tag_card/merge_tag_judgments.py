@@ -2,13 +2,13 @@
 
 與效果類型的 `merge_judgments.py` 同構,三道關卡,任何一道不過就整批不寫入:
 
-1. **集合一致性自檢** —— 結果檔涵蓋的效果句必須與批次檔完全相同,少一筆或
+1. **集合一致性自檢** —— 結果檔涵蓋的標記句必須與批次檔完全相同,少一筆或
    多一筆都指名道姓。
 2. **值全在正典** —— tag 系列:每個 tag 的類別必須是批次的類別、槽位鍵與值
    照 `vocab.tag_code` 解得動;timing 系列:值在觸發時機值域、句子的效果類型
    是承載者。改判旗標兩個方向都要對得上批次(漏寫=改判沒做卻看起來成功,
    多寫=一般票偷覆寫)。
-3. **對得回效果句** —— 鍵對不到標記表、或日文原文與批次時不同(卡文已變動,
+3. **對得回標記句** —— 鍵對不到標記表、或日文原文與批次時不同(卡文已變動,
    批次過期)即失敗。
 
 寫入語意:tag 系列把該句**該類別**的既有 `llm` tag 換成結果檔那一組(空陣列=
@@ -47,8 +47,8 @@ def key_of(row):
 def set_problems(batch, result):
     want = {key_of(row) for row in batch["entries"]}
     got = {key_of(row) for row in result}
-    problems = [f"待判效果句少了 {key}" for key in sorted(want - got)]
-    problems += [f"待判效果句多了 {key}" for key in sorted(got - want)]
+    problems = [f"待判標記句少了 {key}" for key in sorted(want - got)]
+    problems += [f"待判標記句多了 {key}" for key in sorted(got - want)]
     return problems
 
 
@@ -84,7 +84,7 @@ def value_problems(batch, result):
 
 
 def apply_rows(sheet, batch, result, ticket):
-    """結果寫進標記表(dict 就地改);對不回效果句的列成問題清單。"""
+    """結果寫進標記表(dict 就地改);對不回標記句的列成問題清單。"""
     problems = []
     clauses = {(entry["id"], c["section"], c["index"]): c
                for entry in sheet for c in entry["clauses"]}
@@ -96,7 +96,7 @@ def apply_rows(sheet, batch, result, ticket):
         key = key_of(row)
         clause = clauses.get(key)
         if clause is None:
-            problems.append(f"{key} 不是標記表上的效果句")
+            problems.append(f"{key} 不是標記表上的標記句")
             continue
         if clause["text_ja"] != batch_text.get(key):
             problems.append(f"{key} 的卡文已變動,批次過期(重出批次)")

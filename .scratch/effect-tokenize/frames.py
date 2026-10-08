@@ -53,8 +53,9 @@ AUXILIARY = {"いる", "いた", "いない", "いれば", "ある", "あった"
 TAILS = {"た", "て", "る", "った"}
 # 形式名詞:動詞後接這些仍是述語錨點(不算定語);條件類給 條件 位置
 NOMINALIZERS = {"場合", "時", "際", "度", "限り", "ターン", "状態", "事", "ため",
-                "よう", "まま", "後", "前", "間", "つき", "代わり", "結果"}
-CONDITIONAL_NOMINALIZERS = {"場合", "時", "際", "度", "限り", "ターン", "状態"}
+                "よう", "まま", "後", "前", "間", "つき"}
+CONDITIONAL_NOMINALIZERS = {"場合", "時", "際", "度", "限り", "ターン", "状態",
+                            "間"}
 CONDITIONAL_FORMS = {"すれば", "あれば", "いれば", "なければ"}
 # 「N に する/なる」的補語不吸收這些詞(量化詞/比較詞:全て裏側守備表示にする
 # 的 全て 是副詞;レベル以上になる 的 以上 是比較結果,留在目的論元)
@@ -62,7 +63,21 @@ FOLD_STOP = {"全て", "それぞれ", "お互い", "両", "元々", "以上", "
              "同名", "任意", "他", "次", "残り"}
 # サ変名詞直接接 時 也是事件(攻撃宣言時/発動時/成功時);終了時/開始時/
 # ダメージ計算時 是時點,不是動作
-EVENT_NOUNS = {"宣言", "発動", "成功", "リバース"}
+EVENT_NOUNS = {"宣言", "成功", "リバース"}
+# 「・」並列的述語名詞(召喚・特殊召喚した/特殊召喚・リバースした):各出一框架
+SAHEN_NOUNS = {"発動", "召喚", "破壊", "存在", "除外", "アップ", "リリース", "成功",
+               "攻撃", "ドロー", "セット", "装備", "選択", "無効化", "適用", "宣言",
+               "ダウン", "回復", "リバース", "確認", "無視", "発生", "使用", "変更",
+               "移動", "シャッフル", "合計", "チェーン", "終了", "スキップ", "指定",
+               "公開", "勝利", "代用", "相互リンク", "コントロール"}
+# 「Xが Yの N」的屬性主語(攻撃力と守備力が０の悪魔族モンスター):併入名詞片語
+ATTR_NOUNS = {"レベル", "ランク", "攻撃力", "守備力", "種族", "属性", "カード名", "数",
+              "数値", "Pスケール", "リンクマーカー", "名", "合計", "レベル・ランク",
+              "攻撃力・守備力", "種族・属性", "元々の攻撃力", "元々の守備力"}
+# 片語開頭的副詞/接續詞/時間語不屬論元
+LEADING_ADVERBS = {"さらに", "また", "もう", "既に", "その後", "それぞれ"}
+# 「〜に」的方式副詞(ランダムに/順に/お互いに/〜の代わりに):不是目的論元
+MANNER_NI = {"代わり", "ランダム", "お互い", "順"}
 # 狀態/變化述語:在發動句裡是條件、不是代價
 STATE_LEMMAS = {"存在", "ある", "いる", "持つ", "なる", "成功", "含む", "異なる",
                 "違う", "超える", "揃う", "記す", "当たる", "出る", "離れる",
@@ -86,9 +101,13 @@ FUNCTIONAL = (SURU_FAMILY | NEGATORS | AUXILIARY | TAILS
 HIRAGANA_VERBS = {"なる", "めくる", "なくす"}
 # 定語動詞只吸收這些格的片語(其餘動詞:往前吸到讀點或主題 は 為止)——
 # 「カード名が記されたモンスター」的 が 屬定語,前面的 から 是主句的來源
-RELATIVE_SCOPE = {"記す": {"が"}, "持つ": {"を"}, "含む": {"を"},
+RELATIVE_SCOPE = {"記す": {"が", "に"}, "持つ": {"を"}, "含む": {"を"},
                   "異なる": {"が"}, "受ける": {"が"}, "違う": {"が"},
-                  "決める": {"に"}, "存在": {"に", "で", "が"}}
+                  "決める": {"に"}, "存在": {"に", "で", "が"},
+                  "なる": {"と", "に", "が", "で"}, "な": {"に", "が"},
+                  "同じ": {"と", "が"}}
+# 定語吸收不越過的片語(方式/手段副詞、●標籤)
+NON_ABSORB_ROLES = {"に(方式)", "によって", "に対して", "に加えて", "：", "は"}
 # 連用形/て形不當定語(選んで特殊召喚、リリースして発動)
 NON_ATTRIBUTIVE_SURU = {"し", "して", "され", "されて", "せず", "されず"}
 ADJECTIVE_LEMMAS = {"高い", "低い", "多い", "少ない", "大きい", "小さい", "正しい",
@@ -141,7 +160,9 @@ def verb_form(surface, lemma):
     """動詞詞形分類:te/stem/past/neg/cond/dict/irrealis/potential。"""
     if surface in SPECIAL_POTENTIAL:
         return "potential"
-    if surface.endswith(("ない", "なく", "ず", "なかった")):
+    if surface.endswith("ず"):
+        return "stem"
+    if surface.endswith(("ない", "なく", "なかった")):
         return "neg"
     if surface.endswith("ば"):
         return "cond"
@@ -222,8 +243,19 @@ class FrameExtractor:
         def nxt(k):
             return self.word(tokens[k]) if k < n else None
 
-        if w == "対象" and nxt(j) is None and j < n and tokens[j] == "p:として":
+        if w == "対象" and j < n and tokens[j] == "p:として":
             return self._finish(tokens, i, i, j + 1, "対象とする", POL_AFFIRM,
+                                "te", False, 0, clause_start)
+        # 〜を素材として/〜をX素材として:當作素材(動作 素材とする)
+        if w is not None and w.endswith("素材") and j < n \
+                and tokens[j] == "p:として":
+            parts = []
+            while head - 1 >= clause_start \
+                    and token_kind(tokens[head - 1]) == "method":
+                parts.insert(0, tokens[head - 1][2:])
+                head -= 1
+            return self._finish(tokens, head, i, j + 1,
+                                "・".join(parts) + w + "とする", POL_AFFIRM,
                                 "te", False, 0, clause_start)
         if w == "対象" and j < n and tokens[j] == "p:と" and nxt(j + 1) in SURU_FAMILY:
             action, j, form = "対象とする", j + 1, None
@@ -256,11 +288,15 @@ class FrameExtractor:
             # 〜扱いで/〜扱いとして:「當作…」的修飾語,不是動作
             if w == "扱い" and j < n and token_kind(tokens[j]) == "particle":
                 return None
+            # 続けて攻撃できる 的 続けて 是副詞;通常召喚に加えて 的 加えて 是慣用
+            if w == "続けて" and j < n and token_kind(tokens[j]) != "punct":
+                return None
+            if w == "加えて" and i - 2 >= clause_start and tokens[i - 1] == "p:に" \
+                    and self.word(tokens[i - 2]) == "召喚":
+                return None
             passive = bool(_PASSIVE_RE.search(w)) and lemma not in ("離れる",)
             action = lemma
-            if lemma in LIGHT_VERBS or lemma in ("ある", "いる"):
-                pass
-            if form == "neg":
+            if form == "neg" or w.endswith("ず"):
                 polarity = POL_NEG
             elif form == "potential":
                 polarity = POL_CAN
@@ -273,9 +309,25 @@ class FrameExtractor:
             # (無効にする/裏側守備表示にする/リンク素材とする);補語是數字時
             # 動作記 にする、數字留在目的論元(攻撃力を０にする)
             prev = tokens[i - 1] if i - 1 >= clause_start else None
-            if prev not in ("p:に", "p:と"):
+            # 対象にもできない:後綴助詞(も/は)夾在 に 與 する 之間
+            skip = 0
+            if (prev in ("p:も", "p:は") and i - 2 >= clause_start
+                    and tokens[i - 2] in ("p:に", "p:と")):
+                prev, skip = tokens[i - 2], 1
+            if prev in ("p:に", "p:と"):
+                action, fold = self._fold_complement(tokens, i - skip,
+                                                     clause_start, "する")
+                fold += skip
+            elif prev == "p:を" and w in SURU_ACTIVE:
+                action = "する"        # 通常のドローをした
+            elif w in POTENTIAL | POTENTIAL_NEG:
+                # 「〜の特殊召喚は１ターンに１度しかできない」:主題是動作名詞時
+                # 動作就是它(効果は…できない 視為 使用)
+                action = self._topic_action(tokens, i, clause_start)
+                if action is None:
+                    return None
+            else:
                 return None
-            action, fold = self._fold_complement(tokens, i, clause_start, "する")
             form = None
             j = i                      # 本 token 就是 する家族,下面統一吃
         elif w is not None and w not in FUNCTIONAL and w not in NOMINALIZERS \
@@ -308,7 +360,8 @@ class FrameExtractor:
             j += 1
         if form is None:
             form = {"し": "stem", "して": "te", "され": "stem", "されて": "te",
-                    "せず": "neg", "されず": "neg"}.get(suru_form, "dict")
+                    "せず": "stem", "されず": "stem",
+                    "できず": "stem"}.get(suru_form, "dict")
             if suru_form in ("した", "された"):
                 form = "past"
         if j < n and self.word(tokens[j]) in TAILS:
@@ -345,10 +398,38 @@ class FrameExtractor:
             polarity = (POL_NEG if self.word(tokens[j + 2]) in POTENTIAL_NEG
                         else POL_CAN)
             j += 3
-        conditional = suru_form in CONDITIONAL_FORMS or (
+        conditional = suru_form in CONDITIONAL_FORMS or form == "cond" or (
             w is not None and w in CONDITIONAL_FORMS)
         return self._finish(tokens, head, i, j, action, polarity, form, passive,
                             fold, clause_start, conditional)
+
+    def _topic_action(self, tokens, i, clause_start):
+        """裸 できる/できない 的主題(は 前的名詞)是動作名詞時回它的動作名。"""
+        for k in range(i - 1, clause_start, -1):
+            if tokens[k] != "p:は":
+                continue
+            head = self.word(tokens[k - 1])
+            if head == "召喚":
+                parts = []
+                m = k - 2
+                while m >= clause_start and token_kind(tokens[m]) == "method":
+                    parts.insert(0, tokens[m][2:])
+                    m -= 1
+                return "・".join(parts) + "召喚"
+            if head == "効果":
+                return "使用"
+            if head in SAHEN_NOUNS:
+                return head
+            return None
+        # 攻撃宣言もできない:も 前的動作名詞
+        if i - 2 >= clause_start and tokens[i - 1] in ("p:も", "p:しか"):
+            head = self.word(tokens[i - 2])
+            if head == "宣言" and i - 3 >= clause_start \
+                    and self.word(tokens[i - 3]) == "攻撃":
+                return "攻撃宣言"
+            if head in SAHEN_NOUNS:
+                return head
+        return None
 
     def _fold_complement(self, tokens, i, clause_start, lemma):
         """tokens[i] 是 する/なる,前一格是 に/と:補語全是名詞類且不含數字時
@@ -374,9 +455,12 @@ class FrameExtractor:
         if j < n and self.word(tokens[j]) in NOMINALIZERS:
             nominalizer = self.word(tokens[j])
             j += 1
-        elif form not in ("te", "stem", "neg") and j < n \
+        elif form not in ("te", "stem") and j < n \
                 and self.is_noun_like(tokens[j]):
             return None               # 定語:動詞直接修飾後面的名詞
+        elif form in ("dict", "past", "neg") and j + 1 < n and tokens[j] == "、" \
+                and self.is_noun_like(tokens[j + 1]):
+            return None               # 「X」を除く、…モンスター:隔讀點的定語
         if form == "noun" and nominalizer is None:
             return None
         end = j
@@ -400,10 +484,21 @@ class FrameExtractor:
             kind = token_kind(t)
             if kind == "particle":
                 p = t[2:]
-                # 格助詞後接 の(への戦闘ダメージ/EXデッキからの特殊召喚)是修飾,
-                # 留在片語裡;に対して(對…)整組不是論元
-                if p in CASE_ROLE and k + 1 < stop and tokens[k + 1] == "p:の":
+                # 助詞後接 の(への戦闘ダメージ/EXデッキからの特殊召喚/１～６までの)
+                # 是修飾,留在片語裡;に対して(對…)整組不是論元
+                if p != "の" and k + 1 < stop and tokens[k + 1] == "p:の":
                     cur.append(t)
+                    continue
+                # 後綴助詞後接格助詞(１体のみを):不切
+                if p in CASE_SUFFIX and k + 1 < stop and token_kind(
+                        tokens[k + 1]) == "particle" and tokens[k + 1][2:] in CASE_ROLE:
+                    continue
+                # 通常召喚に加えて:慣用,整組不是論元
+                if (p == "に" and k + 1 < stop and self.word(tokens[k + 1]) == "加えて"
+                        and cur and self.word(cur[-1]) == "召喚"):
+                    out.append(["に加えて", cur, hard])
+                    cur, hard = [], False
+                    k += 1
                     continue
                 if (p == "に" and k + 2 < stop and self.word(tokens[k + 1]) == "対"
                         and self.word(tokens[k + 2]) in ("して", "し")):
@@ -419,7 +514,7 @@ class FrameExtractor:
                     cur, hard = [], False
                     k += 1
                     continue
-                if p == "に" and cur and self.word(cur[-1]) in ("代わり", "ランダム"):
+                if p == "に" and cur and self.word(cur[-1]) in MANNER_NI:
                     out.append(["に(方式)", cur, hard])
                     cur, hard = [], False
                     continue
@@ -432,6 +527,9 @@ class FrameExtractor:
                                                       "range")
                             or self.word(cur[lead]) in ("全て", "それぞれ")):
                         lead += 1
+                    # 裸數字後面不是量詞(１ターンに 的 １)不算數量
+                    if lead and token_kind(cur[lead - 1]) == "num":
+                        lead = 0
                     if 0 < lead < len(cur) and out and out[-1][0] == "を":
                         out[-1][1] = out[-1][1] + cur[:lead]
                         cur = cur[lead:]
@@ -451,50 +549,93 @@ class FrameExtractor:
                 continue
             if kind == "punct":
                 if t == "、":
+                    # 定語動詞後的讀點(「X」を除く、…モンスター)在名詞片語裡
+                    if cur and self._predicate_lemma(cur, len(cur) - 1) is not None:
+                        continue
                     if cur:
                         out.append([None, cur, hard])
                     cur, hard = [], True
+                elif t == "：":
+                    # ●選項標籤「●…：」:標籤不是論元,也是硬邊界
+                    out.append(["：", cur, hard])
+                    cur, hard = [], True
                 elif t in PUNCT_IN_PHRASE:
                     cur.append(t)
+                continue
+            # 片語開頭的副詞/接續詞/このターン 不屬論元
+            if not cur and (self.word(t) in LEADING_ADVERBS or (
+                    t.startswith("d:") and self.word(t.split(":", 2)[2]) == "ターン")):
                 continue
             cur.append(t)
         if cur:
             out.append([None, cur, hard])
         return out
 
-    def _relative_verb(self, chunk):
-        """片語含定語動詞(動詞/する家族後直接接名詞)→ 回該定語的詞元;
-        前面的片語屬同一名詞片語。連用形/て形不算。"""
-        for k, (a, b) in enumerate(zip(chunk, chunk[1:])):
-            w = self.word(a)
-            if w is None or not self.is_noun_like(b):
-                continue
-            if w in SURU_FAMILY and w not in NON_ATTRIBUTIVE_SURU:
-                prev = self.word(chunk[k - 1]) if k else None
-                return prev or w
-            if w in NEGATORS:
-                return w
-            if self.lex.is_verb(a) and verb_form(
-                    w, self.lex.lemma_of[a]) not in ("te", "stem", "irrealis"):
-                return self.lex.lemma_of[a]
+    def _predicate_lemma(self, chunk, k):
+        """chunk[k] 是定語位置的述語時回它的詞元(含 た/いる 尾往前找動詞)。"""
+        w = self.word(chunk[k])
+        if w is None:
+            return None
+        if w in TAILS or w in AUXILIARY:
+            for m in range(k - 1, -1, -1):
+                v = self.word(chunk[m])
+                if v is None:
+                    return None
+                if v in TAILS or v in AUXILIARY or v in NEGATORS:
+                    continue
+                if v in SURU_FAMILY:
+                    prev = self.word(chunk[m - 1]) if m else None
+                    return prev or v
+                return self.lex.lemma_of[chunk[m]] if self.lex.is_verb(
+                    chunk[m]) else None
+            return None
+        if w in SURU_FAMILY and w not in NON_ATTRIBUTIVE_SURU:
+            prev = self.word(chunk[k - 1]) if k else None
+            return prev or w
+        if w in NEGATORS or w == "な":
+            return w
+        if self.lex.is_verb(chunk[k]) and verb_form(
+                w, self.lex.lemma_of[chunk[k]]) not in ("te", "stem", "irrealis"):
+            return self.lex.lemma_of[chunk[k]]
         return None
 
-    def arguments(self, tokens, start, stop):
+    def _relative_verb(self, chunk, trailing=False):
+        """片語含定語動詞(動詞/する家族後直接接名詞)→ 回該定語的詞元;
+        前面的片語屬同一名詞片語。連用形/て形不算。trailing:片語尾的動詞也算
+        (後面接的是併入動作的名詞:戦闘を行う|攻撃宣言時)。"""
+        for k, (a, b) in enumerate(zip(chunk, chunk[1:])):
+            if not self.is_noun_like(b):
+                continue
+            lemma = self._predicate_lemma(chunk, k)
+            if lemma is not None:
+                return lemma
+        if trailing and chunk:
+            return self._predicate_lemma(chunk, len(chunk) - 1)
+        return None
+
+    def arguments(self, tokens, start, stop, trailing=False):
+        """[start, stop) 的論元 → (args, carry):args 是本述語的對象/來源/目的,
+        carry 是多個 を 時留給下一個述語的論元(そのモンスターを効果を無効にして
+        特殊召喚し:無効にする 只拿最後一個 を,前面的 を 與 から 給 特殊召喚)。"""
         parts = self.chunks(tokens, start, stop)
         merged = []
-        for role, chunk, hard in parts:
-            rel = self._relative_verb(chunk)
+        for idx, (role, chunk, hard) in enumerate(parts):
+            rel = self._relative_verb(chunk, trailing and idx == len(parts) - 1)
+            if rel is None and merged and merged[-1][0] == "が" and merged[-1][1] \
+                    and self.word(merged[-1][1][-1]) in ATTR_NOUNS \
+                    and "p:の" in chunk[:3]:
+                rel = "が"              # 攻撃力と守備力が|０の悪魔族モンスター
             if rel is not None and merged and not hard:
                 # 往前併到讀點或主題(は)為止;特定動詞只吸收自己的格
                 scope = RELATIVE_SCOPE.get(rel)
                 absorbed = []
-                while merged and merged[-1][0] != "は":
+                while merged and merged[-1][0] not in NON_ABSORB_ROLES:
                     r, c, h = merged.pop()
                     if scope is not None and r not in scope:
                         merged.append([r, c, h])
                         break
                     absorbed.insert(0, c + (["p:" + r] if r else []))
-                    if h:
+                    if h or rel == "が":
                         break
                 chunk = [t for c in absorbed for t in c] + chunk
             merged.append([role, chunk, hard])
@@ -506,6 +647,16 @@ class FrameExtractor:
                 prev = joined.pop()
                 chunk = prev[1] + chunk
             joined.append([role, chunk, hard])
+        # 多個 を:只有最後一個屬本述語,前面的(連同其前的 から)留給下一個述語
+        carry = {}
+        wo_at = [k for k, (role, chunk, _h) in enumerate(joined) if role == "を"]
+        if len(wo_at) >= 2:
+            cut = wo_at[-2] + 1
+            carried, joined = joined[:cut], joined[cut:]
+            for role, chunk, _h in carried:
+                key = CASE_ROLE.get(role)
+                if key and chunk and key not in carry:
+                    carry[key] = "".join(self.surface(t) for t in self._trim(chunk))
         args = {}
         last_key = None
         for role, chunk, _hard in joined:
@@ -522,17 +673,24 @@ class FrameExtractor:
             if key == "goal" and self._is_time(chunk):
                 last_key = None
                 continue
-            # 片語兩端的括弧是註記邊界,不屬論元字面
-            while chunk and chunk[0] in ("（", "）"):
-                chunk = chunk[1:]
-            while chunk and chunk[-1] in ("（", "）"):
-                chunk = chunk[:-1]
+            chunk = self._trim(chunk)
             if not chunk:
                 continue
             text = "".join(self.surface(t) for t in chunk)
             args[key] = text if key not in args else args[key] + "、" + text
             last_key = key
-        return args
+        return args, carry
+
+    @staticmethod
+    def _trim(chunk):
+        """片語兩端不成對的括弧是註記邊界,不屬論元字面。"""
+        while chunk and chunk[0] in ("（", "）") and (
+                chunk[0] == "）" or chunk.count("（") > chunk.count("）")):
+            chunk = chunk[1:]
+        while chunk and chunk[-1] in ("（", "）") and (
+                chunk[-1] == "（" or chunk.count("）") > chunk.count("（")):
+            chunk = chunk[:-1]
+        return chunk
 
     def _is_time(self, chunk):
         last = chunk[-1]
@@ -568,6 +726,12 @@ class FrameExtractor:
                     i += 1
                     continue
                 a["clause_start"] = clause_start
+                # て形/連用形子句後面緊接定語動詞+名詞(〜を素材としてX召喚した
+                # モンスター):整段是名詞片語,不是動作
+                if a["form"] in ("te", "stem") and self._inside_relative(
+                        tokens, a["tail"], s_end):
+                    i = a["tail"]
+                    continue
                 anchors.append(a)
                 clause_start = a["tail"]
                 i = a["tail"]
@@ -583,9 +747,9 @@ class FrameExtractor:
             if t == "）":
                 depth = max(0, depth - 1)
 
-        # 發動句:第一個以 発動できる/発動する 收尾(括弧外、後接 。或句尾)的句子
-        # (この効果は…発動できる 的速度註記除外)
-        act, marker_idx = None, None
+        # 發動句:以 発動できる/発動する 收尾(括弧外、後接 。/（ 或句尾)的句子都是
+        # (●選項各有自己的發動句);この効果は…発動できる 的速度註記除外
+        marker_of = {}
         for s_idx, anchors in enumerate(anchors_by_sentence):
             s_start, s_end = sentences[s_idx]
             if (tokens[s_start].startswith("d:この:")
@@ -598,57 +762,125 @@ class FrameExtractor:
                         and depth_at[a["verb_at"]] == 0
                         and (a["end"] >= s_end - 1
                              or tokens[a["end"]] in ("。", "（"))):
-                    act, marker_idx = s_idx, k
+                    marker_of[s_idx] = k
                     break
-            if act is not None:
-                break
 
         frames = []
         for s_idx, anchors in enumerate(anchors_by_sentence):
-            in_activation = (s_idx == act)
+            marker_idx = marker_of.get(s_idx)
+            in_activation = marker_idx is not None
+            # 條件鏈:發動句裡條件子句之前的子句都是條件;處理句裡緊接條件子句的
+            # 連用/て形子句(存在し、…場合)也是條件
             cond_after = [False] * len(anchors)
-            if in_activation:
-                seen = False
-                for k in range(marker_idx - 1, -1, -1):
-                    cond_after[k] = seen
-                    if anchors[k]["conditional"]:
-                        seen = True
+            seen = False
+            limit = marker_idx - 1 if in_activation else len(anchors) - 1
+            for k in range(limit, -1, -1):
+                cond_after[k] = seen if in_activation else (
+                    k + 1 < len(anchors) and anchors[k + 1]["conditional"]
+                    and (anchors[k]["action"] in STATE_LEMMAS
+                         or anchors[k]["passive"]
+                         or anchors[k]["form"] in ("te", "stem")))
+                if anchors[k]["conditional"]:
+                    seen = True
+            carry = {}
             for k, a in enumerate(anchors):
                 is_marker = in_activation and k == marker_idx
-                before_marker = in_activation and k < marker_idx                     and depth_at[a["verb_at"]] == 0
-                args = self.arguments(tokens, a["clause_start"],
-                                      a["head"] - a["fold"])
-                # 発動 本身:發動句的收尾、「相手ターンでも発動できる」這類速度
-                # 註記都不是動作;有直接對象/來源(〜を発動できない)才成框架
-                if (a["action"] == "発動" and a["polarity"] != POL_NEG
-                        and a["nominalizer"] is None
-                        and not ("object" in args or "source" in args)):
+                before_marker = in_activation and k < marker_idx \
+                    and depth_at[a["verb_at"]] == 0
+                args, next_carry = self.arguments(
+                    tokens, a["clause_start"], a["head"] - a["fold"],
+                    trailing=a["form"] == "noun" or a["fold"] > 0)
+                for key, value in carry.items():
+                    args.setdefault(key, value)
+                carry = next_carry
+                if a["action"].endswith("なる") and "source" in args:
+                    carry["source"] = args.pop("source")   # 〜からリリースし
+                # 発動 本身:發動句的收尾(このカードを発動できる)、速度註記、
+                # 〜するために 都不是動作;有別的對象/來源(〜を発動できない、
+                # デッキから「X」を発動できる)才成框架
+                clause_tokens = tokens[a["clause_start"]:a["head"]]
+                if a["action"] == "発動" and a["polarity"] != POL_NEG and (
+                        a["nominalizer"] in (None, "ため")
+                        and not ("object" in args or "source" in args)
+                        or a["nominalizer"] == "ため"
+                        or args.get("object") == "このカード"
+                        or any(t.startswith("d:この:") and self.word(
+                            t.split(":", 2)[2]) == "効果" for t in clause_tokens)
+                        and "object" not in args):
                     continue
-                if a["conditional"]:
+                if a["conditional"] or a["action"] == "対象とする":
                     position = POS_COND
                 elif is_marker:
-                    position = POS_COND
+                    position = POS_EFFECT
                 elif before_marker:
-                    if (a["action"] == "対象とする" or a["passive"]
-                            or a["action"] in STATE_LEMMAS or cond_after[k]
+                    if (a["passive"] or a["action"] in STATE_LEMMAS
+                            or cond_after[k]
                             or a["form"] in ("dict", "past", "neg")
-                            and a["nominalizer"] != "事"):
+                            and a["nominalizer"] != "事"
+                            or a["action"] in ("選択", "選ぶ")
+                            and args.get("source", "").startswith("以下の効果")):
                         position = POS_COND
                     else:
                         position = POS_COST
+                elif cond_after[k]:
+                    position = POS_COND
                 else:
                     position = POS_EFFECT
                 span = (a["clause_start"], a["end"])
-                frame = {"sentence": s_idx, "action": a["action"],
-                         "object": args.get("object"),
-                         "source": args.get("source"),
-                         "goal": args.get("goal"),
-                         "position": position, "polarity": a["polarity"],
-                         "span": list(span),
-                         "clause": " ".join(self.surface(t)
-                                            for t in tokens[span[0]:span[1]])}
-                frames.append(frame)
+                clause = " ".join(self.surface(t) for t in tokens[span[0]:span[1]])
+                # 「・」並列的述語名詞(召喚・特殊召喚した):各出一框架,共用後綴
+                for extra in self._coordinated_actions(tokens, a):
+                    frames.append({
+                        "sentence": s_idx, "action": extra,
+                        "object": args.get("object"),
+                        "source": args.get("source"), "goal": args.get("goal"),
+                        "position": position, "polarity": a["polarity"],
+                        "span": list(span), "clause": clause})
+                frames.append({"sentence": s_idx, "action": a["action"],
+                               "object": args.get("object"),
+                               "source": args.get("source"),
+                               "goal": args.get("goal"),
+                               "position": position, "polarity": a["polarity"],
+                               "span": list(span), "clause": clause})
         return frames
+
+    def _inside_relative(self, tokens, start, stop):
+        """start 起到下一個助詞/句讀前,出現「定語動詞+名詞」→ 前面的子句在
+        名詞片語裡。"""
+        for k in range(start, min(stop, start + 8) - 1):
+            t = tokens[k]
+            if token_kind(t) in ("particle", "punct"):
+                return False
+            w = self.word(t)
+            if w is None:
+                continue
+            attributive = (w in SURU_FAMILY and w not in NON_ATTRIBUTIVE_SURU) \
+                or (self.lex.is_verb(t) and verb_form(
+                    w, self.lex.lemma_of[t]) in ("dict", "past"))
+            if attributive and self.is_noun_like(tokens[k + 1]):
+                return True
+        return False
+
+    def _coordinated_actions(self, tokens, a):
+        """錨點前以 ・ 並列的述語名詞(召喚・|特殊召喚、特殊召喚・|リバース)。"""
+        out = []
+        k = a["head"] - 1
+        while k - 1 >= a["clause_start"] and tokens[k] == "・":
+            w = self.word(tokens[k - 1])
+            if w == "召喚":
+                parts = []
+                m = k - 2
+                while m >= a["clause_start"] and token_kind(tokens[m]) == "method":
+                    parts.insert(0, tokens[m][2:])
+                    m -= 1
+                out.insert(0, "・".join(parts) + "召喚")
+                k = m
+            elif w in SAHEN_NOUNS:
+                out.insert(0, w)
+                k -= 2
+            else:
+                break
+        return out
 
     def extract(self, text, context=""):
         return self.frames_of_tokens(self.tokenizer.tokenize(text, context))

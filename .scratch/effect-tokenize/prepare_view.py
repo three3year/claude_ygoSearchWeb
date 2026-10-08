@@ -73,7 +73,15 @@ def main():
     with open(os.path.join(HERE, "conventions.md"), encoding="utf-8") as f:
         conventions = f.read()
 
-    out = {"lexicon": surface_of, "strata": {}, "conventions": conventions}
+    # 檢驗摘要(票 11):llm-check/summary.md 打包成「檢驗摘要」分頁
+    summary_path = os.path.join(HERE, "llm-check", "summary.md")
+    check_summary = ""
+    if os.path.exists(summary_path):
+        with open(summary_path, encoding="utf-8") as f:
+            check_summary = f.read()
+
+    out = {"lexicon": surface_of, "strata": {}, "conventions": conventions,
+           "check_summary": check_summary}
     for key, label in (("effect", "效果句"), ("extra", "效果外文本")):
         subset = [s for s in sentences if s["stratum"] == key]
         stats, freq, oov_freq, templates = report.scan_stratum(

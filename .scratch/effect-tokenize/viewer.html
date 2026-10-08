@@ -262,6 +262,7 @@ function fmt(n){return n.toLocaleString("zh-TW")}
 var TABS=[
  {id:"cards",label:"卡片拆解"},
  {id:"cover",label:"框架覆蓋與盲區"},
+ {id:"check",label:"檢驗摘要"},
  {id:"tpl-effect",label:"效果句模板"},
  {id:"tpl-extra",label:"效果外模板"},
  {id:"oov",label:"OOV 高頻段"},
@@ -378,19 +379,29 @@ function histSection(){
   return box;
 }
 
-function convSection(){
-  // 極簡 Markdown 轉換:標題/粗體/行內碼/引用/清單/段落,夠讀 conventions.md
+function convSection(){ return mdSection(D.conventions||"(conventions.md 未打包)"); }
+function checkSection(){ return mdSection(D.check_summary||"(llm-check/summary.md 未打包)"); }
+function mdSection(md){
+  // 極簡 Markdown 轉換:標題/粗體/行內碼/引用/清單/表格/段落
   var box=document.createElement("section");
-  var lines=(D.conventions||"(conventions.md 未打包)").split("\n");
+  var lines=md.split("\n");
   var h="", inList=false;
   function inline(s){
     return esc(s)
       .replace(/`([^`]+)`/g,"<code>$1</code>")
       .replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>");
   }
+  var inTable=false;
   lines.forEach(function(ln){
     var m;
     if(inList && !/^\s*-\s+/.test(ln)){h+="</ul>";inList=false}
+    if(/^\|/.test(ln)){
+      var cells=ln.replace(/^\||\|$/g,"").split("|").map(function(c){return c.trim()});
+      if(cells.every(function(c){return /^-+$/.test(c)}))return;
+      if(!inTable){h+='<div class="scroll"><table><tbody>';inTable=true}
+      h+="<tr>"+cells.map(function(c){return "<td>"+inline(c)+"</td>"}).join("")+"</tr>";
+      return;
+    }else if(inTable){h+="</tbody></table></div>";inTable=false}
     if((m=ln.match(/^(#{1,4})\s+(.*)/))){
       var lv=Math.min(m[1].length+1,5);
       h+="<h"+lv+">"+inline(m[2])+"</h"+lv+">";
@@ -406,6 +417,7 @@ function convSection(){
     }
   });
   if(inList)h+="</ul>";
+  if(inTable)h+="</tbody></table></div>";
   box.innerHTML='<div class="md">'+h+'</div>';
   return box;
 }
@@ -549,6 +561,7 @@ function show(id){
       : id==="oov"?oovSection()
       : id==="freq"?freqSection()
       : id==="conv"?convSection()
+      : id==="check"?checkSection()
       : id==="cards"?cardsSection()
       : id==="cover"?coverSection()
       : histSection();

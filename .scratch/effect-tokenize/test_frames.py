@@ -392,5 +392,78 @@ class TestRound2Fixes(unittest.TestCase):
              ("ダウン", None, None, None, "效果", "肯定")])
 
 
+class TestRound3Fixes(unittest.TestCase):
+    """票 10:新種子樣本(round3)抽驗的回歸例子。"""
+
+    def test_passive_result_before_condition_stays_effect(self):
+        self.assertEqual(
+            extract("①：この効果で特殊召喚したモンスターの効果は無効化され、"
+                    "フィールドから離れた場合に除外される。"),
+            [("無効化", None, None, None, "效果", "肯定"),
+             ("離れる", None, "フィールド", None, "條件", "肯定"),
+             ("除外", None, None, None, "效果", "肯定")])
+
+    def test_this_effect_cannot_be_activated_is_a_note(self):
+        self.assertEqual(
+            extract("①：自分は１枚ドローする。この効果はこのカードが特殊召喚した"
+                    "ターンには発動できない。"),
+            [("ドロー", None, None, None, "效果", "肯定"),
+             ("特殊召喚", None, None, None, "條件", "肯定")])
+
+    def test_coordinated_materials_each_framed(self):
+        self.assertEqual(
+            extract("①：このカードを融合素材またはリンク素材として墓地へ送った"
+                    "場合、自分は１枚ドローする。"),
+            [("融合素材とする", "このカード", None, None, "條件", "肯定"),
+             ("リンク素材とする", "このカード", None, None, "條件", "肯定"),
+             ("送る", None, None, "墓地", "條件", "肯定"),
+             ("ドロー", None, None, None, "效果", "肯定")])
+
+    def test_te_ireba_is_a_condition(self):
+        self.assertEqual(
+            extract("①：自分のPスケールの合計がP召喚したモンスターのレベルの合計を"
+                    "超えていれば発動できる。自分は１枚ドローする。"),
+            [("超える", "P召喚したモンスターのレベルの合計", None, None, "條件",
+              "肯定"),
+             ("ドロー", None, None, None, "效果", "肯定")])
+
+    def test_activation_with_goal_is_an_action(self):
+        self.assertEqual(
+            extract("①：デッキからフィールド魔法カード１枚を選び、手札に加えるか"
+                    "自分フィールドに発動する。"),
+            [("選ぶ", "フィールド魔法カード1枚", "デッキ", None, "效果", "肯定"),
+             ("加える", None, None, "手札", "效果", "肯定"),
+             ("発動", None, None, "自分フィールド", "效果", "肯定")])
+
+    def test_noun_ga_dekinai_and_motanai_relative(self):
+        self.assertEqual(
+            extract("①：レベルを持たないモンスターの効果は発動できない。"
+                    "このターン自分は特殊召喚ができない。"),
+            [("発動", None, None, None, "效果", "否定"),
+             ("特殊召喚", None, None, None, "效果", "否定")])
+
+    def test_state_clause_before_no_baai_is_condition(self):
+        self.assertEqual(
+            extract("①：特殊召喚されたモンスターが相手フィールドに存在し、"
+                    "自分フィールドのモンスターが１体のみの場合、このカードは"
+                    "手札から特殊召喚できる。"),
+            [("存在", None, None, "相手フィールド", "條件", "肯定"),
+             ("特殊召喚", None, "手札", None, "效果", "可能")])
+
+    def test_zu_negative_renyo_is_an_action(self):
+        self.assertEqual(
+            extract("①：そのカードをデッキに戻さず手札に加える事もできる。"),
+            [("戻す", "そのカード", None, "デッキ", "效果", "否定"),
+             ("加える", None, None, "手札", "效果", "可能")])
+
+    def test_to_partner_and_de_modifier(self):
+        self.assertEqual(
+            extract("①：このカードがモンスターと戦闘を行う場合、デッキから攻撃力"
+                    "２４００以上で守備力１０００のモンスター１体を特殊召喚する。"),
+            [("行う", "戦闘", None, None, "條件", "肯定"),
+             ("特殊召喚", "攻撃力2400以上で守備力1000のモンスター1体", "デッキ",
+              None, "效果", "肯定")])
+
+
 if __name__ == "__main__":
     unittest.main()

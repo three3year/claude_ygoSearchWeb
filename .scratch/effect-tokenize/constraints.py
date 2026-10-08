@@ -41,8 +41,11 @@ PLAYERS = {"自分": "自分", "相手": "相手", "お互い": "雙方"}
 WINDOW_WORDS = {"ターン", "開始", "終了", "時", "中", "次"}
 WINDOW_PARTICLES = {"p:の", "p:及び"}
 MODE_LIMIT, MODE_ADD = "限定", "追加"
+FORM_ONLY, FORM_CANNOT = "只能", "不能"
+SUMMON_ONLY, SUMMON_CAN, SUMMON_CANNOT = "只能以某方式", "可以某方式", "不能"
+SEG_END = ("。", "）", "●")
 BOTH = "雙方"
-POL_AFFIRM, POL_NEG = "肯定", "否定"
+POL_AFFIRM, POL_NEG, POL_CAN = "肯定", "否定", "可能"
 THIS_EFFECT = "この効果"
 COUNT_UNITS = {"度", "回", "枚"}
 POTENTIAL_ALL = {"できる", "でき", "できない", "できず"}
@@ -132,7 +135,8 @@ class ConstraintFinder:
         start, end = sentence
         found = []
         for p in range(start, end):
-            if not (p == start or tokens[p - 1] in ("、", "：", OPTION))                     or not self._free(p):
+            if not (p == start or tokens[p - 1] in ("、", "：", OPTION, "p:は")) \
+                    or not self._free(p):
                 continue
             hit = self.period_count(tokens, p, end)
             if hit is None:
@@ -140,9 +144,12 @@ class ConstraintFinder:
             period, value, _unit, j = hit
             if j >= end or tokens[j] != "、":
                 continue
+            # 「名」は１ターンに１度、…:對象是主題(召喚條件句再補上 の特殊召喚)
+            topic = self._text(start, p - 1) if tokens[p - 1] == "p:は" else None
             found.append(self._take(
                 {"category": CAT_LIMIT, "subtype": SUB_COUNT, "period": period,
-                 "count": value, "target": THIS_EFFECT, "sharing": None},
+                 "count": value, "target": topic or THIS_EFFECT, "sharing": None,
+                 "topic": topic},
                 p, j + 1))
             for a in anchors:
                 if a["clause_start"] <= p < a["head"]:
@@ -161,9 +168,13 @@ class ConstraintFinder:
         self.consumed = []
         frames = []
         self.depth_at = depth_at
-        for rule in (self.count_notes, self.count_prefix):
-            frames += rule(tokens, sentence, anchors)
+        frames += self.count_notes(tokens, sentence, anchors)
         frames += self.this_effect_notes(tokens, sentence, anchors)
+        frames += self.pledges(tokens, sentence, anchors)
+        prefixes = self.count_prefix(tokens, sentence, anchors)
+        frames += prefixes
+        if extra:
+            frames += self.summon_conditions(tokens, sentence, anchors, prefixes)
         if marker_idx is not None:
             frames += self.activation_windows(tokens, sentence,
                                               anchors[marker_idx]["head"])
@@ -306,6 +317,143 @@ class ConstraintFinder:
                 found += seg_frames
         return found
 
+    # ── 誓約 ──
+    def _anchor_args(self, tokens, a, clause_start):
+        """錨點的論元(對象/來源/目的,只留有值的)。"""
+        args, _carry = self.x.arguments(tokens, clause_start, a["head"] - a["fold"],
+                                        trailing=a["form"] == "noun" or a["fold"] > 0)
+        return {k: v for k, v in args.items() if v}
+
+    def _action_name(self, tokens, a):
+        """錨點的動作名,「・」並列(召喚・特殊召喚)串成一個。"""
+        a = dict(a)
+        return "・".join(self.x._coordinated_actions(tokens, a) + [a["action"]])
+
+    def pledges(self, tokens, sentence, anchors):
+        """誓約(票 04):「〜を発動する/したターン、自分は…」「このターン、自分は…」「この効果の
+        発動後、ターン終了時まで自分は…」接一個以上 できない/できず 述語——每個否定述語出一個
+        限制·誓約:動作、形式(しか → 只能,否則 不能)、範圍(しか 前的片語或對象)、來源(から);
+        整段(觸發到句尾/括弧)吃掉。"""
+        x = self.x
+        start, end = sentence
+        found = []
+        for k in range(start + 2, end - 1):
+            if not (x.word(tokens[k]) == "自分" and tokens[k + 1] == "p:は") \
+                    or not self._free(k):
+                continue
+            prev = tokens[k - 1]
+            if prev == "、" and x.surface(tokens[k - 2]).endswith("ターン"):
+                turn_at = k - 2
+                trig_start = turn_at
+                while trig_start > start and self._free(trig_start - 1) \
+                        and tokens[trig_start - 1] not in SEG_END + ("、", "（", "："):
+                    trig_start -= 1
+                trigger = self._text(trig_start, turn_at + 1)
+                if not ("発動" in trigger or "召喚" in trigger
+                        or trigger in ("このターン", "そのターン")):
+                    continue
+            elif prev == "p:まで" and any(x.word(t) == "ターン"
+                                         for t in tokens[max(start, k - 5):k]):
+                trig_start = k - 1
+                while trig_start > start and self._free(trig_start - 1) \
+                        and tokens[trig_start - 1] not in SEG_END + ("（",):
+                    trig_start -= 1
+                trigger = self._text(trig_start, k)
+                if "発動" not in trigger:
+                    continue
+            else:
+                continue
+            seg_end = k + 2
+            while seg_end < end and tokens[seg_end] not in SEG_END:
+                seg_end += 1
+            preds = [a for a in anchors if k + 2 <= a["head"] < seg_end
+                     and a["polarity"] == POL_NEG and a["nominalizer"] is None]
+            if not preds:
+                continue
+            clause_start = k + 2
+            for a in preds:
+                args = self._anchor_args(tokens, a, clause_start)
+                head = a["head"] - a["fold"]
+                shika = next((h for h in range(clause_start, head)
+                              if tokens[h] == "p:しか"), None)
+                if shika is not None:
+                    # しか 前的原文是範圍(定語子句整段保留);「〜を１度しか」「〜でしか
+                    # モンスターを」這兩型把對象放前面、しか 前的片語括在後面
+                    scope = self._text(clause_start, shika)
+                    before = tokens[clause_start:shika]
+                    if "p:を" in before and args.get("object"):
+                        scope = "%s(%s)" % (args["object"],
+                                            self._text(before.index("p:を") + clause_start + 1,
+                                                       shika))
+                    elif scope.endswith("で") and args.get("object"):
+                        scope = "%s(%s)" % (args["object"], scope)
+                else:
+                    scope = args.get("object")
+                found.append({"category": CAT_LIMIT, "subtype": SUB_PLEDGE,
+                              "trigger": trigger, "action": self._action_name(tokens, a),
+                              "form": FORM_ONLY if shika is not None else FORM_CANNOT,
+                              "scope": scope, "source": args.get("source"),
+                              "span": [trig_start if a is preds[0] else clause_start,
+                                       a["tail"]]})
+                clause_start = a["tail"]
+            self.consumed.append((trig_start, seg_end))
+        return found
+
+    # ── 召喚條件 ──
+    def summon_conditions(self, tokens, sentence, anchors, prefixes):
+        """召喚條件(票 04,只在效果外文本):以召喚法收尾、極性 可能/否定、主題不是玩家的
+        述語各出一個限制·召喚條件——形式(不能/只能以某方式/可以某方式 + 動作)、方式(でのみ/
+        でしか 前的片語)、手續(它之前的錨點:動作與論元)、來源(から)。整段(上一個召喚條件之後
+        到述語尾)吃掉;同句有「は期間に N 度、」字首時,字首框架的對象改記 主題の動作。"""
+        x = self.x
+        start, end = sentence
+        found = []
+        seg_start = start
+        pending = []
+        for a in anchors:
+            if not self._free(a["head"]):
+                seg_start, pending = a["tail"], []
+                continue
+            summon = a["action"].endswith("召喚") and a["nominalizer"] is None \
+                and a["polarity"] != POL_AFFIRM
+            if not summon:
+                pending.append(a)
+                continue
+            topic_at = next((h for h in range(a["head"] - 1, a["clause_start"] - 1, -1)
+                             if tokens[h] == "p:は"), None)
+            if topic_at is not None and x.word(tokens[topic_at - 1]) in PLAYERS:
+                seg_start, pending = a["tail"], []
+                continue
+            args = self._anchor_args(tokens, a, a["clause_start"])
+            action = self._action_name(tokens, a)
+            rng = tokens[seg_start:a["head"]]
+            only = "p:のみ" in rng or "p:しか" in rng
+            form = (SUMMON_ONLY if only else SUMMON_CAN if a["polarity"] == POL_CAN
+                    else SUMMON_CANNOT) + action
+            method = None
+            for d in range(a["head"] - 1, a["clause_start"], -1):
+                if tokens[d] == "p:で" and tokens[d + 1] in ("p:のみ", "p:しか"):
+                    m_start = topic_at + 1 if topic_at is not None and topic_at < d \
+                        else a["clause_start"]
+                    method = self._text(m_start, d)
+                    break
+            procedure = []
+            for b in pending:
+                step = {"action": self._action_name(tokens, b)}
+                step.update(self._anchor_args(tokens, b, b["clause_start"]))
+                procedure.append(step)
+            span_start = seg_start
+            for pf in prefixes:
+                if seg_start <= pf["span"][0] < a["head"] and pf.get("topic"):
+                    pf["target"] = pf["topic"] + "の" + action
+                    span_start = max(span_start, pf["span"][1])
+            found.append(self._take(
+                {"category": CAT_LIMIT, "subtype": SUB_SUMMON, "form": form,
+                 "action": action, "method": method, "procedure": procedure,
+                 "source": args.get("source")}, span_start, a["tail"]))
+            seg_start, pending = a["tail"], []
+        return found
+
     def count_notes(self, tokens, sentence, anchors):
         """使用次數/發動次數註記(票 02):「X は (それぞれ) 期間に N 度 (、いずれか１つ)
         しか/まで (動作) できない/できず/できる」、「自分は X を 期間に N 度しか 特殊召喚
@@ -322,7 +470,8 @@ class ConstraintFinder:
             if t in ("（", "：", OPTION):
                 seg_start = i + 1
             hit = self.period_count(tokens, i, end)
-            chain_only = hit is None and x.word(t) == "同一" and i + 4 < end                 and x.word(tokens[i + 1]) == "チェーン" and tokens[i + 3] == "p:で"
+            chain_only = hit is None and x.word(t) == "同一" and i + 4 < end \
+                and x.word(tokens[i + 1]) == "チェーン" and tokens[i + 3] == "p:で"
             if hit is None and not chain_only:
                 i += 1
                 continue
@@ -352,7 +501,8 @@ class ConstraintFinder:
                 seg_start = i = k + 1
                 continue
             verbs, m = [], k
-            while m < end and m - k < 5 and tokens[m] not in ("。", "）", "（")                     and x.word(tokens[m]) not in POTENTIAL_ALL:
+            while m < end and m - k < 5 and tokens[m] not in ("。", "）", "（") \
+                    and x.word(tokens[m]) not in POTENTIAL_ALL:
                 verbs.append(tokens[m])
                 m += 1
             if m >= end or x.word(tokens[m]) not in POTENTIAL_ALL:

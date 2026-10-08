@@ -54,6 +54,16 @@ def event_turn(event, banned="発動"):
     return C("限制·事件回合禁用", event=event, banned=banned)
 
 
+def pledge(trigger, action, form, scope, source=None):
+    return C("限制·誓約", trigger=trigger, action=action, form=form, scope=scope,
+             source=source)
+
+
+def summon(form, method=None, procedure=None, source=None):
+    return C("限制·召喚條件", form=form, method=method, procedure=procedure or [],
+             source=source)
+
+
 class TestActivationCount(unittest.TestCase):
     """票 01:發動句內的「１ターンに１度、」出限制·次數,同句其餘動作框架不變。"""
 
@@ -303,6 +313,164 @@ class TestTimingAndEventTurn(unittest.TestCase):
                  "（この効果は相手ターンでも発動できる）。そのモンスターを破壊する。"),
             [A("捨てる", "代價", "肯定"), A("対象とする", "條件", "肯定"),
              timing("相手", "ターン", "追加"), A("破壊", "效果", "肯定")])
+
+
+class TestPledges(unittest.TestCase):
+    """票 04:誓約「〜するターン、自分は…しか/を…できない」(含括弧內、このターン、発動後〜
+    ターン終了時まで)出限制·誓約,句內的 特殊召喚 否定動作框架不再出現。"""
+
+    DRAW = A("ドロー", "效果", "肯定")
+
+    def test_pledge_only_scope(self):
+        self.assertEqual(
+            rows("この効果を発動するターン、自分は機械族・闇属性モンスターしか特殊召喚できない。"),
+            [pledge("この効果を発動するターン", "特殊召喚", "只能", "機械族・闇属性モンスター")])
+
+    def test_pledge_after_effect_with_source(self):
+        self.assertEqual(
+            rows("①：このカードをリリースして発動できる。手札から「試作機」１体を特殊召喚する。"
+                 "この効果を発動したターン、自分はSモンスターしかEXデッキから特殊召喚できない。"),
+            [A("リリース", "代價", "肯定"), A("特殊召喚", "效果", "肯定"),
+             pledge("この効果を発動したターン", "特殊召喚", "只能", "Sモンスター", "EXデッキ")])
+
+    def test_pledge_cannot_form_with_coordinated_summons(self):
+        self.assertEqual(
+            rows("このカードの効果を発動するターン、自分は効果モンスターを召喚・特殊召喚できない。"),
+            [pledge("このカードの効果を発動するターン", "召喚・特殊召喚", "不能", "効果モンスター")])
+
+    def test_pledge_in_activation_parenthesis(self):
+        self.assertEqual(
+            rows("②：墓地のこのカードを除外して発動できる（この効果を発動するターン、自分は"
+                 "機械族・闇属性モンスターしか特殊召喚できない）。自分のデッキの機械族モンスター"
+                 "１体を手札に加える。"),
+            [A("除外", "代價", "肯定"),
+             pledge("この効果を発動するターン", "特殊召喚", "只能", "機械族・闇属性モンスター"),
+             A("加える", "效果", "肯定")])
+
+    def test_count_note_then_pledge(self):
+        self.assertEqual(
+            rows("このカード名のカードは１ターンに１枚しか発動できず、このカードを発動するターン、"
+                 "自分はサイキック族モンスターしか特殊召喚できない。"),
+            [count("回合", 1, "このカード名のカード"),
+             pledge("このカードを発動するターン", "特殊召喚", "只能", "サイキック族モンスター")])
+
+    def test_pledge_until_end_of_turn_after_activation(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果の発動後、ターン終了時まで自分は闇属性"
+                 "モンスターしか特殊召喚できない。"),
+            [self.DRAW,
+             pledge("この効果の発動後、ターン終了時まで", "特殊召喚", "只能", "闇属性モンスター")])
+
+    def test_pledge_this_turn(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このターン、自分は「試作機」モンスターしか特殊召喚"
+                 "できない。"),
+            [self.DRAW, pledge("このターン", "特殊召喚", "只能", "「試作機」モンスター")])
+
+    def test_pledge_scope_keeps_relative_clause(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このターン、自分はレベルまたはランクが３以上の"
+                 "モンスターしか特殊召喚できない。"),
+            [self.DRAW,
+             pledge("このターン", "特殊召喚", "只能", "レベルまたはランクが３以上のモンスター")])
+
+    def test_pledge_manner_before_shika(self):
+        self.assertEqual(
+            rows("この効果を発動するターン、自分は裏側守備表示でしかモンスターを特殊召喚できない。"),
+            [pledge("この効果を発動するターン", "特殊召喚", "只能", "モンスター(裏側守備表示で)")])
+
+    def test_this_turn_without_ban_is_not_a_pledge(self):
+        self.assertEqual(rows("①：このターン、自分は１枚ドローする。"), [self.DRAW])
+
+    def test_two_pledge_predicates(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。このターン、自分はエクストラデッキからモンスターを"
+                 "特殊召喚できず、地属性以外のモンスターの効果を発動できない。"),
+            [self.DRAW,
+             pledge("このターン", "特殊召喚", "不能", "モンスター", "エクストラデッキ"),
+             pledge("このターン", "発動", "不能", "地属性以外のモンスターの効果")])
+
+
+class TestSummonConditions(unittest.TestCase):
+    """票 04:效果外文本的召喚條件句出限制·召喚條件(形式/方式/手續/來源),召喚手續與
+    特殊召喚 本身不再出動作框架;編號效果裡的同形句照舊是動作框架。"""
+
+    def test_cannot_normal_summon_then_only_by_procedure(self):
+        self.assertEqual(
+            rows("このカードは通常召喚できない。自分の墓地の「SPYRAL」カード３枚を除外した"
+                 "場合のみ特殊召喚できる。"),
+            [summon("不能通常召喚"),
+             summon("只能以某方式特殊召喚",
+                    procedure=[{"action": "除外",
+                                "object": "自分の墓地の「SPYRAL」カード3枚"}])])
+
+    def test_only_by_card_effect(self):
+        self.assertEqual(
+            rows("このカードは通常召喚できず、カードの効果でのみ特殊召喚できる。"),
+            [summon("不能通常召喚"), summon("只能以某方式特殊召喚", method="カードの効果")])
+
+    def test_only_by_fusion_summon_from_extra_deck(self):
+        self.assertEqual(
+            rows("このカードは融合召喚でのみＥＸデッキから特殊召喚できる。"),
+            [summon("只能以某方式特殊召喚", method="融合召喚", source="ＥＸデッキ")])
+
+    def test_deshika_dekinai_is_only_form(self):
+        self.assertEqual(
+            rows("このカードは融合召喚でしか特殊召喚できない。"),
+            [summon("只能以某方式特殊召喚", method="融合召喚")])
+
+    def test_cannot_special_summon_only_in_extra_text(self):
+        self.assertEqual(rows("このカードは特殊召喚できない。"), [summon("不能特殊召喚")])
+        self.assertEqual(rows("①：このカードは特殊召喚できない。"),
+                         [A("特殊召喚", "效果", "否定")])
+
+    def test_summon_condition_with_count_gives_two_frames(self):
+        self.assertEqual(
+            rows("「終焉龍 カオス・エンペラー」は１ターンに１度、自分の墓地の光属性と闇属性の"
+                 "モンスターを１体ずつ除外した場合のみ、EXデッキから特殊召喚できる。"),
+            [count("回合", 1, "「終焉龍 カオス・エンペラー」の特殊召喚"),
+             summon("只能以某方式特殊召喚",
+                    procedure=[{"action": "除外",
+                                "object": "自分の墓地の光属性と闇属性のモンスター"}],
+                    source="EXデッキ")])
+
+    def test_xyz_summon_procedure_with_count(self):
+        self.assertEqual(
+            rows("「FA－ホープ・レイ・ランサー」は１ターンに１度、自分フィールドの「希望皇ホープ」"
+                 "モンスターの上に重ねてX召喚する事もできる。"),
+            [count("回合", 1, "「FA－ホープ・レイ・ランサー」のX召喚"),
+             summon("可以某方式X召喚",
+                    procedure=[{"action": "重ねる",
+                                "goal": "自分フィールドの「希望皇ホープ」モンスターの上"}])])
+
+    def test_method_list_with_option_procedure(self):
+        text = ("このカードは融合召喚及び以下の方法でのみ特殊召喚できる。\n●自分のモンスター"
+                "ゾーンの上記のカードを墓地へ送った場合にEXデッキから特殊召喚できる。")
+        self.assertEqual(
+            rows(text),
+            [summon("只能以某方式特殊召喚", method="融合召喚及び以下の方法"),
+             summon("可以某方式特殊召喚",
+                    procedure=[{"action": "送る", "object": "自分のモンスターゾーンの上記のカード",
+                                "goal": "墓地"}],
+                    source="EXデッキ")])
+        self.assertEqual([f["option"] for f in frames.extract(text)], [None, 1])
+
+    def test_tribute_then_advance_summon(self):
+        self.assertEqual(
+            rows("このカードはアドバンス召喚したモンスター１体をリリースしてアドバンス召喚できる。"),
+            [summon("可以某方式アドバンス召喚",
+                    procedure=[{"action": "リリース",
+                                "object": "アドバンス召喚したモンスター1体"}])])
+
+    def test_cannot_synchro_then_only_by_procedure(self):
+        self.assertEqual(
+            rows("このカードはS召喚できず、自分フィールドからチューナー１体とチューナー以外の"
+                 "モンスター１体を墓地へ送った場合のみ特殊召喚できる。"),
+            [summon("不能S召喚"),
+             summon("只能以某方式特殊召喚",
+                    procedure=[{"action": "送る",
+                                "object": "チューナー1体とチューナー以外のモンスター1体",
+                                "source": "自分フィールド", "goal": "墓地"}])])
 
 
 if __name__ == "__main__":

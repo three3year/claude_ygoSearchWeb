@@ -293,8 +293,15 @@ class TestRound1Fixes(unittest.TestCase):
              ("破壊", "そのモンスター", None, None, "效果", "肯定")])
 
     def test_release_and_advance_summon_are_two_actions(self):
+        """約束框架票 04 起:效果外文本的召喚條件句整句是限制·召喚條件框架
+        (test_constraints.py),不再出 リリース/アドバンス召喚 動作框架;同形句在編號
+        效果裡照舊是兩個動作。"""
         self.assertEqual(
             extract("このカードはアドバンス召喚したモンスター１体をリリースして"
+                    "アドバンス召喚できる。"),
+            [])
+        self.assertEqual(
+            extract("①：このカードはアドバンス召喚したモンスター１体をリリースして"
                     "アドバンス召喚できる。"),
             [("リリース", "アドバンス召喚したモンスター1体", None, None,
               "效果", "肯定"),

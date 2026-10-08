@@ -46,6 +46,14 @@ def count(period, count, target, sharing=None):
              sharing=sharing)
 
 
+def timing(player, window, mode="限定", polarity="肯定"):
+    return C("時機", player=player, window=window, mode=mode, polarity=polarity)
+
+
+def event_turn(event, banned="発動"):
+    return C("限制·事件回合禁用", event=event, banned=banned)
+
+
 class TestActivationCount(unittest.TestCase):
     """票 01:發動句內的「１ターンに１度、」出限制·次數,同句其餘動作框架不變。"""
 
@@ -194,6 +202,107 @@ class TestCountNotes(unittest.TestCase):
         self.assertEqual(
             rows("①：「試作機」は自分フィールドに１枚しか表側表示で存在できない。"),
             [A("存在", "效果", "否定")])
+
+
+class TestTimingAndEventTurn(unittest.TestCase):
+    """票 03:發動句內的回合/階段窗口與「この効果は」註記句出時機框架;以事件界定的回合
+    出限制·事件回合禁用;觸發事件照舊是條件動作框架;選項標籤不出時機。"""
+
+    DRAW = A("ドロー", "效果", "肯定")
+
+    def test_own_main_phase_window(self):
+        self.assertEqual(
+            rows("①：自分メインフェイズに発動できる。自分は１枚ドローする。"),
+            [timing("自分", "メインフェイズ"), self.DRAW])
+
+    def test_both_players_main_phase(self):
+        self.assertEqual(
+            rows("①：自分・相手のメインフェイズに発動できる。自分は１枚ドローする。"),
+            [timing("雙方", "メインフェイズ"), self.DRAW])
+
+    def test_opponent_turn_only(self):
+        self.assertEqual(
+            rows("③：相手ターンに発動できる。自分は１枚ドローする。"),
+            [timing("相手", "ターン"), self.DRAW])
+
+    def test_also_on_opponent_turn_is_additive(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果は相手ターンでも発動できる。"),
+            [self.DRAW, timing("相手", "ターン", "追加")])
+
+    def test_phase_time_point(self):
+        self.assertEqual(
+            rows("①：自分・相手のバトルフェイズ開始時に発動できる。自分は１枚ドローする。"),
+            [timing("雙方", "バトルフェイズ開始時"), self.DRAW])
+
+    def test_mandatory_standby_phase_trigger(self):
+        self.assertEqual(
+            rows("②：自分スタンバイフェイズに発動する。自分は５００ダメージを受ける。"),
+            [timing("自分", "スタンバイフェイズ"), A("受ける", "效果", "肯定")])
+
+    def test_window_before_cost_clause(self):
+        self.assertEqual(
+            rows("①：自分メインフェイズに手札を１枚捨てて発動できる。自分は１枚ドローする。"),
+            [timing("自分", "メインフェイズ"), A("捨てる", "代價", "肯定"), self.DRAW])
+
+    def test_count_and_window_in_one_activation(self):
+        self.assertEqual(
+            rows("②：１ターンに１度、自分メインフェイズに発動できる。相手フィールドの魔法・"
+                 "罠カードを全て持ち主の手札に戻す。"),
+            [count("回合", 1, "この効果"), timing("自分", "メインフェイズ"),
+             A("戻す", "效果", "肯定")])
+
+    def test_event_turn_ban_note(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果はこのカードが特殊召喚したターンには"
+                 "発動できない。"),
+            [self.DRAW, event_turn("このカードが特殊召喚したターン")])
+
+    def test_event_turn_ban_on_use_replaces_action_frames(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果はこのカードが墓地へ送られたターンには"
+                 "使用できない。"),
+            [self.DRAW, event_turn("このカードが墓地へ送られたターン", "使用")])
+
+    def test_trigger_event_is_still_a_condition_action(self):
+        self.assertEqual(
+            rows("①：このカードが召喚に成功した時に発動できる。自分は１枚ドローする。"),
+            [A("成功", "條件", "肯定"), self.DRAW])
+
+    def test_event_defined_turn_is_not_a_timing(self):
+        self.assertEqual(
+            rows("②：モンスターが戦闘で破壊された自分・相手ターンに発動できる。"
+                 "自分は１枚ドローする。"),
+            [self.DRAW])
+
+    def test_option_label_turn_is_not_a_timing(self):
+        got = frames.extract("①：以下の効果を発動できる。\n●相手ターン：自分は１枚ドローする。")
+        self.assertEqual([(f["kind"], f["option"], f["label"]) for f in got],
+                         [("動作", 1, "相手ターン")])
+
+    def test_denied_and_added_windows_in_one_note(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果はダメージステップでは発動できず、"
+                 "相手ターンでも発動できる。"),
+            [self.DRAW, timing(None, "ダメージステップ", "限定", "否定"),
+             timing("相手", "ターン", "追加")])
+
+    def test_each_others_main_phase_only(self):
+        self.assertEqual(
+            rows("①：自分は１枚ドローする。この効果はお互いのメインフェイズにのみ発動できる。"),
+            [self.DRAW, timing("雙方", "メインフェイズ")])
+
+    def test_next_standby_phase_keeps_tsugi(self):
+        self.assertEqual(
+            rows("①：次の自分スタンバイフェイズに発動できる。自分は１枚ドローする。"),
+            [timing("自分", "次のスタンバイフェイズ"), self.DRAW])
+
+    def test_parenthetical_timing_note_in_activation(self):
+        self.assertEqual(
+            rows("①：手札を１枚捨て、相手フィールドのモンスター１体を対象として発動できる"
+                 "（この効果は相手ターンでも発動できる）。そのモンスターを破壊する。"),
+            [A("捨てる", "代價", "肯定"), A("対象とする", "條件", "肯定"),
+             timing("相手", "ターン", "追加"), A("破壊", "效果", "肯定")])
 
 
 if __name__ == "__main__":

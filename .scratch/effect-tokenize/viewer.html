@@ -150,6 +150,9 @@ table.frames .sent{display:block;font-size:.7rem}
 .pol-neg{color:var(--chip-oov-ink);font-weight:600}
 .pol-can{color:var(--chip-p-ink)}
 .pol-aff{color:var(--muted)}
+mark.clausemark{background:var(--chip-dem-bg);color:var(--chip-dem-ink);border-radius:3px;padding:0 1px}
+table.frames tr.pin td{background:var(--chip-lex-bg)}
+table.frames tbody tr[title]{cursor:pointer}
 @media (prefers-reduced-motion: no-preference){
   .examples{animation:fade .15s ease-out}
   @keyframes fade{from{opacity:0}to{opacity:1}}
@@ -448,17 +451,22 @@ function recLabel(r){
   var extra=r.st==="extra";
   return (r.s==="pendulum"?"靈擺 ":"")+(extra?"效果外文本 "+r.i:r.i)+(r.k&&!extra?"・"+r.k:"");
 }
+function textHtml(t,range){
+  // 原文;range=[起,迄) 時把對應子句標成 mark(框架的詞序列範圍對回原文)
+  if(!range) return esc(t).replace(/\n/g,"<br>");
+  return esc(t.slice(0,range[0])).replace(/\n/g,"<br>")+'<mark class="clausemark">'+esc(t.slice(range[0],range[1])).replace(/\n/g,"<br>")+'</mark>'+esc(t.slice(range[1])).replace(/\n/g,"<br>");
+}
 function cardHtml(c,recs){
   var h='<div class="card-head"><b>'+c[0]+'</b> '+esc(c[1])+' <span class="muted">'+esc(c[2])+'</span>'
     +' <span class="muted">・'+recs.length+' 句・'+c[5]+' 個框架'+(c[6]?'・'+c[6]+' 句無框架':'')+'</span></div>';
-  recs.forEach(function(r){
-    h+='<div class="rec"><div class="rec-pos">'+esc(recLabel(r))+'</div>'
-      +'<div class="rec-grid"><div class="rec-text">'+esc(r.t).replace(/\n/g,"<br>")+'</div><div class="rec-frames">';
+  recs.forEach(function(r,ri){
+    h+='<div class="rec" data-ri="'+ri+'"><div class="rec-pos">'+esc(recLabel(r))+'</div>'
+      +'<div class="rec-grid"><div class="rec-text">'+textHtml(r.t,null)+'</div><div class="rec-frames">';
     if(!r.f.length){h+='<p class="note">(抽不到框架)</p>';}
     else{
       h+='<table class="frames"><thead><tr><th>#</th><th>位置</th><th>動作</th><th>極性</th><th>對象</th><th>來源</th><th>目的</th></tr></thead><tbody>';
       r.f.forEach(function(f,i){
-        h+='<tr title="'+esc(f[7])+'"><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+posChip(f[1])+'</td><td><b>'+esc(f[2])+'</b></td><td>'+polText(f[3])+'</td>'
+        h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+posChip(f[1])+'</td><td><b>'+esc(f[2])+'</b></td><td>'+polText(f[3])+'</td>'
           +'<td>'+esc(f[4]||"")+'</td><td>'+esc(f[5]||"")+'</td><td>'+esc(f[6]||"")+'</td></tr>'
           +'<tr class="clause"><td></td><td colspan="6"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
       });
@@ -472,18 +480,27 @@ function cardsSection(){
   var box=document.createElement("section");
   if(!FR){box.innerHTML='<p class="note">view_data.js 未含框架資料(先跑 frames.py 與 prepare_view.py)。</p>';return box}
   box.innerHTML='<div class="search-row"><input type="search" placeholder="卡號或卡名(日文/繁中,子字串)"><button class="btn" id="rnd">隨機一張</button></div>'
-    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。左原文、右框架表(動作=詞元;對象/來源/目的=を/から/に・へ 前的詞;位置=代價/效果/條件);滑過一列看對應子句。</p>'
+    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。左原文、右框架表(動作=詞元;對象/來源/目的=を/から/に・へ 前的詞;位置=代價/效果/條件);滑過一列在原文標出對應子句,點一下釘住。</p>'
     +'<div class="results"></div><div class="card-view"></div>';
   var input=box.querySelector("input"), results=box.querySelector(".results"), view=box.querySelector(".card-view");
+  var currentRecs=null;
   function openCard(id){
     var c=cardById[id]; if(!c)return;
     view.innerHTML='<p class="note">載入中…</p>';
     loadShard(c[3],function(err){
       if(err){view.innerHTML='<p class="note">'+esc(err)+'</p>';return}
-      var recs=window.VIEW_FRAMES[c[3]][String(id)]||[];
-      view.innerHTML=cardHtml(c,recs);
+      currentRecs=window.VIEW_FRAMES[c[3]][String(id)]||[];
+      view.innerHTML=cardHtml(c,currentRecs);
       view.scrollIntoView({block:"start"});
     });
+  }
+  function highlight(tr,on){
+    // 滑過/釘住一列:原文標出該框架對應的子句(f[8]=原文字元範圍)
+    var rec=tr.closest(".rec"); if(!rec||!currentRecs)return;
+    var r=currentRecs[+rec.getAttribute("data-ri")], f=r&&r.f[+tr.getAttribute("data-fi")];
+    if(!f)return;
+    rec.querySelector(".rec-text").innerHTML=textHtml(r.t,on?f[8]:null);
+    var next=tr.nextElementSibling; if(next&&next.classList.contains("clause"))next.classList.toggle("on",on);
   }
   function search(q){
     results.innerHTML="";
@@ -506,12 +523,16 @@ function cardsSection(){
     input.value=String(c[0]); results.innerHTML=""; openCard(c[0]);
   });
   view.addEventListener("mouseover",function(e){
-    var tr=e.target.closest("tr[title]"); if(!tr)return;
-    var next=tr.nextElementSibling; if(next&&next.classList.contains("clause"))next.classList.add("on");
+    var tr=e.target.closest("tr[title]"); if(tr&&!view.querySelector("tr.pin"))highlight(tr,true);
   });
   view.addEventListener("mouseout",function(e){
+    var tr=e.target.closest("tr[title]"); if(tr&&!tr.classList.contains("pin")&&!view.querySelector("tr.pin"))highlight(tr,false);
+  });
+  view.addEventListener("click",function(e){
     var tr=e.target.closest("tr[title]"); if(!tr)return;
-    var next=tr.nextElementSibling; if(next&&next.classList.contains("clause"))next.classList.remove("on");
+    var was=tr.classList.contains("pin");
+    view.querySelectorAll("tr.pin").forEach(function(x){x.classList.remove("pin");highlight(x,false)});
+    if(!was){tr.classList.add("pin");highlight(tr,true)}
   });
   return box;
 }

@@ -98,9 +98,9 @@ def write_batches(round_dir, picked):
               newline="\n") as f:
         json.dump(picked, f, ensure_ascii=False, indent=0)
         f.write("\n")
-    per = -(-len(picked) // BATCHES)
+    # 輪流分配:每批混合四個分層(連續切會一批幾乎同一分層)
     for k in range(BATCHES):
-        chunk = picked[k * per:(k + 1) * per]
+        chunk = picked[k::BATCHES]
         lines = ["# 批次 %d(%d 張卡)" % (k, len(chunk)), ""]
         for p in chunk:
             lines += card_block(p["card"], cards, recs_by_card[p["card"]],

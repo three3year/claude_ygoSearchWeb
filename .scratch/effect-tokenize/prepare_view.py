@@ -141,7 +141,7 @@ def main():
             "top_freq": freq_rows,
         }
 
-    out["frames"] = write_frame_shards(sentences)
+    out["frames"] = write_frame_shards(sentences, surface_of)
 
     # ensure_ascii=True:全檔純 ASCII(\uXXXX 轉義),不受伺服器 charset 影響
     js = "window.VIEW_DATA=" + json.dumps(
@@ -156,9 +156,99 @@ def main():
 
 # ── 卡片拆解(票 05/08):frames.json → 分片 + 索引/覆蓋率/盲區 ──
 
-def write_frame_shards(sentences):
+_SILENT = set("● 　\t\n") | {chr(c) for c in range(0x2460, 0x2500)}
+_FULL = str.maketrans("０１２３４５６７８９ＳＸＰＬＡ？", "0123456789SXPLA?")
+_KANJI_NUM = set("一二三四五六七八九十")
+
+
+def _token_pattern(token, surface_of):
+    """token → (原文字面, 是否放寬比對)。放寬:數字可是全形/漢數字、字母可是全形。"""
+    kind = report.token_kind(token)
+    if kind == "lex":
+        return surface_of[token], False
+    if kind == "dem":
+        _, dem, wid = token.split(":", 2)
+        return dem + surface_of[wid], False
+    if kind == "name":
+        return "「" + token.split(":", 1)[1] + "」", False
+    if kind == "num":
+        return token.split(":", 1)[1], True
+    if kind == "quant":
+        _, wid, val, counter, cmp_word = token.split(":", 4)
+        return (surface_of[wid] if wid else "") + val + counter + cmp_word, True
+    if kind == "range":
+        _, lo, hi, counter = token.split(":", 3)
+        return lo + "～" + hi + counter, True
+    if kind == "cname":
+        return token[2:] + "カウンター", False
+    if kind == "elided":
+        return token.split(":", 2)[1], False
+    if kind == "method":
+        return token[2:], True
+    if kind == "punct":
+        return token, False
+    return token.split(":", 1)[1], False          # particle/attr/counter/oov
+
+
+def _match(text, pos, pattern, flexible):
+    """pattern 從 text[pos] 起比對;回結束位置,對不上回 -1。"""
+    i, j = pos, 0
+    while j < len(pattern):
+        if i >= len(text):
+            return -1
+        ch = pattern[j]
+        if flexible and ch.isdigit():
+            while j < len(pattern) and pattern[j].isdigit():
+                j += 1
+            k = i
+            while k < len(text) and (text[k].translate(_FULL).isdigit()
+                                     or text[k] in _KANJI_NUM):
+                k += 1
+            if k == i:
+                return -1
+            i = k
+            continue
+        if text[i] == ch or (flexible and text[i].translate(_FULL) == ch):
+            i, j = i + 1, j + 1
+            continue
+        return -1
+    return i
+
+
+def char_offsets(text, tokens):
+    """每個 token 在原文的 [起,迄);整句對不上回 None(頁面就不高亮)。"""
+    pos, out = 0, []
+    for token in tokens:
+        while pos < len(text) and text[pos] in _SILENT:
+            pos += 1
+        if not out and pos < len(text) and text[pos] == "：" and token != "：":
+            pos += 1                      # 段首「①：」的冒號(分詞器剝掉)
+            while pos < len(text) and text[pos] in _SILENT:
+                pos += 1
+        pattern, flexible = _token_pattern(token, _SURFACES)
+        end = _match(text, pos, pattern, flexible)
+        if end < 0:
+            return None
+        out.append((pos, end))
+        pos = end
+    return out
+
+
+_SURFACES = {}
+
+
+def span_chars(offsets, span):
+    if offsets is None:
+        return None
+    start, end = span
+    if start >= len(offsets) or end > len(offsets) or start >= end:
+        return None
+    return [offsets[start][0], offsets[end - 1][1]]
+
+def write_frame_shards(sentences, surface_of):
     """frames.json 逐卡打包成 FRAME_SHARDS 個 view_frames_<k>.js;回傳要放進
     view_data.js 的索引(卡號/卡名/分片號)、覆蓋率與「抽不到框架的句子」。"""
+    _SURFACES.update(surface_of)
     with open(FRAMES, encoding="utf-8") as f:
         frames = json.load(f)
     with open(CARDS, encoding="utf-8") as f:
@@ -166,28 +256,20 @@ def write_frame_shards(sentences):
     by_key = {(s["card"], s["section"], s["index"]): s for s in sentences}
 
     per_card = {}
-    stats = {k: {"records": 0, "covered": 0, "frames": 0}
-             for k in ("effect", "extra")}
-    position = Counter()
-    polarity = Counter()
-    actions = Counter()
+    stats, position, polarity, actions = report.frame_stats(frames)
     uncovered = []
     for r in frames:
         s = by_key[(r["card"], r["section"], r["index"])]
+        # 原文字元範圍:框架的詞序列範圍對回 text_ja(對不上時為 null,頁面不高亮)
+        offsets = char_offsets(s["text_ja"], s["tokens"])
+        # 欄位:句序、位置、動作、極性、對象、來源、目的、子句、原文 [起,迄)
         rec = {"s": r["section"], "i": r["index"], "k": s["kind"],
                "st": r["stratum"], "t": s["text_ja"],
                "f": [[fr["sentence"], fr["position"], fr["action"],
                       fr["polarity"], fr.get("object"), fr.get("source"),
-                      fr.get("goal"), fr["clause"]] for fr in r["frames"]]}
+                      fr.get("goal"), fr["clause"],
+                      span_chars(offsets, fr["span"])] for fr in r["frames"]]}
         per_card.setdefault(r["card"], []).append(rec)
-        st = stats[r["stratum"]]
-        st["records"] += 1
-        st["covered"] += bool(r["frames"])
-        st["frames"] += len(r["frames"])
-        for fr in r["frames"]:
-            position[fr["position"]] += 1
-            polarity[fr["polarity"]] += 1
-            actions[fr["action"]] += 1
         if not r["frames"]:
             uncovered.append({"card": r["card"], "section": r["section"],
                               "index": r["index"], "stratum": r["stratum"],

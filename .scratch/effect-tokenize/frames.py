@@ -34,7 +34,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from report import token_kind  # noqa: E402
+from report import frame_stats, token_kind  # noqa: E402
 
 LEXICON = os.path.join(HERE, "lexicon.json")
 TOKENS = os.path.join(HERE, "tokens.json")
@@ -84,7 +84,7 @@ STATE_LEMMAS = {"存在", "ある", "いる", "持つ", "なる", "成功", "含
                 "加わる", "戻る", "移る", "上がる", "下がる", "入れ替わる",
                 "満たす", "リンク", "相互リンク", "だ", "無い", "多い", "少ない",
                 "高い", "低い"}
-LIGHT_VERBS = {"する": "する", "なる": "なる"}
+LIGHT_VERBS = {"する", "なる"}
 # 時間語的 に(ターン/フェイズ/時…)不收成目的論元
 TIME_HEADS = {"ターン", "時", "場合", "際", "度", "後", "前", "間", "内", "中",
               "以降", "開始", "終了", "デュエル", "フェイズ", "毎"}
@@ -182,11 +182,9 @@ def verb_form(surface, lemma):
 
 
 class FrameExtractor:
-    def __init__(self, lexicon_entries, tokenizer=None):
+    def __init__(self, lexicon_entries):
         self.lex = Lexicon(lexicon_entries)
-        if tokenizer is None:
-            tokenizer = _load_tokenizer_module().Tokenizer(lexicon_entries)
-        self.tokenizer = tokenizer
+        self.tokenizer = _load_tokenizer_module().Tokenizer(lexicon_entries)
 
     # ── token 讀取 ──
     def surface(self, token):
@@ -231,6 +229,16 @@ class FrameExtractor:
             return False
         return True
 
+    @staticmethod
+    def _method_prefix(tokens, m, start):
+        """tokens[m] 往前連續的召喚法 token(法・法…)→ (字串前綴, 第一個法的位置)。
+        沒有召喚法時回 ("", m + 1)。"""
+        parts = []
+        while m >= start and token_kind(tokens[m]) == "method":
+            parts.insert(0, tokens[m][2:])
+            m -= 1
+        return "・".join(parts), m + 1
+
     # ── 錨點辨識 ──
     def anchor_at(self, tokens, i, clause_start):
         """tokens[i] 起是否為述語錨點。回 dict(head, end, action, polarity,
@@ -252,14 +260,9 @@ class FrameExtractor:
         # 〜を素材として/〜をX素材として:當作素材(動作 素材とする)
         if w is not None and w.endswith("素材") and j < n \
                 and tokens[j] == "p:として":
-            parts = []
-            while head - 1 >= clause_start \
-                    and token_kind(tokens[head - 1]) == "method":
-                parts.insert(0, tokens[head - 1][2:])
-                head -= 1
-            return self._finish(tokens, head, i, j + 1,
-                                "・".join(parts) + w + "とする", POL_AFFIRM,
-                                "te", False, 0, clause_start)
+            prefix, head = self._method_prefix(tokens, head - 1, clause_start)
+            return self._finish(tokens, head, i, j + 1, prefix + w + "とする",
+                                POL_AFFIRM, "te", False, 0, clause_start)
         if w == "対象" and j < n and tokens[j] == "p:と" and nxt(j + 1) in SURU_FAMILY:
             action, j, form = "対象とする", j + 1, None
         elif token_kind(t) == "method" or w == "召喚":
@@ -426,14 +429,9 @@ class FrameExtractor:
                     and tokens[k - 3].startswith("d:この:"):
                 return None           # このカードの発動は手札からもできる
             if head == "召喚":
-                parts = []
-                m = k - 2
-                while m >= clause_start and token_kind(tokens[m]) == "method":
-                    parts.insert(0, tokens[m][2:])
-                    m -= 1
-                return "・".join(parts) + "召喚"
+                return self._method_prefix(tokens, k - 2, clause_start)[0] + "召喚"
             if head == "効果":
-                return "使用"
+                return "できる"       # 効果は１ターンに１度しかできない:述語就是 できる
             if head in SAHEN_NOUNS:
                 return head
             break
@@ -444,12 +442,7 @@ class FrameExtractor:
                     and self.word(tokens[i - 3]) == "攻撃":
                 return "攻撃宣言"
             if head == "召喚":
-                parts = []
-                m = i - 3
-                while m >= clause_start and token_kind(tokens[m]) == "method":
-                    parts.insert(0, tokens[m][2:])
-                    m -= 1
-                return "・".join(parts) + "召喚"
+                return self._method_prefix(tokens, i - 3, clause_start)[0] + "召喚"
             if head in SAHEN_NOUNS:
                 return head
         return None
@@ -815,9 +808,7 @@ class FrameExtractor:
         marker_of = {}
         for s_idx, anchors in enumerate(anchors_by_sentence):
             s_start, s_end = sentences[s_idx]
-            if (tokens[s_start].startswith("d:この:")
-                    and self.word(tokens[s_start].split(":", 2)[2]) == "効果"
-                    and s_start + 1 < n and tokens[s_start + 1] == "p:は"):
+            if self._topic_is_this_effect(tokens, sentences[s_idx]):
                 continue
             for k, a in enumerate(anchors):
                 if (a["action"] == "発動" and a["polarity"] != POL_NEG
@@ -836,6 +827,12 @@ class FrameExtractor:
         for s_idx, anchors in enumerate(anchors_by_sentence):
             marker_idx = marker_of.get(s_idx)
             in_activation = marker_idx is not None
+            # 「この効果は…発動できない/発動できる」整句是效果本身的註記(速度/
+            # 時機限制),句內的條件子句也不是這張卡的動作
+            if self._topic_is_this_effect(tokens, sentences[s_idx]) and any(
+                    self.word(t) == "発動"
+                    for t in tokens[sentences[s_idx][0]:sentences[s_idx][1]]):
+                continue
             # 條件鏈:發動句裡條件子句之前的子句都是條件;處理句裡緊接條件子句的
             # 連用/て形子句(存在し、…場合)也是條件
             cond_after = [False] * len(anchors)
@@ -871,15 +868,6 @@ class FrameExtractor:
                 # 発動 本身:發動句的收尾(このカードを発動できる)、速度註記、
                 # 〜するために 都不是動作;有別的對象/來源(〜を発動できない、
                 # デッキから「X」を発動できる)才成框架
-                clause_tokens = tokens[a["clause_start"]:a["head"]]
-                sentence_tokens = tokens[sentences[s_idx][0]:a["head"]]
-                topic_effect = any(
-                    t.startswith("d:この:") and self.word(t.split(":", 2)[2])
-                    == "効果" and k2 + 1 < len(sentence_tokens)
-                    and sentence_tokens[k2 + 1] == "p:は"
-                    for k2, t in enumerate(sentence_tokens))
-                if a["action"] == "発動" and topic_effect and "object" not in args:
-                    continue
                 if a["action"] == "発動" and a["polarity"] != POL_NEG and (
                         a["nominalizer"] in (None, "ため")
                         and not ("object" in args or "source" in args
@@ -887,10 +875,7 @@ class FrameExtractor:
                         or a["nominalizer"] == "ため"
                         or args.get("object") in ("このカード", "この効果")
                         or a["nominalizer"] is None
-                        and (args.get("object") or "").endswith("効果")
-                        or any(t.startswith("d:この:") and self.word(
-                            t.split(":", 2)[2]) == "効果" for t in clause_tokens)
-                        and "object" not in args):
+                        and (args.get("object") or "").endswith("効果")):
                     continue
                 if a["conditional"] or a["action"] == "対象とする":
                     position = POS_COND
@@ -919,20 +904,32 @@ class FrameExtractor:
                     methods = a["action"][:-2].split("・")
                     coordinated += [m + "召喚" for m in methods[:-1]]
                     a["action"] = methods[-1] + "召喚"
-                for extra in coordinated:
-                    frames.append({
-                        "sentence": s_idx, "action": extra,
-                        "object": args.get("object"),
-                        "source": args.get("source"), "goal": args.get("goal"),
-                        "position": position, "polarity": a["polarity"],
-                        "span": list(span), "clause": clause})
-                frames.append({"sentence": s_idx, "action": a["action"],
-                               "object": args.get("object"),
-                               "source": args.get("source"),
-                               "goal": args.get("goal"),
-                               "position": position, "polarity": a["polarity"],
-                               "span": list(span), "clause": clause})
+                for action in coordinated + [a["action"]]:
+                    frames.append({"sentence": s_idx, "action": action,
+                                   "object": args.get("object"),
+                                   "source": args.get("source"),
+                                   "goal": args.get("goal"),
+                                   "position": position,
+                                   "polarity": a["polarity"],
+                                   "span": list(span), "clause": clause})
         return frames
+
+    def _topic_is_this_effect(self, tokens, sentence):
+        """句子以「この効果は」為主題(この効果は相手ターンでも発動できる);括弧裡的
+        註記(…発動できる（この効果は相手ターンでも発動できる）)不算本句的主題。"""
+        start, end = sentence
+        depth = 0
+        for k in range(start, end):
+            t = tokens[k]
+            if t == "（":
+                depth += 1
+            elif t == "）":
+                depth = max(0, depth - 1)
+            elif (depth == 0 and t.startswith("d:この:")
+                  and self.word(t.split(":", 2)[2]) == "効果"
+                  and k + 1 < end and tokens[k + 1] == "p:は"):
+                return True
+        return False
 
     def _inside_relative(self, tokens, start, stop):
         """start 起到下一個助詞/句讀前,出現「定語動詞+名詞」→ 前面的子句在
@@ -959,24 +956,16 @@ class FrameExtractor:
         if a["action"].endswith("素材とする"):
             while k - 1 >= a["clause_start"] and tokens[k] in ("p:または", "・") \
                     and (self.word(tokens[k - 1]) or "").endswith("素材"):
-                parts = []
-                m = k - 2
-                while m >= a["clause_start"] and token_kind(tokens[m]) == "method":
-                    parts.insert(0, tokens[m][2:])
-                    m -= 1
-                out.insert(0, "・".join(parts) + self.word(tokens[k - 1]) + "とする")
-                k = m
+                prefix, m = self._method_prefix(tokens, k - 2, a["clause_start"])
+                out.insert(0, prefix + self.word(tokens[k - 1]) + "とする")
+                k = m - 1
             return out
         while k - 1 >= a["clause_start"] and tokens[k] == "・":
             w = self.word(tokens[k - 1])
             if w == "召喚":
-                parts = []
-                m = k - 2
-                while m >= a["clause_start"] and token_kind(tokens[m]) == "method":
-                    parts.insert(0, tokens[m][2:])
-                    m -= 1
-                out.insert(0, "・".join(parts) + "召喚")
-                k = m
+                prefix, m = self._method_prefix(tokens, k - 2, a["clause_start"])
+                out.insert(0, prefix + "召喚")
+                k = m - 1
             elif w in SAHEN_NOUNS:
                 out.insert(0, w)
                 k -= 2
@@ -1009,9 +998,6 @@ def main():
     with open(TOKENS, encoding="utf-8") as f:
         sentences = json.load(f)
     out = []
-    covered = {"effect": 0, "extra": 0}
-    total = {"effect": 0, "extra": 0}
-    n_frames = 0
     for s in sentences:
         frames = extractor.frames_of_tokens(s["tokens"])
         for k, fr in enumerate(frames):
@@ -1019,16 +1005,17 @@ def main():
         out.append({"card": s["card"], "section": s["section"],
                     "index": s["index"], "stratum": s["stratum"],
                     "frames": frames})
-        total[s["stratum"]] += 1
-        covered[s["stratum"]] += bool(frames)
-        n_frames += len(frames)
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False, indent=0)
         f.write("\n")
+    stats, _position, _polarity, _actions = frame_stats(out)
     for key in ("effect", "extra"):
+        st = stats[key]
         print("%s: 有框架的句 %d / %d(%.2f%%)" % (
-            key, covered[key], total[key], 100.0 * covered[key] / total[key]))
-    print("框架總數 %d;已寫出 %s" % (n_frames, OUT))
+            key, st["covered"], st["records"],
+            100.0 * st["covered"] / max(1, st["records"])))
+    print("框架總數 %d;已寫出 %s" % (
+        sum(st["frames"] for st in stats.values()), OUT))
     return 0
 
 

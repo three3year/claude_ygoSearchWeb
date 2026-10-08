@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """動作框架抽取的行為測試(票 effect-tokenize#05〜#10)。
 
 唯一接縫:一句效果文原文(帶同卡同段上文)→ 動作框架清單(frames.extract)。
@@ -407,8 +408,7 @@ class TestRound3Fixes(unittest.TestCase):
         self.assertEqual(
             extract("①：自分は１枚ドローする。この効果はこのカードが特殊召喚した"
                     "ターンには発動できない。"),
-            [("ドロー", None, None, None, "效果", "肯定"),
-             ("特殊召喚", None, None, None, "條件", "肯定")])
+            [("ドロー", None, None, None, "效果", "肯定")])
 
     def test_coordinated_materials_each_framed(self):
         self.assertEqual(
@@ -463,6 +463,22 @@ class TestRound3Fixes(unittest.TestCase):
             [("行う", "戦闘", None, None, "條件", "肯定"),
              ("特殊召喚", "攻撃力2400以上で守備力1000のモンスター1体", "デッキ",
               None, "效果", "肯定")])
+
+    def test_parenthetical_note_does_not_drop_activation_frames(self):
+        self.assertEqual(
+            extract("①：手札を１枚捨て、相手フィールドのモンスター１体を対象として"
+                    "発動できる（この効果は相手ターンでも発動できる）。"
+                    "そのモンスターを破壊する。"),
+            [("捨てる", "手札", None, None, "代價", "肯定"),
+             ("対象とする", "相手フィールドのモンスター1体", None, None, "條件",
+              "肯定"),
+             ("破壊", "そのモンスター", None, None, "效果", "肯定")])
+
+    def test_this_effect_note_without_activation_anchor(self):
+        self.assertEqual(
+            extract("①：自分は１枚ドローする。この効果は自分フィールドに「試作機」"
+                    "が存在する場合に発動と処理ができる。"),
+            [("ドロー", None, None, None, "效果", "肯定")])
 
 
 if __name__ == "__main__":

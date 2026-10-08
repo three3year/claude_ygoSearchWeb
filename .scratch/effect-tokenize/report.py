@@ -284,12 +284,9 @@ def pct(x):
     return "%.2f%%" % (x * 100)
 
 
-def frames_section():
-    """動作框架覆蓋率(票 05):frames.json 不存在時略過。"""
-    if not os.path.exists(FRAMES):
-        return []
-    with open(FRAMES, encoding="utf-8") as f:
-        frames = json.load(f)
+def frame_stats(frames):
+    """frames.json 的紀錄 → (每 stratum 的 records/covered/frames, 位置 Counter,
+    極性 Counter, 動作 Counter)。frames.py/prepare_view.py 共用,同一把尺。"""
     stats = {k: {"records": 0, "covered": 0, "frames": 0}
              for k, _ in STRATA}
     position, polarity, actions = Counter(), Counter(), Counter()
@@ -302,6 +299,16 @@ def frames_section():
             position[fr["position"]] += 1
             polarity[fr["polarity"]] += 1
             actions[fr["action"]] += 1
+    return stats, position, polarity, actions
+
+
+def frames_section():
+    """動作框架覆蓋率(票 05):frames.json 不存在時略過。"""
+    if not os.path.exists(FRAMES):
+        return []
+    with open(FRAMES, encoding="utf-8") as f:
+        frames = json.load(f)
+    stats, position, polarity, actions = frame_stats(frames)
     lines = [
         "## 動作框架覆蓋率(票 05;儀表板參考)",
         "",

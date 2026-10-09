@@ -771,5 +771,62 @@ class TestCodeReviewFixes(unittest.TestCase):
             self.assertNotIn("topic", f)
 
 
+class TestHandoffKnownItems(unittest.TestCase):
+    """交件後站主要修的已知未修項(約束框架線票 11:第 2、7、9 項)。"""
+
+    DRAW = A("ドロー", "效果", "肯定")
+
+    def test_possible_case_is_a_precondition_step_and_zone_is_source(self):
+        self.assertEqual(
+            rows("レベル４がP召喚可能な場合にEXデッキの表側のこのカードはP召喚できる。",
+                 extra=True),
+            [summon("可以某方式P召喚",
+                    procedure=[{"action": "P召喚可能", "subject": "レベル４"}],
+                    source="EXデッキ")])
+
+    def test_draw_phase_before_draw_is_a_window(self):
+        self.assertEqual(
+            rows("①：自分ドローフェイズのドロー前に、手札のこのカードを相手に見せて"
+                 "発動できる。自分は１枚ドローする。"),
+            [timing("自分", "ドローフェイズのドロー前"), A("見せる", "代價", "肯定"),
+             self.DRAW])
+
+    def test_window_bound_to_past_relative_verb_is_not_timing(self):
+        self.assertEqual(
+            rows("①：自分ドローフェイズに通常のドローをしたこのカードを公開して"
+                 "発動できる。自分は１枚ドローする。"),
+            [A("公開", "代價", "肯定"), self.DRAW])
+
+    def test_possible_case_subject_stops_at_the_previous_comma(self):
+        self.assertEqual(
+            rows("このカードは自分フィールドの「リベリオン」Xモンスターの上に重ねてX召喚"
+                 "する事もでき、レベル７がP召喚可能な場合にEXデッキの表側のこのカードは"
+                 "P召喚できる。", extra=True),
+            [summon("可以某方式P召喚",
+                    procedure=[{"action": "重ねる",
+                                "goal": "自分フィールドの「リベリオン」Xモンスターの上"},
+                               {"action": "P召喚可能", "subject": "レベル７"}],
+                    source="EXデッキ")])
+
+    def test_window_before_passive_or_state_relative_verb_is_still_timing(self):
+        self.assertEqual(
+            rows("①：自分エンドフェイズに自分フィールドのX素材を持った「セイクリッド」"
+                 "Xモンスター２体を対象として発動できる。自分は１枚ドローする。"),
+            [timing("自分", "エンドフェイズ"), A("対象とする", "條件", "肯定"),
+             self.DRAW])
+        self.assertEqual(
+            rows("①：自分・相手のエンドフェイズに相手フィールドにセットされた魔法・罠"
+                 "カード１枚を対象として発動できる。自分は１枚ドローする。"),
+            [timing("雙方", "エンドフェイズ"), A("対象とする", "條件", "肯定"),
+             self.DRAW])
+
+    def test_window_before_stative_relative_verb_is_still_timing(self):
+        self.assertEqual(
+            rows("②：このカードが除外された場合、次のターンのスタンバイフェイズに除外"
+                 "されているこのカードをデッキに戻して発動できる。自分は１枚ドローする。"),
+            [A("除外", "條件", "肯定"), timing(None, "次のターンのスタンバイフェイズ"),
+             A("戻す", "代價", "肯定"), self.DRAW])
+
+
 if __name__ == "__main__":
     unittest.main()

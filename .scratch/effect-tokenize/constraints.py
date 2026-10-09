@@ -39,7 +39,8 @@ FIELD_LABEL = {"period": "期間", "count": "次數", "target": "對象", "shari
 PERIOD_TURN, PERIOD_DUEL, PERIOD_CHAIN = "回合", "決鬥", "同一連鎖"
 # 時機窗口片語允許的詞:玩家、階段名(封閉值域)、ターン、時點與連接
 PLAYERS = {"自分": "自分", "相手": "相手", "お互い": "雙方"}
-WINDOW_WORDS = {"ターン", "開始", "終了", "時", "中", "次"}
+# ドロー/前 給「自分ドローフェイズのドロー前に」(票 11);片語仍須含階段名或 ターン
+WINDOW_WORDS = {"ターン", "開始", "終了", "時", "中", "次", "ドロー", "前"}
 WINDOW_PARTICLES = {"p:の", "p:及び"}
 MODE_LIMIT, MODE_ADD = "限定", "追加"
 FORM_ONLY, FORM_CANNOT = "只能", "不能"
@@ -48,6 +49,8 @@ SUMMON_ONLY, SUMMON_CAN, SUMMON_CANNOT, SUMMON_MUST = (
 # 誓約的主體:自分(預設,不記)、このカード、自分の…;相手は…できない 是效果內容
 PLEDGE_SUBJECTS = ("自分", "このカード")
 SEG_END = ("。", "）", "●")
+# 召喚條件主題的區域定語(EXデッキの表側のこのカードは P召喚できる)記成來源(票 11)
+ZONE_WORDS = {"EXデッキ", "エクストラデッキ", "手札", "墓地", "デッキ"}
 BOTH = "雙方"
 POL_AFFIRM, POL_NEG, POL_CAN = "肯定", "否定", "可能"
 THIS_EFFECT = "この効果"
@@ -89,7 +92,8 @@ def describe_action(frame):
 def _procedure_text(step):
     args = [step.get("object"), step.get("source") and step["source"] + "から",
             step.get("goal") and step["goal"] + "へ"]
-    return " ".join([step["action"]] + [a for a in args if a])
+    head = ([step["subject"] + "が"] if step.get("subject") else []) + [step["action"]]
+    return " ".join(head + [a for a in args if a])
 
 
 class ConstraintFinder:
@@ -295,10 +299,40 @@ class ConstraintFinder:
                     for a in anchors)):
                 i += 1
                 continue
+            if not standalone and self._window_in_relative(tokens, hit[3], marker_head):
+                i += 1
+                continue
             player, window, mode, end = hit
             found.append(self._take(self._timing(player, window, mode), i, end))
             i = end
         return found
+
+    def _window_in_relative(self, tokens, start, stop):
+        """窗口片語之後、同一讀點段內出現「主動過去形的事件定語動詞+名詞」(自分ドロー
+        フェイズに通常のドローをしたこのカード)→ 時間語黏在最近的事件述語上,窗口修飾的是
+        那個定語動詞,不是發動窗口(票 11)。狀態不帶走窗口:〜ている(次のターンのスタンバイ
+        フェイズに除外されているこのカードを…戻して発動できる)、被動結果(エンドフェイズに
+        相手フィールドにセットされた魔法・罠カードを対象として)、狀態動詞(エンドフェイズに
+        X素材を持ったXモンスターを対象として)的窗口仍是時機。"""
+        from frames import STATE_LEMMAS, SURU_FAMILY, _PASSIVE_RE, verb_form
+        x = self.x
+        for k in range(start, stop - 1):
+            t = tokens[k]
+            if t == "、":
+                return False
+            w = x.word(t)
+            if w is None:
+                continue
+            if w in SURU_FAMILY:
+                event_past = w.endswith("した") and not w.endswith("された")
+            else:
+                event_past = x.lex.is_verb(t) \
+                    and verb_form(w, x.lex.lemma_of[t]) == "past" \
+                    and x.lex.lemma_of[t] not in STATE_LEMMAS \
+                    and not _PASSIVE_RE.search(w)
+            if event_past and x.is_noun_like(tokens[k + 1]):
+                return True
+        return False
 
     def this_effect_notes(self, tokens, sentence, anchors):
         """「この効果は…」註記句(票 03;整句或括弧裡):窗口片語+発動できる/できない 出
@@ -543,11 +577,19 @@ class ConstraintFinder:
                         else a["clause_start"]
                     method = self._text(m_start, d)
                     break
-            procedure = []
+            steps = []
+            pre_end = self._possible_case(tokens, seg_start, a["head"], steps)
             for b in pending:
                 step = {"action": self._action_name(tokens, b)}
                 step.update(self._anchor_args(tokens, b, b["clause_start"]))
-                procedure.append(step)
+                steps.append((b["head"], step))
+            procedure = [step for _pos, step in sorted(steps, key=lambda s: s[0])]
+            if "source" not in args and topic_at is not None:
+                # 主題的區域定語(EXデッキの表側のこのカードは)是召喚來源(票 11)
+                t0 = max(pre_end, a["clause_start"])
+                if t0 + 1 < topic_at and x.word(tokens[t0]) in ZONE_WORDS \
+                        and tokens[t0 + 1] == "p:の":
+                    args["source"] = x.surface(tokens[t0])
             span_start = seg_start
             for pf in prefixes:
                 if seg_start <= pf["span"][0] < a["head"] and pf.get("topic"):
@@ -559,6 +601,27 @@ class ConstraintFinder:
                  "source": args.get("source")}, span_start, a["tail"]))
             seg_start, pending = a["tail"], []
         return found
+
+    def _possible_case(self, tokens, start, stop, steps):
+        """「〜が X召喚可能な場合に」(レベル４がP召喚可能な場合にEXデッキの表側のこの
+        カードはP召喚できる):可能 不是述語、沒有錨點,召喚法本身的前提記成手續第一步
+        (動作 X召喚可能、主體 が 前到上一個讀點為止的片語;票 11)。步驟連同位置加進 steps,
+        回傳片語結束位置(沒有時 start)。"""
+        x = self.x
+        for c in range(start + 2, stop - 3):
+            if x.word(tokens[c]) != "可能" or x.word(tokens[c - 1]) != "召喚" \
+                    or x.word(tokens[c + 1]) != "な" \
+                    or x.word(tokens[c + 2]) != "場合" or tokens[c + 3] != "p:に":
+                continue
+            prefix, m0 = x._method_prefix(tokens, c - 2, start)
+            step = {"action": prefix + "召喚可能"}
+            if m0 - 1 > start and tokens[m0 - 1] == "p:が":
+                s0 = max([start] + [h + 1 for h in range(start, m0 - 1)
+                                    if tokens[h] == "、"])
+                step["subject"] = self._text(s0, m0 - 1)
+            steps.append((c, step))
+            return c + 4
+        return start
 
     # ── 素材 ──
     def materials(self, tokens, sentence, anchors, card_type):

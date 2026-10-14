@@ -46,8 +46,16 @@ def count(period, count, target, sharing=None):
              sharing=sharing)
 
 
-def timing(player, window, mode="限定", polarity="肯定"):
-    return C("時機", player=player, window=window, mode=mode, polarity=polarity)
+def timing(player, window, mode="限定", polarity="肯定", turn=None):
+    return C("時機", player=player, window=window, turn=turn, mode=mode,
+             polarity=polarity)
+
+
+def windows(text, context="", **kw):
+    """動作框架的 (動作, 窗口, 回合條件):frame-args-v2 票 04 的處理句欄位。"""
+    return [(f["action"], f.get("window"), f.get("turn"))
+            for f in frames.extract(text, context, **kw)
+            if f["kind"] == constraints.KIND_ACTION]
 
 
 def event_turn(event, banned="発動"):
@@ -291,10 +299,12 @@ class TestTimingAndEventTurn(unittest.TestCase):
             [A("成功", "條件", "肯定"), self.DRAW])
 
     def test_event_defined_turn_is_not_a_timing(self):
+        """以事件界定的回合(只有回合沒有階段)不出時機;事件本身照舊是條件框架(v2-round1
+        起「〜した自分・相手ターン」的 ターン 也當形式名詞,與「〜したターン」一致)。"""
         self.assertEqual(
             rows("②：モンスターが戦闘で破壊された自分・相手ターンに発動できる。"
                  "自分は１枚ドローする。"),
-            [self.DRAW])
+            [A("破壊", "條件", "肯定"), self.DRAW])
 
     def test_option_label_turn_is_not_a_timing(self):
         got = frames.extract("①：以下の効果を発動できる。\n●相手ターン：自分は１枚ドローする。")
@@ -824,8 +834,100 @@ class TestHandoffKnownItems(unittest.TestCase):
         self.assertEqual(
             rows("②：このカードが除外された場合、次のターンのスタンバイフェイズに除外"
                  "されているこのカードをデッキに戻して発動できる。自分は１枚ドローする。"),
-            [A("除外", "條件", "肯定"), timing(None, "次のターンのスタンバイフェイズ"),
+            [A("除外", "條件", "肯定"),
+             timing(None, "スタンバイフェイズ", turn="次のターン"),
              A("戻す", "代價", "肯定"), self.DRAW])
+
+
+class TestTurnCondition(unittest.TestCase):
+    """frame-args-v2 票 04:「(回合限定詞)の(階段)に」收尾的發動窗口出時機——窗口只記
+    階段、回合條件記限定詞原文(そのターン/次のターン/〜したターン);事件子句照舊另出條件
+    框架;處理句裡的同型片語記在動作框架的窗口與回合條件欄。只有回合沒有階段、觸發子句
+    內的回合仍不出時機(2026-10-09 第 7 項裁定)。"""
+
+    DRAW = A("ドロー", "效果", "肯定")
+
+    def test_event_turn_end_phase_gives_timing_and_condition(self):
+        self.assertEqual(
+            rows("③：このカードが召喚・リバースしたターンのエンドフェイズに発動する。"
+                 "このカードを手札に戻す。"),
+            [timing(None, "エンドフェイズ", turn="このカードが召喚・リバースしたターン"),
+             A("召喚", "條件", "肯定"), A("リバース", "條件", "肯定"),
+             A("戻す", "效果", "肯定")])
+
+    def test_sono_turn_main_phase_one(self):
+        self.assertEqual(
+            rows("①：自分フィールドにカードが存在しない場合、そのターンのメインフェイズ１に"
+                 "発動できる。自分は１枚ドローする。"),
+            [A("存在", "條件", "否定"), timing(None, "メインフェイズ１", turn="そのターン"),
+             self.DRAW])
+
+    def test_event_turn_own_main_phase_keeps_player(self):
+        self.assertEqual(
+            rows("①：このカードを発動したターンの自分メインフェイズに発動できる。"
+                 "自分は１枚ドローする。"),
+            [timing("自分", "メインフェイズ", turn="このカードを発動したターン"), self.DRAW])
+
+    def test_relative_verb_before_next_turn_is_not_a_barrier(self):
+        self.assertEqual(
+            rows("②：このカードが除外された次のターンのスタンバイフェイズに発動できる。"
+                 "自分は１枚ドローする。"),
+            [timing(None, "スタンバイフェイズ", turn="このカードが除外された次のターン"),
+             A("除外", "條件", "肯定"), self.DRAW])
+
+    def test_event_turn_with_player_keeps_condition_and_player(self):
+        """v2-round1:「〜した相手ターンのエンドフェイズに」——事件另出條件框架、回合欄記 相手。"""
+        self.assertEqual(
+            rows("②：このカードを特殊召喚した相手ターンのエンドフェイズに発動できる。"
+                 "自分は１枚ドローする。"),
+            [timing("相手", "エンドフェイズ", turn="このカードを特殊召喚した相手ターン"),
+             A("特殊召喚", "條件", "肯定"), self.DRAW])
+
+    def test_event_turn_spanning_connected_clauses(self):
+        """v2-round1:「破壊され墓地へ送られたターン」的限定詞原文連同前面的連用子句。"""
+        self.assertEqual(
+            rows("③：このカードが戦闘・効果で破壊され墓地へ送られたターンのエンドフェイズに"
+                 "発動できる。自分は１枚ドローする。"),
+            [timing(None, "エンドフェイズ",
+                    turn="このカードが戦闘・効果で破壊され墓地へ送られたターン"),
+             A("破壊", "條件", "肯定"), A("送る", "條件", "肯定"), self.DRAW])
+
+    def test_next_turn_phase_uses_the_same_format(self):
+        self.assertEqual(
+            rows("②：次の相手ターンのエンドフェイズに発動できる。自分は１枚ドローする。"),
+            [timing("相手", "エンドフェイズ", turn="次の相手ターン"), self.DRAW])
+
+    def test_processing_sentence_records_window_and_turn_on_the_action(self):
+        text = "①：このカードは特殊召喚したターンのエンドフェイズに破壊される。"
+        self.assertEqual(rows(text),
+                         [A("特殊召喚", "條件", "肯定"), A("破壊", "效果", "肯定")])
+        self.assertEqual(windows(text),
+                         [("特殊召喚", None, None),
+                          ("破壊", "エンドフェイズ", "特殊召喚したターン")])
+
+    def test_processing_sentence_kono_turn_phase(self):
+        self.assertEqual(
+            windows("①：自分は１枚ドローする。このターンのエンドフェイズにこのカードを破壊する。"),
+            [("ドロー", None, None), ("破壊", "エンドフェイズ", "このターン")])
+
+    def test_turn_without_phase_is_still_not_a_timing(self):
+        self.assertEqual(
+            rows("②：このカードが特殊召喚したターンに発動できる。自分は１枚ドローする。"),
+            [A("特殊召喚", "條件", "肯定"), self.DRAW])
+
+    def test_event_turn_phase_inside_trigger_clause_is_not_a_timing(self):
+        """code review:「〜したターンのエンドフェイズに相手が…した場合に発動できる」的階段
+        仍在觸發子句裡,不出時機(第 7 項裁定)。"""
+        self.assertEqual(
+            rows("①：このカードが特殊召喚したターンのエンドフェイズに相手がモンスターを"
+                 "特殊召喚した場合に発動できる。自分は１枚ドローする。"),
+            [A("特殊召喚", "條件", "肯定"), A("特殊召喚", "條件", "肯定"), self.DRAW])
+
+    def test_turn_inside_trigger_clause_is_still_not_a_timing(self):
+        self.assertEqual(
+            rows("①：相手ターンに自分がモンスターの特殊召喚に成功した場合に発動できる。"
+                 "自分は１枚ドローする。"),
+            [A("成功", "條件", "肯定"), self.DRAW])
 
 
 if __name__ == "__main__":

@@ -228,7 +228,7 @@ class TestRound1Fixes(unittest.TestCase):
         self.assertEqual(
             extract("①：さらに相手フィールドのモンスター１体を選んで破壊する。"),
             [("選ぶ", "相手フィールドのモンスター1体", None, None, "效果", "肯定"),
-             ("破壊", None, None, None, "效果", "肯定")])
+             ("破壊", "相手フィールドのモンスター1体", None, None, "效果", "肯定")])
 
     def test_coordinated_summon_predicates_both_framed(self):
         self.assertEqual(
@@ -457,8 +457,9 @@ class TestRound3Fixes(unittest.TestCase):
             extract("①：デッキからフィールド魔法カード１枚を選び、手札に加えるか"
                     "自分フィールドに発動する。"),
             [("選ぶ", "フィールド魔法カード1枚", "デッキ", None, "效果", "肯定"),
-             ("加える", None, None, "手札", "效果", "肯定"),
-             ("発動", None, None, "自分フィールド", "效果", "肯定")])
+             ("加える", "フィールド魔法カード1枚", "デッキ", "手札", "效果", "肯定"),
+             ("発動", "フィールド魔法カード1枚", "デッキ", "自分フィールド", "效果",
+              "肯定")])
 
     def test_noun_ga_dekinai_and_motanai_relative(self):
         self.assertEqual(
@@ -559,7 +560,9 @@ class TestOptions(unittest.TestCase):
              ("除外", "效果", 2, None)])
 
     def test_enumerated_items_do_not_frame(self):
-        """4079728 ②:選ぶ 的對象仍是「以下のモンスターの内１体」,列舉項不出框架。"""
+        """4079728 ②:選ぶ 的對象仍是「以下のモンスターの内１体」,列舉項不出框架
+        (frame-args-v2 後列舉項掛在列舉欄、か 兩邊回填對象與來源,見 TestEnumeration/
+        TestBackfill)。"""
         self.assertEqual(
             extract("②：このカードのX素材を２つ取り除いて発動できる。デッキから以下の"
                     "モンスターの内１体を選び、手札に加えるか特殊召喚する。\n"
@@ -568,8 +571,8 @@ class TestOptions(unittest.TestCase):
                     "●「アルバスの落胤」またはそのカード名が記されたモンスター"),
             [("取り除く", "このカードのX素材", None, None, "代價", "肯定"),
              ("選ぶ", "以下のモンスターの内1体", "デッキ", None, "效果", "肯定"),
-             ("加える", None, None, "手札", "效果", "肯定"),
-             ("特殊召喚", None, None, None, "效果", "肯定")])
+             ("加える", "以下のモンスターの内1体", "デッキ", "手札", "效果", "肯定"),
+             ("特殊召喚", "以下のモンスターの内1体", "デッキ", None, "效果", "肯定")])
 
     def test_unsplit_options_same_frames_plus_option_column(self):
         """269510 ③(未拆 ●):框架與合併前相同,只多選項欄。"""
@@ -641,6 +644,202 @@ class TestRound5Fixes(unittest.TestCase):
             [("対象とする", "このカードがX素材としているモンスター", None, None,
               "條件", "肯定"),
              ("破壊", "そのモンスター", None, None, "效果", "肯定")])
+
+
+def enumerations(text, context=""):
+    """框架 → (動作或類別, 對象, 列舉):frame-args-v2 票 01 的列舉欄(兩種框架都看)。"""
+    return [(f.get("action") or f["category"], f.get("object"), f.get("enumeration"))
+            for f in frames.extract(text, context)]
+
+
+def groups(text, context=""):
+    """動作框架 → (動作, 連接, 群組):票 02。"""
+    return [(f["action"], f.get("link"), f.get("group")) for f in actions(text, context)]
+
+
+def filled(text, context=""):
+    """動作框架 → (動作, 對象, 來源, 目的, 回填):票 03。"""
+    return [(f["action"], f.get("object"), f.get("source"), f.get("goal"),
+             f.get("backfill")) for f in actions(text, context)]
+
+
+SPRIGGANS = ("②：このカードのX素材を２つ取り除いて発動できる。デッキから以下のモンスターの内"
+             "１体を選び、手札に加えるか特殊召喚する。\n●「スプリガンズ」モンスター\n"
+             "●「セリオンズ」モンスター\n●「アルバスの落胤」またはそのカード名が記された"
+             "モンスター")
+SPRIGGANS_ITEMS = ["「スプリガンズ」モンスター", "「セリオンズ」モンスター",
+                   "「アルバスの落胤」またはそのカード名が記されたモンスター"]
+
+
+class TestEnumeration(unittest.TestCase):
+    """frame-args-v2 票 01:純列舉項(● 項全部沒有框架)掛進母句「以下の」所指框架的列舉欄,
+    對象欄維持原文字面;部分 ● 項有框架的不掛。"""
+
+    def test_items_attach_to_the_ika_no_object_frame(self):
+        self.assertEqual(
+            enumerations(SPRIGGANS),
+            [("取り除く", "このカードのX素材", None),
+             ("選ぶ", "以下のモンスターの内1体", SPRIGGANS_ITEMS),
+             ("加える", "以下のモンスターの内1体", None),
+             ("特殊召喚", "以下のモンスターの内1体", None)])
+
+    def test_items_fall_back_to_the_frame_whose_clause_has_ika(self):
+        self.assertEqual(
+            enumerations("②：自分フィールドの以下のモンスターが戦闘・効果で破壊される場合、"
+                         "代わりにフィールド・墓地のこのカードを除外できる。\n"
+                         "●「ジャンク・ウォリアー」のカード名が記されたモンスター\n"
+                         "●元々のカード名に「ウォリアー」を含むSモンスター"),
+            [("破壊", None, ["「ジャンク・ウォリアー」のカード名が記されたモンスター",
+                           "元々のカード名に「ウォリアー」を含むSモンスター"]),
+             ("除外", "フィールド・墓地のこのカード", None)])
+
+    def test_item_text_drops_the_bullet_and_trailing_period(self):
+        self.assertEqual(
+            enumerations("②：自分メインフェイズに発動できる。デッキから以下のカードの内いずれか"
+                         "１枚を手札に加える。\n●「海」。\n●「リバイアサン」魔法・罠カード"),
+            [("時機", None, None),
+             ("加える", "以下のカードの内いずれか1枚", ["「海」", "「リバイアサン」魔法・罠カード"])])
+
+    def test_partial_enumeration_is_not_attached(self):
+        self.assertEqual(
+            enumerations("②：デッキから以下のカードの内１枚を手札に加える。\n●「海」\n"
+                         "●自分フィールドのカード１枚を破壊する。"),
+            [("加える", "以下のカードの内1枚", None), ("破壊", "自分フィールドのカード1枚", None)])
+
+
+class TestLinkAndGroup(unittest.TestCase):
+    """frame-args-v2 票 02:か 並列的述語各自一個框架,都記 連接=或、群組=n(一句效果句內
+    從 1 起編);名詞間的 か 與 その後 不記。"""
+
+    def test_ka_coordinated_predicates_share_a_group(self):
+        self.assertEqual(
+            groups("①：デッキからモンスター１体を手札に加えるか特殊召喚する。"),
+            [("加える", "或", 1), ("特殊召喚", "或", 1)])
+
+    def test_three_way_ka(self):
+        self.assertEqual(
+            groups("①：デッキからカード１枚を手札に加えるか特殊召喚するか墓地へ送る。"),
+            [("加える", "或", 1), ("特殊召喚", "或", 1), ("送る", "或", 1)])
+
+    def test_groups_are_numbered_in_order_within_the_effect_clause(self):
+        self.assertEqual(
+            groups("①：手札を１枚捨てるかこのカードをリリースして発動できる。デッキから"
+                   "カード１枚を手札に加えるか特殊召喚する。"),
+            [("捨てる", "或", 1), ("リリース", "或", 1),
+             ("加える", "或", 2), ("特殊召喚", "或", 2)])
+
+    def test_ka_between_nouns_is_not_a_group(self):
+        self.assertEqual(
+            groups("①：デッキからモンスターか魔法カード１枚を手札に加える。"),
+            [("加える", None, None)])
+        self.assertEqual(
+            extract("①：デッキからモンスターか魔法カード１枚を手札に加える。"),
+            [("加える", "モンスターか魔法カード1枚", "デッキ", "手札", "效果", "肯定")])
+
+    def test_sonogo_is_not_a_link(self):
+        self.assertEqual(
+            groups("①：デッキからカード１枚を手札に加える。その後、自分は１枚ドローする。"),
+            [("加える", None, None), ("ドロー", None, None)])
+
+    def test_ka_member_is_the_head_of_a_te_form_chain(self):
+        """v2-round1:「戻すか召喚条件を無視して特殊召喚する」的右成員是鏈的收尾 特殊召喚,
+        不是緊接 か 的 無視して;回填也落在 特殊召喚。"""
+        text = ("①：自分の墓地のモンスター１体を対象として発動できる。そのモンスターを"
+                "EXデッキに戻すか召喚条件を無視して特殊召喚する。")
+        self.assertEqual(
+            groups(text),
+            [("対象とする", None, None), ("戻す", "或", 1), ("無視", None, None),
+             ("特殊召喚", "或", 1)])
+        self.assertEqual(
+            filled(text)[1:],
+            [("戻す", "そのモンスター", None, "EXデッキ", None),
+             ("無視", "召喚条件", None, None, None),
+             ("特殊召喚", "そのモンスター", None, None, ["object"])])
+
+    def test_ka_chain_does_not_cross_a_comma(self):
+        """code review:「戻すか墓地へ送り、相手に…与える」的第二成員是讀點前的 送る,
+        不跨過讀點跳到 与える。"""
+        self.assertEqual(
+            groups("①：そのカードをデッキに戻すか墓地へ送り、相手に５００ダメージを与える。"),
+            [("戻す", "或", 1), ("送る", "或", 1), ("与える", None, None)])
+
+    def test_nakaguro_coordinated_predicates_are_not_a_ka_group(self):
+        """召喚・リバースした 是一個錨點出兩個框架,不是 か 並列。"""
+        self.assertEqual(
+            groups("③：このカードが召喚・リバースしたターンのエンドフェイズに発動する。"
+                   "このカードを手札に戻す。"),
+            [("召喚", None, None), ("リバース", None, None), ("戻す", None, None)])
+
+
+class TestBackfill(unittest.TestCase):
+    """frame-args-v2 票 03:か 群組與選ぶ鏈之後缺對象的述語從前面接過對象與來源,框架記
+    回填欄;到句號、有對象的述語、新主題 は 為止;從不帶對象的動作不填;不填目的。"""
+
+    def test_select_chain_fills_object_and_source(self):
+        self.assertEqual(
+            filled("①：墓地から「SPYRAL－ダンディ」１体を選んで特殊召喚する。"),
+            [("選ぶ", "「SPYRAL－ダンディ」1体", "墓地", None, None),
+             ("特殊召喚", "「SPYRAL－ダンディ」1体", "墓地", None, ["object", "source"])])
+
+    def test_ka_group_members_are_all_filled(self):
+        self.assertEqual(
+            filled(SPRIGGANS)[1:],
+            [("選ぶ", "以下のモンスターの内1体", "デッキ", None, None),
+             ("加える", "以下のモンスターの内1体", "デッキ", "手札", ["object", "source"]),
+             ("特殊召喚", "以下のモンスターの内1体", "デッキ", None, ["object", "source"])])
+
+    def test_ka_group_without_select_fills_from_the_first_member(self):
+        self.assertEqual(
+            filled("①：デッキからモンスター１体を手札に加えるか特殊召喚する。"),
+            [("加える", "モンスター1体", "デッキ", "手札", None),
+             ("特殊召喚", "モンスター1体", "デッキ", None, ["object", "source"])])
+
+    def test_chain_fills_every_lacking_predicate_until_the_period(self):
+        self.assertEqual(
+            filled("①：手札からカード１枚を選んで墓地へ送り、除外する。自分は１枚ドローする。"),
+            [("選ぶ", "カード1枚", "手札", None, None),
+             ("送る", "カード1枚", "手札", "墓地", ["object", "source"]),
+             ("除外", "カード1枚", "手札", None, ["object", "source"]),
+             ("ドロー", None, None, None, None)])
+
+    def test_predicate_with_its_own_object_stops_the_chain(self):
+        self.assertEqual(
+            filled("①：デッキからモンスター１体を選んで特殊召喚し、相手フィールドのカード"
+                   "１枚を破壊し、墓地へ送る。"),
+            [("選ぶ", "モンスター1体", "デッキ", None, None),
+             ("特殊召喚", "モンスター1体", "デッキ", None, ["object", "source"]),
+             ("破壊", "相手フィールドのカード1枚", None, None, None),
+             ("送る", None, None, "墓地", None)])
+
+    def test_predicate_with_a_topic_stops_the_chain(self):
+        self.assertEqual(
+            filled("①：デッキからモンスター１体を選んで特殊召喚し、そのモンスターの攻撃力は"
+                   "５００アップする。"),
+            [("選ぶ", "モンスター1体", "デッキ", None, None),
+             ("特殊召喚", "モンスター1体", "デッキ", None, ["object", "source"]),
+             ("アップ", None, None, None, None)])
+        self.assertEqual(
+            filled("①：デッキからカード１枚を選んで相手に見せ、相手はその中から１枚選ぶ。"),
+            [("選ぶ", "カード1枚", "デッキ", None, None),
+             ("見せる", "カード1枚", "デッキ", "相手", ["object", "source"]),
+             ("選ぶ", None, "その中", None, None)])
+
+    def test_intransitive_action_is_not_filled(self):
+        self.assertEqual(
+            filled("①：デッキからカード１枚を選んで墓地へ送り、１枚ドローする。"),
+            [("選ぶ", "カード1枚", "デッキ", None, None),
+             ("送る", "カード1枚", "デッキ", "墓地", ["object", "source"]),
+             ("ドロー", None, None, None, None)])
+
+    def test_backfill_lists_only_the_filled_fields(self):
+        self.assertEqual(
+            filled("①：自分の墓地のモンスター１体を選んで特殊召喚する。"),
+            [("選ぶ", "自分の墓地のモンスター1体", None, None, None),
+             ("特殊召喚", "自分の墓地のモンスター1体", None, None, ["object"])])
+        self.assertEqual(
+            filled("①：デッキからモンスター１体を選び、墓地から特殊召喚する。"),
+            [("選ぶ", "モンスター1体", "デッキ", None, None),
+             ("特殊召喚", "モンスター1体", "墓地", None, ["object"])])
 
 
 if __name__ == "__main__":

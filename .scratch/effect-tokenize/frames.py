@@ -32,6 +32,13 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
     count/period/window  可選(約束框架票 06):效果內容的次數(１度だけ、もう１度、
               主題後的 １ターンに１度、)與期間、非發動句的階段窗口(追加召喚的
               自分メインフェイズに)——這些不是約束框架
+    turn      可選(frame-args-v2 票 04):處理句裡「〜したターン/そのターン/次のターン
+              の(階段)に」的回合限定詞原文,與 window(階段)並列
+    enumeration  可選(票 01):純列舉項(● 項全部沒有框架)掛在母句「以下の」所指框架上的
+              有序字串清單;對象欄不改字
+    link/group   可選(票 02):か 並列的述語各記 連接=或、群組=n(一句效果句內從 1 起編)
+    backfill  可選(票 03):か 群組與選ぶ鏈之後缺對象的述語從前面接過 object/source,
+              此欄列出被填的欄名;值是上游框架的字面
 
 單位是效果句(一個編號效果的全文,連同它的 ● 選項;tokenize.py 的 assemble 把
 拆開的領起句與子效果句接回一段):選項邊界 token「●」與「。」同樣結束一句,
@@ -51,7 +58,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from constraints import KIND_ACTION, KIND_CONSTRAINT, ConstraintFinder  # noqa: E402
+from constraints import (BACKFILL_FIELDS, KIND_ACTION, KIND_CONSTRAINT,  # noqa: E402
+                         ConstraintFinder)
 from report import frame_stats, token_kind  # noqa: E402
 
 LEXICON = os.path.join(HERE, "lexicon.json")
@@ -157,6 +165,15 @@ _TE_GODAN_RE = re.compile(r"(って|いて|んで|して)$")
 POS_COST, POS_EFFECT, POS_COND = "代價", "效果", "條件"
 POL_AFFIRM, POL_NEG, POL_CAN = "肯定", "否定", "可能"
 OPTION = "●"                  # 選項邊界 token(tokenize.OPTION)
+# ── 第二版論元(frame-args-v2)──
+LINK_OR = "或"                # か 並列的連接值(票 02,值域只有這一個)
+SELECT_ACTIONS = {"選ぶ", "選択"}   # 選ぶ鏈的起點(票 03)
+# 回填不碰的動作(票 03):全語料實際上不帶對象的動作——2026-10-14 從 frames.json 算一次:
+# 動作框架 ≥ 20 個且帶對象的比例 ≤ 5%(嚴格「從不帶」會漏掉 ドロー:舊式卡文「このカードを
+# ドローした時」18 例);「〜なる」家族(になる/同じになる/倍になる…)另以字尾判
+NO_OBJECT_ACTIONS = {"存在", "成功", "ドロー", "離れる", "無効化", "攻撃宣言", "リバース",
+                     "戻る", "加わる", "素材にする", "違う", "行く", "上がる", "異なる",
+                     "チェーン", "L素材にする", "S素材にする"}
 LABEL_MAX_CHARS = 30          # ●標籤「●…：」冒號前的最大字數(與 tokenize._LABEL 同)
 
 
@@ -509,9 +526,17 @@ class FrameExtractor:
                 and self.word(tokens[j + 1]) in NOMINALIZERS:
             j += 1                    # 〜としている場合
             form = "dict"
+        turn_at = self._event_turn_after(tokens, j) if form in ("past", "neg", "dict") \
+            else None
         if j < n and self.word(tokens[j]) in NOMINALIZERS:
             nominalizer = self.word(tokens[j])
             j += 1
+        elif turn_at is not None:
+            # 〜した次のターン/〜された自分・相手ターン:ターン 仍是形式名詞(事件界定的
+            # 回合),與「〜したターン」一致出條件框架;中間的 次の/玩家 留在子句裡
+            # (v2-round1)
+            nominalizer = "ターン"
+            j = turn_at + 1
         elif form not in ("te", "stem", "cond") and j < n \
                 and self.is_noun_like(tokens[j]):
             return None               # 定語:動詞直接修飾後面的名詞
@@ -529,6 +554,24 @@ class FrameExtractor:
                 "passive": passive, "nominalizer": nominalizer,
                 "fold": fold, "conditional": conditional
                 or nominalizer in CONDITIONAL_NOMINALIZERS}
+
+    def _event_turn_after(self, tokens, j):
+        """tokens[j] 起是否為「(次 の)(自分/相手/お互い(・)…)ターン」→ ターン 的位置,
+        否則 None。動詞後直接接這段時,ターン 是事件界定的回合的形式名詞。"""
+        n = len(tokens)
+        k = j
+        if k + 1 < n and self.word(tokens[k]) == "次" and tokens[k + 1] == "p:の":
+            k += 2
+        seen_player = False
+        while k < n and (self.word(tokens[k]) in ("自分", "相手", "お互い")
+                         or tokens[k] == "・" and seen_player):
+            seen_player = seen_player or self.word(tokens[k]) is not None
+            k += 1
+        if k < n and seen_player and tokens[k] == "p:の":
+            k += 1                    # お互いのターン
+        if k > j and k < n and self.word(tokens[k]) == "ターン":
+            return k
+        return None
 
     # ── 論元 ──
     def chunks(self, tokens, start, stop):
@@ -912,6 +955,7 @@ class FrameExtractor:
                     break
 
         frames = []
+        made = []                    # (句序, 錨點序, 錨點, 動作框架):第二版論元的後處理用
         for s_idx, anchors in enumerate(anchors_by_sentence):
             marker_idx = marker_of.get(s_idx)
             in_activation = marker_idx is not None
@@ -1007,24 +1051,156 @@ class FrameExtractor:
                     a["action"] = methods[-1] + "召喚"
                 # 效果內容的次數/窗口(１度だけ、追加召喚的 自分メインフェイズに)記在
                 # 動作框架自己身上(約束框架票 06)
-                fields = self.finder.action_fields(tokens, a["clause_start"],
-                                                   a["head"], in_activation)
+                fields = self.finder.action_fields(
+                    tokens, a["clause_start"], a["head"], in_activation,
+                    prev_anchor=anchors[k - 1] if k else None)
                 for action in coordinated + [a["action"]]:
-                    frames.append(dict({"kind": KIND_ACTION, "sentence": s_idx,
-                                        "action": action,
-                                        "object": args.get("object"),
-                                        "source": args.get("source"),
-                                        "goal": args.get("goal"),
-                                        "position": position,
-                                        "polarity": a["polarity"],
-                                        "option": option_of[s_idx],
-                                        "label": label_of[s_idx],
-                                        "span": list(span), "clause": clause},
-                                       **fields))
+                    frame = dict({"kind": KIND_ACTION, "sentence": s_idx,
+                                  "action": action,
+                                  "object": args.get("object"),
+                                  "source": args.get("source"),
+                                  "goal": args.get("goal"),
+                                  "position": position,
+                                  "polarity": a["polarity"],
+                                  "option": option_of[s_idx],
+                                  "label": label_of[s_idx],
+                                  "span": list(span), "clause": clause},
+                                 **fields)
+                    frames.append(frame)
+                    made.append((s_idx, k, a, frame))
+        # frame-args-v2:か 並列的連接與群組(票 02)→ 回填對象與來源(票 03)→ 純列舉項
+        # 掛進列舉欄(票 01)
+        self._link_groups(tokens, anchors_by_sentence, made, marker_of)
+        self._backfill(tokens, made)
+        self._attach_enumeration(tokens, sentences, option_of, frames, text_of)
         # 依原文位置混排;同起點時約束框架在前(穩定排序保住並列述語的順序)
         frames.sort(key=lambda f: (f["sentence"], f["span"][0],
                                    f["kind"] != KIND_CONSTRAINT))
         return frames
+
+    # ── 第二版論元(frame-args-v2 票 01〜03)──
+    def _link_groups(self, tokens, anchors_by_sentence, made, marker_of):
+        """か 並列(票 02):同一句裡「述語か述語(か述語)する」——錨點尾到子句尾之間只有 か
+        (可帶讀點)且下一個錨點的子句就從那裡起——的成員各自仍是一個框架,全部記
+        連接=或、群組=n(一句效果句內依出現順序從 1 起編)。名詞間的 か 不在錨點尾,不算;
+        沒出框架的成員(被約束框架吃掉、発動 收尾)不計,剩不到兩個成員時不成群組。"""
+        group_no = 0
+        for s_idx, anchors in enumerate(anchors_by_sentence):
+            def linked(k):
+                a = anchors[k]
+                return (k + 1 < len(anchors)
+                        and tokens[a["end"]:a["tail"]] in (["p:か"], ["p:か", "、"])
+                        and anchors[k + 1]["clause_start"] == a["tail"])
+
+            marker = marker_of.get(s_idx)
+            chains, chain, k = [], [], 0
+            while k < len(anchors):
+                if linked(k):
+                    chain = chain or [k]
+                    # か 之後的成員是那個選項的收尾述語:跳過て形/連用形的修飾鏈
+                    # (戻すか召喚条件を無視して|特殊召喚する → 特殊召喚;v2-round1),
+                    # 不跨過讀點(戻すか墓地へ送り、…与える 的成員是 送る)、不跨過發動句
+                    # 的收尾(〜して発動できる)
+                    m = k + 1
+                    while m + 1 < len(anchors) and anchors[m]["form"] in ("te", "stem") \
+                            and "、" not in tokens[anchors[m]["end"]:anchors[m]["tail"]] \
+                            and (marker is None or m + 1 < marker):
+                        m += 1
+                    chain.append(m)
+                    k = m
+                    continue
+                if chain:
+                    chains.append(chain)
+                    chain = []
+                k += 1
+            if chain:
+                chains.append(chain)
+            for chain in chains:
+                members = [(kk, fr) for si, kk, _a, fr in made
+                           if si == s_idx and kk in chain]
+                # 成員得來自兩個以上的錨點(召喚・リバース 的「・」並列是一個錨點出兩個
+                # 框架,不是 か 並列)
+                if len({kk for kk, _fr in members}) >= 2:
+                    group_no += 1
+                    for _kk, fr in members:
+                        fr["link"] = LINK_OR
+                        fr["group"] = group_no
+
+    def _backfill(self, tokens, made):
+        """回填(票 03):(b)選ぶ/選択 框架有對象時,它之後同一句內缺對象的述語接過它的對象,
+        缺來源時也接來源——到句號、自己有對象的述語、新的主題「〜は」為止;(a)か 群組裡缺
+        對象/來源的成員拿群組內第一個有該欄的成員(含它回填到的值)。從不帶對象的動作
+        (NO_OBJECT_ACTIONS、〜なる)不填;只動對象與來源;框架記 backfill=被填的欄名。"""
+        own_object = {id(fr): bool(fr["object"]) for _s, _k, _a, fr in made}
+
+        def fill(fr, donor, keys):
+            for key in keys:
+                if not fr.get(key) and donor.get(key):
+                    fr[key] = donor[key]
+                    fr.setdefault("backfill", []).append(key)
+
+        def fillable(fr):
+            return fr["action"] not in NO_OBJECT_ACTIONS \
+                and not fr["action"].endswith("なる")
+
+        # (b) 選ぶ鏈:依原文順序掃每一句
+        donor, cur_sentence = None, None
+        for s_idx, _k, a, fr in made:
+            if s_idx != cur_sentence:
+                donor, cur_sentence = None, s_idx
+            if fr["action"] in SELECT_ACTIONS and own_object[id(fr)]:
+                donor = fr
+                continue
+            if donor is None:
+                continue
+            if own_object[id(fr)] or "p:は" in tokens[a["clause_start"]:a["head"]]:
+                donor = None
+                continue
+            if fillable(fr):
+                fill(fr, donor, BACKFILL_FIELDS)
+        # (a) か 群組
+        groups = {}
+        for _s, _k, _a, fr in made:
+            if fr.get("group") is not None:
+                groups.setdefault(fr["group"], []).append(fr)
+        for members in groups.values():
+            for key in BACKFILL_FIELDS:
+                donor = next((m for m in members if m.get(key)), None)
+                if donor is None:
+                    continue
+                for m in members:
+                    if m is not donor and fillable(m):
+                        fill(m, donor, (key,))
+
+    def _attach_enumeration(self, tokens, sentences, option_of, frames, text_of):
+        """純列舉(票 01):效果句的 ● 項全部沒有框架時,各項原文(去 ● 與尾端句號,項目內部
+        不拆)依序掛進母句裡對象含「以下の」的框架的 enumeration 欄;沒有時掛子句含詞
+        「以下」的框架(主語「以下のモンスターが」、定語、主題);兩者都沒有時不掛。"""
+        option_sentences = [s for s in range(len(sentences)) if option_of[s] is not None]
+        if not option_sentences or any(fr["sentence"] in option_sentences
+                                       for fr in frames):
+            return
+        items, texts = [], {}
+        for s_idx in option_sentences:
+            s_start, s_end = sentences[s_idx]
+            if tokens[s_start] == OPTION:
+                s_start += 1
+            texts.setdefault(option_of[s_idx], []).append(text_of(s_start, s_end))
+        for option in sorted(texts):
+            item = "".join(texts[option]).strip("●\n 　、").rstrip("。").strip()
+            if item:
+                items.append(item)
+        if not items:
+            return
+        mother = [fr for fr in frames if fr["sentence"] not in option_sentences]
+        target = next((fr for fr in mother if fr["kind"] == KIND_ACTION
+                       and "以下の" in (fr.get("object") or "")), None)
+        if target is None:
+            target = next((fr for fr in mother if any(
+                self.word(t) == "以下" for t in tokens[fr["span"][0]:fr["span"][1]])),
+                None)
+        if target is not None:
+            target["enumeration"] = items
 
     def _topic_is_this_effect(self, tokens, sentence):
         """句子以「この効果は」為主題(この効果は相手ターンでも発動できる);括弧裡的

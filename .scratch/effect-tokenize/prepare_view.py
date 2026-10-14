@@ -181,11 +181,11 @@ def frame_row(fr, offsets):
     if fr.get("kind") == constraints.KIND_CONSTRAINT:
         return [fr["sentence"], None, None, fr.get("polarity"), None, None, None,
                 fr["clause"], chars, fr.get("option"), fr.get("label"),
-                constraints.label_of(fr), constraints.describe(fr)]
+                constraints.label_of(fr), constraints.describe(fr), None]
     return [fr["sentence"], fr["position"], fr["action"], fr["polarity"],
             fr.get("object"), fr.get("source"), fr.get("goal"), fr["clause"],
             chars, fr.get("option"), fr.get("label"), None,
-            constraints.describe_action(fr)]
+            constraints.describe_action(fr), fr.get("backfill")]
 
 
 def write_frame_shards(sentences, surface_of):
@@ -210,8 +210,9 @@ def write_frame_shards(sentences, surface_of):
         unaligned += offsets is None
         # 欄位:句序、位置、動作、極性、對象、來源、目的、子句、原文 [起,迄)、
         # 選項(第幾個 ●)、標籤、約束框架的 類別·子類(動作框架為 null)、內容
-        # (約束框架的專屬欄位併成一欄;動作框架為次數/窗口欄,沒有時 null);
-        # p=各段(標記句)的 index、效果類型、字元範圍
+        # (約束框架的專屬欄位併成一欄;動作框架為次數/窗口/回合條件/連接·群組/回填/
+        # 列舉欄,沒有時 null)、回填的欄名清單(object/source;頁面把那幾格淡色,沒有
+        # 時 null);p=各段(標記句)的 index、效果類型、字元範圍
         rec = {"s": r["section"], "i": r["index"], "k": s["kind"],
                "st": r["stratum"], "t": s["text_ja"],
                "p": [[p["index"], p["kind"], p["start"], p["end"]]

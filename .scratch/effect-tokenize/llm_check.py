@@ -8,12 +8,17 @@
 - 受影響卡(票 15;round5 起):● 合併(ADR-0015)影響到的卡——有子效果句的卡加上
   含未拆 ● 的卡;依領起句家族分層(賦予型/發動時選/處理時選/適用/依條件發動/其他/
   未拆●),抽 100 張、切 4 批。
+- 第二版論元(frame-args-v2 票 05;v2-round1 起):受列舉/か 並列/回填/回合階段四型規則影響
+  的卡——依框架資料分層(純列舉/か並列/選ぶ鏈/回合階段,一張卡依序歸入第一個符合的層),
+  各抽 25 張、切 4 批;錯誤類型在既有五類外加 列舉掛錯/漏、連接群組錯、回填錯、回合條件錯。
 種子固定,同一種子重抽得到同一批(複檢沿用);不同種子抽新樣本(過擬合抽驗)。
 
     sample   --round R --seed S   全語料抽樣:寫 llm-check/round<R>/sample.json 與 batch-<k>.md
     affected --round R --seed S   受影響卡抽樣(同上,另寫 meta.json 記分層與批數)
+    v2       --round R --seed S   第二版論元受影響卡抽樣(寫 llm-check/v2-round<R>/)
     report   --round R            讀 llm-check/round<R>/findings-<k>.json 寫 report.md
     recheck  --round R --from R0  用 round R0 的樣本重出批次檔(同批複檢)
+    (report/recheck 加 --line constraints 或 --line v2 走各自的目錄)
 
 批次檔一張卡一節、一句效果句一段:整段效果句(含 ● 選項;拆開的領起句與子效果句
 各標 index 與效果類型)與它的框架(含選項欄「●n 標籤」)。
@@ -59,6 +64,11 @@ QUOTA_CONSTRAINT = {"事件回合禁用": 20, "誓約": 50, "召喚條件": 50, 
 BATCHES_CONSTRAINT = 8
 ERROR_TYPES_CONSTRAINT = ("漏認約束", "誤認約束", "類別/子類判錯", "欄位抽錯", "取代錯誤",
                           "次數歸屬判錯")
+# 第二版論元(frame-args-v2 票 05):四型分層各 25 張;錯誤類型五類+四類
+STRATA_V2 = ("純列舉", "か並列", "選ぶ鏈", "回合階段")
+QUOTA_V2 = {k: 25 for k in STRATA_V2}
+BATCHES_V2 = 4
+ERROR_TYPES_V2 = ERROR_TYPES + ("列舉掛錯/漏", "連接群組錯", "回填錯", "回合條件錯")
 TYPE_PENDULUM, TYPE_SPELL, TYPE_TRAP = 0x1000000, 0x2, 0x4
 OPTION = "●"
 
@@ -191,6 +201,46 @@ def sample_constraints(seed):
     return picked
 
 
+# ── 第二版論元(票 05)──
+
+def v2_stratum(records):
+    """一張卡的框架紀錄 → 第二版論元分層(依 STRATA_V2 順序取第一個符合的):純列舉=有框架
+    帶列舉欄;か並列=有框架帶群組;選ぶ鏈=有框架帶回填(且不在 か 群組);回合階段=有框架帶
+    回合條件;都沒有回 None。"""
+    labels = set()
+    for r in records:
+        for f in r["frames"]:
+            if f.get("enumeration"):
+                labels.add("純列舉")
+            if f.get("group") is not None:
+                labels.add("か並列")
+            if f.get("backfill") and f.get("group") is None:
+                labels.add("選ぶ鏈")
+            if f.get("turn"):
+                labels.add("回合階段")
+    return next((k for k in STRATA_V2 if k in labels), None)
+
+
+def sample_v2(seed):
+    _cards, _tokens, frames = load()
+    by_card = defaultdict(list)
+    for r in frames:
+        by_card[r["card"]].append(r)
+    pools = defaultdict(list)
+    for cid in sorted(by_card):
+        stratum = v2_stratum(by_card[cid])
+        if stratum:
+            pools[stratum].append(cid)
+    rng = random.Random(seed)
+    picked = []
+    for key in STRATA_V2:
+        pool = pools.get(key, [])
+        chosen = sorted(rng.sample(pool, min(QUOTA_V2[key], len(pool))))
+        picked += [{"card": cid, "stratum": key} for cid in chosen]
+    print("母體:" + "、".join("%s %d" % (k, len(pools.get(k, []))) for k in STRATA_V2))
+    return picked
+
+
 # ── 批次檔 ──
 
 def record_lines(s, fr):
@@ -220,9 +270,12 @@ def record_lines(s, fr):
                 f["clause"]))
             continue
         extra = constraints.describe_action(f)
-        lines.append("框架 %d:[%s] %s(%s)| 對象=%s | 來源=%s | 目的=%s%s%s | 子句=%s"
+        # 回填的對象/來源(frame-args-v2)標「(回填)」:子代理回報時分「抽錯」與「回填錯」
+        backfill = f.get("backfill") or []
+        lines.append("框架 %d:[%s] %s(%s)| 對象=%s%s | 來源=%s%s | 目的=%s%s%s | 子句=%s"
                      % (k, f["position"], f["action"], f["polarity"],
-                        f.get("object") or "", f.get("source") or "",
+                        f.get("object") or "", "(回填)" if "object" in backfill else "",
+                        f.get("source") or "", "(回填)" if "source" in backfill else "",
                         f.get("goal") or "", " | " + extra if extra else "", opt,
                         f["clause"]))
     lines.append("")
@@ -276,7 +329,7 @@ def read_meta(round_dir):
 
 
 def round_dir_of(line, round_no):
-    prefix = "constraint-round" if line == "constraints" else "round"
+    prefix = {"constraints": "constraint-round", "v2": "v2-round"}.get(line, "round")
     return os.path.join(CHECK_DIR, "%s%d" % (prefix, round_no))
 
 
@@ -361,16 +414,20 @@ def report(round_dir):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("command", choices=("sample", "affected", "constraints", "report",
+    ap.add_argument("command", choices=("sample", "affected", "constraints", "v2", "report",
                                         "recheck"))
     ap.add_argument("--round", type=int, required=True)
     ap.add_argument("--seed", type=int, default=20261009)
     ap.add_argument("--from", dest="from_round", type=int)
-    ap.add_argument("--line", choices=("frames", "constraints"), default="frames")
+    ap.add_argument("--line", choices=("frames", "constraints", "v2"), default="frames")
     args = ap.parse_args()
-    line = "constraints" if args.command == "constraints" else args.line
+    line = args.command if args.command in ("constraints", "v2") else args.line
     round_dir = round_dir_of(line, args.round)
-    if args.command == "constraints":
+    if args.command == "v2":
+        write_batches(round_dir, sample_v2(args.seed),
+                      {"mode": "v2", "seed": args.seed, "batches": BATCHES_V2,
+                       "strata": list(STRATA_V2), "error_types": list(ERROR_TYPES_V2)})
+    elif args.command == "constraints":
         write_batches(round_dir, sample_constraints(args.seed),
                       {"mode": "constraints", "seed": args.seed,
                        "batches": BATCHES_CONSTRAINT, "strata": list(STRATA_CONSTRAINT),

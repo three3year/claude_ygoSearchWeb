@@ -156,6 +156,7 @@ table.frames .sent{display:block;font-size:.7rem}
 .f-con{background:var(--chip-p-bg);color:var(--chip-p-ink)}
 table.frames tr.con td{background:var(--con-row)}
 table.frames td.content{font-size:.82rem;color:var(--muted)}
+table.frames td.bf{color:var(--muted);opacity:.55;font-style:italic}
 .pol-neg{color:var(--chip-oov-ink);font-weight:600}
 .pol-can{color:var(--chip-p-ink)}
 .pol-aff{color:var(--muted)}
@@ -495,10 +496,13 @@ function cardHtml(c,recs){
     else{
       h+='<table class="frames"><thead><tr><th>#</th><th>類別</th><th>動作</th><th>極性</th><th>對象</th><th>來源</th><th>目的</th><th>內容</th><th>選項</th></tr></thead><tbody>';
       r.f.forEach(function(f,i){
-        // f[11]=約束框架的 類別·子類(動作框架 null);f[12]=內容(約束框架的專屬欄位;動作框架的次數/窗口)
+        // f[11]=約束框架的 類別·子類(動作框架 null);f[12]=內容(約束框架的專屬欄位;動作框架的次數/窗口/回合條件/連接·群組/回填/列舉);f[13]=回填的欄名(object/source,那幾格淡色)
         var con=!!f[11];
+        var bf=f[13]||[];
+        var objCls=bf.indexOf("object")>=0?' class="bf" title="回填:規則從前面的述語接過來的,不是這子句寫的"':'';
+        var srcCls=bf.indexOf("source")>=0?' class="bf" title="回填:規則從前面的述語接過來的,不是這子句寫的"':'';
         h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"'+(con?' class="con"':'')+'><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+(con?conChip(f[11]):posChip(f[1]))+'</td><td>'+(con?'':'<b>'+esc(f[2])+'</b>')+'</td><td>'+(f[3]?polText(f[3]):'')+'</td>'
-          +'<td>'+esc(f[4]||"")+'</td><td>'+esc(f[5]||"")+'</td><td>'+esc(f[6]||"")+'</td><td class="content">'+esc(f[12]||"")+'</td><td>'+optText(f)+'</td></tr>'
+          +'<td'+objCls+'>'+esc(f[4]||"")+'</td><td'+srcCls+'>'+esc(f[5]||"")+'</td><td>'+esc(f[6]||"")+'</td><td class="content">'+esc(f[12]||"")+'</td><td>'+optText(f)+'</td></tr>'
           +'<tr class="clause"><td></td><td colspan="8"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
       });
       h+='</tbody></table>';
@@ -511,7 +515,7 @@ function cardsSection(){
   var box=document.createElement("section");
   if(!FR){box.innerHTML='<p class="note">view_data.js 未含框架資料(先跑 frames.py 與 prepare_view.py)。</p>';return box}
   box.innerHTML='<div class="search-row"><input type="search" placeholder="卡號或卡名(日文/繁中,子字串)"><button class="btn" id="rnd">隨機一張</button></div>'
-    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。一句效果句一塊:左原文(領起部分接各 ● 行,每段標效果類型)、右框架表,兩種框架依原文順序混排——動作框架(類別欄=位置 代價/效果/條件;動作=詞元;對象/來源/目的=を/から/に・へ 前的詞;內容=效果內容的次數/窗口)與約束框架(底色列;類別欄=限制·次數/限制·事件回合禁用/限制·誓約/限制·召喚條件/時機/素材;內容=專屬欄位);選項=出自第幾個 ● 與標籤;滑過一列在原文標出對應字段,點一下釘住。</p>'
+    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。一句效果句一塊:左原文(領起部分接各 ● 行,每段標效果類型)、右框架表,兩種框架依原文順序混排——動作框架(類別欄=位置 代價/效果/條件;動作=詞元;對象/來源/目的=を/から/に・へ 前的詞,淡色斜體的對象/來源格是規則從前面的述語回填的(か 並列、選ぶ鏈),不是這子句寫的;內容=效果內容的次數/窗口/回合條件、か 並列的「或①」(同號二選一)、回填了哪幾欄、純列舉項的列舉清單)與約束框架(底色列;類別欄=限制·次數/限制·事件回合禁用/限制·誓約/限制·召喚條件/時機/素材;內容=專屬欄位,時機的窗口只記階段、「〜したターン/そのターン/次のターン」記在回合條件);選項=出自第幾個 ● 與標籤;滑過一列在原文標出對應字段,點一下釘住。</p>'
     +'<div class="results"></div><div class="card-view"></div>';
   var input=box.querySelector("input"), results=box.querySelector(".results"), view=box.querySelector(".card-view");
   var currentRecs=null;

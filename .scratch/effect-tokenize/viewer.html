@@ -165,6 +165,27 @@ table.frames td.cat .cat-na{color:var(--muted);opacity:.5}
 .rollup{font-size:.85rem;margin:-4px 0 10px;overflow-wrap:anywhere}
 .rollup .grp{color:var(--muted);margin-right:4px}
 .rollup .grp~.grp{margin-left:12px}
+/* 類別總覽 */
+.ctree{display:flex;flex-direction:column;gap:2px}
+.ctree details{background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.ctree details details{margin:2px 6px 2px 18px;border-color:transparent;border-left:2px solid var(--line);border-radius:0}
+.ctree summary{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 84px 84px 90px;gap:8px;
+  align-items:center;padding:5px 10px 5px 24px;cursor:pointer;list-style:none}
+.ctree summary::-webkit-details-marker{display:none}
+.ctree summary::before{content:"▸";color:var(--muted);position:absolute;left:9px}
+.ctree details[open]>summary::before{content:"▾"}
+.ctree summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ctree .cn{overflow-wrap:anywhere}
+.ctree .cleaf>summary .cn{font-weight:600}
+.ctree .cf,.ctree .cc{text-align:right;font-variant-numeric:tabular-nums;font-size:.88rem}
+.ctree .cc{color:var(--muted)}
+.ctree .cbar{display:block;height:5px;background:var(--bar);border-radius:3px}
+.ctree .tag{font-size:.75rem;color:var(--muted);font-weight:400;margin-left:6px}
+.flist{padding:4px 12px 10px 24px}
+.flist table{font-size:.86rem}
+.flist td{padding:4px 8px;vertical-align:top}
+.flist input[type="search"]{margin:4px 0 8px;max-width:320px;padding:5px 10px}
+@media (max-width:620px){.ctree summary{grid-template-columns:minmax(0,1fr) 64px 64px}.ctree .cbarw{display:none}}
 .pol-neg{color:var(--chip-oov-ink);font-weight:600}
 .pol-can{color:var(--chip-p-ink)}
 .pol-aff{color:var(--muted)}
@@ -286,6 +307,7 @@ var TABS=[
  {id:"cards",label:"卡片拆解"},
  {id:"cover",label:"框架覆蓋與盲區"},
  {id:"check",label:"檢驗摘要"},
+ {id:"cats",label:"類別總覽"},
  {id:"tpl-effect",label:"效果句模板"},
  {id:"tpl-extra",label:"效果外模板"},
  {id:"oov",label:"OOV 高頻段"},
@@ -446,20 +468,25 @@ function mdSection(md){
 }
 
 // ---- 卡片拆解(票 05/08):索引在 D.frames,逐卡資料在 view_frames_<k>.js 按需載入 ----
-var FR=D.frames, CARDS=FR?FR.cards:[], shardLoading={};
+var FR=D.frames, CARDS=FR?FR.cards:[];
 var cardById={};
 CARDS.forEach(function(c){cardById[c[0]]=c});
-function loadShard(k,cb){
-  window.VIEW_FRAMES=window.VIEW_FRAMES||{};
-  if(window.VIEW_FRAMES[k]){cb(null);return}
-  if(shardLoading[k]){shardLoading[k].push(cb);return}
-  shardLoading[k]=[cb];
-  var s=document.createElement("script");
-  s.src="view_frames_"+k+".js";
-  s.onload=function(){var q=shardLoading[k];delete shardLoading[k];q.forEach(function(f){f(null)})};
-  s.onerror=function(){var q=shardLoading[k];delete shardLoading[k];q.forEach(function(f){f("載入 view_frames_"+k+".js 失敗")})};
-  document.head.appendChild(s);
+function shardLoader(global,prefix){
+  // 分片按需載入:window[global][k] 由 <prefix><k>.js 填入;同一片載入中的請求排隊
+  var loading={};
+  return function(k,cb){
+    window[global]=window[global]||{};
+    if(window[global][k]){cb(null);return}
+    if(loading[k]){loading[k].push(cb);return}
+    loading[k]=[cb];
+    var s=document.createElement("script");
+    s.src=prefix+k+".js";
+    s.onload=function(){var q=loading[k];delete loading[k];q.forEach(function(f){f(null)})};
+    s.onerror=function(){var q=loading[k];delete loading[k];q.forEach(function(f){f("載入 "+prefix+k+".js 失敗")})};
+    document.head.appendChild(s);
+  };
 }
+var loadShard=shardLoader("VIEW_FRAMES","view_frames_");
 function posChip(p){
   var cls=p==="代價"?"f-cost":p==="條件"?"f-cond":"f-eff";
   return '<span class="chip '+cls+'">'+esc(p)+'</span>';
@@ -548,14 +575,24 @@ function cardsSection(){
     +'<div class="results"></div><div class="card-view"></div>';
   var input=box.querySelector("input"), results=box.querySelector(".results"), view=box.querySelector(".card-view");
   var currentRecs=null;
-  function openCard(id){
+  function openCard(id,focus){
+    // focus=[段落, 句序, 框架序](類別總覽跳過來時):釘住那個框架並捲到它
     var c=cardById[id]; if(!c)return;
     view.innerHTML='<p class="note">載入中…</p>';
     loadShard(c[3],function(err){
       if(err){view.innerHTML='<p class="note">'+esc(err)+'</p>';return}
       currentRecs=window.VIEW_FRAMES[c[3]][String(id)]||[];
       view.innerHTML=cardHtml(c,currentRecs);
-      view.scrollIntoView({block:"start"});
+      var tr=null;
+      if(focus){
+        for(var ri=0;ri<currentRecs.length;ri++){
+          if(currentRecs[ri].s===focus[0]&&currentRecs[ri].i===focus[1]){
+            tr=view.querySelector('.rec[data-ri="'+ri+'"] tr[data-fi="'+focus[2]+'"]');break;
+          }
+        }
+      }
+      if(tr){tr.classList.add("pin");highlight(tr,true);tr.scrollIntoView({block:"center"})}
+      else view.scrollIntoView({block:"start"});
     });
   }
   function highlight(tr,on){
@@ -598,6 +635,7 @@ function cardsSection(){
     view.querySelectorAll("tr.pin").forEach(function(x){x.classList.remove("pin");highlight(x,false)});
     if(!was){tr.classList.add("pin");highlight(tr,true)}
   });
+  box.openCard=function(id,focus){input.value=String(id);results.innerHTML="";openCard(id,focus)};
   return box;
 }
 function coverSection(){
@@ -640,6 +678,96 @@ function coverSection(){
   return box;
 }
 
+// ---- 類別總覽(action-categories 票 05):樹與計數在 D.frames.categories,
+// 每葉/每個未歸詞元的框架清單在 view_cats_<k>.js 按需載入 ----
+var loadCatShard=shardLoader("VIEW_CATS","view_cats_");
+var CAT_PAGE=200;
+function goCard(id,focus){
+  nav.querySelector('button[data-tab="cards"]').click();
+  cache["cards"].openCard(id,focus);
+}
+function catSection(){
+  var box=document.createElement("section"), C=FR&&FR.categories;
+  if(!C||!C.nodes){box.innerHTML='<p class="note">view_data.js 未含類別總覽(先跑 categories.py 與 prepare_view.py)。</p>';return box}
+  var placed=C.counts[0], un=C.counts[1], na=C.counts[2];
+  function tile(k,v,small){return '<div class="tile"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+small+'</small></div></div>'}
+  var max=1;
+  C.nodes.forEach(function(n){max=Math.max(max,n[1])});
+  C.unplaced.forEach(function(u){max=Math.max(max,u[2])});
+  function row(name,frames,cards,tag){
+    return '<summary><span class="cn">'+esc(name)+(tag?'<span class="tag">'+tag+'</span>':'')+'</span>'
+      +'<span class="cf">'+fmt(frames)+' 框</span><span class="cc">'+fmt(cards)+' 張</span>'
+      +'<span class="cbarw"><span class="cbar" style="width:'+Math.max(2,Math.round(100*frames/max))+'%"></span></span></summary>';
+  }
+  function leafHtml(key,name,frames,cards,tag){
+    return '<details class="cleaf" data-key="'+key+'">'+row(name,frames,cards,tag)+'<div class="flist"></div></details>';
+  }
+  function nodeHtml(n){
+    var kids=n[4], leaf=n[3];
+    if(!kids.length) return leafHtml("l"+leaf,n[0],n[1],n[2]);
+    var h='<details class="cnode">'+row(n[0],n[1],n[2]);
+    h+=kids.map(nodeHtml).join("");
+    // 詞元節點的預設葉(沒有條件欄的 {}):與節點同名,列在子節點最後
+    if(leaf>=0) h+=leafHtml("l"+leaf,n[0],C.leaf_counts[leaf][0],C.leaf_counts[leaf][1],"預設葉");
+    return h+'</details>';
+  }
+  var h='<div class="stats">'
+    +tile('已歸',fmt(placed),'個動作框架')
+    +tile('未歸',fmt(un),'規則表沒覆蓋')
+    +tile('不適用',fmt(na),'條件位')
+    +tile('已歸比例',(100*placed/Math.max(1,placed+un)).toFixed(2)+'%','已歸/(已歸+未歸)')
+    +tile('類別樹',fmt(C.paths.length)+' 葉','頂層 '+fmt(C.majors)+' 個')
+    +'</div>'
+    +'<p class="note">動作類別第二版:代價位與效果位的動作框架貼到類別樹的葉上(條件位不適用,約束框架不歸本樹)。框=貼在該節點底下的框架數,張=有這些框架的卡數;大類與詞元層由葉彙總,一個框架帶多個葉(複合來源)在上層只算一次。比例是儀表板,不是通過門檻。點節點展開、點葉列出它的框架(卡號、卡名、位置、子句原文),點卡號跳到該卡的拆解並釘住那個框架。</p>'
+    +'<div class="search-row"><button class="btn" data-act="open">展開所有節點</button><button class="btn" data-act="close">全部收合</button></div>'
+    +'<h2>類別樹</h2><div class="ctree">'+C.nodes.map(nodeHtml).join("")+'</div>'
+    +'<h2>未歸類(依詞元聚合,'+fmt(C.unplaced.length)+' 組、'+fmt(un)+' 個框架)</h2>'
+    +'<p class="note">標籤是詞元加極性類:肯定只寫詞元、耐性/限制寫 詞元(耐性)/(限制)、一般否定(送らず、戻さず)寫 詞元(否定)。「有節點」=樹裡有這個詞元節點,但條件全不符、也沒有預設葉(例:得る 只有 コントロール/効果 兩個關鍵詞葉);「無節點」=樹裡沒有這個詞元。點一組列出它的框架。</p>'
+    +'<div class="ctree">'+C.unplaced.map(function(u,j){
+      return leafHtml("u"+j,u[0],u[2],u[3],u[1]?"有節點":"無節點");
+    }).join("")+'</div>';
+  box.innerHTML=h;
+  function renderList(el,rows){
+    var shown=CAT_PAGE, q="";
+    el.innerHTML='<input type="search" placeholder="過濾(卡號、卡名或子句原文子字串)"><div class="fl"></div>';
+    var out=el.querySelector(".fl");
+    function draw(){
+      var hits=q?rows.filter(function(r){var c=cardById[r[0]];return String(r[0]).indexOf(q)>=0||r[5].indexOf(q)>=0||(c&&(c[1].indexOf(q)>=0||c[2].indexOf(q)>=0))}):rows;
+      out.innerHTML='<p class="note">'+fmt(hits.length)+' 個框架'+(hits.length>shown?'(列前 '+fmt(shown)+')':'')+'</p>'
+        +'<div class="scroll"><table><thead><tr><th>卡號</th><th>卡名</th><th>位置</th><th>子句原文</th></tr></thead><tbody>'
+        +hits.slice(0,shown).map(function(r){
+          var c=cardById[r[0]];
+          return '<tr><td><button class="link" data-id="'+r[0]+'" data-s="'+esc(r[1])+'" data-i="'+esc(r[2])+'" data-o="'+r[3]+'">'+r[0]+'</button></td>'
+            +'<td>'+esc(c?c[1]:"")+'</td><td>'+posChip(r[4])+'</td><td class="extext">'+esc(r[5])+'</td></tr>';
+        }).join("")+'</tbody></table></div>'
+        +(hits.length>shown?'<button class="btn" data-more="1">再列 '+fmt(CAT_PAGE)+' 個</button>':'');
+    }
+    el.querySelector("input").addEventListener("input",function(){q=this.value.trim();shown=CAT_PAGE;draw()});
+    out.addEventListener("click",function(e){if(e.target.closest("button[data-more]")){shown+=CAT_PAGE;draw()}});
+    draw();
+  }
+  // toggle 不冒泡:在捕獲階段接;葉第一次展開時載入它的分片
+  box.addEventListener("toggle",function(e){
+    var d=e.target;
+    if(!d.open||!d.classList||!d.classList.contains("cleaf")||d.getAttribute("data-loaded"))return;
+    d.setAttribute("data-loaded","1");
+    var key=d.getAttribute("data-key"), el=d.querySelector(".flist"), k=C.shard_of[key];
+    if(k==null){el.innerHTML='<p class="note">(沒有框架)</p>';return}
+    el.innerHTML='<p class="note">載入中…</p>';
+    loadCatShard(k,function(err){
+      if(err){el.innerHTML='<p class="note">'+esc(err)+'</p>';d.removeAttribute("data-loaded");return}
+      renderList(el,window.VIEW_CATS[k][key]||[]);
+    });
+  },true);
+  box.addEventListener("click",function(e){
+    var a=e.target.closest("button[data-act]");
+    if(a){box.querySelectorAll("details.cnode").forEach(function(d){d.open=a.getAttribute("data-act")==="open"});return}
+    var b=e.target.closest("button[data-id]");
+    if(b)goCard(+b.getAttribute("data-id"),[b.getAttribute("data-s"),b.getAttribute("data-i"),+b.getAttribute("data-o")]);
+  });
+  return box;
+}
+
 var cache={};
 function show(id){
   if(!cache[id]){
@@ -651,6 +779,7 @@ function show(id){
       : id==="check"?checkSection()
       : id==="cards"?cardsSection()
       : id==="cover"?coverSection()
+      : id==="cats"?catSection()
       : histSection();
   }
   main.innerHTML=""; main.appendChild(cache[id]);

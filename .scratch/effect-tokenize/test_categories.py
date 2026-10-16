@@ -29,34 +29,40 @@ class TestSkeleton(unittest.TestCase):
     def test_revive_from_grave(self):
         self.assertEqual(
             classify("①：自分の墓地からモンスター１体を特殊召喚する。"),
-            [("特殊召喚", "已歸", ["特殊召喚←墓地"], "區域移動", "自分", None)])
+            [("特殊召喚", "已歸", ["特殊召喚←墓地"], "召喚", "自分", None)])
 
     def test_search_deck_to_hand_cost_and_effect(self):
-        """代價位照貼;檢索歸 加える:デッキ→手札,捨てる 沒有詞元節點記未歸。"""
+        """代價位照貼(捨てる);檢索歸 加える:デッキ→手札。"""
         self.assertEqual(
             classify("①：手札を１枚捨てて発動できる。デッキから「試作機」１体を"
                      "手札に加える。"),
-            [("捨てる", "未歸", [], None, None, None),
+            [("捨てる", "已歸", ["捨てる"], "區域移動", "無", None),
              ("加える", "已歸", ["加える:デッキ→手札"], "區域移動", "無", "無")])
 
-    def test_unmatched_conditions_without_default_leaf(self):
-        """特殊召喚 沒有 ←EXデッキ 的葉、也沒有預設葉:EXデッキから 記未歸(玩家欄照記)。"""
+    def test_lemma_without_node_is_unplaced(self):
+        """樹裡沒有這個詞元(長尾 振り直す):記未歸,沒有「其他」類。"""
         self.assertEqual(
-            classify("①：このカードをEXデッキから特殊召喚する。"),
-            [("特殊召喚", "未歸", [], None, "無", None)])
+            classify("①：サイコロを振り直す。"),
+            [("振り直す", "未歸", [], None, None, None)])
+
+    def test_unmatched_conditions_without_default_leaf(self):
+        """得る 只有 コントロール/効果 兩個關鍵詞葉、沒有預設葉:對象對不上時記未歸。"""
+        self.assertEqual(
+            classify("①：相手は１０００LPを得る。"),
+            [("得る", "未歸", [], None, None, None)])
 
     def test_lemma_node_without_children_is_default_leaf(self):
         self.assertEqual(
             classify("①：自分は１０００LP回復する。"),
-            [("回復", "已歸", ["回復"], "回復", None, None)])
+            [("回復", "已歸", ["回復"], "LP・ダメージ", None, None)])
 
     def test_condition_position_is_not_applicable(self):
-        """條件位的框架不貼本樹(觸發事件軸另開線);沒有葉的詞元記未歸。"""
+        """條件位的框架不貼本樹(觸發事件軸另開線)。"""
         self.assertEqual(
             classify("①：このカードが召喚に成功した時に発動できる。"
                      "自分は１枚ドローする。"),
             [("成功", "不適用", [], None, None, None),
-             ("ドロー", "未歸", [], None, None, None)])
+             ("ドロー", "已歸", ["ドロー"], "區域移動", None, None)])
 
     def test_condition_position_wins_over_matching_leaf(self):
         """「…が破壊された場合」的 破壊 是條件位:即使 破壊 有葉也不適用。"""
@@ -64,7 +70,7 @@ class TestSkeleton(unittest.TestCase):
             classify("①：このカードが戦闘で破壊された場合に発動できる。"
                      "自分の墓地からモンスター１体を特殊召喚する。"),
             [("破壊", "不適用", [], None, None, None),
-             ("特殊召喚", "已歸", ["特殊召喚←墓地"], "區域移動", "自分", None)])
+             ("特殊召喚", "已歸", ["特殊召喚←墓地"], "召喚", "自分", None)])
 
     def test_frames_inside_options(self):
         """出自選項(●)的框架照貼。"""
@@ -73,8 +79,8 @@ class TestSkeleton(unittest.TestCase):
                      "●自分の墓地からモンスター１体を特殊召喚する。"
                      "●相手フィールドのカード１枚を破壊する。"),
             [("選択", "不適用", [], None, None, None),
-             ("特殊召喚", "已歸", ["特殊召喚←墓地"], "區域移動", "自分", None),
-             ("破壊", "已歸", ["破壊"], "破壊", None, None)])
+             ("特殊召喚", "已歸", ["特殊召喚←墓地"], "召喚", "自分", None),
+             ("破壊", "已歸", ["破壊"], "破壊", "相手", None)])
 
 
 class TestZonesAndPlayers(unittest.TestCase):
@@ -84,7 +90,7 @@ class TestZonesAndPlayers(unittest.TestCase):
         """手札・墓地から:依字面順序帶兩葉,大類仍一個。"""
         self.assertEqual(
             classify("①：手札・墓地から「試作機」１体を特殊召喚する。"),
-            [("特殊召喚", "已歸", ["特殊召喚←手札", "特殊召喚←墓地"], "區域移動",
+            [("特殊召喚", "已歸", ["特殊召喚←手札", "特殊召喚←墓地"], "召喚",
               "無", None)])
 
     def test_player_prefix_does_not_split_leaf(self):
@@ -92,20 +98,20 @@ class TestZonesAndPlayers(unittest.TestCase):
         self.assertEqual(
             classify("①：相手の墓地からモンスター１体を選んで自分フィールドに"
                      "特殊召喚する。"),
-            [("選ぶ", "未歸", [], None, "相手", None),
-             ("特殊召喚", "已歸", ["特殊召喚←墓地"], "區域移動", "相手", "自分")])
+            [("選ぶ", "已歸", ["選ぶ"], "處理程序", "相手", None),
+             ("特殊召喚", "已歸", ["特殊召喚←墓地"], "召喚", "相手", "自分")])
 
     def test_either_player_is_both(self):
         """自分または相手の(與 自分か相手の、自分・相手の、お互いの)記雙方。"""
         self.assertEqual(
             classify("①：自分または相手の墓地からモンスター１体を選んで"
                      "自分フィールドに特殊召喚する。"),
-            [("選ぶ", "未歸", [], None, "雙方", None),
-             ("特殊召喚", "已歸", ["特殊召喚←墓地"], "區域移動", "雙方", "自分")])
+            [("選ぶ", "已歸", ["選ぶ"], "處理程序", "雙方", None),
+             ("特殊召喚", "已歸", ["特殊召喚←墓地"], "召喚", "雙方", "自分")])
         for prefix in ("自分か相手の", "自分・相手の"):
             self.assertEqual(
                 classify("①：%s墓地からモンスター１体を特殊召喚する。" % prefix),
-                [("特殊召喚", "已歸", ["特殊召喚←墓地"], "區域移動", "雙方", None)],
+                [("特殊召喚", "已歸", ["特殊召喚←墓地"], "召喚", "雙方", None)],
                 prefix)
 
     def test_deck_top_is_deck(self):
@@ -114,13 +120,35 @@ class TestZonesAndPlayers(unittest.TestCase):
             classify("①：お互いのデッキの上からカードを１枚墓地へ送る。"),
             [("送る", "已歸", ["送る:デッキ→墓地"], "區域移動", "雙方", "無")])
 
+    def test_object_zone_is_source_when_source_literal_empty(self):
+        """票 06:來源字面空著時,對象欄開頭的區域當來源(墓地のこのカードを除外する、
+        相手フィールドのカードを破壊する),玩家也從對象欄取;有來源字面時不看對象。"""
+        self.assertEqual(
+            classify("①：墓地のこのカードを除外して発動できる。"
+                     "相手フィールドのカード１枚を破壊する。"),
+            [("除外", "已歸", ["除外←墓地"], "區域移動", "無", None),
+             ("破壊", "已歸", ["破壊"], "破壊", "相手", None)])
+        self.assertEqual(
+            classify("①：自分の手札から「墓地のモンスター」１体を特殊召喚する。"),
+            [("特殊召喚", "已歸", ["特殊召喚←手札"], "召喚", "自分", None)])
+
+    def test_object_zone_prefix_compound_and_described(self):
+        """對象欄取第一個認得出區域的「…の」前綴:複合區域帶多葉;描述裡有「・」
+        (魔法・罠カード)也認得出前綴。"""
+        self.assertEqual(
+            classify("①：手札・フィールドのこのカードを墓地へ送って発動できる。"
+                     "相手フィールドの魔法・罠カード１枚を破壊する。"),
+            [("送る", "已歸", ["送る:手札→墓地", "送る:フィールド→墓地"], "區域移動",
+              "無", "無"),
+             ("破壊", "已歸", ["破壊:魔法カード/罠カード"], "破壊", "相手", None)])
+
     def test_unmapped_zone_literal(self):
-        """その中 對不上任何區域:需要區域的葉不匹配、不報錯;玩家欄留空。"""
+        """その中 對不上任何區域:需要區域的葉不匹配、不報錯,落預設葉;玩家欄留空。"""
         self.assertEqual(
             classify("①：デッキからカードを３枚めくり、その中からモンスター１体を"
                      "特殊召喚する。"),
-            [("めくる", "未歸", [], None, "無", None),
-             ("特殊召喚", "未歸", [], None, None, None)])
+            [("めくる", "已歸", ["めくる"], "處理程序", "無", None),
+             ("特殊召喚", "已歸", ["特殊召喚"], "召喚", None, None)])
 
 
 class TestNegationAndKeywords(unittest.TestCase):
@@ -145,7 +173,7 @@ class TestNegationAndKeywords(unittest.TestCase):
     def test_cannot_is_restriction(self):
         self.assertEqual(
             classify("①：相手は自分の墓地のカードを除外できない。"),
-            [("除外", "已歸", ["除外(限制)"], "限制", None, None)])
+            [("除外", "已歸", ["除外(限制)"], "限制", "自分", None)])
 
     def test_godan_potential_is_restriction(self):
         """行えない 是 行う 的可能否定。"""
@@ -158,7 +186,7 @@ class TestNegationAndKeywords(unittest.TestCase):
         self.assertEqual(
             classify("①：発動後、このカードは墓地へ送らず、そのままセットする。"),
             [("送る", "未歸", [], None, None, "無"),
-             ("セット", "未歸", [], None, None, None)])
+             ("セット", "已歸", ["セット"], "區域移動", None, None)])
 
     def test_possible_is_affirmative(self):
         """破壊できる 與 破壊する 同葉。"""
@@ -166,35 +194,35 @@ class TestNegationAndKeywords(unittest.TestCase):
             classify("①：このカードが召喚に成功した場合に発動できる。"
                      "相手フィールドのカード１枚を選んで破壊できる。"),
             [("成功", "不適用", [], None, None, None),
-             ("選ぶ", "未歸", [], None, None, None),
-             ("破壊", "已歸", ["破壊"], "破壊", None, None)])
+             ("選ぶ", "已歸", ["選ぶ"], "處理程序", "相手", None),
+             ("破壊", "已歸", ["破壊"], "破壊", "相手", None)])
 
     def test_destroy_spell_trap_and_monster_split(self):
         self.assertEqual(
             classify("①：相手フィールドの魔法・罠カード１枚を破壊する。"),
-            [("破壊", "已歸", ["破壊:魔法カード/罠カード"], "破壊", None, None)])
+            [("破壊", "已歸", ["破壊:魔法カード/罠カード"], "破壊", "相手", None)])
         self.assertEqual(
             classify("①：相手フィールドの罠カード１枚を破壊する。"),
-            [("破壊", "已歸", ["破壊:魔法カード/罠カード"], "破壊", None, None)])
+            [("破壊", "已歸", ["破壊:魔法カード/罠カード"], "破壊", "相手", None)])
         self.assertEqual(
             classify("①：相手フィールドのモンスター１体を破壊する。"),
-            [("破壊", "已歸", ["破壊:モンスター"], "破壊", None, None)])
+            [("破壊", "已歸", ["破壊:モンスター"], "破壊", "相手", None)])
 
     def test_negate_activation_and_effect_split(self):
         self.assertEqual(
             classify("①：相手が魔法・罠カードを発動した時に発動できる。"
                      "その発動を無効にする。"),
             [("発動", "不適用", [], None, None, None),
-             ("無効にする", "已歸", ["無効にする:発動"], "無効にする", None, None)])
+             ("無効にする", "已歸", ["無効にする:発動"], "無効", None, None)])
         self.assertEqual(
             classify("①：その効果を無効にする。"),
-            [("無効にする", "已歸", ["無効にする:効果"], "無効にする", None, None)])
+            [("無効にする", "已歸", ["無効にする:効果"], "無効", None, None)])
 
     def test_unmatched_object_falls_to_default_leaf(self):
         """對象對不上任何關鍵詞(相手フィールドのカード)落 破壊 的預設葉。"""
         self.assertEqual(
             classify("①：相手フィールドのカード１枚を破壊する。"),
-            [("破壊", "已歸", ["破壊"], "破壊", None, None)])
+            [("破壊", "已歸", ["破壊"], "破壊", "相手", None)])
 
 
 class TestCardRollup(unittest.TestCase):
@@ -206,19 +234,19 @@ class TestCardRollup(unittest.TestCase):
             categories.classify_card([
                 "①：自分の墓地のモンスター１体を除外して発動できる。"
                 "相手フィールドのモンスター１体を破壊する。"]),
-            {"effect": ["破壊:モンスター"], "cost": ["除外"]})
+            {"effect": ["破壊:モンスター"], "cost": ["除外←墓地"]})
 
     def test_groups_dedupe_and_follow_tree_order(self):
-        """兩句各出的葉合併去重,依樹序排(特殊召喚 在 加える 前、←墓地 在 ←手札 前);
-        未歸與條件位的框架不進任何組。"""
+        """兩句各出的葉合併去重,依樹序排(特殊召喚 在 加える 前、←手札 在 ←墓地 前);
+        條件位的框架不進任何組;代價位的 捨てる 只進代價組。"""
         self.assertEqual(
             categories.classify_card([
                 "①：手札を１枚捨てて発動できる。デッキから「試作機」１体を手札に加える。",
                 "②：このカードが墓地へ送られた場合に発動できる。"
                 "手札・墓地から「試作機」１体を特殊召喚する。",
                 "③：自分の墓地から「試作機」１体を特殊召喚する。"]),
-            {"effect": ["特殊召喚←墓地", "特殊召喚←手札", "加える:デッキ→手札"],
-             "cost": []})
+            {"effect": ["特殊召喚←手札", "特殊召喚←墓地", "加える:デッキ→手札"],
+             "cost": ["捨てる"]})
 
 
 class TestTreeIntegrity(unittest.TestCase):

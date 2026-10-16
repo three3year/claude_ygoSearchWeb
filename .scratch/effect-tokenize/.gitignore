@@ -7,6 +7,7 @@ frame_categories.json
 card_categories.json
 view_data.js
 view_frames_*.js
+view_cats_*.js
 wordfreq.json
 # 審閱鏡像的資料塊 JSON,prepare_view.py 重生
 mirror-data/

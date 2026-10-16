@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """產生檢視頁資料 view_data.js(window.VIEW_DATA=...)、卡片拆解分頁的分片
-view_frames_<k>.js(window.VIEW_FRAMES[k]=...,依卡號分片、按需載入),以及
+view_frames_<k>.js(window.VIEW_FRAMES[k]=...,依卡號分片、按需載入)、類別總覽分頁
+每葉的框架清單分片 view_cats_<k>.js(window.VIEW_CATS[k]=...,按需載入),以及
 conventions.md 審閱鏡像的資料塊 JSON(mirror-data/,格式見 review-mirror skill
 的「資料塊」)。
 
@@ -32,6 +33,7 @@ MIRROR_DIR = os.path.join(HERE, "mirror-data")
 FRAMES = os.path.join(HERE, "frames.json")
 CARDS = os.path.join(HERE, "..", "..", "data", "cards.json")
 FRAME_SHARDS = 12
+CATEGORY_SHARDS = 4       # 類別總覽每葉/每個未歸詞元的框架清單(view_cats_<k>.js)
 TOP_ACTIONS = 80
 
 TOP_TEMPLATES = {"effect": 300, "extra": 150}
@@ -191,23 +193,126 @@ def frame_row(fr, offsets, category):
 
 
 def load_categories():
-    """動作類別(票 04):(卡號, 段落, 句序, 框架序) → [狀態碼, 葉號…]、卡號 → [效果組葉號,
-    代價組葉號]、葉號 → 大類到葉的路徑。狀態碼是 categories.STATUSES 的位置
-    (0 已歸、1 未歸、2 不適用),葉號是樹序;分片只放號碼,名稱查 view_data 的表。"""
+    """動作類別(票 04):類別樹、(卡號, 段落, 句序, 框架序) → 類別紀錄、同鍵 → [狀態碼,
+    葉號…]、卡號 → [效果組葉號, 代價組葉號]、葉號 → 大類到葉的路徑。狀態碼是
+    categories.STATUSES 的位置(0 已歸、1 未歸、2 不適用),葉號是樹序;分片只放號碼,
+    名稱查 view_data 的表。"""
     tree = categories.load_tree()
     index = tree.leaf_order
     code = {status: i for i, status in enumerate(categories.STATUSES)}
     with open(categories.OUT, encoding="utf-8") as f:
-        per_frame = {(r["card"], r["section"], r["index"], r["order"]):
-                     [code[r["status"]]] + [index[name] for name in r["leaves"]]
-                     for r in json.load(f)}
+        records = {(r["card"], r["section"], r["index"], r["order"]): r for r in json.load(f)}
+    per_frame = {key: [code[r["status"]]] + [index[name] for name in r["leaves"]]
+                 for key, r in records.items()}
     with open(categories.CARDS_OUT, encoding="utf-8") as f:
         per_card = {c["card"]: [[index[name] for name in c["effect"]],
                                 [index[name] for name in c["cost"]]]
                     for c in json.load(f)}
     table = {"statuses": list(categories.STATUSES),
              "paths": [list(leaf.path) for leaf in tree.leaves]}
-    return per_frame, per_card, table
+    return tree, records, per_frame, per_card, table
+
+
+# ── 類別總覽(action-categories 票 05):樹的節點計數、未歸依詞元聚合、每葉的框架清單 ──
+
+def tree_nodes(tree):
+    """類別樹的葉路徑 → 巢狀節點 {"name", "leaf"(葉號或 None), "children"},依樹序。
+    詞元節點帶預設葉時(破壊 底下的 {}),預設葉的路徑與詞元節點相同,節點同時是
+    葉與內部節點。"""
+    root = {"name": None, "leaf": None, "children": []}
+    for i, leaf in enumerate(tree.leaves):
+        node = root
+        for name in leaf.path:
+            child = next((c for c in node["children"] if c["name"] == name), None)
+            if child is None:
+                child = {"name": name, "leaf": None, "children": []}
+                node["children"].append(child)
+            node = child
+        node["leaf"] = i
+    return root["children"]
+
+
+def balanced_shards(groups, count):
+    """(鍵, 列數) → 鍵 → 分片號:由大到小(同大小依鍵)放進目前最輕的分片,決定性。"""
+    load = [0] * count
+    assign = {}
+    for key, size in sorted(groups, key=lambda kv: (-kv[1], kv[0])):
+        k = min(range(count), key=lambda j: (load[j], j))
+        assign[key] = k
+        load[k] += size
+    return assign
+
+
+def category_overview(tree, items):
+    """items:依語料順序的 (卡號, 段落, 句序, 框架, 類別紀錄, 子句原文)(只有動作框架)。
+    回傳 (總覽表, 分片清單):總覽表放進 view_data 的 frames.categories——儀表板三個數、
+    樹節點 [名, 框架數, 卡數, 葉號或 -1, 子節點](大類與詞元層由葉彙總,多葉框架只算
+    一次)、未歸依 (詞元, 極性類) 聚合 [標籤, 詞元有節點, 框架數, 卡數];分片是
+    {"l<葉號>"/"u<未歸序>": [[卡號, 段落, 句序, 框架序, 位置, 子句原文]…]},按需載入。"""
+    counts = Counter()
+    leaf_rows = [[] for _ in tree.leaves]
+    unplaced = {}
+    for card, section, index, fr, rec, text in items:
+        counts[rec["status"]] += 1
+        row = [card, section, index, fr["order"], fr["position"], text]
+        if rec["status"] == categories.STATUS_PLACED:
+            for name in rec["leaves"]:
+                leaf_rows[tree.leaf_order[name]].append(row)
+        elif rec["status"] == categories.STATUS_UNPLACED:
+            label, key = categories.unplaced_label(fr)
+            unplaced.setdefault(label, (key in tree.by_key, []))[1].append(row)
+
+    def frame_key(row):
+        return tuple(row[:4])
+
+    def summarize(node):
+        """節點 → (輸出列 [名, 框架數, 卡數, 葉號或 -1, 子節點列], 框架鍵集合, 卡號集合);
+        集合往上併,多葉框架在上層只算一次。"""
+        frames, cards, children = set(), set(), []
+        for child in node["children"]:
+            row, child_frames, child_cards = summarize(child)
+            children.append(row)
+            frames |= child_frames
+            cards |= child_cards
+        if node["leaf"] is not None:
+            rows = leaf_rows[node["leaf"]]
+            frames |= {frame_key(r) for r in rows}
+            cards |= {r[0] for r in rows}
+        leaf = -1 if node["leaf"] is None else node["leaf"]
+        return [node["name"], len(frames), len(cards), leaf, children], frames, cards
+
+    nodes = [summarize(n)[0] for n in tree_nodes(tree)]
+    groups = sorted(unplaced.items(), key=lambda kv: (-len(kv[1][1]), kv[0]))
+    rows_of = {"l%d" % i: rows for i, rows in enumerate(leaf_rows) if rows}
+    rows_of.update(("u%d" % j, rows) for j, (_, (_, rows)) in enumerate(groups))
+    assign = balanced_shards([(key, len(rows)) for key, rows in rows_of.items()],
+                             CATEGORY_SHARDS)
+    shards = [{} for _ in range(CATEGORY_SHARDS)]
+    for key, rows in rows_of.items():
+        shards[assign[key]][key] = rows
+    overview = {
+        "counts": [counts[s] for s in categories.STATUSES],
+        "majors": len(tree.majors),
+        "nodes": nodes,
+        # 每葉自己的 [框架數, 卡數](同時是內部節點的預設葉要單獨顯示)
+        "leaf_counts": [[len({frame_key(r) for r in rows}), len({r[0] for r in rows})]
+                        for rows in leaf_rows],
+        "unplaced": [[label, has_node, len(rows), len({r[0] for r in rows})]
+                     for label, (has_node, rows) in groups],
+        "shard_of": assign,
+    }
+    return overview, shards
+
+
+def write_category_shards(shards):
+    for k, shard in enumerate(shards):
+        js = ("window.VIEW_CATS=window.VIEW_CATS||{};window.VIEW_CATS[%d]=" % k
+              + json.dumps(shard, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
+              + ";")
+        path = os.path.join(HERE, "view_cats_%d.js" % k)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(js)
+        print("written", path, len(js), "bytes")
 
 
 def write_frame_shards(sentences, surface_of):
@@ -220,17 +325,28 @@ def write_frame_shards(sentences, surface_of):
     with open(CARDS, encoding="utf-8") as f:
         names = {c["id"]: (c["name_ja"], c["name_zh"]) for c in json.load(f)}
     by_key = {(s["card"], s["section"], s["index"]): s for s in sentences}
-    frame_cats, card_cats, cat_table = load_categories()
+    tree, cat_records, frame_cats, card_cats, cat_table = load_categories()
 
     per_card = {}
     stats, position, polarity, actions, con_dist = report.frame_stats(frames)
     uncovered = []
     unaligned = 0
+    overview_items = []
     for r in frames:
         s = by_key[(r["card"], r["section"], r["index"])]
         # 原文字元範圍:框架的詞序列範圍對回 text_ja(對不上時為 null,頁面不高亮)
         offsets = char_offsets(s["text_ja"], s["tokens"])
         unaligned += offsets is None
+        # 類別總覽的框架清單:子句原文取字元範圍,對不上時用子句的詞序列接起來
+        for fr in r["frames"]:
+            if fr.get("kind") == constraints.KIND_CONSTRAINT:
+                continue
+            chars = span_chars(offsets, fr["span"])
+            text = (s["text_ja"][chars[0]:chars[1]] if chars
+                    else fr["clause"].replace(" ", ""))
+            key = (r["card"], r["section"], r["index"], fr["order"])
+            overview_items.append((r["card"], r["section"], r["index"], fr,
+                                   cat_records[key], text))
         # 欄位:句序、位置、動作、極性、對象、來源、目的、子句、原文 [起,迄)、
         # 選項(第幾個 ●)、標籤、約束框架的 類別·子類(動作框架為 null)、內容
         # (約束框架的專屬欄位併成一欄;動作框架為次數/窗口/回合條件/連接·群組/回填/
@@ -271,6 +387,10 @@ def write_frame_shards(sentences, surface_of):
                           sum(len(r["f"]) for r in recs),
                           sum(1 for r in recs if not r["f"]),
                           card_cats.get(cid, [[], []])])
+    overview, cat_shards = category_overview(tree, overview_items)
+    write_category_shards(cat_shards)
+    cat_table.update(overview)
+    cat_table["shards"] = CATEGORY_SHARDS
     return {
         "shards": FRAME_SHARDS,
         "cards": index,

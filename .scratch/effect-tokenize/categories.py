@@ -22,7 +22,8 @@ category_tree.json,為每個動作框架寫一列類別紀錄到 frame_categorie
     匹配到葉     → 已歸,記葉清單與大類(葉所在的頂層節點)
     其餘         → 未歸(詞元沒有節點,或條件全不符且沒有預設葉);沒有「其他」類
 來源/目的字面先映成(玩家, 區域清單)(票 02,parse_place):玩家 自分/相手/雙方/無 不進
-葉、記在來源玩家/目的玩家欄;複合字面(手札・墓地)逐區域各匹配一葉,一個框架因此可帶
+葉、記在來源玩家/目的玩家欄;來源字面空著時改讀對象欄開頭的區域(墓地のこのカード、
+相手フィールドのカード;票 06);複合字面(手札・墓地)逐區域各匹配一葉,一個框架因此可帶
 多個葉(依字面順序、去重),同詞元的葉同大類。同詞元的葉依樹序先到先得。
 
 建置期檢查樹的完整性(葉名全樹唯一、每葉有詞元條件、每大類至少一葉、同詞元的葉
@@ -192,6 +193,41 @@ def parse_place(literal):
         if zone not in zones:
             zones.append(zone)
     return player, zones
+
+
+def object_place(literal):
+    """對象字面開頭的地點 → (玩家, 區域清單):取第一個認得出區域的「…の」前綴(墓地の
+    このカード、相手フィールドの魔法・罠カード、自分の墓地のモンスター),都認不出時整個
+    字面再認一次(手札、除外状態のこのカード);認不出回 (None, [])。"""
+    if not literal:
+        return None, []
+    for i, ch in enumerate(literal):
+        if ch == "の":
+            player, zones = parse_place(literal[:i])
+            if zones:
+                return player, zones
+    return parse_place(literal)
+
+
+def source_place(frame):
+    """框架的來源 → (玩家, 區域清單, 是否取自對象欄)。來源字面空著時,對象欄開頭的區域
+    就是來源(墓地のこのカードを除外する、相手フィールドのカードを破壊する;票 06)。"""
+    player, zones = parse_place(frame.get("source"))
+    if not frame.get("source"):
+        object_player, object_zones = object_place(frame.get("object"))
+        if object_zones:
+            return object_player, object_zones, True
+    return player, zones, False
+
+
+def unplaced_label(frame):
+    """未歸框架的聚合標籤與它的 (詞元, 極性類) 鍵(類別總覽與草案的未歸類清單共用):
+    肯定記詞元、耐性/限制記 詞元(耐性)/(限制)、一般否定(沒有極性類)記 詞元(否定)、
+    鍵為 None。"""
+    cls = polarity_class(frame)
+    if cls is None:
+        return frame["action"] + "(否定)", None
+    return leaf_name(frame["action"], cls), (frame["action"], cls)
 
 
 def polarity_class(frame):
@@ -378,7 +414,7 @@ class CategoryTree:
         if frame["position"] == POS_COND:
             record["status"] = STATUS_NA
             return record
-        source_player, source_zones = parse_place(frame.get("source"))
+        source_player, source_zones, _ = source_place(frame)
         goal_player, goal_zones = parse_place(frame.get("goal"))
         record.update(source_player=source_player, goal_player=goal_player)
         candidates = self.by_key.get((frame["action"], polarity_class(frame)), ())

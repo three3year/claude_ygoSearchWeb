@@ -5,7 +5,8 @@ conventions.md 審閱鏡像的資料塊 JSON(mirror-data/,格式見 review-mirro
 的「資料塊」)。
 
 重用 report.py 的 token_kind/normalize/scan_stratum,保證與報表同一把尺;
-框架資料讀 frames.json(frames.py 的輸出)。
+框架資料讀 frames.json(frames.py 的輸出),動作類別讀 frame_categories.json 與
+card_categories.json(categories.py 的輸出)、葉的路徑由 category_tree.json 展開。
 決定性輸出:排序穩定、不讀時鐘;全部純 ASCII(\\uXXXX 轉義)避開伺服器 charset。
 """
 import importlib.util
@@ -23,6 +24,7 @@ _spec = importlib.util.spec_from_file_location(
     "effect_tokenize", os.path.join(HERE, "tokenize.py"))
 effect_tokenize = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(effect_tokenize)
+import categories  # noqa: E402
 import constraints  # noqa: E402
 import extract_seed  # noqa: E402
 
@@ -175,17 +177,37 @@ def span_chars(offsets, span):
         return None
     return [offsets[start][0], offsets[end - 1][1]]
 
-def frame_row(fr, offsets):
+def frame_row(fr, offsets, category):
     """一個框架 → 拆解頁的列(欄位順序見 write_frame_shards 的註解)。"""
     chars = span_chars(offsets, fr["span"])
     if fr.get("kind") == constraints.KIND_CONSTRAINT:
         return [fr["sentence"], None, None, fr.get("polarity"), None, None, None,
                 fr["clause"], chars, fr.get("option"), fr.get("label"),
-                constraints.label_of(fr), constraints.describe(fr), None]
+                constraints.label_of(fr), constraints.describe(fr), None, None]
     return [fr["sentence"], fr["position"], fr["action"], fr["polarity"],
             fr.get("object"), fr.get("source"), fr.get("goal"), fr["clause"],
             chars, fr.get("option"), fr.get("label"), None,
-            constraints.describe_action(fr), fr.get("backfill")]
+            constraints.describe_action(fr), fr.get("backfill"), category]
+
+
+def load_categories():
+    """動作類別(票 04):(卡號, 段落, 句序, 框架序) → [狀態碼, 葉號…]、卡號 → [效果組葉號,
+    代價組葉號]、葉號 → 大類到葉的路徑。狀態碼是 categories.STATUSES 的位置
+    (0 已歸、1 未歸、2 不適用),葉號是樹序;分片只放號碼,名稱查 view_data 的表。"""
+    tree = categories.load_tree()
+    index = tree.leaf_order
+    code = {status: i for i, status in enumerate(categories.STATUSES)}
+    with open(categories.OUT, encoding="utf-8") as f:
+        per_frame = {(r["card"], r["section"], r["index"], r["order"]):
+                     [code[r["status"]]] + [index[name] for name in r["leaves"]]
+                     for r in json.load(f)}
+    with open(categories.CARDS_OUT, encoding="utf-8") as f:
+        per_card = {c["card"]: [[index[name] for name in c["effect"]],
+                                [index[name] for name in c["cost"]]]
+                    for c in json.load(f)}
+    table = {"statuses": list(categories.STATUSES),
+             "paths": [list(leaf.path) for leaf in tree.leaves]}
+    return per_frame, per_card, table
 
 
 def write_frame_shards(sentences, surface_of):
@@ -198,6 +220,7 @@ def write_frame_shards(sentences, surface_of):
     with open(CARDS, encoding="utf-8") as f:
         names = {c["id"]: (c["name_ja"], c["name_zh"]) for c in json.load(f)}
     by_key = {(s["card"], s["section"], s["index"]): s for s in sentences}
+    frame_cats, card_cats, cat_table = load_categories()
 
     per_card = {}
     stats, position, polarity, actions, con_dist = report.frame_stats(frames)
@@ -212,12 +235,15 @@ def write_frame_shards(sentences, surface_of):
         # 選項(第幾個 ●)、標籤、約束框架的 類別·子類(動作框架為 null)、內容
         # (約束框架的專屬欄位併成一欄;動作框架為次數/窗口/回合條件/連接·群組/回填/
         # 列舉欄,沒有時 null)、回填的欄名清單(object/source;頁面把那幾格淡色,沒有
-        # 時 null);p=各段(標記句)的 index、效果類型、字元範圍
+        # 時 null)、動作類別 [狀態碼, 葉號…](約束框架 null,見 load_categories);
+        # p=各段(標記句)的 index、效果類型、字元範圍
         rec = {"s": r["section"], "i": r["index"], "k": s["kind"],
                "st": r["stratum"], "t": s["text_ja"],
                "p": [[p["index"], p["kind"], p["start"], p["end"]]
                      for p in s["parts"]],
-               "f": [frame_row(fr, offsets) for fr in r["frames"]]}
+               "f": [frame_row(fr, offsets, frame_cats.get(
+                   (r["card"], r["section"], r["index"], fr["order"])))
+                     for fr in r["frames"]]}
         per_card.setdefault(r["card"], []).append(rec)
         if not r["frames"]:
             uncovered.append({"card": r["card"], "section": r["section"],
@@ -240,9 +266,11 @@ def write_frame_shards(sentences, surface_of):
         for cid in chunk:
             recs = per_card[cid]
             ja, zh = names.get(cid, ("", ""))
+            # 末欄:卡層彙總 [效果組葉號, 代價組葉號](票 04)
             index.append([cid, ja, zh, k, len(recs),
                           sum(len(r["f"]) for r in recs),
-                          sum(1 for r in recs if not r["f"])])
+                          sum(1 for r in recs if not r["f"]),
+                          card_cats.get(cid, [[], []])])
     return {
         "shards": FRAME_SHARDS,
         "cards": index,
@@ -255,6 +283,7 @@ def write_frame_shards(sentences, surface_of):
         "distinct_actions": len(actions),
         "uncovered": uncovered,
         "unaligned": unaligned,
+        "categories": cat_table,
     }
 
 

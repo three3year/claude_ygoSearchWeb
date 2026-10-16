@@ -4,6 +4,7 @@
 tokens.json
 frames.json
 frame_categories.json
+card_categories.json
 view_data.js
 view_frames_*.js
 wordfreq.json

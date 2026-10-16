@@ -157,6 +157,14 @@ table.frames .sent{display:block;font-size:.7rem}
 table.frames tr.con td{background:var(--con-row)}
 table.frames td.content{font-size:.82rem;color:var(--muted)}
 table.frames td.bf{color:var(--muted);opacity:.55;font-style:italic}
+table.frames td.cat{font-size:.82rem;min-width:7em}
+table.frames td.cat .path{display:block;white-space:nowrap}
+table.frames td.cat .path b{font-weight:600}
+table.frames td.cat .cat-un{color:var(--muted);font-style:italic}
+table.frames td.cat .cat-na{color:var(--muted);opacity:.5}
+.rollup{font-size:.85rem;margin:-4px 0 10px;overflow-wrap:anywhere}
+.rollup .grp{color:var(--muted);margin-right:4px}
+.rollup .grp~.grp{margin-left:12px}
 .pol-neg{color:var(--chip-oov-ink);font-weight:600}
 .pol-can{color:var(--chip-p-ink)}
 .pol-aff{color:var(--muted)}
@@ -481,29 +489,49 @@ function recTextHtml(r,range){
   });
   return h;
 }
+function leafName(i){var p=FR.categories.paths[i];return p[p.length-1]}
+function leafPath(i){
+  // 葉號 → 大類到葉的路徑(view_data 的 categories.paths),葉名加粗
+  var p=FR.categories.paths[i];
+  return esc(p.slice(0,-1).concat([""]).join(" › "))+'<b>'+esc(leafName(i))+'</b>';
+}
+function catCell(c){
+  // f[14]=動作類別 [狀態碼, 葉號…]:已歸列路徑(多葉並列)、未歸與不適用各以淡色區分
+  if(!c) return '<td class="cat"></td>';
+  var st=FR.categories.statuses[c[0]];
+  if(c.length<2) return '<td class="cat"><span class="'+(st==="不適用"?'cat-na':'cat-un')+'">'+esc(st)+'</span></td>';
+  return '<td class="cat">'+c.slice(1).map(function(i){return '<span class="path">'+leafPath(i)+'</span>'}).join("")+'</td>';
+}
+function rollupHtml(c){
+  // 卡層彙總(c[7]=[效果組葉號, 代價組葉號]):只列葉名,依樹序
+  var g=c[7]||[[],[]];
+  function names(ids){return ids.length?ids.map(function(i){return esc(leafName(i))}).join("、"):'<span class="muted">(無)</span>'}
+  return '<div class="rollup"><span class="grp">效果組</span>'+names(g[0])+'<span class="grp">代價組</span>'+names(g[1])+'</div>';
+}
 function optText(f){
   if(f[9]==null) return "";
   return '<span class="opt"><b>●'+f[9]+'</b>'+(f[10]?' '+esc(f[10]):'')+'</span>';
 }
 function cardHtml(c,recs){
   var h='<div class="card-head"><b>'+c[0]+'</b> '+esc(c[1])+' <span class="muted">'+esc(c[2])+'</span>'
-    +' <span class="muted">・'+recs.length+' 句・'+c[5]+' 個框架'+(c[6]?'・'+c[6]+' 句無框架':'')+'</span></div>';
+    +' <span class="muted">・'+recs.length+' 句・'+c[5]+' 個框架'+(c[6]?'・'+c[6]+' 句無框架':'')+'</span></div>'
+    +(FR.categories?rollupHtml(c):'');
   recs.forEach(function(r,ri){
     var multi=r.p&&r.p.length>1;
     h+='<div class="rec" data-ri="'+ri+'"><div class="rec-pos">'+esc(recLabel(r))+(multi?' <span class="muted">・'+(r.p.length-1)+' 個子效果句</span>':'')+'</div>'
       +'<div class="rec-grid"><div class="rec-text">'+recTextHtml(r,null)+'</div><div class="rec-frames">';
     if(!r.f.length){h+='<p class="note">(抽不到框架)</p>';}
     else{
-      h+='<table class="frames"><thead><tr><th>#</th><th>類別</th><th>動作</th><th>極性</th><th>對象</th><th>來源</th><th>目的</th><th>內容</th><th>選項</th></tr></thead><tbody>';
+      h+='<table class="frames"><thead><tr><th>#</th><th>類別</th><th>動作</th><th>動作類別</th><th>極性</th><th>對象</th><th>來源</th><th>目的</th><th>內容</th><th>選項</th></tr></thead><tbody>';
       r.f.forEach(function(f,i){
-        // f[11]=約束框架的 類別·子類(動作框架 null);f[12]=內容(約束框架的專屬欄位;動作框架的次數/窗口/回合條件/連接·群組/回填/列舉);f[13]=回填的欄名(object/source,那幾格淡色)
+        // f[11]=約束框架的 類別·子類(動作框架 null);f[12]=內容(約束框架的專屬欄位;動作框架的次數/窗口/回合條件/連接·群組/回填/列舉);f[13]=回填的欄名(object/source,那幾格淡色);f[14]=動作類別(約束框架 null)
         var con=!!f[11];
         var bf=f[13]||[];
         var objCls=bf.indexOf("object")>=0?' class="bf" title="回填:規則從前面的述語接過來的,不是這子句寫的"':'';
         var srcCls=bf.indexOf("source")>=0?' class="bf" title="回填:規則從前面的述語接過來的,不是這子句寫的"':'';
-        h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"'+(con?' class="con"':'')+'><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+(con?conChip(f[11]):posChip(f[1]))+'</td><td>'+(con?'':'<b>'+esc(f[2])+'</b>')+'</td><td>'+(f[3]?polText(f[3]):'')+'</td>'
+        h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"'+(con?' class="con"':'')+'><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+(con?conChip(f[11]):posChip(f[1]))+'</td><td>'+(con?'':'<b>'+esc(f[2])+'</b>')+'</td>'+(FR.categories?catCell(f[14]):'<td></td>')+'<td>'+(f[3]?polText(f[3]):'')+'</td>'
           +'<td'+objCls+'>'+esc(f[4]||"")+'</td><td'+srcCls+'>'+esc(f[5]||"")+'</td><td>'+esc(f[6]||"")+'</td><td class="content">'+esc(f[12]||"")+'</td><td>'+optText(f)+'</td></tr>'
-          +'<tr class="clause"><td></td><td colspan="8"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
+          +'<tr class="clause"><td></td><td colspan="9"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
       });
       h+='</tbody></table>';
     }
@@ -515,7 +543,8 @@ function cardsSection(){
   var box=document.createElement("section");
   if(!FR){box.innerHTML='<p class="note">view_data.js 未含框架資料(先跑 frames.py 與 prepare_view.py)。</p>';return box}
   box.innerHTML='<div class="search-row"><input type="search" placeholder="卡號或卡名(日文/繁中,子字串)"><button class="btn" id="rnd">隨機一張</button></div>'
-    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。一句效果句一塊:左原文(領起部分接各 ● 行,每段標效果類型)、右框架表,兩種框架依原文順序混排——動作框架(類別欄=位置 代價/效果/條件;動作=詞元;對象/來源/目的=を/から/に・へ 前的詞,淡色斜體的對象/來源格是規則從前面的述語回填的(か 並列、選ぶ鏈),不是這子句寫的;內容=效果內容的次數/窗口/回合條件、か 並列的「或①」(同號二選一)、回填了哪幾欄、純列舉項的列舉清單)與約束框架(底色列;類別欄=限制·次數/限制·事件回合禁用/限制·誓約/限制·召喚條件/時機/素材;內容=專屬欄位,時機的窗口只記階段、「〜したターン/そのターン/次のターン」記在回合條件);選項=出自第幾個 ● 與標籤;滑過一列在原文標出對應字段,點一下釘住。</p>'
+    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。一句效果句一塊:左原文(領起部分接各 ● 行,每段標效果類型)、右框架表,兩種框架依原文順序混排——動作框架(類別欄=位置 代價/效果/條件;動作=詞元;動作類別=歸到類別樹的哪個葉,顯示大類 › 詞元 › 葉的路徑,複合來源多葉並列,淡色斜體「未歸」是規則表沒覆蓋、更淡的「不適用」是條件位;對象/來源/目的=を/から/に・へ 前的詞,淡色斜體的對象/來源格是規則從前面的述語回填的(か 並列、選ぶ鏈),不是這子句寫的;內容=效果內容的次數/窗口/回合條件、か 並列的「或①」(同號二選一)、回填了哪幾欄、純列舉項的列舉清單)與約束框架(底色列;類別欄=限制·次數/限制·事件回合禁用/限制·誓約/限制·召喚條件/時機/素材;內容=專屬欄位,時機的窗口只記階段、「〜したターン/そのターン/次のターン」記在回合條件);選項=出自第幾個 ● 與標籤;滑過一列在原文標出對應字段,點一下釘住。</p>'
+    +'<p class="note">卡名下一行是卡層彙總:這張卡已歸的葉分效果組與代價組(各自去重、依樹序)。</p>'
     +'<div class="results"></div><div class="card-view"></div>';
   var input=box.querySelector("input"), results=box.querySelector(".results"), view=box.querySelector(".card-view");
   var currentRecs=null;

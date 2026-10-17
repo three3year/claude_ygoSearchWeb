@@ -270,16 +270,31 @@ def record_lines(s, fr):
                 f["clause"]))
             continue
         extra = constraints.describe_action(f)
-        # 回填的對象/來源(frame-args-v2)標「(回填)」:子代理回報時分「抽錯」與「回填錯」
-        backfill = f.get("backfill") or []
-        lines.append("框架 %d:[%s] %s(%s)| 對象=%s%s | 來源=%s%s | 目的=%s%s%s | 子句=%s"
+        lines.append("框架 %d:[%s] %s(%s%s)| %s%s%s | 子句=%s"
                      % (k, f["position"], f["action"], f["polarity"],
-                        f.get("object") or "", "(回填)" if "object" in backfill else "",
-                        f.get("source") or "", "(回填)" if "source" in backfill else "",
-                        f.get("goal") or "", " | " + extra if extra else "", opt,
+                        "・被動" if f.get("passive") else "",
+                        " | ".join(argument_cells(f)), " | " + extra if extra else "", opt,
                         f["clause"]))
     lines.append("")
     return lines
+
+
+# 動作框架的論元欄(批次檔的顯示順序;frame-args-v3 起多主題/主語/所在)
+ARGUMENT_CELLS = (("topic", "主題"), ("subject", "主語"), ("object", "對象"), ("source", "來源"),
+                  ("place", "所在"), ("goal", "目的"))
+
+
+def argument_cells(f):
+    """動作框架 → 「欄=值」清單;回填的格標「(回填)」、推得的格標「(推得)」——子代理回報時
+    分「抽錯」「回填錯/延續錯」「推得錯」。主題/主語/所在沒有值時不列。"""
+    backfill, inferred = f.get("backfill") or [], f.get("inferred") or []
+    cells = []
+    for key, label in ARGUMENT_CELLS:
+        if not f.get(key) and key in ("topic", "subject", "place"):
+            continue
+        mark = "(回填)" if key in backfill else "(推得)" if key in inferred else ""
+        cells.append("%s=%s%s" % (label, f.get(key) or "", mark))
+    return cells
 
 
 def card_block(cid, cards, recs, frames_by_key):

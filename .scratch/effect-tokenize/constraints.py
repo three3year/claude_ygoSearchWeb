@@ -38,9 +38,11 @@ FIELD_LABEL = {"period": "期間", "count": "次數", "target": "對象", "shari
                "polarity": "極性", "materials": "素材",
                # frame-args-v2:回合條件(時機與動作框架共用)、動作框架的列舉/連接/群組/回填
                "turn": "回合條件", "enumeration": "列舉", "link": "連接", "group": "群組",
-               "backfill": "回填", "object": "對象"}
-# 回填欄的值是被填的欄名(object/source);「內容」欄顯示成 對象/來源
-BACKFILL_FIELDS = ("object", "source")
+               "backfill": "回填", "object": "對象",
+               # frame-args-v3:動作框架的主題/所在/目的(回填與推得的欄名)
+               "topic": "主題", "place": "所在", "goal": "目的", "inferred": "推得"}
+# 回填欄的值是被填的欄名(topic/object/source/place,frame-args-v3 起多主題與所在);
+# 推得欄是 source/goal;「內容」欄顯示成 主題/對象/來源/所在/目的
 # 群組號的顯示(或①/或②…);超出時退回 或(n)
 CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 PERIOD_TURN, PERIOD_DUEL, PERIOD_CHAIN = "回合", "決鬥", "同一連鎖"
@@ -117,6 +119,8 @@ def _v2_parts(frame):
         parts.append(group_text(frame))
     if frame.get("backfill"):
         parts.append("回填 %s" % "・".join(FIELD_LABEL[k] for k in frame["backfill"]))
+    if frame.get("inferred"):
+        parts.append("推得 %s" % "・".join(FIELD_LABEL[k] for k in frame["inferred"]))
     if frame.get("enumeration"):
         parts.append("列舉 %s" % "／".join(frame["enumeration"]))
     return parts
@@ -542,10 +546,10 @@ class ConstraintFinder:
 
     # ── 誓約 ──
     def _anchor_args(self, tokens, a, clause_start):
-        """錨點的論元(對象/來源/目的,只留有值的)。"""
+        """錨點的論元(對象/來源/目的,只留有值的;主題/主語是動作框架的欄位,不入約束框架)。"""
         args, _carry = self.x.arguments(tokens, clause_start, a["head"] - a["fold"],
                                         trailing=a["form"] == "noun" or a["fold"] > 0)
-        return {k: v for k, v in args.items() if v}
+        return {k: v for k, v in args.items() if v and k in ("object", "source", "goal")}
 
     def _action_name(self, tokens, a):
         """錨點的動作名,「・」並列(召喚・特殊召喚)串成一個;攻撃宣言 連 攻撃 一起記。"""

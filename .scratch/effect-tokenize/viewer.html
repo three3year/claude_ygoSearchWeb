@@ -157,6 +157,8 @@ table.frames .sent{display:block;font-size:.7rem}
 table.frames tr.con td{background:var(--con-row)}
 table.frames td.content{font-size:.82rem;color:var(--muted)}
 table.frames td.bf{color:var(--muted);opacity:.55;font-style:italic}
+table.frames td.inf{color:var(--muted);opacity:.55;text-decoration:underline dotted}
+table.frames .passive{display:block;font-size:.72rem;color:var(--muted)}
 table.frames td.cat{font-size:.82rem;min-width:7em}
 table.frames td.cat .path{display:block;white-space:nowrap}
 table.frames td.cat .path b{font-weight:600}
@@ -549,16 +551,19 @@ function cardHtml(c,recs){
       +'<div class="rec-grid"><div class="rec-text">'+recTextHtml(r,null)+'</div><div class="rec-frames">';
     if(!r.f.length){h+='<p class="note">(抽不到框架)</p>';}
     else{
-      h+='<table class="frames"><thead><tr><th>#</th><th>類別</th><th>動作</th><th>動作類別</th><th>極性</th><th>對象</th><th>來源</th><th>目的</th><th>內容</th><th>選項</th></tr></thead><tbody>';
+      h+='<table class="frames"><thead><tr><th>#</th><th>類別</th><th>動作</th><th>動作類別</th><th>極性</th><th>主題</th><th>主語</th><th>對象</th><th>來源</th><th>所在</th><th>目的</th><th>內容</th><th>選項</th></tr></thead><tbody>';
       r.f.forEach(function(f,i){
-        // f[11]=約束框架的 類別·子類(動作框架 null);f[12]=內容(約束框架的專屬欄位;動作框架的次數/窗口/回合條件/連接·群組/回填/列舉);f[13]=回填的欄名(object/source,那幾格淡色);f[14]=動作類別(約束框架 null)
+        // f[11]=約束框架的 類別·子類(動作框架 null);f[12]=內容(約束框架的專屬欄位;動作框架的次數/窗口/回合條件/連接·群組/回填/推得/列舉);f[13]=回填的欄名(topic/object/source/place,那幾格淡色斜體);f[14]=動作類別(約束框架 null);f[15]〜f[19]=主題、主語、所在、推得的欄名(source/goal,那幾格淡色加點線)、被動
         var con=!!f[11];
-        var bf=f[13]||[];
-        var objCls=bf.indexOf("object")>=0?' class="bf" title="回填:規則從前面的述語接過來的,不是這子句寫的"':'';
-        var srcCls=bf.indexOf("source")>=0?' class="bf" title="回填:規則從前面的述語接過來的,不是這子句寫的"':'';
-        h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"'+(con?' class="con"':'')+'><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+(con?conChip(f[11]):posChip(f[1]))+'</td><td>'+(con?'':'<b>'+esc(f[2])+'</b>')+'</td>'+(FR.categories?catCell(f[14]):'<td></td>')+'<td>'+(f[3]?polText(f[3]):'')+'</td>'
-          +'<td'+objCls+'>'+esc(f[4]||"")+'</td><td'+srcCls+'>'+esc(f[5]||"")+'</td><td>'+esc(f[6]||"")+'</td><td class="content">'+esc(f[12]||"")+'</td><td>'+optText(f)+'</td></tr>'
-          +'<tr class="clause"><td></td><td colspan="9"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
+        var bf=f[13]||[],inf=f[18]||[];
+        function cell(key,v){
+          var cls=bf.indexOf(key)>=0?' class="bf" title="回填:規則從前面的述語接過來的,不是這子句寫的"'
+            :inf.indexOf(key)>=0?' class="inf" title="推得:規則依動作補上的去處/來處,原文沒寫"':'';
+          return '<td'+cls+'>'+esc(v||"")+'</td>';
+        }
+        h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"'+(con?' class="con"':'')+'><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+(con?conChip(f[11]):posChip(f[1]))+'</td><td>'+(con?'':'<b>'+esc(f[2])+'</b>')+'</td>'+(FR.categories?catCell(f[14]):'<td></td>')+'<td>'+(f[3]?polText(f[3]):'')+(f[19]?'<span class="passive">被動</span>':'')+'</td>'
+          +cell("topic",f[15])+cell("subject",f[16])+cell("object",f[4])+cell("source",f[5])+cell("place",f[17])+cell("goal",f[6])+'<td class="content">'+esc(f[12]||"")+'</td><td>'+optText(f)+'</td></tr>'
+          +'<tr class="clause"><td></td><td colspan="12"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
       });
       h+='</tbody></table>';
     }
@@ -570,7 +575,7 @@ function cardsSection(){
   var box=document.createElement("section");
   if(!FR){box.innerHTML='<p class="note">view_data.js 未含框架資料(先跑 frames.py 與 prepare_view.py)。</p>';return box}
   box.innerHTML='<div class="search-row"><input type="search" placeholder="卡號或卡名(日文/繁中,子字串)"><button class="btn" id="rnd">隨機一張</button></div>'
-    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。一句效果句一塊:左原文(領起部分接各 ● 行,每段標效果類型)、右框架表,兩種框架依原文順序混排——動作框架(類別欄=位置 代價/效果/條件;動作=詞元;動作類別=歸到類別樹的哪個葉,顯示大類 › 詞元 › 葉的路徑,複合來源多葉並列,淡色斜體「未歸」是規則表沒覆蓋、更淡的「不適用」是條件位;對象/來源/目的=を/から/に・へ 前的詞,淡色斜體的對象/來源格是規則從前面的述語回填的(か 並列、選ぶ鏈),不是這子句寫的;內容=效果內容的次數/窗口/回合條件、か 並列的「或①」(同號二選一)、回填了哪幾欄、純列舉項的列舉清單)與約束框架(底色列;類別欄=限制·次數/限制·事件回合禁用/限制·誓約/限制·召喚條件/時機/素材;內容=專屬欄位,時機的窗口只記階段、「〜したターン/そのターン/次のターン」記在回合條件);選項=出自第幾個 ● 與標籤;滑過一列在原文標出對應字段,點一下釘住。</p>'
+    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。一句效果句一塊:左原文(領起部分接各 ● 行,每段標效果類型)、右框架表,兩種框架依原文順序混排——動作框架(類別欄=位置 代價/效果/條件;動作=詞元;動作類別=歸到類別樹的哪個葉,顯示大類 › 詞元 › 葉的路徑,複合來源多葉並列,淡色斜體「未歸」是規則表沒覆蓋、更淡的「不適用」是條件位;主題=は 前的片語(說的是誰;同一句內沒有自己主題的子句沿用前一個主題)、主語=が 前的片語(說的是什麼在變),被動句的受事者留在主題/主語、極性下標「被動」;對象/來源/目的=を/から/に・へ 前的詞;受事者片語裡的區域切出來——區域移動與召喚類動作記來源、其餘記所在(卡在那裡、沒有被移走);淡色斜體的格是規則從前面的述語回填的(か 並列、選ぶ鏈、主題延續),淡色加點線的格是推得——目的(與 捨てる、ドロー 的來源)由動作本身決定、原文沒寫,規則補上的;內容=效果內容的次數/窗口/回合條件、か 並列的「或①」(同號二選一)、回填與推得了哪幾欄、純列舉項的列舉清單)與約束框架(底色列;類別欄=限制·次數/限制·事件回合禁用/限制·誓約/限制·召喚條件/時機/素材;內容=專屬欄位,時機的窗口只記階段、「〜したターン/そのターン/次のターン」記在回合條件);選項=出自第幾個 ● 與標籤;滑過一列在原文標出對應字段,點一下釘住。</p>'
     +'<p class="note">卡名下一行是卡層彙總:這張卡已歸的葉分效果組與代價組(各自去重、依樹序)。</p>'
     +'<div class="results"></div><div class="card-view"></div>';
   var input=box.querySelector("input"), results=box.querySelector(".results"), view=box.querySelector(".card-view");

@@ -37,8 +37,14 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
     enumeration  可選(票 01):純列舉項(● 項全部沒有框架)掛在母句「以下の」所指框架上的
               有序字串清單;對象欄不改字
     link/group   可選(票 02):か 並列的述語各記 連接=或、群組=n(一句效果句內從 1 起編)
-    backfill  可選(票 03):か 群組與選ぶ鏈之後缺對象的述語從前面接過 object/source,
-              此欄列出被填的欄名;值是上游框架的字面
+    backfill  可選(票 03):か 群組與選ぶ鏈之後缺對象的述語從前面接過 object 與區域,
+              此欄列出被填的欄名;值是上游框架的字面(frame-args-v3 起值域多 topic/place)
+    topic/subject  可選(frame-args-v3 票 02/03):は 片語(主題)、が 片語(主語)的字面,
+              同一子句取離述語最近的;主題在同一句內延續給沒有自己主題的子句(回填記 topic)
+    place     可選(票 04):受事者(主動句對象;被動句主語,沒有時主題)片語裡切出的區域——
+              移動類動作(MOVE_ACTIONS)記在 source,其餘記在 place(所在);受事者欄只少掉那一段
+    inferred  可選(票 05):規則依動作補上的 source/goal 欄名(INFERRED;原文沒寫才補)
+    passive   可選(票 02):被動句時為 True
 
 單位是效果句(一個編號效果的全文,連同它的 ● 選項;tokenize.py 的 assemble 把
 拆開的領起句與子效果句接回一段):選項邊界 token「●」與「。」同樣結束一句,
@@ -58,8 +64,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from constraints import (BACKFILL_FIELDS, KIND_ACTION, KIND_CONSTRAINT,  # noqa: E402
-                         ConstraintFinder)
+from constraints import KIND_ACTION, KIND_CONSTRAINT, ConstraintFinder  # noqa: E402
+from places import parse_place  # noqa: E402
 from report import frame_stats, token_kind  # noqa: E402
 
 LEXICON = os.path.join(HERE, "lexicon.json")
@@ -124,7 +130,9 @@ LIGHT_VERBS = {"する", "なる"}
 TIME_HEADS = {"ターン", "時", "場合", "際", "度", "後", "前", "間", "内", "中",
               "以降", "開始", "終了", "デュエル", "フェイズ", "毎"}
 CASE_ROLE = {"を": "object", "から": "source", "に": "goal", "へ": "goal"}
-# 其他格助詞:切片語但第一版不收(主體/手段/期間);後綴型(にも/には)併入前一格
+# 主題(は 前)與主語(が 前)(frame-args-v3 票 02);後綴型(には/では/とは)不算主題
+TOPIC_ROLES = {"は": "topic", "が": "subject"}
+# 其他格助詞:切片語但不收成論元(手段/期間);後綴型(にも/には)併入前一格
 CASE_OTHER = {"が", "は", "で", "まで", "より", "として", "しか", "のみ", "だけ",
               "ずつ", "も"}
 CASE_SUFFIX = {"も", "は", "のみ", "だけ", "しか", "ずつ"}
@@ -174,6 +182,40 @@ SELECT_ACTIONS = {"選ぶ", "選択"}   # 選ぶ鏈的起點(票 03)
 NO_OBJECT_ACTIONS = {"存在", "成功", "ドロー", "離れる", "無効化", "攻撃宣言", "リバース",
                      "戻る", "加わる", "素材にする", "違う", "行く", "上がる", "異なる",
                      "チェーン", "L素材にする", "S素材にする"}
+# ── 第三版論元(frame-args-v3)──
+# 受事者候選的論元鍵:主動句的受事者是對象,被動句是主語(沒有時是主題)(票 04)
+PATIENT_KEYS = ("object", "topic", "subject")
+# 移動類(區域移動與召喚兩個大類的成員;素材類不算,規格決定 2026-10-17):受事者的區域記
+# 來源,其餘動作記所在(票 04)
+MOVE_ACTIONS = {"加える", "ドロー", "送る", "捨てる", "リリース", "除外", "戻す", "戻る", "置く",
+                "セット", "装備", "移動", "特殊召喚", "召喚", "通常召喚", "アドバンス召喚",
+                "A召喚", "融合召喚", "儀式召喚", "S召喚", "X召喚", "リンク召喚", "P召喚"}
+# 區域字面前的玩家詞;自身の/持ち主の 照區域辨識記玩家「無」,仍隨區域切出
+PLAYER_WORDS = {"自分", "相手", "お互い", "自身", "持ち主"}
+# 受事者片語裡並列段的分隔(各段切自己的區域);區域字面內部的並列(自分か相手の、手札・墓地)
+PATIENT_COORDINATORS = {"p:と", "p:か", "p:や", "p:及び", "p:または"}
+PLACE_JOINERS = {"・", "p:か", "p:または", "p:及び", "p:や"}
+DECK_POSITIONS = {"一番上", "一番下", "上", "下"}
+# 推得值(票 05):動作 → 由動作唯一決定的 來源/目的 區域字面;原文沒寫時補上並標推得。
+# 装備(目的是被裝備的怪獸)、リリース、破壊(去處會被改寫)不補(規格決定 2026-10-17)
+_ON_FIELD = {"goal": "フィールド"}
+INFERRED = dict({"除外": {"goal": "除外"}, "捨てる": {"source": "手札", "goal": "墓地"},
+                 "ドロー": {"source": "デッキ", "goal": "手札"}, "セット": _ON_FIELD,
+                 "加える": {"goal": "手札"}},
+                **{action: _ON_FIELD for action in (
+                    "特殊召喚", "召喚", "通常召喚", "アドバンス召喚", "A召喚", "融合召喚",
+                    "儀式召喚", "S召喚", "X召喚", "リンク召喚", "P召喚")})
+INFERRED_FIELDS = ("source", "goal")          # 推得欄的值,依框架表的欄序
+# 區域前的位置限定語(自分の中央の|メインモンスターゾーン)
+POSITION_WORDS = {"中央", "左端", "右端", "両端"}
+# 「と」後接這些詞時是比較(…と同じ/と異なる),不是並列受事者
+COMPARE_AFTER_TO = {"同じ", "異なる", "違う", "共に", "一緒"}
+PAREN_MAX = 3                 # 區域後括號註記(フィールド（表側表示）)的最多詞數
+# 片語是數量(…の数×100、…の合計)時區域修飾的是數量,不切
+COUNT_WORDS = {"数", "合計"}
+# 屬性主題「Xの攻撃力」(票 03):延續給下一子句時改用屬性的主人 X
+ATTRIBUTE_TOPIC = re.compile(r"(.+?)の(?:元々の)?(?:攻撃力・守備力|攻撃力|守備力|レベル|ランク"
+                             r"|カード名|種族|属性|効果)")
 LABEL_MAX_CHARS = 30          # ●標籤「●…：」冒號前的最大字數(與 tokenize._LABEL 同)
 
 
@@ -800,14 +842,28 @@ class FrameExtractor:
                 key = CASE_ROLE.get(role)
                 if key and chunk and key not in carry:
                     carry[key] = "".join(self.surface(t) for t in self._trim(chunk))
+                    found = self.split_place(self._trim(chunk)) if key == "object" else None
+                    if found:
+                        carry["split"] = {"object": found}
         args = {}
+        spans = {}                    # 論元的詞序列(受事者切區域用,票 04)
         last_key = None
         for role, chunk, _hard in joined:
+            # 主題(は 前)與主語(が 前;frame-args-v3 票 02):同一子句有多個時取離述語最近的
+            if role in TOPIC_ROLES and self._trim(chunk):
+                key = TOPIC_ROLES[role]
+                spans[key] = self._trim(chunk)
+                args[key] = "".join(self.surface(t) for t in spans[key])
+                # 主題在主語之前(このカードは、相手モンスターが…場合):條件子句的主題屬主句(票 03)
+                args["topic_first"] = key == "subject" and "topic" in args
+                last_key = None
+                continue
             if role == "まで" and last_key == "object" and chunk and all(
                     token_kind(t) in ("num", "counter", "quant", "range")
                     for t in chunk):
                 # 「〜を２枚まで」:上限數量併回對象
                 args[last_key] += "".join(self.surface(t) for t in chunk) + "まで"
+                spans[last_key] = spans[last_key] + chunk + ["p:まで"]
                 continue
             key = CASE_ROLE.get(role, "goal" if role == "と" else None)
             if key is None or not chunk:
@@ -821,8 +877,159 @@ class FrameExtractor:
                 continue
             text = "".join(self.surface(t) for t in chunk)
             args[key] = text if key not in args else args[key] + "、" + text
+            spans[key] = chunk if key not in spans else spans[key] + ["、"] + chunk
             last_key = key
+        # 受事者候選(對象/主題/主語)片語裡的區域(票 04);用哪一個由框架依被動決定
+        args["split"] = {key: found for key in PATIENT_KEYS if key in spans
+                         for found in [self.split_place(spans[key])] if found}
         return args, carry
+
+    # ── 受事者的區域切分(frame-args-v3 票 04)──
+    def split_place(self, chunk):
+        """受事者片語的詞序列 → (區域字面, 剩餘字面);受事者本身就是區域(整個片語是區域:
+        手札、相手のEXデッキ;或片語以區域收尾:このカード以外の手札)時剩餘為 None、受事者
+        欄不動;沒有區域回 None。每個並列段(と/か/や/及び/または 隔開;と同じ 的 と 是比較,
+        不算)切它第一段「(玩家の)區域の」——片語開頭、の/讀點/定語述語之後都算段首;段裡的
+        區域後面隔著定語述語又出現區域時,前面那個在定語子句裡、不是受事者的,改用後面的。
+        多段的區域依字面順序以「・」並列、去重。"""
+        n = len(chunk)
+        found = []                  # (切的起點, 切的終點或 None(不切), 區域字面)
+        k, at_boundary, part_found, reopen = 0, True, False, False
+        while k < n:
+            t = chunk[k]
+            if self._coordinates(chunk, k):
+                k, at_boundary, part_found, reopen = k + 1, True, False, False
+                continue
+            if part_found and self._is_predicate(t):
+                reopen = True           # 定語述語之後若還有區域,前面那個在定語子句裡
+            if at_boundary and (not part_found or reopen) and not self._counts_from(chunk, k):
+                end = self._place_segment(chunk, k)
+                head = end == n or end is not None and self._coordinates(chunk, end)
+                # 除外されている(自分の)X:狀態寫法的區域直接修飾名詞,後面沒有 の
+                banished = end is not None and not head and chunk[end] != "p:の" \
+                    and self._base_word(chunk[k]) == "除外" and self.word(chunk[k + 1]) == "されて"
+                if end is not None and (head or banished or chunk[end] == "p:の"):
+                    lo = self._qualified_start(chunk, k, end)
+                    if part_found:
+                        found.pop()
+                    found.append((lo, None if head else end if banished else end + 1,
+                                  self._text(chunk[lo:end])))
+                    part_found, reopen = True, False
+                    k, at_boundary = (end if head or banished else end + 1), True
+                    continue
+            # 段首:の/讀點之後,或定語述語(含む、された)之後;助詞之後不算(この効果で|除外
+            # されている:區域詞是定語子句自己的述語)
+            at_boundary = t in ("p:の", "、") or self._is_predicate(t)
+            k += 1
+        if not found:
+            return None
+        places = []
+        for _lo, _hi, text in found:
+            if text not in places:
+                places.append(text)
+        cuts = [(lo, hi) for lo, hi, _text in found if hi is not None]
+        rest = [t for i, t in enumerate(chunk) if not any(lo <= i < hi for lo, hi in cuts)]
+        return "・".join(places), (self._text(rest) if cuts and rest else None)
+
+    def _coordinates(self, chunk, k):
+        """chunk[k] 是並列受事者的分隔;「と同じ/と異なる」的比較、「となる」的引用 と 不算
+        (並列的 と 後面接名詞)。"""
+        return chunk[k] in PATIENT_COORDINATORS and not (
+            chunk[k] == "p:と" and k + 1 < len(chunk)
+            and (self.word(chunk[k + 1]) in COMPARE_AFTER_TO
+                 or not self.is_noun_like(chunk[k + 1])))
+
+    def _is_predicate(self, token):
+        """片語裡的定語述語(含む、された、持つ、なる…):詞典詞且不是名詞類。"""
+        return token_kind(token) == "lex" and not self.is_noun_like(token)
+
+    def _qualified_start(self, chunk, k, end):
+        """區域前的位置限定語連同玩家一起切(自分の中央の|メインモンスターゾーン):回切的起點。"""
+        lo = k
+        if lo >= 2 and chunk[lo - 1] == "p:の" and self.word(chunk[lo - 2]) in POSITION_WORDS:
+            lo -= 2
+            if lo >= 1 and chunk[lo - 1] == "・":
+                return k              # 左端・右端の:並列的限定語不併,只切區域
+            if lo >= 2 and chunk[lo - 1] == "p:の" and self.word(chunk[lo - 2]) in PLAYER_WORDS:
+                lo -= 2
+        return lo if lo == k or parse_place(self._text(chunk[lo:end]))[1] else k
+
+    def _counts_from(self, chunk, k):
+        """chunk[k] 起到下一個並列分隔前是數量(…の数×100ダメージ、…の合計):區域修飾的是
+        數量,受事者不在那裡。"""
+        for t in chunk[k:]:
+            if t in PATIENT_COORDINATORS:
+                return False
+            if self.word(t) in COUNT_WORDS or t == "×":
+                return True
+        return False
+
+    def _text(self, tokens):
+        return "".join(self.surface(t) for t in tokens)
+
+    def _place_segment(self, chunk, k):
+        """chunk[k] 起是不是一段區域字面:(玩家(か|・…玩家)の)區域(・|か…區域)(の 一番上),
+        或 除外されている(玩家)——回這段的結尾(不含),不是時 None;最後由區域辨識
+        (places.parse_place)確認認得出區域。"""
+        n = len(chunk)
+        m = k
+        if (m + 2 < n and self._base_word(chunk[m]) == "除外" and self.word(chunk[m + 1]) == "されて"
+                and self.word(chunk[m + 2]) == "いる"):
+            m += 3
+            if m < n and self.word(chunk[m]) in PLAYER_WORDS:
+                m += 1
+        else:
+            if self.word(chunk[m]) in PLAYER_WORDS:
+                m += 1
+                while (m + 1 < n and chunk[m] in PLACE_JOINERS
+                       and self.word(chunk[m + 1]) in PLAYER_WORDS):
+                    m += 2
+                if m + 1 < n and chunk[m] in PLACE_JOINERS \
+                        and self._zone_end(chunk, m + 1) is not None:
+                    m += 1            # 自分または|相手フィールド:玩家與帶玩家的區域詞並列
+                elif m + 1 >= n or chunk[m] != "p:の":
+                    return None
+                else:
+                    m += 1
+            m = self._zone_end(chunk, m)
+            if m is None:
+                return None
+            while m + 1 < n and chunk[m] in PLACE_JOINERS \
+                    and self._zone_end(chunk, m + 1) is not None:
+                m = self._zone_end(chunk, m + 1)
+            # デッキの一番上:牌組頂/底仍是區域(位置併進區域字面)
+            if (m + 1 < n and chunk[m] == "p:の" and self.word(chunk[m + 1]) in DECK_POSITIONS
+                    and (self._base_word(chunk[m - 1]) or "").endswith("デッキ")):
+                m += 2
+        return m if parse_place(self._text(chunk[k:m]))[1] else None
+
+    def _zone_end(self, chunk, m):
+        """chunk[m] 起是一個區域詞(含 除外|状態 兩詞、指示詞 その墓地、其後的括號註記
+        フィールド（表側表示）)→ 回結尾(不含),否則 None。"""
+        n = len(chunk)
+        if m >= n:
+            return None
+        if m + 1 < n and self._base_word(chunk[m]) == "除外" and self.word(chunk[m + 1]) == "状態":
+            m += 2
+        elif self._base_word(chunk[m]) and "の" not in self._base_word(chunk[m]) \
+                and parse_place(self._base_word(chunk[m]) if token_kind(chunk[m]) == "elided"
+                                else self.surface(chunk[m]))[1]:
+            m += 1
+        else:
+            return None
+        if m < n and chunk[m] == "（" and "）" in chunk[m:m + PAREN_MAX + 2]:
+            m = chunk.index("）", m) + 1
+        return m
+
+    def _base_word(self, token):
+        """詞典詞的字面,指示詞取被指的詞(その墓地 → 墓地)、省略寫法取完整的詞(自分(フィールド)
+        → 自分フィールド);其餘 None。"""
+        kind = token_kind(token)
+        if kind == "lex":
+            return self.lex.surface_of[token]
+        if kind in ("dem", "elided"):
+            return self.lex.surface_of[token.split(":", 2)[2]]
+        return None
 
     @staticmethod
     def _trim(chunk):
@@ -1005,8 +1212,12 @@ class FrameExtractor:
                 args, next_carry = self.arguments(
                     tokens, a["clause_start"], a["head"] - a["fold"],
                     trailing=a["form"] == "noun" or a["fold"] > 0)
+                own = set(args)
                 for key, value in carry.items():
-                    args.setdefault(key, value)
+                    if key != "split":
+                        args.setdefault(key, value)
+                if "object" not in own and "object" in carry.get("split", {}):
+                    args["split"]["object"] = carry["split"]["object"]
                 carry = next_carry
                 if a["action"].endswith("なる") and "source" in args:
                     carry["source"] = args.pop("source")   # 〜からリリースし
@@ -1054,23 +1265,30 @@ class FrameExtractor:
                 fields = self.finder.action_fields(
                     tokens, a["clause_start"], a["head"], in_activation,
                     prev_anchor=anchors[k - 1] if k else None)
+                # 條件子句裡主題在自己的主語之前:主題屬主句,不給條件框架,交給後面延續(票 03)
+                a["lifted_topic"] = args.pop("topic") if (
+                    a["conditional"] and args.get("topic_first")) else None
                 for action in coordinated + [a["action"]]:
+                    # 第三版論元(票 02/04):主題、主語、所在、被動 是可選欄,只在有值時帶
+                    v3 = self._patient_place(args, action, a["passive"])
                     frame = dict({"kind": KIND_ACTION, "sentence": s_idx,
                                   "action": action,
-                                  "object": args.get("object"),
-                                  "source": args.get("source"),
+                                  "object": v3.pop("object"),
+                                  "source": v3.pop("source"),
                                   "goal": args.get("goal"),
                                   "position": position,
                                   "polarity": a["polarity"],
                                   "option": option_of[s_idx],
                                   "label": label_of[s_idx],
                                   "span": list(span), "clause": clause},
-                                 **fields)
+                                 **fields, **v3)
+                    self._infer(frame)
                     frames.append(frame)
                     made.append((s_idx, k, a, frame))
         # frame-args-v2:か 並列的連接與群組(票 02)→ 回填對象與來源(票 03)→ 純列舉項
         # 掛進列舉欄(票 01)
         self._link_groups(tokens, anchors_by_sentence, made, marker_of)
+        self._carry_topic(made)
         self._backfill(tokens, made)
         self._attach_enumeration(tokens, sentences, option_of, frames, text_of)
         # 依原文位置混排;同起點時約束框架在前(穩定排序保住並列述語的順序)
@@ -1126,18 +1344,104 @@ class FrameExtractor:
                         fr["link"] = LINK_OR
                         fr["group"] = group_no
 
+    @staticmethod
+    def _patient_place(args, action, passive):
+        """論元 → 框架的對象/來源與第三版可選欄(主題、主語、所在、被動;票 02/04)。受事者
+        (主動句是對象;被動句是主語,沒有時是主題)片語裡的區域切出:移動類記來源、其餘記
+        所在,受事者欄只少掉區域那一段(整段就是區域時不動);原文已有 から 來源時不切。"""
+        out = {"object": args.get("object"), "source": args.get("source")}
+        out.update((key, args[key]) for key in ("topic", "subject") if args.get(key))
+        patient = "object" if not passive else ("subject" if args.get("subject") else "topic")
+        split = args.get("split", {}).get(patient)
+        if split and not args.get("source") and out.get(patient):
+            place, rest = split
+            if rest is not None:
+                out[patient] = rest
+            out["source" if action in MOVE_ACTIONS else "place"] = place
+        if passive:
+            out["passive"] = True
+        return out
+
+    @staticmethod
+    def _infer(frame):
+        """推得值(票 05):對照表裡的動作,原文沒寫的 來源/目的 補上規則值,框架記 推得=被補的
+        欄名;原文有字面時用原文。否定框架也補(欄位說的是這個動作的去處,極性另記)。"""
+        table = INFERRED.get(frame["action"], {})
+        filled = [key for key in INFERRED_FIELDS if key in table and not frame.get(key)]
+        for key in filled:
+            frame[key] = table[key]
+        if filled:
+            frame["inferred"] = filled
+
+    def _carry_topic(self, made):
+        """主題延續(frame-args-v3 票 03):子句沒有自己的主題時沿用同一句內前一個主題,框架的
+        回填欄記 topic;到句號、新的主題、或一個自己帶 が/は 的條件子句為止(條件框架不接、
+        延續也到此停)。屬性主題(Xの攻撃力は…)延續下去的是 X。條件子句裡主題在自己主語之前時(このカードは、相手モンスターが攻撃
+        した場合、…),主題屬主句:條件框架不帶,從它之後接著延續。主語不延續。"""
+        current, cur_sentence = None, None
+        for s_idx, _k, a, fr in made:
+            if s_idx != cur_sentence:
+                current, cur_sentence = None, s_idx
+            if a.get("lifted_topic"):
+                current = a["lifted_topic"]
+                continue
+            if fr.get("topic"):
+                # 「Xの攻撃力は…アップし、…破壊されない」:延續下去的是屬性的主人 X
+                owner = ATTRIBUTE_TOPIC.fullmatch(fr["topic"])
+                current = owner.group(1) if owner else fr["topic"]
+                continue
+            if a["conditional"] and fr.get("subject"):
+                current = None
+                continue
+            if current:
+                fr["topic"] = current
+                fr.setdefault("backfill", []).append("topic")
+                if fr.get("passive") and not fr.get("subject") \
+                        and not (_literal(fr, "source") or fr.get("place")):
+                    self._cut_carried_topic(fr)
+
+    def _cut_carried_topic(self, fr):
+        """延續來的主題落在沒有主語的被動框架:主題就是受事者,區域照票 04 切出(移動類記來源、
+        其餘記所在),該欄也標回填。延續值是字串,重新分詞後再切。"""
+        found = self.split_place(self.tokenizer.tokenize(fr["topic"], ""))
+        if not found:
+            return
+        place, rest = found
+        if rest is not None:
+            fr["topic"] = rest
+        key = "source" if fr["action"] in MOVE_ACTIONS else "place"
+        fr[key] = place
+        fr["backfill"].append(key)
+        if key in (fr.get("inferred") or ()):
+            fr["inferred"].remove(key)
+            if not fr["inferred"]:
+                del fr["inferred"]
+
     def _backfill(self, tokens, made):
         """回填(票 03):(b)選ぶ/選択 框架有對象時,它之後同一句內缺對象的述語接過它的對象,
-        缺來源時也接來源——到句號、自己有對象的述語、新的主題「〜は」為止;(a)か 群組裡缺
-        對象/來源的成員拿群組內第一個有該欄的成員(含它回填到的值)。從不帶對象的動作
-        (NO_OBJECT_ACTIONS、〜なる)不填;只動對象與來源;框架記 backfill=被填的欄名。"""
+        缺區域時也接區域——到句號、自己有對象的述語、新的主題「〜は」為止;(a)か 群組裡缺
+        對象/區域的成員拿群組內第一個有該欄的成員(含它回填到的值)。從不帶對象的動作
+        (NO_OBJECT_ACTIONS、〜なる)不填;不動目的;框架記 backfill=被填的欄名。
+        區域轉欄(frame-args-v3 票 06):上游的區域(來源,沒有時所在;推得的不算)交給下游時,
+        下游是移動類放來源、否則放所在;下游原文自己有來源或所在時不填;接到的區域蓋過下游
+        推得的同欄(上游原文的字優先於規則補的字)。"""
         own_object = {id(fr): bool(fr["object"]) for _s, _k, _a, fr in made}
 
-        def fill(fr, donor, keys):
-            for key in keys:
-                if not fr.get(key) and donor.get(key):
-                    fr[key] = donor[key]
-                    fr.setdefault("backfill", []).append(key)
+        def region(fr):
+            return _literal(fr, "source") or fr.get("place")
+
+        def fill(fr, donor, keys=("object", "region")):
+            if "object" in keys and not fr.get("object") and donor.get("object"):
+                fr["object"] = donor["object"]
+                fr.setdefault("backfill", []).append("object")
+            if "region" in keys and region(donor) and not region(fr):
+                key = "source" if fr["action"] in MOVE_ACTIONS else "place"
+                fr[key] = region(donor)
+                fr.setdefault("backfill", []).append(key)
+                if key in (fr.get("inferred") or ()):
+                    fr["inferred"].remove(key)
+                    if not fr["inferred"]:
+                        del fr["inferred"]
 
         def fillable(fr):
             return fr["action"] not in NO_OBJECT_ACTIONS \
@@ -1157,15 +1461,15 @@ class FrameExtractor:
                 donor = None
                 continue
             if fillable(fr):
-                fill(fr, donor, BACKFILL_FIELDS)
+                fill(fr, donor)
         # (a) か 群組
         groups = {}
         for _s, _k, _a, fr in made:
             if fr.get("group") is not None:
                 groups.setdefault(fr["group"], []).append(fr)
         for members in groups.values():
-            for key in BACKFILL_FIELDS:
-                donor = next((m for m in members if m.get(key)), None)
+            for key, has in (("object", lambda m: m.get("object")), ("region", region)):
+                donor = next((m for m in members if has(m)), None)
                 if donor is None:
                     continue
                 for m in members:
@@ -1275,6 +1579,11 @@ class FrameExtractor:
             extra = not (text[:1] == OPTION or 0x2460 <= ord(text[:1] or " ") < 0x2500)
         return self.frames_of_tokens(self.tokenizer.tokenize(text, context),
                                      text=text, extra=extra, card_type=card_type)
+
+
+def _literal(frame, key):
+    """論元欄的原文值(含切分與回填);推得的格(票 05)當作沒寫。"""
+    return None if key in (frame.get("inferred") or ()) else frame.get(key)
 
 
 _DEFAULT = None

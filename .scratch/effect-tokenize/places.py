@@ -50,6 +50,10 @@ QUALIFIER = re.compile(r"(?:(?!自分|相手|お互い|・|及び|または|%s).
                        r"(?=自分|相手|お互い|%s)" % (_ZONE_ALT, _ZONE_ALT))
 
 
+# 分詞器的省略寫法 自分(フィールド)・相手フィールド:半形括號裡是省略掉的詞尾,補回再認
+ELIDED = re.compile(r"\(([^()]*)\)")
+
+
 def _strip_player(text):
     """去掉開頭的玩家前綴 → (明示的玩家或 None, 其餘字面)。"""
     for prefix, player in PLAYER_PREFIXES:
@@ -101,6 +105,7 @@ def parse_place(literal):
     """
     if not literal:
         return None, []
+    literal = ELIDED.sub(r"\1", literal)
     if literal in BARE_PLAYERS:
         return BARE_PLAYERS[literal], []
     outer, rest = _strip_player(literal)

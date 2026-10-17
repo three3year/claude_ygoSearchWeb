@@ -15,10 +15,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import frames  # noqa: E402
 
 
+def literal(frame, key):
+    """論元欄的原文值:推得的格(frame-args-v3 票 05,規則補的)當作沒寫——推得值另由
+    TestInferredValues 斷言。"""
+    return None if key in (frame.get("inferred") or ()) else frame.get(key)
+
+
 def brief(frame):
-    """框架 → 比對用的精簡 tuple(動作, 對象, 來源, 目的, 位置, 極性)。"""
-    return (frame["action"], frame.get("object"), frame.get("source"),
-            frame.get("goal"), frame["position"], frame["polarity"])
+    """框架 → 比對用的精簡 tuple(動作, 對象, 來源, 目的, 位置, 極性);來源/目的只看原文
+    (推得的格當作沒寫)。"""
+    return (frame["action"], frame.get("object"), literal(frame, "source"),
+            literal(frame, "goal"), frame["position"], frame["polarity"])
 
 
 def actions(text, context=""):
@@ -55,7 +62,7 @@ class TestSingleAction(unittest.TestCase):
         self.assertEqual(
             extract("①：相手フィールドの表側表示モンスター１体のコントロールを"
                     "得る。"),
-            [("得る", "相手フィールドの表側表示モンスター1体のコントロール",
+            [("得る", "表側表示モンスター1体のコントロール",
               None, None, "效果", "肯定")])
 
     def test_frame_fields(self):
@@ -76,7 +83,7 @@ class TestClausesAndPosition(unittest.TestCase):
         self.assertEqual(
             extract("①：手札を１枚捨てて発動できる。デッキからモンスター１体を"
                     "手札に加える。"),
-            [("捨てる", "手札", None, None, "代價", "肯定"),
+            [("捨てる", "手札", "手札", None, "代價", "肯定"),
              ("加える", "モンスター1体", "デッキ", "手札", "效果", "肯定")])
 
     def test_condition_clause(self):
@@ -84,7 +91,7 @@ class TestClausesAndPosition(unittest.TestCase):
             extract("①：自分フィールドに「試作機」が存在する場合に発動できる。"
                     "相手フィールドのカード１枚を破壊する。"),
             [("存在", None, None, "自分フィールド", "條件", "肯定"),
-             ("破壊", "相手フィールドのカード1枚", None, None, "效果", "肯定")])
+             ("破壊", "カード1枚", None, None, "效果", "肯定")])
 
     def test_trigger_toki(self):
         self.assertEqual(
@@ -141,19 +148,19 @@ class TestPredicatesAndPolarity(unittest.TestCase):
     def test_sahen_banish(self):
         self.assertEqual(
             extract("①：相手の墓地のカード１枚を除外する。"),
-            [("除外", "相手の墓地のカード1枚", None, None, "效果", "肯定")])
+            [("除外", "カード1枚", "相手の墓地", None, "效果", "肯定")])
 
     def test_elided_head_in_object(self):
         self.assertEqual(
             extract("①：フィールドの魔法・罠カード１枚を破壊する。"),
-            [("破壊", "フィールドの魔法(カード)・罠カード1枚", None, None,
+            [("破壊", "魔法(カード)・罠カード1枚", None, None,
               "效果", "肯定")])
 
     def test_demonstrative_binding_and_target(self):
         self.assertEqual(
             extract("①：相手フィールドのモンスター１体を対象として発動できる。"
                     "そのモンスターを破壊する。"),
-            [("対象とする", "相手フィールドのモンスター1体", None, None,
+            [("対象とする", "モンスター1体", None, None,
               "條件", "肯定"),
              ("破壊", "そのモンスター", None, None, "效果", "肯定")])
 
@@ -227,8 +234,8 @@ class TestRound1Fixes(unittest.TestCase):
     def test_adverb_sarani_not_in_argument(self):
         self.assertEqual(
             extract("①：さらに相手フィールドのモンスター１体を選んで破壊する。"),
-            [("選ぶ", "相手フィールドのモンスター1体", None, None, "效果", "肯定"),
-             ("破壊", "相手フィールドのモンスター1体", None, None, "效果", "肯定")])
+            [("選ぶ", "モンスター1体", None, None, "效果", "肯定"),
+             ("破壊", "モンスター1体", None, None, "效果", "肯定")])
 
     def test_coordinated_summon_predicates_both_framed(self):
         self.assertEqual(
@@ -320,7 +327,7 @@ class TestRound1Fixes(unittest.TestCase):
     def test_otagai_ni_is_not_a_goal(self):
         self.assertEqual(
             extract("①：お互いに墓地のモンスターを特殊召喚できない。"),
-            [("特殊召喚", "墓地のモンスター", None, None, "效果", "否定")])
+            [("特殊召喚", "モンスター", "墓地", None, "效果", "否定")])
 
     def test_relative_naru_does_not_absorb_object(self):
         self.assertEqual(
@@ -352,8 +359,8 @@ class TestRound1Fixes(unittest.TestCase):
             extract("①：自分の墓地のモンスター１体を対象として発動できる"
                     "（代わりに自分の墓地の罠カード１枚を対象とする事もできる）。"
                     "そのカードを手札に加える。"),
-            [("対象とする", "自分の墓地のモンスター1体", None, None, "條件", "肯定"),
-             ("対象とする", "自分の墓地の罠カード1枚", None, None, "條件", "可能"),
+            [("対象とする", "モンスター1体", None, None, "條件", "肯定"),
+             ("対象とする", "罠カード1枚", None, None, "條件", "可能"),
              ("加える", "そのカード", None, "手札", "效果", "肯定")])
 
     def test_onaji_and_adjective_relative_clauses(self):
@@ -381,7 +388,7 @@ class TestRound2Fixes(unittest.TestCase):
         self.assertEqual(
             extract("①：そのモンスター以外の、自分の墓地のXモンスター１体を以下の"
                     "効果を持つ装備魔法カード扱いで対象のモンスターに装備する。"),
-            [("装備", "そのモンスター以外の自分の墓地のXモンスター1体", None,
+            [("装備", "そのモンスター以外のXモンスター1体", "自分の墓地",
               "対象のモンスター", "效果", "肯定")])
 
     def test_method_chain_summons_each_framed(self):
@@ -398,7 +405,7 @@ class TestRound2Fixes(unittest.TestCase):
         self.assertEqual(
             extract("●このターンに戦闘を行った相手フィールドのモンスター１体を"
                     "破壊する。"),
-            [("破壊", "戦闘を行った相手フィールドのモンスター1体", None, None,
+            [("破壊", "戦闘を行ったモンスター1体", None, None,
               "效果", "肯定")])
 
     def test_renyo_potential_before_comma_is_an_action(self):
@@ -458,7 +465,7 @@ class TestRound3Fixes(unittest.TestCase):
                     "自分フィールドに発動する。"),
             [("選ぶ", "フィールド魔法カード1枚", "デッキ", None, "效果", "肯定"),
              ("加える", "フィールド魔法カード1枚", "デッキ", "手札", "效果", "肯定"),
-             ("発動", "フィールド魔法カード1枚", "デッキ", "自分フィールド", "效果",
+             ("発動", "フィールド魔法カード1枚", None, "自分フィールド", "效果",
               "肯定")])
 
     def test_noun_ga_dekinai_and_motanai_relative(self):
@@ -495,8 +502,8 @@ class TestRound3Fixes(unittest.TestCase):
             extract("①：手札を１枚捨て、相手フィールドのモンスター１体を対象として"
                     "発動できる（この効果は相手ターンでも発動できる）。"
                     "そのモンスターを破壊する。"),
-            [("捨てる", "手札", None, None, "代價", "肯定"),
-             ("対象とする", "相手フィールドのモンスター1体", None, None, "條件",
+            [("捨てる", "手札", "手札", None, "代價", "肯定"),
+             ("対象とする", "モンスター1体", None, None, "條件",
               "肯定"),
              ("破壊", "そのモンスター", None, None, "效果", "肯定")])
 
@@ -658,8 +665,8 @@ def groups(text, context=""):
 
 
 def filled(text, context=""):
-    """動作框架 → (動作, 對象, 來源, 目的, 回填):票 03。"""
-    return [(f["action"], f.get("object"), f.get("source"), f.get("goal"),
+    """動作框架 → (動作, 對象, 來源, 目的, 回填):票 03;推得的格當作沒寫。"""
+    return [(f["action"], f.get("object"), literal(f, "source"), literal(f, "goal"),
              f.get("backfill")) for f in actions(text, context)]
 
 
@@ -691,7 +698,7 @@ class TestEnumeration(unittest.TestCase):
                          "●元々のカード名に「ウォリアー」を含むSモンスター"),
             [("破壊", None, ["「ジャンク・ウォリアー」のカード名が記されたモンスター",
                            "元々のカード名に「ウォリアー」を含むSモンスター"]),
-             ("除外", "フィールド・墓地のこのカード", None)])
+             ("除外", "このカード", None)])
 
     def test_item_text_drops_the_bullet_and_trailing_period(self):
         self.assertEqual(
@@ -704,7 +711,7 @@ class TestEnumeration(unittest.TestCase):
         self.assertEqual(
             enumerations("②：デッキから以下のカードの内１枚を手札に加える。\n●「海」\n"
                          "●自分フィールドのカード１枚を破壊する。"),
-            [("加える", "以下のカードの内1枚", None), ("破壊", "自分フィールドのカード1枚", None)])
+            [("加える", "以下のカードの内1枚", None), ("破壊", "カード1枚", None)])
 
 
 class TestLinkAndGroup(unittest.TestCase):
@@ -808,7 +815,7 @@ class TestBackfill(unittest.TestCase):
                    "１枚を破壊し、墓地へ送る。"),
             [("選ぶ", "モンスター1体", "デッキ", None, None),
              ("特殊召喚", "モンスター1体", "デッキ", None, ["object", "source"]),
-             ("破壊", "相手フィールドのカード1枚", None, None, None),
+             ("破壊", "カード1枚", None, None, None),
              ("送る", None, None, "墓地", None)])
 
     def test_predicate_with_a_topic_stops_the_chain(self):
@@ -821,7 +828,7 @@ class TestBackfill(unittest.TestCase):
         self.assertEqual(
             filled("①：デッキからカード１枚を選んで相手に見せ、相手はその中から１枚選ぶ。"),
             [("選ぶ", "カード1枚", "デッキ", None, None),
-             ("見せる", "カード1枚", "デッキ", "相手", ["object", "source"]),
+             ("見せる", "カード1枚", None, "相手", ["object", "place"]),
              ("選ぶ", None, "その中", None, None)])
 
     def test_intransitive_action_is_not_filled(self):
@@ -834,12 +841,442 @@ class TestBackfill(unittest.TestCase):
     def test_backfill_lists_only_the_filled_fields(self):
         self.assertEqual(
             filled("①：自分の墓地のモンスター１体を選んで特殊召喚する。"),
-            [("選ぶ", "自分の墓地のモンスター1体", None, None, None),
-             ("特殊召喚", "自分の墓地のモンスター1体", None, None, ["object"])])
+            [("選ぶ", "モンスター1体", None, None, None),
+             ("特殊召喚", "モンスター1体", "自分の墓地", None, ["object", "source"])])
         self.assertEqual(
             filled("①：デッキからモンスター１体を選び、墓地から特殊召喚する。"),
             [("選ぶ", "モンスター1体", "デッキ", None, None),
              ("特殊召喚", "モンスター1体", "墓地", None, ["object"])])
+
+
+def topics(text, context=""):
+    """動作框架 → (動作, 主題, 主語, 對象, 被動):frame-args-v3 票 02。"""
+    return [(f["action"], f.get("topic"), f.get("subject"), f.get("object"),
+             f.get("passive", False)) for f in actions(text, context)]
+
+
+class TestTopicAndSubject(unittest.TestCase):
+    """frame-args-v3 票 02:子句內「は」前的片語記主題、「が」前的片語記主語,同一子句有多個時
+    取離述語最近的;被動句的受事者留在主題/主語、不搬進對象,框架帶 被動 標記。"""
+
+    def test_topic_and_subject_of_naru(self):
+        self.assertEqual(
+            topics("①：相手フィールドの全ての表側表示モンスターは、守備力が０になる。"),
+            [("になる", "相手フィールドの全ての表側表示モンスター", "守備力", None, False)])
+
+    def test_topic_with_relative_ga_has_no_subject(self):
+        """自分が受ける 是定語,屬名詞片語;整段是主題、沒有主語。"""
+        self.assertEqual(
+            topics("①：自分が受ける効果ダメージは０になる。"),
+            [("になる", "自分が受ける効果ダメージ", None, None, False)])
+
+    def test_actor_topic(self):
+        self.assertEqual(
+            topics("①：自分は手札を１枚捨てる。"),
+            [("捨てる", "自分", None, "手札", False)])
+
+    def test_passive_patient_stays_in_topic(self):
+        """このカードは…破壊されない:受事者留在主題、對象空著;では 併入前一格,不算主題。"""
+        self.assertEqual(
+            topics("①：このカードは戦闘では破壊されない。"),
+            [("破壊", "このカード", None, None, True)])
+
+    def test_passive_patient_stays_in_subject(self):
+        self.assertEqual(
+            topics("①：このカードが墓地へ送られた場合に発動できる。デッキからカード１枚を"
+                   "手札に加える。"),
+            [("送る", None, "このカード", None, True),
+             ("加える", None, None, "カード1枚", False)])
+
+    def test_relative_ga_is_not_a_subject(self):
+        self.assertEqual(
+            topics("①：「X」のカード名が記されたモンスター１体を特殊召喚する。"),
+            [("特殊召喚", None, None, "「X」のカード名が記されたモンスター1体", False)])
+
+    def test_ni_wa_is_not_a_topic(self):
+        """には 的 は 是後綴,併入 に 格(目的),不出主題。"""
+        self.assertEqual(
+            topics("①：相手フィールドにはモンスターを特殊召喚できない。"),
+            [("特殊召喚", None, None, "モンスター", False)])
+
+    def test_nearest_subject_wins(self):
+        """同一子句有多個 が:取離述語最近的。"""
+        self.assertEqual(
+            topics("①：自分フィールドに「X」が存在し、このカードが戦闘で破壊された場合に"
+                   "発動できる。このカードを特殊召喚する。")[:2],
+            [("存在", None, "「X」", None, False), ("破壊", None, "このカード", None, True)])
+
+
+def carried(text, context=""):
+    """動作框架 → (動作, 主題, 主語, 回填):frame-args-v3 票 03。"""
+    return [(f["action"], f.get("topic"), f.get("subject"), f.get("backfill"))
+            for f in actions(text, context)]
+
+
+class TestTopicCarryOver(unittest.TestCase):
+    """frame-args-v3 票 03:子句沒有自己的主題時沿用同一句內前一個主題(回填欄記 topic),
+    到句號、新的主題、或自己帶 が/は 的條件子句為止;主語不延續。"""
+
+    def test_topic_carries_to_the_next_clause(self):
+        self.assertEqual(
+            carried("①：自分は手札を１枚捨て、デッキから１枚ドローする。"),
+            [("捨てる", "自分", None, None), ("ドロー", "自分", None, ["topic"])])
+
+    def test_period_stops_the_carry(self):
+        self.assertEqual(
+            carried("①：自分は手札を１枚捨てる。その後、デッキから１枚ドローする。"),
+            [("捨てる", "自分", None, None), ("ドロー", None, None, None)])
+
+    def test_new_topic_stops_the_carry(self):
+        self.assertEqual(
+            carried("①：自分は手札を１枚捨て、相手はデッキから１枚ドローし、"
+                    "手札を１枚選んで墓地へ送る。"),
+            [("捨てる", "自分", None, None), ("ドロー", "相手", None, None),
+             ("選ぶ", "相手", None, ["topic"]), ("送る", "相手", None, ["topic", "object", "source"])])
+
+    def test_conditional_clause_with_its_own_subject_blocks_the_carry(self):
+        """このカードは、相手モンスターが攻撃した場合、…:句首主題屬主句,不給有自己主語的
+        條件子句;主句接過主題(回填)。"""
+        self.assertEqual(
+            carried("①：このカードは、相手モンスターが攻撃した場合、攻撃できない。"),
+            [("攻撃", None, "相手モンスター", None),
+             ("攻撃", "このカード", None, ["topic"])])
+        self.assertEqual(
+            carried("①：自分は手札を１枚捨て、相手フィールドにモンスターが存在する場合、"
+                    "デッキから１枚ドローする。"),
+            [("捨てる", "自分", None, None), ("存在", None, "モンスター", None),
+             ("ドロー", None, None, None)])
+
+    def test_attribute_topic_carries_its_owner(self):
+        """「Xの攻撃力は…アップし、…破壊されない」:延續給下一子句的是 X,不是 X の攻撃力。"""
+        self.assertEqual(
+            carried("①：装備モンスターの攻撃力は３００アップし、効果では破壊されない。"),
+            [("アップ", "装備モンスターの攻撃力", None, None),
+             ("破壊", "装備モンスター", None, ["topic"])])
+        self.assertEqual(
+            carried("②：この効果で特殊召喚したモンスターの効果は無効化され、エンドフェイズに"
+                    "破壊される。"),
+            [("無効化", "この効果で特殊召喚したモンスターの効果", None, None),
+             ("破壊", "この効果で特殊召喚したモンスター", None, ["topic"])])
+
+    def test_subject_does_not_carry(self):
+        self.assertEqual(
+            carried("①：相手フィールドの全ての表側表示モンスターは、守備力が０になり、"
+                    "その効果は無効化される。"),
+            [("になる", "相手フィールドの全ての表側表示モンスター", "守備力", None),
+             ("無効化", "その効果", None, None)])
+        self.assertEqual(
+            carried("①：このカードが戦闘で破壊され、墓地へ送られた時に発動できる。"
+                    "相手に５００ダメージを与える。")[:2],
+            [("破壊", None, "このカード", None), ("送る", None, None, None)])
+
+
+def placed(text, context=""):
+    """動作框架 → (動作, 主題, 主語, 對象, 來源, 所在):frame-args-v3 票 04。"""
+    return [(f["action"], f.get("topic"), f.get("subject"), f.get("object"),
+             f.get("source"), f.get("place")) for f in actions(text, context)]
+
+
+class TestPatientPlaceSplit(unittest.TestCase):
+    """frame-args-v3 票 04:受事者(主動句是對象;被動句是主語,沒有時是主題)片語裡的第一段
+    「(玩家の)區域の」切出——移動類動作記來源、其餘記所在;開頭或中間都切,並列的受事者
+    各帶區域時取聯集;原文有 から 來源時不切;主動句執行者的主題不切。"""
+
+    def test_zone_of_a_moved_card_is_the_source(self):
+        self.assertEqual(
+            placed("①：墓地のこのカードを除外する。"),
+            [("除外", None, None, "このカード", "墓地", None)])
+
+    def test_zone_of_a_destroyed_card_is_the_place(self):
+        self.assertEqual(
+            placed("①：相手フィールドのカード１枚を破壊する。"),
+            [("破壊", None, None, "カード1枚", None, "相手フィールド")])
+
+    def test_target_zone_is_the_place(self):
+        self.assertEqual(
+            placed("①：自分フィールドの表側表示モンスター１体を対象として発動できる。"
+                   "そのモンスターの攻撃力は５００アップする。")[0],
+            ("対象とする", None, None, "表側表示モンスター1体", None, "自分フィールド"))
+
+    def test_player_prefix_goes_with_the_zone(self):
+        self.assertEqual(
+            placed("①：自分の墓地の機械族モンスター１体を特殊召喚する。"),
+            [("特殊召喚", None, None, "機械族モンスター1体", "自分の墓地", None)])
+        self.assertEqual(
+            placed("①：自分か相手の墓地のカード１枚を除外する。"),
+            [("除外", None, None, "カード1枚", "自分か相手の墓地", None)])
+
+    def test_zone_in_the_middle_is_cut(self):
+        self.assertEqual(
+            placed("①：対象のモンスター以外の自分フィールドの表側表示モンスター１体を除外する。"),
+            [("除外", None, None, "対象のモンスター以外の表側表示モンスター1体",
+              "自分フィールド", None)])
+
+    def test_coordinated_patients_union_their_zones(self):
+        self.assertEqual(
+            placed("①：自分の墓地のモンスター１体と相手フィールドの表側表示モンスター１体を"
+                   "除外する。"),
+            [("除外", None, None, "モンスター1体と表側表示モンスター1体",
+              "自分の墓地・相手フィールド", None)])
+
+    def test_compound_zone_and_deck_position(self):
+        self.assertEqual(
+            placed("①：お互いのフィールド・墓地のカードを全て除外する。"),
+            [("除外", None, None, "カード", "お互いのフィールド・墓地", None)])
+        self.assertEqual(
+            placed("①：デッキの一番上のカードを墓地へ送る。"),
+            [("送る", None, None, "カード", "デッキの一番上", None)])
+
+    def test_banished_state_zone(self):
+        self.assertEqual(
+            placed("①：除外されている自分のモンスター１体を対象として発動できる。"
+                   "そのモンスターを特殊召喚する。")[0],
+            ("対象とする", None, None, "モンスター1体", None, "除外されている自分"))
+        self.assertEqual(
+            placed("①：除外されているこのカードを特殊召喚する。"),
+            [("特殊召喚", None, None, "このカード", "除外されている", None)])
+
+    def test_zone_verb_inside_a_relative_clause_is_not_cut(self):
+        """「この効果で除外されているカード」「この効果で除外したモンスター」:區域詞是定語子句的
+        述語(前面接助詞),切了會留下殘缺的對象,不切。"""
+        self.assertEqual(
+            placed("①：この効果で除外されているカードを手札に加える。"),
+            [("加える", None, None, "この効果で除外されているカード", None, None)])
+        self.assertEqual(
+            placed("①：この効果で除外したモンスターを特殊召喚する。"),
+            [("特殊召喚", None, None, "この効果で除外したモンスター", None, None)])
+
+    def test_player_coordinated_with_a_player_zone(self):
+        """自分または相手フィールド、自分・相手フィールド(自分(フィールド) 是省略寫法)是一段區域。"""
+        self.assertEqual(
+            placed("①：自分または相手フィールドのモンスター１体をリリースする。"),
+            [("リリース", None, None, "モンスター1体", "自分または相手フィールド", None)])
+        self.assertEqual(
+            placed("①：自分・相手フィールドの攻撃表示モンスター１体をリリースする。"),
+            [("リリース", None, None, "攻撃表示モンスター1体", "自分(フィールド)・相手フィールド",
+              None)])
+
+    def test_positional_qualifier_stays_with_the_zone(self):
+        """自分の中央のメインモンスターゾーン:玩家與位置限定語跟著區域切。"""
+        self.assertEqual(
+            placed("①：自分の中央のメインモンスターゾーンのモンスター１体を破壊する。"),
+            [("破壊", None, None, "モンスター1体", None, "自分の中央のメインモンスターゾーン")])
+
+    def test_zone_inside_a_relative_clause_is_not_the_patients(self):
+        """「自分の墓地の…と同じとなる相手フィールドのモンスター」:と 是比較(と同じ)不是並列,
+        定語子句裡的區域不是受事者的;受事者的區域是定語之後那一段。"""
+        frame = actions("●種族か属性が、自分の墓地の通常モンスターのいずれかと同じとなる"
+                        "相手フィールドのモンスター１体を除外する。")[-1]
+        self.assertEqual((frame["action"], frame["source"]), ("除外", "相手フィールド"))
+        self.assertIn("自分の墓地の通常モンスター", frame["object"])
+
+    def test_zone_after_a_relative_clause_keeps_its_player(self):
+        """定語動詞後的「自分の墓地の」:玩家跟著區域一起切。"""
+        self.assertEqual(
+            placed("①：「X」モンスターを含む自分の墓地のモンスターを除外する。"),
+            [("除外", None, None, "「X」モンスターを含むモンスター", "自分の墓地", None)])
+
+    def test_two_token_and_parenthesised_zones(self):
+        """除外状態(兩個詞)、フィールド（表側表示）、その墓地 也是區域。"""
+        self.assertEqual(
+            placed("①：自分の手札・除外状態の「御巫」モンスター１体を特殊召喚する。"),
+            [("特殊召喚", None, None, "「御巫」モンスター1体", "自分の手札・除外状態", None)])
+        self.assertEqual(
+            placed("①：このカード以外の自分の手札・フィールド（表側表示）の「真竜」カード１枚を"
+                   "破壊する。"),
+            [("破壊", None, None, "このカード以外の「真竜」カード1枚", None,
+              "自分の手札・フィールド（表側表示）")])
+        self.assertEqual(
+            placed("①：その墓地のモンスター１体を特殊召喚する。"),
+            [("特殊召喚", None, None, "モンスター1体", "その墓地", None)])
+
+    def test_object_carried_past_another_wo_is_cut(self):
+        """「Xを効果を無効にして特殊召喚」:X 留給 特殊召喚,它的區域照切。"""
+        self.assertEqual(
+            placed("①：自分の墓地のモンスター１体を効果を無効にして特殊召喚する。"),
+            [("無効にする", None, None, "効果", None, None),
+             ("特殊召喚", None, None, "モンスター1体", "自分の墓地", None)])
+
+    def test_zone_in_a_count_is_not_cut(self):
+        """區域修飾的是數量(墓地のモンスターの数×100ダメージ):受事者不在那裡,不切。"""
+        self.assertEqual(
+            placed("①：自分の墓地のモンスターの数×１００ダメージを相手に与える。"),
+            [("与える", None, None, "自分の墓地のモンスターの数×100ダメージ", None, None)])
+
+    def test_explicit_source_is_not_overwritten(self):
+        """原文用 から 寫了來源:對象欄不切。"""
+        self.assertEqual(
+            placed("①：デッキから自分フィールドのモンスターと同じ種族のモンスター１体を"
+                   "手札に加える。"),
+            [("加える", None, None, "自分フィールドのモンスターと同じ種族のモンスター1体",
+              "デッキ", None)])
+
+    def test_actor_topic_is_not_cut(self):
+        """主動句的主題是執行者,不切;受事者(對象)照切。"""
+        self.assertEqual(
+            placed("①：自分フィールドの「X」モンスターは、相手フィールドの守備表示モンスターを"
+                   "攻撃できる。"),
+            [("攻撃", "自分フィールドの「X」モンスター", None, "守備表示モンスター", None,
+              "相手フィールド")])
+
+    def test_passive_patient_is_cut_from_subject_or_topic(self):
+        self.assertEqual(
+            placed("①：墓地のこのカードが除外された場合に発動できる。デッキからカード１枚を"
+                   "手札に加える。")[0],
+            ("除外", None, "このカード", None, "墓地", None))
+        self.assertEqual(
+            placed("①：自分フィールドのモンスターは効果では破壊されない。"),
+            [("破壊", "モンスター", None, None, None, "自分フィールド")])
+
+    def test_whole_phrase_is_a_zone(self):
+        """整個受事者就是區域:區域記進來源/所在,受事者欄維持原文。"""
+        self.assertEqual(
+            placed("①：手札を１枚捨てる。")[0][3:5],
+            ("手札", "手札"))
+        self.assertEqual(
+            placed("①：相手のEXデッキを確認する。"),
+            [("確認", None, None, "相手のEXデッキ", None, "相手のEXデッキ")])
+        self.assertEqual(
+            placed("①：このカード以外の手札を１枚捨てる。")[0][3:5],
+            ("このカード以外の手札", "手札"))
+        self.assertEqual(
+            placed("●お互いは自身の手札を全てデッキに戻す。")[0][3:5],
+            ("自身の手札", "自身の手札"))
+
+    def test_material_zone_is_the_place(self):
+        """素材類不算移動類(規格決定 2026-10-17):區域記所在。"""
+        self.assertEqual(
+            placed("①：自分の手札・フィールドのモンスターを融合素材とする。"),
+            [("融合素材とする", None, None, "モンスター", None, "自分の手札・フィールド")])
+
+
+def inferred(text, context=""):
+    """動作框架 → (動作, 來源, 目的, 推得):frame-args-v3 票 05。"""
+    return [(f["action"], f.get("source"), f.get("goal"), f.get("inferred"))
+            for f in actions(text, context)]
+
+
+class TestInferredValues(unittest.TestCase):
+    """frame-args-v3 票 05:目的(與 捨てる、ドロー 的來源)由動作唯一決定、原文沒寫時補上並標
+    推得——除外→除外;捨てる→墓地(來源 手札);ドロー→手札(來源 デッキ);特殊召喚與各召喚法、
+    セット→フィールド;加える→手札。装備、リリース、破壊 不補;原文有字面時用原文。"""
+
+    def test_banish_goal(self):
+        self.assertEqual(
+            inferred("①：墓地のこのカードを除外する。"),
+            [("除外", "墓地", "除外", ["goal"])])
+
+    def test_discard_goal_and_source(self):
+        self.assertEqual(
+            inferred("①：「X」１枚を捨てる。"),
+            [("捨てる", "手札", "墓地", ["source", "goal"])])
+        # 受事者整段就是區域(手札を):來源是原文切出的,不標推得
+        self.assertEqual(
+            inferred("①：手札を１枚捨てる。"),
+            [("捨てる", "手札", "墓地", ["goal"])])
+
+    def test_draw_keeps_a_written_source(self):
+        self.assertEqual(
+            inferred("①：デッキから１枚ドローする。"),
+            [("ドロー", "デッキ", "手札", ["goal"])])
+        self.assertEqual(
+            inferred("①：自分は１枚ドローする。"),
+            [("ドロー", "デッキ", "手札", ["source", "goal"])])
+
+    def test_summon_goal_unless_written(self):
+        self.assertEqual(
+            inferred("①：自分の墓地のモンスター１体を特殊召喚する。"),
+            [("特殊召喚", "自分の墓地", "フィールド", ["goal"])])
+        self.assertEqual(
+            inferred("①：自分の墓地のモンスター１体を相手フィールドに特殊召喚する。"),
+            [("特殊召喚", "自分の墓地", "相手フィールド", None)])
+        self.assertEqual(
+            inferred("①：このカードをアドバンス召喚する。"),
+            [("アドバンス召喚", None, "フィールド", ["goal"])])
+
+    def test_set_and_add_goal(self):
+        self.assertEqual(
+            inferred("①：デッキから「X」１枚をセットする。"),
+            [("セット", "デッキ", "フィールド", ["goal"])])
+
+    def test_equip_release_destroy_are_not_inferred(self):
+        self.assertEqual(
+            inferred("①：このカードを装備カード扱いとして装備する。")[-1],
+            ("装備", None, None, None))
+        self.assertEqual(
+            inferred("①：自分フィールドのモンスター１体をリリースし、"
+                     "相手フィールドのカード１枚を破壊する。"),
+            [("リリース", "自分フィールド", None, None), ("破壊", None, None, None)])
+
+    def test_negated_frames_are_inferred_too(self):
+        self.assertEqual(
+            inferred("①：相手は墓地のカードを除外できない。"),
+            [("除外", "墓地", "除外", ["goal"])])
+
+    def test_condition_frame_is_inferred(self):
+        self.assertEqual(
+            inferred("①：墓地のこのカードが除外された場合に発動できる。デッキからカード１枚を"
+                     "手札に加える。"),
+            [("除外", "墓地", "除外", ["goal"]), ("加える", "デッキ", "手札", None)])
+
+
+def converted(text, context=""):
+    """動作框架 → (動作, 對象, 來源, 所在, 回填, 推得):frame-args-v3 票 06。"""
+    return [(f["action"], f.get("object"), f.get("source"), f.get("place"), f.get("backfill"),
+             f.get("inferred")) for f in actions(text, context)]
+
+
+class TestBackfillPlaceConversion(unittest.TestCase):
+    """frame-args-v3 票 06:回填(か 群組、選ぶ鏈)把上游的區域交給下游時,依下游動作是不是移動類
+    放進來源或所在;下游原文自己有來源或所在時不填;回填接到的區域蓋過推得的同欄;對象照舊
+    原字面接過。"""
+
+    def test_place_of_select_becomes_source_of_summon(self):
+        self.assertEqual(
+            converted("①：墓地のモンスター１体を選んで特殊召喚する。"),
+            [("選ぶ", "モンスター1体", None, "墓地", None, None),
+             ("特殊召喚", "モンスター1体", "墓地", None, ["object", "source"], ["goal"])])
+
+    def test_region_handed_to_a_non_moving_action_is_a_place(self):
+        self.assertEqual(
+            converted("①：相手フィールドのカード１枚を選んで破壊する。"),
+            [("選ぶ", "カード1枚", None, "相手フィールド", None, None),
+             ("破壊", "カード1枚", None, "相手フィールド", ["object", "place"], None)])
+        self.assertEqual(
+            converted("①：手札からカード１枚を選んで破壊する。"),
+            [("選ぶ", "カード1枚", "手札", None, None, None),
+             ("破壊", "カード1枚", None, "手札", ["object", "place"], None)])
+
+    def test_ka_group_converts_the_region(self):
+        self.assertEqual(
+            converted("①：自分の墓地のモンスター１体を手札に加えるか特殊召喚する。"),
+            [("加える", "モンスター1体", "自分の墓地", None, None, None),
+             ("特殊召喚", "モンスター1体", "自分の墓地", None, ["object", "source"], ["goal"])])
+        self.assertEqual(
+            converted("①：フィールドのカード１枚を破壊するか除外する。"),
+            [("破壊", "カード1枚", None, "フィールド", None, None),
+             ("除外", "カード1枚", "フィールド", None, ["object", "source"], ["goal"])])
+
+    def test_own_place_is_not_overwritten(self):
+        self.assertEqual(
+            converted("①：デッキからモンスター１体を選び、墓地から特殊召喚する。")[1],
+            ("特殊召喚", "モンスター1体", "墓地", None, ["object"], ["goal"]))
+
+    def test_carried_topic_of_a_passive_frame_is_cut(self):
+        """延續來的主題落在被動框架(受事者就是主題):區域照切,主題與所在都標回填。"""
+        self.assertEqual(
+            [(f["action"], f.get("topic"), f.get("place"), f.get("backfill"))
+             for f in actions("①：自分フィールドの「X」モンスターの攻撃力は５００アップし、"
+                              "相手の効果では破壊されない。")],
+            [("アップ", "自分フィールドの「X」モンスターの攻撃力", None, None),
+             ("破壊", "「X」モンスター", "自分フィールド", ["topic", "place"])])
+
+    def test_backfilled_region_wins_over_inferred(self):
+        """選んで捨てる:上游的區域(その中)蓋過 捨てる 推得的來源 手札。"""
+        self.assertEqual(
+            converted("①：デッキからカードを３枚めくり、その中からカード１枚を選んで捨てる。")[1:],
+            [("選ぶ", "カード1枚", "その中", None, None, None),
+             ("捨てる", "カード1枚", "その中", None, ["object", "source"], ["goal"])])
 
 
 if __name__ == "__main__":

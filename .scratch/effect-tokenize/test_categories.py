@@ -120,9 +120,9 @@ class TestZonesAndPlayers(unittest.TestCase):
             classify("①：お互いのデッキの上からカードを１枚墓地へ送る。"),
             [("送る", "已歸", ["送る:デッキ→墓地"], "區域移動", "雙方", "無")])
 
-    def test_object_zone_is_source_when_source_literal_empty(self):
-        """票 06:來源字面空著時,對象欄開頭的區域當來源(墓地のこのカードを除外する、
-        相手フィールドのカードを破壊する),玩家也從對象欄取;有來源字面時不看對象。"""
+    def test_patient_zone_from_frame_source_or_place(self):
+        """frame-args-v3 票 04:受事者片語裡的區域由框架抽取切出——移動類(除外)記來源,
+        其餘(破壊)記所在;來源空著時讀所在,玩家也從所在取;原文有來源字面時對象欄不切。"""
         self.assertEqual(
             classify("①：墓地のこのカードを除外して発動できる。"
                      "相手フィールドのカード１枚を破壊する。"),
@@ -132,15 +132,25 @@ class TestZonesAndPlayers(unittest.TestCase):
             classify("①：自分の手札から「墓地のモンスター」１体を特殊召喚する。"),
             [("特殊召喚", "已歸", ["特殊召喚←手札"], "召喚", "自分", None)])
 
-    def test_object_zone_prefix_compound_and_described(self):
-        """對象欄取第一個認得出區域的「…の」前綴:複合區域帶多葉;描述裡有「・」
-        (魔法・罠カード)也認得出前綴。"""
+    def test_patient_zone_compound_and_described(self):
+        """受事者的複合區域(手札・フィールドのこのカード)帶多葉;描述裡有「・」
+        (魔法・罠カード)也切得出區域。"""
         self.assertEqual(
             classify("①：手札・フィールドのこのカードを墓地へ送って発動できる。"
                      "相手フィールドの魔法・罠カード１枚を破壊する。"),
             [("送る", "已歸", ["送る:手札→墓地", "送る:フィールド→墓地"], "區域移動",
               "無", "無"),
              ("破壊", "已歸", ["破壊:魔法カード/罠カード"], "破壊", "相手", None)])
+
+    def test_moved_patient_zone_still_reaches_source_leaves(self):
+        """frame-args-v3 票 04:拿掉「對象欄當來源」的補丁後,除外←墓地、戻す:フィールド→手札
+        仍歸得到(區域改由框架的來源給)。"""
+        self.assertEqual(
+            classify("①：自分の墓地のモンスター１体を除外する。"),
+            [("除外", "已歸", ["除外←墓地"], "區域移動", "自分", None)])
+        self.assertEqual(
+            classify("①：相手フィールドのモンスター１体を持ち主の手札に戻す。"),
+            [("戻す", "已歸", ["戻す:フィールド→手札"], "區域移動", "相手", "無")])
 
     def test_unmapped_zone_literal(self):
         """その中 對不上任何區域:需要區域的葉不匹配、不報錯,落預設葉;玩家欄留空。"""

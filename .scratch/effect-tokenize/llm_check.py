@@ -11,14 +11,18 @@
 - 第二版論元(frame-args-v2 票 05;v2-round1 起):受列舉/か 並列/回填/回合階段四型規則影響
   的卡——依框架資料分層(純列舉/か並列/選ぶ鏈/回合階段,一張卡依序歸入第一個符合的層),
   各抽 25 張、切 4 批;錯誤類型在既有五類外加 列舉掛錯/漏、連接群組錯、回填錯、回合條件錯。
+- 第三版論元(frame-args-v3 票 07;v3-round1 起):受區域切分/並列多區域/推得/主題延續/主語/被動
+  受事者/回填轉欄七型規則影響的卡——依框架資料分層(一張卡依序歸入第一個符合的層),共 100 張、
+  切 4 批;錯誤類型在既有五類外加 區域切錯/漏切、推得錯、主題/主語錯、延續錯、回填錯。
 種子固定,同一種子重抽得到同一批(複檢沿用);不同種子抽新樣本(過擬合抽驗)。
 
     sample   --round R --seed S   全語料抽樣:寫 llm-check/round<R>/sample.json 與 batch-<k>.md
     affected --round R --seed S   受影響卡抽樣(同上,另寫 meta.json 記分層與批數)
     v2       --round R --seed S   第二版論元受影響卡抽樣(寫 llm-check/v2-round<R>/)
+    v3       --round R --seed S   第三版論元受影響卡抽樣(寫 llm-check/v3-round<R>/)
     report   --round R            讀 llm-check/round<R>/findings-<k>.json 寫 report.md
     recheck  --round R --from R0  用 round R0 的樣本重出批次檔(同批複檢)
-    (report/recheck 加 --line constraints 或 --line v2 走各自的目錄)
+    (report/recheck 加 --line constraints、--line v2 或 --line v3 走各自的目錄)
 
 批次檔一張卡一節、一句效果句一段:整段效果句(含 ● 選項;拆開的領起句與子效果句
 各標 index 與效果類型)與它的框架(含選項欄「●n 標籤」)。
@@ -69,6 +73,12 @@ STRATA_V2 = ("純列舉", "か並列", "選ぶ鏈", "回合階段")
 QUOTA_V2 = {k: 25 for k in STRATA_V2}
 BATCHES_V2 = 4
 ERROR_TYPES_V2 = ERROR_TYPES + ("列舉掛錯/漏", "連接群組錯", "回填錯", "回合條件錯")
+# 第三版論元(frame-args-v3 票 07):七型分層(依序歸入第一個符合的層;較少見的型在前),合計 100
+STRATA_V3 = ("回填轉欄", "並列多區域", "被動受事者", "主題延續", "區域切分", "主語", "推得")
+QUOTA_V3 = {"回填轉欄": 14, "並列多區域": 14, "被動受事者": 14, "主題延續": 14, "區域切分": 16,
+            "主語": 14, "推得": 14}
+BATCHES_V3 = 4
+ERROR_TYPES_V3 = ERROR_TYPES + ("區域切錯/漏切", "推得錯", "主題/主語錯", "延續錯", "回填錯")
 TYPE_PENDULUM, TYPE_SPELL, TYPE_TRAP = 0x1000000, 0x2, 0x4
 OPTION = "●"
 
@@ -241,6 +251,69 @@ def sample_v2(seed):
     return picked
 
 
+# ── 第三版論元(票 07)──
+
+def cut_region(f):
+    """框架的來源/所在是不是從受事者片語切出來的(不是原文 から、不是推得或回填)→ 欄名或 None。"""
+    marked = set(f.get("inferred") or ()) | set(f.get("backfill") or ())
+    if f.get("place") and "place" not in marked:
+        return "place"
+    clause = f["clause"].replace(" ", "")
+    if f.get("source") and "source" not in marked and f["source"] + "から" not in clause:
+        return "source"
+    return None
+
+
+def v3_labels(f):
+    """一個動作框架命中的第三版論元型。"""
+    labels = set()
+    backfill = f.get("backfill") or []
+    if "place" in backfill or "source" in backfill:
+        labels.add("回填轉欄")
+    if "topic" in backfill:
+        labels.add("主題延續")
+    region = cut_region(f)
+    if region:
+        labels.add("並列多區域" if "・" in f[region] and any(
+            c in (f.get("object") or "") for c in ("と", "か", "及び", "または")) else "區域切分")
+        if f.get("passive"):
+            labels.add("被動受事者")
+    if f.get("subject"):
+        labels.add("主語")
+    if f.get("inferred"):
+        labels.add("推得")
+    return labels
+
+
+def v3_stratum(records):
+    labels = set()
+    for r in records:
+        for f in r["frames"]:
+            if f.get("kind") == constraints.KIND_ACTION:
+                labels |= v3_labels(f)
+    return next((k for k in STRATA_V3 if k in labels), None)
+
+
+def sample_v3(seed):
+    _cards, _tokens, frames = load()
+    by_card = defaultdict(list)
+    for r in frames:
+        by_card[r["card"]].append(r)
+    pools = defaultdict(list)
+    for cid in sorted(by_card):
+        stratum = v3_stratum(by_card[cid])
+        if stratum:
+            pools[stratum].append(cid)
+    rng = random.Random(seed)
+    picked = []
+    for key in STRATA_V3:
+        pool = pools.get(key, [])
+        chosen = sorted(rng.sample(pool, min(QUOTA_V3[key], len(pool))))
+        picked += [{"card": cid, "stratum": key} for cid in chosen]
+    print("母體:" + "、".join("%s %d" % (k, len(pools.get(k, []))) for k in STRATA_V3))
+    return picked
+
+
 # ── 批次檔 ──
 
 def record_lines(s, fr):
@@ -344,7 +417,8 @@ def read_meta(round_dir):
 
 
 def round_dir_of(line, round_no):
-    prefix = {"constraints": "constraint-round", "v2": "v2-round"}.get(line, "round")
+    prefix = {"constraints": "constraint-round", "v2": "v2-round",
+              "v3": "v3-round"}.get(line, "round")
     return os.path.join(CHECK_DIR, "%s%d" % (prefix, round_no))
 
 
@@ -429,16 +503,20 @@ def report(round_dir):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("command", choices=("sample", "affected", "constraints", "v2", "report",
-                                        "recheck"))
+    ap.add_argument("command", choices=("sample", "affected", "constraints", "v2", "v3",
+                                        "report", "recheck"))
     ap.add_argument("--round", type=int, required=True)
     ap.add_argument("--seed", type=int, default=20261009)
     ap.add_argument("--from", dest="from_round", type=int)
-    ap.add_argument("--line", choices=("frames", "constraints", "v2"), default="frames")
+    ap.add_argument("--line", choices=("frames", "constraints", "v2", "v3"), default="frames")
     args = ap.parse_args()
-    line = args.command if args.command in ("constraints", "v2") else args.line
+    line = args.command if args.command in ("constraints", "v2", "v3") else args.line
     round_dir = round_dir_of(line, args.round)
-    if args.command == "v2":
+    if args.command == "v3":
+        write_batches(round_dir, sample_v3(args.seed),
+                      {"mode": "v3", "seed": args.seed, "batches": BATCHES_V3,
+                       "strata": list(STRATA_V3), "error_types": list(ERROR_TYPES_V3)})
+    elif args.command == "v2":
         write_batches(round_dir, sample_v2(args.seed),
                       {"mode": "v2", "seed": args.seed, "batches": BATCHES_V2,
                        "strata": list(STRATA_V2), "error_types": list(ERROR_TYPES_V2)})

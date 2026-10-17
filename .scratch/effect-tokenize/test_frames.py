@@ -448,7 +448,7 @@ class TestRound3Fixes(unittest.TestCase):
                     "場合、自分は１枚ドローする。"),
             [("融合素材とする", "このカード", None, None, "條件", "肯定"),
              ("リンク素材とする", "このカード", None, None, "條件", "肯定"),
-             ("送る", None, None, "墓地", "條件", "肯定"),
+             ("送る", "このカード", None, "墓地", "條件", "肯定"),
              ("ドロー", None, None, None, "效果", "肯定")])
 
     def test_te_ireba_is_a_condition(self):
@@ -1277,6 +1277,90 @@ class TestBackfillPlaceConversion(unittest.TestCase):
             converted("①：デッキからカードを３枚めくり、その中からカード１枚を選んで捨てる。")[1:],
             [("選ぶ", "カード1枚", "その中", None, None, None),
              ("捨てる", "カード1枚", "その中", None, ["object", "source"], ["goal"])])
+
+
+class TestV3Round1Fixes(unittest.TestCase):
+    """frame-args-v3 票 07:v3-round1 回報的同型錯誤,先補例子再修。"""
+
+    def test_attribute_ga_in_a_noun_phrase_is_not_a_subject(self):
+        """「攻撃力か守備力が２０００の…モンスター」「属性が…と同じ…モンスター」的 が 屬名詞片語,
+        併回對象、不出主語;「攻撃力が超えた分」的 が 是定語子句的,不出主語。"""
+        self.assertEqual(
+            topics("①：攻撃力か守備力が２０００の通常召喚できないモンスター１体を特殊召喚する。"),
+            [("特殊召喚", None, None, "攻撃力か守備力が2000の通常召喚できないモンスター1体",
+              False)])
+        frame = actions("①：属性がこの効果で特殊召喚したモンスターと同じ相手フィールドのモンスター"
+                        "１体を墓地へ送る。")[0]
+        self.assertEqual((frame.get("subject"), frame["object"], frame["source"]),
+                         (None, "属性がこの効果で特殊召喚したモンスターと同じモンスター1体",
+                          "相手フィールド"))
+        self.assertEqual(
+            topics("①：その守備力を攻撃力が超えた分だけ戦闘ダメージを与える。"),
+            [("与える", None, None, "戦闘ダメージ", False)])
+
+    def test_attribute_ga_inside_a_subject(self):
+        """v3-round2:「攻撃力か守備力が２０００のモンスターが存在する場合」:屬性 が 併進主語片語。"""
+        self.assertEqual(
+            topics("①：自分フィールドに攻撃力か守備力が２０００のモンスターが存在する場合に"
+                   "発動できる。このカードを特殊召喚する。")[0][:3],
+            ("存在", None, "攻撃力か守備力が2000のモンスター"))
+
+    def test_subject_of_an_unanchored_clause_is_not_taken(self):
+        """「自分のLPが相手より３０００以上少なく、このカードが…」:主語只取最後一個讀點之後;
+        「自分のLPが相手より少ない場合、…を対象として」的 自分のLP 屬條件子句,不給 対象とする。"""
+        self.assertEqual(
+            topics("①：自分のLPが相手より３０００以上少なく、このカードがX召喚に成功した場合に"
+                   "発動できる。このカードを破壊する。")[0][:3],
+            ("成功", None, "このカード"))
+        self.assertEqual(
+            topics("①：自分のLPが相手より少ない場合、自分フィールドのモンスター１体を対象として"
+                   "発動できる。そのモンスターを破壊する。")[0][:3],
+            ("対象とする", None, None))
+
+    def test_subject_of_an_adjunct_clause_moves_to_its_predicate(self):
+        """「このカードが「X」を素材としてL召喚された場合」「…Sモンスターが自身の効果を発動する
+        ためにリリースされた場合」:主語屬後面的述語,前面的附加子句(として/ために)不帶。"""
+        self.assertEqual(
+            [(f["action"], f.get("subject"), f.get("backfill"))
+             for f in actions("①：このカードが「X」を素材としてL召喚された場合に発動できる。"
+                              "デッキからカード１枚を手札に加える。")][:2],
+            [("素材とする", None, None), ("L召喚", "このカード", ["subject"])])
+        frame = actions("①：自分フィールドの「スターダスト」Sモンスターが自身の効果を発動するために"
+                        "リリースされた場合に発動できる。このカードを特殊召喚する。")[0]
+        self.assertEqual((frame["action"], frame.get("subject"), frame.get("source")),
+                         ("リリース", "「スターダスト」Sモンスター", "自分フィールド"))
+
+    def test_material_object_goes_to_the_banish(self):
+        """「自分の墓地のモンスターを融合素材として除外し」:被除外的就是素材。"""
+        self.assertEqual(
+            converted("①：自分の墓地のモンスターを融合素材として除外し、融合モンスター１体を"
+                      "EXデッキから融合召喚する。")[:2],
+            [("融合素材とする", "モンスター", None, "自分の墓地", None, None),
+             ("除外", "モンスター", "自分の墓地", None, ["object", "source"], ["goal"])])
+
+    def test_link_summon_short_name_is_inferred(self):
+        self.assertEqual(
+            inferred("①：このカードがL召喚した場合に発動できる。デッキからカード１枚を手札に"
+                     "加える。")[0],
+            ("L召喚", None, "フィールド", ["goal"]))
+
+    def test_zone_with_a_quantity_is_the_whole_patient(self):
+        self.assertEqual(
+            placed("①：手札を１枚相手に見せる。"),
+            [("見せる", None, None, "手札1枚", None, "手札")])
+
+    def test_intransitive_move_cuts_its_subject(self):
+        """戻る 是移動類的自動詞:移動的卡是主語,區域照切成來源。"""
+        self.assertEqual(
+            placed("①：自分フィールドのモンスターがデッキに戻った場合に発動できる。"
+                   "デッキからカード１枚を手札に加える。")[0],
+            ("戻る", None, "モンスター", None, "自分フィールド", None))
+
+    def test_card_name_topic_carries_as_is(self):
+        """「このカードのカード名は…」延續下去的仍是 このカードのカード名(カード名 不算屬性)。"""
+        self.assertEqual(
+            carried("①：このカードのカード名は「X」として扱い、「Y」としても扱う。")[1],
+            ("扱う", "このカードのカード名", None, ["topic"]))
 
 
 if __name__ == "__main__":

@@ -41,6 +41,8 @@ FIELD_LABEL = {"period": "期間", "count": "次數", "target": "對象", "shari
                "backfill": "回填", "object": "對象",
                # frame-args-v3:動作框架的主題/所在/目的(回填與推得的欄名)
                "topic": "主題", "place": "所在", "goal": "目的", "inferred": "推得"}
+# 動作框架的 subject 是主語(約束框架的 subject 是主體)
+ACTION_FIELD_LABEL = dict(FIELD_LABEL, subject="主語")
 # 回填欄的值是被填的欄名(topic/object/source/place,frame-args-v3 起多主題與所在);
 # 推得欄是 source/goal;「內容」欄顯示成 主題/對象/來源/所在/目的
 # 群組號的顯示(或①/或②…);超出時退回 或(n)
@@ -118,9 +120,9 @@ def _v2_parts(frame):
     if frame.get("group") is not None:
         parts.append(group_text(frame))
     if frame.get("backfill"):
-        parts.append("回填 %s" % "・".join(FIELD_LABEL[k] for k in frame["backfill"]))
+        parts.append("回填 %s" % "・".join(ACTION_FIELD_LABEL[k] for k in frame["backfill"]))
     if frame.get("inferred"):
-        parts.append("推得 %s" % "・".join(FIELD_LABEL[k] for k in frame["inferred"]))
+        parts.append("推得 %s" % "・".join(ACTION_FIELD_LABEL[k] for k in frame["inferred"]))
     if frame.get("enumeration"):
         parts.append("列舉 %s" % "／".join(frame["enumeration"]))
     return parts

@@ -231,24 +231,30 @@ def v2_stratum(records):
     return next((k for k in STRATA_V2 if k in labels), None)
 
 
-def sample_v2(seed):
+def sample_by_frames(seed, stratum_of_records, strata, quota):
+    """依框架資料分層抽樣(第二、三版論元共用):一張卡的框架紀錄 → 分層(None 不入母體),
+    各層依配額以固定種子抽。"""
     _cards, _tokens, frames = load()
     by_card = defaultdict(list)
     for r in frames:
         by_card[r["card"]].append(r)
     pools = defaultdict(list)
     for cid in sorted(by_card):
-        stratum = v2_stratum(by_card[cid])
+        stratum = stratum_of_records(by_card[cid])
         if stratum:
             pools[stratum].append(cid)
     rng = random.Random(seed)
     picked = []
-    for key in STRATA_V2:
+    for key in strata:
         pool = pools.get(key, [])
-        chosen = sorted(rng.sample(pool, min(QUOTA_V2[key], len(pool))))
+        chosen = sorted(rng.sample(pool, min(quota[key], len(pool))))
         picked += [{"card": cid, "stratum": key} for cid in chosen]
-    print("母體:" + "、".join("%s %d" % (k, len(pools.get(k, []))) for k in STRATA_V2))
+    print("母體:" + "、".join("%s %d" % (k, len(pools.get(k, []))) for k in strata))
     return picked
+
+
+def sample_v2(seed):
+    return sample_by_frames(seed, v2_stratum, STRATA_V2, QUOTA_V2)
 
 
 # ── 第三版論元(票 07)──
@@ -295,23 +301,7 @@ def v3_stratum(records):
 
 
 def sample_v3(seed):
-    _cards, _tokens, frames = load()
-    by_card = defaultdict(list)
-    for r in frames:
-        by_card[r["card"]].append(r)
-    pools = defaultdict(list)
-    for cid in sorted(by_card):
-        stratum = v3_stratum(by_card[cid])
-        if stratum:
-            pools[stratum].append(cid)
-    rng = random.Random(seed)
-    picked = []
-    for key in STRATA_V3:
-        pool = pools.get(key, [])
-        chosen = sorted(rng.sample(pool, min(QUOTA_V3[key], len(pool))))
-        picked += [{"card": cid, "stratum": key} for cid in chosen]
-    print("母體:" + "、".join("%s %d" % (k, len(pools.get(k, []))) for k in STRATA_V3))
-    return picked
+    return sample_by_frames(seed, v3_stratum, STRATA_V3, QUOTA_V3)
 
 
 # ── 批次檔 ──

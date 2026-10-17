@@ -43,7 +43,8 @@ FIELD_LABEL = {"period": "期間", "count": "次數", "target": "對象", "shari
                "topic": "主題", "place": "所在", "goal": "目的", "inferred": "推得"}
 # 動作框架的 subject 是主語(約束框架的 subject 是主體)
 ACTION_FIELD_LABEL = dict(FIELD_LABEL, subject="主語")
-# 回填欄的值是被填的欄名(topic/object/source/place,frame-args-v3 起多主題與所在);
+# 回填欄的值是被填的欄名(topic/subject/object/source/place,frame-args-v3 起多主題、主語
+# 與所在);
 # 推得欄是 source/goal;「內容」欄顯示成 主題/對象/來源/所在/目的
 # 群組號的顯示(或①/或②…);超出時退回 或(n)
 CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"

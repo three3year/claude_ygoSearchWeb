@@ -38,7 +38,8 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
               有序字串清單;對象欄不改字
     link/group   可選(票 02):か 並列的述語各記 連接=或、群組=n(一句效果句內從 1 起編)
     backfill  可選(票 03):か 群組與選ぶ鏈之後缺對象的述語從前面接過 object 與區域,
-              此欄列出被填的欄名;值是上游框架的字面(frame-args-v3 起值域多 topic/place)
+              此欄列出被填的欄名;值是上游框架的字面(frame-args-v3 起值域多 topic/place,
+              與附加子句移過來的 subject)
     topic/subject  可選(frame-args-v3 票 02/03):は 片語(主題)、が 片語(主語)的字面,
               同一子句取離述語最近的;主題在同一句內延續給沒有自己主題的子句(回填記 topic)
     place     可選(票 04):受事者(主動句對象;被動句主語,沒有時主題)片語裡切出的區域——
@@ -222,6 +223,7 @@ COMPARE_AFTER_TO = {"同じ", "異なる", "違う", "共に", "一緒"}
 PAREN_MAX = 3                 # 區域後括號註記(フィールド（表側表示）)的最多詞數
 # 片語是數量(…の数×100、…の合計)時區域修飾的是數量,不切
 COUNT_WORDS = {"数", "合計"}
+OBJECT, REGION = "object", "region"   # 回填接過的兩部分(區域再依下游動作轉欄)
 # 屬性主題「Xの攻撃力」(票 03):延續給下一子句時改用屬性的主人 X
 ATTRIBUTE_TOPIC = re.compile(r"(.+?)の(?:元々の)?(?:攻撃力・守備力|攻撃力|守備力|レベル|ランク"
                              r"|種族|属性|効果)")
@@ -882,7 +884,7 @@ class FrameExtractor:
                 last_key = None
                 continue
             if role == "まで" and last_key == "object" and chunk and all(
-                    token_kind(t) in ("num", "counter", "quant", "range")
+                    token_kind(t) in QUANTITY_KINDS
                     for t in chunk):
                 # 「〜を２枚まで」:上限數量併回對象
                 args[last_key] += "".join(self.surface(t) for t in chunk) + "まで"
@@ -1342,18 +1344,18 @@ class FrameExtractor:
                     a["conditional"] and args.get("topic_first")) else None
                 for action in coordinated + [a["action"]]:
                     # 第三版論元(票 02/04):主題、主語、所在、被動 是可選欄,只在有值時帶
-                    v3 = self._patient_place(args, action, a["passive"])
+                    argued = self._frame_arguments(args, action, a["passive"])
                     frame = dict({"kind": KIND_ACTION, "sentence": s_idx,
                                   "action": action,
-                                  "object": v3.pop("object"),
-                                  "source": v3.pop("source"),
+                                  "object": argued.pop("object"),
+                                  "source": argued.pop("source"),
                                   "goal": args.get("goal"),
                                   "position": position,
                                   "polarity": a["polarity"],
                                   "option": option_of[s_idx],
                                   "label": label_of[s_idx],
                                   "span": list(span), "clause": clause},
-                                 **fields, **v3)
+                                 **fields, **argued)
                     self._infer(frame)
                     if subject_moved:
                         frame.setdefault("backfill", []).insert(0, "subject")
@@ -1419,7 +1421,7 @@ class FrameExtractor:
                         fr["group"] = group_no
 
     @staticmethod
-    def _patient_place(args, action, passive):
+    def _frame_arguments(args, action, passive):
         """論元 → 框架的對象/來源與第三版可選欄(主題、主語、所在、被動;票 02/04)。受事者
         (主動句是對象;被動句是主語,沒有時是主題)片語裡的區域切出:移動類記來源、其餘記
         所在,受事者欄只少掉區域那一段(整段就是區域時不動);原文已有 から 來源時不切。"""
@@ -1432,7 +1434,7 @@ class FrameExtractor:
             place, rest = split
             if rest is not None:
                 out[patient] = rest
-            out["source" if action in MOVE_ACTIONS else "place"] = place
+            out[region_key(action)] = place
         if passive:
             out["passive"] = True
         return out
@@ -1451,8 +1453,9 @@ class FrameExtractor:
     def _carry_topic(self, made):
         """主題延續(frame-args-v3 票 03):子句沒有自己的主題時沿用同一句內前一個主題,框架的
         回填欄記 topic;到句號、新的主題、或一個自己帶 が/は 的條件子句為止(條件框架不接、
-        延續也到此停)。屬性主題(Xの攻撃力は…)延續下去的是 X。條件子句裡主題在自己主語之前時(このカードは、相手モンスターが攻撃
-        した場合、…),主題屬主句:條件框架不帶,從它之後接著延續。主語不延續。"""
+        延續也到此停)。屬性主題(Xの攻撃力は…)延續下去的是 X。條件子句裡主題在自己主語
+        之前時(このカードは、相手モンスターが攻撃した場合、…),主題屬主句:條件框架不帶,
+        從它之後接著延續。主語不延續。"""
         current, cur_sentence = None, None
         for s_idx, _k, a, fr in made:
             if s_idx != cur_sentence:
@@ -1471,8 +1474,8 @@ class FrameExtractor:
             if current:
                 fr["topic"] = current
                 fr.setdefault("backfill", []).append("topic")
-                if (fr.get("passive") or fr["action"] in INTRANSITIVE_MOVES) and not fr.get("subject") \
-                        and not (_literal(fr, "source") or fr.get("place")):
+                patient_is_topic = fr.get("passive") or fr["action"] in INTRANSITIVE_MOVES
+                if patient_is_topic and not fr.get("subject") and not _region(fr):
                     self._cut_carried_topic(fr)
 
     def _cut_carried_topic(self, fr):
@@ -1484,13 +1487,7 @@ class FrameExtractor:
         place, rest = found
         if rest is not None:
             fr["topic"] = rest
-        key = "source" if fr["action"] in MOVE_ACTIONS else "place"
-        fr[key] = place
-        fr["backfill"].append(key)
-        if key in (fr.get("inferred") or ()):
-            fr["inferred"].remove(key)
-            if not fr["inferred"]:
-                del fr["inferred"]
+        _put_region(fr, place)
 
     def _backfill(self, tokens, made):
         """回填(票 03):(b)選ぶ/選択 框架有對象時,它之後同一句內缺對象的述語接過它的對象,
@@ -1502,21 +1499,13 @@ class FrameExtractor:
         推得的同欄(上游原文的字優先於規則補的字)。"""
         own_object = {id(fr): bool(fr["object"]) for _s, _k, _a, fr in made}
 
-        def region(fr):
-            return _literal(fr, "source") or fr.get("place")
-
-        def fill(fr, donor, keys=("object", "region")):
-            if "object" in keys and not fr.get("object") and donor.get("object"):
+        def fill(fr, donor, parts=(OBJECT, REGION)):
+            """parts:要接的部分——OBJECT 對象、REGION 區域(轉成來源或所在)。"""
+            if OBJECT in parts and not fr.get("object") and donor.get("object"):
                 fr["object"] = donor["object"]
                 fr.setdefault("backfill", []).append("object")
-            if "region" in keys and region(donor) and not region(fr):
-                key = "source" if fr["action"] in MOVE_ACTIONS else "place"
-                fr[key] = region(donor)
-                fr.setdefault("backfill", []).append(key)
-                if key in (fr.get("inferred") or ()):
-                    fr["inferred"].remove(key)
-                    if not fr["inferred"]:
-                        del fr["inferred"]
+            if REGION in parts and _region(donor) and not _region(fr):
+                _put_region(fr, _region(donor))
 
         def fillable(fr):
             return fr["action"] not in NO_OBJECT_ACTIONS \
@@ -1549,7 +1538,7 @@ class FrameExtractor:
             if fr.get("group") is not None:
                 groups.setdefault(fr["group"], []).append(fr)
         for members in groups.values():
-            for key, has in (("object", lambda m: m.get("object")), ("region", region)):
+            for key, has in ((OBJECT, lambda m: m.get("object")), (REGION, _region)):
                 donor = next((m for m in members if has(m)), None)
                 if donor is None:
                     continue
@@ -1665,6 +1654,27 @@ class FrameExtractor:
 def _literal(frame, key):
     """論元欄的原文值(含切分與回填);推得的格(票 05)當作沒寫。"""
     return None if key in (frame.get("inferred") or ()) else frame.get(key)
+
+
+def region_key(action):
+    """受事者的區域放哪一欄:移動類記來源、其餘記所在(票 04)。"""
+    return "source" if action in MOVE_ACTIONS else "place"
+
+
+def _region(frame):
+    """框架的區域:來源(推得的不算),沒有時所在。"""
+    return _literal(frame, "source") or frame.get("place")
+
+
+def _put_region(frame, place):
+    """把規則接過來的區域放進框架(回填):依動作放來源或所在、標回填,蓋過推得的同欄。"""
+    key = region_key(frame["action"])
+    frame[key] = place
+    frame.setdefault("backfill", []).append(key)
+    if key in (frame.get("inferred") or ()):
+        frame["inferred"].remove(key)
+        if not frame["inferred"]:
+            del frame["inferred"]
 
 
 _DEFAULT = None

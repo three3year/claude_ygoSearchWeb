@@ -152,6 +152,12 @@ class TestZonesAndPlayers(unittest.TestCase):
             classify("①：相手フィールドのモンスター１体を持ち主の手札に戻す。"),
             [("戻す", "已歸", ["戻す:フィールド→手札"], "區域移動", "相手", "無")])
 
+    def test_banished_state_zone_keeps_its_player(self):
+        """code review:切出的「除外されている自分」仍讀得出玩家 自分。"""
+        self.assertEqual(
+            classify("①：除外されている自分のモンスター１体を手札に加える。"),
+            [("加える", "已歸", ["加える:除外→手札"], "區域移動", "自分", "無")])
+
     def test_unmapped_zone_literal(self):
         """その中 對不上任何區域:需要區域的葉不匹配、不報錯,落預設葉;玩家欄留空。"""
         self.assertEqual(

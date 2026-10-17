@@ -352,7 +352,7 @@ def write_frame_shards(sentences, surface_of):
         # 欄位:句序、位置、動作、極性、對象、來源、目的、子句、原文 [起,迄)、
         # 選項(第幾個 ●)、標籤、約束框架的 類別·子類(動作框架為 null)、內容
         # (約束框架的專屬欄位併成一欄;動作框架為次數/窗口/回合條件/連接·群組/回填/
-        # 列舉欄,沒有時 null)、回填的欄名清單(topic/object/source/place;頁面把那幾格
+        # 列舉欄,沒有時 null)、回填的欄名清單(topic/subject/object/source/place;頁面把那幾格
         # 淡色,沒有時 null)、動作類別 [狀態碼, 葉號…](約束框架 null,見 load_categories)、
         # 主題、主語、所在、推得的欄名清單(source/goal,頁面淡色並與回填區分)、被動
         # (frame-args-v3;約束框架的列沒有這五欄);

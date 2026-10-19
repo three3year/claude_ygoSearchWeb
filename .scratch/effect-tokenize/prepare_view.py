@@ -222,9 +222,14 @@ def tree_nodes(tree):
     詞元節點帶預設葉時(破壊 底下的 {}),預設葉的路徑與詞元節點相同,節點同時是
     葉與內部節點。葉宣告了大類時(category-tree-restart 票 04)路徑的頭是宣告的大類,
     同一詞元節點因此可出現在幾個大類下、各自只掛那裡的葉;大類依樹序先排好,掛到本家
-    以外大類的葉後放,借來的詞元節點因此排在該大類自己的詞元節點之後。"""
-    root = {"name": None, "leaf": None,
-            "children": [{"name": name, "leaf": None, "children": []} for name in tree.majors]}
+    以外大類的葉後放,借來的詞元節點因此排在該大類自己的詞元節點之後。大類的中類
+    (category-middle-class)依樹來源檔的清單先排在詞元節點之前;葉宣告了中類時路徑是
+    大類 › 中類 › 葉,詞元節點因此只彙總留在它底下的葉。"""
+    def new_node(name, children=()):
+        return {"name": name, "leaf": None, "children": list(children)}
+
+    root = new_node(None, [new_node(name, [new_node(m) for m in tree.middles.get(name, ())])
+                           for name in tree.majors])
     order = sorted(range(len(tree.leaves)), key=lambda i: (tree.leaves[i].borrowed, i))
     for i in order:
         leaf = tree.leaves[i]
@@ -232,7 +237,7 @@ def tree_nodes(tree):
         for name in leaf.path:
             child = next((c for c in node["children"] if c["name"] == name), None)
             if child is None:
-                child = {"name": name, "leaf": None, "children": []}
+                child = new_node(name)
                 node["children"].append(child)
             node = child
         node["leaf"] = i

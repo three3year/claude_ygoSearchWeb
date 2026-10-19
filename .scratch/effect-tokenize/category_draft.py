@@ -5,10 +5,13 @@
 
     summary.json       儀表板:已歸/未歸/不適用、已歸比例、有所在的框架數、葉數、
                        頂層節點數
-    majors.json        頂層節點(大類):成員詞元節點(含借來的)、葉數、框架數、卡數
+    majors.json        頂層節點(大類):成員(中類在前、再列留有葉的詞元節點,含借來的)、
+                       葉數、框架數、卡數
+    middles.json       中類(category-middle-class):所屬大類、葉數、框架數、卡數、收的葉;
+                       展開看每葉的詞元與計數
     leaves.json        每葉(樹序):所屬大類與詞元節點、條件欄逐欄(詞元、極性類、來源、
-                       目的、所在、各區域的玩家、關鍵詞、宣告大類)、框架數(效果位/代價位
-                       分列)、卡數;展開看三條例句
+                       目的、所在、各區域的玩家、關鍵詞、宣告大類、中類)、框架數(效果位/
+                       代價位分列)、卡數;展開看三條例句
     unplaced.json      未歸類依(詞元, 極性類)聚合:詞元有沒有節點、框架數、卡數;展開看例句
     places.json        非移動類詞元的所在分佈:每個非條件位有所在的非移動類詞元節點(含否定
                        極性類)一列,展開看 所在區域×玩家 的框架數、卡數、≥10 框可開的擬葉名
@@ -106,11 +109,14 @@ def summary_table(counts, with_place, tree, unplaced):
             ["有所在(非條件位)", "{:,}".format(with_place)],
             ["葉", "{:,}".format(len(tree.leaves))],
             ["頂層節點(大類)", "{:,}".format(len(tree.majors))],
+            ["中類", "{:,}".format(sum(len(names) for names in tree.middles.values()))],
             ["未歸類組(詞元+極性類)", "{:,}".format(len(unplaced))],
         )]}
 
 
 def majors_table(tree, per_major):
+    """成員欄:中類(樹來源檔的清單順序)在前,再列還留有葉(沒宣告中類)的詞元節點,
+    與類別總覽同一棵樹。"""
     leaves_of_major = defaultdict(list)
     for leaf in tree.leaves:
         leaves_of_major[leaf.major].append(leaf)
@@ -119,16 +125,45 @@ def majors_table(tree, per_major):
         leaves = leaves_of_major[major]
         lemma_nodes = []
         for leaf in leaves:
-            node = categories.leaf_name(leaf.lemma, leaf.polarity)
-            if node not in lemma_nodes:
-                lemma_nodes.append(node)
+            if leaf.middle is None and leaf.node not in lemma_nodes:
+                lemma_nodes.append(leaf.node)
+        members = []
+        if tree.middles.get(major):
+            members.append("中類:" + "、".join(tree.middles[major]))
+        if lemma_nodes:
+            members.append("詞元節點:" + "、".join(lemma_nodes))
         frames = per_major[major]
-        rows.append({"cells": [major, "、".join(lemma_nodes), len(leaves), len(frames),
+        rows.append({"cells": [major, ";".join(members), len(leaves), len(frames),
                                len({key[0] for key in frames})]})
-    return {"columns": [column("大類", "text"), column("詞元節點", "text"),
+    return {"columns": [column("大類", "text"), column("成員", "text"),
                         column("葉數", "number"), column("框架數", "number"),
                         column("卡數", "number")],
             "key": "大類",
+            "rows": rows}
+
+
+def middles_table(tree, per_leaf):
+    """每個中類一列(大類依樹序、中類依清單順序):框架數是帶該中類任一葉的框架(多葉框架
+    只算一次),展開列每葉的詞元節點與計數(樹序)。"""
+    rows = []
+    for major in tree.majors:
+        for middle in tree.middles.get(major, ()):
+            leaves = [leaf for leaf in tree.leaves
+                      if leaf.major == major and leaf.middle == middle]
+            frames = {(seq, card) for leaf in leaves for seq, card, _ in per_leaf[leaf.name]}
+            rows.append({
+                "cells": [middle, major, len(leaves), len(frames),
+                          len({card for _, card in frames}),
+                          "、".join(leaf.name for leaf in leaves)],
+                "detail": {"columns": [column("葉", "text"), column("詞元節點", "text"),
+                                       column("框架數", "number"), column("卡數", "number")],
+                           "rows": [{"cells": [leaf.name, leaf.node, len(per_leaf[leaf.name]),
+                                               len({c for _, c, _ in per_leaf[leaf.name]})]}
+                                    for leaf in leaves]}})
+    return {"columns": [column("中類", "text"), column("大類", "text"), column("葉數", "number"),
+                        column("框架數", "number"), column("卡數", "number"),
+                        column("收的葉", "text")],
+            "key": "中類",
             "rows": rows}
 
 
@@ -144,9 +179,9 @@ def leaves_table(tree, per_leaf, names):
         for field in categories.ZONE_FIELDS:
             zones += [getattr(leaf, field), leaf.players.get(field)]
         rows.append({
-            "cells": [leaf.name, leaf.major, categories.leaf_name(leaf.lemma, leaf.polarity),
+            "cells": [leaf.name, leaf.major, leaf.node,
                       leaf.lemma, leaf.polarity] + zones + [
-                      "/".join(leaf.keywords) or None, leaf.declared, len(items),
+                      "/".join(leaf.keywords) or None, leaf.declared, leaf.middle, len(items),
                       sum(fr["position"] == POS_EFFECT for _, _, fr in items),
                       sum(fr["position"] == POS_COST for _, _, fr in items),
                       len({card for _, card, _ in items})],
@@ -154,7 +189,7 @@ def leaves_table(tree, per_leaf, names):
     return {"columns": [column("葉", "text"), column("大類", "text"), column("詞元節點", "text"),
                         column("詞元", "text"), column("極性類", "text")] + zone_columns + [
                         column("關鍵詞", "text"), column("宣告大類", "text"),
-                        column("框架數", "number"), column("效果位", "number"),
+                        column("中類", "text"), column("框架數", "number"), column("效果位", "number"),
                         column("代價位", "number"), column("卡數", "number")],
             "key": "葉",
             "rows": rows}
@@ -352,6 +387,7 @@ def main():
         "summary.json": summary_table(counts, with_place, tree, unplaced),
         "majors.json": majors_table(tree, per_major),
         "leaves.json": leaves_table(tree, per_leaf, names),
+        "middles.json": middles_table(tree, per_leaf),
         "unplaced.json": unplaced_table(unplaced, has_node, names),
         "places.json": places_table(actions, tree),
         "keywords-naru.json": keywords_table(actions, NARU_FAMILY, NARU_KEYWORDS, "naru:",

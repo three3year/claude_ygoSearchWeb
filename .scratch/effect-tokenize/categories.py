@@ -37,7 +37,10 @@ frame-args-v3 票 01),各比自己那一欄(category-tree-restart 票 01):移動
 關鍵詞條件(字面子字串清單)依 對象→主語→主題 找第一個有值的欄、只比那一欄(主題含回填
 延續的值;三欄都空不中;category-tree-restart 票 03)。匹配:對每個(來源區域, 目的區域,
 所在區域)組合,收集所有區域/玩家條件相符且關鍵詞命中的葉(多關鍵詞多葉:攻撃力・守備力
-帶兩葉);沒有任何關鍵詞葉命中時,取樹序第一個條件相符、不帶關鍵詞條件的葉(預設葉含在
+帶兩葉),樹序第一個條件相符、不帶關鍵詞條件的葉若帶所在條件也收(「做什麼」與
+「在哪裡」兩軸並收:相手フィールドのモンスター 帶 破壊:モンスター 與 破壊@相手フィールド;
+來源/目的葉是移動的起訖、不並收——フィールドの表側表示モンスターにカウンターを置く 不帶
+置く→フィールド;票 06 草案,待站主裁定);沒有任何關鍵詞葉命中時就取那一葉(預設葉含在
 內)。複合字面(手札・墓地)逐區域各匹配,一個框架因此可帶多個葉;葉清單依樹序去重,
 多葉跨大類時框架的大類取第一葉的。
 
@@ -376,7 +379,12 @@ class CategoryTree:
             places = dict(zip(ZONE_FIELDS, combo))
             fitting = [leaf for leaf in candidates if leaf.places_match(places)]
             hits = [leaf for leaf in fitting if leaf.hits(text)]
-            matched.update(hits or [leaf for leaf in fitting if not leaf.keywords][:1])
+            plain = [leaf for leaf in fitting if not leaf.keywords][:1]
+            if hits:
+                # 關鍵詞葉命中時,帶所在條件的葉照收(兩軸並收);來源/目的葉與預設葉不收
+                matched.update(hits + [leaf for leaf in plain if leaf.place])
+            else:
+                matched.update(plain)
         matched = [leaf for leaf in candidates if leaf in matched]     # 樹序
         if matched:
             # 多葉跨大類時取第一葉(樹序)的

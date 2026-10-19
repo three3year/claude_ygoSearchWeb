@@ -5,9 +5,9 @@
 (categories.classify)。包住框架抽取接縫再接歸組,用真的分詞器、詞典、類別樹與
 規則表;只斷言每個框架的(動作、狀態、葉清單、大類、來源玩家、目的玩家),不測規則
 內部、不測樹怎麼存。每個句型一條回歸例子——修規則或改樹前先補一條會失敗的例子。
-例外:真樹還沒開的葉條件(所在、玩家;葉表在類別線票 06 草案才提議)用測試小樹驗,
-經同一接縫(classify 的 tree 參數),分詞器、詞典與規則表仍是真的
-(category-tree-restart 票 01、02)。
+例外:匹配機制本身(所在、玩家、關鍵詞三欄、大類宣告、關鍵詞與所在兩軸並收)另以測試
+小樹驗,免得真樹改葉表時把機制的例子一起改掉;經同一接縫(classify 的 tree 參數),
+分詞器、詞典與規則表仍是真的(category-tree-restart 票 01〜04、類別線票 06)。
 
 執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize
 """
@@ -86,7 +86,7 @@ class TestSkeleton(unittest.TestCase):
                      "●相手フィールドのカード１枚を破壊する。"),
             [("選択", "不適用", [], None, None, None),
              ("特殊召喚", "已歸", ["特殊召喚←墓地"], "召喚", "自分", None),
-             ("破壊", "已歸", ["破壊@フィールド"], "破壊", None, None)])
+             ("破壊", "已歸", ["破壊@相手フィールド"], "破壊", None, None)])
 
 
 class TestZonesAndPlayers(unittest.TestCase):
@@ -134,7 +134,7 @@ class TestZonesAndPlayers(unittest.TestCase):
             classify("①：墓地のこのカードを除外して発動できる。"
                      "相手フィールドのカード１枚を破壊する。"),
             [("除外", "已歸", ["除外←墓地"], "區域移動", "無", None),
-             ("破壊", "已歸", ["破壊@フィールド"], "破壊", None, None)])
+             ("破壊", "已歸", ["破壊@相手フィールド"], "破壊", None, None)])
         self.assertEqual(
             classify("①：自分の手札から「墓地のモンスター」１体を特殊召喚する。"),
             [("特殊召喚", "已歸", ["特殊召喚←手札"], "召喚", "自分", None)])
@@ -147,7 +147,8 @@ class TestZonesAndPlayers(unittest.TestCase):
                      "相手フィールドの魔法・罠カード１枚を破壊する。"),
             [("送る", "已歸", ["送る:手札→墓地", "送る:フィールド→墓地"], "區域移動",
               "無", "無"),
-             ("破壊", "已歸", ["破壊:魔法カード/罠カード"], "破壊", None, None)])
+             ("破壊", "已歸", ["破壊:魔法カード/罠カード", "破壊@相手フィールド"], "破壊",
+              None, None)])
 
     def test_moved_patient_zone_still_reaches_source_leaves(self):
         """frame-args-v3 票 04:拿掉「對象欄當來源」的補丁後,除外←墓地、戻す:フィールド→手札
@@ -217,19 +218,22 @@ class TestNegationAndKeywords(unittest.TestCase):
             classify("①：このカードが召喚に成功した場合に発動できる。"
                      "相手フィールドのカード１枚を選んで破壊できる。"),
             [("成功", "不適用", [], None, None, None),
-             ("選ぶ", "已歸", ["選ぶ"], "處理程序", None, None),
-             ("破壊", "已歸", ["破壊@フィールド"], "破壊", None, None)])
+             ("選ぶ", "已歸", ["選ぶ@相手フィールド"], "處理程序", None, None),
+             ("破壊", "已歸", ["破壊@相手フィールド"], "破壊", None, None)])
 
     def test_destroy_spell_trap_and_monster_split(self):
+        """關鍵詞葉之外,所在葉 破壊@相手フィールド 並收(票 06 草案的兩軸並收)。"""
         self.assertEqual(
             classify("①：相手フィールドの魔法・罠カード１枚を破壊する。"),
-            [("破壊", "已歸", ["破壊:魔法カード/罠カード"], "破壊", None, None)])
+            [("破壊", "已歸", ["破壊:魔法カード/罠カード", "破壊@相手フィールド"], "破壊",
+              None, None)])
         self.assertEqual(
             classify("①：相手フィールドの罠カード１枚を破壊する。"),
-            [("破壊", "已歸", ["破壊:魔法カード/罠カード"], "破壊", None, None)])
+            [("破壊", "已歸", ["破壊:魔法カード/罠カード", "破壊@相手フィールド"], "破壊",
+              None, None)])
         self.assertEqual(
             classify("①：相手フィールドのモンスター１体を破壊する。"),
-            [("破壊", "已歸", ["破壊:モンスター"], "破壊", None, None)])
+            [("破壊", "已歸", ["破壊:モンスター", "破壊@相手フィールド"], "破壊", None, None)])
 
     def test_negate_activation_and_effect_split(self):
         self.assertEqual(
@@ -242,11 +246,11 @@ class TestNegationAndKeywords(unittest.TestCase):
             [("無効にする", "已歸", ["無効にする:効果"], "無効", None, None)])
 
     def test_unmatched_object_falls_to_default_leaf(self):
-        """對象對不上任何關鍵詞(相手フィールドのカード)依所在落 破壊@フィールド;
+        """對象對不上任何關鍵詞(相手フィールドのカード)依所在落 破壊@相手フィールド;
         所在也沒有時落 破壊 的預設葉。"""
         self.assertEqual(
             classify("①：相手フィールドのカード１枚を破壊する。"),
-            [("破壊", "已歸", ["破壊@フィールド"], "破壊", None, None)])
+            [("破壊", "已歸", ["破壊@相手フィールド"], "破壊", None, None)])
         self.assertEqual(
             classify("①：このカードを破壊する。"),
             [("破壊", "已歸", ["破壊"], "破壊", None, None)])
@@ -264,11 +268,15 @@ class TestPlaceCondition(unittest.TestCase):
     所在條件只比所在,「來源空著時讀所在」的橋接拿掉。"""
 
     def test_place_leaf(self):
-        """真樹的 破壊@フィールド:無前綴與帶玩家前綴的場上都歸得到(本票先不分玩家)。"""
-        for place in ("相手フィールド", "フィールド", "自分フィールド"):
+        """真樹(票 06 草案)的 破壊 依所在玩家分葉:相手/自分/お互いの 各一葉,無前綴落
+        破壊@フィールド。"""
+        for place, leaf in (("相手フィールド", "破壊@相手フィールド"),
+                            ("自分フィールド", "破壊@自分フィールド"),
+                            ("お互いのフィールド", "破壊@お互いのフィールド"),
+                            ("フィールド", "破壊@フィールド")):
             self.assertEqual(
                 classify("①：%sのカード１枚を破壊する。" % place),
-                [("破壊", "已歸", ["破壊@フィールド"], "破壊", None, None)], place)
+                [("破壊", "已歸", [leaf], "破壊", None, None)], place)
 
     def test_place_does_not_match_source_leaf(self):
         """破壊 的所在 フィールド 不中 破壊←フィールド(來源葉),落 破壊@フィールド。"""
@@ -454,13 +462,92 @@ class TestKeywordFields(unittest.TestCase):
             [("無効にする", "已歸", ["無効にする:効果", "無効にする:発動"], "無効", None, None)])
 
 
+# 測試小樹:關鍵詞葉與區域葉兩軸並收
+TWO_AXES_TREE = [
+    {"詞元": "破壊", "子": [
+        {"關鍵詞": ["モンスター"]},
+        {"所在": "場上", "所在玩家": "相手"},
+        {"所在": "場上"},
+        {}]},
+]
+
+
+class TestKeywordAndZoneAxes(unittest.TestCase):
+    """票 06 草案(待站主裁定):關鍵詞葉命中時,樹序第一個條件相符、不帶關鍵詞的葉若帶所在
+    條件也收——「做什麼」與「在哪裡」兩軸並收;來源/目的葉不並收,預設葉只在都沒中時才收。"""
+
+    def test_keyword_hit_also_takes_place_leaf(self):
+        """相手フィールドのモンスター:破壊:モンスター 與 破壊@相手フィールド 都帶,
+        搜「破壞對手場上」撈得到破壞對手怪獸的卡。"""
+        self.assertEqual(
+            classify("①：相手フィールドのモンスター１体を破壊する。", tree=TWO_AXES_TREE),
+            [("破壊", "已歸", ["破壊:モンスター", "破壊@相手フィールド"], "破壊", None, None)])
+
+    def test_keyword_hit_without_zone_skips_default_leaf(self):
+        """沒有所在:只帶關鍵詞葉,預設葉不收。"""
+        self.assertEqual(
+            classify("①：そのモンスターを破壊する。", tree=TWO_AXES_TREE),
+            [("破壊", "已歸", ["破壊:モンスター"], "破壊", None, None)])
+
+    def test_no_keyword_hit_takes_zone_leaf_only(self):
+        self.assertEqual(
+            classify("①：フィールドのカード１枚を破壊する。", tree=TWO_AXES_TREE),
+            [("破壊", "已歸", ["破壊@フィールド"], "破壊", None, None)])
+
+    def test_goal_leaf_is_not_paired_with_keyword_leaf(self):
+        """真樹:目的葉是移動的訖點、不並收——カウンター 放在場上怪獸身上,不帶 置く→フィールド。"""
+        self.assertEqual(
+            classify("①：相手フィールドの表側表示モンスター１体に"
+                     "〈乙女〉カウンターを１つ置く。"),
+            [("置く", "已歸", ["置く:カウンター"], "區域移動", None, "相手")])
+
+
+class TestDraftTree(unittest.TestCase):
+    """票 06 重起草案的真樹(待站主裁定):になる/アップ 系的關鍵詞葉與大類、非移動類的
+    所在/玩家葉、否定葉帶所在。"""
+
+    def test_up_family_keyword_leaves(self):
+        self.assertEqual(
+            classify("①：自分フィールドのモンスターの攻撃力・守備力は５００アップする。"),
+            [("アップ", "已歸", ["アップ:攻撃力", "アップ:守備力"], "數值", None, None)])
+        self.assertEqual(
+            classify("①：このカードのレベルを１つ上げる。"),
+            [("上げる", "已歸", ["上げる:レベル"], "數值", None, None)])
+
+    def test_naru_family_keywords_pick_major(self):
+        """半分になる:ダメージ/LP 歸 LP・ダメージ、にする:レベル 歸 數值。"""
+        self.assertEqual(
+            classify("①：その戦闘で発生する相手への戦闘ダメージは半分になる。"),
+            [("半分になる", "已歸", ["半分になる:ダメージ/LP"], "LP・ダメージ", None, None)])
+        self.assertEqual(
+            classify("①：そのモンスターのレベルを４にする。"),
+            [("にする", "已歸", ["にする:レベル"], "數值", None, None)])
+
+    def test_place_player_leaves_on_non_move_lemmas(self):
+        self.assertEqual(
+            classify("①：相手の手札をランダムに１枚選んで墓地へ捨てる。"),
+            [("選ぶ", "已歸", ["選ぶ@相手手札"], "處理程序", None, None),
+             ("捨てる", "已歸", ["捨てる"], "區域移動", "相手", "無")])
+        self.assertEqual(
+            classify("①：自分の手札・フィールドのモンスターを融合素材とし、"
+                     "融合モンスター１体を融合召喚する。"),
+            [("融合素材とする", "已歸", ["融合素材とする@自分フィールド", "融合素材とする@自分手札"],
+              "素材", None, None),
+             ("融合召喚", "已歸", ["融合召喚"], "召喚", None, None)])
+
+    def test_negation_leaf_with_place_player(self):
+        self.assertEqual(
+            classify("①：自分フィールドのモンスターは効果では破壊されない。"),
+            [("破壊", "已歸", ["破壊@自分フィールド(耐性)"], "耐性", None, None)])
+
+
 class TestMajorByLeaf(unittest.TestCase):
     """category-tree-restart 票 04:葉可宣告自己掛的大類(沒宣告取詞元節點的本家大類),
     同一詞元的葉可以在不同大類;多葉跨大類時框架的大類取第一葉(樹序)的。"""
 
     def test_same_lemma_leaves_in_three_majors(self):
-        """真樹的 になる:攻撃力/:守備力 沒宣告、取本家 數值;:ダメージ 宣告 LP・ダメージ、
-        :ドロー 宣告 規則改寫。"""
+        """真樹的 になる:攻撃力/:守備力 沒宣告、取本家 數值;:ダメージ/LP 宣告 LP・ダメージ、
+        :ドロー/枚数/回数 宣告 規則改寫。"""
         self.assertEqual(
             classify("①：このカードの攻撃力は１００００になる。"),
             [("になる", "已歸", ["になる:攻撃力"], "數值", None, None)])
@@ -470,10 +557,10 @@ class TestMajorByLeaf(unittest.TestCase):
              ("無効化", "已歸", ["無効化"], "無効", None, None)])
         self.assertEqual(
             classify("①：その戦闘で発生する自分への戦闘ダメージは０になる。"),
-            [("になる", "已歸", ["になる:ダメージ"], "LP・ダメージ", None, None)])
+            [("になる", "已歸", ["になる:ダメージ/LP"], "LP・ダメージ", None, None)])
         self.assertEqual(
             classify("①：自分の通常のドローは２枚になる。"),
-            [("になる", "已歸", ["になる:ドロー"], "規則改寫", None, None)])
+            [("になる", "已歸", ["になる:ドロー/枚数/回数"], "規則改寫", None, None)])
 
     def test_multi_leaf_across_majors_takes_first_leafs_major(self):
         tree = [
@@ -498,7 +585,7 @@ class TestCardRollup(unittest.TestCase):
             categories.classify_card([
                 "①：自分の墓地のモンスター１体を除外して発動できる。"
                 "相手フィールドのモンスター１体を破壊する。"]),
-            {"effect": ["破壊:モンスター"], "cost": ["除外←墓地"]})
+            {"effect": ["破壊:モンスター", "破壊@相手フィールド"], "cost": ["除外←墓地"]})
 
     def test_groups_dedupe_and_follow_tree_order(self):
         """兩句各出的葉合併去重,依樹序排(特殊召喚 在 加える 前、←手札 在 ←墓地 前);

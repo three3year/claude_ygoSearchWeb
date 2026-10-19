@@ -6,7 +6,9 @@
 再組葉名。框架裡存的仍是原文字面,區域七值只在類別線用。
 
 區域七值:手牌/牌組/額外牌組/墓地/除外/場上/靈擺區(值域正典的區域,與動作類別第一版同一組)。
-玩家:自分/相手/雙方/無——各段明示的玩家合起來,不進葉。
+玩家:自分/相手/雙方/無——parse_place 給各段明示的玩家合起來(框架類別檔的來源玩家/
+目的玩家欄);parse_zones 給逐區域的玩家(類別樹的玩家條件比對用,category-tree-restart
+票 02)。
 """
 import re
 
@@ -94,6 +96,39 @@ def _parse_zone(text):
     return None
 
 
+def parse_zones(literal):
+    """地點字面 → 逐區域的 [(玩家, 區域)…](依字面順序、區域去重),或 None(沒有字面)、
+    [](整個字面就是玩家,或認不出區域)。
+
+    每個區域的玩家是該段自己的前綴,沒有時沿用字面開頭的前綴,都沒有記無(自分の手札・
+    相手フィールド → 手札 自分、フィールド 相手);同一區域出現兩次時玩家合起來
+    (自分フィールド・相手フィールド → フィールド 雙方)。複合字面只要有一段認不出就
+    整段不認。
+    """
+    if not literal:
+        return None
+    literal = ELIDED.sub(r"\1", literal)
+    if literal in BARE_PLAYERS:
+        return []
+    outer, rest = _strip_player(literal)
+    whole = _parse_part(rest)
+    parts = [whole] if whole else [_parse_part(p) for p in PLACE_SEPARATOR.split(rest)]
+    if None in parts:
+        return []
+    zones = {}
+    for player, zone in parts:
+        zones.setdefault(zone, set()).add(player or outer or PLAYER_NONE)
+    return [(_merge_players(players), zone) for zone, players in zones.items()]
+
+
+def _merge_players(players):
+    """幾個玩家值 → 一個:兩者都有或含雙方 → 雙方;只有無與某方時取那方。"""
+    if PLAYER_BOTH in players or {PLAYER_SELF, PLAYER_OPP} <= players:
+        return PLAYER_BOTH
+    named = players - {PLAYER_NONE}
+    return named.pop() if named else PLAYER_NONE
+
+
 def parse_place(literal):
     """地點字面 → (玩家, 區域清單)。
 
@@ -105,21 +140,10 @@ def parse_place(literal):
     """
     if not literal:
         return None, []
-    literal = ELIDED.sub(r"\1", literal)
-    if literal in BARE_PLAYERS:
-        return BARE_PLAYERS[literal], []
-    outer, rest = _strip_player(literal)
-    whole = _parse_part(rest)
-    parts = [whole] if whole else [_parse_part(p) for p in PLACE_SEPARATOR.split(rest)]
-    if None in parts:
+    bare = BARE_PLAYERS.get(ELIDED.sub(r"\1", literal))
+    if bare:
+        return bare, []
+    zones = parse_zones(literal)
+    if not zones:
         return None, []
-    players = {p for p, _ in parts if p} | ({outer} if outer else set())
-    if PLAYER_BOTH in players or {PLAYER_SELF, PLAYER_OPP} <= players:
-        player = PLAYER_BOTH
-    else:
-        player = players.pop() if players else PLAYER_NONE
-    zones = []
-    for _, zone in parts:
-        if zone not in zones:
-            zones.append(zone)
-    return player, zones
+    return _merge_players({player for player, _ in zones}), [zone for _, zone in zones]

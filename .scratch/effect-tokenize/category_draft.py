@@ -3,7 +3,7 @@
 md(.scratch/action-categories/tree-draft.md)引用的 JSON 表,格式見 review-mirror skill 的
 「資料塊」。計數與例句都由這裡產出,草案不手抄。
 
-    summary.json   儀表板:已歸/未歸/不適用、已歸比例、來源取自所在的框架數、葉數、
+    summary.json   儀表板:已歸/未歸/不適用、已歸比例、有所在的框架數、葉數、
                    頂層節點數
     majors.json    頂層節點(大類):成員詞元節點、葉數、框架數、卡數
     leaves.json    每葉(樹序):所屬大類與詞元節點、條件、效果位/代價位框架數、卡數;展開看三條例句
@@ -45,10 +45,12 @@ def leaf_conditions(leaf):
     parts = ["詞元=" + leaf.lemma]
     if leaf.polarity != categories.POL_AFFIRM:
         parts.append("極性類=" + leaf.polarity)
-    if leaf.source:
-        parts.append("來源=" + leaf.source)
-    if leaf.goal:
-        parts.append("目的=" + leaf.goal)
+    for field in categories.ZONE_FIELDS:
+        if getattr(leaf, field):
+            parts.append("%s=%s" % (categories.LEAF_LABELS[field], getattr(leaf, field)))
+        if field in leaf.players:
+            parts.append("%s=%s" % (categories.LEAF_LABELS[field + "_player"],
+                                    leaf.players[field]))
     if leaf.keywords:
         parts.append("對象含 " + "/".join(leaf.keywords))
     return ";".join(parts)
@@ -77,7 +79,7 @@ def main():
     unplaced = defaultdict(list)        # 標籤 → [(語料序, 卡號, 框架)]
     has_node = {}
     counts = dict.fromkeys(categories.STATUSES, 0)
-    from_place = 0                      # 來源字面空著、改讀所在的框架
+    with_place = 0                      # 有所在字面的框架(所在只比葉的所在條件)
     seq = 0
     for s in sentences:
         for fr in s["frames"]:
@@ -86,8 +88,8 @@ def main():
             key = (s["card"], s["section"], s["index"], fr["order"])
             rec = records[key]
             counts[rec["status"]] += 1
-            if rec["status"] != categories.STATUS_NA and categories.source_place(fr)[2]:
-                from_place += 1
+            if rec["status"] != categories.STATUS_NA and fr.get("place"):
+                with_place += 1
             item = (seq, s["card"], fr)
             seq += 1
             if rec["status"] == categories.STATUS_PLACED:
@@ -109,7 +111,7 @@ def main():
             ["未歸", "{:,}".format(missing)],
             ["不適用(條件位)", "{:,}".format(counts[categories.STATUS_NA])],
             ["已歸比例(已歸/(已歸+未歸))", "%.2f%%" % (100.0 * placed / max(1, placed + missing))],
-            ["來源取自所在(來源字面空著、讀框架的所在)", "{:,}".format(from_place)],
+            ["有所在(非條件位)", "{:,}".format(with_place)],
             ["葉", "{:,}".format(len(tree.leaves))],
             ["頂層節點(大類)", "{:,}".format(len(tree.majors))],
             ["未歸類組(詞元+極性類)", "{:,}".format(len(unplaced))],

@@ -473,7 +473,7 @@ TWO_AXES_TREE = [
 
 
 class TestKeywordAndZoneAxes(unittest.TestCase):
-    """票 06 草案(待站主裁定):關鍵詞葉命中時,樹序第一個條件相符、不帶關鍵詞的葉若帶所在
+    """票 06(2026-10-19 站主裁定):關鍵詞葉命中時,樹序第一個條件相符、不帶關鍵詞的葉若帶所在
     條件也收——「做什麼」與「在哪裡」兩軸並收;來源/目的葉不並收,預設葉只在都沒中時才收。"""
 
     def test_keyword_hit_also_takes_place_leaf(self):

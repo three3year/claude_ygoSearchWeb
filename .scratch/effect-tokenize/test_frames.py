@@ -1363,5 +1363,69 @@ class TestV3Round1Fixes(unittest.TestCase):
             ("扱う", "このカードのカード名", None, ["topic"]))
 
 
+def merged_clauses(text, context=""):
+    """動作框架 → (動作, 主題, 主語, 對象, 來源, 回填, 子句字面去空白):frame-args-v3 票 09。
+    子句字面一般不斷言,這裡是票 09 的驗收條件(後面述語的子句含 〜よう 的字面)。"""
+    return [(f["action"], f.get("topic"), f.get("subject"), f.get("object"),
+             literal(f, "source"), f.get("backfill"), f["clause"].replace(" ", ""))
+            for f in actions(text, context)]
+
+
+class TestYouNiClauseMerged(unittest.TestCase):
+    """frame-args-v3 票 09:以 よう/ように 收尾的子句是後面述語的連用修飾——不出動作框架,字面
+    併入後面述語的子句;量條件(よう 子句的主語、目的)不結構化,其餘論元(對象、來源、主題)
+    屬後面的述語。"""
+
+    def test_ritual_release_takes_the_you_clause(self):
+        self.assertEqual(
+            merged_clauses("②：このカードのX素材を１つ取り除いて発動できる。レベルの合計が"
+                           "儀式召喚するモンスターのレベル以上になるように、自分の手札・"
+                           "フィールドのモンスターをリリースし、手札から儀式モンスター１体を"
+                           "儀式召喚する。")[1:3],
+            [("リリース", None, None, "モンスター", "自分の手札・フィールド", None,
+              "レベルの合計が儀式召喚するモンスターのレベル以上になるように、"
+              "自分の手札・フィールドのモンスターをリリースし"),
+             ("儀式召喚", None, None, "儀式モンスター1体", "手札", None,
+              "手札から儀式モンスター1体を儀式召喚する")])
+
+    def test_conditional_you_clause_has_no_frame_either(self):
+        """條件位(發動句的代價前)的「〜になるよう」同樣不出。"""
+        self.assertEqual(
+            [f[0] for f in merged_clauses("①：このカードが手札に存在する場合、リンクマーカーの合計が"
+                                          "５になるようにEXデッキから機械族Lモンスターを除外して"
+                                          "発動できる。このカードを特殊召喚する。")],
+            ["存在", "除外", "特殊召喚"])
+
+    def test_topic_and_object_of_the_you_clause_belong_to_the_predicate(self):
+        """「自分は手札が５枚になるようにドローする」:主題 自分 是 ドロー 自己子句的字(不標回填);
+        「そのモンスターを…となるように特殊召喚する」:對象屬 特殊召喚。"""
+        self.assertEqual(
+            merged_clauses("②：自分は手札が５枚になるようにデッキからドローする。"),
+            [("ドロー", "自分", None, None, "デッキ", None,
+              "自分は手札が5枚になるようにデッキからドローする")])
+        self.assertEqual(
+            merged_clauses("②：そのモンスターをこのカードとリンク状態となるように"
+                           "自分フィールドに特殊召喚する。")[0][:5],
+            ("特殊召喚", None, None, "そのモンスター", None))
+
+    def test_subject_moved_into_the_you_clause_stays_there(self):
+        """「攻撃力の合計が、…発動するために払ったLPの数値以下になるように…選んで」:ために 移過來的
+        主語是 よう 子句的量條件,不往後給 選ぶ。"""
+        self.assertEqual(
+            merged_clauses("②：その差分のLPを払ってこの効果を発動できる。攻撃力の合計が、"
+                           "この効果を発動するために払ったLPの数値以下になるように、"
+                           "相手フィールドの表側表示モンスターを選んで破壊する。")[1][:4],
+            ("選ぶ", None, None, "表側表示モンスター"))
+
+    def test_you_without_a_following_predicate_is_kept(self):
+        """反例:よう 之後同一句沒有述語時不受影響;名詞後的「同じように」本來就不是錨點。"""
+        self.assertEqual(
+            [f[:3] for f in merged_clauses("①：レベルの合計が８になるように。")],
+            [("になる", None, "レベルの合計")])
+        self.assertEqual(
+            [f[0] for f in merged_clauses("①：このカードは通常召喚と同じように扱う。")],
+            ["扱う"])
+
+
 if __name__ == "__main__":
     unittest.main()

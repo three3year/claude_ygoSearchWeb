@@ -53,7 +53,9 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
 
 子句切分:一子句至多一個述語錨點——錨點(含活用尾/可能/否定/形式名詞 後綴與
 其後的助詞、讀點)結束處即下一子句的起點;定語用法(動詞後直接接名詞:
-特殊召喚したモンスター)不當錨點,留在名詞片語裡。
+特殊召喚したモンスター)不當錨點,留在名詞片語裡。〜よう(に) 收尾的子句後面同一句還有
+述語時是它的連用修飾(frame-args-v3 票 09):不出框架,字面併入下一個述語的子句;量條件
+(よう 子句的主語、目的)不結構化,對象/來源/主題交給下一個述語。
 
 用法:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/frames.py
 """
@@ -186,6 +188,8 @@ NO_OBJECT_ACTIONS = {"存在", "成功", "ドロー", "離れる", "無効化", 
 # ── 第三版論元(frame-args-v3)──
 # 受事者候選的論元鍵:主動句的受事者是對象,被動句是主語(沒有時是主題)(票 04)
 PATIENT_KEYS = ("object", "topic", "subject")
+# 〜よう 子句交給下一個述語的論元(票 09);主語與目的是量條件,不交
+ABSORBED_KEYS = ("object", "source", "topic")
 # 移動類(區域移動與召喚兩個大類的成員;素材類不算,規格決定 2026-10-17):受事者的區域記
 # 來源,其餘動作記所在(票 04)
 MOVE_ACTIONS = {"加える", "ドロー", "送る", "捨てる", "リリース", "除外", "戻す", "戻る", "置く",
@@ -1191,6 +1195,12 @@ class FrameExtractor:
                 anchors.append(a)
                 clause_start = a["tail"]
                 i = a["tail"]
+            # 〜よう(に) 子句(票 09):後面同一句還有述語時是它的連用修飾——不出框架,字面併入
+            # 下一個述語的子句(span_start);論元仍照自己的範圍抽,交給下一個述語
+            for a, b in zip(anchors, anchors[1:]):
+                if a["nominalizer"] == "よう":
+                    a["absorbed"] = True
+                    b["span_start"] = span_start(a)
             anchors_by_sentence.append(anchors)
 
         # 括弧深度:（…）裡的註記(この効果は相手ターンでも発動できる)不算
@@ -1279,8 +1289,9 @@ class FrameExtractor:
                 for key, value in carry.items():
                     if key != "split":
                         args.setdefault(key, value)
-                if "object" not in own and "object" in carry.get("split", {}):
-                    args["split"]["object"] = carry["split"]["object"]
+                for key, found in carry.get("split", {}).items():
+                    if key not in own:
+                        args["split"][key] = found
                 carry = next_carry
                 if a["action"].endswith("なる") and "source" in args:
                     carry["source"] = args.pop("source")   # 〜からリリースし
@@ -1295,6 +1306,15 @@ class FrameExtractor:
                         a["action"].endswith("素材とする") and a["form"] == "te"
                         or a["nominalizer"] == "ため"):
                     pending_subject = (args.pop("subject"), args["split"].pop("subject", None))
+                if a.get("absorbed"):
+                    # 〜よう 子句:主語(含附加子句移過來的)與目的是量條件(不結構化),
+                    # 對象/來源/主題屬下一個述語
+                    for key in ABSORBED_KEYS:
+                        if args.get(key):
+                            carry[key] = args[key]
+                            if key in args["split"]:
+                                carry.setdefault("split", {})[key] = args["split"][key]
+                    continue
                 # 発動 本身:發動句的收尾(このカードを発動できる)、速度註記、
                 # 〜するために 都不是動作;有別的對象/來源(〜を発動できない、
                 # デッキから「X」を発動できる)才成框架
@@ -1325,7 +1345,7 @@ class FrameExtractor:
                     position = POS_COND
                 else:
                     position = POS_EFFECT
-                span = (a["clause_start"], a["end"])
+                span = (span_start(a), a["end"])
                 clause = " ".join(self.surface(t) for t in tokens[span[0]:span[1]])
                 # 「・」並列的述語名詞(召喚・特殊召喚した)與召喚法鏈(儀式・融合・
                 # S・X召喚):各出一框架,共用後綴
@@ -1336,9 +1356,10 @@ class FrameExtractor:
                     a["action"] = methods[-1] + "召喚"
                 # 效果內容的次數/窗口(１度だけ、追加召喚的 自分メインフェイズに)記在
                 # 動作框架自己身上(約束框架票 06)
+                # 〜よう 子句併入時從併入的起點掃,上一個錨點是併入段之前的那個(票 09)
+                prev = next((b for b in reversed(anchors[:k]) if not b.get("absorbed")), None)
                 fields = self.finder.action_fields(
-                    tokens, a["clause_start"], a["head"], in_activation,
-                    prev_anchor=anchors[k - 1] if k else None)
+                    tokens, span_start(a), a["head"], in_activation, prev_anchor=prev)
                 # 條件子句裡主題在自己的主語之前:主題屬主句,不給條件框架,交給後面延續(票 03)
                 a["lifted_topic"] = args.pop("topic") if (
                     a["conditional"] and args.get("topic_first")) else None
@@ -1521,7 +1542,7 @@ class FrameExtractor:
                 continue
             if donor is None:
                 continue
-            if own_object[id(fr)] or "p:は" in tokens[a["clause_start"]:a["head"]]:
+            if own_object[id(fr)] or "p:は" in tokens[span_start(a):a["head"]]:
                 donor = None
                 continue
             if fillable(fr):
@@ -1659,6 +1680,11 @@ def _literal(frame, key):
 def region_key(action):
     """受事者的區域放哪一欄:移動類記來源、其餘記所在(票 04)。"""
     return "source" if action in MOVE_ACTIONS else "place"
+
+
+def span_start(anchor):
+    """錨點的子句字面起點:〜よう 子句併入時是併入段的起點(票 09),否則就是子句起點。"""
+    return anchor.get("span_start", anchor["clause_start"])
 
 
 def _region(frame):

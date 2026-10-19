@@ -11,9 +11,9 @@ category_tree.json,為每個動作框架寫一列類別紀錄到 frame_categorie
 框架只貼葉、祖先由樹推得。葉名由條件機械組出——來源「詞元←區域」、目的「詞元→區域」、
 來源加目的「詞元:來源→目的」、所在「詞元@區域」、對象關鍵詞「詞元:關鍵詞」(多個關鍵詞以 / 並列)、
 否定「詞元(耐性)」「詞元(限制)」;區域在葉名裡寫日文卡文的區域名(手札/デッキ/墓地…),
-條件值是區域七值。區域條件可各帶玩家條件(來源玩家/目的玩家/所在玩家,值 自分/相手/雙方/無;
-category-tree-restart 票 02),葉名以日文前綴連寫在該區域名前(破壊@相手フィールド、
-除外←相手墓地、雙方寫 お互いの、無不寫)。
+條件值是區域七值。區域條件可各帶玩家條件(來源玩家/目的玩家/所在玩家,值 自分/相手/雙方;
+category-tree-restart 票 02,2026-10-19 站主裁定不切「無」),葉名以日文前綴連寫在該區域名前
+(破壊@相手フィールド、除外←相手墓地、雙方寫 お互いの)。
 
 規則表語意:主鍵是(動作詞元, 極性類)。極性類是 肯定/耐性/限制:可能視同肯定;否定
 依述語形分(票 03)——被動否定(されない)、にならない、受けない 為耐性,可能否定
@@ -27,8 +27,9 @@ category-tree-restart 票 02),葉名以日文前綴連寫在該區域名前(破�
 frame-args-v3 票 01),各比自己那一欄(category-tree-restart 票 01):移動類動作依來源切葉,
 破壊、選ぶ 這類非移動類依所在切葉(受事者區域由框架抽取切出,frame-args-v3 票 04)。
 玩家條件只在宣告的葉上比對該區域欄的玩家(複合字面逐區域取:自分の墓地・相手フィールド
-的墓地是自分、フィールドは相手;places.parse_zones):無 只對「有字面但沒有玩家前綴」成立,
-null(沒字面、推得、字面不是地點)不中任何玩家值;沒宣告玩家的葉不看玩家。不論葉有沒有宣告,
+的墓地是自分、フィールドは相手;places.parse_zones);沒寫玩家前綴的字面(含 持ち主の、
+自身の 這類相對前綴)與 null(沒字面、推得、字面不是地點)不中任何宣告玩家的葉,落沒宣告
+玩家的葉——沒宣告玩家的葉不看玩家。不論葉有沒有宣告,
 來源/目的的玩家都照記在來源玩家/目的玩家欄(推得的記 null)。複合字面
 (手札・墓地)逐區域各匹配一葉,一個框架因此可帶多個葉(依字面順序、去重),同詞元的葉
 同大類。同詞元的葉依樹序先到先得。
@@ -53,8 +54,7 @@ sys.path.insert(0, HERE)
 import frames  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
 from frames import POL_AFFIRM, POL_NEG, POS_COND, POS_COST, POS_EFFECT  # noqa: E402
-from places import (PLAYER_BOTH, PLAYER_NONE, PLAYER_OPP, PLAYER_SELF,  # noqa: E402
-                    parse_place, parse_zones)
+from places import PLAYER_BOTH, PLAYER_OPP, PLAYER_SELF, parse_place, parse_zones  # noqa: E402
 
 TREE = os.path.join(HERE, "category_tree.json")
 FRAMES = os.path.join(HERE, "frames.json")
@@ -88,8 +88,9 @@ KEY_MAJOR = "大類"
 KEY_LEMMA = "詞元"
 KEY_POLARITY_CLASS = "極性類"
 KEY_CHILDREN = "子"
-# 玩家條件的值與它在葉名裡的日文前綴(無不寫)
-PLAYER_LABEL = {PLAYER_SELF: "自分", PLAYER_OPP: "相手", PLAYER_BOTH: "お互いの", PLAYER_NONE: ""}
+# 可宣告的玩家條件值與它在葉名裡的日文前綴。「無」不能宣告(2026-10-19 站主裁定):
+# 它與沒宣告玩家的葉葉名同形,沒寫玩家的框架由沒宣告玩家的葉收
+PLAYER_LABEL = {PLAYER_SELF: "自分", PLAYER_OPP: "相手", PLAYER_BOTH: "お互いの"}
 
 # 樹來源檔的葉條件鍵 → 內部欄名;玩家條件欄是「區域欄名_player」,綁在該區域條件上
 LEAF_KEYS = {"來源": "source", "目的": "goal", "所在": "place", "對象": "keywords",
@@ -133,8 +134,8 @@ def leaf_name(lemma, polarity, conditions=None):
     conditions = conditions or {}
 
     def zone(field):
-        return (PLAYER_LABEL[conditions.get(field + "_player") or PLAYER_NONE]
-                + ZONE_LABEL[conditions[field]])
+        player = conditions.get(field + "_player")
+        return (PLAYER_LABEL[player] if player else "") + ZONE_LABEL[conditions[field]]
 
     name = lemma
     source, goal = conditions.get("source"), conditions.get("goal")

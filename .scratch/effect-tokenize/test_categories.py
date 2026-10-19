@@ -301,20 +301,20 @@ PLAYER_TREE = [
         {"所在": "場上", "所在玩家": "相手"},
         {"所在": "場上", "所在玩家": "自分"},
         {"所在": "場上", "所在玩家": "雙方"},
-        {"所在": "場上", "所在玩家": "無"},
+        {"所在": "場上"},
         {}]},
-    {"詞元": "除外", "子": [{"來源": "墓地", "來源玩家": "相手"}, {"目的": "除外", "目的玩家": "無"},
-                          {}]},
-    {"詞元": "送る", "子": [{"目的": "墓地", "目的玩家": "無"}, {}]},
-    {"詞元": "特殊召喚", "子": [{"來源": "墓地"}, {}]},
+    {"詞元": "除外", "子": [{"來源": "墓地", "來源玩家": "相手"}, {}]},
+    {"詞元": "特殊召喚", "子": [{"來源": "墓地"}, {"目的": "場上", "目的玩家": "自分"}, {}]},
 ]
 
 
 class TestPlayerCondition(unittest.TestCase):
     """category-tree-restart 票 02:玩家是可選葉條件,綁在它修飾的區域條件上;葉名以日文
-    前綴連寫(自分、相手、お互いの,無不寫);沒宣告的葉不看玩家,來源玩家/目的玩家欄不變。"""
+    前綴連寫(自分、相手、お互いの);可宣告的值只有 自分/相手/雙方(2026-10-19 站主裁定
+    不切「無」),沒寫玩家的落沒宣告玩家的葉;沒宣告的葉不看玩家,來源玩家/目的玩家欄不變。"""
 
     def test_place_player_splits_leaves(self):
+        """相手/自分/お互いの 各一葉;沒寫玩家的 フィールド 落後面沒宣告玩家的 破壊@フィールド。"""
         for place, leaf in (("相手フィールド", "破壊@相手フィールド"),
                             ("自分フィールド", "破壊@自分フィールド"),
                             ("フィールド", "破壊@フィールド"),
@@ -341,8 +341,15 @@ class TestPlayerCondition(unittest.TestCase):
             classify("①：お互いのフィールド・墓地のカードを全て破壊する。", tree=tree),
             [("破壊", "已歸", ["破壊@お互いのフィールド", "破壊"], "破壊", None, None)])
 
-    def test_no_place_literal_matches_no_player_leaf(self):
-        """沒有所在字面(玩家 null)不中「無」:落預設葉。"""
+    def test_relative_prefix_takes_undeclared_leaf(self):
+        """相手は自身のフィールド:自身の 不算明示玩家,不中 破壊@相手フィールド,
+        落沒宣告玩家的 破壊@フィールド。"""
+        self.assertEqual(
+            classify("①：相手は自身のフィールドのカード１枚を破壊する。", tree=PLAYER_TREE),
+            [("破壊", "已歸", ["破壊@フィールド"], "破壊", None, None)])
+
+    def test_no_place_literal_takes_default_leaf(self):
+        """沒有所在字面:區域條件都不中,落預設葉。"""
         self.assertEqual(
             classify("①：このカードを破壊する。", tree=PLAYER_TREE),
             [("破壊", "已歸", ["破壊"], "破壊", None, None)])
@@ -365,14 +372,15 @@ class TestPlayerCondition(unittest.TestCase):
                 [("特殊召喚", "已歸", ["特殊召喚←墓地"], "特殊召喚", player, None)], prefix)
 
     def test_inferred_goal_matches_no_player_leaf(self):
-        """推得的目的(除外→除外)沒有字面、玩家 null:不中 除外→除外 的「無」葉;
-        原文寫出的目的(墓地へ)才中 送る→墓地。"""
+        """推得的目的(特殊召喚→フィールド)沒有字面、玩家 null:不中 特殊召喚→自分フィールド,
+        落預設葉;原文寫出 自分フィールドに 才中。"""
         self.assertEqual(
-            classify("①：このカードを除外する。", tree=PLAYER_TREE),
-            [("除外", "已歸", ["除外"], "除外", None, None)])
+            classify("①：手札からモンスター１体を特殊召喚する。", tree=PLAYER_TREE),
+            [("特殊召喚", "已歸", ["特殊召喚"], "特殊召喚", "無", None)])
         self.assertEqual(
-            classify("①：このカードを墓地へ送る。", tree=PLAYER_TREE),
-            [("送る", "已歸", ["送る→墓地"], "送る", None, "無")])
+            classify("①：手札からモンスター１体を自分フィールドに特殊召喚する。",
+                     tree=PLAYER_TREE),
+            [("特殊召喚", "已歸", ["特殊召喚→自分フィールド"], "特殊召喚", "無", "自分")])
 
 
 class TestCardRollup(unittest.TestCase):
@@ -416,9 +424,12 @@ class TestTreeIntegrity(unittest.TestCase):
         self.assertTreeError([{"詞元": "破壊", "子": [{"所在": "フィールド"}, {}]}],
                              "不在區域七值")
 
-    def test_player_value_must_be_one_of_four(self):
-        self.assertTreeError([{"詞元": "破壊", "子": [{"所在": "場上", "所在玩家": "持ち主"}, {}]}],
-                             "不在 自分/相手/雙方/無")
+    def test_player_value_must_be_one_of_three(self):
+        """「無」不能宣告(2026-10-19 站主裁定不切「無」):沒寫玩家的由沒宣告玩家的葉收。"""
+        for player in ("無", "持ち主"):
+            self.assertTreeError(
+                [{"詞元": "破壊", "子": [{"所在": "場上", "所在玩家": player}, {}]}],
+                "不在 自分/相手/雙方")
 
     def test_player_must_bind_to_existing_zone_condition(self):
         self.assertTreeError([{"詞元": "破壊", "子": [{"所在": "場上", "來源玩家": "相手"}, {}]}],

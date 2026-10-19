@@ -220,9 +220,14 @@ def load_categories():
 def tree_nodes(tree):
     """類別樹的葉路徑 → 巢狀節點 {"name", "leaf"(葉號或 None), "children"},依樹序。
     詞元節點帶預設葉時(破壊 底下的 {}),預設葉的路徑與詞元節點相同,節點同時是
-    葉與內部節點。"""
-    root = {"name": None, "leaf": None, "children": []}
-    for i, leaf in enumerate(tree.leaves):
+    葉與內部節點。葉宣告了大類時(category-tree-restart 票 04)路徑的頭是宣告的大類,
+    同一詞元節點因此可出現在幾個大類下、各自只掛那裡的葉;大類依樹序先排好,掛到本家
+    以外大類的葉後放,借來的詞元節點因此排在該大類自己的詞元節點之後。"""
+    root = {"name": None, "leaf": None,
+            "children": [{"name": name, "leaf": None, "children": []} for name in tree.majors]}
+    order = sorted(range(len(tree.leaves)), key=lambda i: (tree.leaves[i].borrowed, i))
+    for i in order:
+        leaf = tree.leaves[i]
         node = root
         for name in leaf.path:
             child = next((c for c in node["children"] if c["name"] == name), None)
@@ -245,31 +250,36 @@ def balanced_shards(groups, count):
     return assign
 
 
+def frame_key(row):
+    """總覽列 [卡號, 段落, 句序, 框架序, …] → 框架鍵。"""
+    return tuple(row[:4])
+
+
 def category_overview(tree, items):
     """items:依語料順序的 (卡號, 段落, 句序, 框架, 類別紀錄, 子句原文)(只有動作框架)。
     回傳 (總覽表, 分片清單):總覽表放進 view_data 的 frames.categories——儀表板三個數、
-    樹節點 [名, 框架數, 卡數, 葉號或 -1, 子節點](大類與詞元層由葉彙總,多葉框架只算
-    一次)、未歸依 (詞元, 極性類) 聚合 [標籤, 詞元有節點, 框架數, 卡數];分片是
+    樹節點 [名, 框架數, 卡數, 葉號或 -1, 子節點](詞元層由掛在那裡的葉彙總,多葉框架只算
+    一次;大類層只算框架大類是它的——多葉跨大類的框架只算進第一葉的大類)、
+    未歸依 (詞元, 極性類) 聚合 [標籤, 詞元有節點, 框架數, 卡數];分片是
     {"l<葉號>"/"u<未歸序>": [[卡號, 段落, 句序, 框架序, 位置, 子句原文]…]},按需載入。"""
     counts = Counter()
     leaf_rows = [[] for _ in tree.leaves]
     unplaced = {}
+    major_of = {}                       # 已歸框架鍵 → 框架的大類
     for card, section, index, fr, rec, text in items:
         counts[rec["status"]] += 1
         row = [card, section, index, fr["order"], fr["position"], text]
         if rec["status"] == categories.STATUS_PLACED:
+            major_of[frame_key(row)] = rec["major"]
             for name in rec["leaves"]:
                 leaf_rows[tree.leaf_order[name]].append(row)
         elif rec["status"] == categories.STATUS_UNPLACED:
             label, key = categories.unplaced_label(fr)
             unplaced.setdefault(label, (key in tree.by_key, []))[1].append(row)
 
-    def frame_key(row):
-        return tuple(row[:4])
-
-    def summarize(node):
+    def summarize(node, top_level=False):
         """節點 → (輸出列 [名, 框架數, 卡數, 葉號或 -1, 子節點列], 框架鍵集合, 卡號集合);
-        集合往上併,多葉框架在上層只算一次。"""
+        集合往上併,多葉框架在上層只算一次;頂層大類只留大類是它的框架。"""
         frames, cards, children = set(), set(), []
         for child in node["children"]:
             row, child_frames, child_cards = summarize(child)
@@ -280,10 +290,13 @@ def category_overview(tree, items):
             rows = leaf_rows[node["leaf"]]
             frames |= {frame_key(r) for r in rows}
             cards |= {r[0] for r in rows}
+        if top_level:
+            frames = {key for key in frames if major_of[key] == node["name"]}
+            cards = {key[0] for key in frames}
         leaf = -1 if node["leaf"] is None else node["leaf"]
         return [node["name"], len(frames), len(cards), leaf, children], frames, cards
 
-    nodes = [summarize(n)[0] for n in tree_nodes(tree)]
+    nodes = [summarize(n, top_level=True)[0] for n in tree_nodes(tree)]
     groups = sorted(unplaced.items(), key=lambda kv: (-len(kv[1][1]), kv[0]))
     rows_of = {"l%d" % i: rows for i, rows in enumerate(leaf_rows) if rows}
     rows_of.update(("u%d" % j, rows) for j, (_, (_, rows)) in enumerate(groups))

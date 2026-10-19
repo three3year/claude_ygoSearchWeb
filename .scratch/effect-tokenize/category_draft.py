@@ -52,7 +52,9 @@ def leaf_conditions(leaf):
             parts.append("%s=%s" % (categories.LEAF_LABELS[field + "_player"],
                                     leaf.players[field]))
     if leaf.keywords:
-        parts.append("對象含 " + "/".join(leaf.keywords))
+        parts.append("關鍵詞含 " + "/".join(leaf.keywords))
+    if leaf.declared is not None:
+        parts.append("大類=" + leaf.declared)
     return ";".join(parts)
 
 

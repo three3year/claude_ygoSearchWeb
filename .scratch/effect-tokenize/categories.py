@@ -8,9 +8,12 @@ category_tree.json,為每個動作框架寫一列類別紀錄到 frame_categorie
 框架抽取的輸出、不改它;約束框架不歸本樹。
 
 類別樹(格式見 category_tree.json 的「說明」):大類 → 詞元節點 → 葉,分支可不等深;
-框架只貼葉、祖先由樹推得。葉名由條件機械組出——來源「詞元←區域」、目的「詞元→區域」、
-來源加目的「詞元:來源→目的」、所在「詞元@區域」、對象關鍵詞「詞元:關鍵詞」(多個關鍵詞以 / 並列)、
-否定「詞元(耐性)」「詞元(限制)」;區域在葉名裡寫日文卡文的區域名(手札/デッキ/墓地…),
+框架只貼葉、祖先由樹推得。葉可宣告自己掛的大類(category-tree-restart 票 04;值是頂層大類名,
+沒宣告時取詞元節點所在的本家大類),葉的路徑是 宣告的大類 › 詞元 › 葉——同一詞元的葉
+因此可以在不同大類(になる:守備力 在 數值、になる:ダメージ 在 LP・ダメージ)。
+葉名由條件機械組出——來源「詞元←區域」、目的「詞元→區域」、
+來源加目的「詞元:來源→目的」、所在「詞元@區域」、關鍵詞「詞元:關鍵詞」(多個關鍵詞以 /
+並列)、否定「詞元(耐性)」「詞元(限制)」;區域在葉名裡寫日文卡文的區域名(手札/デッキ/墓地…),
 條件值是區域七值。區域條件可各帶玩家條件(來源玩家/目的玩家/所在玩家,值 自分/相手/雙方;
 category-tree-restart 票 02,2026-10-19 站主裁定不切「無」),葉名以日文前綴連寫在該區域名前
 (破壊@相手フィールド、除外←相手墓地、雙方寫 お互いの)。
@@ -19,9 +22,9 @@ category-tree-restart 票 02,2026-10-19 站主裁定不切「無」),葉名以�
 依述語形分(票 03)——被動否定(されない)、にならない、受けない 為耐性,可能否定
 (できない、行えない)為限制,其餘一般否定(送らず、戻さず)沒有極性類、記未歸。述語形
 是唯一讀子句字面的地方(框架抽取只記 否定、沒記述語形);其餘匹配只看框架欄位(動作、
-來源、目的、所在、極性、位置、對象):
+來源、目的、所在、極性、位置,關鍵詞讀 對象/主語/主題):
     條件位       → 不適用(條件框架歸觸發事件軸,另開線)
-    匹配到葉     → 已歸,記葉清單與大類(葉所在的頂層節點)
+    匹配到葉     → 已歸,記葉清單與大類(第一葉的大類)
     其餘         → 未歸(詞元沒有節點,或條件全不符且沒有預設葉);沒有「其他」類
 來源/目的/所在字面各自映成(玩家, 區域清單)(票 02;區域辨識 places.parse_place 在框架線,
 frame-args-v3 票 01),各比自己那一欄(category-tree-restart 票 01):移動類動作依來源切葉,
@@ -30,12 +33,16 @@ frame-args-v3 票 01),各比自己那一欄(category-tree-restart 票 01):移動
 的墓地是自分、フィールドは相手;places.parse_zones);沒寫玩家前綴的字面(含 持ち主の、
 自身の 這類相對前綴)與 null(沒字面、推得、字面不是地點)不中任何宣告玩家的葉,落沒宣告
 玩家的葉——沒宣告玩家的葉不看玩家。不論葉有沒有宣告,
-來源/目的的玩家都照記在來源玩家/目的玩家欄(推得的記 null)。複合字面
-(手札・墓地)逐區域各匹配一葉,一個框架因此可帶多個葉(依字面順序、去重),同詞元的葉
-同大類。同詞元的葉依樹序先到先得。
+來源/目的的玩家都照記在來源玩家/目的玩家欄(推得的記 null)。
+關鍵詞條件(字面子字串清單)依 對象→主語→主題 找第一個有值的欄、只比那一欄(主題含回填
+延續的值;三欄都空不中;category-tree-restart 票 03)。匹配:對每個(來源區域, 目的區域,
+所在區域)組合,收集所有區域/玩家條件相符且關鍵詞命中的葉(多關鍵詞多葉:攻撃力・守備力
+帶兩葉);沒有任何關鍵詞葉命中時,取樹序第一個條件相符、不帶關鍵詞條件的葉(預設葉含在
+內)。複合字面(手札・墓地)逐區域各匹配,一個框架因此可帶多個葉;葉清單依樹序去重,
+多葉跨大類時框架的大類取第一葉的。
 
-建置期檢查樹的完整性(葉名全樹唯一、每葉有詞元條件、每大類至少一葉、同詞元的葉
-不被前面較寬的葉蓋掉),違反時報錯不產出。
+建置期檢查樹的完整性(葉名全樹唯一、每葉有詞元條件、每大類至少一葉、葉宣告的大類
+存在、同詞元的葉不被前面較寬、不帶關鍵詞條件的葉蓋掉),違反時報錯不產出。
 
 測試接縫是 classify(text, context=""):一句效果句原文(帶同卡同段上文)→ 每個
 動作框架的類別紀錄,內部呼叫真的框架抽取與類別樹;卡層彙總經同一接縫多句組裝
@@ -93,11 +100,13 @@ KEY_CHILDREN = "子"
 PLAYER_LABEL = {PLAYER_SELF: "自分", PLAYER_OPP: "相手", PLAYER_BOTH: "お互いの"}
 
 # 樹來源檔的葉條件鍵 → 內部欄名;玩家條件欄是「區域欄名_player」,綁在該區域條件上
-LEAF_KEYS = {"來源": "source", "目的": "goal", "所在": "place", "對象": "keywords",
+LEAF_KEYS = {"來源": "source", "目的": "goal", "所在": "place", "關鍵詞": "keywords",
              "來源玩家": "source_player", "目的玩家": "goal_player", "所在玩家": "place_player"}
 LEAF_LABELS = {field: key for key, field in LEAF_KEYS.items()}
 # 區域條件欄(樹序也是葉名裡區域段的順序)
 ZONE_FIELDS = ("source", "goal", "place")
+# 關鍵詞的比對欄,依序取第一個有值的(category-tree-restart 票 03)
+KEYWORD_FIELDS = ("object", "subject", "topic")
 
 
 class TreeError(ValueError):
@@ -158,9 +167,10 @@ def leaf_name(lemma, polarity, conditions=None):
 class Leaf:
     """一個葉:所屬詞元節點的(詞元, 極性)加上自己的條件欄;名字由條件組出。
     path 是大類到葉的節點名(詞元節點自己就是葉時、或頂層詞元節點自成大類時,相鄰同名
-    只留一個),major 是 path 的頭。"""
+    只留一個),major 是 path 的頭、home 是本家大類(詞元節點所在的頂層節點);葉宣告了
+    本家以外的大類(declared)時 path 是 宣告的大類 › 詞元 › 葉。"""
 
-    def __init__(self, lemma, polarity, conditions, ancestors):
+    def __init__(self, lemma, polarity, conditions, ancestors, declared=None):
         self.lemma = lemma
         self.polarity = polarity
         self.source = conditions.get("source")
@@ -171,6 +181,11 @@ class Leaf:
                         if field + "_player" in conditions}
         self.keywords = tuple(conditions.get("keywords") or ())
         self.name = leaf_name(lemma, polarity, conditions)
+        self.declared = declared
+        self.home = ancestors[0]
+        if declared is not None and declared != self.home:
+            # 借到別的大類:直接掛在宣告的大類下,本家路徑上的中間節點不帶過去
+            ancestors = (declared, ancestors[-1])
         path = []
         for name in ancestors + (self.name,):
             if not path or path[-1] != name:
@@ -178,21 +193,20 @@ class Leaf:
         self.path = tuple(path)
         self.major = self.path[0]
 
-    def covers(self, other):
-        """本葉的條件是否涵蓋 other 的全部情形(other 寫在後面就永遠匹配不到):other 的
-        區域與玩家條件當成一個框架來比,沒宣告的欄是 None。"""
-        if not self._places_match({field: (other.players.get(field), getattr(other, field))
-                                   for field in ZONE_FIELDS}):
-            return False
-        # 關鍵詞是子字串比對:other 的每個關鍵詞都含本葉某個關鍵詞時,命中 other 的
-        # 對象必然也命中本葉(本葉 魔法 蓋掉後面的 魔法・罠)
-        if self.keywords and not (other.keywords and all(
-                any(mine in theirs for mine in self.keywords)
-                for theirs in other.keywords)):
-            return False
-        return True
+    @property
+    def borrowed(self):
+        """葉掛在本家以外的大類(總覽頁的詞元節點因此出現在幾個大類下)。"""
+        return self.major != self.home
 
-    def _places_match(self, places):
+    def covers(self, other):
+        """本葉寫在 other 前面時是否蓋住它:只有不帶關鍵詞條件的葉蓋得住(關鍵詞葉之間
+        多葉、不互蓋),條件是本葉的區域與玩家條件涵蓋 other 的全部情形——other 是不帶
+        關鍵詞的葉時它永遠匹配不到;是關鍵詞葉時較具體者要寫在前。other 的條件當成一個
+        框架來比,沒宣告的欄是 None。"""
+        return not self.keywords and self.places_match(
+            {field: (other.players.get(field), getattr(other, field)) for field in ZONE_FIELDS})
+
+    def places_match(self, places):
         """{來源/目的/所在欄: (玩家或 None, 區域或 None)} 是否符合本葉的區域與玩家條件。"""
         for field in ZONE_FIELDS:
             player, zone = places[field]
@@ -203,14 +217,9 @@ class Leaf:
                 return False
         return True
 
-    def matches(self, places, obj):
-        """框架的區域與玩家({來源/目的/所在欄: (玩家或 None, 區域或 None)})與對象字面
-        是否符合本葉全部條件。"""
-        if not self._places_match(places):
-            return False
-        if self.keywords and not (obj and any(k in obj for k in self.keywords)):
-            return False
-        return True
+    def hits(self, text):
+        """關鍵詞比對欄的字面(或 None)是否含本葉某個關鍵詞;不帶關鍵詞條件的葉恆為假。"""
+        return bool(text) and any(k in text for k in self.keywords)
 
 
 class CategoryTree:
@@ -220,6 +229,7 @@ class CategoryTree:
         self.leaves = []            # 樹序
         self.by_key = {}            # (詞元, 極性類) → 該詞元節點的葉(樹序)
         self.majors = []            # 頂層節點名(大類名),樹序
+        self.major_nodes = set()    # 頂層大類節點名(葉可宣告的值;不含自成大類的詞元節點)
         errors = []
         for node in data["樹"]:
             self._walk(node, (), None, errors)
@@ -230,7 +240,14 @@ class CategoryTree:
             seen.add(leaf.name)
         for name in sorted({m for m in self.majors if self.majors.count(m) > 1}):
             errors.append("大類名重複(頂層節點同名):%s" % name)
-        # 同詞元的葉只擋「後面的葉被前面的葉整個蓋住」(永遠匹配不到);部分重疊
+        for leaf in self.leaves:
+            if leaf.declared is not None and leaf.declared not in self.major_nodes:
+                errors.append("葉 %s 宣告的大類 %s 不是頂層大類" % (leaf.name, leaf.declared))
+        homes, majors = {leaf.home for leaf in self.leaves}, {leaf.major for leaf in self.leaves}
+        for name in self.majors:
+            if name in homes and name not in majors:
+                errors.append("大類 %s 底下的葉都宣告到別的大類" % name)
+        # 同詞元的葉只擋「後面的葉被前面不帶關鍵詞的葉整個蓋住」;部分重疊
         # (來源=墓地 與 目的=手札)合法,依樹序先到先得
         for leaves in self.by_key.values():
             for i, earlier in enumerate(leaves):
@@ -251,6 +268,7 @@ class CategoryTree:
             name = node[KEY_MAJOR]
             if major is None:
                 self.majors.append(name)
+                self.major_nodes.add(name)
             children = node.get(KEY_CHILDREN) or []
             count = sum(self._walk(child, path + (name,), major or name, errors)
                         for child in children)
@@ -284,24 +302,26 @@ class CategoryTree:
         specs = children if children else [{}]
         leaves = []
         for spec in specs:
-            conditions = self._conditions(spec, lemma, errors)
-            if conditions is not None:
-                leaves.append(Leaf(lemma, polarity, conditions, path + (node_name,)))
+            parsed = self._conditions(spec, lemma, errors)
+            if parsed is not None:
+                conditions, declared = parsed
+                leaves.append(Leaf(lemma, polarity, conditions, path + (node_name,), declared))
         self.by_key[key] = leaves
         self.leaves.extend(leaves)
         return len(leaves)
 
     @staticmethod
     def _conditions(spec, lemma, errors):
-        if not isinstance(spec, dict) or KEY_MAJOR in spec or KEY_LEMMA in spec:
+        """葉的物件 → (條件 {內部欄名: 值}, 宣告的大類或 None);不合法時記錯、回 None。"""
+        if not isinstance(spec, dict) or KEY_CHILDREN in spec or KEY_LEMMA in spec:
             errors.append("詞元節點 %s 底下只能掛葉:%s"
                           % (lemma, json.dumps(spec, ensure_ascii=False)))
             return None
-        unknown = set(spec) - set(LEAF_KEYS)
+        unknown = set(spec) - set(LEAF_KEYS) - {KEY_MAJOR}
         if unknown:
             errors.append("詞元 %s 的葉有不認得的條件欄:%s" % (lemma, "、".join(sorted(unknown))))
             return None
-        conditions = {LEAF_KEYS[k]: v for k, v in spec.items()}
+        conditions = {LEAF_KEYS[k]: v for k, v in spec.items() if k != KEY_MAJOR}
         for field in ZONE_FIELDS:
             if field in conditions and conditions[field] not in ZONE_LABEL:
                 errors.append("詞元 %s 的葉區域 %r 不在區域七值" % (lemma, conditions[field]))
@@ -320,15 +340,20 @@ class CategoryTree:
         keywords = conditions.get("keywords")
         if keywords is not None and (not isinstance(keywords, list) or not keywords
                                      or not all(isinstance(k, str) and k for k in keywords)):
-            errors.append("詞元 %s 的葉對象關鍵詞要是非空字串清單:%r" % (lemma, keywords))
+            errors.append("詞元 %s 的葉關鍵詞要是非空字串清單:%r" % (lemma, keywords))
             return None
-        return conditions
+        declared = spec.get(KEY_MAJOR)
+        if declared is not None and not (isinstance(declared, str) and declared):
+            errors.append("詞元 %s 的葉宣告的大類 %r 不是頂層大類" % (lemma, declared))
+            return None
+        return conditions, declared
 
     def classify_frame(self, frame):
         """一個動作框架 → 類別紀錄(動作、狀態、葉清單、大類、來源玩家、目的玩家)。
 
-        複合來源/目的/所在逐(來源區域, 目的區域, 所在區域)組合各匹配一葉(依字面順序、
-        去重);認不出區域的一欄以 None 參與匹配。條件位不適用,玩家欄也不填。"""
+        複合來源/目的/所在逐(來源區域, 目的區域, 所在區域)組合各匹配:命中的關鍵詞葉
+        全收,沒有時取第一個條件相符、不帶關鍵詞的葉;葉清單依樹序去重。認不出區域的一欄
+        以 None 參與匹配。條件位不適用,玩家欄也不填。"""
         record = {"action": frame["action"], "status": STATUS_UNPLACED, "leaves": [],
                   "major": None, "source_player": None, "goal_player": None}
         if frame["position"] == POS_COND:
@@ -344,17 +369,17 @@ class CategoryTree:
         for field in ("source", "goal"):     # 玩家欄:各段的玩家合起來(與葉的條件無關)
             record[field + "_player"] = (None if field in inferred
                                          else parse_place(frame.get(field))[0])
+        text = next((frame[f] for f in KEYWORD_FIELDS if frame.get(f)), None)
         candidates = self.by_key.get((frame["action"], polarity_class(frame)), ())
-        matched = []
+        matched = set()
         for combo in itertools.product(*options):
             places = dict(zip(ZONE_FIELDS, combo))
-            for leaf in candidates:
-                if leaf.matches(places, frame.get("object")):
-                    if leaf not in matched:
-                        matched.append(leaf)
-                    break
+            fitting = [leaf for leaf in candidates if leaf.places_match(places)]
+            hits = [leaf for leaf in fitting if leaf.hits(text)]
+            matched.update(hits or [leaf for leaf in fitting if not leaf.keywords][:1])
+        matched = [leaf for leaf in candidates if leaf in matched]     # 樹序
         if matched:
-            # 同一詞元節點的葉同大類(樹的設計保證),取第一葉的
+            # 多葉跨大類時取第一葉(樹序)的
             record.update(status=STATUS_PLACED, leaves=[leaf.name for leaf in matched],
                           major=matched[0].major)
         return record

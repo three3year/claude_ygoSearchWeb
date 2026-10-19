@@ -383,6 +383,112 @@ class TestPlayerCondition(unittest.TestCase):
             [("特殊召喚", "已歸", ["特殊召喚→自分フィールド"], "特殊召喚", "無", "自分")])
 
 
+# 測試小樹:關鍵詞讀 對象→主語→主題 的第一個有值的欄,多關鍵詞多葉
+KEYWORD_TREE = [
+    {"詞元": "アップ", "子": [{"關鍵詞": ["攻撃力"]}, {"關鍵詞": ["守備力"]}, {}]},
+    {"詞元": "になる", "子": [{"關鍵詞": ["攻撃力"]}, {"關鍵詞": ["守備力"]}, {}]},
+    {"詞元": "にする", "子": [{"關鍵詞": ["レベル"]}, {}]},
+    {"詞元": "破壊", "子": [{"關鍵詞": ["このカード"]}, {}]},
+    {"詞元": "破壊", "極性類": "耐性", "子": [{"關鍵詞": ["モンスター"]}, {}]},
+]
+
+
+class TestKeywordFields(unittest.TestCase):
+    """category-tree-restart 票 03:葉的「關鍵詞」條件依 對象→主語→主題 找第一個有值的欄、
+    只比那一欄(主題含回填延續的值);同時命中幾個關鍵詞葉就帶幾個葉(依樹序)。"""
+
+    def test_object_hit(self):
+        self.assertEqual(
+            classify("①：そのモンスターのレベルを４にする。", tree=KEYWORD_TREE),
+            [("にする", "已歸", ["にする:レベル"], "にする", None, None)])
+
+    def test_subject_hit(self):
+        self.assertEqual(
+            classify("①：そのモンスターの守備力が０になり、効果は無効化される。",
+                     tree=KEYWORD_TREE),
+            [("になる", "已歸", ["になる:守備力"], "になる", None, None),
+             ("無効化", "未歸", [], None, None, None)])
+
+    def test_topic_hit(self):
+        self.assertEqual(
+            classify("①：このカードの攻撃力は１００００になる。", tree=KEYWORD_TREE),
+            [("になる", "已歸", ["になる:攻撃力"], "になる", None, None)])
+
+    def test_backfilled_topic_hit(self):
+        """「マリンセス」モンスター…破壊されない 的主題由回填延續而來,照樣比對。"""
+        self.assertEqual(
+            classify("①：自分フィールドの「マリンセス」モンスターの攻撃力は５００アップし、"
+                     "効果では破壊されない。", tree=KEYWORD_TREE),
+            [("アップ", "已歸", ["アップ:攻撃力"], "アップ", None, None),
+             ("破壊", "已歸", ["破壊:モンスター(耐性)"], "破壊(耐性)", None, None)])
+
+    def test_object_present_ignores_topic(self):
+        """有對象(モンスター)就只比對象:主題 このカード 不看,落預設葉。"""
+        self.assertEqual(
+            classify("①：このカードは相手フィールドのモンスターを全て破壊する。",
+                     tree=KEYWORD_TREE),
+            [("破壊", "已歸", ["破壊"], "破壊", None, None)])
+
+    def test_no_keyword_hit_takes_default_leaf(self):
+        self.assertEqual(
+            classify("①：そのモンスターの攻撃力を０にする。", tree=KEYWORD_TREE),
+            [("にする", "已歸", ["にする"], "にする", None, None)])
+
+    def test_all_three_fields_empty_takes_default_leaf(self):
+        """對象、主語、主題都空著:關鍵詞葉不中,落預設葉。"""
+        self.assertEqual(
+            classify("①：ターン終了時まで１０００アップする。", tree=KEYWORD_TREE),
+            [("アップ", "已歸", ["アップ"], "アップ", None, None)])
+
+    def test_two_keywords_take_two_leaves(self):
+        """攻撃力・守備力 同時命中兩個關鍵詞葉:搜守備力上升也撈得到攻守同升的卡。"""
+        self.assertEqual(
+            classify("①：自分フィールドのモンスターの攻撃力・守備力が１０００アップする。",
+                     tree=KEYWORD_TREE),
+            [("アップ", "已歸", ["アップ:攻撃力", "アップ:守備力"], "アップ", None, None)])
+
+    def test_activated_effect_takes_both_negate_leaves(self):
+        """真樹:その発動した効果 同時帶 無効にする:効果 與 :発動,不再依樹裡順序先到先得。"""
+        self.assertEqual(
+            classify("①：その発動した効果を無効にする。"),
+            [("無効にする", "已歸", ["無効にする:効果", "無効にする:発動"], "無効", None, None)])
+
+
+class TestMajorByLeaf(unittest.TestCase):
+    """category-tree-restart 票 04:葉可宣告自己掛的大類(沒宣告取詞元節點的本家大類),
+    同一詞元的葉可以在不同大類;多葉跨大類時框架的大類取第一葉(樹序)的。"""
+
+    def test_same_lemma_leaves_in_three_majors(self):
+        """真樹的 になる:攻撃力/:守備力 沒宣告、取本家 數值;:ダメージ 宣告 LP・ダメージ、
+        :ドロー 宣告 規則改寫。"""
+        self.assertEqual(
+            classify("①：このカードの攻撃力は１００００になる。"),
+            [("になる", "已歸", ["になる:攻撃力"], "數值", None, None)])
+        self.assertEqual(
+            classify("①：そのモンスターの守備力が０になり、効果は無効化される。"),
+            [("になる", "已歸", ["になる:守備力"], "數值", None, None),
+             ("無効化", "已歸", ["無効化"], "無効", None, None)])
+        self.assertEqual(
+            classify("①：その戦闘で発生する自分への戦闘ダメージは０になる。"),
+            [("になる", "已歸", ["になる:ダメージ"], "LP・ダメージ", None, None)])
+        self.assertEqual(
+            classify("①：自分の通常のドローは２枚になる。"),
+            [("になる", "已歸", ["になる:ドロー"], "規則改寫", None, None)])
+
+    def test_multi_leaf_across_majors_takes_first_leafs_major(self):
+        tree = [
+            {"大類": "甲", "子": [{"詞元": "になる", "子": [
+                {"關鍵詞": ["攻撃力"], "大類": "乙"}, {"關鍵詞": ["守備力"]}, {}]}]},
+            {"大類": "乙", "子": [{"詞元": "アップ"}]},
+        ]
+        self.assertEqual(
+            classify("①：そのモンスターの攻撃力・守備力が０になる。", tree=tree),
+            [("になる", "已歸", ["になる:攻撃力", "になる:守備力"], "乙", None, None)])
+        self.assertEqual(
+            classify("①：そのモンスターの守備力が０になる。", tree=tree),
+            [("になる", "已歸", ["になる:守備力"], "甲", None, None)])
+
+
 class TestCardRollup(unittest.TestCase):
     """票 04:卡層彙總——一張卡的幾句原文 → 效果組與代價組的葉集合(各自去重、依樹序)。"""
 
@@ -442,10 +548,58 @@ class TestTreeIntegrity(unittest.TestCase):
             "葉 破壊@相手フィールド 被前面的 破壊@フィールド 蓋掉")
 
     def test_wider_leaf_covering_place_leaf(self):
-        """沒有所在條件的 破壊:モンスター 寫在前,蓋掉後面的 破壊@フィールド:モンスター。"""
+        """沒有所在條件的 破壊 預設葉寫在前,蓋掉後面的 破壊@フィールド。"""
+        self.assertTreeError([{"詞元": "破壊", "子": [{}, {"所在": "場上"}]}],
+                             "葉 破壊@フィールド 被前面的 破壊 蓋掉")
+
+    def test_leaf_without_keyword_covering_keyword_leaf(self):
+        """沒有關鍵詞條件的 破壊@フィールド 寫在前、涵蓋後面 破壊@フィールド:モンスター 的
+        區域條件:較具體者要寫在前(票 03)。"""
         self.assertTreeError([{"詞元": "破壊", "子": [
-            {"對象": ["モンスター"]}, {"所在": "場上", "對象": ["モンスター"]}]}],
-            "葉 破壊@フィールド:モンスター 被前面的 破壊:モンスター 蓋掉")
+            {"所在": "場上"}, {"所在": "場上", "關鍵詞": ["モンスター"]}]}],
+            "葉 破壊@フィールド:モンスター 被前面的 破壊@フィールド 蓋掉")
+
+    def test_keyword_leaves_do_not_cover_each_other(self):
+        """關鍵詞葉之間不互蓋(多葉):破壊:モンスター 在 破壊@フィールド:モンスター 之前、
+        魔法 在 魔法・罠 之前都合法。"""
+        tree = categories.CategoryTree({"樹": [{"詞元": "破壊", "子": [
+            {"關鍵詞": ["モンスター"]}, {"所在": "場上", "關鍵詞": ["モンスター"]},
+            {"關鍵詞": ["魔法"]}, {"關鍵詞": ["魔法・罠"]}, {}]}]})
+        self.assertEqual(len(tree.leaves), 5)
+
+    def test_declared_major_must_exist(self):
+        """葉宣告的大類要是樹裡某個頂層大類的名字(票 04)。"""
+        self.assertTreeError([{"大類": "數值", "子": [{"詞元": "になる", "子": [
+            {"關鍵詞": ["ダメージ"], "大類": "LP"}, {}]}]}],
+            "葉 になる:ダメージ 宣告的大類 LP 不是頂層大類")
+
+    def test_declared_major_must_be_a_major_node(self):
+        """自成大類的頂層詞元節點(破壊)不是可宣告的大類;空字串與非字串也不行。"""
+        for declared, message in (("破壊", "葉 になる:ダメージ 宣告的大類 破壊 不是頂層大類"),
+                                  ("", "宣告的大類 '' 不是頂層大類"),
+                                  (["數值"], "宣告的大類 ['數值'] 不是頂層大類")):
+            self.assertTreeError([
+                {"大類": "數值", "子": [{"詞元": "になる", "子": [
+                    {"關鍵詞": ["ダメージ"], "大類": declared}, {}]}]},
+                {"詞元": "破壊"}], message)
+
+    def test_major_left_without_leaves_by_declarations(self):
+        """本家大類的葉全宣告到別的大類時,本家大類沒有葉。"""
+        self.assertTreeError([
+            {"大類": "數值", "子": [{"詞元": "になる", "子": [{"大類": "規則改寫"}]}]},
+            {"大類": "規則改寫", "子": [{"詞元": "得る"}]}],
+            "大類 數值 底下的葉都宣告到別的大類")
+
+    def test_nested_node_under_lemma_is_rejected(self):
+        """詞元節點底下只能掛葉:帶 子 的物件(大類節點)不能掛。"""
+        self.assertTreeError([{"大類": "數值", "子": [{"詞元": "になる", "子": [
+            {"大類": "數值", "子": [{"詞元": "アップ"}]}, {}]}]}],
+            "詞元節點 になる 底下只能掛葉")
+
+    def test_old_object_key_is_rejected(self):
+        """葉條件鍵「對象」已改名「關鍵詞」。"""
+        self.assertTreeError([{"詞元": "破壊", "子": [{"對象": ["モンスター"]}, {}]}],
+                             "不認得的條件欄:對象")
 
 
 if __name__ == "__main__":

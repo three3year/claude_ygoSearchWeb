@@ -727,7 +727,7 @@ function catSection(){
     +'<div class="search-row"><button class="btn" data-act="open">展開所有節點</button><button class="btn" data-act="close">全部收合</button></div>'
     +'<h2>類別樹</h2><div class="ctree">'+C.nodes.map(nodeHtml).join("")+'</div>'
     +'<h2>未歸類(依詞元聚合,'+fmt(C.unplaced.length)+' 組、'+fmt(un)+' 個框架)</h2>'
-    +'<p class="note">標籤是詞元加極性類:肯定只寫詞元、耐性/限制寫 詞元(耐性)/(限制)、一般否定(送らず、戻さず)寫 詞元(否定)。「有節點」=樹裡有這個詞元節點,但條件全不符、也沒有預設葉(例:得る 只有 コントロール/効果 兩個關鍵詞葉);「無節點」=樹裡沒有這個詞元。點一組列出它的框架。</p>'
+    +'<p class="note">標籤是詞元加極性類:肯定只寫詞元、耐性/限制寫 詞元(耐性)/(限制)、一般否定(送らず、戻さず)寫 詞元(否定)。「有節點」=樹裡有這個詞元節點,但條件全不符、也沒有預設葉(例:得る 只有 コントロール/効果 兩個關鍵詞葉與 得る@相手フィールド);「無節點」=樹裡沒有這個詞元。點一組列出它的框架。</p>'
     +'<div class="ctree">'+C.unplaced.map(function(u,j){
       return leafHtml("u"+j,u[0],u[2],u[3],u[1]?"有節點":"無節點");
     }).join("")+'</div>';

@@ -174,7 +174,7 @@ class TestZonesAndPlayers(unittest.TestCase):
               ["區域移動 › ←墓地 › 除外←墓地"])])
         self.assertEqual(
             classify("①：相手フィールドのモンスター１体を持ち主の手札に戻す。"),
-            [("戻す", "已歸", ["戻す:フィールド→手札"], "區域移動", "相手", "無",
+            [("戻す", "已歸", ["戻す:フィールド→手札"], "區域移動", "相手", "相對",
               ["區域移動 › ←フィールド › 戻す:フィールド→手札"])])
 
     def test_banished_state_zone_keeps_its_player(self):
@@ -379,11 +379,15 @@ class TestPlayerCondition(unittest.TestCase):
               ["破壊 › 破壊@お互いのフィールド", "破壊"])])
 
     def test_relative_prefix_takes_undeclared_leaf(self):
-        """相手は自身のフィールド:自身の 不算明示玩家,不中 破壊@相手フィールド,
-        落沒宣告玩家的 破壊@フィールド。"""
+        """相手は自身のフィールド:自身の 記 相對、不算明示玩家,不中 破壊@相手フィールド,
+        落沒宣告玩家的 破壊@フィールド;來源字面是 自身の墓地 時不中 除外←相手墓地、落預設葉,
+        來源玩家欄記 相對(2026-10-27 站主裁定另記一值)。"""
         self.assertEqual(
             classify("①：相手は自身のフィールドのカード１枚を破壊する。", tree=PLAYER_TREE),
             [("破壊", "已歸", ["破壊@フィールド"], "破壊", None, None, ["破壊 › 破壊@フィールド"])])
+        self.assertEqual(
+            classify("①：相手は自身の墓地のモンスター１体を除外する。", tree=PLAYER_TREE),
+            [("除外", "已歸", ["除外"], "除外", "相對", None, ["除外"])])
 
     def test_no_place_literal_takes_default_leaf(self):
         """沒有所在字面:區域條件都不中,落預設葉。"""
@@ -588,6 +592,30 @@ class TestDraftTree(unittest.TestCase):
             [("破壊", "已歸", ["破壊@自分フィールド(耐性)"], "耐性", None, None,
               ["耐性 › 破壊(耐性) › 破壊@自分フィールド(耐性)"])])
 
+    def test_threshold_leaves_that_duplicate_lemma_or_keyword(self):
+        """2026-10-27 站主裁定照門檻開的三葉:指定@フィールド、S素材とする@自分フィールド
+        (葉幾乎等於詞元)、得る@相手フィールド(與 得る:コントロール 兩軸並收)。"""
+        self.assertEqual(
+            classify("①：使用していない相手のモンスターゾーンを１ヵ所指定する。"),
+            [("指定", "已歸", ["指定@フィールド"], "處理程序", None, None,
+              ["處理程序 › 指定 › 指定@フィールド"])])
+        self.assertEqual(
+            classify("①：自分フィールドの「竜星」モンスターのみをS素材としてS召喚する。"),
+            [("S素材とする", "已歸", ["S素材とする@自分フィールド"], "素材", None, None,
+              ["素材 › S素材とする › S素材とする@自分フィールド"]),
+             ("S召喚", "已歸", ["S召喚"], "召喚", None, None, ["召喚 › S召喚"])])
+        self.assertEqual(
+            classify("①：相手フィールドのモンスター１体のコントロールをエンドフェイズまで得る。"),
+            [("得る", "已歸", ["得る:コントロール", "得る@相手フィールド"], "規則改寫", None, None,
+              ["規則改寫 › 得る › 得る:コントロール", "規則改寫 › 得る › 得る@相手フィールド"])])
+
+    def test_relative_prefix_player_column(self):
+        """持ち主の手札 的目的玩家記 相對(2026-10-27 站主裁定另記一值),葉照舊不分。"""
+        self.assertEqual(
+            classify("①：相手フィールドの魔法・罠カードを全て持ち主の手札に戻す。"),
+            [("戻す", "已歸", ["戻す:フィールド→手札"], "區域移動", "相手", "相對",
+              ["區域移動 › ←フィールド › 戻す:フィールド→手札"])])
+
 
 class TestMajorByLeaf(unittest.TestCase):
     """category-tree-restart 票 04:葉可宣告自己掛的大類(沒宣告取詞元節點的本家大類),
@@ -790,8 +818,9 @@ class TestTreeIntegrity(unittest.TestCase):
                              "不在區域七值")
 
     def test_player_value_must_be_one_of_three(self):
-        """「無」不能宣告(2026-10-19 站主裁定不切「無」):沒寫玩家的由沒宣告玩家的葉收。"""
-        for player in ("無", "持ち主"):
+        """「無」「相對」不能宣告(2026-10-19 站主裁定不切「無」;2026-10-27 自身の/持ち主の
+        另記 相對、也不切):由沒宣告玩家的葉收。"""
+        for player in ("無", "相對", "持ち主"):
             self.assertTreeError(
                 [{"詞元": "破壊", "子": [{"所在": "場上", "所在玩家": player}, {}]}],
                 "不在 自分/相手/雙方")

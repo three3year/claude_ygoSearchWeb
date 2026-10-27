@@ -40,7 +40,8 @@ sys.path.insert(0, HERE)
 import categories  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
 from frames import MOVE_ACTIONS, POS_COND, POS_COST, POS_EFFECT  # noqa: E402
-from places import PLAYER_BOTH, PLAYER_NONE, PLAYER_OPP, PLAYER_SELF, parse_zones  # noqa: E402
+from places import (PLAYER_BOTH, PLAYER_NONE, PLAYER_OPP,  # noqa: E402
+                    PLAYER_RELATIVE, PLAYER_SELF, parse_zones)
 
 OUT_DIR = os.path.join(HERE, "..", "action-categories", "draft-data")
 CARDS = os.path.join(HERE, "..", "..", "data", "cards.json")
@@ -65,7 +66,7 @@ KEYWORD_LABELS = {"object": "對象", "subject": "主語", "topic": "主題"}
 TOTAL, OTHER, EMPTY = "(家族合計)", "(其他)", "(三欄都空)"
 
 # 所在分佈的玩家列序;區域合計列不分玩家(擬葉名不帶玩家前綴)
-PLAYER_ORDER = (PLAYER_SELF, PLAYER_OPP, PLAYER_BOTH, PLAYER_NONE)
+PLAYER_ORDER = (PLAYER_SELF, PLAYER_OPP, PLAYER_BOTH, PLAYER_RELATIVE, PLAYER_NONE)
 ALL_PLAYERS = "(不分)"
 UNKNOWN_ZONE = "(認不出區域)"
 ZONE_ORDER = list(categories.ZONE_LABEL)

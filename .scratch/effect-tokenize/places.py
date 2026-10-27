@@ -6,20 +6,23 @@
 再組葉名。框架裡存的仍是原文字面,區域七值只在類別線用。
 
 區域七值:手牌/牌組/額外牌組/墓地/除外/場上/靈擺區(值域正典的區域,與動作類別第一版同一組)。
-玩家:自分/相手/雙方/無——parse_place 給各段明示的玩家合起來(框架類別檔的來源玩家/
+玩家:自分/相手/雙方/相對/無——parse_place 給各段明示的玩家合起來(框架類別檔的來源玩家/
 目的玩家欄);parse_zones 給逐區域的玩家(類別樹的玩家條件比對用,category-tree-restart
-票 02)。
+票 02)。相對(自身の/持ち主の:看主語或持有者是誰)另記一值、不算明示玩家,類別樹的葉
+不能宣告它(類別線票 06,2026-10-27 站主裁定)。
 """
 import re
 
-PLAYER_SELF, PLAYER_OPP, PLAYER_BOTH, PLAYER_NONE = "自分", "相手", "雙方", "無"
-# 玩家前綴(長的在前);自身の/持ち主の 是主語或持有者相對的,不算明示玩家
+PLAYER_SELF, PLAYER_OPP, PLAYER_BOTH = "自分", "相手", "雙方"
+PLAYER_RELATIVE, PLAYER_NONE = "相對", "無"
+# 玩家前綴(長的在前);自身の/持ち主の 是主語或持有者相對的,記 相對、不算明示玩家
 PLAYER_PREFIXES = (
     ("自分か相手の", PLAYER_BOTH), ("自分・相手の", PLAYER_BOTH),
     ("自分または相手の", PLAYER_BOTH), ("お互いの", PLAYER_BOTH),
     ("自分か相手", PLAYER_BOTH), ("自分・相手", PLAYER_BOTH), ("自分または相手", PLAYER_BOTH),
     ("自分の", PLAYER_SELF), ("相手の", PLAYER_OPP), ("自分", PLAYER_SELF),
-    ("相手", PLAYER_OPP), ("元々の持ち主の", None), ("持ち主の", None), ("自身の", None),
+    ("相手", PLAYER_OPP), ("元々の持ち主の", PLAYER_RELATIVE), ("持ち主の", PLAYER_RELATIVE),
+    ("自身の", PLAYER_RELATIVE),
 )
 PREFIX_PLAYER = dict(PLAYER_PREFIXES)
 # 整個字面就是玩家(相手に…ダメージ 的目的):記玩家、沒有區域
@@ -101,9 +104,9 @@ def parse_zones(literal):
     [](整個字面就是玩家,或認不出區域)。
 
     每個區域的玩家是該段自己的前綴,沒有時沿用字面開頭的前綴,都沒有記無(自分の手札・
-    相手フィールド → 手札 自分、フィールド 相手);同一區域出現兩次時玩家合起來
-    (自分フィールド・相手フィールド → フィールド 雙方)。複合字面只要有一段認不出就
-    整段不認。
+    相手フィールド → 手札 自分、フィールド 相手;自身の/持ち主の 記相對);同一區域出現
+    兩次時玩家合起來(自分フィールド・相手フィールド → フィールド 雙方)。複合字面只要
+    有一段認不出就整段不認。
     """
     if not literal:
         return None
@@ -122,18 +125,22 @@ def parse_zones(literal):
 
 
 def _merge_players(players):
-    """幾個玩家值 → 一個:兩者都有或含雙方 → 雙方;只有無與某方時取那方。"""
+    """幾個玩家值 → 一個:兩者都有或含雙方 → 雙方;只有無/相對與某方時取那方;沒有明示
+    的玩家時,有相對取相對、否則無。"""
     if PLAYER_BOTH in players or {PLAYER_SELF, PLAYER_OPP} <= players:
         return PLAYER_BOTH
-    named = players - {PLAYER_NONE}
-    return named.pop() if named else PLAYER_NONE
+    named = players - {PLAYER_NONE, PLAYER_RELATIVE}
+    if named:
+        return named.pop()
+    return PLAYER_RELATIVE if PLAYER_RELATIVE in players else PLAYER_NONE
 
 
 def parse_place(literal):
     """地點字面 → (玩家, 區域清單)。
 
     玩家是各段明示的玩家合起來:只有自分 → 自分、只有相手 → 相手、兩者都有或「自分か
-    相手の」這類 → 雙方、都沒寫 → 無。區域清單依字面順序、去重。整個字面就是玩家
+    相手の」這類 → 雙方、只有 自身の/持ち主の → 相對、都沒寫 → 無。區域清單依字面順序、
+    去重。整個字面就是玩家
     (相手)時回 (該玩家, []);認不出區域的字面回 (None, [])——需要區域的葉因此不匹配,
     玩家欄也是 null(null = 沒有字面,或字面不是地點:その中、以下の効果、0、
     このカード)。複合字面只要有一段認不出就整段不認(不保留認出的部分)。

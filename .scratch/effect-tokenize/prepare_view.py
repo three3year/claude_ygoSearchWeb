@@ -191,7 +191,7 @@ def frame_row(fr, offsets, category):
             chars, fr.get("option"), fr.get("label"), None,
             constraints.describe_action(fr), fr.get("backfill"), category,
             fr.get("topic"), fr.get("subject"), fr.get("place"), fr.get("inferred"),
-            fr.get("passive")]
+            fr.get("voice")]
 
 
 def load_categories():
@@ -372,8 +372,8 @@ def write_frame_shards(sentences, surface_of):
         # (約束框架的專屬欄位併成一欄;動作框架為次數/窗口/回合條件/連接·群組/回填/
         # 列舉欄,沒有時 null)、回填的欄名清單(topic/subject/object/source/place;頁面把那幾格
         # 淡色,沒有時 null)、動作類別 [狀態碼, 葉號…](約束框架 null,見 load_categories)、
-        # 主題、主語、所在、推得的欄名清單(source/goal,頁面淡色並與回填區分)、被動
-        # (frame-args-v3;約束框架的列沒有這五欄);
+        # 主題、主語、所在、推得的欄名清單(source/goal,頁面淡色並與回填區分)(frame-args-v3)、
+        # 態(他動/自動/受身,空是 null;frame-lemma-unify 票 01)——約束框架的列沒有這五欄;
         # p=各段(標記句)的 index、效果類型、字元範圍
         rec = {"s": r["section"], "i": r["index"], "k": s["kind"],
                "st": r["stratum"], "t": s["text_ja"],

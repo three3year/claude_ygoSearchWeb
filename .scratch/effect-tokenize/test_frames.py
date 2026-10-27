@@ -312,7 +312,7 @@ class TestRound1Fixes(unittest.TestCase):
                     "アドバンス召喚できる。"),
             [("リリース", "アドバンス召喚したモンスター1体", None, None,
               "效果", "肯定"),
-             ("アドバンス召喚", None, None, None, "效果", "可能")])
+             ("A召喚", None, None, None, "效果", "可能")])
 
     def test_bare_number_of_time_phrase_stays_out_of_object(self):
         """約束框架票 02 起:「〜を１ターンに１度しか特殊召喚できない」是限制·次數框架
@@ -432,7 +432,7 @@ class TestRound3Fixes(unittest.TestCase):
         self.assertEqual(
             extract("①：この効果で特殊召喚したモンスターの効果は無効化され、"
                     "フィールドから離れた場合に除外される。"),
-            [("無効化", None, None, None, "效果", "肯定"),
+            [("無効にする", None, None, None, "效果", "肯定"),
              ("離れる", None, "フィールド", None, "條件", "肯定"),
              ("除外", None, None, None, "效果", "肯定")])
 
@@ -447,7 +447,7 @@ class TestRound3Fixes(unittest.TestCase):
             extract("①：このカードを融合素材またはリンク素材として墓地へ送った"
                     "場合、自分は１枚ドローする。"),
             [("融合素材とする", "このカード", None, None, "條件", "肯定"),
-             ("リンク素材とする", "このカード", None, None, "條件", "肯定"),
+             ("L素材とする", "このカード", None, None, "條件", "肯定"),
              ("送る", "このカード", None, "墓地", "條件", "肯定"),
              ("ドロー", None, None, None, "效果", "肯定")])
 
@@ -592,9 +592,9 @@ class TestOptions(unittest.TestCase):
             extract(text),
             [("存在", None, None, "フィールド", "條件", "肯定"),
              ("適用", "以下の効果", None, None, "效果", "肯定"),
-             ("無効化", None, None, None, "效果", "肯定"),
+             ("無効にする", None, None, None, "效果", "肯定"),
              ("攻撃", None, None, None, "效果", "否定"),
-             ("攻撃対象になる", None, None, None, "效果", "否定"),
+             ("攻撃対象にする", None, None, None, "效果", "否定"),
              ("なる", None, None, "効果の対象", "效果", "否定")])
         self.assertEqual([(f["option"], f["label"]) for f in frames.extract(text)],
                          [(None, None), (None, None), (1, None), (2, None),
@@ -850,61 +850,62 @@ class TestBackfill(unittest.TestCase):
 
 
 def topics(text, context=""):
-    """動作框架 → (動作, 主題, 主語, 對象, 被動):frame-args-v3 票 02。"""
+    """動作框架 → (動作, 主題, 主語, 對象, 態):frame-args-v3 票 02;被動旗標 2026-10-27 起是
+    態=受身(frame-lemma-unify 票 01),態空是 None。"""
     return [(f["action"], f.get("topic"), f.get("subject"), f.get("object"),
-             f.get("passive", False)) for f in actions(text, context)]
+             f.get("voice")) for f in actions(text, context)]
 
 
 class TestTopicAndSubject(unittest.TestCase):
     """frame-args-v3 票 02:子句內「は」前的片語記主題、「が」前的片語記主語,同一子句有多個時
-    取離述語最近的;被動句的受事者留在主題/主語、不搬進對象,框架帶 被動 標記。"""
+    取離述語最近的;被動句的受事者留在主題/主語、不搬進對象,框架的態是 受身。"""
 
     def test_topic_and_subject_of_naru(self):
         self.assertEqual(
             topics("①：相手フィールドの全ての表側表示モンスターは、守備力が０になる。"),
-            [("になる", "相手フィールドの全ての表側表示モンスター", "守備力", None, False)])
+            [("にする", "相手フィールドの全ての表側表示モンスター", "守備力", None, "自動")])
 
     def test_topic_with_relative_ga_has_no_subject(self):
         """自分が受ける 是定語,屬名詞片語;整段是主題、沒有主語。"""
         self.assertEqual(
             topics("①：自分が受ける効果ダメージは０になる。"),
-            [("になる", "自分が受ける効果ダメージ", None, None, False)])
+            [("にする", "自分が受ける効果ダメージ", None, None, "自動")])
 
     def test_actor_topic(self):
         self.assertEqual(
             topics("①：自分は手札を１枚捨てる。"),
-            [("捨てる", "自分", None, "手札", False)])
+            [("捨てる", "自分", None, "手札", None)])
 
     def test_passive_patient_stays_in_topic(self):
         """このカードは…破壊されない:受事者留在主題、對象空著;では 併入前一格,不算主題。"""
         self.assertEqual(
             topics("①：このカードは戦闘では破壊されない。"),
-            [("破壊", "このカード", None, None, True)])
+            [("破壊", "このカード", None, None, "受身")])
 
     def test_passive_patient_stays_in_subject(self):
         self.assertEqual(
             topics("①：このカードが墓地へ送られた場合に発動できる。デッキからカード１枚を"
                    "手札に加える。"),
-            [("送る", None, "このカード", None, True),
-             ("加える", None, None, "カード1枚", False)])
+            [("送る", None, "このカード", None, "受身"),
+             ("加える", None, None, "カード1枚", None)])
 
     def test_relative_ga_is_not_a_subject(self):
         self.assertEqual(
             topics("①：「X」のカード名が記されたモンスター１体を特殊召喚する。"),
-            [("特殊召喚", None, None, "「X」のカード名が記されたモンスター1体", False)])
+            [("特殊召喚", None, None, "「X」のカード名が記されたモンスター1体", None)])
 
     def test_ni_wa_is_not_a_topic(self):
         """には 的 は 是後綴,併入 に 格(目的),不出主題。"""
         self.assertEqual(
             topics("①：相手フィールドにはモンスターを特殊召喚できない。"),
-            [("特殊召喚", None, None, "モンスター", False)])
+            [("特殊召喚", None, None, "モンスター", None)])
 
     def test_nearest_subject_wins(self):
         """同一子句有多個 が:取離述語最近的。"""
         self.assertEqual(
             topics("①：自分フィールドに「X」が存在し、このカードが戦闘で破壊された場合に"
                    "発動できる。このカードを特殊召喚する。")[:2],
-            [("存在", None, "「X」", None, False), ("破壊", None, "このカード", None, True)])
+            [("存在", None, "「X」", None, None), ("破壊", None, "このカード", None, "受身")])
 
 
 def carried(text, context=""):
@@ -956,15 +957,15 @@ class TestTopicCarryOver(unittest.TestCase):
         self.assertEqual(
             carried("②：この効果で特殊召喚したモンスターの効果は無効化され、エンドフェイズに"
                     "破壊される。"),
-            [("無効化", "この効果で特殊召喚したモンスターの効果", None, None),
+            [("無効にする", "この効果で特殊召喚したモンスターの効果", None, None),
              ("破壊", "この効果で特殊召喚したモンスター", None, ["topic"])])
 
     def test_subject_does_not_carry(self):
         self.assertEqual(
             carried("①：相手フィールドの全ての表側表示モンスターは、守備力が０になり、"
                     "その効果は無効化される。"),
-            [("になる", "相手フィールドの全ての表側表示モンスター", "守備力", None),
-             ("無効化", "その効果", None, None)])
+            [("にする", "相手フィールドの全ての表側表示モンスター", "守備力", None),
+             ("無効にする", "その効果", None, None)])
         self.assertEqual(
             carried("①：このカードが戦闘で破壊され、墓地へ送られた時に発動できる。"
                     "相手に５００ダメージを与える。")[:2],
@@ -1192,7 +1193,7 @@ class TestInferredValues(unittest.TestCase):
             [("特殊召喚", "自分の墓地", "相手フィールド", None)])
         self.assertEqual(
             inferred("①：このカードをアドバンス召喚する。"),
-            [("アドバンス召喚", None, "フィールド", ["goal"])])
+            [("A召喚", None, "フィールド", ["goal"])])
 
     def test_set_and_add_goal(self):
         self.assertEqual(
@@ -1288,7 +1289,7 @@ class TestV3Round1Fixes(unittest.TestCase):
         self.assertEqual(
             topics("①：攻撃力か守備力が２０００の通常召喚できないモンスター１体を特殊召喚する。"),
             [("特殊召喚", None, None, "攻撃力か守備力が2000の通常召喚できないモンスター1体",
-              False)])
+              None)])
         frame = actions("①：属性がこの効果で特殊召喚したモンスターと同じ相手フィールドのモンスター"
                         "１体を墓地へ送る。")[0]
         self.assertEqual((frame.get("subject"), frame["object"], frame["source"]),
@@ -1296,7 +1297,7 @@ class TestV3Round1Fixes(unittest.TestCase):
                           "相手フィールド"))
         self.assertEqual(
             topics("①：その守備力を攻撃力が超えた分だけ戦闘ダメージを与える。"),
-            [("与える", None, None, "戦闘ダメージ", False)])
+            [("与える", None, None, "戦闘ダメージ", None)])
 
     def test_attribute_ga_inside_a_subject(self):
         """v3-round2:「攻撃力か守備力が２０００のモンスターが存在する場合」:屬性 が 併進主語片語。"""
@@ -1354,7 +1355,7 @@ class TestV3Round1Fixes(unittest.TestCase):
         self.assertEqual(
             placed("①：自分フィールドのモンスターがデッキに戻った場合に発動できる。"
                    "デッキからカード１枚を手札に加える。")[0],
-            ("戻る", None, "モンスター", None, "自分フィールド", None))
+            ("戻す", None, "モンスター", None, "自分フィールド", None))
 
     def test_card_name_topic_carries_as_is(self):
         """「このカードのカード名は…」延續下去的仍是 このカードのカード名(カード名 不算屬性)。"""
@@ -1421,10 +1422,307 @@ class TestYouNiClauseMerged(unittest.TestCase):
         """反例:よう 之後同一句沒有述語時不受影響;名詞後的「同じように」本來就不是錨點。"""
         self.assertEqual(
             [f[:3] for f in merged_clauses("①：レベルの合計が８になるように。")],
-            [("になる", None, "レベルの合計")])
+            [("にする", None, "レベルの合計")])
         self.assertEqual(
             [f[0] for f in merged_clauses("①：このカードは通常召喚と同じように扱う。")],
             ["扱う"])
+
+
+def voiced(text, context=""):
+    """動作框架 → (動作, 態, 極性):frame-lemma-unify 的詞元與態;態空是 None。"""
+    return [(f["action"], f.get("voice"), f["polarity"]) for f in actions(text, context)]
+
+
+def complements(text, context=""):
+    """動作框架 → (動作, 態, 目的, 對象, 主題):補語不併(frame-lemma-unify 票 05)。"""
+    return [(f["action"], f.get("voice"), literal(f, "goal"), f.get("object"), f.get("topic"))
+            for f in actions(text, context)]
+
+
+class TestVoiceColumn(unittest.TestCase):
+    """frame-lemma-unify 票 01:態欄取代被動旗標——述語錨點判出被動的框架態是 受身,沒判的是空。"""
+
+    def test_passive_negation_is_passive_voice(self):
+        self.assertEqual(voiced("①：このカードはリリースされない。"),
+                         [("リリース", "受身", "否定")])
+
+    def test_active_verb_outside_unified_groups_has_no_voice(self):
+        """態空是「沒判」,不是他動:破壊 不在統一組。"""
+        self.assertEqual(voiced("①：フィールドのカード１枚を破壊する。"),
+                         [("破壊", None, "肯定")])
+
+    def test_passive_flag_is_gone(self):
+        frame = actions("①：ダメージステップ終了時までそのモンスターの効果は無効化される。")[0]
+        self.assertEqual((frame["action"], frame.get("voice")), ("無効にする", "受身"))
+        self.assertNotIn("passive", frame)
+
+
+class TestSpellingUnified(unittest.TestCase):
+    """frame-lemma-unify 票 02:縮寫與全名、分詞殘片是同一個詞元,以現行官方縮寫為名。"""
+
+    def test_advance_summon_is_a_summon(self):
+        self.assertEqual(
+            extract("①：自分は通常召喚に加えて１度だけ、自分メインフェイズにレベル７以上の"
+                    "モンスター１体を表側攻撃表示でアドバンス召喚できる。"),
+            [("A召喚", "レベル7以上のモンスター1体", None, None, "效果", "可能")])
+
+    def test_link_summon_in_condition(self):
+        self.assertEqual(
+            voiced("①：このカードがリンク召喚した場合に発動できる。デッキからカード１枚を"
+                   "手札に加える。")[0], ("L召喚", None, "肯定"))
+        self.assertEqual(
+            actions("①：このカードがリンク召喚した場合に発動できる。デッキからカード１枚を"
+                    "手札に加える。")[0]["position"], "條件")
+
+    def test_link_material_cannot(self):
+        """L素材にする 沒有 なる 形被併進來,不在統一組:態空。"""
+        self.assertEqual(voiced("①：このカードはリンク素材にできない。"),
+                         [("L素材にする", None, "否定")])
+
+    def test_link_material_as(self):
+        """として 系:リンク素材として → L素材とする。"""
+        self.assertEqual(
+            [f[0] for f in voiced("③：このカードが「ティンダングル」リンクモンスターのリンク素材として"
+                                  "墓地へ送られた場合に発動できる。")][:1],
+            ["L素材とする"])
+
+    def test_demonstrative_is_not_folded_into_material(self):
+        """そのX素材とする:指示詞 その/この 不併入補語,詞元 X素材とする、對象不變。"""
+        self.assertEqual(
+            complements("①：このカードをそのX素材とする。"),
+            [("X素材とする", None, None, "このカード", None)])
+        self.assertEqual(
+            complements("②：このカード及びこのカードの装備カードを全てそのX素材にする。"),
+            [("X素材にする", None, None, "このカード及びこのカードの装備カード", None)])
+
+    def test_coordinated_summons_each_normalized(self):
+        """召喚法鏈的「・」並列各框架照樣對照。"""
+        self.assertEqual(
+            [f[0] for f in voiced("①：このカードがアドバンス召喚・リンク召喚した場合に発動できる。")],
+            ["A召喚", "L召喚"])
+
+
+class TestVoiceUnified(unittest.TestCase):
+    """frame-lemma-unify 票 03:同一動作的他動/自動/受身是一個詞元、以他動形為名,差別記在態;
+    受事者落在哪一欄不變(自動與受身在主語/主題、他動在對象)。"""
+
+    def test_return_two_voices(self):
+        self.assertEqual(topics("①：このカードは手札に戻る。"),
+                         [("戻す", "このカード", None, None, "自動")])
+        self.assertEqual(topics("①：このカードを手札に戻す。"),
+                         [("戻す", None, None, "このカード", "他動")])
+
+    def test_returned_subject_keeps_its_place_cut(self):
+        """戻った 的受事者在主語,區域照舊從主語切出(移動類記來源)。"""
+        frame = actions("②：自分フィールドの表側表示のスピリットモンスターが自分の手札に戻った場合"
+                        "に発動できる。")[0]
+        self.assertEqual((frame["action"], frame.get("voice"), frame.get("subject"),
+                          literal(frame, "source")),
+                         ("戻す", "自動", "表側表示のスピリットモンスター", "自分フィールド"))
+
+    def test_up_voice_by_particle(self):
+        self.assertEqual(voiced("①：このカードの攻撃力は３００アップする。"),
+                         [("アップ", "自動", "肯定")])
+        self.assertEqual(voiced("①：このカードの攻撃力を３００アップする。"),
+                         [("アップ", "他動", "肯定")])
+
+    def test_up_voice_unknown_stays_empty(self):
+        """受事者既不是 を 也不是 は/が:態留空;延續來的主題(執行者 自分)不算受事者。"""
+        self.assertEqual(voiced("①：３００アップする。"), [("アップ", None, "肯定")])
+        self.assertEqual(
+            voiced("①：自分は手札を１枚捨て、さらに３００アップする。")[1], ("アップ", None, "肯定"))
+
+    def test_passive_of_a_unified_verb(self):
+        """被統一組的受身形也是 受身(無効にされない),受事者留在主題。"""
+        self.assertEqual(topics("①：このカードの効果は無効にされない。"),
+                         [("無効にする", "このカードの効果", None, None, "受身")])
+
+    def test_raise_and_rise_are_up(self):
+        self.assertEqual(voiced("①：対象のモンスターのレベルを１つ上げる。"),
+                         [("アップ", "他動", "肯定")])
+        self.assertEqual(
+            voiced("①：フィールドの「F.A.」モンスターのレベルはメインフェイズの間だけ２つ上がる。"),
+            [("アップ", "自動", "肯定")])
+
+    def test_lower_and_fall_are_down(self):
+        self.assertEqual(voiced("①：このターン、お互いの手札のモンスターのレベルを１つ下げる。"),
+                         [("ダウン", "他動", "肯定")])
+        self.assertEqual(voiced("①：対象のモンスターのレベルは１つ下がる。"),
+                         [("ダウン", "自動", "肯定")])
+
+    def test_double_half_same(self):
+        self.assertEqual(voiced("②：このカードの攻撃力はターン終了時まで倍になる。"),
+                         [("倍にする", "自動", "肯定")])
+        self.assertEqual(voiced("①：このカードの攻撃力を倍にする。"),
+                         [("倍にする", "他動", "肯定")])
+        self.assertEqual(voiced("①：相手が受ける戦闘ダメージは半分になる。"),
+                         [("半分にする", "自動", "肯定")])
+        self.assertEqual(
+            complements("②：対象のモンスターの種族・属性はターン終了時まで、見せたモンスターと"
+                        "同じになる。"),
+            [("同じにする", "自動", "見せたモンスター", None, "対象のモンスターの種族・属性")])
+
+    def test_bare_naru_is_nisuru(self):
+        self.assertEqual(complements("①：自分が受ける効果ダメージは０になる。"),
+                         [("にする", "自動", "0", None, "自分が受ける効果ダメージ")])
+        self.assertEqual(complements("③：相手のLPを１００にする。"),
+                         [("にする", "他動", "100", "相手のLP", None)])
+
+    def test_negated_is_negate_passive(self):
+        self.assertEqual(
+            voiced("①：ダメージステップ終了時までそのモンスターの効果は無効化される。"),
+            [("無効にする", "受身", "肯定")])
+        self.assertEqual(voiced("①：このカードの発動と効果は無効化されない。"),
+                         [("無効にする", "受身", "否定")])
+
+    def test_other_folded_naru(self):
+        self.assertEqual(
+            voiced("①：フィールドのレベル１０以上のモンスターは効果の対象にならず、"
+                   "効果では破壊されない。"),
+            [("対象にする", "自動", "否定"), ("破壊", "受身", "否定")])
+        self.assertEqual(
+            voiced("②：このカードが融合召喚の素材となって墓地へ送られた場合に発動できる。"
+                   "このカードを特殊召喚する。")[0],
+            ("素材とする", "自動", "肯定"))
+
+
+class TestFullActionNames(unittest.TestCase):
+    """frame-lemma-unify 票 04:攻撃+宣言 一律 攻撃宣言、直接+攻撃 一律 直接攻撃。"""
+
+    def test_attack_declaration_all_forms(self):
+        self.assertEqual(voiced("①：このカードは攻撃宣言できない。"),
+                         [("攻撃宣言", None, "否定")])
+        self.assertEqual(
+            voiced("②：この効果でコントロールを得たモンスターは、攻撃宣言できず、"
+                   "リリースできない。")[0],
+            ("攻撃宣言", None, "否定"))
+        self.assertEqual(
+            extract("③：このカードが相手モンスターに攻撃宣言した時に発動できる。"
+                    "そのモンスターを破壊する。")[0],
+            ("攻撃宣言", None, None, "相手モンスター", "條件", "肯定"))
+        self.assertEqual(
+            [f[:2] for f in voiced("①：相手モンスターの攻撃宣言時に発動できる。"
+                                   "その攻撃を無効にする。")],
+            [("攻撃宣言", None), ("無効にする", "他動")])
+
+    def test_negative_conditional_before_attack_declaration(self):
+        """「送らなければ攻撃宣言できない」:〜なければ 是條件形、自成框架,不是定語;
+        攻撃宣言 不拿它的論元。"""
+        self.assertEqual(
+            extract("①：お互いのプレイヤーは手札を１枚墓地へ送らなければ攻撃宣言できない。"),
+            [("送る", "手札1枚", "手札", "墓地", "條件", "否定"),
+             ("攻撃宣言", None, None, None, "效果", "否定")])
+
+    def test_card_name_declaration_stays(self):
+        self.assertEqual(voiced("①：カード名を１つ宣言して発動できる。")[0][0], "宣言")
+
+    def test_direct_attack(self):
+        self.assertEqual(
+            extract("①：このカードは相手プレイヤーに直接攻撃できる。"),
+            [("直接攻撃", None, None, "相手プレイヤー", "效果", "可能")])
+        self.assertEqual(voiced("①：このカードは直接攻撃できない。"),
+                         [("直接攻撃", None, "否定")])
+
+    def test_plain_attack_stays(self):
+        self.assertEqual(voiced("①：このカードは相手モンスター全てに１回ずつ攻撃できる。"),
+                         [("攻撃", None, "可能")])
+
+
+class TestComplementNotFolded(unittest.TestCase):
+    """frame-lemma-unify 票 05:補語收在封閉值域字面或屬性名詞時不併入詞元,整段留目的欄、詞元是
+    にする/とする 形;狀態/角色詞照舊併。"""
+
+    def test_attribute_values(self):
+        self.assertEqual(complements("①：このカードは闇属性になる。"),
+                         [("にする", "自動", "闇属性", None, "このカード")])
+        self.assertEqual(
+            complements("②：フィールドの全ての表側表示モンスターは、ターン終了時まで宣言した"
+                        "属性になる。"),
+            [("にする", "自動", "宣言した属性", None, "フィールドの全ての表側表示モンスター")])
+        self.assertEqual(
+            complements("②：墓地のこのカードはターン終了時までドラゴン族になる。"),
+            [("にする", "自動", "ドラゴン族", None, "墓地のこのカード")])
+
+    def test_battle_positions(self):
+        self.assertEqual(complements("②：このカードを裏側守備表示にする。"),
+                         [("にする", "他動", "裏側守備表示", "このカード", None)])
+        self.assertEqual(
+            complements("③：Ａカウンターが置かれている相手モンスターは、守備表示になる。"),
+            [("にする", "自動", "守備表示", None, "〈Ａ〉カウンターが置かれている相手モンスター")])
+
+    def test_quantifier_is_not_part_of_the_complement(self):
+        """「…は全て守備表示になり」:全て 是主題的量化詞,不屬補語(lemma-round1)。"""
+        self.assertEqual(
+            complements("①：相手フィールドの表側攻撃表示モンスターは全て守備表示になる。")[0][:3],
+            ("にする", "自動", "守備表示"))
+
+    def test_attribute_nouns(self):
+        self.assertTrue(
+            complements("②：このカードの攻撃力は、リリースしたモンスターの元々の攻撃力・守備力を"
+                        "それぞれ合計した数値になる。")[0][2].endswith("合計した数値"))
+        self.assertEqual(
+            complements("①：自分フィールドの全てのモンスターのレベルはターン終了時まで、"
+                        "除外したモンスターと同じレベルになる。")[0][:3],
+            ("にする", "自動", "除外したモンスターと同じレベル"))
+        self.assertEqual(complements("①：このカードの守備力は元々の守備力になる。")[0][:3],
+                         ("にする", "自動", "元々の守備力"))
+        self.assertEqual(
+            complements("①：相手が宣言したカード名はこの効果で宣言したカード名になる。")[0][:3],
+            ("にする", "自動", "この効果で宣言したカード名"))
+
+    def test_relative_complement_keeps_the_only_object(self):
+        """「Xを宣言したレベルにする」:する 的補語裡的定語不吸收句裡唯一的 を——X 是對象。"""
+        self.assertEqual(
+            complements("②：そのモンスターのレベルを宣言したレベルにする。"),
+            [("にする", "他動", "宣言したレベル", "そのモンスターのレベル", None)])
+        self.assertEqual(
+            complements("①：そのモンスターとこのカードのレベルを、ターン終了時までその２体のレベルを"
+                        "合計したレベルにする。")[0][:4],
+            ("にする", "他動", "その2体のレベルを合計したレベル", "そのモンスターとこのカードのレベル"))
+
+    def test_sum_value_is_an_attribute(self):
+        """合計|値、合計|分 兩詞連起來是屬性名詞。"""
+        self.assertEqual(
+            complements("②：このカードの攻撃力は、他の「D-HERO」モンスターの元々の攻撃力の"
+                        "合計値になる。")[0][:3],
+            ("にする", "自動", "他の「D-HERO」モンスターの元々の攻撃力の合計値"))
+        self.assertEqual(
+            complements("①：その攻撃力はリリースしたモンスターの攻撃力の合計分となる。")[0][:3],
+            ("とする", "自動", "リリースしたモンスターの攻撃力の合計分"))
+
+    def test_phase_name(self):
+        """已知偏離:エンドフェイズになる 依規則記 にする+目的(時間語的 に 也收)。"""
+        self.assertEqual(complements("②：このターンのエンドフェイズになる。")[0][:3],
+                         ("にする", "自動", "エンドフェイズ"))
+
+    def test_state_words_still_fold(self):
+        """照舊併入;対象とする、融合素材とする 沒有 なる 形被併進來,態空。"""
+        self.assertEqual(voiced("①：フィールドのモンスター１体を対象として発動できる。")[0][:2],
+                         ("対象とする", None))
+        self.assertEqual(complements("①：そのモンスターの効果を無効にする。"),
+                         [("無効にする", "他動", None, "そのモンスターの効果", None)])
+        self.assertEqual(
+            voiced("②：自分の手札・フィールドのモンスターを融合素材とし、融合モンスター１体を"
+                   "EXデッキから融合召喚する。")[0][:2],
+            ("融合素材とする", None))
+        self.assertEqual(voiced("①：このカードは攻撃対象にされない。"),
+                         [("攻撃対象にする", "受身", "否定")])
+        self.assertEqual(voiced("①：相手が受ける戦闘ダメージを半分にする。"),
+                         [("半分にする", "他動", "肯定")])
+
+    def test_number_stays_in_goal(self):
+        self.assertEqual(complements("②：そのモンスターの攻撃力を０にする。"),
+                         [("にする", "他動", "0", "そのモンスターの攻撃力", None)])
+
+    def test_comparison_stays_in_goal(self):
+        """以上 照舊不吸收:補語整段留目的。"""
+        self.assertEqual(
+            complements("①：レベルの合計がそのモンスターのレベル以上になる。")[0][:3],
+            ("にする", "自動", "そのモンスターのレベル以上"))
+
+    def test_summon_with_perform_stays(self):
+        """「S召喚を行う」不動,留在 行う。"""
+        self.assertEqual(voiced("①：S召喚を行う。")[0][:2], ("行う", None))
 
 
 if __name__ == "__main__":

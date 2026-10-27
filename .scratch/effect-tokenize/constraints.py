@@ -11,6 +11,7 @@ ConstraintFinder.find() 拿到約束框架與被吃掉的詞序列範圍,落在�
 見 FIELDS。describe() 把專屬欄位併成一欄「內容」字串,拆解頁與檢驗批次檔共用。
 """
 
+from action_lemmas import spell
 from report import token_kind
 
 KIND_ACTION, KIND_CONSTRAINT = "動作", "約束"
@@ -555,15 +556,9 @@ class ConstraintFinder:
         return {k: v for k, v in args.items() if v and k in ("object", "source", "goal")}
 
     def _action_name(self, tokens, a):
-        """錨點的動作名,「・」並列(召喚・特殊召喚)串成一個;攻撃宣言 連 攻撃 一起記。"""
-        a = dict(a)
-        prev = self.x.word(tokens[a["head"] - 1]) \
-            if a["head"] - 1 >= a["clause_start"] else None
-        if a["action"] == "宣言" and prev == "攻撃":
-            a["action"] = "攻撃宣言"
-        elif a["action"] == "攻撃" and prev == "直接":
-            a["action"] = "直接攻撃"
-        return "・".join(self.x._coordinated_actions(tokens, a) + [a["action"]])
+        """錨點的動作名,「・」並列(召喚・特殊召喚)串成一個;攻撃宣言/直接攻撃 由述語錨點連前一個詞
+        記(frames.COMPOUND_ACTIONS);寫法歸一到縮寫(アドバンス召喚 → A召喚,frame-lemma-unify)。"""
+        return spell("・".join(self.x._coordinated_actions(tokens, a) + [a["action"]]))
 
     def pledges(self, tokens, sentence, anchors):
         """誓約(票 04):「〜を発動する/したターン、自分は…」「このターン、自分は…」「この効果の

@@ -10,7 +10,7 @@ category_tree.json,為每個動作框架寫一列類別紀錄到 frame_categorie
 類別樹(格式見 category_tree.json 的「說明」):大類 → 詞元節點 → 葉,分支可不等深;
 框架只貼葉、祖先由樹推得。葉可宣告自己掛的大類(category-tree-restart 票 04;值是頂層大類名,
 沒宣告時取詞元節點所在的本家大類),葉的路徑是 宣告的大類 › 詞元 › 葉——同一詞元的葉
-因此可以在不同大類(になる:守備力 在 數值、になる:ダメージ 在 LP・ダメージ)。頂層大類可另列
+因此可以在不同大類(にする:守備力 在 數值、にする:ダメージ/LP 在 LP・ダメージ)。頂層大類可另列
 中類清單(category-middle-class),葉以名字宣告所掛大類的中類,路徑改為 大類 › 中類 › 葉——
 詞元層省掉,跨詞元收同一個屬性或來源的葉(數值 › 攻撃力 › アップ:攻撃力、區域移動 › ←墓地 ›
 加える:墓地→手札);中類只改路徑,匹配、葉名、大類都不變。
@@ -22,10 +22,10 @@ category-tree-restart 票 02,2026-10-19 站主裁定不切「無」),葉名以�
 (破壊@相手フィールド、除外←相手墓地、雙方寫 お互いの)。
 
 規則表語意:主鍵是(動作詞元, 極性類)。極性類是 肯定/耐性/限制:可能視同肯定;否定
-依述語形分(票 03)——被動否定(されない)、にならない、受けない 為耐性,可能否定
-(できない、行えない)為限制,其餘一般否定(送らず、戻さず)沒有極性類、記未歸。述語形
-是唯一讀子句字面的地方(框架抽取只記 否定、沒記述語形);其餘匹配只看框架欄位(動作、
-來源、目的、所在、極性、位置,關鍵詞讀 對象/主語/主題):
+依述語形分(票 03)——被動否定(態 受身;frame-lemma-unify 票 01 起讀框架的態欄)、にならない、
+受けない 為耐性,可能否定(できない、行えない)為限制,其餘一般否定(送らず、戻さず)沒有極性類、
+記未歸。被動以外的述語形是唯一讀子句字面的地方(框架抽取只記 否定、沒記述語形);其餘匹配只看
+框架欄位(動作、來源、目的、所在、極性、態、位置,關鍵詞讀 對象/主語/主題):
     條件位       → 不適用(條件框架歸觸發事件軸,另開線)
     匹配到葉     → 已歸,記葉清單與大類(第一葉的大類)
     其餘         → 未歸(詞元沒有節點,或條件全不符且沒有預設葉);沒有「其他」類
@@ -70,6 +70,7 @@ sys.path.insert(0, HERE)
 import frames  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
 from frames import POL_AFFIRM, POL_NEG, POS_COND, POS_COST, POS_EFFECT  # noqa: E402
+from action_lemmas import VOICE_PASSIVE  # noqa: E402
 from places import PLAYER_BOTH, PLAYER_OPP, PLAYER_SELF, parse_place, parse_zones  # noqa: E402
 
 TREE = os.path.join(HERE, "category_tree.json")
@@ -86,13 +87,14 @@ STATUSES = (STATUS_PLACED, STATUS_UNPLACED, STATUS_NA)
 POL_RESIST = "耐性"
 POL_RESTRICT = "限制"
 POLARITY_CLASSES = (POL_AFFIRM, POL_RESIST, POL_RESTRICT)
-# 否定框架的述語形 → 極性類:取子句裡最後一個否定述語(框架的子句收在它自己的述語);
+# 否定框架的述語形 → 極性類:態是受身(被動否定,frame-lemma-unify 票 01 起讀框架的態欄)為
+# 耐性;其餘取子句裡最後一個否定述語(框架的子句收在它自己的述語);
 # 〜ければならない/〜ねばならない 是義務、不是否定述語。
 # 受けない 字面是一般否定,但 受ける 的否定就是不受影響,歸耐性;行えない 是五段動詞
 # 行う 的可能否定。其餘一般否定(送らず、戻さず、リリースせず)不屬任何一類。
 NEGATION_FORMS = (
     (re.compile(r"(?:でき|出来)(?:ない|ず|なく|ませ)|行え(?:ない|ず|なく)"), POL_RESTRICT),
-    (re.compile(r"(?:され|(?<!ば)なら|受け)(?:ない|ず|なく)"), POL_RESIST),
+    (re.compile(r"(?:(?<!ば)なら|受け)(?:ない|ず|なく)"), POL_RESIST),
 )
 
 # 區域七值(值域正典的區域,與第一版同一組)與葉名裡的日文區域名
@@ -134,10 +136,12 @@ def unplaced_label(frame):
 
 
 def polarity_class(frame):
-    """框架的極性 → 極性類:可能視同肯定;否定依子句裡最後一個否定述語分耐性/限制,
-    一般否定回 None(沒有節點)。"""
+    """框架的極性 → 極性類:可能視同肯定;被動否定(態 受身)是耐性;其餘否定依子句裡最後一個
+    否定述語分耐性/限制,一般否定回 None(沒有節點)。"""
     if frame["polarity"] != POL_NEG:
         return POL_AFFIRM
+    if frame.get("voice") == VOICE_PASSIVE:
+        return POL_RESIST
     clause = frame["clause"].replace(" ", "")
     last, found = -1, None
     for pattern, cls in NEGATION_FORMS:

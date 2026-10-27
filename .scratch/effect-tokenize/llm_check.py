@@ -14,15 +14,19 @@
 - 第三版論元(frame-args-v3 票 07;v3-round1 起):受區域切分/並列多區域/推得/主題延續/主語/被動
   受事者/回填轉欄七型規則影響的卡——依框架資料分層(一張卡依序歸入第一個符合的層),共 100 張、
   切 4 批;錯誤類型在既有五類外加 區域切錯/漏切、推得錯、主題/主語錯、延續錯、回填錯。
+- 動作詞元統一(frame-lemma-unify 票 06;lemma-round1):受寫法歸一/攻撃宣言・直接攻撃/補語不併/
+  態歸一/態欄五型影響的卡——依框架資料分層(一張卡依序歸入第一個符合的層),共 100 張、切 4 批;
+  錯誤類型在既有五類外加 詞元錯、態錯、補語錯欄;批次檔的框架列多「態=」。
 種子固定,同一種子重抽得到同一批(複檢沿用);不同種子抽新樣本(過擬合抽驗)。
 
     sample   --round R --seed S   全語料抽樣:寫 llm-check/round<R>/sample.json 與 batch-<k>.md
     affected --round R --seed S   受影響卡抽樣(同上,另寫 meta.json 記分層與批數)
     v2       --round R --seed S   第二版論元受影響卡抽樣(寫 llm-check/v2-round<R>/)
     v3       --round R --seed S   第三版論元受影響卡抽樣(寫 llm-check/v3-round<R>/)
+    lemma    --round R --seed S   動作詞元統一受影響卡抽樣(寫 llm-check/lemma-round<R>/)
     report   --round R            讀 llm-check/round<R>/findings-<k>.json 寫 report.md
     recheck  --round R --from R0  用 round R0 的樣本重出批次檔(同批複檢)
-    (report/recheck 加 --line constraints、--line v2 或 --line v3 走各自的目錄)
+    (report/recheck 加 --line constraints、--line v2、--line v3 或 --line lemma 走各自的目錄)
 
 批次檔一張卡一節、一句效果句一段:整段效果句(含 ● 選項;拆開的領起句與子效果句
 各標 index 與效果類型)與它的框架(含選項欄「●n 標籤」)。
@@ -43,6 +47,7 @@ from collections import Counter, defaultdict
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import constraints  # noqa: E402
+import action_lemmas  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 CARDS = os.path.join(ROOT, "data", "cards.json")
@@ -79,6 +84,20 @@ QUOTA_V3 = {"回填轉欄": 14, "並列多區域": 14, "被動受事者": 14, "�
             "主語": 14, "推得": 14}
 BATCHES_V3 = 4
 ERROR_TYPES_V3 = ERROR_TYPES + ("區域切錯/漏切", "推得錯", "主題/主語錯", "延續錯", "回填錯")
+# 動作詞元統一(frame-lemma-unify 票 06):五型分層(依序歸入第一個符合的層;較少見的型在前),
+# 合計 100;錯誤類型五類+三類
+STRATA_LEMMA = ("寫法歸一", "攻撃宣言/直接攻撃", "補語不併", "態歸一", "態欄")
+QUOTA_LEMMA = {"寫法歸一": 20, "攻撃宣言/直接攻撃": 20, "補語不併": 20, "態歸一": 25, "態欄": 15}
+BATCHES_LEMMA = 4
+ERROR_TYPES_LEMMA = ERROR_TYPES + ("詞元錯", "態錯", "補語錯欄")
+# 寫法歸一:全名與分詞殘片(子句字面裡看得到)→ 縮寫的詞元字首,取自 action_lemmas 的對照表
+FULL_SPELLINGS = tuple(action_lemmas.SPELLING) + tuple(
+    full for full, _short in action_lemmas.SPELLING_PREFIXES) + ("そのX素材",)
+SHORT_SPELLINGS = tuple(action_lemmas.SPELLING.values()) + tuple(
+    short for _full, short in action_lemmas.SPELLING_PREFIXES) + ("X素材",)
+# 併進 アップ/ダウン 的詞對(上げる/上がる…)在子句字面裡的詞幹
+RAISE_LOWER = tuple(raw[:-1] for raw, (canonical, _voice) in action_lemmas.VOICE_PAIRS.items()
+                    if canonical in action_lemmas.PARTICLE_VOICED)
 TYPE_PENDULUM, TYPE_SPELL, TYPE_TRAP = 0x1000000, 0x2, 0x4
 OPTION = "●"
 
@@ -282,7 +301,7 @@ def v3_labels(f):
     if region:
         labels.add("並列多區域" if "・" in f[region] and any(
             c in (f.get("object") or "") for c in ("と", "か", "及び", "または")) else "區域切分")
-        if f.get("passive"):
+        if f.get("voice") == action_lemmas.VOICE_PASSIVE:
             labels.add("被動受事者")
     if f.get("subject"):
         labels.add("主語")
@@ -302,6 +321,55 @@ def v3_stratum(records):
 
 def sample_v3(seed):
     return sample_by_frames(seed, v3_stratum, STRATA_V3, QUOTA_V3)
+
+
+# ── 動作詞元統一(frame-lemma-unify 票 06)──
+
+_VALUE_ENDINGS = []
+
+
+def value_endings():
+    """補語不併判準的字尾:封閉值域字面(lexicon 的 closed 類)與屬性名詞;第一次用到時讀詞典。"""
+    if not _VALUE_ENDINGS:
+        with open(os.path.join(HERE, "lexicon.json"), encoding="utf-8") as f:
+            _VALUE_ENDINGS.extend(e["surface"] for e in json.load(f)
+                                  if e.get("closed") in action_lemmas.COMPLEMENT_VALUE_CLASSES)
+        _VALUE_ENDINGS.extend(action_lemmas.COMPLEMENT_ATTRIBUTES)
+    return tuple(_VALUE_ENDINGS)
+
+
+def lemma_labels(f):
+    """一個動作框架命中的動作詞元統一型(子句字面看原文寫法,框架欄位看正規化後的值)。"""
+    labels = set()
+    clause = f["clause"].replace(" ", "")
+    action, voice = f["action"], f.get("voice")
+    if any(s in clause for s in FULL_SPELLINGS) and action.startswith(SHORT_SPELLINGS):
+        labels.add("寫法歸一")
+    if action == "直接攻撃" or (action == "攻撃宣言" and "攻撃宣言時" not in clause):
+        labels.add("攻撃宣言/直接攻撃")
+    if action in ("にする", "とする") and (f.get("goal") or "").endswith(value_endings()):
+        labels.add("補語不併")
+    if (voice == action_lemmas.VOICE_INTRANSITIVE
+            or (action == "無効にする" and voice == action_lemmas.VOICE_PASSIVE)
+            or (action in action_lemmas.PARTICLE_VOICED
+                and any(s in clause for s in RAISE_LOWER))):
+        labels.add("態歸一")
+    if voice in (action_lemmas.VOICE_ACTIVE, action_lemmas.VOICE_PASSIVE):
+        labels.add("態欄")
+    return labels
+
+
+def lemma_stratum(records):
+    labels = set()
+    for r in records:
+        for f in r["frames"]:
+            if f.get("kind") == constraints.KIND_ACTION:
+                labels |= lemma_labels(f)
+    return next((k for k in STRATA_LEMMA if k in labels), None)
+
+
+def sample_lemma(seed):
+    return sample_by_frames(seed, lemma_stratum, STRATA_LEMMA, QUOTA_LEMMA)
 
 
 # ── 批次檔 ──
@@ -335,7 +403,7 @@ def record_lines(s, fr):
         extra = constraints.describe_action(f)
         lines.append("框架 %d:[%s] %s(%s%s)| %s%s%s | 子句=%s"
                      % (k, f["position"], f["action"], f["polarity"],
-                        "・被動" if f.get("passive") else "",
+                        "・態=" + f["voice"] if f.get("voice") else "",
                         " | ".join(argument_cells(f)), " | " + extra if extra else "", opt,
                         f["clause"]))
     lines.append("")
@@ -408,7 +476,7 @@ def read_meta(round_dir):
 
 def round_dir_of(line, round_no):
     prefix = {"constraints": "constraint-round", "v2": "v2-round",
-              "v3": "v3-round"}.get(line, "round")
+              "v3": "v3-round", "lemma": "lemma-round"}.get(line, "round")
     return os.path.join(CHECK_DIR, "%s%d" % (prefix, round_no))
 
 
@@ -494,15 +562,20 @@ def report(round_dir):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=("sample", "affected", "constraints", "v2", "v3",
-                                        "report", "recheck"))
+                                        "lemma", "report", "recheck"))
     ap.add_argument("--round", type=int, required=True)
     ap.add_argument("--seed", type=int, default=20261009)
     ap.add_argument("--from", dest="from_round", type=int)
-    ap.add_argument("--line", choices=("frames", "constraints", "v2", "v3"), default="frames")
+    ap.add_argument("--line", choices=("frames", "constraints", "v2", "v3", "lemma"),
+                    default="frames")
     args = ap.parse_args()
-    line = args.command if args.command in ("constraints", "v2", "v3") else args.line
+    line = args.command if args.command in ("constraints", "v2", "v3", "lemma") else args.line
     round_dir = round_dir_of(line, args.round)
-    if args.command == "v3":
+    if args.command == "lemma":
+        write_batches(round_dir, sample_lemma(args.seed),
+                      {"mode": "lemma", "seed": args.seed, "batches": BATCHES_LEMMA,
+                       "strata": list(STRATA_LEMMA), "error_types": list(ERROR_TYPES_LEMMA)})
+    elif args.command == "v3":
         write_batches(round_dir, sample_v3(args.seed),
                       {"mode": "v3", "seed": args.seed, "batches": BATCHES_V3,
                        "strata": list(STRATA_V3), "error_types": list(ERROR_TYPES_V3)})

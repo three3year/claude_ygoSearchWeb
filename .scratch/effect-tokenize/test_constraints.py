@@ -164,7 +164,7 @@ class TestCountNotes(unittest.TestCase):
     def test_once_per_turn_only_in_parenthesis(self):
         self.assertEqual(
             rows("②：このカードを裏側守備表示にする（１ターンに１度のみ）。"),
-            [A("裏側守備表示にする", "效果", "肯定"),
+            [A("にする", "效果", "肯定"),
              count("回合", 1, "この効果")])
 
     def test_this_effect_once_per_turn_note(self):
@@ -479,7 +479,7 @@ class TestSummonConditions(unittest.TestCase):
     def test_tribute_then_advance_summon(self):
         self.assertEqual(
             rows("このカードはアドバンス召喚したモンスター１体をリリースしてアドバンス召喚できる。"),
-            [summon("可以某方式アドバンス召喚",
+            [summon("可以某方式A召喚",
                     procedure=[{"action": "リリース",
                                 "object": "アドバンス召喚したモンスター1体"}])])
 
@@ -604,7 +604,7 @@ class TestConstraintRound1Fixes(unittest.TestCase):
             [self.DRAW,
              pledge("この効果で守備表示にしたターン", "攻撃", "只能", "対象のモンスター",
                     subject="自分のモンスター"),
-             A("になる", "效果", "肯定")])
+             A("にする", "效果", "肯定")])
 
     def test_protection_this_turn_is_not_a_pledge(self):
         """被動否定(破壊されない)是保護效果,不是誓約;可能形否定(攻撃できない)才是。"""
@@ -727,7 +727,7 @@ class TestConstraintRound3Fixes(unittest.TestCase):
         self.assertEqual(
             rows("②：自分は１枚ドローする。この効果で特殊召喚したモンスターはこのターン、"
                  "効果が無効化され、L素材にできない。"),
-            [self.DRAW, A("無効化", "效果", "肯定"), A("L素材にする", "效果", "否定")])
+            [self.DRAW, A("無効にする", "效果", "肯定"), A("L素材にする", "效果", "否定")])
 
     def test_condition_clause_is_not_a_pledge_subject(self):
         self.assertEqual(

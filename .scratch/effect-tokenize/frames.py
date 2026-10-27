@@ -13,10 +13,14 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
 (取代規則:約束框架吃掉的詞序列範圍內的錨點不出框架)。
 
 動作框架(一個動作一個框架,依原文順序):
-    action    動作(詞元):動詞以 lexicon.json 的 lemma 歸詞元;サ変名詞+する
-              家族記名詞(破壊|する → 破壊);召喚法+召喚記 法+召喚(特殊召喚);
-              「N に する/なる」的單詞補語併入動作(無効にする、対象になる);
-              「〜を対象として」記 対象とする
+    action    動作(動作詞元):動詞以 lexicon.json 的 lemma 歸詞元;サ変名詞+する
+              家族記名詞(破壊|する → 破壊),攻撃|宣言、直接|攻撃 連前一個詞記
+              (COMPOUND_ACTIONS);召喚法+召喚記 法+召喚(特殊召喚);「N に する/なる」
+              的狀態/角色詞補語併入動作(無効にする、対象になる),補語是值或屬性時不併、
+              整段進目的(action_lemmas 的補語不併判準);「〜を対象として」記 対象とする。以上是
+              抽取內部用的原詞元,框架產出前過詞元對照表(action_lemmas.normalize;frame-lemma-unify、
+              ADR-0016)成正規詞元:戻る→戻す、になる→にする、無効化→無効にする、
+              上げる/上がる→アップ、アドバンス召喚→A召喚…
     object    對象(を 前的詞)、source 來源(から 前)、goal 目的(に/へ 前)
               ——述語往前、同一子句內依助詞收;值保留原詞(指示綁定、列舉前項
               補全值、數量約束、卡名佔位);時間語(ターン/フェイズ/時…)的 に 不收
@@ -45,7 +49,9 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
     place     可選(票 04):受事者(主動句對象;被動句主語,沒有時主題)片語裡切出的區域——
               移動類動作(MOVE_ACTIONS)記在 source,其餘記在 place(所在);受事者欄只少掉那一段
     inferred  可選(票 05):規則依動作補上的 source/goal 欄名(INFERRED;原文沒寫才補)
-    passive   可選(票 02):被動句時為 True
+    voice     可選(frame-lemma-unify 票 01/03):態 他動/自動/受身——受身是述語錨點判出的被動
+              (取代 2026-10-27 前的 passive 旗標),他動/自動只在詞元對照表合併的詞元上記;
+              沒值時不帶(空是沒判,不是他動)
 
 單位是效果句(一個編號效果的全文,連同它的 ● 選項;tokenize.py 的 assemble 把
 拆開的領起句與子效果句接回一段):選項邊界 token「●」與「。」同樣結束一句,
@@ -68,6 +74,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from constraints import KIND_ACTION, KIND_CONSTRAINT, ConstraintFinder  # noqa: E402
+import action_lemmas  # noqa: E402
 from places import parse_place  # noqa: E402
 from report import frame_stats, token_kind  # noqa: E402
 
@@ -102,12 +109,16 @@ CONDITIONAL_NOMINALIZERS = {"場合", "時", "際", "度", "限り", "ターン"
                             "間"}
 CONDITIONAL_FORMS = {"すれば", "あれば", "いれば", "なければ"}
 # 「N に する/なる」的補語不吸收這些詞(量化詞/比較詞:全て裏側守備表示にする
-# 的 全て 是副詞;レベル以上になる 的 以上 是比較結果,留在目的論元)
+# 的 全て 是副詞;レベル以上になる 的 以上 是比較結果,留在目的論元;指示詞 その/この
+# 不併入補語:そのX素材とする → X素材とする,frame-lemma-unify 票 02)
 FOLD_STOP = {"全て", "それぞれ", "お互い", "両", "元々", "以上", "以下", "未満",
-             "同名", "任意", "他", "次", "残り"}
+             "同名", "任意", "他", "次", "残り", "その", "この"}
 # サ変名詞直接接 時 也是事件(攻撃宣言時/発動時/成功時);終了時/開始時/
 # ダメージ計算時 是時點,不是動作
 EVENT_NOUNS = {"宣言", "成功", "リバース"}
+# 動作名完整(frame-lemma-unify 票 04):前一個詞 + サ変名詞 是一個動作,不論述語形
+# (攻撃宣言できない/攻撃宣言した/攻撃宣言時 → 攻撃宣言;直接攻撃できる → 直接攻撃)
+COMPOUND_ACTIONS = {("攻撃", "宣言"): "攻撃宣言", ("直接", "攻撃"): "直接攻撃"}
 # 「・」並列的述語名詞(召喚・特殊召喚した/特殊召喚・リバースした):各出一框架
 SAHEN_NOUNS = {"発動", "召喚", "破壊", "存在", "除外", "アップ", "リリース", "成功",
                "攻撃", "ドロー", "セット", "装備", "選択", "無効化", "適用", "宣言",
@@ -115,9 +126,8 @@ SAHEN_NOUNS = {"発動", "召喚", "破壊", "存在", "除外", "アップ", "�
                "移動", "シャッフル", "合計", "チェーン", "終了", "スキップ", "指定",
                "公開", "勝利", "代用", "相互リンク", "コントロール"}
 # 「Xが Yの N」的屬性主語(攻撃力と守備力が０の悪魔族モンスター):併入名詞片語
-ATTR_NOUNS = {"レベル", "ランク", "攻撃力", "守備力", "種族", "属性", "カード名", "数",
-              "数値", "Pスケール", "リンクマーカー", "名", "合計", "レベル・ランク",
-              "攻撃力・守備力", "種族・属性", "元々の攻撃力", "元々の守備力"}
+# (與補語不併判準共用一份,定義在 action_lemmas)
+ATTR_NOUNS = action_lemmas.ATTRIBUTE_NOUNS
 # 片語開頭的副詞/接續詞/時間語不屬論元
 LEADING_ADVERBS = {"さらに", "また", "もう", "既に", "その後", "それぞれ"}
 # 「〜に」的方式副詞(ランダムに/順に/お互いに/〜の代わりに):不是目的論元
@@ -356,6 +366,7 @@ class FrameExtractor:
         j = i + 1
         polarity = POL_AFFIRM
         fold = 0                      # 併入動作的前置 token 數(N に する)
+        complement = None             # N に する/なる 的補語不併時是 する/なる(票 05)
         obligation = False            # 〜しなければならない(召喚條件的「必須」)
 
         def nxt(k):
@@ -418,8 +429,8 @@ class FrameExtractor:
                 polarity = POL_CAN
             if lemma in LIGHT_VERBS:
                 # N に/と なる:補語併入動作(無効になる/対象になる/同じになる)
-                action, fold = self._fold_complement(tokens, i, clause_start,
-                                                     lemma)
+                action, fold, complement = self._fold_complement(tokens, i, clause_start,
+                                                                 lemma)
         elif w is not None and w in SURU_FAMILY:
             # 裸 する家族(前面不是サ変名詞):N に/と する → 併入動作
             # (無効にする/裏側守備表示にする/リンク素材とする);補語是數字時
@@ -431,8 +442,8 @@ class FrameExtractor:
                     and tokens[i - 2] in ("p:に", "p:と")):
                 prev, skip = tokens[i - 2], 1
             if prev in ("p:に", "p:と"):
-                action, fold = self._fold_complement(tokens, i - skip,
-                                                     clause_start, "する")
+                action, fold, complement = self._fold_complement(tokens, i - skip,
+                                                                 clause_start, "する")
                 fold += skip
             elif prev == "p:を" and w in SURU_ACTIVE:
                 action = "する"        # 通常のドローをした
@@ -454,11 +465,11 @@ class FrameExtractor:
                 action, form = w, None
             elif after == "時" and w in EVENT_NOUNS:
                 action, form = w, "noun"
-                if w == "宣言" and i - 1 >= clause_start \
-                        and self.word(tokens[i - 1]) == "攻撃":
-                    action, head = "攻撃宣言", i - 1
             else:
                 return None
+            compound = self._compound_action(tokens, i, clause_start)
+            if compound is not None:
+                action, head = compound, i - 1
         else:
             return None
 
@@ -495,6 +506,8 @@ class FrameExtractor:
                 form = "neg"           # 存在しない+名詞 是定語
             elif self.word(tokens[j]) == "ず":
                 form = "stem"          # 戻さず手札に加える:連用否定
+            elif self.word(tokens[j]) == "なければ":
+                form = "cond"          # 送らなければ攻撃宣言できない:條件形,不是定語
             j += 1
             # 〜しなければならない/ならず:義務,不是否定
             if (j + 1 < n and self.word(tokens[j - 1]) == "なければ"
@@ -528,6 +541,8 @@ class FrameExtractor:
                               fold, clause_start, conditional)
         if anchor is not None and obligation:
             anchor["obligation"] = True
+        if anchor is not None and complement:
+            anchor["complement"] = complement
         return anchor
 
     def _topic_action(self, tokens, i, clause_start):
@@ -544,25 +559,32 @@ class FrameExtractor:
             if head == "効果":
                 return "できる"       # 効果は１ターンに１度しかできない:述語就是 できる
             if head in SAHEN_NOUNS:
-                return head
+                return self._compound_action(tokens, k - 1, clause_start) or head
             break
         # 攻撃宣言もできない/特殊召喚ができない:も/が 前的動作名詞
         if i - 2 >= clause_start and tokens[i - 1] in ("p:も", "p:しか", "p:が"):
             head = self.word(tokens[i - 2])
-            if head == "宣言" and i - 3 >= clause_start \
-                    and self.word(tokens[i - 3]) == "攻撃":
-                return "攻撃宣言"
             if head == "召喚":
                 return self._method_prefix(tokens, i - 3, clause_start)[0] + "召喚"
             if head in SAHEN_NOUNS:
-                return head
+                return self._compound_action(tokens, i - 2, clause_start) or head
         return None
 
+    def _compound_action(self, tokens, k, clause_start):
+        """tokens[k] 的サ変名詞連同前一個詞是完整動作名(攻撃|宣言、直接|攻撃;票 04)時回它,
+        否則 None。"""
+        if k - 1 < clause_start:
+            return None
+        return COMPOUND_ACTIONS.get((self.word(tokens[k - 1]), self.word(tokens[k])))
+
     def _fold_complement(self, tokens, i, clause_start, lemma):
-        """tokens[i] 是 する/なる,前一格是 に/と:補語全是名詞類且不含數字時
-        併入動作(補語+助詞+詞元),回 (動作, 併入格數);否則 (助詞+詞元, 0)。"""
+        """tokens[i] 是 する/なる,前一格是 に/と:回 (動作, 併入格數, 不併的補語)。
+        補語全是名詞類且不含數字時併入動作 → (補語+助詞+詞元, 格數, None);補語是數字或沒有補語
+        → (助詞+詞元, 0, None);補語最後一個詞是封閉值域字面或屬性名詞(action_lemmas 的補語不併
+        判準;frame-lemma-unify 票 05)→ (助詞+詞元, 0, 詞元 する/なる)——整段補語是目的論元
+        (時間語也收)。"""
         if i - 1 < clause_start or tokens[i - 1] not in ("p:に", "p:と"):
-            return lemma, 0
+            return lemma, 0, None
         particle = tokens[i - 1][2:]
         k = i - 1
         while (k - 1 >= clause_start and (i - 1) - (k - 1) <= FOLD_MAX
@@ -571,9 +593,25 @@ class FrameExtractor:
                and self.word(tokens[k - 1]) not in FOLD_STOP):
             k -= 1
         if k == i - 1:
-            return particle + lemma, 0
+            return particle + lemma, 0, None
+        if self._is_value_complement(tokens[k:i - 1]):
+            return particle + lemma, 0, lemma
         text = "".join(self.surface(t) for t in tokens[k:i - 1])
-        return text + particle + lemma, i - k
+        return text + particle + lemma, i - k, None
+
+    def _is_value_complement(self, complement):
+        """補語的最後一個詞是「值」或「屬性」(闇属性、裏側守備表示、エンドフェイズ、レベル、
+        数値…):action_lemmas.COMPLEMENT_VALUE_CLASSES 的封閉值域字面,或 COMPLEMENT_ATTRIBUTES
+        (合計|値、合計|分 兩詞連起來比)。"""
+        words = [self._base_word(t) for t in complement[-2:]]
+        last = complement[-1]
+        if words[-1] is None:
+            return False
+        wid = last.split(":", 2)[-1]            # 詞典詞本身或 指示詞/省略寫法 指的詞
+        return (self.lex.closed_of[wid] in action_lemmas.COMPLEMENT_VALUE_CLASSES
+                or words[-1] in action_lemmas.COMPLEMENT_ATTRIBUTES
+                or (None not in words
+                    and "".join(words) in action_lemmas.COMPLEMENT_ATTRIBUTES))
 
     def _finish(self, tokens, head, verb_at, j, action, polarity, form, passive,
                 fold, clause_start, conditional=False):
@@ -806,10 +844,14 @@ class FrameExtractor:
             return self._predicate_lemma(chunk, len(chunk) - 1)
         return None
 
-    def arguments(self, tokens, start, stop, trailing=False):
+    def arguments(self, tokens, start, stop, trailing=False, complement=None):
         """[start, stop) 的論元 → (args, carry):args 是本述語的對象/來源/目的,
         carry 是多個 を 時留給下一個述語的論元(そのモンスターを効果を無効にして
-        特殊召喚し:無効にする 只拿最後一個 を,前面的 を 與 から 給 特殊召喚)。"""
+        特殊召喚し:無効にする 只拿最後一個 を,前面的 を 與 から 給 特殊召喚)。
+        complement:最後一格是 N に/と なる/する 不併的補語時是 する/なる(frame-lemma-unify
+        票 05)——時間語(エンドフェイズになる)也收成目的;補語裡的定語不吸收述語的期間
+        (ターン終了時まで宣言した属性になる),する 的補語也不吸收句裡唯一的 を(そのモンスターの
+        レベルを|宣言したレベルにする:を 是 にする 的對象)。"""
         parts = self.chunks(tokens, start, stop)
         merged = []
         for idx, (role, chunk, hard) in enumerate(parts):
@@ -828,11 +870,17 @@ class FrameExtractor:
                     and rel not in ADJECTIVE_LEMMAS and rel not in NEGATORS \
                     and rel not in RELATIVE_SCOPE
                 taken = set()
+                # 不併的補語(票 05):期間與 する 的唯一對象屬述語,不屬補語裡的定語
+                is_complement = complement is not None and idx == len(parts) - 1
                 while merged and merged[-1][0] not in NON_ABSORB_ROLES:
                     r, c, h = merged.pop()
-                    if scope is not None and (r not in scope or r in taken) or (
+                    complement_stop = is_complement and bool(c) and (
+                        (r == "まで" and self._is_time(c))
+                        or (complement == "する" and r == "を"
+                            and all(m[0] != "を" for m in merged)))
+                    if (scope is not None and (r not in scope or r in taken)) or (
                             verb_rel and r == "が" and c
-                            and self.word(c[-1]) in ATTR_NOUNS):
+                            and self.word(c[-1]) in ATTR_NOUNS) or complement_stop:
                         merged.append([r, c, h])
                         break
                     taken.add(r)
@@ -898,10 +946,16 @@ class FrameExtractor:
             if key is None or not chunk:
                 last_key = None
                 continue
-            if key == "goal" and self._is_time(chunk):
+            is_complement = complement is not None and idx == len(joined) - 1
+            if key == "goal" and self._is_time(chunk) and not is_complement:
                 last_key = None
                 continue
             chunk = self._trim(chunk)
+            if is_complement:
+                # このターンのエンドフェイズ:開頭的 このターン 已剝掉,剩下的 の 不屬補語;
+                # 「…は全て守備表示になる」的 全て 是主題的量化詞(lemma-round1)
+                while chunk and (chunk[0] == "p:の" or self.word(chunk[0]) in ("全て", "それぞれ")):
+                    chunk = chunk[1:]
             if not chunk:
                 continue
             text = "".join(self.surface(t) for t in chunk)
@@ -1284,7 +1338,8 @@ class FrameExtractor:
                     and depth_at[a["verb_at"]] == 0
                 args, next_carry = self.arguments(
                     tokens, a["clause_start"], a["head"] - a["fold"],
-                    trailing=a["form"] == "noun" or a["fold"] > 0)
+                    trailing=a["form"] == "noun" or a["fold"] > 0,
+                    complement=a.get("complement"))
                 own = set(args)
                 for key, value in carry.items():
                     if key != "split":
@@ -1364,7 +1419,8 @@ class FrameExtractor:
                 a["lifted_topic"] = args.pop("topic") if (
                     a["conditional"] and args.get("topic_first")) else None
                 for action in coordinated + [a["action"]]:
-                    # 第三版論元(票 02/04):主題、主語、所在、被動 是可選欄,只在有值時帶
+                    # 第三版論元(票 02/04):主題、主語、所在 是可選欄,只在有值時帶;被動是抽取內部的
+                    # 標記,正規化時轉成 態=受身
                     argued = self._frame_arguments(args, action, a["passive"])
                     frame = dict({"kind": KIND_ACTION, "sentence": s_idx,
                                   "action": action,
@@ -1388,6 +1444,10 @@ class FrameExtractor:
         self._carry_topic(made)
         self._backfill(tokens, made)
         self._attach_enumeration(tokens, sentences, option_of, frames, text_of)
+        # 動作詞元正規化(frame-lemma-unify):以上規則都看原詞元,最後才過詞元對照表、記態
+        for fr in frames:
+            if fr["kind"] == KIND_ACTION:
+                _normalize(fr)
         # 依原文位置混排;同起點時約束框架在前(穩定排序保住並列述語的順序)
         frames.sort(key=lambda f: (f["sentence"], f["span"][0],
                                    f["kind"] != KIND_CONSTRAINT))
@@ -1443,9 +1503,10 @@ class FrameExtractor:
 
     @staticmethod
     def _frame_arguments(args, action, passive):
-        """論元 → 框架的對象/來源與第三版可選欄(主題、主語、所在、被動;票 02/04)。受事者
-        (主動句是對象;被動句是主語,沒有時是主題)片語裡的區域切出:移動類記來源、其餘記
-        所在,受事者欄只少掉區域那一段(整段就是區域時不動);原文已有 から 來源時不切。"""
+        """論元 → 框架的對象/來源與第三版可選欄(主題、主語、所在;票 02/04),被動時另帶抽取內部的
+        被動標記(正規化時轉成 態=受身)。受事者(主動句是對象;被動句是主語,沒有時是主題)片語裡
+        的區域切出:移動類記來源、其餘記所在,受事者欄只少掉區域那一段(整段就是區域時不動);原文
+        已有 から 來源時不切。"""
         out = {"object": args.get("object"), "source": args.get("source")}
         out.update((key, args[key]) for key in ("topic", "subject") if args.get(key))
         patient = "object" if not (passive or action in INTRANSITIVE_MOVES) \
@@ -1457,7 +1518,7 @@ class FrameExtractor:
                 out[patient] = rest
             out[region_key(action)] = place
         if passive:
-            out["passive"] = True
+            out["passive"] = True     # 抽取內部用;正規化時轉成 態=受身(_normalize)
         return out
 
     @staticmethod
@@ -1670,6 +1731,20 @@ class FrameExtractor:
             extra = not (text[:1] == OPTION or 0x2460 <= ord(text[:1] or " ") < 0x2500)
         return self.frames_of_tokens(self.tokenizer.tokenize(text, context),
                                      text=text, extra=extra, card_type=card_type)
+
+
+def _normalize(frame):
+    """動作框架過詞元對照表(action_lemmas.normalize):原詞元 → 動作詞元,態記在 voice(只在有值時
+    帶);抽取內部的被動標記併入 態=受身。アップ/ダウン 的態只看框架自己的原文——回填的對象、延續來的
+    主題/主語不算(延續來的主題多半是執行者「自分は…」)。"""
+    backfilled = frame.get("backfill") or ()
+    own = {key: bool(frame.get(key)) and key not in backfilled
+           for key in ("object", "subject", "topic")}
+    frame["action"], voice = action_lemmas.normalize(
+        frame["action"], passive=frame.pop("passive", False), has_object=own["object"],
+        has_subject=own["subject"] or own["topic"])
+    if voice:
+        frame["voice"] = voice
 
 
 def _literal(frame, key):

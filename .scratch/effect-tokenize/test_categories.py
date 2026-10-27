@@ -5,10 +5,11 @@
 (categories.classify)。包住框架抽取接縫再接歸組,用真的分詞器、詞典、類別樹與
 規則表;只斷言每個框架的(動作、狀態、葉清單、大類、來源玩家、目的玩家、路徑),不測
 規則內部、不測樹怎麼存(預期路徑直接寫出,不依葉名查樹)。每個句型一條回歸例子——
-修規則或改樹前先補一條會失敗的例子。例外:匹配機制本身(所在、玩家、關鍵詞三欄、大類
-宣告、關鍵詞與所在兩軸並收、中類)另以測試小樹驗,免得真樹改葉表時把機制的例子一起
+修規則或改樹前先補一條會失敗的例子。例外:匹配機制本身(所在、玩家、關鍵詞三欄、目的關鍵詞、
+大類宣告、關鍵詞與所在兩軸並收、中類)另以測試小樹驗,免得真樹改葉表時把機制的例子一起
 改掉;經同一接縫(classify 的 tree 參數),分詞器、詞典與規則表仍是真的
-(category-tree-restart 票 01〜04、類別線票 06、category-middle-class 票 01)。
+(category-tree-restart 票 01〜04、類別線票 06、category-middle-class 票 01、
+category-lemma-followup 票 02)。
 
 執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize
 """
@@ -546,6 +547,157 @@ class TestKeywordAndZoneAxes(unittest.TestCase):
               ["區域移動 › 置く › 置く:カウンター"])])
 
 
+# 測試小樹:目的關鍵詞只比目的欄,與關鍵詞葉、所在葉並收
+GOAL_TREE = [
+    {"詞元": "にする", "子": [
+        {"關鍵詞": ["レベル"]},
+        {"目的關鍵詞": ["裏側守備表示"]},
+        {"目的關鍵詞": ["守備表示"]},
+        {"目的關鍵詞": ["属性", "族"]},
+        {"目的關鍵詞": ["レベル"]},
+        {"關鍵詞": ["攻撃力"], "目的關鍵詞": ["元々"]},
+        {"所在": "場上"},
+        {}]},
+]
+
+
+class TestGoalKeywords(unittest.TestCase):
+    """category-lemma-followup 票 02:葉的「目的關鍵詞」條件只比框架的目的欄(子字串命中任一),
+    與關鍵詞(對象→主語→主題)各自獨立;命中的關鍵詞葉與目的關鍵詞葉全收、任一命中就不取預設葉,
+    帶所在條件的葉照樣並收;葉名以「→」接字面,多個以 / 連寫。"""
+
+    def test_goal_keyword_reads_goal_column_only(self):
+        """對象寫了 裏側守備表示、目的是 攻撃表示:目的關鍵詞葉不中,落預設葉。"""
+        self.assertEqual(
+            classify("①：裏側守備表示のモンスターを攻撃表示にする。", tree=GOAL_TREE),
+            [("にする", "已歸", ["にする"], "にする", None, None, ["にする"])])
+
+    def test_goal_hits_several_leaves(self):
+        """裏側守備表示 同時中 →裏側守備表示 與 →守備表示;預設葉不收。"""
+        self.assertEqual(
+            classify("①：このカードを裏側守備表示にする。", tree=GOAL_TREE),
+            [("にする", "已歸", ["にする→裏側守備表示", "にする→守備表示"], "にする", None, None,
+              ["にする › にする→裏側守備表示", "にする › にする→守備表示"])])
+
+    def test_keyword_and_goal_keyword_leaves_both_taken(self):
+        """對象與目的都有 レベル:にする:レベル 與 にする→レベル 都帶。"""
+        self.assertEqual(
+            classify("①：そのモンスターのレベルを宣言したレベルにする。", tree=GOAL_TREE),
+            [("にする", "已歸", ["にする:レベル", "にする→レベル"], "にする", None, None,
+              ["にする › にする:レベル", "にする › にする→レベル"])])
+
+    def test_goal_keyword_leaf_paired_with_place_leaf(self):
+        """相手フィールドのモンスター を蓋伏:目的關鍵詞葉與所在葉兩軸並收。"""
+        self.assertEqual(
+            classify("①：相手フィールドのモンスター１体を裏側守備表示にする。", tree=GOAL_TREE),
+            [("にする", "已歸", ["にする→裏側守備表示", "にする→守備表示", "にする@フィールド"],
+              "にする", None, None,
+              ["にする › にする→裏側守備表示", "にする › にする→守備表示",
+               "にする › にする@フィールド"])])
+
+    def test_several_goal_keywords_join_with_slash(self):
+        self.assertEqual(
+            classify("①：このカードは機械族になる。", tree=GOAL_TREE),
+            [("にする", "已歸", ["にする→属性/族"], "にする", None, None,
+              ["にする › にする→属性/族"])])
+
+    def test_keyword_and_goal_keyword_on_one_leaf_both_required(self):
+        """一葉同時宣告關鍵詞與目的關鍵詞:葉名 にする:攻撃力→元々,兩者都中才收。"""
+        self.assertEqual(
+            classify("①：そのモンスターの攻撃力を元々の攻撃力にする。", tree=GOAL_TREE),
+            [("にする", "已歸", ["にする:攻撃力→元々"], "にする", None, None,
+              ["にする › にする:攻撃力→元々"])])
+        self.assertEqual(
+            classify("①：そのモンスターは元々の攻撃力になる。", tree=GOAL_TREE),
+            [("にする", "已歸", ["にする"], "にする", None, None, ["にする"])])
+
+
+class TestLemmaFollowupRealTree(unittest.TestCase):
+    """category-lemma-followup 票 01〜04 的真樹:直接攻撃 在 戰鬥/限制 各一節點;にする 依目的
+    分出表示形式六葉、→属性/→族(規則改寫)、→レベル(數值 › レベル);ダメージ 與 LP 各一葉。
+    →レベル 的兩個句型見 TestMiddleClassRealTree.test_level_complements_land_on_nisuru,
+    半分になる/０になる 的 ダメージ 葉見 TestDraftTree、TestMajorByLeaf。"""
+
+    def test_direct_attack_possible_is_battle(self):
+        self.assertEqual(
+            classify("①：このカードは直接攻撃できる。"),
+            [("直接攻撃", "已歸", ["直接攻撃"], "戰鬥", None, None, ["戰鬥 › 直接攻撃"])])
+
+    def test_direct_attack_cannot_is_restriction(self):
+        self.assertEqual(
+            classify("①：このカードは直接攻撃できない。"),
+            [("直接攻撃", "已歸", ["直接攻撃(限制)"], "限制", None, None,
+              ["限制 › 直接攻撃(限制)"])])
+
+    def test_attack_becomes_direct_attack_keeps_its_node(self):
+        self.assertEqual(
+            classify("①：相手の攻撃は自分への直接攻撃になる。"),
+            [("直接攻撃にする", "已歸", ["直接攻撃にする"], "戰鬥", None, None,
+              ["戰鬥 › 直接攻撃にする"])])
+
+    def test_face_down_defense_takes_two_battle_position_leaves(self):
+        self.assertEqual(
+            classify("①：このカードを裏側守備表示にする。"),
+            [("にする", "已歸", ["にする→裏側守備表示", "にする→守備表示"], "表示形式", None, None,
+              ["表示形式 › にする › にする→裏側守備表示", "表示形式 › にする › にする→守備表示"])])
+
+    def test_attack_position(self):
+        self.assertEqual(
+            classify("①：そのモンスターを攻撃表示にする。"),
+            [("にする", "已歸", ["にする→攻撃表示"], "表示形式", None, None,
+              ["表示形式 › にする › にする→攻撃表示"])])
+
+    def test_either_position_takes_both_sides(self):
+        self.assertEqual(
+            classify("①：そのモンスターを表側攻撃表示または表側守備表示にする。"),
+            [("にする", "已歸", ["にする→表側守備表示", "にする→表側攻撃表示", "にする→守備表示",
+                                  "にする→攻撃表示"], "表示形式", None, None,
+              ["表示形式 › にする › にする→表側守備表示", "表示形式 › にする › にする→表側攻撃表示",
+               "表示形式 › にする › にする→守備表示", "表示形式 › にする › にする→攻撃表示"])])
+
+    def test_attribute_goal(self):
+        for text in ("①：このカードは闇属性になる。", "①：そのモンスターは宣言した属性になる。"):
+            self.assertEqual(
+                classify(text),
+                [("にする", "已歸", ["にする→属性"], "規則改寫", None, None,
+                  ["規則改寫 › にする › にする→属性"])])
+
+    def test_race_goal(self):
+        self.assertEqual(
+            classify("①：このカードは機械族になる。"),
+            [("にする", "已歸", ["にする→族"], "規則改寫", None, None,
+              ["規則改寫 › にする › にする→族"])])
+
+    def test_race_and_attribute_goal_takes_both(self):
+        self.assertEqual(
+            classify("①：そのモンスターは宣言した種族・属性になる。"),
+            [("にする", "已歸", ["にする→属性", "にする→族"], "規則改寫", None, None,
+              ["規則改寫 › にする › にする→属性", "規則改寫 › にする › にする→族"])])
+
+    def test_other_goal_values_stay_on_default_leaf(self):
+        """エンドフェイズ 這類其餘目的值不開葉,仍落 にする 預設葉;攻撃力を０ 照舊。"""
+        self.assertEqual(
+            classify("①：このターンのエンドフェイズになる。"),
+            [("にする", "已歸", ["にする"], "數值", None, None, ["數值 › にする"])])
+        self.assertEqual(
+            classify("①：そのモンスターの攻撃力を０にする。"),
+            [("にする", "已歸", ["にする:攻撃力"], "數值", None, None,
+              ["數值 › 攻撃力 › にする:攻撃力"])])
+
+    def test_halve_lp_takes_lp_leaf_only(self):
+        self.assertEqual(
+            classify("①：相手のLPを半分にする。"),
+            [("半分にする", "已歸", ["半分にする:LP"], "LP・ダメージ", None, None,
+              ["LP・ダメージ › LP › 半分にする:LP"])])
+
+    def test_lp_becomes_value_is_lp_middle_class(self):
+        self.assertEqual(
+            classify("①：相手のLPは４０００になる。"),
+            [("にする", "已歸", ["にする:LP"], "LP・ダメージ", None, None,
+              ["LP・ダメージ › LP › にする:LP"])])
+
+
+
 class TestDraftTree(unittest.TestCase):
     """票 06 重起草案的真樹(待站主裁定):にする/アップ 系(2026-10-27 起 になる 併入 にする)的
     關鍵詞葉與大類、非移動類的所在/玩家葉、否定葉帶所在。"""
@@ -561,11 +713,11 @@ class TestDraftTree(unittest.TestCase):
               ["數值 › レベル › アップ:レベル"])])
 
     def test_naru_family_keywords_pick_major(self):
-        """半分にする:ダメージ/LP 歸 LP・ダメージ、にする:レベル 歸 數值。"""
+        """半分にする:ダメージ 歸 LP・ダメージ、にする:レベル 歸 數值。"""
         self.assertEqual(
             classify("①：その戦闘で発生する相手への戦闘ダメージは半分になる。"),
-            [("半分にする", "已歸", ["半分にする:ダメージ/LP"], "LP・ダメージ", None, None,
-              ["LP・ダメージ › ダメージ › 半分にする:ダメージ/LP"])])
+            [("半分にする", "已歸", ["半分にする:ダメージ"], "LP・ダメージ", None, None,
+              ["LP・ダメージ › ダメージ › 半分にする:ダメージ"])])
         self.assertEqual(
             classify("①：そのモンスターのレベルを４にする。"),
             [("にする", "已歸", ["にする:レベル"], "數值", None, None,
@@ -622,7 +774,7 @@ class TestMajorByLeaf(unittest.TestCase):
     同一詞元的葉可以在不同大類;多葉跨大類時框架的大類取第一葉(樹序)的。"""
 
     def test_same_lemma_leaves_in_three_majors(self):
-        """真樹的 にする:攻撃力/:守備力 沒宣告、取本家 數值;:ダメージ/LP 宣告 LP・ダメージ、
+        """真樹的 にする:攻撃力/:守備力 沒宣告、取本家 數值;:ダメージ 宣告 LP・ダメージ、
         :ドロー/枚数/回数 宣告 規則改寫。"""
         self.assertEqual(
             classify("①：このカードの攻撃力は１００００になる。"),
@@ -636,8 +788,8 @@ class TestMajorByLeaf(unittest.TestCase):
               ["無効 › 無効にする › 無効にする:効果"])])
         self.assertEqual(
             classify("①：その戦闘で発生する自分への戦闘ダメージは０になる。"),
-            [("にする", "已歸", ["にする:ダメージ/LP"], "LP・ダメージ", None, None,
-              ["LP・ダメージ › ダメージ › にする:ダメージ/LP"])])
+            [("にする", "已歸", ["にする:ダメージ"], "LP・ダメージ", None, None,
+              ["LP・ダメージ › ダメージ › にする:ダメージ"])])
         self.assertEqual(
             classify("①：自分の通常のドローは２枚になる。"),
             [("にする", "已歸", ["にする:ドロー/枚数/回数"], "規則改寫", None, None,
@@ -720,22 +872,23 @@ class TestMiddleClassRealTree(unittest.TestCase):
 
     def test_level_complements_land_on_nisuru(self):
         """「宣言したレベルになる」「同じレベルになる」:補語不併(frame-lemma-unify 票 05)後詞元是
-        にする、レベル 在目的欄;主題寫了 レベル 時落 にする:レベル(數值 › レベル),主題沒寫時落
-        にする 的預設葉——關鍵詞要不要讀目的欄交類別線另開票。"""
+        にする、レベル 在目的欄,由目的關鍵詞葉 にする→レベル 收進 數值 › レベル;主題也寫了 レベル
+        時另帶 にする:レベル(命中全收;category-lemma-followup 票 03)。"""
         self.assertEqual(
             classify("①：このカードのレベルはターン終了時まで宣言したレベルになる。"),
-            [("にする", "已歸", ["にする:レベル"], "數值", None, None,
-              ["數值 › レベル › にする:レベル"])])
+            [("にする", "已歸", ["にする:レベル", "にする→レベル"], "數值", None, None,
+              ["數值 › レベル › にする:レベル", "數值 › レベル › にする→レベル"])])
         self.assertEqual(
             classify("①：そのモンスターはターン終了時まで、除外したモンスターと同じレベルになる。"),
-            [("にする", "已歸", ["にする"], "數值", None, None, ["數值 › にする"])])
+            [("にする", "已歸", ["にする→レベル"], "數值", None, None,
+              ["數值 › レベル › にする→レベル"])])
 
     def test_borrowed_damage_leaf_in_damage_middle_class(self):
-        """借到 LP・ダメージ 的 にする:ダメージ/LP 歸 ダメージ 中類;与える 也在同一處。"""
+        """借到 LP・ダメージ 的 にする:ダメージ 歸 ダメージ 中類;与える 也在同一處。"""
         self.assertEqual(
             classify("①：その戦闘で発生する自分への戦闘ダメージは０になる。"),
-            [("にする", "已歸", ["にする:ダメージ/LP"], "LP・ダメージ", None, None,
-              ["LP・ダメージ › ダメージ › にする:ダメージ/LP"])])
+            [("にする", "已歸", ["にする:ダメージ"], "LP・ダメージ", None, None,
+              ["LP・ダメージ › ダメージ › にする:ダメージ"])])
         self.assertEqual(
             classify("①：相手に１０００ダメージを与える。"),
             [("与える", "已歸", ["与える"], "LP・ダメージ", None, "相手",
@@ -906,7 +1059,7 @@ class TestTreeIntegrity(unittest.TestCase):
     def test_middle_class_named_like_lemma_node(self):
         """中類與同大類底下的詞元節點同名(總覽頁會出現兩個同名節點)。"""
         self.assertTreeError([{"大類": "數值", "中類": ["アップ"], "子": [
-            {"詞元": "上げる", "子": [{"中類": "アップ"}]},
+            {"詞元": "ダウン", "子": [{"中類": "アップ"}]},
             {"詞元": "アップ"}]}],
             "大類 數值 的中類 アップ 與詞元節點同名")
 
@@ -940,6 +1093,47 @@ class TestTreeIntegrity(unittest.TestCase):
         self.assertTreeError([{"大類": "數值", "子": [{"詞元": "にする", "子": [
             {"大類": "數值", "子": [{"詞元": "アップ"}]}, {}]}]}],
             "詞元節點 にする 底下只能掛葉")
+
+    def test_goal_keywords_format(self):
+        """目的關鍵詞要是非空字串清單(category-lemma-followup 票 02)。"""
+        for value in ([], "守備表示", [""], [1]):
+            self.assertTreeError([{"詞元": "にする", "子": [{"目的關鍵詞": value}, {}]}],
+                                 "詞元 にする 的葉目的關鍵詞要是非空字串清單")
+
+    def test_goal_and_goal_keywords_on_one_leaf(self):
+        self.assertTreeError([{"詞元": "戻す", "子": [{"目的": "手牌", "目的關鍵詞": ["手札"]}, {}]}],
+                             "詞元 戻す 的葉不能同時宣告 目的 與 目的關鍵詞")
+
+    def test_goal_leaf_and_goal_keyword_leaf_name_clash(self):
+        """目的區域葉 戻す→手札 與目的關鍵詞葉 戻す→手札 撞名,由葉名唯一檢查擋下。"""
+        self.assertTreeError([{"詞元": "戻す", "子": [{"目的": "手牌"}, {"目的關鍵詞": ["手札"]}, {}]}],
+                             "葉名重複:戻す→手札")
+
+    def test_plain_leaf_covering_goal_keyword_leaf(self):
+        """不帶關鍵詞類條件的預設葉寫在目的關鍵詞葉之前會蓋掉它;目的關鍵詞葉之間、與關鍵詞葉
+        之間不互蓋。"""
+        self.assertTreeError([{"詞元": "にする", "子": [{}, {"目的關鍵詞": ["守備表示"]}]}],
+                             "葉 にする→守備表示 被前面的 にする 蓋掉")
+        tree = categories.CategoryTree({"樹": [{"詞元": "にする", "子": [
+            {"目的關鍵詞": ["守備表示"]}, {"目的關鍵詞": ["裏側守備表示"]},
+            {"關鍵詞": ["レベル"]}, {"目的關鍵詞": ["レベル"]}, {}]}]})
+        self.assertEqual(len(tree.leaves), 5)
+
+    def test_lemma_must_be_canonical(self):
+        """詞元節點寫了對照表的輸入端(態歸一前的原詞元、全名):建置失敗並指出正規詞元
+        (category-lemma-followup 票 05)。"""
+        for lemma, canonical in (("戻る", "戻す"), ("無効化", "無効にする"), ("上げる", "アップ"),
+                                 ("アドバンス召喚", "A召喚")):
+            self.assertTreeError([{"詞元": lemma}],
+                                 "詞元節點 %s 不是框架抽取產得出的詞元(正規詞元是 %s)"
+                                 % (lemma, canonical))
+
+    def test_lemma_split_by_complement_rule(self):
+        """「值或屬性 + にする」:補語不併判準會拆成 にする 與目的,樹上不能寫。"""
+        for lemma in ("裏側守備表示にする", "属性にする", "レベルにする", "同じレベルにする",
+                      "数値にする"):
+            self.assertTreeError([{"詞元": lemma}],
+                                 "詞元節點 %s 的補語是值或屬性,框架抽取不併入詞元" % lemma)
 
     def test_old_object_key_is_rejected(self):
         """葉條件鍵「對象」已改名「關鍵詞」。"""

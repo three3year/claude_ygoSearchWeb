@@ -10,7 +10,7 @@
     middles.json       中類(category-middle-class):所屬大類、葉數、框架數、卡數、收的葉;
                        展開看每葉的詞元與計數
     leaves.json        每葉(樹序):所屬大類與詞元節點、條件欄逐欄(詞元、極性類、來源、
-                       目的、所在、各區域的玩家、關鍵詞、宣告大類、中類)、框架數(效果位/
+                       目的、所在、各區域的玩家、關鍵詞、目的關鍵詞、宣告大類、中類)、框架數(效果位/
                        代價位分列)、卡數;展開看三條例句
     unplaced.json      未歸類依(詞元, 極性類)聚合:詞元有沒有節點、框架數、卡數;展開看例句
     places.json        非移動類詞元的所在分佈:每個非條件位有所在的非移動類詞元節點(含否定
@@ -52,10 +52,10 @@ OTHER_VALUES = 30           # 關鍵詞表(其他)展開列的欄值數
 # 開葉門檻:葉 ≥10 框才開,與詞元節點同(category-tree-restart 規格)
 LEAF_THRESHOLD = 10
 
-# 關鍵詞分佈的詞元家族(票 06 的裁定項:になる 的關鍵詞→大類對照表、アップ/ダウン 的關鍵詞集)
-NARU_FAMILY = ("になる", "にする", "となる", "倍になる", "倍にする", "半分になる", "半分にする",
-               "同じになる", "同じにする", "数値になる", "同じレベルになる", "レベルになる")
-UP_FAMILY = ("アップ", "ダウン", "上げる", "下げる", "上がる", "下がる")
+# 關鍵詞分佈的詞元家族(票 06 的裁定項:になる 的關鍵詞→大類對照表、アップ/ダウン 的關鍵詞集);
+# 詞元統一(frame-lemma-unify,ADR-0016)後 なる 形併入 する 形、上げる/上がる 併入 アップ
+NARU_FAMILY = ("にする", "とする", "倍にする", "半分にする", "同じにする")
+UP_FAMILY = ("アップ", "ダウン")
 # 各家族聚合用的候選關鍵詞(字面子字串;一個欄值含幾個就算進幾列,與多關鍵詞多葉同理)。
 # アップ 系照規格只看 攻撃力/守備力/レベル/ランク/Pスケール,其餘字面進(其他)——
 # 免得「闇属性モンスターの攻撃力」多算一列 属性
@@ -182,14 +182,16 @@ def leaves_table(tree, per_leaf, names):
         rows.append({
             "cells": [leaf.name, leaf.major, leaf.node,
                       leaf.lemma, leaf.polarity] + zones + [
-                      "/".join(leaf.keywords) or None, leaf.declared, leaf.middle, len(items),
+                      "/".join(leaf.keywords) or None, "/".join(leaf.goal_keywords) or None,
+                      leaf.declared, leaf.middle, len(items),
                       sum(fr["position"] == POS_EFFECT for _, _, fr in items),
                       sum(fr["position"] == POS_COST for _, _, fr in items),
                       len({card for _, card, _ in items})],
             "detail": examples(items, leaf.name, EXAMPLES_PER_LEAF, names)})
     return {"columns": [column("葉", "text"), column("大類", "text"), column("詞元節點", "text"),
                         column("詞元", "text"), column("極性類", "text")] + zone_columns + [
-                        column("關鍵詞", "text"), column("宣告大類", "text"),
+                        column("關鍵詞", "text"), column("目的關鍵詞", "text"),
+                        column("宣告大類", "text"),
                         column("中類", "text"), column("框架數", "number"), column("效果位", "number"),
                         column("代價位", "number"), column("卡數", "number")],
             "key": "葉",

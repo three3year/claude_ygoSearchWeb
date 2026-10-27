@@ -613,6 +613,15 @@ class FrameExtractor:
                 or (None not in words
                     and "".join(words) in action_lemmas.COMPLEMENT_ATTRIBUTES))
 
+    def splits_complement(self, lemma):
+        """「N に/と する」形的詞元,補語會被不併判準拆開(值或屬性:裏側守備表示にする、属性にする)
+        時為真——框架抽取產不出這種詞元(類別樹建置檢查用,category-lemma-followup 票 05)。"""
+        tokens = self.tokenizer.tokenize(lemma)
+        if len(tokens) < 3 or self.word(tokens[-1]) != "する":
+            return False
+        _, _, unfolded = self._fold_complement(tokens, len(tokens) - 1, 0, "する")
+        return unfolded is not None
+
     def _finish(self, tokens, head, verb_at, j, action, polarity, form, passive,
                 fold, clause_start, conditional=False):
         n = len(tokens)

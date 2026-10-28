@@ -1,0 +1,9594 @@
+[
+{
+"card": 67768675,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "特殊召喚←手札",
+"id": "c0001"
+},
+{
+"card": 71108540,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "特殊召喚←手札",
+"id": "c0002"
+},
+{
+"card": 75416738,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "特殊召喚←手札",
+"id": "c0003"
+},
+{
+"card": 84054556,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "特殊召喚←手札",
+"id": "c0004"
+},
+{
+"card": 88996322,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "特殊召喚←手札",
+"id": "c0005"
+},
+{
+"card": 3376703,
+"section": "main",
+"index": "②",
+"order": 6,
+"stratum": "特殊召喚←デッキ",
+"id": "c0006"
+},
+{
+"card": 3734202,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "特殊召喚←デッキ",
+"id": "c0007"
+},
+{
+"card": 23657016,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "特殊召喚←デッキ",
+"id": "c0008"
+},
+{
+"card": 65433790,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "特殊召喚←デッキ",
+"id": "c0009"
+},
+{
+"card": 77522571,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "特殊召喚←デッキ",
+"id": "c0010"
+},
+{
+"card": 1490690,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "特殊召喚←墓地",
+"id": "c0011"
+},
+{
+"card": 20904475,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "特殊召喚←墓地",
+"id": "c0012"
+},
+{
+"card": 40398073,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "特殊召喚←墓地",
+"id": "c0013"
+},
+{
+"card": 74892653,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "特殊召喚←墓地",
+"id": "c0014"
+},
+{
+"card": 82570174,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "特殊召喚←墓地",
+"id": "c0015"
+},
+{
+"card": 28806532,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "特殊召喚←除外",
+"id": "c0016"
+},
+{
+"card": 31398842,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "特殊召喚←除外",
+"id": "c0017"
+},
+{
+"card": 55276522,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "特殊召喚←除外",
+"id": "c0018"
+},
+{
+"card": 75884822,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "特殊召喚←除外",
+"id": "c0019"
+},
+{
+"card": 79509511,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "特殊召喚←除外",
+"id": "c0020"
+},
+{
+"card": 483,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "特殊召喚←EXデッキ",
+"id": "c0021"
+},
+{
+"card": 5267507,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "特殊召喚←EXデッキ",
+"id": "c0022"
+},
+{
+"card": 31086840,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "特殊召喚←EXデッキ",
+"id": "c0023"
+},
+{
+"card": 86976918,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "特殊召喚←EXデッキ",
+"id": "c0024"
+},
+{
+"card": 97219708,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "特殊召喚←EXデッキ",
+"id": "c0025"
+},
+{
+"card": 40493210,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "特殊召喚",
+"id": "c0026"
+},
+{
+"card": 46518210,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "特殊召喚",
+"id": "c0027"
+},
+{
+"card": 52340444,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "特殊召喚",
+"id": "c0028"
+},
+{
+"card": 76524506,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "特殊召喚",
+"id": "c0029"
+},
+{
+"card": 79561872,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "特殊召喚",
+"id": "c0030"
+},
+{
+"card": 16146511,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "召喚",
+"id": "c0031"
+},
+{
+"card": 34419588,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "召喚",
+"id": "c0032"
+},
+{
+"card": 34761062,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "召喚",
+"id": "c0033"
+},
+{
+"card": 35026117,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "召喚",
+"id": "c0034"
+},
+{
+"card": 77406972,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "召喚",
+"id": "c0035"
+},
+{
+"card": 15066114,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "通常召喚",
+"id": "c0036"
+},
+{
+"card": 29303524,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "通常召喚",
+"id": "c0037"
+},
+{
+"card": 75025112,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "通常召喚",
+"id": "c0038"
+},
+{
+"card": 94561645,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "通常召喚",
+"id": "c0039"
+},
+{
+"card": 14556954,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "A召喚",
+"id": "c0040"
+},
+{
+"card": 25280974,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "A召喚",
+"id": "c0041"
+},
+{
+"card": 55423549,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "A召喚",
+"id": "c0042"
+},
+{
+"card": 78665705,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "A召喚",
+"id": "c0043"
+},
+{
+"card": 82243738,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "A召喚",
+"id": "c0044"
+},
+{
+"card": 17725109,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "融合召喚",
+"id": "c0045"
+},
+{
+"card": 21011044,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "融合召喚",
+"id": "c0046"
+},
+{
+"card": 87931906,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "融合召喚",
+"id": "c0047"
+},
+{
+"card": 92003832,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "融合召喚",
+"id": "c0048"
+},
+{
+"card": 95238394,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "融合召喚",
+"id": "c0049"
+},
+{
+"card": 21082832,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "儀式召喚",
+"id": "c0050"
+},
+{
+"card": 22398665,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "儀式召喚",
+"id": "c0051"
+},
+{
+"card": 34767865,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "儀式召喚",
+"id": "c0052"
+},
+{
+"card": 51124303,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "儀式召喚",
+"id": "c0053"
+},
+{
+"card": 73055622,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "儀式召喚",
+"id": "c0054"
+},
+{
+"card": 35089369,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "S召喚",
+"id": "c0055"
+},
+{
+"card": 39964797,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "S召喚",
+"id": "c0056"
+},
+{
+"card": 63410069,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "S召喚",
+"id": "c0057"
+},
+{
+"card": 66500065,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "S召喚",
+"id": "c0058"
+},
+{
+"card": 82224646,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "S召喚",
+"id": "c0059"
+},
+{
+"card": 20285786,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "X召喚",
+"id": "c0060"
+},
+{
+"card": 29087919,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "X召喚",
+"id": "c0061"
+},
+{
+"card": 40493210,
+"section": "main",
+"index": "①",
+"order": 8,
+"stratum": "X召喚",
+"id": "c0062"
+},
+{
+"card": 44161893,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "X召喚",
+"id": "c0063"
+},
+{
+"card": 87804365,
+"section": "main",
+"index": "①",
+"order": 11,
+"stratum": "X召喚",
+"id": "c0064"
+},
+{
+"card": 1295111,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "L召喚",
+"id": "c0065"
+},
+{
+"card": 15447747,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "L召喚",
+"id": "c0066"
+},
+{
+"card": 28534130,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "L召喚",
+"id": "c0067"
+},
+{
+"card": 28827503,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "L召喚",
+"id": "c0068"
+},
+{
+"card": 65351555,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "L召喚",
+"id": "c0069"
+},
+{
+"card": 6992184,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "P召喚",
+"id": "c0070"
+},
+{
+"card": 29432356,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "P召喚",
+"id": "c0071"
+},
+{
+"card": 30998403,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "P召喚",
+"id": "c0072"
+},
+{
+"card": 31531170,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "P召喚",
+"id": "c0073"
+},
+{
+"card": 34884015,
+"section": "main",
+"index": "④",
+"order": 1,
+"stratum": "P召喚",
+"id": "c0074"
+},
+{
+"card": 3758046,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "加える:デッキ→手札",
+"id": "c0075"
+},
+{
+"card": 7293697,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "加える:デッキ→手札",
+"id": "c0076"
+},
+{
+"card": 18378992,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える:デッキ→手札",
+"id": "c0077"
+},
+{
+"card": 84792926,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "加える:デッキ→手札",
+"id": "c0078"
+},
+{
+"card": 85991529,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "加える:デッキ→手札",
+"id": "c0079"
+},
+{
+"card": 20191720,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "加える:墓地→手札",
+"id": "c0080"
+},
+{
+"card": 28827503,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "加える:墓地→手札",
+"id": "c0081"
+},
+{
+"card": 51412776,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える:墓地→手札",
+"id": "c0082"
+},
+{
+"card": 61606250,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "加える:墓地→手札",
+"id": "c0083"
+},
+{
+"card": 90711610,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "加える:墓地→手札",
+"id": "c0084"
+},
+{
+"card": 703897,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "加える:除外→手札",
+"id": "c0085"
+},
+{
+"card": 15306543,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "加える:除外→手札",
+"id": "c0086"
+},
+{
+"card": 47736165,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える:除外→手札",
+"id": "c0087"
+},
+{
+"card": 53194323,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "加える:除外→手札",
+"id": "c0088"
+},
+{
+"card": 63941169,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "加える:除外→手札",
+"id": "c0089"
+},
+{
+"card": 28720123,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える:EXデッキ→手札",
+"id": "c0090"
+},
+{
+"card": 37972500,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "加える:EXデッキ→手札",
+"id": "c0091"
+},
+{
+"card": 66150724,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える:EXデッキ→手札",
+"id": "c0092"
+},
+{
+"card": 92812851,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える:EXデッキ→手札",
+"id": "c0093"
+},
+{
+"card": 93317313,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "加える:EXデッキ→手札",
+"id": "c0094"
+},
+{
+"card": 28651380,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "加える→手札",
+"id": "c0095"
+},
+{
+"card": 40460013,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "加える→手札",
+"id": "c0096"
+},
+{
+"card": 51869363,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "加える→手札",
+"id": "c0097"
+},
+{
+"card": 64280356,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "加える→手札",
+"id": "c0098"
+},
+{
+"card": 70122149,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "加える→手札",
+"id": "c0099"
+},
+{
+"card": 4836680,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "加える→EXデッキ",
+"id": "c0100"
+},
+{
+"card": 24094258,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える→EXデッキ",
+"id": "c0101"
+},
+{
+"card": 38491852,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "加える→EXデッキ",
+"id": "c0102"
+},
+{
+"card": 39943352,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "加える→EXデッキ",
+"id": "c0103"
+},
+{
+"card": 90764871,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "加える→EXデッキ",
+"id": "c0104"
+},
+{
+"card": 2390019,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "加える→デッキ",
+"id": "c0105"
+},
+{
+"card": 16329071,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える→デッキ",
+"id": "c0106"
+},
+{
+"card": 43664494,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "加える→デッキ",
+"id": "c0107"
+},
+{
+"card": 73594093,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "加える→デッキ",
+"id": "c0108"
+},
+{
+"card": 89484053,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "加える→デッキ",
+"id": "c0109"
+},
+{
+"card": 6128460,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "加える",
+"id": "c0110"
+},
+{
+"card": 69327790,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "加える",
+"id": "c0111"
+},
+{
+"card": 84058253,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "加える",
+"id": "c0112"
+},
+{
+"card": 87288189,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "加える",
+"id": "c0113"
+},
+{
+"card": 95697223,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える",
+"id": "c0114"
+},
+{
+"card": 35998832,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "ドロー",
+"id": "c0115"
+},
+{
+"card": 49936169,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "ドロー",
+"id": "c0116"
+},
+{
+"card": 60944809,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "ドロー",
+"id": "c0117"
+},
+{
+"card": 66023650,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "ドロー",
+"id": "c0118"
+},
+{
+"card": 70245411,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "ドロー",
+"id": "c0119"
+},
+{
+"card": 14055212,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "送る:デッキ→墓地",
+"id": "c0120"
+},
+{
+"card": 26631975,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "送る:デッキ→墓地",
+"id": "c0121"
+},
+{
+"card": 28139785,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "送る:デッキ→墓地",
+"id": "c0122"
+},
+{
+"card": 44649322,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "送る:デッキ→墓地",
+"id": "c0123"
+},
+{
+"card": 60242223,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "送る:デッキ→墓地",
+"id": "c0124"
+},
+{
+"card": 17540705,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "送る:手札→墓地",
+"id": "c0125"
+},
+{
+"card": 29143457,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "送る:手札→墓地",
+"id": "c0126"
+},
+{
+"card": 31322640,
+"section": "main",
+"index": "③",
+"order": 0,
+"stratum": "送る:手札→墓地",
+"id": "c0127"
+},
+{
+"card": 48705086,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "送る:手札→墓地",
+"id": "c0128"
+},
+{
+"card": 70645913,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "送る:手札→墓地",
+"id": "c0129"
+},
+{
+"card": 17255673,
+"section": "main",
+"index": "③",
+"order": 0,
+"stratum": "送る:フィールド→墓地",
+"id": "c0130"
+},
+{
+"card": 30603688,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "送る:フィールド→墓地",
+"id": "c0131"
+},
+{
+"card": 40740224,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "送る:フィールド→墓地",
+"id": "c0132"
+},
+{
+"card": 64178424,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "送る:フィールド→墓地",
+"id": "c0133"
+},
+{
+"card": 67523044,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "送る:フィールド→墓地",
+"id": "c0134"
+},
+{
+"card": 637216,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "送る:EXデッキ→墓地",
+"id": "c0135"
+},
+{
+"card": 14529511,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "送る:EXデッキ→墓地",
+"id": "c0136"
+},
+{
+"card": 30271097,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "送る:EXデッキ→墓地",
+"id": "c0137"
+},
+{
+"card": 54701958,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "送る:EXデッキ→墓地",
+"id": "c0138"
+},
+{
+"card": 72043279,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "送る:EXデッキ→墓地",
+"id": "c0139"
+},
+{
+"card": 13923256,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "送る",
+"id": "c0140"
+},
+{
+"card": 34568783,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "送る",
+"id": "c0141"
+},
+{
+"card": 35371948,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "送る",
+"id": "c0142"
+},
+{
+"card": 45005708,
+"section": "main",
+"index": "②",
+"order": 7,
+"stratum": "送る",
+"id": "c0143"
+},
+{
+"card": 76403456,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "送る",
+"id": "c0144"
+},
+{
+"card": 601193,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "捨てる",
+"id": "c0145"
+},
+{
+"card": 2144946,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "捨てる",
+"id": "c0146"
+},
+{
+"card": 14386013,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "捨てる",
+"id": "c0147"
+},
+{
+"card": 81519836,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "捨てる",
+"id": "c0148"
+},
+{
+"card": 85123771,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "捨てる",
+"id": "c0149"
+},
+{
+"card": 17954937,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "リリース",
+"id": "c0150"
+},
+{
+"card": 18514525,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "リリース",
+"id": "c0151"
+},
+{
+"card": 36849933,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "リリース",
+"id": "c0152"
+},
+{
+"card": 84693918,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "リリース",
+"id": "c0153"
+},
+{
+"card": 96345184,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "リリース",
+"id": "c0154"
+},
+{
+"card": 49415281,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "除外←墓地",
+"id": "c0155"
+},
+{
+"card": 73694478,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "除外←墓地",
+"id": "c0156"
+},
+{
+"card": 81078880,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "除外←墓地",
+"id": "c0157"
+},
+{
+"card": 90452877,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "除外←墓地",
+"id": "c0158"
+},
+{
+"card": 97036149,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "除外←墓地",
+"id": "c0159"
+},
+{
+"card": 9070454,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "除外←手札",
+"id": "c0160"
+},
+{
+"card": 25861589,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "除外←手札",
+"id": "c0161"
+},
+{
+"card": 26523337,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "除外←手札",
+"id": "c0162"
+},
+{
+"card": 31440046,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "除外←手札",
+"id": "c0163"
+},
+{
+"card": 95083785,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "除外←手札",
+"id": "c0164"
+},
+{
+"card": 58820923,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "除外←デッキ",
+"id": "c0165"
+},
+{
+"card": 72283691,
+"section": "main",
+"index": "0",
+"order": 0,
+"stratum": "除外←デッキ",
+"id": "c0166"
+},
+{
+"card": 80101899,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "除外←デッキ",
+"id": "c0167"
+},
+{
+"card": 86060749,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "除外←デッキ",
+"id": "c0168"
+},
+{
+"card": 92644052,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "除外←デッキ",
+"id": "c0169"
+},
+{
+"card": 220414,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "除外←フィールド",
+"id": "c0170"
+},
+{
+"card": 2390019,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "除外←フィールド",
+"id": "c0171"
+},
+{
+"card": 31061682,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "除外←フィールド",
+"id": "c0172"
+},
+{
+"card": 39185163,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "除外←フィールド",
+"id": "c0173"
+},
+{
+"card": 82616239,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "除外←フィールド",
+"id": "c0174"
+},
+{
+"card": 35561352,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "除外←EXデッキ",
+"id": "c0175"
+},
+{
+"card": 50179591,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "除外←EXデッキ",
+"id": "c0176"
+},
+{
+"card": 62002838,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "除外←EXデッキ",
+"id": "c0177"
+},
+{
+"card": 65914127,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "除外←EXデッキ",
+"id": "c0178"
+},
+{
+"card": 69120785,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "除外←EXデッキ",
+"id": "c0179"
+},
+{
+"card": 5439384,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "除外",
+"id": "c0180"
+},
+{
+"card": 45148985,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "除外",
+"id": "c0181"
+},
+{
+"card": 67886895,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "除外",
+"id": "c0182"
+},
+{
+"card": 72648810,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "除外",
+"id": "c0183"
+},
+{
+"card": 99092624,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "除外",
+"id": "c0184"
+},
+{
+"card": 340002,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "戻す:フィールド→手札",
+"id": "c0185"
+},
+{
+"card": 4582942,
+"section": "main",
+"index": "①",
+"order": 9,
+"stratum": "戻す:フィールド→手札",
+"id": "c0186"
+},
+{
+"card": 12266229,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "戻す:フィールド→手札",
+"id": "c0187"
+},
+{
+"card": 54880296,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "戻す:フィールド→手札",
+"id": "c0188"
+},
+{
+"card": 76660178,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "戻す:フィールド→手札",
+"id": "c0189"
+},
+{
+"card": 6494106,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "戻す→手札",
+"id": "c0190"
+},
+{
+"card": 53270092,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "戻す→手札",
+"id": "c0191"
+},
+{
+"card": 56585883,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "戻す→手札",
+"id": "c0192"
+},
+{
+"card": 60823690,
+"section": "main",
+"index": "④",
+"order": 2,
+"stratum": "戻す→手札",
+"id": "c0193"
+},
+{
+"card": 76075139,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "戻す→手札",
+"id": "c0194"
+},
+{
+"card": 37961969,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "戻す:フィールド→デッキ",
+"id": "c0195"
+},
+{
+"card": 53936268,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "戻す:フィールド→デッキ",
+"id": "c0196"
+},
+{
+"card": 61613388,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "戻す:フィールド→デッキ",
+"id": "c0197"
+},
+{
+"card": 65664792,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "戻す:フィールド→デッキ",
+"id": "c0198"
+},
+{
+"card": 70551291,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "戻す:フィールド→デッキ",
+"id": "c0199"
+},
+{
+"card": 6958567,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "戻す:墓地→デッキ",
+"id": "c0200"
+},
+{
+"card": 15447747,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "戻す:墓地→デッキ",
+"id": "c0201"
+},
+{
+"card": 42759961,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "戻す:墓地→デッキ",
+"id": "c0202"
+},
+{
+"card": 66518509,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "戻す:墓地→デッキ",
+"id": "c0203"
+},
+{
+"card": 67752972,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "戻す:墓地→デッキ",
+"id": "c0204"
+},
+{
+"card": 13364097,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "戻す:除外→デッキ",
+"id": "c0205"
+},
+{
+"card": 14972952,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "戻す:除外→デッキ",
+"id": "c0206"
+},
+{
+"card": 19942835,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "戻す:除外→デッキ",
+"id": "c0207"
+},
+{
+"card": 26548709,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "戻す:除外→デッキ",
+"id": "c0208"
+},
+{
+"card": 99161253,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "戻す:除外→デッキ",
+"id": "c0209"
+},
+{
+"card": 14386013,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "戻す→デッキ",
+"id": "c0210"
+},
+{
+"card": 53989821,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "戻す→デッキ",
+"id": "c0211"
+},
+{
+"card": 73898890,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "戻す→デッキ",
+"id": "c0212"
+},
+{
+"card": 74191528,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "戻す→デッキ",
+"id": "c0213"
+},
+{
+"card": 74879881,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "戻す→デッキ",
+"id": "c0214"
+},
+{
+"card": 10286023,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "戻す→EXデッキ",
+"id": "c0215"
+},
+{
+"card": 16169772,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "戻す→EXデッキ",
+"id": "c0216"
+},
+{
+"card": 16780318,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "戻す→EXデッキ",
+"id": "c0217"
+},
+{
+"card": 37115973,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "戻す→EXデッキ",
+"id": "c0218"
+},
+{
+"card": 56588755,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "戻す→EXデッキ",
+"id": "c0219"
+},
+{
+"card": 28039390,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "戻す→墓地",
+"id": "c0220"
+},
+{
+"card": 33334269,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "戻す→墓地",
+"id": "c0221"
+},
+{
+"card": 61965407,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "戻す→墓地",
+"id": "c0222"
+},
+{
+"card": 74586817,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "戻す→墓地",
+"id": "c0223"
+},
+{
+"card": 85698115,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "戻す→墓地",
+"id": "c0224"
+},
+{
+"card": 43839002,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "戻す",
+"id": "c0225"
+},
+{
+"card": 60238002,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "戻す",
+"id": "c0226"
+},
+{
+"card": 63013339,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "戻す",
+"id": "c0227"
+},
+{
+"card": 90519313,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "戻す",
+"id": "c0228"
+},
+{
+"card": 94730900,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "戻す",
+"id": "c0229"
+},
+{
+"card": 17465972,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "置く:カウンター",
+"id": "c0230"
+},
+{
+"card": 56111151,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "置く:カウンター",
+"id": "c0231"
+},
+{
+"card": 66104644,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "置く:カウンター",
+"id": "c0232"
+},
+{
+"card": 71459017,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "置く:カウンター",
+"id": "c0233"
+},
+{
+"card": 92171126,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "置く:カウンター",
+"id": "c0234"
+},
+{
+"card": 31987203,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "置く→Pゾーン",
+"id": "c0235"
+},
+{
+"card": 62480168,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "置く→Pゾーン",
+"id": "c0236"
+},
+{
+"card": 64881644,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "置く→Pゾーン",
+"id": "c0237"
+},
+{
+"card": 82112494,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "置く→Pゾーン",
+"id": "c0238"
+},
+{
+"card": 87468732,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "置く→Pゾーン",
+"id": "c0239"
+},
+{
+"card": 8571567,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "置く→フィールド",
+"id": "c0240"
+},
+{
+"card": 27260347,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "置く→フィールド",
+"id": "c0241"
+},
+{
+"card": 61264008,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "置く→フィールド",
+"id": "c0242"
+},
+{
+"card": 90241276,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "置く→フィールド",
+"id": "c0243"
+},
+{
+"card": 98684220,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "置く→フィールド",
+"id": "c0244"
+},
+{
+"card": 36187051,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "置く→デッキ",
+"id": "c0245"
+},
+{
+"card": 62200831,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "置く→デッキ",
+"id": "c0246"
+},
+{
+"card": 64726269,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "置く→デッキ",
+"id": "c0247"
+},
+{
+"card": 71108540,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "置く→デッキ",
+"id": "c0248"
+},
+{
+"card": 82434071,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "置く→デッキ",
+"id": "c0249"
+},
+{
+"card": 25964547,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "置く",
+"id": "c0250"
+},
+{
+"card": 27096833,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "置く",
+"id": "c0251"
+},
+{
+"card": 50696588,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "置く",
+"id": "c0252"
+},
+{
+"card": 61264008,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "置く",
+"id": "c0253"
+},
+{
+"card": 68250822,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "置く",
+"id": "c0254"
+},
+{
+"card": 7480763,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "セット←デッキ",
+"id": "c0255"
+},
+{
+"card": 42228966,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "セット←デッキ",
+"id": "c0256"
+},
+{
+"card": 50486289,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "セット←デッキ",
+"id": "c0257"
+},
+{
+"card": 60946049,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "セット←デッキ",
+"id": "c0258"
+},
+{
+"card": 70389815,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "セット←デッキ",
+"id": "c0259"
+},
+{
+"card": 1225009,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "セット←手札",
+"id": "c0260"
+},
+{
+"card": 34267821,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "セット←手札",
+"id": "c0261"
+},
+{
+"card": 50838440,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "セット←手札",
+"id": "c0262"
+},
+{
+"card": 65289956,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "セット←手札",
+"id": "c0263"
+},
+{
+"card": 82738277,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "セット←手札",
+"id": "c0264"
+},
+{
+"card": 24662957,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "セット←墓地",
+"id": "c0265"
+},
+{
+"card": 24878656,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "セット←墓地",
+"id": "c0266"
+},
+{
+"card": 53770666,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "セット←墓地",
+"id": "c0267"
+},
+{
+"card": 81684048,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "セット←墓地",
+"id": "c0268"
+},
+{
+"card": 95454996,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "セット←墓地",
+"id": "c0269"
+},
+{
+"card": 494922,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "セット",
+"id": "c0270"
+},
+{
+"card": 46497537,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "セット",
+"id": "c0271"
+},
+{
+"card": 50237654,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "セット",
+"id": "c0272"
+},
+{
+"card": 65330383,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "セット",
+"id": "c0273"
+},
+{
+"card": 65357623,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "セット",
+"id": "c0274"
+},
+{
+"card": 2542230,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "装備",
+"id": "c0275"
+},
+{
+"card": 19190082,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "装備",
+"id": "c0276"
+},
+{
+"card": 38960450,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "装備",
+"id": "c0277"
+},
+{
+"card": 57541158,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "装備",
+"id": "c0278"
+},
+{
+"card": 65114115,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "装備",
+"id": "c0279"
+},
+{
+"card": 4611341,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "移動",
+"id": "c0280"
+},
+{
+"card": 65285459,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "移動",
+"id": "c0281"
+},
+{
+"card": 87571563,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "移動",
+"id": "c0282"
+},
+{
+"card": 92204263,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "移動",
+"id": "c0283"
+},
+{
+"card": 93394164,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "移動",
+"id": "c0284"
+},
+{
+"card": 24027078,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "破壊:魔法カード/罠カード",
+"id": "c0285"
+},
+{
+"card": 36953371,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "破壊:魔法カード/罠カード",
+"id": "c0286"
+},
+{
+"card": 65236257,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "破壊:魔法カード/罠カード",
+"id": "c0287"
+},
+{
+"card": 79868386,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "破壊:魔法カード/罠カード",
+"id": "c0288"
+},
+{
+"card": 82697428,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "破壊:魔法カード/罠カード",
+"id": "c0289"
+},
+{
+"card": 17016362,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "破壊:モンスター",
+"id": "c0290"
+},
+{
+"card": 44146295,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "破壊:モンスター",
+"id": "c0291"
+},
+{
+"card": 44822037,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "破壊:モンスター",
+"id": "c0292"
+},
+{
+"card": 69436288,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "破壊:モンスター",
+"id": "c0293"
+},
+{
+"card": 96592102,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "破壊:モンスター",
+"id": "c0294"
+},
+{
+"card": 61399402,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "破壊@相手フィールド",
+"id": "c0295"
+},
+{
+"card": 71222868,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "破壊@相手フィールド",
+"id": "c0296"
+},
+{
+"card": 87804747,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "破壊@相手フィールド",
+"id": "c0297"
+},
+{
+"card": 91434208,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "破壊@相手フィールド",
+"id": "c0298"
+},
+{
+"card": 93332803,
+"section": "main",
+"index": "④",
+"order": 3,
+"stratum": "破壊@相手フィールド",
+"id": "c0299"
+},
+{
+"card": 675319,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "破壊@自分フィールド",
+"id": "c0300"
+},
+{
+"card": 18165869,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "破壊@自分フィールド",
+"id": "c0301"
+},
+{
+"card": 24215921,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "破壊@自分フィールド",
+"id": "c0302"
+},
+{
+"card": 38007649,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "破壊@自分フィールド",
+"id": "c0303"
+},
+{
+"card": 74605254,
+"section": "pendulum",
+"index": "②",
+"order": 2,
+"stratum": "破壊@自分フィールド",
+"id": "c0304"
+},
+{
+"card": 5821478,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "破壊@お互いのフィールド",
+"id": "c0305"
+},
+{
+"card": 36368606,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "破壊@お互いのフィールド",
+"id": "c0306"
+},
+{
+"card": 47132793,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "破壊@お互いのフィールド",
+"id": "c0307"
+},
+{
+"card": 67745632,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "破壊@お互いのフィールド",
+"id": "c0308"
+},
+{
+"card": 99414629,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "破壊@お互いのフィールド",
+"id": "c0309"
+},
+{
+"card": 3064425,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "破壊@フィールド",
+"id": "c0310"
+},
+{
+"card": 42307760,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "破壊@フィールド",
+"id": "c0311"
+},
+{
+"card": 43940008,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "破壊@フィールド",
+"id": "c0312"
+},
+{
+"card": 80758812,
+"section": "main",
+"index": "①",
+"order": 11,
+"stratum": "破壊@フィールド",
+"id": "c0313"
+},
+{
+"card": 85687952,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "破壊@フィールド",
+"id": "c0314"
+},
+{
+"card": 9070454,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "破壊@自分手札",
+"id": "c0315"
+},
+{
+"card": 31010081,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "破壊@自分手札",
+"id": "c0316"
+},
+{
+"card": 34041788,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "破壊@自分手札",
+"id": "c0317"
+},
+{
+"card": 43871165,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "破壊@自分手札",
+"id": "c0318"
+},
+{
+"card": 65305978,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "破壊@自分手札",
+"id": "c0319"
+},
+{
+"card": 17151328,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "破壊@手札",
+"id": "c0320"
+},
+{
+"card": 24175232,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "破壊@手札",
+"id": "c0321"
+},
+{
+"card": 25397880,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "破壊@手札",
+"id": "c0322"
+},
+{
+"card": 77456448,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "破壊@手札",
+"id": "c0323"
+},
+{
+"card": 98999181,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "破壊@手札",
+"id": "c0324"
+},
+{
+"card": 2254222,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "破壊@自分Pゾーン",
+"id": "c0325"
+},
+{
+"card": 3594985,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "破壊@自分Pゾーン",
+"id": "c0326"
+},
+{
+"card": 46999905,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "破壊@自分Pゾーン",
+"id": "c0327"
+},
+{
+"card": 96227613,
+"section": "pendulum",
+"index": "②",
+"order": 2,
+"stratum": "破壊@自分Pゾーン",
+"id": "c0328"
+},
+{
+"card": 96802306,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "破壊@自分Pゾーン",
+"id": "c0329"
+},
+{
+"card": 17427333,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "破壊",
+"id": "c0330"
+},
+{
+"card": 33837653,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "破壊",
+"id": "c0331"
+},
+{
+"card": 42776855,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "破壊",
+"id": "c0332"
+},
+{
+"card": 47128571,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "破壊",
+"id": "c0333"
+},
+{
+"card": 89824842,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "破壊",
+"id": "c0334"
+},
+{
+"card": 17473466,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "無効にする:効果",
+"id": "c0335"
+},
+{
+"card": 17954937,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "無効にする:効果",
+"id": "c0336"
+},
+{
+"card": 69975751,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "無効にする:効果",
+"id": "c0337"
+},
+{
+"card": 71095768,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "無効にする:効果",
+"id": "c0338"
+},
+{
+"card": 75922381,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "無効にする:効果",
+"id": "c0339"
+},
+{
+"card": 33026283,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "無効にする:発動",
+"id": "c0340"
+},
+{
+"card": 34298391,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "無効にする:発動",
+"id": "c0341"
+},
+{
+"card": 40139997,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "無効にする:発動",
+"id": "c0342"
+},
+{
+"card": 42444868,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "無効にする:発動",
+"id": "c0343"
+},
+{
+"card": 53701259,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "無効にする:発動",
+"id": "c0344"
+},
+{
+"card": 20590784,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "無効にする:攻撃",
+"id": "c0345"
+},
+{
+"card": 27503418,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "無効にする:攻撃",
+"id": "c0346"
+},
+{
+"card": 63180841,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "無効にする:攻撃",
+"id": "c0347"
+},
+{
+"card": 67865534,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "無効にする:攻撃",
+"id": "c0348"
+},
+{
+"card": 82489470,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "無効にする:攻撃",
+"id": "c0349"
+},
+{
+"card": 41546,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "無効にする:召喚",
+"id": "c0350"
+},
+{
+"card": 7987191,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "無効にする:召喚",
+"id": "c0351"
+},
+{
+"card": 14152693,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "無効にする:召喚",
+"id": "c0352"
+},
+{
+"card": 73941492,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "無効にする:召喚",
+"id": "c0353"
+},
+{
+"card": 91449532,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "無効にする:召喚",
+"id": "c0354"
+},
+{
+"card": 22070401,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "無効にする@相手フィールド",
+"id": "c0355"
+},
+{
+"card": 34541940,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "無効にする@相手フィールド",
+"id": "c0356"
+},
+{
+"card": 50147815,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "無効にする@相手フィールド",
+"id": "c0357"
+},
+{
+"card": 57420265,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "無効にする@相手フィールド",
+"id": "c0358"
+},
+{
+"card": 58270977,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "無効にする@相手フィールド",
+"id": "c0359"
+},
+{
+"card": 38988538,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "無効にする@フィールド",
+"id": "c0360"
+},
+{
+"card": 47021196,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "無効にする@フィールド",
+"id": "c0361"
+},
+{
+"card": 69680031,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "無効にする@フィールド",
+"id": "c0362"
+},
+{
+"card": 98287529,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "無効にする@フィールド",
+"id": "c0363"
+},
+{
+"card": 98630720,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "無効にする@フィールド",
+"id": "c0364"
+},
+{
+"card": 3167439,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "無効にする",
+"id": "c0365"
+},
+{
+"card": 10300821,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "無効にする",
+"id": "c0366"
+},
+{
+"card": 14309486,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "無効にする",
+"id": "c0367"
+},
+{
+"card": 64233143,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "無効にする",
+"id": "c0368"
+},
+{
+"card": 74892653,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "無効にする",
+"id": "c0369"
+},
+{
+"card": 64767757,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "アップ:攻撃力",
+"id": "c0370"
+},
+{
+"card": 69757518,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "アップ:攻撃力",
+"id": "c0371"
+},
+{
+"card": 74665150,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "アップ:攻撃力",
+"id": "c0372"
+},
+{
+"card": 83747250,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "アップ:攻撃力",
+"id": "c0373"
+},
+{
+"card": 98881931,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "アップ:攻撃力",
+"id": "c0374"
+},
+{
+"card": 12023931,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "アップ:守備力",
+"id": "c0375"
+},
+{
+"card": 15464375,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "アップ:守備力",
+"id": "c0376"
+},
+{
+"card": 19301729,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "アップ:守備力",
+"id": "c0377"
+},
+{
+"card": 55688914,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "アップ:守備力",
+"id": "c0378"
+},
+{
+"card": 94693857,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "アップ:守備力",
+"id": "c0379"
+},
+{
+"card": 5641251,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "アップ:レベル",
+"id": "c0380"
+},
+{
+"card": 6764709,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "アップ:レベル",
+"id": "c0381"
+},
+{
+"card": 29157292,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "アップ:レベル",
+"id": "c0382"
+},
+{
+"card": 37675907,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "アップ:レベル",
+"id": "c0383"
+},
+{
+"card": 66322203,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "アップ:レベル",
+"id": "c0384"
+},
+{
+"card": 21293424,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "アップ",
+"id": "c0385"
+},
+{
+"card": 32787239,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "アップ",
+"id": "c0386"
+},
+{
+"card": 74387963,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "アップ",
+"id": "c0387"
+},
+{
+"card": 82134632,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "アップ",
+"id": "c0388"
+},
+{
+"card": 84046493,
+"section": "pendulum",
+"index": "①",
+"order": 3,
+"stratum": "アップ",
+"id": "c0389"
+},
+{
+"card": 8820526,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "ダウン:攻撃力",
+"id": "c0390"
+},
+{
+"card": 21770839,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "ダウン:攻撃力",
+"id": "c0391"
+},
+{
+"card": 34976176,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "ダウン:攻撃力",
+"id": "c0392"
+},
+{
+"card": 51476410,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "ダウン:攻撃力",
+"id": "c0393"
+},
+{
+"card": 57288064,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "ダウン:攻撃力",
+"id": "c0394"
+},
+{
+"card": 6247535,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "ダウン:守備力",
+"id": "c0395"
+},
+{
+"card": 61397885,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "ダウン:守備力",
+"id": "c0396"
+},
+{
+"card": 84797028,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "ダウン:守備力",
+"id": "c0397"
+},
+{
+"card": 88724332,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "ダウン:守備力",
+"id": "c0398"
+},
+{
+"card": 95040215,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "ダウン:守備力",
+"id": "c0399"
+},
+{
+"card": 25784595,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "ダウン:レベル",
+"id": "c0400"
+},
+{
+"card": 54537489,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "ダウン:レベル",
+"id": "c0401"
+},
+{
+"card": 71386411,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "ダウン:レベル",
+"id": "c0402"
+},
+{
+"card": 79561872,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "ダウン:レベル",
+"id": "c0403"
+},
+{
+"card": 79663524,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "ダウン:レベル",
+"id": "c0404"
+},
+{
+"card": 11808215,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "ダウン",
+"id": "c0405"
+},
+{
+"card": 47558785,
+"section": "pendulum",
+"index": "①",
+"order": 3,
+"stratum": "ダウン",
+"id": "c0406"
+},
+{
+"card": 50608164,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "ダウン",
+"id": "c0407"
+},
+{
+"card": 87468732,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "ダウン",
+"id": "c0408"
+},
+{
+"card": 87481592,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "ダウン",
+"id": "c0409"
+},
+{
+"card": 11439455,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "倍にする:攻撃力",
+"id": "c0410"
+},
+{
+"card": 26773909,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "倍にする:攻撃力",
+"id": "c0411"
+},
+{
+"card": 42230449,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "倍にする:攻撃力",
+"id": "c0412"
+},
+{
+"card": 55496220,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "倍にする:攻撃力",
+"id": "c0413"
+},
+{
+"card": 91831066,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "倍にする:攻撃力",
+"id": "c0414"
+},
+{
+"card": 6990577,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "倍にする:守備力",
+"id": "c0415"
+},
+{
+"card": 14469229,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "倍にする:守備力",
+"id": "c0416"
+},
+{
+"card": 19254117,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "倍にする:守備力",
+"id": "c0417"
+},
+{
+"card": 67249508,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "倍にする:守備力",
+"id": "c0418"
+},
+{
+"card": 67901914,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "倍にする:守備力",
+"id": "c0419"
+},
+{
+"card": 35884610,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "倍にする:ダメージ",
+"id": "c0420"
+},
+{
+"card": 45796834,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "倍にする:ダメージ",
+"id": "c0421"
+},
+{
+"card": 49684352,
+"section": "pendulum",
+"index": "①",
+"order": 4,
+"stratum": "倍にする:ダメージ",
+"id": "c0422"
+},
+{
+"card": 81524756,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "倍にする:ダメージ",
+"id": "c0423"
+},
+{
+"card": 96733134,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "倍にする:ダメージ",
+"id": "c0424"
+},
+{
+"card": 11808215,
+"section": "main",
+"index": "②",
+"order": 8,
+"stratum": "倍にする",
+"id": "c0425"
+},
+{
+"card": 40204620,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "倍にする",
+"id": "c0426"
+},
+{
+"card": 81881839,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "倍にする",
+"id": "c0427"
+},
+{
+"card": 15130912,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "半分にする:攻撃力",
+"id": "c0428"
+},
+{
+"card": 21830679,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "半分にする:攻撃力",
+"id": "c0429"
+},
+{
+"card": 61420130,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "半分にする:攻撃力",
+"id": "c0430"
+},
+{
+"card": 82103466,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "半分にする:攻撃力",
+"id": "c0431"
+},
+{
+"card": 89870349,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "半分にする:攻撃力",
+"id": "c0432"
+},
+{
+"card": 2396042,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "半分にする:守備力",
+"id": "c0433"
+},
+{
+"card": 36956512,
+"section": "main",
+"index": "④",
+"order": 3,
+"stratum": "半分にする:守備力",
+"id": "c0434"
+},
+{
+"card": 50065971,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "半分にする:守備力",
+"id": "c0435"
+},
+{
+"card": 65472618,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "半分にする:守備力",
+"id": "c0436"
+},
+{
+"card": 80611581,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "半分にする:守備力",
+"id": "c0437"
+},
+{
+"card": 41546,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "半分にする:ダメージ",
+"id": "c0438"
+},
+{
+"card": 49652661,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "半分にする:ダメージ",
+"id": "c0439"
+},
+{
+"card": 56574543,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "半分にする:ダメージ",
+"id": "c0440"
+},
+{
+"card": 67508932,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "半分にする:ダメージ",
+"id": "c0441"
+},
+{
+"card": 74069667,
+"section": "pendulum",
+"index": "①",
+"order": 4,
+"stratum": "半分にする:ダメージ",
+"id": "c0442"
+},
+{
+"card": 7733560,
+"section": "main",
+"index": "③",
+"order": 0,
+"stratum": "半分にする:LP",
+"id": "c0443"
+},
+{
+"card": 36708764,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "半分にする:LP",
+"id": "c0444"
+},
+{
+"card": 60643553,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "半分にする:LP",
+"id": "c0445"
+},
+{
+"card": 80896940,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "半分にする:LP",
+"id": "c0446"
+},
+{
+"card": 96661780,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "半分にする:LP",
+"id": "c0447"
+},
+{
+"card": 11808215,
+"section": "main",
+"index": "②",
+"order": 7,
+"stratum": "半分にする",
+"id": "c0448"
+},
+{
+"card": 10000,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "にする:攻撃力",
+"id": "c0449"
+},
+{
+"card": 6022371,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "にする:攻撃力",
+"id": "c0450"
+},
+{
+"card": 24361622,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "にする:攻撃力",
+"id": "c0451"
+},
+{
+"card": 64496451,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "にする:攻撃力",
+"id": "c0452"
+},
+{
+"card": 71442223,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "にする:攻撃力",
+"id": "c0453"
+},
+{
+"card": 14957440,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "にする:守備力",
+"id": "c0454"
+},
+{
+"card": 30037118,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "にする:守備力",
+"id": "c0455"
+},
+{
+"card": 31181711,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "にする:守備力",
+"id": "c0456"
+},
+{
+"card": 52340444,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "にする:守備力",
+"id": "c0457"
+},
+{
+"card": 71101678,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "にする:守備力",
+"id": "c0458"
+},
+{
+"card": 863795,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "にする:レベル",
+"id": "c0459"
+},
+{
+"card": 64327901,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "にする:レベル",
+"id": "c0460"
+},
+{
+"card": 85119159,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "にする:レベル",
+"id": "c0461"
+},
+{
+"card": 90885155,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "にする:レベル",
+"id": "c0462"
+},
+{
+"card": 97682931,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "にする:レベル",
+"id": "c0463"
+},
+{
+"card": 17086528,
+"section": "pendulum",
+"index": "②",
+"order": 0,
+"stratum": "にする:Pスケール",
+"id": "c0464"
+},
+{
+"card": 21364070,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "にする:Pスケール",
+"id": "c0465"
+},
+{
+"card": 56675280,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "にする:Pスケール",
+"id": "c0466"
+},
+{
+"card": 78274190,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "にする:Pスケール",
+"id": "c0467"
+},
+{
+"card": 94415058,
+"section": "pendulum",
+"index": "②",
+"order": 1,
+"stratum": "にする:Pスケール",
+"id": "c0468"
+},
+{
+"card": 16617334,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "にする:ダメージ",
+"id": "c0469"
+},
+{
+"card": 25163979,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "にする:ダメージ",
+"id": "c0470"
+},
+{
+"card": 46724542,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "にする:ダメージ",
+"id": "c0471"
+},
+{
+"card": 71867500,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "にする:ダメージ",
+"id": "c0472"
+},
+{
+"card": 92435533,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "にする:ダメージ",
+"id": "c0473"
+},
+{
+"card": 6387204,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "にする:LP",
+"id": "c0474"
+},
+{
+"card": 45836982,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "にする:LP",
+"id": "c0475"
+},
+{
+"card": 58720904,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "にする:LP",
+"id": "c0476"
+},
+{
+"card": 67616300,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "にする:LP",
+"id": "c0477"
+},
+{
+"card": 72453068,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "にする:LP",
+"id": "c0478"
+},
+{
+"card": 15936370,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "にする:ドロー/枚数/回数",
+"id": "c0479"
+},
+{
+"card": 19162134,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "にする:ドロー/枚数/回数",
+"id": "c0480"
+},
+{
+"card": 19403423,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "にする:ドロー/枚数/回数",
+"id": "c0481"
+},
+{
+"card": 39275698,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "にする:ドロー/枚数/回数",
+"id": "c0482"
+},
+{
+"card": 54120521,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "にする:ドロー/枚数/回数",
+"id": "c0483"
+},
+{
+"card": 30748475,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "にする→裏側守備表示",
+"id": "c0484"
+},
+{
+"card": 31834488,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "にする→裏側守備表示",
+"id": "c0485"
+},
+{
+"card": 45508030,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "にする→裏側守備表示",
+"id": "c0486"
+},
+{
+"card": 54842941,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "にする→裏側守備表示",
+"id": "c0487"
+},
+{
+"card": 67797569,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "にする→裏側守備表示",
+"id": "c0488"
+},
+{
+"card": 14761450,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "にする→表側守備表示",
+"id": "c0489"
+},
+{
+"card": 23912837,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "にする→表側守備表示",
+"id": "c0490"
+},
+{
+"card": 62587693,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "にする→表側守備表示",
+"id": "c0491"
+},
+{
+"card": 80015408,
+"section": "main",
+"index": "②",
+"order": 6,
+"stratum": "にする→表側守備表示",
+"id": "c0492"
+},
+{
+"card": 82359538,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "にする→表側守備表示",
+"id": "c0493"
+},
+{
+"card": 5697558,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "にする→表側攻撃表示",
+"id": "c0494"
+},
+{
+"card": 51612489,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "にする→表側攻撃表示",
+"id": "c0495"
+},
+{
+"card": 69058960,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "にする→表側攻撃表示",
+"id": "c0496"
+},
+{
+"card": 71410542,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "にする→表側攻撃表示",
+"id": "c0497"
+},
+{
+"card": 96708940,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "にする→表側攻撃表示",
+"id": "c0498"
+},
+{
+"card": 7903368,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "にする→守備表示",
+"id": "c0499"
+},
+{
+"card": 28273805,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "にする→守備表示",
+"id": "c0500"
+},
+{
+"card": 33781156,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "にする→守備表示",
+"id": "c0501"
+},
+{
+"card": 42932862,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "にする→守備表示",
+"id": "c0502"
+},
+{
+"card": 76359406,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "にする→守備表示",
+"id": "c0503"
+},
+{
+"card": 6116731,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "にする→攻撃表示",
+"id": "c0504"
+},
+{
+"card": 19671102,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "にする→攻撃表示",
+"id": "c0505"
+},
+{
+"card": 47556396,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "にする→攻撃表示",
+"id": "c0506"
+},
+{
+"card": 74640994,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "にする→攻撃表示",
+"id": "c0507"
+},
+{
+"card": 94997874,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "にする→攻撃表示",
+"id": "c0508"
+},
+{
+"card": 9505425,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "にする→属性",
+"id": "c0509"
+},
+{
+"card": 60226558,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "にする→属性",
+"id": "c0510"
+},
+{
+"card": 67557908,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "にする→属性",
+"id": "c0511"
+},
+{
+"card": 70369116,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "にする→属性",
+"id": "c0512"
+},
+{
+"card": 83032858,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "にする→属性",
+"id": "c0513"
+},
+{
+"card": 1259814,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "にする→族",
+"id": "c0514"
+},
+{
+"card": 39122311,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "にする→族",
+"id": "c0515"
+},
+{
+"card": 40041559,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "にする→族",
+"id": "c0516"
+},
+{
+"card": 40380686,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "にする→族",
+"id": "c0517"
+},
+{
+"card": 68941332,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "にする→族",
+"id": "c0518"
+},
+{
+"card": 10971759,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "にする→レベル",
+"id": "c0519"
+},
+{
+"card": 12743620,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "にする→レベル",
+"id": "c0520"
+},
+{
+"card": 44265115,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "にする→レベル",
+"id": "c0521"
+},
+{
+"card": 70456282,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "にする→レベル",
+"id": "c0522"
+},
+{
+"card": 94395649,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "にする→レベル",
+"id": "c0523"
+},
+{
+"card": 5848934,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "にする",
+"id": "c0524"
+},
+{
+"card": 12338068,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "にする",
+"id": "c0525"
+},
+{
+"card": 33022867,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "にする",
+"id": "c0526"
+},
+{
+"card": 39392286,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "にする",
+"id": "c0527"
+},
+{
+"card": 43355214,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "にする",
+"id": "c0528"
+},
+{
+"card": 7268133,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "同じにする:攻撃力",
+"id": "c0529"
+},
+{
+"card": 8243121,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "同じにする:攻撃力",
+"id": "c0530"
+},
+{
+"card": 38030232,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "同じにする:攻撃力",
+"id": "c0531"
+},
+{
+"card": 53315891,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "同じにする:攻撃力",
+"id": "c0532"
+},
+{
+"card": 66809920,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "同じにする:攻撃力",
+"id": "c0533"
+},
+{
+"card": 10602628,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "同じにする:レベル",
+"id": "c0534"
+},
+{
+"card": 21291696,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "同じにする:レベル",
+"id": "c0535"
+},
+{
+"card": 35960413,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "同じにする:レベル",
+"id": "c0536"
+},
+{
+"card": 52176579,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "同じにする:レベル",
+"id": "c0537"
+},
+{
+"card": 79966218,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "同じにする:レベル",
+"id": "c0538"
+},
+{
+"card": 39015,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "同じにする",
+"id": "c0539"
+},
+{
+"card": 29432356,
+"section": "pendulum",
+"index": "①",
+"order": 3,
+"stratum": "同じにする",
+"id": "c0540"
+},
+{
+"card": 44694191,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "同じにする",
+"id": "c0541"
+},
+{
+"card": 77384395,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "同じにする",
+"id": "c0542"
+},
+{
+"card": 92422871,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "同じにする",
+"id": "c0543"
+},
+{
+"card": 4632019,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "与える:戦闘ダメージ",
+"id": "c0544"
+},
+{
+"card": 44874522,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "与える:戦闘ダメージ",
+"id": "c0545"
+},
+{
+"card": 53212882,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "与える:戦闘ダメージ",
+"id": "c0546"
+},
+{
+"card": 64104037,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "与える:戦闘ダメージ",
+"id": "c0547"
+},
+{
+"card": 91691605,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "与える:戦闘ダメージ",
+"id": "c0548"
+},
+{
+"card": 16955631,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "与える",
+"id": "c0549"
+},
+{
+"card": 21435914,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "与える",
+"id": "c0550"
+},
+{
+"card": 30086349,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "与える",
+"id": "c0551"
+},
+{
+"card": 74289646,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "与える",
+"id": "c0552"
+},
+{
+"card": 78621186,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "与える",
+"id": "c0553"
+},
+{
+"card": 6909330,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "受ける",
+"id": "c0554"
+},
+{
+"card": 52038441,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "受ける",
+"id": "c0555"
+},
+{
+"card": 70465810,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "受ける",
+"id": "c0556"
+},
+{
+"card": 71578874,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "受ける",
+"id": "c0557"
+},
+{
+"card": 81260679,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "受ける",
+"id": "c0558"
+},
+{
+"card": 14169843,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "回復",
+"id": "c0559"
+},
+{
+"card": 17257342,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "回復",
+"id": "c0560"
+},
+{
+"card": 49936169,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "回復",
+"id": "c0561"
+},
+{
+"card": 93896655,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "回復",
+"id": "c0562"
+},
+{
+"card": 99427357,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "回復",
+"id": "c0563"
+},
+{
+"card": 33438265,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "払う",
+"id": "c0564"
+},
+{
+"card": 56187077,
+"section": "pendulum",
+"index": "②",
+"order": 0,
+"stratum": "払う",
+"id": "c0565"
+},
+{
+"card": 68059897,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "払う",
+"id": "c0566"
+},
+{
+"card": 70493141,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "払う",
+"id": "c0567"
+},
+{
+"card": 84341431,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "払う",
+"id": "c0568"
+},
+{
+"card": 483,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "失う",
+"id": "c0569"
+},
+{
+"card": 12148078,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "失う",
+"id": "c0570"
+},
+{
+"card": 54447022,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "失う",
+"id": "c0571"
+},
+{
+"card": 70916046,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "失う",
+"id": "c0572"
+},
+{
+"card": 86304179,
+"section": "pendulum",
+"index": "①",
+"order": 5,
+"stratum": "失う",
+"id": "c0573"
+},
+{
+"card": 26434972,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "融合素材とする@自分フィールド",
+"id": "c0574"
+},
+{
+"card": 66518509,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "融合素材とする@自分フィールド",
+"id": "c0575"
+},
+{
+"card": 73360025,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "融合素材とする@自分フィールド",
+"id": "c0576"
+},
+{
+"card": 82738008,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "融合素材とする@自分フィールド",
+"id": "c0577"
+},
+{
+"card": 87746184,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "融合素材とする@自分フィールド",
+"id": "c0578"
+},
+{
+"card": 7375867,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "融合素材とする@自分手札",
+"id": "c0579"
+},
+{
+"card": 24220368,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "融合素材とする@自分手札",
+"id": "c0580"
+},
+{
+"card": 42878636,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "融合素材とする@自分手札",
+"id": "c0581"
+},
+{
+"card": 92003832,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "融合素材とする@自分手札",
+"id": "c0582"
+},
+{
+"card": 98567237,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "融合素材とする@自分手札",
+"id": "c0583"
+},
+{
+"card": 8690387,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "融合素材とする@自分墓地",
+"id": "c0584"
+},
+{
+"card": 62091148,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "融合素材とする@自分墓地",
+"id": "c0585"
+},
+{
+"card": 69389481,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "融合素材とする@自分墓地",
+"id": "c0586"
+},
+{
+"card": 95072744,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "融合素材とする@自分墓地",
+"id": "c0587"
+},
+{
+"card": 99941223,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "融合素材とする@自分墓地",
+"id": "c0588"
+},
+{
+"card": 6958567,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "融合素材とする@自分除外",
+"id": "c0589"
+},
+{
+"card": 11852093,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "融合素材とする@自分除外",
+"id": "c0590"
+},
+{
+"card": 24484270,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "融合素材とする@自分除外",
+"id": "c0591"
+},
+{
+"card": 77124096,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "融合素材とする@自分除外",
+"id": "c0592"
+},
+{
+"card": 99161253,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "融合素材とする@自分除外",
+"id": "c0593"
+},
+{
+"card": 22283204,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "融合素材とする",
+"id": "c0594"
+},
+{
+"card": 27118421,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "融合素材とする",
+"id": "c0595"
+},
+{
+"card": 32548318,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "融合素材とする",
+"id": "c0596"
+},
+{
+"card": 44394295,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "融合素材とする",
+"id": "c0597"
+},
+{
+"card": 58570206,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "融合素材とする",
+"id": "c0598"
+},
+{
+"card": 11646785,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "X素材とする@自分フィールド",
+"id": "c0599"
+},
+{
+"card": 57450198,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "X素材とする@自分フィールド",
+"id": "c0600"
+},
+{
+"card": 67331360,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "X素材とする@自分フィールド",
+"id": "c0601"
+},
+{
+"card": 72782945,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "X素材とする@自分フィールド",
+"id": "c0602"
+},
+{
+"card": 85252081,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "X素材とする@自分フィールド",
+"id": "c0603"
+},
+{
+"card": 720147,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "X素材とする@手札",
+"id": "c0604"
+},
+{
+"card": 2665273,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "X素材とする@手札",
+"id": "c0605"
+},
+{
+"card": 57031794,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "X素材とする@手札",
+"id": "c0606"
+},
+{
+"card": 68159562,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "X素材とする@手札",
+"id": "c0607"
+},
+{
+"card": 83319610,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "X素材とする@手札",
+"id": "c0608"
+},
+{
+"card": 7511613,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "X素材とする@自分墓地",
+"id": "c0609"
+},
+{
+"card": 10877309,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "X素材とする@自分墓地",
+"id": "c0610"
+},
+{
+"card": 13046291,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "X素材とする@自分墓地",
+"id": "c0611"
+},
+{
+"card": 20212491,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "X素材とする@自分墓地",
+"id": "c0612"
+},
+{
+"card": 95856586,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "X素材とする@自分墓地",
+"id": "c0613"
+},
+{
+"card": 10780049,
+"section": "main",
+"index": "①",
+"order": 8,
+"stratum": "X素材とする@デッキ",
+"id": "c0614"
+},
+{
+"card": 38669664,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "X素材とする@デッキ",
+"id": "c0615"
+},
+{
+"card": 59208943,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "X素材とする@デッキ",
+"id": "c0616"
+},
+{
+"card": 66059345,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "X素材とする@デッキ",
+"id": "c0617"
+},
+{
+"card": 73881652,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "X素材とする@デッキ",
+"id": "c0618"
+},
+{
+"card": 10424147,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "X素材とする",
+"id": "c0619"
+},
+{
+"card": 10666000,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "X素材とする",
+"id": "c0620"
+},
+{
+"card": 39030163,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "X素材とする",
+"id": "c0621"
+},
+{
+"card": 45710945,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "X素材とする",
+"id": "c0622"
+},
+{
+"card": 90126061,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "X素材とする",
+"id": "c0623"
+},
+{
+"card": 30095833,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "X素材にする",
+"id": "c0624"
+},
+{
+"card": 43355214,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "X素材にする",
+"id": "c0625"
+},
+{
+"card": 60394026,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "X素材にする",
+"id": "c0626"
+},
+{
+"card": 76833149,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "X素材にする",
+"id": "c0627"
+},
+{
+"card": 98452268,
+"section": "pendulum",
+"index": "①",
+"order": 5,
+"stratum": "X素材にする",
+"id": "c0628"
+},
+{
+"card": 1825445,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "重ねる@フィールド",
+"id": "c0629"
+},
+{
+"card": 2665273,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "重ねる@フィールド",
+"id": "c0630"
+},
+{
+"card": 14005031,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "重ねる@フィールド",
+"id": "c0631"
+},
+{
+"card": 24434049,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "重ねる@フィールド",
+"id": "c0632"
+},
+{
+"card": 74615388,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "重ねる@フィールド",
+"id": "c0633"
+},
+{
+"card": 3298689,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "重ねる@手札",
+"id": "c0634"
+},
+{
+"card": 31755044,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "重ねる@手札",
+"id": "c0635"
+},
+{
+"card": 57031794,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "重ねる@手札",
+"id": "c0636"
+},
+{
+"card": 57450198,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "重ねる@手札",
+"id": "c0637"
+},
+{
+"card": 60944809,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "重ねる@手札",
+"id": "c0638"
+},
+{
+"card": 720147,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "重ねる@墓地",
+"id": "c0639"
+},
+{
+"card": 10877309,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "重ねる@墓地",
+"id": "c0640"
+},
+{
+"card": 20212491,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "重ねる@墓地",
+"id": "c0641"
+},
+{
+"card": 46060017,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "重ねる@墓地",
+"id": "c0642"
+},
+{
+"card": 78876707,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "重ねる@墓地",
+"id": "c0643"
+},
+{
+"card": 1735088,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "重ねる",
+"id": "c0644"
+},
+{
+"card": 16474916,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "重ねる",
+"id": "c0645"
+},
+{
+"card": 79933029,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "重ねる",
+"id": "c0646"
+},
+{
+"card": 81650695,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "重ねる",
+"id": "c0647"
+},
+{
+"card": 83888009,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "重ねる",
+"id": "c0648"
+},
+{
+"card": 15447747,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "素材とする@自分フィールド",
+"id": "c0649"
+},
+{
+"card": 67680512,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "素材とする@自分フィールド",
+"id": "c0650"
+},
+{
+"card": 73421698,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "素材とする@自分フィールド",
+"id": "c0651"
+},
+{
+"card": 89974904,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "素材とする@自分フィールド",
+"id": "c0652"
+},
+{
+"card": 99471856,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "素材とする@自分フィールド",
+"id": "c0653"
+},
+{
+"card": 20050865,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "素材とする",
+"id": "c0654"
+},
+{
+"card": 50366775,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "素材とする",
+"id": "c0655"
+},
+{
+"card": 62899696,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "素材とする",
+"id": "c0656"
+},
+{
+"card": 63748694,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "素材とする",
+"id": "c0657"
+},
+{
+"card": 87804365,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "素材とする",
+"id": "c0658"
+},
+{
+"card": 2095764,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "S素材とする@自分フィールド",
+"id": "c0659"
+},
+{
+"card": 30106950,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "S素材とする@自分フィールド",
+"id": "c0660"
+},
+{
+"card": 39964797,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "S素材とする@自分フィールド",
+"id": "c0661"
+},
+{
+"card": 63410069,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "S素材とする@自分フィールド",
+"id": "c0662"
+},
+{
+"card": 99946920,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "S素材とする@自分フィールド",
+"id": "c0663"
+},
+{
+"card": 13021682,
+"section": "main",
+"index": "0-1",
+"order": 0,
+"stratum": "S素材にする",
+"id": "c0664"
+},
+{
+"card": 16387555,
+"section": "main",
+"index": "0-1",
+"order": 2,
+"stratum": "S素材にする",
+"id": "c0665"
+},
+{
+"card": 16449363,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "S素材にする",
+"id": "c0666"
+},
+{
+"card": 17209452,
+"section": "main",
+"index": "0-1",
+"order": 2,
+"stratum": "S素材にする",
+"id": "c0667"
+},
+{
+"card": 25148255,
+"section": "main",
+"index": "0",
+"order": 0,
+"stratum": "S素材にする",
+"id": "c0668"
+},
+{
+"card": 4993187,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "L素材にする",
+"id": "c0669"
+},
+{
+"card": 7594154,
+"section": "main",
+"index": "0-2",
+"order": 1,
+"stratum": "L素材にする",
+"id": "c0670"
+},
+{
+"card": 24521325,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "L素材にする",
+"id": "c0671"
+},
+{
+"card": 30114823,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "L素材にする",
+"id": "c0672"
+},
+{
+"card": 53782828,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "L素材にする",
+"id": "c0673"
+},
+{
+"card": 36527535,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "リリースにする",
+"id": "c0674"
+},
+{
+"card": 42029847,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "リリースにする",
+"id": "c0675"
+},
+{
+"card": 44710391,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "リリースにする",
+"id": "c0676"
+},
+{
+"card": 50354944,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "リリースにする",
+"id": "c0677"
+},
+{
+"card": 66752837,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "リリースにする",
+"id": "c0678"
+},
+{
+"card": 4064925,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "なくす",
+"id": "c0679"
+},
+{
+"card": 40227329,
+"section": "pendulum",
+"index": "②",
+"order": 2,
+"stratum": "なくす",
+"id": "c0680"
+},
+{
+"card": 61822419,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "なくす",
+"id": "c0681"
+},
+{
+"card": 65959844,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "なくす",
+"id": "c0682"
+},
+{
+"card": 99531088,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "なくす",
+"id": "c0683"
+},
+{
+"card": 6983839,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "取り除く:X素材",
+"id": "c0684"
+},
+{
+"card": 33909817,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "取り除く:X素材",
+"id": "c0685"
+},
+{
+"card": 35772782,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "取り除く:X素材",
+"id": "c0686"
+},
+{
+"card": 79625003,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "取り除く:X素材",
+"id": "c0687"
+},
+{
+"card": 82496097,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "取り除く:X素材",
+"id": "c0688"
+},
+{
+"card": 5399521,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "取り除く:カウンター",
+"id": "c0689"
+},
+{
+"card": 9634146,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "取り除く:カウンター",
+"id": "c0690"
+},
+{
+"card": 26493435,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "取り除く:カウンター",
+"id": "c0691"
+},
+{
+"card": 61156777,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "取り除く:カウンター",
+"id": "c0692"
+},
+{
+"card": 92559258,
+"section": "pendulum",
+"index": "②",
+"order": 0,
+"stratum": "取り除く:カウンター",
+"id": "c0693"
+},
+{
+"card": 7602800,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "取り除く@自分フィールド",
+"id": "c0694"
+},
+{
+"card": 36890111,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "取り除く@自分フィールド",
+"id": "c0695"
+},
+{
+"card": 39123673,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "取り除く@自分フィールド",
+"id": "c0696"
+},
+{
+"card": 64626565,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "取り除く@自分フィールド",
+"id": "c0697"
+},
+{
+"card": 84433129,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "取り除く@自分フィールド",
+"id": "c0698"
+},
+{
+"card": 1487805,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "取り除く@お互いのフィールド",
+"id": "c0699"
+},
+{
+"card": 48770333,
+"section": "main",
+"index": "④",
+"order": 1,
+"stratum": "取り除く@お互いのフィールド",
+"id": "c0700"
+},
+{
+"card": 55063751,
+"section": "main",
+"index": "④",
+"order": 1,
+"stratum": "取り除く@お互いのフィールド",
+"id": "c0701"
+},
+{
+"card": 63941210,
+"section": "main",
+"index": "④",
+"order": 1,
+"stratum": "取り除く@お互いのフィールド",
+"id": "c0702"
+},
+{
+"card": 84769941,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "取り除く@お互いのフィールド",
+"id": "c0703"
+},
+{
+"card": 24079759,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "取り除く@フィールド",
+"id": "c0704"
+},
+{
+"card": 27868563,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "取り除く@フィールド",
+"id": "c0705"
+},
+{
+"card": 31398842,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "取り除く@フィールド",
+"id": "c0706"
+},
+{
+"card": 51473858,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "取り除く@フィールド",
+"id": "c0707"
+},
+{
+"card": 90711610,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "取り除く@フィールド",
+"id": "c0708"
+},
+{
+"card": 1174075,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "取り除く",
+"id": "c0709"
+},
+{
+"card": 2519690,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "変更",
+"id": "c0710"
+},
+{
+"card": 22501005,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "変更",
+"id": "c0711"
+},
+{
+"card": 43739056,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "変更",
+"id": "c0712"
+},
+{
+"card": 44241999,
+"section": "main",
+"index": "②",
+"order": 6,
+"stratum": "変更",
+"id": "c0713"
+},
+{
+"card": 55106249,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "変更",
+"id": "c0714"
+},
+{
+"card": 46354113,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "攻撃",
+"id": "c0715"
+},
+{
+"card": 47471667,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "攻撃",
+"id": "c0716"
+},
+{
+"card": 70298454,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "攻撃",
+"id": "c0717"
+},
+{
+"card": 76871889,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "攻撃",
+"id": "c0718"
+},
+{
+"card": 92607427,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "攻撃",
+"id": "c0719"
+},
+{
+"card": 14512825,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "直接攻撃",
+"id": "c0720"
+},
+{
+"card": 30348744,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "直接攻撃",
+"id": "c0721"
+},
+{
+"card": 31733941,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "直接攻撃",
+"id": "c0722"
+},
+{
+"card": 56725612,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "直接攻撃",
+"id": "c0723"
+},
+{
+"card": 61190918,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "直接攻撃",
+"id": "c0724"
+},
+{
+"card": 7984540,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "直接攻撃にする",
+"id": "c0725"
+},
+{
+"card": 16625614,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "直接攻撃にする",
+"id": "c0726"
+},
+{
+"card": 39622156,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "直接攻撃にする",
+"id": "c0727"
+},
+{
+"card": 65285459,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "直接攻撃にする",
+"id": "c0728"
+},
+{
+"card": 92770064,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "直接攻撃にする",
+"id": "c0729"
+},
+{
+"card": 2434862,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "移し替える",
+"id": "c0730"
+},
+{
+"card": 8170654,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "移し替える",
+"id": "c0731"
+},
+{
+"card": 34475451,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "移し替える",
+"id": "c0732"
+},
+{
+"card": 67385964,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "移し替える",
+"id": "c0733"
+},
+{
+"card": 91499077,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "移し替える",
+"id": "c0734"
+},
+{
+"card": 276357,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "終了",
+"id": "c0735"
+},
+{
+"card": 9852718,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "終了",
+"id": "c0736"
+},
+{
+"card": 25857246,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "終了",
+"id": "c0737"
+},
+{
+"card": 28168762,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "終了",
+"id": "c0738"
+},
+{
+"card": 54374642,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "終了",
+"id": "c0739"
+},
+{
+"card": 4008212,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "スキップ",
+"id": "c0740"
+},
+{
+"card": 8192327,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "スキップ",
+"id": "c0741"
+},
+{
+"card": 30430448,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "スキップ",
+"id": "c0742"
+},
+{
+"card": 67835547,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "スキップ",
+"id": "c0743"
+},
+{
+"card": 92182447,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "スキップ",
+"id": "c0744"
+},
+{
+"card": 29303524,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "得る:コントロール",
+"id": "c0745"
+},
+{
+"card": 40221691,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "得る:コントロール",
+"id": "c0746"
+},
+{
+"card": 49941059,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "得る:コントロール",
+"id": "c0747"
+},
+{
+"card": 54082269,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "得る:コントロール",
+"id": "c0748"
+},
+{
+"card": 74820316,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "得る:コントロール",
+"id": "c0749"
+},
+{
+"card": 23689428,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "得る:効果",
+"id": "c0750"
+},
+{
+"card": 31755044,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "得る:効果",
+"id": "c0751"
+},
+{
+"card": 45014450,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "得る:効果",
+"id": "c0752"
+},
+{
+"card": 76833149,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "得る:効果",
+"id": "c0753"
+},
+{
+"card": 96864105,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "得る:効果",
+"id": "c0754"
+},
+{
+"card": 41488249,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "得る@相手フィールド",
+"id": "c0755"
+},
+{
+"card": 43932352,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "得る@相手フィールド",
+"id": "c0756"
+},
+{
+"card": 45951104,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "得る@相手フィールド",
+"id": "c0757"
+},
+{
+"card": 86993168,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "得る@相手フィールド",
+"id": "c0758"
+},
+{
+"card": 93156774,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "得る@相手フィールド",
+"id": "c0759"
+},
+{
+"card": 4239451,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "入れ替える",
+"id": "c0760"
+},
+{
+"card": 15308295,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "入れ替える",
+"id": "c0761"
+},
+{
+"card": 25163979,
+"section": "main",
+"index": "②",
+"order": 6,
+"stratum": "入れ替える",
+"id": "c0762"
+},
+{
+"card": 52119435,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "入れ替える",
+"id": "c0763"
+},
+{
+"card": 93473606,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "入れ替える",
+"id": "c0764"
+},
+{
+"card": 23920796,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "移す",
+"id": "c0765"
+},
+{
+"card": 38143903,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "移す",
+"id": "c0766"
+},
+{
+"card": 80551022,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "移す",
+"id": "c0767"
+},
+{
+"card": 81522098,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "移す",
+"id": "c0768"
+},
+{
+"card": 82791472,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "移す",
+"id": "c0769"
+},
+{
+"card": 18494511,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "扱う",
+"id": "c0770"
+},
+{
+"card": 34093683,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "扱う",
+"id": "c0771"
+},
+{
+"card": 49684352,
+"section": "main",
+"index": "0",
+"order": 0,
+"stratum": "扱う",
+"id": "c0772"
+},
+{
+"card": 63481713,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "扱う",
+"id": "c0773"
+},
+{
+"card": 97973962,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "扱う",
+"id": "c0774"
+},
+{
+"card": 25096909,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "適用",
+"id": "c0775"
+},
+{
+"card": 48183890,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "適用",
+"id": "c0776"
+},
+{
+"card": 49684352,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "適用",
+"id": "c0777"
+},
+{
+"card": 59687381,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "適用",
+"id": "c0778"
+},
+{
+"card": 61681816,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "適用",
+"id": "c0779"
+},
+{
+"card": 15256925,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "無視",
+"id": "c0780"
+},
+{
+"card": 21296502,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "無視",
+"id": "c0781"
+},
+{
+"card": 66290900,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "無視",
+"id": "c0782"
+},
+{
+"card": 77710579,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "無視",
+"id": "c0783"
+},
+{
+"card": 82286798,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "無視",
+"id": "c0784"
+},
+{
+"card": 1154611,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "とする",
+"id": "c0785"
+},
+{
+"card": 24440742,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "とする",
+"id": "c0786"
+},
+{
+"card": 27170599,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "とする",
+"id": "c0787"
+},
+{
+"card": 72305034,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "とする",
+"id": "c0788"
+},
+{
+"card": 92092092,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "とする",
+"id": "c0789"
+},
+{
+"card": 2994495,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "異なる",
+"id": "c0790"
+},
+{
+"card": 8608979,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "異なる",
+"id": "c0791"
+},
+{
+"card": 23249029,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "異なる",
+"id": "c0792"
+},
+{
+"card": 54562327,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "異なる",
+"id": "c0793"
+},
+{
+"card": 86976918,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "異なる",
+"id": "c0794"
+},
+{
+"card": 15862758,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "勝利",
+"id": "c0795"
+},
+{
+"card": 42776960,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "勝利",
+"id": "c0796"
+},
+{
+"card": 66765023,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "勝利",
+"id": "c0797"
+},
+{
+"card": 77751766,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "勝利",
+"id": "c0798"
+},
+{
+"card": 97795930,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "勝利",
+"id": "c0799"
+},
+{
+"card": 19221310,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "選ぶ@相手フィールド",
+"id": "c0800"
+},
+{
+"card": 24882256,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "選ぶ@相手フィールド",
+"id": "c0801"
+},
+{
+"card": 61320914,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "選ぶ@相手フィールド",
+"id": "c0802"
+},
+{
+"card": 62528292,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "選ぶ@相手フィールド",
+"id": "c0803"
+},
+{
+"card": 73320394,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "選ぶ@相手フィールド",
+"id": "c0804"
+},
+{
+"card": 17465972,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "選ぶ@自分フィールド",
+"id": "c0805"
+},
+{
+"card": 63708033,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "選ぶ@自分フィールド",
+"id": "c0806"
+},
+{
+"card": 65872270,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "選ぶ@自分フィールド",
+"id": "c0807"
+},
+{
+"card": 76075139,
+"section": "pendulum",
+"index": "①",
+"order": 2,
+"stratum": "選ぶ@自分フィールド",
+"id": "c0808"
+},
+{
+"card": 85766789,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "選ぶ@自分フィールド",
+"id": "c0809"
+},
+{
+"card": 31044787,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "選ぶ@フィールド",
+"id": "c0810"
+},
+{
+"card": 39752820,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "選ぶ@フィールド",
+"id": "c0811"
+},
+{
+"card": 44009443,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "選ぶ@フィールド",
+"id": "c0812"
+},
+{
+"card": 52645235,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "選ぶ@フィールド",
+"id": "c0813"
+},
+{
+"card": 67288539,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "選ぶ@フィールド",
+"id": "c0814"
+},
+{
+"card": 2810642,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "選ぶ@自分手札",
+"id": "c0815"
+},
+{
+"card": 19516687,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "選ぶ@自分手札",
+"id": "c0816"
+},
+{
+"card": 26984177,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "選ぶ@自分手札",
+"id": "c0817"
+},
+{
+"card": 29876299,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "選ぶ@自分手札",
+"id": "c0818"
+},
+{
+"card": 58288218,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "選ぶ@自分手札",
+"id": "c0819"
+},
+{
+"card": 34172284,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "選ぶ@相手手札",
+"id": "c0820"
+},
+{
+"card": 48032131,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "選ぶ@相手手札",
+"id": "c0821"
+},
+{
+"card": 55878038,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "選ぶ@相手手札",
+"id": "c0822"
+},
+{
+"card": 56350972,
+"section": "main",
+"index": "①",
+"order": 8,
+"stratum": "選ぶ@相手手札",
+"id": "c0823"
+},
+{
+"card": 66712905,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "選ぶ@相手手札",
+"id": "c0824"
+},
+{
+"card": 1876841,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "選ぶ@手札",
+"id": "c0825"
+},
+{
+"card": 9061682,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "選ぶ@手札",
+"id": "c0826"
+},
+{
+"card": 9482987,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "選ぶ@手札",
+"id": "c0827"
+},
+{
+"card": 39552584,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "選ぶ@手札",
+"id": "c0828"
+},
+{
+"card": 50275295,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "選ぶ@手札",
+"id": "c0829"
+},
+{
+"card": 8868767,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "選ぶ@自分墓地",
+"id": "c0830"
+},
+{
+"card": 43219114,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "選ぶ@自分墓地",
+"id": "c0831"
+},
+{
+"card": 64726269,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "選ぶ@自分墓地",
+"id": "c0832"
+},
+{
+"card": 75991479,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "選ぶ@自分墓地",
+"id": "c0833"
+},
+{
+"card": 91668401,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "選ぶ@自分墓地",
+"id": "c0834"
+},
+{
+"card": 43218406,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "選ぶ@墓地",
+"id": "c0835"
+},
+{
+"card": 57314798,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "選ぶ@墓地",
+"id": "c0836"
+},
+{
+"card": 60168186,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "選ぶ@墓地",
+"id": "c0837"
+},
+{
+"card": 74615388,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "選ぶ@墓地",
+"id": "c0838"
+},
+{
+"card": 91668078,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "選ぶ@墓地",
+"id": "c0839"
+},
+{
+"card": 2266498,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "選ぶ@自分除外",
+"id": "c0840"
+},
+{
+"card": 47910940,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "選ぶ@自分除外",
+"id": "c0841"
+},
+{
+"card": 72498838,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "選ぶ@自分除外",
+"id": "c0842"
+},
+{
+"card": 79194594,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "選ぶ@自分除外",
+"id": "c0843"
+},
+{
+"card": 92379223,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "選ぶ@自分除外",
+"id": "c0844"
+},
+{
+"card": 12877076,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "選ぶ@デッキ",
+"id": "c0845"
+},
+{
+"card": 34771947,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "選ぶ@デッキ",
+"id": "c0846"
+},
+{
+"card": 35026117,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "選ぶ@デッキ",
+"id": "c0847"
+},
+{
+"card": 67768675,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "選ぶ@デッキ",
+"id": "c0848"
+},
+{
+"card": 74191528,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "選ぶ@デッキ",
+"id": "c0849"
+},
+{
+"card": 4688231,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "選ぶ@EXデッキ",
+"id": "c0850"
+},
+{
+"card": 62015408,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "選ぶ@EXデッキ",
+"id": "c0851"
+},
+{
+"card": 63737050,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "選ぶ@EXデッキ",
+"id": "c0852"
+},
+{
+"card": 65872270,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "選ぶ@EXデッキ",
+"id": "c0853"
+},
+{
+"card": 77826734,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "選ぶ@EXデッキ",
+"id": "c0854"
+},
+{
+"card": 14756848,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "選ぶ@Pゾーン",
+"id": "c0855"
+},
+{
+"card": 17241941,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "選ぶ@Pゾーン",
+"id": "c0856"
+},
+{
+"card": 17885118,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "選ぶ@Pゾーン",
+"id": "c0857"
+},
+{
+"card": 45014450,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "選ぶ@Pゾーン",
+"id": "c0858"
+},
+{
+"card": 71614230,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "選ぶ@Pゾーン",
+"id": "c0859"
+},
+{
+"card": 13046291,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "選ぶ",
+"id": "c0860"
+},
+{
+"card": 17956906,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "選ぶ",
+"id": "c0861"
+},
+{
+"card": 43940008,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "選ぶ",
+"id": "c0862"
+},
+{
+"card": 72386290,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "選ぶ",
+"id": "c0863"
+},
+{
+"card": 73079836,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "選ぶ",
+"id": "c0864"
+},
+{
+"card": 5466615,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "対象にする",
+"id": "c0865"
+},
+{
+"card": 52962804,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "対象にする",
+"id": "c0866"
+},
+{
+"card": 62530723,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "対象にする",
+"id": "c0867"
+},
+{
+"card": 87571563,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "対象にする",
+"id": "c0868"
+},
+{
+"card": 98935722,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "対象にする",
+"id": "c0869"
+},
+{
+"card": 17016131,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "確認@相手手札",
+"id": "c0870"
+},
+{
+"card": 24413299,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "確認@相手手札",
+"id": "c0871"
+},
+{
+"card": 25311006,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "確認@相手手札",
+"id": "c0872"
+},
+{
+"card": 62893810,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "確認@相手手札",
+"id": "c0873"
+},
+{
+"card": 71978434,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "確認@相手手札",
+"id": "c0874"
+},
+{
+"card": 39238953,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "確認@デッキ",
+"id": "c0875"
+},
+{
+"card": 64961254,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "確認@デッキ",
+"id": "c0876"
+},
+{
+"card": 88124568,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "確認@デッキ",
+"id": "c0877"
+},
+{
+"card": 90359458,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "確認@デッキ",
+"id": "c0878"
+},
+{
+"card": 94096018,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "確認@デッキ",
+"id": "c0879"
+},
+{
+"card": 10666000,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "確認@相手EXデッキ",
+"id": "c0880"
+},
+{
+"card": 32476603,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "確認@相手EXデッキ",
+"id": "c0881"
+},
+{
+"card": 39576656,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "確認@相手EXデッキ",
+"id": "c0882"
+},
+{
+"card": 40352445,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "確認@相手EXデッキ",
+"id": "c0883"
+},
+{
+"card": 68304193,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "確認@相手EXデッキ",
+"id": "c0884"
+},
+{
+"card": 16024176,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "確認",
+"id": "c0885"
+},
+{
+"card": 34298391,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "確認",
+"id": "c0886"
+},
+{
+"card": 39238953,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "確認",
+"id": "c0887"
+},
+{
+"card": 46232525,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "確認",
+"id": "c0888"
+},
+{
+"card": 94431029,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "確認",
+"id": "c0889"
+},
+{
+"card": 20191720,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "見せる@手札",
+"id": "c0890"
+},
+{
+"card": 54562327,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "見せる@手札",
+"id": "c0891"
+},
+{
+"card": 54842941,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "見せる@手札",
+"id": "c0892"
+},
+{
+"card": 71705144,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "見せる@手札",
+"id": "c0893"
+},
+{
+"card": 92447211,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "見せる@手札",
+"id": "c0894"
+},
+{
+"card": 6552971,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "見せる@EXデッキ",
+"id": "c0895"
+},
+{
+"card": 33099732,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "見せる@EXデッキ",
+"id": "c0896"
+},
+{
+"card": 51669847,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "見せる@EXデッキ",
+"id": "c0897"
+},
+{
+"card": 59432181,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "見せる@EXデッキ",
+"id": "c0898"
+},
+{
+"card": 61070601,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "見せる@EXデッキ",
+"id": "c0899"
+},
+{
+"card": 28126717,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "見せる",
+"id": "c0900"
+},
+{
+"card": 32360466,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "見せる",
+"id": "c0901"
+},
+{
+"card": 41773061,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "見せる",
+"id": "c0902"
+},
+{
+"card": 66736715,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "見せる",
+"id": "c0903"
+},
+{
+"card": 67225377,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "見せる",
+"id": "c0904"
+},
+{
+"card": 15083304,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "公開",
+"id": "c0905"
+},
+{
+"card": 35906693,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "公開",
+"id": "c0906"
+},
+{
+"card": 56673480,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "公開",
+"id": "c0907"
+},
+{
+"card": 69217334,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "公開",
+"id": "c0908"
+},
+{
+"card": 75364199,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "公開",
+"id": "c0909"
+},
+{
+"card": 22198672,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "見る",
+"id": "c0910"
+},
+{
+"card": 61264008,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "見る",
+"id": "c0911"
+},
+{
+"card": 74202664,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "見る",
+"id": "c0912"
+},
+{
+"card": 95376428,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "見る",
+"id": "c0913"
+},
+{
+"card": 96637156,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "見る",
+"id": "c0914"
+},
+{
+"card": 9251497,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "めくる@自分デッキ",
+"id": "c0915"
+},
+{
+"card": 15381252,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "めくる@自分デッキ",
+"id": "c0916"
+},
+{
+"card": 20579538,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "めくる@自分デッキ",
+"id": "c0917"
+},
+{
+"card": 62017867,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "めくる@自分デッキ",
+"id": "c0918"
+},
+{
+"card": 74879881,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "めくる@自分デッキ",
+"id": "c0919"
+},
+{
+"card": 46232525,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "めくる",
+"id": "c0920"
+},
+{
+"card": 54927180,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "めくる",
+"id": "c0921"
+},
+{
+"card": 57769391,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "めくる",
+"id": "c0922"
+},
+{
+"card": 75311421,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "めくる",
+"id": "c0923"
+},
+{
+"card": 84211599,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "めくる",
+"id": "c0924"
+},
+{
+"card": 5795980,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "宣言",
+"id": "c0925"
+},
+{
+"card": 43618262,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "宣言",
+"id": "c0926"
+},
+{
+"card": 46425662,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "宣言",
+"id": "c0927"
+},
+{
+"card": 48422921,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "宣言",
+"id": "c0928"
+},
+{
+"card": 83032858,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "宣言",
+"id": "c0929"
+},
+{
+"card": 10584050,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "指定@フィールド",
+"id": "c0930"
+},
+{
+"card": 14839621,
+"section": "main",
+"index": "0",
+"order": 0,
+"stratum": "指定@フィールド",
+"id": "c0931"
+},
+{
+"card": 40669071,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "指定@フィールド",
+"id": "c0932"
+},
+{
+"card": 42517468,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "指定@フィールド",
+"id": "c0933"
+},
+{
+"card": 97466438,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "指定@フィールド",
+"id": "c0934"
+},
+{
+"card": 38395123,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "シャッフル",
+"id": "c0935"
+},
+{
+"card": 49936169,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "シャッフル",
+"id": "c0936"
+},
+{
+"card": 63274863,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "シャッフル",
+"id": "c0937"
+},
+{
+"card": 73594093,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "シャッフル",
+"id": "c0938"
+},
+{
+"card": 78949372,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "シャッフル",
+"id": "c0939"
+},
+{
+"card": 5641251,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "振る",
+"id": "c0940"
+},
+{
+"card": 8868767,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "振る",
+"id": "c0941"
+},
+{
+"card": 11808215,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "振る",
+"id": "c0942"
+},
+{
+"card": 73320394,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "振る",
+"id": "c0943"
+},
+{
+"card": 76630812,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "振る",
+"id": "c0944"
+},
+{
+"card": 4575541,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "行う:召喚",
+"id": "c0945"
+},
+{
+"card": 5253985,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "行う:召喚",
+"id": "c0946"
+},
+{
+"card": 35125879,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "行う:召喚",
+"id": "c0947"
+},
+{
+"card": 63181559,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "行う:召喚",
+"id": "c0948"
+},
+{
+"card": 75874514,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "行う:召喚",
+"id": "c0949"
+},
+{
+"card": 2606417,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "行う:コイントス",
+"id": "c0950"
+},
+{
+"card": 12686296,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "行う:コイントス",
+"id": "c0951"
+},
+{
+"card": 15130912,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "行う:コイントス",
+"id": "c0952"
+},
+{
+"card": 39761418,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "行う:コイントス",
+"id": "c0953"
+},
+{
+"card": 59712426,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "行う:コイントス",
+"id": "c0954"
+},
+{
+"card": 19162134,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "行う",
+"id": "c0955"
+},
+{
+"card": 27822206,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "行う",
+"id": "c0956"
+},
+{
+"card": 50065971,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "行う",
+"id": "c0957"
+},
+{
+"card": 78534861,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "行う",
+"id": "c0958"
+},
+{
+"card": 88093706,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "行う",
+"id": "c0959"
+},
+{
+"card": 11881272,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "発動",
+"id": "c0960"
+},
+{
+"card": 17322533,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "発動",
+"id": "c0961"
+},
+{
+"card": 26684111,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "発動",
+"id": "c0962"
+},
+{
+"card": 32912040,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "発動",
+"id": "c0963"
+},
+{
+"card": 92107604,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "発動",
+"id": "c0964"
+},
+{
+"card": 18988396,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "使用",
+"id": "c0965"
+},
+{
+"card": 26434972,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "使用",
+"id": "c0966"
+},
+{
+"card": 46136942,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "使用",
+"id": "c0967"
+},
+{
+"card": 65646587,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "使用",
+"id": "c0968"
+},
+{
+"card": 90307777,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "使用",
+"id": "c0969"
+},
+{
+"card": 1154611,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "チェーン",
+"id": "c0970"
+},
+{
+"card": 2376209,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "チェーン",
+"id": "c0971"
+},
+{
+"card": 24643913,
+"section": "main",
+"index": "0",
+"order": 4,
+"stratum": "チェーン",
+"id": "c0972"
+},
+{
+"card": 56322832,
+"section": "pendulum",
+"index": "②",
+"order": 0,
+"stratum": "チェーン",
+"id": "c0973"
+},
+{
+"card": 86682165,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "チェーン",
+"id": "c0974"
+},
+{
+"card": 6511113,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "破壊@自分フィールド(耐性)",
+"id": "c0975"
+},
+{
+"card": 23848752,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "破壊@自分フィールド(耐性)",
+"id": "c0976"
+},
+{
+"card": 42006475,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "破壊@自分フィールド(耐性)",
+"id": "c0977"
+},
+{
+"card": 48608796,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "破壊@自分フィールド(耐性)",
+"id": "c0978"
+},
+{
+"card": 77313225,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "破壊@自分フィールド(耐性)",
+"id": "c0979"
+},
+{
+"card": 7894706,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "破壊@フィールド(耐性)",
+"id": "c0980"
+},
+{
+"card": 9822220,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "破壊@フィールド(耐性)",
+"id": "c0981"
+},
+{
+"card": 28373620,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "破壊@フィールド(耐性)",
+"id": "c0982"
+},
+{
+"card": 29913783,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "破壊@フィールド(耐性)",
+"id": "c0983"
+},
+{
+"card": 45409943,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "破壊@フィールド(耐性)",
+"id": "c0984"
+},
+{
+"card": 13173832,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "破壊(耐性)",
+"id": "c0985"
+},
+{
+"card": 31178212,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "破壊(耐性)",
+"id": "c0986"
+},
+{
+"card": 50907446,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "破壊(耐性)",
+"id": "c0987"
+},
+{
+"card": 69526976,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "破壊(耐性)",
+"id": "c0988"
+},
+{
+"card": 71797713,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "破壊(耐性)",
+"id": "c0989"
+},
+{
+"card": 16240772,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "受ける(耐性)",
+"id": "c0990"
+},
+{
+"card": 17016362,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "受ける(耐性)",
+"id": "c0991"
+},
+{
+"card": 28325165,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "受ける(耐性)",
+"id": "c0992"
+},
+{
+"card": 59120809,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "受ける(耐性)",
+"id": "c0993"
+},
+{
+"card": 67359907,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "受ける(耐性)",
+"id": "c0994"
+},
+{
+"card": 1061200,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "対象にする(耐性)",
+"id": "c0995"
+},
+{
+"card": 4167084,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "対象にする(耐性)",
+"id": "c0996"
+},
+{
+"card": 54631665,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "対象にする(耐性)",
+"id": "c0997"
+},
+{
+"card": 61888819,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "対象にする(耐性)",
+"id": "c0998"
+},
+{
+"card": 81670445,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "対象にする(耐性)",
+"id": "c0999"
+},
+{
+"card": 22617205,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "無効にする(耐性)",
+"id": "c1000"
+},
+{
+"card": 47705572,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "無効にする(耐性)",
+"id": "c1001"
+},
+{
+"card": 54100561,
+"section": "pendulum",
+"index": "①",
+"order": 0,
+"stratum": "無効にする(耐性)",
+"id": "c1002"
+},
+{
+"card": 57777714,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "無効にする(耐性)",
+"id": "c1003"
+},
+{
+"card": 77384395,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "無効にする(耐性)",
+"id": "c1004"
+},
+{
+"card": 269510,
+"section": "main",
+"index": "③",
+"order": 4,
+"stratum": "攻撃対象にする(耐性)",
+"id": "c1005"
+},
+{
+"card": 11825276,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "攻撃対象にする(耐性)",
+"id": "c1006"
+},
+{
+"card": 78225596,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "攻撃対象にする(耐性)",
+"id": "c1007"
+},
+{
+"card": 79698395,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "攻撃対象にする(耐性)",
+"id": "c1008"
+},
+{
+"card": 93896655,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "攻撃対象にする(耐性)",
+"id": "c1009"
+},
+{
+"card": 269510,
+"section": "main",
+"index": "③",
+"order": 5,
+"stratum": "なる(耐性)",
+"id": "c1010"
+},
+{
+"card": 37354507,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "なる(耐性)",
+"id": "c1011"
+},
+{
+"card": 57823578,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "なる(耐性)",
+"id": "c1012"
+},
+{
+"card": 74665651,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "なる(耐性)",
+"id": "c1013"
+},
+{
+"card": 78225596,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "なる(耐性)",
+"id": "c1014"
+},
+{
+"card": 3355732,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "発動@フィールド(限制)",
+"id": "c1015"
+},
+{
+"card": 13331639,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "発動@フィールド(限制)",
+"id": "c1016"
+},
+{
+"card": 40227329,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "発動@フィールド(限制)",
+"id": "c1017"
+},
+{
+"card": 70095046,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "発動@フィールド(限制)",
+"id": "c1018"
+},
+{
+"card": 95911373,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "発動@フィールド(限制)",
+"id": "c1019"
+},
+{
+"card": 2602411,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "発動@墓地(限制)",
+"id": "c1020"
+},
+{
+"card": 3966653,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "発動@墓地(限制)",
+"id": "c1021"
+},
+{
+"card": 40227329,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "発動@墓地(限制)",
+"id": "c1022"
+},
+{
+"card": 59494222,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "発動@墓地(限制)",
+"id": "c1023"
+},
+{
+"card": 82566662,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "発動@墓地(限制)",
+"id": "c1024"
+},
+{
+"card": 15419596,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "発動(限制)",
+"id": "c1025"
+},
+{
+"card": 18486927,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "発動(限制)",
+"id": "c1026"
+},
+{
+"card": 55733143,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "発動(限制)",
+"id": "c1027"
+},
+{
+"card": 86993168,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "発動(限制)",
+"id": "c1028"
+},
+{
+"card": 87532344,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "発動(限制)",
+"id": "c1029"
+},
+{
+"card": 45002991,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "攻撃(限制)",
+"id": "c1030"
+},
+{
+"card": 57111661,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "攻撃(限制)",
+"id": "c1031"
+},
+{
+"card": 62777823,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "攻撃(限制)",
+"id": "c1032"
+},
+{
+"card": 83190280,
+"section": "pendulum",
+"index": "①",
+"order": 3,
+"stratum": "攻撃(限制)",
+"id": "c1033"
+},
+{
+"card": 90173539,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "攻撃(限制)",
+"id": "c1034"
+},
+{
+"card": 2896663,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "直接攻撃(限制)",
+"id": "c1035"
+},
+{
+"card": 18597560,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "直接攻撃(限制)",
+"id": "c1036"
+},
+{
+"card": 45171524,
+"section": "main",
+"index": "①",
+"order": 8,
+"stratum": "直接攻撃(限制)",
+"id": "c1037"
+},
+{
+"card": 52768390,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "直接攻撃(限制)",
+"id": "c1038"
+},
+{
+"card": 53134520,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "直接攻撃(限制)",
+"id": "c1039"
+},
+{
+"card": 3129527,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "特殊召喚←EXデッキ(限制)",
+"id": "c1040"
+},
+{
+"card": 5255013,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "特殊召喚←EXデッキ(限制)",
+"id": "c1041"
+},
+{
+"card": 7459919,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "特殊召喚←EXデッキ(限制)",
+"id": "c1042"
+},
+{
+"card": 11050415,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "特殊召喚←EXデッキ(限制)",
+"id": "c1043"
+},
+{
+"card": 76218313,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "特殊召喚←EXデッキ(限制)",
+"id": "c1044"
+},
+{
+"card": 2834264,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "特殊召喚(限制)",
+"id": "c1045"
+},
+{
+"card": 6728559,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "特殊召喚(限制)",
+"id": "c1046"
+},
+{
+"card": 23187256,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "特殊召喚(限制)",
+"id": "c1047"
+},
+{
+"card": 59054773,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "特殊召喚(限制)",
+"id": "c1048"
+},
+{
+"card": 83152482,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "特殊召喚(限制)",
+"id": "c1049"
+},
+{
+"card": 14625090,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "対象にする@自分フィールド(限制)",
+"id": "c1050"
+},
+{
+"card": 31971040,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "対象にする@自分フィールド(限制)",
+"id": "c1051"
+},
+{
+"card": 34093683,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "対象にする@自分フィールド(限制)",
+"id": "c1052"
+},
+{
+"card": 62089826,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "対象にする@自分フィールド(限制)",
+"id": "c1053"
+},
+{
+"card": 98477480,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "対象にする@自分フィールド(限制)",
+"id": "c1054"
+},
+{
+"card": 1825445,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "対象にする@フィールド(限制)",
+"id": "c1055"
+},
+{
+"card": 49451215,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "対象にする@フィールド(限制)",
+"id": "c1056"
+},
+{
+"card": 54757758,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "対象にする@フィールド(限制)",
+"id": "c1057"
+},
+{
+"card": 88753594,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "対象にする@フィールド(限制)",
+"id": "c1058"
+},
+{
+"card": 94641726,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "対象にする@フィールド(限制)",
+"id": "c1059"
+},
+{
+"card": 22723778,
+"section": "main",
+"index": "③",
+"order": 5,
+"stratum": "対象にする(限制)",
+"id": "c1060"
+},
+{
+"card": 50383626,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "対象にする(限制)",
+"id": "c1061"
+},
+{
+"card": 82315403,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "対象にする(限制)",
+"id": "c1062"
+},
+{
+"card": 90207654,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "対象にする(限制)",
+"id": "c1063"
+},
+{
+"card": 96150936,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "対象にする(限制)",
+"id": "c1064"
+},
+{
+"card": 28674152,
+"section": "main",
+"index": "③",
+"order": 0,
+"stratum": "存在(限制)",
+"id": "c1065"
+},
+{
+"card": 36956512,
+"section": "main",
+"index": "③",
+"order": 0,
+"stratum": "存在(限制)",
+"id": "c1066"
+},
+{
+"card": 44146295,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "存在(限制)",
+"id": "c1067"
+},
+{
+"card": 44680819,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "存在(限制)",
+"id": "c1068"
+},
+{
+"card": 65952776,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "存在(限制)",
+"id": "c1069"
+},
+{
+"card": 4991081,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "選択(限制)",
+"id": "c1070"
+},
+{
+"card": 20265095,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "選択(限制)",
+"id": "c1071"
+},
+{
+"card": 64184058,
+"section": "main",
+"index": "②",
+"order": 0,
+"stratum": "選択(限制)",
+"id": "c1072"
+},
+{
+"card": 69453825,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "選択(限制)",
+"id": "c1073"
+},
+{
+"card": 70709488,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "選択(限制)",
+"id": "c1074"
+},
+{
+"card": 15185344,
+"section": "main",
+"index": "0-3",
+"order": 0,
+"stratum": "素材にする(限制)",
+"id": "c1075"
+},
+{
+"card": 63845230,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "素材にする(限制)",
+"id": "c1076"
+},
+{
+"card": 85101097,
+"section": "main",
+"index": "0",
+"order": 0,
+"stratum": "素材にする(限制)",
+"id": "c1077"
+},
+{
+"card": 87462901,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "素材にする(限制)",
+"id": "c1078"
+},
+{
+"card": 88722973,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "素材にする(限制)",
+"id": "c1079"
+},
+{
+"card": 40669071,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "使用(限制)",
+"id": "c1080"
+},
+{
+"card": 44146295,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "使用(限制)",
+"id": "c1081"
+},
+{
+"card": 60203670,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "使用(限制)",
+"id": "c1082"
+},
+{
+"card": 60600821,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "使用(限制)",
+"id": "c1083"
+},
+{
+"card": 97466438,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "使用(限制)",
+"id": "c1084"
+},
+{
+"card": 3129527,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "リリース(限制)",
+"id": "c1085"
+},
+{
+"card": 9929398,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "リリース(限制)",
+"id": "c1086"
+},
+{
+"card": 22916418,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "リリース(限制)",
+"id": "c1087"
+},
+{
+"card": 63845230,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "リリース(限制)",
+"id": "c1088"
+},
+{
+"card": 96113307,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "リリース(限制)",
+"id": "c1089"
+},
+{
+"card": 20773176,
+"section": "pendulum",
+"index": "①",
+"order": 0,
+"stratum": "P召喚(限制)",
+"id": "c1090"
+},
+{
+"card": 24573625,
+"section": "pendulum",
+"index": "①",
+"order": 0,
+"stratum": "P召喚(限制)",
+"id": "c1091"
+},
+{
+"card": 46035545,
+"section": "pendulum",
+"index": "①",
+"order": 0,
+"stratum": "P召喚(限制)",
+"id": "c1092"
+},
+{
+"card": 58016954,
+"section": "pendulum",
+"index": "①",
+"order": 0,
+"stratum": "P召喚(限制)",
+"id": "c1093"
+},
+{
+"card": 96223501,
+"section": "pendulum",
+"index": "①",
+"order": 0,
+"stratum": "P召喚(限制)",
+"id": "c1094"
+},
+{
+"card": 5559570,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "攻撃宣言(限制)",
+"id": "c1095"
+},
+{
+"card": 20265095,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "攻撃宣言(限制)",
+"id": "c1096"
+},
+{
+"card": 31434645,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "攻撃宣言(限制)",
+"id": "c1097"
+},
+{
+"card": 44716890,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "攻撃宣言(限制)",
+"id": "c1098"
+},
+{
+"card": 73810864,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "攻撃宣言(限制)",
+"id": "c1099"
+},
+{
+"card": 54842941,
+"section": "main",
+"index": "③",
+"order": 2,
+"stratum": "変更(限制)",
+"id": "c1100"
+},
+{
+"card": 58153103,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "変更(限制)",
+"id": "c1101"
+},
+{
+"card": 58589739,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "変更(限制)",
+"id": "c1102"
+},
+{
+"card": 87462901,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "変更(限制)",
+"id": "c1103"
+},
+{
+"card": 99330325,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "変更(限制)",
+"id": "c1104"
+},
+{
+"card": 4729591,
+"section": "main",
+"index": "0-3",
+"order": 1,
+"stratum": "L素材にする(限制)",
+"id": "c1105"
+},
+{
+"card": 26692769,
+"section": "main",
+"index": "0-2",
+"order": 0,
+"stratum": "L素材にする(限制)",
+"id": "c1106"
+},
+{
+"card": 27381364,
+"section": "main",
+"index": "0-2",
+"order": 1,
+"stratum": "L素材にする(限制)",
+"id": "c1107"
+},
+{
+"card": 57282724,
+"section": "main",
+"index": "0-2",
+"order": 0,
+"stratum": "L素材にする(限制)",
+"id": "c1108"
+},
+{
+"card": 71607202,
+"section": "main",
+"index": "0-2",
+"order": 1,
+"stratum": "L素材にする(限制)",
+"id": "c1109"
+},
+{
+"card": 13735899,
+"section": "main",
+"index": "0-2",
+"order": 0,
+"stratum": "融合素材にする(限制)",
+"id": "c1110"
+},
+{
+"card": 30864377,
+"section": "main",
+"index": "0-2",
+"order": 2,
+"stratum": "融合素材にする(限制)",
+"id": "c1111"
+},
+{
+"card": 38811586,
+"section": "main",
+"index": "0-2",
+"order": 0,
+"stratum": "融合素材にする(限制)",
+"id": "c1112"
+},
+{
+"card": 72490637,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "融合素材にする(限制)",
+"id": "c1113"
+},
+{
+"card": 87116928,
+"section": "main",
+"index": "0-3",
+"order": 0,
+"stratum": "融合素材にする(限制)",
+"id": "c1114"
+},
+{
+"card": 45001322,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "除外(限制)",
+"id": "c1115"
+},
+{
+"card": 45148985,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "除外(限制)",
+"id": "c1116"
+},
+{
+"card": 53829527,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "除外(限制)",
+"id": "c1117"
+},
+{
+"card": 58809685,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "除外(限制)",
+"id": "c1118"
+},
+{
+"card": 89604813,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "除外(限制)",
+"id": "c1119"
+},
+{
+"card": 18027138,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "攻撃対象にする(限制)",
+"id": "c1120"
+},
+{
+"card": 42237854,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "攻撃対象にする(限制)",
+"id": "c1121"
+},
+{
+"card": 74725513,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "攻撃対象にする(限制)",
+"id": "c1122"
+},
+{
+"card": 79636594,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "攻撃対象にする(限制)",
+"id": "c1123"
+},
+{
+"card": 97588916,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "攻撃対象にする(限制)",
+"id": "c1124"
+},
+{
+"card": 18175965,
+"section": "main",
+"index": "③",
+"order": 1,
+"stratum": "召喚(限制)",
+"id": "c1125"
+},
+{
+"card": 30650147,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "召喚(限制)",
+"id": "c1126"
+},
+{
+"card": 63504681,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "召喚(限制)",
+"id": "c1127"
+},
+{
+"card": 65430834,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "召喚(限制)",
+"id": "c1128"
+},
+{
+"card": 86809440,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "召喚(限制)",
+"id": "c1129"
+},
+{
+"card": 13683298,
+"section": "main",
+"index": "0",
+"order": 1,
+"stratum": "行う(限制)",
+"id": "c1130"
+},
+{
+"card": 40450317,
+"section": "main",
+"index": "0",
+"order": 0,
+"stratum": "行う(限制)",
+"id": "c1131"
+},
+{
+"card": 54447022,
+"section": "main",
+"index": "0",
+"order": 1,
+"stratum": "行う(限制)",
+"id": "c1132"
+},
+{
+"card": 61322713,
+"section": "main",
+"index": "0",
+"order": 1,
+"stratum": "行う(限制)",
+"id": "c1133"
+},
+{
+"card": 86308219,
+"section": "main",
+"index": "0",
+"order": 1,
+"stratum": "行う(限制)",
+"id": "c1134"
+},
+{
+"card": 13974207,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "セット(限制)",
+"id": "c1135"
+},
+{
+"card": 43577607,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "セット(限制)",
+"id": "c1136"
+},
+{
+"card": 71650854,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "セット(限制)",
+"id": "c1137"
+},
+{
+"card": 73468603,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "セット(限制)",
+"id": "c1138"
+},
+{
+"card": 95545183,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "セット(限制)",
+"id": "c1139"
+},
+{
+"card": 9929398,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "S素材にする(限制)",
+"id": "c1140"
+},
+{
+"card": 18239909,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "S素材にする(限制)",
+"id": "c1141"
+},
+{
+"card": 28674152,
+"section": "main",
+"index": "④",
+"order": 3,
+"stratum": "S素材にする(限制)",
+"id": "c1142"
+},
+{
+"card": 36608728,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "S素材にする(限制)",
+"id": "c1143"
+},
+{
+"card": 62899696,
+"section": "main",
+"index": "0-2",
+"order": 0,
+"stratum": "S素材にする(限制)",
+"id": "c1144"
+},
+{
+"card": 15291624,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "加える(限制)",
+"id": "c1145"
+},
+{
+"card": 32687071,
+"section": "pendulum",
+"index": "①",
+"order": 1,
+"stratum": "加える(限制)",
+"id": "c1146"
+},
+{
+"card": 79791695,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "加える(限制)",
+"id": "c1147"
+},
+{
+"card": 80320877,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "加える(限制)",
+"id": "c1148"
+},
+{
+"card": 84025439,
+"section": "main",
+"index": "①",
+"order": 7,
+"stratum": "加える(限制)",
+"id": "c1149"
+},
+{
+"card": 64865,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1150"
+},
+{
+"card": 4904633,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1151"
+},
+{
+"card": 4931121,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1152"
+},
+{
+"card": 6186304,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "(未歸類)",
+"id": "c1153"
+},
+{
+"card": 7373632,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1154"
+},
+{
+"card": 10163855,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "(未歸類)",
+"id": "c1155"
+},
+{
+"card": 12067160,
+"section": "main",
+"index": "0-2",
+"order": 0,
+"stratum": "(未歸類)",
+"id": "c1156"
+},
+{
+"card": 14556954,
+"section": "main",
+"index": "③",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1157"
+},
+{
+"card": 15381252,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "(未歸類)",
+"id": "c1158"
+},
+{
+"card": 18585765,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "(未歸類)",
+"id": "c1159"
+},
+{
+"card": 18795635,
+"section": "main",
+"index": "①",
+"order": 0,
+"stratum": "(未歸類)",
+"id": "c1160"
+},
+{
+"card": 22638495,
+"section": "main",
+"index": "0-2",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1161"
+},
+{
+"card": 25148255,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "(未歸類)",
+"id": "c1162"
+},
+{
+"card": 30583090,
+"section": "main",
+"index": "②",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1163"
+},
+{
+"card": 32687071,
+"section": "pendulum",
+"index": "0",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1164"
+},
+{
+"card": 33506331,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1165"
+},
+{
+"card": 35035481,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "(未歸類)",
+"id": "c1166"
+},
+{
+"card": 37119142,
+"section": "main",
+"index": "②",
+"order": 5,
+"stratum": "(未歸類)",
+"id": "c1167"
+},
+{
+"card": 37279096,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1168"
+},
+{
+"card": 37613663,
+"section": "main",
+"index": "①",
+"order": 6,
+"stratum": "(未歸類)",
+"id": "c1169"
+},
+{
+"card": 40080312,
+"section": "main",
+"index": "0",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1170"
+},
+{
+"card": 42138622,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1171"
+},
+{
+"card": 42193638,
+"section": "main",
+"index": "①",
+"order": 5,
+"stratum": "(未歸類)",
+"id": "c1172"
+},
+{
+"card": 43011492,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "(未歸類)",
+"id": "c1173"
+},
+{
+"card": 46271408,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "(未歸類)",
+"id": "c1174"
+},
+{
+"card": 46502744,
+"section": "main",
+"index": "②",
+"order": 2,
+"stratum": "(未歸類)",
+"id": "c1175"
+},
+{
+"card": 48016074,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1176"
+},
+{
+"card": 49131917,
+"section": "pendulum",
+"index": "①",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1177"
+},
+{
+"card": 50947142,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "(未歸類)",
+"id": "c1178"
+},
+{
+"card": 51684157,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1179"
+},
+{
+"card": 51706604,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1180"
+},
+{
+"card": 54241725,
+"section": "main",
+"index": "②",
+"order": 4,
+"stratum": "(未歸類)",
+"id": "c1181"
+},
+{
+"card": 54498517,
+"section": "main",
+"index": "0-2",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1182"
+},
+{
+"card": 57496978,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1183"
+},
+{
+"card": 57496978,
+"section": "main",
+"index": "①",
+"order": 4,
+"stratum": "(未歸類)",
+"id": "c1184"
+},
+{
+"card": 58297729,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1185"
+},
+{
+"card": 63017368,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1186"
+},
+{
+"card": 65351555,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1187"
+},
+{
+"card": 73575650,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1188"
+},
+{
+"card": 74191528,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "(未歸類)",
+"id": "c1189"
+},
+{
+"card": 74640994,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1190"
+},
+{
+"card": 79606837,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "(未歸類)",
+"id": "c1191"
+},
+{
+"card": 80749819,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "(未歸類)",
+"id": "c1192"
+},
+{
+"card": 81038234,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "(未歸類)",
+"id": "c1193"
+},
+{
+"card": 81481818,
+"section": "main",
+"index": "②",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1194"
+},
+{
+"card": 85520170,
+"section": "main",
+"index": "①",
+"order": 3,
+"stratum": "(未歸類)",
+"id": "c1195"
+},
+{
+"card": 88069597,
+"section": "main",
+"index": "0",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1196"
+},
+{
+"card": 90351981,
+"section": "main",
+"index": "①",
+"order": 1,
+"stratum": "(未歸類)",
+"id": "c1197"
+},
+{
+"card": 95254840,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "(未歸類)",
+"id": "c1198"
+},
+{
+"card": 98827725,
+"section": "main",
+"index": "①",
+"order": 2,
+"stratum": "(未歸類)",
+"id": "c1199"
+}
+]

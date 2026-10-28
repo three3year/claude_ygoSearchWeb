@@ -1,0 +1,10 @@
+{
+ "mode": "categories",
+ "seed": 20261028,
+ "batches": 8,
+ "error_types": [
+  "歸錯葉",
+  "該歸未歸",
+  "葉定義有問題"
+ ]
+}

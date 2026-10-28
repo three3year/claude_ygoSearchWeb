@@ -32,7 +32,9 @@ category-tree-restart 票 02,2026-10-19 站主裁定不切「無」),葉名以�
     其餘         → 未歸(詞元沒有節點,或條件全不符且沒有預設葉);沒有「其他」類
 來源/目的/所在字面各自映成(玩家, 區域清單)(票 02;區域辨識 places.parse_place 在框架線,
 frame-args-v3 票 01),各比自己那一欄(category-tree-restart 票 01):移動類動作依來源切葉,
-破壊、選ぶ 這類非移動類依所在切葉(受事者區域由框架抽取切出,frame-args-v3 票 04)。
+破壊、選ぶ 這類非移動類依所在切葉(受事者區域由框架抽取切出,frame-args-v3 票 04);非移動類
+(不在框架線的 MOVE_ACTIONS)所在空著、來源有原文字面時,來源當所在比——「手札・墓地から選ぶ」
+的 から 是受事者的所在(類別線票 08,category-round1;待站主裁定)。
 玩家條件只在宣告的葉上比對該區域欄的玩家(複合字面逐區域取:自分の墓地・相手フィールド
 的墓地是自分、フィールドは相手;places.parse_zones);沒寫玩家前綴的字面(玩家 無)、
 持ち主の/自身の 這類相對前綴(玩家 相對,看主語或持有者是誰;類別線票 06,2026-10-27
@@ -77,7 +79,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import frames  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
-from frames import POL_AFFIRM, POL_NEG, POS_COND, POS_COST, POS_EFFECT  # noqa: E402
+from frames import MOVE_ACTIONS, POL_AFFIRM, POL_NEG, POS_COND, POS_COST, POS_EFFECT  # noqa: E402
 import action_lemmas  # noqa: E402
 from action_lemmas import VOICE_PASSIVE  # noqa: E402
 from places import PLAYER_BOTH, PLAYER_OPP, PLAYER_SELF, parse_place, parse_zones  # noqa: E402
@@ -464,9 +466,11 @@ class CategoryTree:
         # 推得的來源/目的(frame-args-v3 票 05)參與區域匹配,但沒有原文字面:玩家照 null,
         # 不中任何宣告玩家的葉,玩家欄也記 null
         inferred = frame.get("inferred") or ()
+        literals = {"source": frame.get("source"), "goal": frame.get("goal"),
+                    "place": place_literal(frame)}
         options = []                # 每欄的 [(玩家, 區域)…];沒有區域的欄以 (None, None) 參與
         for field in ZONE_FIELDS:
-            zones = parse_zones(frame.get(field)) or [(None, None)]
+            zones = parse_zones(literals[field]) or [(None, None)]
             options.append([(None, zone) for _, zone in zones] if field in inferred else zones)
         for field in ("source", "goal"):     # 玩家欄:各段的玩家合起來(與葉的條件無關)
             record[field + "_player"] = (None if field in inferred
@@ -491,6 +495,17 @@ class CategoryTree:
             record.update(status=STATUS_PLACED, leaves=[leaf.name for leaf in matched],
                           major=matched[0].major, paths=[list(leaf.path) for leaf in matched])
         return record
+
+
+def place_literal(frame):
+    """框架比所在葉用的字面:所在欄;非移動類動作(不在框架線的 MOVE_ACTIONS)所在空著、來源有
+    原文字面時讀來源欄——「手札・墓地から選ぶ」的 から 是受事者的所在(票 08,category-round1;
+    待站主裁定)。移動類的來源仍只比來源葉。草案的所在分佈用同一個字面。"""
+    if frame.get("place") or frame["action"] in MOVE_ACTIONS:
+        return frame.get("place")
+    if "source" in (frame.get("inferred") or ()):
+        return None
+    return frame.get("source")
 
 
 def lemma_errors(lemma):

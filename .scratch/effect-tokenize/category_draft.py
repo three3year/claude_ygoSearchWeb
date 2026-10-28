@@ -220,7 +220,8 @@ def counted(entries):
 
 
 def places_table(actions, tree):
-    """非移動類詞元的 所在區域×玩家 分佈(非條件位)。一個框架的複合所在逐區域各算一次
+    """非移動類詞元的 所在區域×玩家 分佈(非條件位;所在空著時讀來源,categories.place_literal)。
+    一個框架的複合所在逐區域各算一次
     (玩家逐區域取,places.parse_zones;所在不會推得),每個區域先列不分玩家的合計列、再列
     玩家各列。≥10 框標可開並給擬葉名(詞元節點存在時):玩家列是 詞元@相手フィールド 這類,
     無(沒寫玩家)不能宣告、沒有自己的葉;合計列是不帶玩家的 詞元@區域,門檻看扣掉同區域
@@ -234,12 +235,13 @@ def places_table(actions, tree):
             continue
         label, key = categories.unplaced_label(fr)
         keys[label] = key
-        if not fr.get("place"):
+        place = categories.place_literal(fr)      # 所在空著時讀來源(票 08),與歸組同一個字面
+        if not place:
             without[label] += 1
             continue
         placed_cards[label].append(card)
         entry = (card, rec["leaves"])
-        zones = parse_zones(fr["place"])
+        zones = parse_zones(place)
         if not zones:
             by_node[label][UNKNOWN_ZONE][None].append(entry)
         for player, zone in zones:

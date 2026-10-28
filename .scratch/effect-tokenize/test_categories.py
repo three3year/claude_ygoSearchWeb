@@ -816,7 +816,7 @@ class TestMajorByLeaf(unittest.TestCase):
 
     def test_same_lemma_leaves_in_three_majors(self):
         """真樹的 にする:攻撃力/:守備力 沒宣告、取本家 數值;:ダメージ 宣告 LP・ダメージ、
-        :ドロー/枚数/回数 宣告 規則改寫。"""
+        :ドロー/数 宣告 規則改寫(2026-10-28 第四批裁定前是 :ドロー/枚数/回数)。"""
         self.assertEqual(
             classify("①：このカードの攻撃力は１００００になる。"),
             [("にする", "已歸", ["にする:攻撃力"], "數值", None, None,
@@ -833,8 +833,8 @@ class TestMajorByLeaf(unittest.TestCase):
               ["LP・ダメージ › ダメージ › にする:ダメージ"])])
         self.assertEqual(
             classify("①：自分の通常のドローは２枚になる。"),
-            [("にする", "已歸", ["にする:ドロー/枚数/回数"], "規則改寫", None, None,
-              ["規則改寫 › にする › にする:ドロー/枚数/回数"])])
+            [("にする", "已歸", ["にする:ドロー/数"], "規則改寫", None, None,
+              ["規則改寫 › にする › にする:ドロー/数"])])
 
     def test_multi_leaf_across_majors_takes_first_leafs_major(self):
         tree = [
@@ -850,6 +850,68 @@ class TestMajorByLeaf(unittest.TestCase):
             classify("①：そのモンスターの守備力が０になる。", tree=tree),
             [("にする", "已歸", ["にする:守備力"], "甲", None, None,
               ["甲 › にする › にする:守備力"])])
+
+
+class TestLeafProposalsRealTree(unittest.TestCase):
+    """類別線票 06 第四批裁定(2026-10-28,LLM 檢驗 round1 挑出的葉表提議):アップ 開 :Pスケール
+    (中類 Pスケール);無効にする(耐性) 比照肯定節點依 効果/発動/召喚 分葉;にする 的 ドロー/枚数/回数
+    葉改宣告 ドロー/数(枚数/回数 是 数 的子字串,「手札に加える数を２枚に」也收);使用(限制) 開
+    使用:ゾーン(限制)(9 框,站主點名開、不照門檻);異なる(對象限定語)、見る(視點語)不是卡在做的
+    動作,節點刪除、框架回未歸。"""
+
+    def test_pendulum_scale_up(self):
+        self.assertEqual(
+            classify("①：１ターンに１度、自分メインフェイズに発動できる。"
+                     "このカードのPスケールを１つ上げる（最大１２まで）。"),
+            [("アップ", "已歸", ["アップ:Pスケール"], "數值", None, None,
+              ["數值 › Pスケール › アップ:Pスケール"])])
+
+    def test_negate_resistance_splits_by_keyword(self):
+        self.assertEqual(
+            classify("①：このカードの発動と効果は無効化されない。"),
+            [("無効にする", "已歸", ["無効にする:効果(耐性)", "無効にする:発動(耐性)"], "耐性",
+              None, None,
+              ["耐性 › 無効にする(耐性) › 無効にする:効果(耐性)",
+               "耐性 › 無効にする(耐性) › 無効にする:発動(耐性)"])])
+        # 発動する効果 的 発動 是動詞用法、不算命中
+        self.assertEqual(
+            classify("①：このターン、「サブテラー」カードの発動する効果は無効化されない。")[0][2],
+            ["無効にする:効果(耐性)"])
+        self.assertEqual(
+            classify("①：このカードの特殊召喚は無効化されず、"
+                     "特殊召喚成功時に相手は効果を発動できない。")[0][2],
+            ["無効にする:召喚(耐性)"])
+
+    def test_count_rewrite_takes_kazu(self):
+        for text in ("①：この効果で手札に加える数を２枚にできる。",
+                     "①：このカードのX素材を取り除く数を１つにできる。"):
+            self.assertEqual(
+                classify(text),
+                [("にする", "已歸", ["にする:ドロー/数"], "規則改寫", None, None,
+                  ["規則改寫 › にする › にする:ドロー/数"])])
+
+    def test_zone_use_restriction(self):
+        self.assertEqual(
+            classify("①：このターン、指定したゾーンは使用できない。"),
+            [("使用", "已歸", ["使用:ゾーン(限制)"], "限制", None, None,
+              ["限制 › 使用(限制) › 使用:ゾーン(限制)"])])
+        # 召喚素材用途的 使用 字面在子句,仍落預設葉
+        self.assertEqual(
+            classify("①：このカードをS素材とする場合、"
+                     "「セイヴァー」モンスターのS召喚にしか使用できない。")[-1][2],
+            ["使用(限制)"])
+
+    def test_differ_and_seen_from_are_unplaced(self):
+        self.assertEqual(
+            classify("①：フィールドの表側表示モンスター１体を対象として発動できる。"
+                     "そのモンスターとはカード名が異なり、同じ属性を持つフィールドの"
+                     "モンスター１体を選んで破壊する。")[1],
+            ("異なる", "未歸", [], None, None, None, []))
+        self.assertIn(
+            ("見る", "未歸", [], None, None, None, []),
+            classify("①：１ターンに１度、自分メインフェイズに発動できる。装備モンスターの位置を、"
+                     "そのモンスターのリンク先のメインモンスターゾーンに移動する"
+                     "（そのモンスターから見て相手のフィールドには移動できない）。"))
 
 
 # 測試小樹:中類(大類底下列中類清單,葉以名字宣告)

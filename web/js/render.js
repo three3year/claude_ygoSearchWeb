@@ -258,7 +258,7 @@ function printHtml(c) {
 }
 
 /* 種類與參數。怪獸參數只有怪獸有——罠モンスター的種族是它變成怪獸之後的形態,
-   索引裡根本沒有那些欄位(CONTEXT.md「卡片子類型」)。 */
+   索引裡根本沒有那些欄位(GLOSSARY.md「卡片子類型」)。 */
 function metaHtml(c) {
   const sub = SUB_ZH[c.c] || {};
   const lines = [`<div>${esc(

@@ -145,7 +145,7 @@ const VALUE = {
   atk: c => stat(c.atk),
   df: c => stat(c.df),
   // 等級/階級只認 `lv`:連結怪獸沒有等級,LINK-3 是連結值、是另一個參數
-  // (欄位的有無由大類與子類型決定,見 CONTEXT.md「前端索引」),所以連結怪獸
+  // (欄位的有無由大類與子類型決定,見 GLOSSARY.md「前端索引」),所以連結怪獸
   // 在這個鍵上是空值而不是等級 3
   lv: c => (c.lv == null ? null : c.lv),
   // 卡名比的是**碼點序**而不是 localeCompare:後者的結果隨環境的 ICU 版本與

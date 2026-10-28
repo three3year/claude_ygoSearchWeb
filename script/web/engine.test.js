@@ -208,7 +208,7 @@ const VOCAB = {
           // 本類對應(ADR-0010):跨類型排除照它判,由值域正典宣告、隨 VOCAB 出去
           own: { sn: 's:normal', sr: 's:ritual', se: 's:equip',
                  sp: 'm:pendulum', tn: 't:normal', tc: 't:continuous' } },
-  // 承載關係與怪獸側組合鈕都住在值域正典(CONTEXT.md「必發/選發」、
+  // 承載關係與怪獸側組合鈕都住在值域正典(GLOSSARY.md「必發/選發」、
   // spec-optional-combo):只有誘發即時(2速)、誘發(1速)與魔陷卡效果十值承載;
   // 組合鈕 = 「同一句是該效果類型且帶該值」,由 combos 宣告命中規則
   optional: { zh: '必發/選發',

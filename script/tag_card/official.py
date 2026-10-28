@@ -9,7 +9,7 @@
 不是對外接縫,對外的只有 tagcard.build_tag_cards 與 masked 那一對。這裡也放兩樣
 姊妹模組共用的東西:`NON_EFFECT_RE`(遮蔽測試要遮掉的效果外文本明示,八種變體與
 抽取器認同一條才不會漏遮)與 `normalise` / `quotes`(拆句表的引用交叉驗證要與歸屬
-對位用同一把尺)。共用的是判準本身,不是判定流程。詞彙見 CONTEXT.md。
+對位用同一把尺)。共用的是判準本身,不是判定流程。詞彙見 GLOSSARY.md。
 """
 import re
 import unicodedata
@@ -20,7 +20,7 @@ INDEX_PREAMBLE = "0"
 INDEX_UNNUMBERED = "1"
 BULLET = "●"
 
-# 效果類型的六種怪獸側固定值(CONTEXT.md 定義,「(2速)」「(1速)」是名稱的一部分)。
+# 效果類型的六種怪獸側固定值(GLOSSARY.md 定義,「(2速)」「(1速)」是名稱的一部分)。
 # 官方的類型詞只用在**以怪獸身分運作**的效果上,官方明示抽取也只認這六種。
 KIND_NON_EFFECT = "效果外文本"
 KIND_UNCLASSIFIED = "無種類效果"
@@ -46,7 +46,7 @@ SPELLTRAP_KINDS = ("通常魔法卡效果", "速攻魔法卡效果", "儀式魔�
 
 SOURCE_OFFICIAL = "official"
 
-# 必發/選發的兩個值(CONTEXT.md 定義);官方明示只講得出必發那一邊
+# 必發/選發的兩個值(GLOSSARY.md 定義);官方明示只講得出必發那一邊
 OPTIONAL_MANDATORY = "必發"
 OPTIONAL_OPTIONAL = "選發"
 

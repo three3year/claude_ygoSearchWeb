@@ -2,7 +2,7 @@
 
 單一接縫:build_card_list(zh_path[, ja_path, en_path, existing]) → (cards, report)。
 輸入為來源 cdb 檔路徑;下載與檔案輸出在此模組之外。
-詞彙見 CONTEXT.md:卡片密碼、卡片總表、衍生物、同名異圖卡、差值更新。
+詞彙見 GLOSSARY.md:卡片密碼、卡片總表、衍生物、同名異圖卡、差值更新。
 """
 import json
 import sqlite3

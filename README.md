@@ -14,7 +14,7 @@
 判定分三層權威——官方補足情報的明示 > 規則層 > 逐條判定;規則只寫影子預測不決定值,
 每一條都以官方明示獨立驗證(ADR-0002)。
 
-領域詞彙見 [CONTEXT.md](CONTEXT.md);規格與票券見 `.scratch/card-list/` 與
+領域詞彙見 [GLOSSARY.md](GLOSSARY.md);規格與票券見 `.scratch/card-list/` 與
 `.scratch/search-web/`。
 
 ## 使用

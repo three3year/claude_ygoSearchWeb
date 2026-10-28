@@ -22,7 +22,7 @@ tag(槽位中文值,`pos` 由掃描範圍決定)、新增票號、遮蔽測試�
 分期推進由 PHASES 登記——只有已開貼類別的規則會上工,seal 的「零空缺」也
 只問已開貼的類別。
 
-詞彙見 CONTEXT.md:效果 Tag、動作類別、槽位、觸發時機。
+詞彙見 GLOSSARY.md:效果 Tag、動作類別、槽位、觸發時機。
 """
 import hashlib
 import re

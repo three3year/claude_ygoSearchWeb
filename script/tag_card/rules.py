@@ -11,7 +11,7 @@
 規則變更僅限 CHANGE_REASONS 的三種情況,每次變更都要留下理由與票號;合併的舊條
 標記 `merged_into` 而不刪行,規則的來歷因此永遠可追溯。
 
-給 tagcard.build_tag_cards 用,不是對外接縫。詞彙見 CONTEXT.md。
+給 tagcard.build_tag_cards 用,不是對外接縫。詞彙見 GLOSSARY.md。
 """
 import hashlib
 import re

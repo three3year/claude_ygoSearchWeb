@@ -63,7 +63,7 @@ const FIELDS = [
     groupAfter: { '能力': 'race' } },
   { tri: 'sub', dom: 'sub_s', side: 's', parent: 'cat' },
   { tri: 'sub', dom: 'sub_t', side: 't', parent: 'cat' },
-  // `mon`:怪獸才有的參數(CONTEXT.md:非怪獸清空 race/attr/level/atk/def 五欄;
+  // `mon`:怪獸才有的參數(GLOSSARY.md:非怪獸清空 race/attr/level/atk/def 五欄;
   // 連結值/刻度/連結標記同理)。與子類組同一套連動隱藏——選了大類「怪獸」才出現,
   // 取消就藏起並清空;出現時收著不自動展開(八軸全彈開是一面牆)
   { tri: 'attr', dom: 'attr', mon: true, parent: 'sub_m' },
@@ -590,7 +590,7 @@ function showAxis(el, show, expand) {
 }
 
 /* 大類連動:選了「包含」才出現。子類組跟著自己那一側;怪獸參數軸(mon)跟著
-   「怪獸」——屬性/種族/等級這些是怪獸才有的參數(CONTEXT.md:非怪獸清空
+   「怪獸」——屬性/種族/等級這些是怪獸才有的參數(GLOSSARY.md:非怪獸清空
    那五欄,連結值/刻度/連結標記同理),大類沒選怪獸時它們是問不出結果的條件。 */
 function syncSubs() {
   const cat = axisEl('cat', '');

@@ -42,7 +42,7 @@ const LM_CODES = codesOf('lm');
 const BAN_ZH = { bo: zhTable('ban_o'), bt: zhTable('ban_t'),
                  bm: zhTable('ban_m') };
 /* 子類型一側一份:同一個碼在怪獸側是儀式怪獸、在魔法側是儀式魔法,
-   讀哪一份由卡片的大類決定(CONTEXT.md「卡片子類型」) */
+   讀哪一份由卡片的大類決定(GLOSSARY.md「卡片子類型」) */
 const SUB_ZH = { m: zhTable('sub_m'), s: zhTable('sub_s'), t: zhTable('sub_t') };
 
 const $ = id => document.getElementById(id);
@@ -56,7 +56,7 @@ function esc(s) {
 const pad8 = id => String(id).padStart(8, '0');
 
 /* 資料更新時間的顯示格式:`2026-08-08T17:57:00+0800` → `2026-08-08 17:57 (UTC+8)`。
-   秒數捨去(「資料多新」分鐘就夠)。顯示固定 UTC+8(CONTEXT.md「資料更新時間」),
+   秒數捨去(「資料多新」分鐘就夠)。顯示固定 UTC+8(GLOSSARY.md「資料更新時間」),
    偏移就只認 +0800;其他任何形狀(含別的偏移)都是非預期,原樣返回——
    footer 顯示原值,不出 NaN/Invalid Date。 */
 function fmtTime(v) {

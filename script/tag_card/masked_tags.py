@@ -18,7 +18,7 @@
 樣本檔與標準答案檔入版控(.scratch/effect-tag/masked/),tag seal 每輪對著
 它們**現場重算**規則輸出——規則改了,成績就跟著變,不會留著一張過期的及格單。
 
-詞彙見 CONTEXT.md:效果 Tag、動作類別、遮蔽測試。
+詞彙見 GLOSSARY.md:效果 Tag、動作類別、遮蔽測試。
 """
 import random
 

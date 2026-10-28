@@ -23,7 +23,7 @@ class CanonTest(unittest.TestCase):
         self.assertEqual(vocab.problems(), [])
 
     def test_sizes_match_documented_domains(self):
-        """成員數與 CONTEXT.md / spec 記的值域規模逐項對得上。"""
+        """成員數與 GLOSSARY.md / spec 記的值域規模逐項對得上。"""
         for name, expected in vocab.EXPECTED_SIZES.items():
             self.assertEqual(len(vocab.codes(name)), expected, name)
 

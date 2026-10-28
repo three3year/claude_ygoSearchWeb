@@ -55,8 +55,16 @@ QUALIFIER = re.compile(r"(?:(?!自分|相手|お互い|・|及び|または|%s).
                        r"(?=自分|相手|お互い|%s)" % (_ZONE_ALT, _ZONE_ALT))
 
 
-# 分詞器的省略寫法 自分(フィールド)・相手フィールド:半形括號裡是省略掉的詞尾,補回再認
+# 分詞器的省略寫法 自分(フィールド)・相手フィールド:半形括號裡是省略掉的詞尾。原文是
+# 「自分・相手フィールド」(一段區域、玩家雙方),改寫成同義的 お互いのフィールド 讓它仍是一段
+# (寫回 自分・相手 會被複合字面的分隔拆開);其餘省略補回詞尾再認
+ELIDED_BOTH = re.compile(r"(?:自分|相手)\(([^()]*)\)・(?:自分|相手)\1")
 ELIDED = re.compile(r"\(([^()]*)\)")
+
+
+def unelide(literal):
+    """省略寫法還原成可認的字面(parse_zones 與 parse_place 共用)。"""
+    return ELIDED.sub(r"\1", ELIDED_BOTH.sub(r"お互いの\1", literal))
 
 
 def _strip_player(text):
@@ -104,13 +112,14 @@ def parse_zones(literal):
     [](整個字面就是玩家,或認不出區域)。
 
     每個區域的玩家是該段自己的前綴,沒有時沿用字面開頭的前綴,都沒有記無(自分の手札・
-    相手フィールド → 手札 自分、フィールド 相手;自身の/持ち主の 記相對);同一區域出現
-    兩次時玩家合起來(自分フィールド・相手フィールド → フィールド 雙方)。複合字面只要
+    相手フィールド → 手札 自分、フィールド 相手;自身の/持ち主の 記相對);同一區域帶不同
+    玩家出現兩次時各算一段(自分フィールド・相手フィールド → (自分, 場上)、(相手, 場上);
+    類別線票 08,2026-10-28 站主裁定),雙方只來自 自分・相手/お互いの 這類前綴。複合字面只要
     有一段認不出就整段不認。
     """
     if not literal:
         return None
-    literal = ELIDED.sub(r"\1", literal)
+    literal = unelide(literal)
     if literal in BARE_PLAYERS:
         return []
     outer, rest = _strip_player(literal)
@@ -118,10 +127,12 @@ def parse_zones(literal):
     parts = [whole] if whole else [_parse_part(p) for p in PLACE_SEPARATOR.split(rest)]
     if None in parts:
         return []
-    zones = {}
+    zones = []
     for player, zone in parts:
-        zones.setdefault(zone, set()).add(player or outer or PLAYER_NONE)
-    return [(_merge_players(players), zone) for zone, players in zones.items()]
+        pair = (player or outer or PLAYER_NONE, zone)
+        if pair not in zones:
+            zones.append(pair)
+    return zones
 
 
 def _merge_players(players):
@@ -147,7 +158,7 @@ def parse_place(literal):
     """
     if not literal:
         return None, []
-    bare = BARE_PLAYERS.get(ELIDED.sub(r"\1", literal))
+    bare = BARE_PLAYERS.get(unelide(literal))
     if bare:
         return bare, []
     zones = parse_zones(literal)

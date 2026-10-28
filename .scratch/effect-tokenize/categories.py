@@ -34,15 +34,19 @@ category-tree-restart 票 02,2026-10-19 站主裁定不切「無」),葉名以�
 frame-args-v3 票 01),各比自己那一欄(category-tree-restart 票 01):移動類動作依來源切葉,
 破壊、選ぶ 這類非移動類依所在切葉(受事者區域由框架抽取切出,frame-args-v3 票 04);非移動類
 (不在框架線的 MOVE_ACTIONS)所在空著、來源有原文字面時,來源當所在比——「手札・墓地から選ぶ」
-的 から 是受事者的所在(類別線票 08,category-round1;待站主裁定)。
+的 から 是受事者的所在(類別線票 08,category-round1;2026-10-28 站主裁定保留)。
 玩家條件只在宣告的葉上比對該區域欄的玩家(複合字面逐區域取:自分の墓地・相手フィールド
-的墓地是自分、フィールドは相手;places.parse_zones);沒寫玩家前綴的字面(玩家 無)、
+的墓地是自分、フィールドは相手;同一區域兩個玩家各算一段——自分フィールド・相手フィールド 帶
+破壊@自分フィールド 與 破壊@相手フィールド,雙方只來自 自分・相手/お互いの 前綴;票 08,2026-10-28
+站主裁定;places.parse_zones);沒寫玩家前綴的字面(玩家 無)、
 持ち主の/自身の 這類相對前綴(玩家 相對,看主語或持有者是誰;類別線票 06,2026-10-27
 站主裁定另記一值)與 null(沒字面、推得、字面不是地點)都不中任何宣告玩家的葉,落沒宣告
 玩家的葉——沒宣告玩家的葉不看玩家。不論葉有沒有宣告,
 來源/目的的玩家都照記在來源玩家/目的玩家欄(推得的記 null)。
 關鍵詞條件(字面子字串清單)依 對象→主語→主題 找第一個有值的欄、只比那一欄(主題含回填
-延續的值;三欄都空不中;category-tree-restart 票 03)。目的關鍵詞條件(字面子字串清單)只比
+延續的值;三欄都空不中;category-tree-restart 票 03);關鍵詞緊接 した/する/され 的出現是動詞用法、
+修飾後面的名詞(特殊召喚したモンスターの効果、発動した効果),不算命中(票 08,2026-10-28 站主
+裁定;關鍵詞類條件都適用)。目的關鍵詞條件(字面子字串清單)只比
 目的欄(原文字面,推得的值也照字面比),與關鍵詞各自獨立——收補語是值或屬性、留在目的欄的框架
 (にする→裏側守備表示、にする→属性;category-lemma-followup 票 02);一葉兩種都宣告時兩者都要中。
 關鍵詞與目的關鍵詞合稱關鍵詞類條件。匹配:對每個(來源區域, 目的區域,
@@ -131,6 +135,9 @@ LEAF_LABELS = {field: key for key, field in LEAF_KEYS.items()}
 ZONE_FIELDS = ("source", "goal", "place")
 # 關鍵詞的比對欄,依序取第一個有值的(category-tree-restart 票 03)
 KEYWORD_FIELDS = ("object", "subject", "topic")
+# 關鍵詞緊接這些字時是動詞用法、修飾後面的名詞(特殊召喚したモンスター、発動した効果、召喚された),
+# 不算命中(票 08,2026-10-28 站主裁定);召喚・特殊召喚を無効 的 召喚 照中
+KEYWORD_VERB_TAILS = ("した", "する", "され")
 
 
 class TreeError(ValueError):
@@ -161,6 +168,20 @@ def polarity_class(frame):
             if m.end() > last:
                 last, found = m.end(), cls
     return found
+
+
+def keyword_in(keyword, text):
+    """關鍵詞是否出現在字面裡(子字串),但緊接 した/する/され 的出現不算——那是動詞用法、修飾
+    後面的名詞(特殊召喚したモンスターの効果 的 召喚、発動した効果 的 発動),不是動作的標的。"""
+    start = 0
+    while True:
+        i = text.find(keyword, start)
+        if i < 0:
+            return False
+        tail = text[i + len(keyword):]
+        if not tail.startswith(KEYWORD_VERB_TAILS):
+            return True
+        start = i + 1
 
 
 def leaf_name(lemma, polarity, conditions=None):
@@ -264,7 +285,7 @@ class Leaf:
         目的關鍵詞時,目的欄的字面(或 None)要含其中一個;兩者都宣告時都要中。不帶關鍵詞類條件
         的葉恆為假。"""
         return self.keyed and all(
-            bool(value) and any(k in value for k in keys)
+            bool(value) and any(keyword_in(k, value) for k in keys)
             for keys, value in ((self.keywords, text), (self.goal_keywords, goal)) if keys)
 
 
@@ -500,7 +521,7 @@ class CategoryTree:
 def place_literal(frame):
     """框架比所在葉用的字面:所在欄;非移動類動作(不在框架線的 MOVE_ACTIONS)所在空著、來源有
     原文字面時讀來源欄——「手札・墓地から選ぶ」的 から 是受事者的所在(票 08,category-round1;
-    待站主裁定)。移動類的來源仍只比來源葉。草案的所在分佈用同一個字面。"""
+    2026-10-28 站主裁定保留)。移動類的來源仍只比來源葉。草案的所在分佈用同一個字面。"""
     if frame.get("place") or frame["action"] in MOVE_ACTIONS:
         return frame.get("place")
     if "source" in (frame.get("inferred") or ()):

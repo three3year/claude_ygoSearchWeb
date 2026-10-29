@@ -24,3 +24,4 @@
 - 分詞鏈決定性重跑兩次,41 個產物逐位元組相同;effect-tokenize 全套 449 → 482 條通過(test_frames 194 → 222、test_categories 128 → 133);script/ Python 785 條、JS 122 條通過。
 - code review(Standards/Spec 兩軸)後:條件子句裡先寫的主題在分框前交給主句(「このカードは、自分がS召喚を行う場合」的 S召喚 不帶主題)、「召喚・特殊召喚を行えない」各出一框、「素材として扱う」限「の」前接、上限數量的寬鬆比對收窄到「…まで」(後三者全語料 0 處,各補回歸例子;全語料產物與修前逐位元組相同);有素材詞元的法(`MATERIAL_METHODS`)與目的併入(`GOAL_FOLDS`)收進 `action_lemmas` 封閉表,統一組與檢驗腳本由它推得;重複的回歸例子拿掉。規格故事 23「S素材として墓地へ送られた → 受身」與實作決策(する 形記他動)衝突,實作照實作決策、寫成檢驗摘要「需要你決定的」新事項待站主裁定。
 - 發布:拆解頁照原網址重新發布(Version 59,view_data 與全部分片都換):https://claude.ai/artifact/SSvzzZPLJcZsVLewfm3Htx ;類別樹草案鏡像(Version 14):https://claude.ai/artifact/BgSzW7mb782GrbnGuetfHm ;檢驗摘要鏡像(Version 19):https://claude.ai/artifact/K9v5rfWiXgSdTgPgs83PpK 。兩個鏡像的 mirrors.json 原有該筆。待站主裁定兩項:類別樹草案「X素材にする(限制) 要開節點嗎?」、檢驗摘要「S素材として墓地へ送られた 的 S素材とする 記 他動,可以嗎?」。
+- 2026-10-29 站主裁定兩項都 (a):S素材として 照規則記 他動(不改程式);開 限制 › X素材にする(限制)(先改回歸例子再改樹),41 框從未歸改落,已歸 30,071 → 30,112、未歸 350 → 309、葉 234 → 235;決定行記入檢驗摘要與草案,三個頁面照原網址重新發布。

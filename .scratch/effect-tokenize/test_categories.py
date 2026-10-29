@@ -924,14 +924,15 @@ class TestLemmaVariantsRealTree(unittest.TestCase):
             [("S召喚", "已歸", ["S召喚"], "召喚", None, None, ["召喚 › S召喚"])])
 
     def test_summon_material_restriction_per_method(self):
-        """X素材にする 沒有限制葉:記未歸(交類別線的新葉提議)。"""
+        """X素材にする(限制) 2026-10-29 站主裁定開節點,與 融合/S/L素材にする(限制) 並列。"""
         self.assertEqual(
             classify("①：このカードは融合・S・X召喚の素材にできない。"),
             [("融合素材にする", "已歸", ["融合素材にする(限制)"], "限制", None, None,
               ["限制 › 融合素材にする(限制)"]),
              ("S素材にする", "已歸", ["S素材にする(限制)"], "限制", None, None,
               ["限制 › S素材にする(限制)"]),
-             ("X素材にする", "未歸", [], None, None, None, [])])
+             ("X素材にする", "已歸", ["X素材にする(限制)"], "限制", None, None,
+              ["限制 › X素材にする(限制)"])])
 
     def test_cannot_select_as_attack_target_is_a_restriction(self):
         self.assertEqual(

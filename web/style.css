@@ -640,3 +640,9 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   .act-tog, .act-tog-pad { width: 28px; }
   .act-tog { font-size: 15px; padding: 4px 0; }
 }
+
+.act-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.act-cost-toggle {
+  display: flex; align-items: center; gap: 4px; flex: none;
+  color: var(--muted); font-size: 12px; cursor: pointer;
+}

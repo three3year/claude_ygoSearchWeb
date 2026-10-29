@@ -173,6 +173,9 @@ function actHtml(f) {
   return `<div class="axis axis-act" data-axis="${f.act}" data-side=""
     data-states="3"${Acat.present ? '' : ' hidden'}>
     ${headHtml(f.zh, `涵蓋 ${Acat.COVERED} / ${total} 張`)}<div class="axis-body" hidden>
+    <div class="act-tools"><label class="act-cost-toggle"
+      title="不勾時只比效果位：「丟一張手牌當費用」的卡不會出現在「丟牌」的搜尋裡；勾了包含與排除都連代價位一起比"><input
+      type="checkbox" class="act-cost-in">含代價</label></div>
     <ul class="act-tree">${Acat.roots.map(actNodeHtml).join('')}</ul></div></div>`;
 }
 
@@ -190,6 +193,7 @@ function readAct(q) {
     if (btn.dataset.st) sel[btn.dataset.code] = btn.dataset.st === 'ex' ? -1 : 1;
   });
   if (Object.keys(sel).length) q.act = sel;
+  if (actBox().querySelector('.act-cost-in').checked) q.actCost = 1;
 }
 
 function setNodeOpen(li, open) {
@@ -203,6 +207,7 @@ function setNodeOpen(li, open) {
 /* 已選節點的祖先展開:網址開進來的條件看得見,不必一層層點開去找。 */
 function writeAct(q) {
   const sel = q.act || {};
+  actBox().querySelector('.act-cost-in').checked = !!q.actCost;
   actTris().forEach(btn => {
     const v = sel[btn.dataset.code];
     setTri(btn, v > 0 ? 'in' : (v < 0 ? 'ex' : ''));
@@ -520,11 +525,13 @@ function clear() {
   syncOptional();
   all('.axis, .range, .axis-group').forEach(box => setAxisOpen(box, false));
   all('.act-node').forEach(li => setNodeOpen(li, false));
+  all('.act-cost-in').forEach(box => { box.checked = false; });
   updateCounts();
 }
 
 function clearBlock(box) {
   box.querySelectorAll('.tri').forEach(b => setTri(b, ''));
+  box.querySelectorAll('.act-cost-in').forEach(b => { b.checked = false; });
   box.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
   syncSubs();
   syncOptional();

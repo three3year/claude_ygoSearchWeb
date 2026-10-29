@@ -1733,3 +1733,44 @@ test('動作類別軸不進網址的一般三態軸 schema(其他軸的往返不
     assert.deepStrictEqual(harness.parseHash(acatBox, harness.hash(acatBox, st)), st);
   }
 });
+
+test('動作類別排除:卡上任何一句帶它,整張不中(卡層,不看句層條件)', () => {
+  assert.deepStrictEqual(acatIds({ act: { '破壊': -1 } }), [3003, 3004, 3006, 3007, 3009]);
+  // 3001 的破壞在誘發句、選的效果類型是啟動:排除照樣整張剔除
+  assert.ok(!acatIds({ act: { [DESTROY_OPP]: -1 }, kind: { i: 1 } }).includes(3001));
+});
+
+test('動作類別:同軸包含與排除並用,排除優先', () => {
+  assert.deepStrictEqual(acatIds({ act: { '召喚': 1, [DESTROY_OPP]: -1 } }), [3003]);
+});
+
+test('動作類別:只有排除時舊式卡文的卡也不中,命中句照句層條件', () => {
+  assert.ok(!acatIds({ act: { '數值': -1 } }).includes(3005));
+  assert.strictEqual(acatRows({ act: { '數值': -1 } }, 3007), null);
+  assert.deepStrictEqual(acatRows({ act: { '數值': -1 }, kind: { i: 1 } }, 3007), [0]);
+  const marks = harness.marks(acatBox, { act: { '數值': -1 } });
+  assert.ok(!marks.some(m => m.type === 'act'));
+});
+
+test('動作類別:預設只看效果位,勾「含代價」時代價位也算命中', () => {
+  assert.deepStrictEqual(acatIds({ act: { [DISCARD]: 1 } }), [3009]);
+  assert.deepStrictEqual(acatIds({ act: { [DISCARD]: 1 }, actCost: 1 }), [3003, 3009]);
+  assert.deepStrictEqual(acatRows({ act: { [DISCARD]: 1 }, actCost: 1 }, 3003), [0]);
+  const act = harness.marks(acatBox, { act: { [DISCARD]: 1 }, actCost: 1 })
+    .find(m => m.type === 'act');
+  assert.strictEqual(act.cost, true);
+});
+
+test('動作類別:含代價時排除也看代價位', () => {
+  assert.ok(acatIds({ act: { [DISCARD]: -1 } }).includes(3003));
+  assert.ok(!acatIds({ act: { [DISCARD]: -1 }, actCost: 1 }).includes(3003));
+});
+
+test('動作類別:「含代價」進網址,往返相等', () => {
+  const st = { q: { ...EMPTY_Q, act: { [DISCARD]: 1, '破壊': -1 }, actCost: 1 },
+               sort: DOM_SORT };
+  const h = harness.hash(acatBox, st);
+  assert.ok(h.includes('actCost=1'));
+  assert.deepStrictEqual(harness.parseHash(acatBox, h), st);
+  assert.strictEqual(harness.canonHash(acatBox, h), h);
+});

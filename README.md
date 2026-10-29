@@ -112,7 +112,11 @@ python script/tag_card/run_masked_test.py score
 ### 查卡網站
 
 ```bash
-# 建置前端索引:卡片總表 + 效果標記表 → web/data.js + 報告
+# 重跑分詞鏈(分詞 → 框架 → 類別 → 匯出)→ data/action_categories.json
+# 差值更新時:效果標記表更新之後、建置前端索引之前必跑(ADR-0017)
+python .scratch/effect-tokenize/run_chain.py
+
+# 建置前端索引:卡片總表 + 效果標記表 + 動作類別匯出檔 → web/data.js + 報告
 python script/web/build_index.py
 
 # 只跑檢查與報告,不動 data.js
@@ -127,6 +131,14 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 中文表隨索引輸出成 `window.VOCAB`,**HTML 不寫死任何選項**。索引裡出現正典沒有的值、正典
 沒解釋的 `type` 位元、效果句缺效果類型、效果句串接後出現已知兩種以外的覆蓋缺口,
 一律**建置失敗**——把「漏一個碼、某批卡無聲消失」換成吵鬧的失效。
+
+動作類別搜尋的資料是分詞鏈匯出的 `data/action_categories.json`(**入版控**;ADR-0017):
+每句標記句的效果位葉、代價位葉與日文原文雜湊,加上類別樹。網站建置只讀這份檔、不呼叫
+分詞鏈;分詞程式仍在試點目錄 `.scratch/effect-tokenize/`。**差值更新的順序**:更新卡片
+總表 → 效果標記表(判定票、合併、`build_tag_cards.py`)→ `run_chain.py` → `build_index.py`。
+不重跑分詞鏈時,卡文有變的標記句雜湊對不上,索引建置會以「動作類別匯出檔過時」失敗——
+類別不會靜默沿用過時的結果。只涵蓋新格式新卡;改了類別樹或類別規則,同樣重跑
+`run_chain.py` 再重建索引,網站就反映。
 
 `web/data.js` 是**入版控的建置產物**(GitHub Pages 直接吃 repo 內容,產物不進版控就沒有站),
 一卡一行、git diff 可讀;同一份輸入兩次建置逐位元組相同。
@@ -163,10 +175,13 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/web/vocab.py` | 值域正典(cdb 位元/整數/中文 → 短碼 → 中文 + 宣告序)+ 自檢接縫 |
 | `script/web/webindex.py` | 前端索引管線(純函式):總表 + 標記表 → 索引 + 一致性檢查報告 |
 | `script/web/build_index.py` | 建置 CLI 薄殼(讀檔 → 寫 web/data.js → 印報告 → 依 problems 定 exit code) |
+| `.scratch/effect-tokenize/run_chain.py` | 重跑分詞鏈(分詞 → 框架 → 類別 → 匯出);任一步失敗即停並說是哪一步 |
+| `.scratch/effect-tokenize/export_categories.py` | 類別匯出:框架類別落到標記句 → `data/action_categories.json` |
 | `script/web/frontend_harness.js` | 接縫 3 的沙箱載入器(`node:vm` 依 index.html 的順序載入真實前端程式碼) |
 | `script/web/engine.test.js` | 前端查詢引擎的接縫測試(`node:test`,合成資料集) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
 | `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |
+| `data/action_categories.json` | 動作類別匯出檔(分詞鏈產生、入版控;一句一行) |
 | `data/clause_splits.json` | 拆句表:舊式無編號卡文的效果句邊界(入版控的來源檔) |
 | `data/cid_overrides.json` | 人工查證的 cid→卡片密碼 對應(ygoprodeck 查不到的卡) |
 | `data/sources/` | 來源檔暫存,含 `faq_info.json`(不入版控) |
@@ -177,7 +192,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `../data_ygoFaqCache/_cache` | 官方 DB 頁面快取:Q&A 頁 `faq_*.html` + 卡片頁 `card_*.html`(repo 外,約 1.1GB) |
 | `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |
 | `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` |
-| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`sort`(領域序與排序鍵,純函式)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`hash`(條件與排序 ⇄ 網址 `#hash`,純函式)、`render`(卡片呈現、異圖切換、排序與分頁)、`main`(主流程與網址寫入時機) |
+| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`acat`(動作類別樹:節點路徑 → 葉集合)、`sort`(領域序與排序鍵,純函式)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`hash`(條件與排序 ⇄ 網址 `#hash`,純函式)、`render`(卡片呈現、異圖切換、排序與分頁)、`main`(主流程與網址寫入時機) |
 | `index.html` / `.nojekyll` | GitHub Pages 部署形態(根目錄為來源):轉址到 `web/index.html`、擋掉 Jekyll |
 
 ## cards.json 欄位

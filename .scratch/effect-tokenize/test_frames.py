@@ -960,6 +960,25 @@ class TestTopicCarryOver(unittest.TestCase):
             [("無効にする", "この効果で特殊召喚したモンスターの効果", None, None),
              ("破壊", "この効果で特殊召喚したモンスター", None, ["topic"])])
 
+    def test_bare_attribute_topic_keeps_the_carried_owner(self):
+        """「Xの攻撃力・守備力は０になり、効果は無効化され、…素材にできない」:光禿禿的屬性主題
+        (効果は)是 X 的屬性,不換掉延續中的 X;它自己的主題補成「Xの効果」(標回填)。"""
+        self.assertEqual(
+            carried("①：この効果で特殊召喚したモンスターの攻撃力・守備力は０になり、"
+                    "効果は無効化され、S・X召喚の素材にできない。"),
+            [("にする", "この効果で特殊召喚したモンスターの攻撃力・守備力", None, None),
+             ("無効にする", "この効果で特殊召喚したモンスターの効果", None, ["topic"]),
+             ("S素材にする", "この効果で特殊召喚したモンスター", None, ["topic"]),
+             ("X素材にする", "この効果で特殊召喚したモンスター", None, ["topic"])])
+
+    def test_completed_attribute_topic_keeps_its_own_voice(self):
+        """「装備モンスターは…、攻撃力は１０００ダウンする」:補了主人的屬性主題原文有主題,
+        ダウン 照舊記 自動(延續來的主題才不算)。"""
+        frame = actions("①：装備モンスターは戦闘では破壊されず、攻撃力は１０００ダウンする。")[-1]
+        self.assertEqual((frame["action"], frame["topic"], frame["backfill"], frame.get("voice")),
+                         ("ダウン", "装備モンスターの攻撃力", ["topic"], "自動"))
+        self.assertNotIn("topic_literal", frame)
+
     def test_subject_does_not_carry(self):
         self.assertEqual(
             carried("①：相手フィールドの全ての表側表示モンスターは、守備力が０になり、"

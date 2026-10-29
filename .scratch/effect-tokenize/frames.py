@@ -240,9 +240,11 @@ PAREN_MAX = 3                 # 區域後括號註記(フィールド（表側�
 # 片語是數量(…の数×100、…の合計)時區域修飾的是數量,不切
 COUNT_WORDS = {"数", "合計"}
 OBJECT, REGION = "object", "region"   # 回填接過的兩部分(區域再依下游動作轉欄)
-# 屬性主題「Xの攻撃力」(票 03):延續給下一子句時改用屬性的主人 X
-ATTRIBUTE_TOPIC = re.compile(r"(.+?)の(?:元々の)?(?:攻撃力・守備力|攻撃力|守備力|レベル|ランク"
-                             r"|種族|属性|効果)")
+# 屬性主題「Xの攻撃力」(票 03):延續給下一子句時改用屬性的主人 X;
+# 光禿禿的屬性主題(効果は)是延續中 X 的屬性,不換掉 X
+_TOPIC_ATTRIBUTE = r"(?:元々の)?(?:攻撃力・守備力|攻撃力|守備力|レベル|ランク|種族|属性|効果)"
+ATTRIBUTE_TOPIC = re.compile(r"(.+?)の" + _TOPIC_ATTRIBUTE)
+BARE_ATTRIBUTE_TOPIC = re.compile(_TOPIC_ATTRIBUTE)
 LABEL_MAX_CHARS = 30          # ●標籤「●…：」冒號前的最大字數(與 tokenize._LABEL 同)
 
 
@@ -1636,7 +1638,8 @@ class FrameExtractor:
         回填欄記 topic;到句號、新的主題、或一個自己帶 が/は 的條件子句為止(條件框架不接、
         延續也到此停)。屬性主題(Xの攻撃力は…)延續下去的是 X。條件子句裡主題在自己主語
         之前時(このカードは、相手モンスターが攻撃した場合、…),主題屬主句:條件框架不帶,
-        從它之後接著延續。主語不延續。"""
+        從它之後接著延續。光禿禿的屬性主題(…の攻撃力・守備力は０になり、効果は無効化され、…)
+        不算新的主題,補成「Xの効果」(標回填),延續中的 X 照舊往下接。主語不延續。"""
         current, cur_sentence = None, None
         for s_idx, _k, a, fr in made:
             if s_idx != cur_sentence:
@@ -1645,6 +1648,11 @@ class FrameExtractor:
                 current = a["lifted_topic"]
                 continue
             if fr.get("topic"):
+                if current and BARE_ATTRIBUTE_TOPIC.fullmatch(fr["topic"]):
+                    fr["topic"] = current + "の" + fr["topic"]
+                    fr["topic_literal"] = True   # 抽取內部用:原文有主題,態照自己的主題判(_normalize)
+                    self._mark_carried_topic(fr)
+                    continue
                 # 「Xの攻撃力は…アップし、…破壊されない」:延續下去的是屬性的主人 X
                 owner = ATTRIBUTE_TOPIC.fullmatch(fr["topic"])
                 current = owner.group(1) if owner else fr["topic"]
@@ -1654,10 +1662,13 @@ class FrameExtractor:
                 continue
             if current:
                 fr["topic"] = current
-                fr.setdefault("backfill", []).append("topic")
-                patient_is_topic = fr.get("passive") or fr["action"] in INTRANSITIVE_MOVES
-                if patient_is_topic and not fr.get("subject") and not _region(fr):
-                    self._cut_carried_topic(fr)
+                self._mark_carried_topic(fr)
+
+    def _mark_carried_topic(self, fr):
+        fr.setdefault("backfill", []).append("topic")
+        patient_is_topic = fr.get("passive") or fr["action"] in INTRANSITIVE_MOVES
+        if patient_is_topic and not fr.get("subject") and not _region(fr):
+            self._cut_carried_topic(fr)
 
     def _cut_carried_topic(self, fr):
         """延續來的主題落在沒有主語的被動框架:主題就是受事者,區域照票 04 切出(移動類記來源、
@@ -1835,10 +1846,12 @@ class FrameExtractor:
 def _normalize(frame):
     """動作框架過詞元對照表(action_lemmas.normalize):原詞元 → 動作詞元,態記在 voice(只在有值時
     帶);抽取內部的被動標記併入 態=受身。アップ/ダウン 的態只看框架自己的原文——回填的對象、延續來的
-    主題/主語不算(延續來的主題多半是執行者「自分は…」)。目的併入詞元的(攻撃対象に選択)先併。"""
+    主題/主語不算(延續來的主題多半是執行者「自分は…」);光禿禿的屬性主題補了主人的(攻撃力は →
+    Xの攻撃力)原文有主題,照自己的算。目的併入詞元的(攻撃対象に選択)先併。"""
     frame["action"], frame["goal"] = action_lemmas.fold_goal(frame["action"], frame["goal"])
     backfilled = frame.get("backfill") or ()
-    own = {key: bool(frame.get(key)) and key not in backfilled
+    topic_literal = frame.pop("topic_literal", False)
+    own = {key: bool(frame.get(key)) and (key not in backfilled or (key == "topic" and topic_literal))
            for key in ("object", "subject", "topic")}
     frame["action"], voice = action_lemmas.normalize(
         frame["action"], passive=frame.pop("passive", False), has_object=own["object"],

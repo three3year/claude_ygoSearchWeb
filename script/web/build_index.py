@@ -116,6 +116,7 @@ def print_categories(report, p):
     p(f"動作類別: 涵蓋 {cat['covered_cards']} 張卡、標記句 {cat['sentences']} 句"
       f"(帶葉 {cat['sentences_with_leaves']} 句)")
     p("  各大類句數: " + " ".join(f"{k}={n}" for k, n in cat["by_major"].items()))
+    p("  各葉句數: " + " ".join(f"{k}={n}" for k, n in cat["by_leaf"].items()))
 
 
 def print_report(report, file=sys.stdout):

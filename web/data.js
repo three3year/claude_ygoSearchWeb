@@ -14226,7 +14226,8 @@ window.VOCAB={
 "sub_t":{"items":[{"code":"normal","zh":"通常"},{"code":"continuous","zh":"永續"},{"code":"counter","zh":"反擊"}],"zh":"陷阱子類型"}
 };
 window.META={
-"built_at":"2026-10-30T03:49:14+0800",
+"acat_digest":"f903660a99abc2d9",
+"built_at":"2026-10-30T04:01:55+0800",
 "cards":14207,
 "clauses":34390,
 "data_updated_at":"2026-08-23T02:04:20+0800",

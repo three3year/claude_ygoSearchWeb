@@ -241,7 +241,7 @@ function effHtml(c, text, i, rows, hl) {
   const badge = hit ? badgeText(hl.marks, c, i) : '';
   return `<p class="eff${roleClass(c, role)}${hit ? ' hit' : ''}" data-ei="${i}">${
     badge ? `<span class="eff-hit">${esc(badge)}</span>` : ''}${
-    lineHtml(text, ranges)}${actHtml(c, i, hit && hl)}${
+    lineHtml(text, ranges)}${leafBadgesHtml(c, i, hit && hl)}${
     labels.length ? `<span class="eff-kinds">${labels.map(t =>
       `<span class="eff-kind">${esc(t)}</span>`).join('')}</span>` : ''}</p>`;
 }
@@ -249,7 +249,7 @@ function effHtml(c, text, i, rows, hl) {
 /* [[動作類別]]的葉:每句尾列它全部的葉(效果位在前、代價位在後),葉名照類別樹的
    日文原名;代價位的葉字面帶「代價：」。命中句裡、本次搜尋包含節點的葉包 <mark>
    (代價位的葉只在「含代價」時算)。沒有葉的句子什麼都不加。 */
-function actHtml(c, i, hl) {
+function leafBadgesHtml(c, i, hl) {
   const eff = (c.ae && c.ae[i]) || [];
   const cost = (c.ac && c.ac[i]) || [];
   if (!eff.length && !cost.length) return '';

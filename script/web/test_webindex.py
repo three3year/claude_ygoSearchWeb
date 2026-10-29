@@ -7,6 +7,7 @@ fixture 於測試內程式化建立,不碰網路也不碰真實資料檔(先例:
 四道一致性檢查的測試重點是**該擋的擋得住**,不是「現行資料跑得過」:每一道都餵
 一份壞掉的輸入進去,斷言 report 的 problems 非空。
 """
+import hashlib
 import unittest
 
 import vocab
@@ -836,7 +837,6 @@ class TagAxisTest(unittest.TestCase):
 
 
 def sha(text):
-    import hashlib
     return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
 
 
@@ -953,7 +953,25 @@ class CategoryTest(unittest.TestCase):
         _, report = self.build()
         self.assertEqual(report["categories"], {
             "covered_cards": 1, "sentences": 2, "sentences_with_leaves": 1,
-            "by_major": {"召喚": 1, "破壊": 0, "區域移動": 1}})
+            "by_major": {"召喚": 1, "破壊": 0, "區域移動": 1},
+            "by_leaf": {"特殊召喚←墓地": 1, "破壊": 0, "捨てる": 1}})
+
+    def test_leaf_outside_the_tree_fails_even_for_a_card_missing_from_the_list(self):
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1)},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)},
+                {"card": 99, "section": "main", "index": "①", "hash": "x",
+                 "effect": ["蘇生"]}]
+        _, report = self.build(rows)
+        self.assertEqual(report["checks"]["category_unknown_leaves"],
+                         [{"id": 99, "index": "①", "leaf": "蘇生"}])
+
+    def test_meta_digest_changes_with_the_category_tree(self):
+        """類別樹改了,META 看得出來(同值域正典的 vocab_digest)。"""
+        before = self.build()[0]["meta"]["acat_digest"]
+        self.LEAVES = ["特殊召喚←墓地", "破壊", "捨てる(改名)"]
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1)},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)}]
+        self.assertNotEqual(self.build(rows)[0]["meta"]["acat_digest"], before)
 
     def test_serialized_index_is_deterministic(self):
         first = serialize_index(self.build()[0])

@@ -479,66 +479,75 @@ def _leaf_majors(tree):
     return majors, of
 
 
+def _category_stale(rows, clauses_by_id):
+    """匯出檔與標記表對不上的標記句 [{id, section, index}]:雜湊不符、匯出有標記表
+    沒有的句、涵蓋的段落裡標記表多了一句(重拆、新增效果)。"""
+    tagged = {(cid, cl.get("section"), cl.get("index")): cl
+              for cid, clauses in clauses_by_id.items() for cl in clauses}
+    covered_sections = {key[:2] for key in rows}
+    stale = [key for key, row in rows.items()
+             if key not in tagged
+             or _text_hash(tagged[key].get("text_ja") or "") != row["hash"]]
+    stale += [key for key, cl in tagged.items()
+              if key[:2] in covered_sections and cl.get("text_ja") and key not in rows]
+    return [{"id": cid, "section": section, "index": index}
+            for cid, section, index in stale]
+
+
 def _attach_categories(entries, clauses_by_id, categories, checks):
     """[[動作類別]]匯出檔 → 每張涵蓋卡的 `ae` / `ac`(與 `tx` 對齊的葉號陣列),
     回傳 (VOCAB 的類別部分, 報告)。
 
     `ae` 的有無就是涵蓋與否:涵蓋的卡一定帶 `ae`(沒有葉的句是空陣列,整張都沒有
-    葉也照帶),`ac` 全空時省略。匯出檔與標記表對不上(雜湊不符、匯出有標記表
-    沒有的句、涵蓋的段落裡標記表多了一句)記進 `category_stale`,葉不在類別樹記進
-    `category_unknown_leaves`——兩者都讓建置失敗(ADR-0017、ADR-0008)。
+    葉也照帶),`ac` 全空時省略。匯出檔與標記表對不上記進 `category_stale`
+    (`_category_stale`),葉不在類別樹記進 `category_unknown_leaves`——兩者都讓
+    建置失敗(ADR-0017、ADR-0008)。
     """
     leaves = categories["葉"]
     number = {name: i for i, name in enumerate(leaves)}
     rows = {(r["card"], r["section"], r["index"]): r for r in categories["句"]}
-    covered_sections = {(card, section) for card, section, _ in rows}
-    tagged = {}
-    for cid, clauses in clauses_by_id.items():
-        for clause in clauses:
-            tagged[(cid, clause.get("section"), clause.get("index"))] = clause
-    for key, row in rows.items():
-        clause = tagged.get(key)
-        if clause is None or _text_hash(clause.get("text_ja") or "") != row["hash"]:
-            checks["category_stale"].append(
-                {"id": key[0], "section": key[1], "index": key[2]})
-    for key, clause in tagged.items():
-        if (key[:2] in covered_sections and clause.get("text_ja")
-                and key not in rows):
-            checks["category_stale"].append(
-                {"id": key[0], "section": key[1], "index": key[2]})
-    covered = sorted({card for card, _ in covered_sections})
+    checks["category_stale"].extend(_category_stale(rows, clauses_by_id))
+    for (cid, _, index), row in rows.items():
+        for name in list(row.get("effect", ())) + list(row.get("cost", ())):
+            if name not in number:
+                checks["category_unknown_leaves"].append(
+                    {"id": cid, "index": index, "leaf": name})
+    covered = sorted({cid for cid, _, _ in rows})
     for cid in covered:
         entry = entries.get(cid)
         if entry is None:
             continue
-        groups = {"ae": [], "ac": []}
-        for clause in clauses_by_id.get(cid) or ():
-            row = rows.get((cid, clause.get("section"), clause.get("index"))) or {}
-            for field, group in (("ae", "effect"), ("ac", "cost")):
-                codes = []
-                for name in row.get(group, ()):
-                    if name in number:
-                        codes.append(number[name])
-                    else:
-                        checks["category_unknown_leaves"].append(
-                            {"id": cid, "index": clause.get("index"), "leaf": name})
-                groups[field].append(codes)
-        entry["ae"] = groups["ae"]
-        if any(groups["ac"]):
-            entry["ac"] = groups["ac"]
+        found = [rows.get((cid, cl.get("section"), cl.get("index"))) or {}
+                 for cl in clauses_by_id.get(cid) or ()]
+        codes = lambda group: [[number[n] for n in row.get(group, ())  # noqa: E731
+                                if n in number] for row in found]
+        entry["ae"] = codes("effect")
+        cost = codes("cost")
+        if any(cost):
+            entry["ac"] = cost
     majors, major_of = _leaf_majors(categories["樹"])
     by_major = dict.fromkeys(majors, 0)
+    by_leaf = dict.fromkeys(leaves, 0)
     with_leaves = 0
     for row in rows.values():
-        names = list(row.get("effect", ())) + list(row.get("cost", ()))
+        names = set(row.get("effect", ())) | set(row.get("cost", ()))
         with_leaves += bool(names)
+        for name in names & set(by_leaf):
+            by_leaf[name] += 1
         for major in {major_of.get(number.get(n)) for n in names} - {None}:
             by_major[major] += 1
     vocab_part = {"zh": "動作類別", "covered": len(covered), "leaves": list(leaves),
                   "tree": categories["樹"]}
     report = {"covered_cards": len(covered), "sentences": len(rows),
-              "sentences_with_leaves": with_leaves, "by_major": by_major}
+              "sentences_with_leaves": with_leaves, "by_major": by_major,
+              "by_leaf": by_leaf}
     return vocab_part, report
+
+
+def _acat_digest(acat):
+    """類別樹的雜湊:樹改了(改名、搬節點、加葉),META 看得出來(同 vocab_digest)。"""
+    payload = json.dumps(acat, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
 def _summarise_problems(report):
@@ -696,6 +705,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
             "cards": len(index_cards),
             "clauses": clause_total,
             "vocab_digest": vocab.digest(),
+            **({"acat_digest": _acat_digest(acat)} if acat is not None else {}),
             "sources": dict(sources or {}),
         },
     }

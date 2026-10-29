@@ -7,9 +7,9 @@
 const Acat = (() => {
 const { VOCAB } = Util;
 
-const DOM = VOCAB.acat || { leaves: [], tree: [], covered: 0 };
+const DOMAIN = VOCAB.acat || { leaves: [], tree: [], covered: 0 };
 const SEP = '›';
-const LEAVES = DOM.leaves || [];
+const LEAVES = DOMAIN.leaves || [];
 const NODES = [];
 const BY_ID = {};
 
@@ -37,7 +37,7 @@ function add(node, parent, depth) {
   return entry.leaves;
 }
 
-(DOM.tree || []).forEach(node => add(node, null, 0));
+(DOMAIN.tree || []).forEach(node => add(node, null, 0));
 const ORDER = {};
 NODES.forEach((n, i) => { ORDER[n.id] = i; });
 
@@ -77,8 +77,8 @@ function filter(term) {
 }
 
   return Object.freeze({
-    LEAVES, NODES, SEP,
-    COVERED: DOM.covered || 0,
+    LEAVES,
+    COVERED: DOMAIN.covered || 0,
     present: NODES.length > 0,
     roots: NODES.filter(n => !n.parent).map(n => n.id),
     node, leavesOf, sortIds, filter,

@@ -184,6 +184,13 @@ class TestExport(unittest.TestCase):
         self.assertEqual(json.loads(text), doc)
         self.assertEqual(sum(line.startswith('{"card"') for line in text.splitlines()), 2)
 
+    def test_same_input_exports_byte_identical(self):
+        cards = {1: [clause("①", REVIVE)],
+                 2: [clause("①", "①：手札を１枚捨てて発動できる。デッキから「試作機」１体を"
+                                 "手札に加える。")]}
+        first = export_categories.serialize(export(cards)[0])
+        self.assertEqual(first, export_categories.serialize(export(cards)[0]))
+
 
 if __name__ == "__main__":
     unittest.main()

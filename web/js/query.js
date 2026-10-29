@@ -13,7 +13,7 @@ const FIELDS = [
   { tri: 'cat', dom: 'cat', states: 2 },
   { tri: 'kind', dom: 'kind' },
   { tri: 'opt', dom: 'optional' },
-  { act: 'act', zh: '動作類別' },
+  { act: 'act', dom: 'acat' },
   { tri: 'sub', dom: 'sub_m', side: 'm', parent: 'cat', groupBlocks: true,
     groupAfter: { '能力': 'race' } },
   { tri: 'sub', dom: 'sub_s', side: 's', parent: 'cat' },
@@ -168,11 +168,12 @@ function actNodeHtml(id) {
       n.kids.map(actNodeHtml).join('')}</ul>` : ''}</li>`;
 }
 
-function actHtml(f) {
+function actAxisHtml(f) {
   const total = META.cards || DB.length;
+  const zh = (VOCAB[f.dom] || {}).zh || f.act;
   return `<div class="axis axis-act" data-axis="${f.act}" data-side=""
     data-states="3"${Acat.present ? '' : ' hidden'}>
-    ${headHtml(f.zh, `涵蓋 ${Acat.COVERED} / ${total} 張`)}<div class="axis-body" hidden>
+    ${headHtml(zh, `涵蓋 ${Acat.COVERED} / ${total} 張`)}<div class="axis-body" hidden>
     <div class="act-tools"><label class="act-cost-toggle"
       title="不勾時只比效果位：「丟一張手牌當費用」的卡不會出現在「丟牌」的搜尋裡；勾了包含與排除都連代價位一起比"><input
       type="checkbox" class="act-cost-in">含代價</label>
@@ -262,7 +263,7 @@ function build() {
   const htmlOf = f => f.tri
     ? axisHtml(axisByKey[f.tri + '/' + (f.side || '')], kidsOf(blockKey(f)))
     : f.group ? groupBoxHtml(f, kidsOf(blockKey(f)))
-    : f.act ? actHtml(f)
+    : f.act ? actAxisHtml(f)
     : rangeHtml(f);
   const kidsOf = key => FIELDS.filter(f => f.parent === key)
     .map(f => ({ key: blockKey(f), html: htmlOf(f) }));

@@ -80,6 +80,11 @@ const DRIVER = `
 ;function __unhash(s) { return JSON.stringify(Hash.parse(s)); }
 ;function __canonHash(s) { return Hash.canon(s); }
 ;function __fmtTime(v) { return Util.fmtTime(v); }
+;function __acatFilter(term) {
+  var f = Acat.filter(term);
+  return JSON.stringify(f && { visible: Array.from(f.visible).sort(),
+                                open: Array.from(f.open).sort() });
+}
 ;function __cardHtml(json) { return View.cardHtml(JSON.parse(json), null); }
 ;function __cardHtmlHl(json) {
   var a = JSON.parse(json);
@@ -241,6 +246,14 @@ function cardHtml(sandbox, entry) {
   return sandbox.__cardHtml(JSON.stringify(entry));
 }
 
+/**
+ * 動作類別軸的過濾框(category-search 票 04):字面 → { visible, open }(節點路徑,
+ * 排序過);空字串回 null(不過濾)。DOM 那一層只照這份答案藏節點、展開祖先。
+ */
+function acatFilter(sandbox, term) {
+  return JSON.parse(sandbox.__acatFilter(String(term == null ? '' : term)));
+}
+
 /** 同一條呈現縫,帶生效中的句層條件(marks)——命中行的 badge 字面由此驗。 */
 function cardHtmlHl(sandbox, entry, marks) {
   return sandbox.__cardHtmlHl(JSON.stringify({ entry, marks }));
@@ -250,4 +263,4 @@ module.exports = { load, search, ids, marks, axes,
                    optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml,
-                   cardHtmlHl };
+                   cardHtmlHl, acatFilter };

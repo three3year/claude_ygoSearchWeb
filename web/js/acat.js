@@ -54,11 +54,33 @@ function sortIds(ids) {
   return ids.filter(id => BY_ID[id]).sort((a, b) => ORDER[a] - ORDER[b]);
 }
 
+/* 過濾框:名稱含字面(子字串)的節點連同祖先與子孫留下,祖先強制展開(命中節點
+   自己與子孫照原本的展開狀態,可再點開);空字面回 null=不過濾。只決定顯示,
+   不碰已選條件。 */
+function filter(term) {
+  const t = String(term == null ? '' : term).trim();
+  if (!t) return null;
+  const visible = new Set(), open = new Set();
+  const down = id => {
+    visible.add(id);
+    BY_ID[id].kids.forEach(down);
+  };
+  NODES.forEach(n => {
+    if (n.name.indexOf(t) < 0) return;
+    down(n.id);
+    for (let p = n.parent; p; p = BY_ID[p].parent) {
+      visible.add(p);
+      open.add(p);
+    }
+  });
+  return { visible, open };
+}
+
   return Object.freeze({
     LEAVES, NODES, SEP,
     COVERED: DOM.covered || 0,
     present: NODES.length > 0,
     roots: NODES.filter(n => !n.parent).map(n => n.id),
-    node, leavesOf, sortIds,
+    node, leavesOf, sortIds, filter,
   });
 })();

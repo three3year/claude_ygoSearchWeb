@@ -175,7 +175,9 @@ function actHtml(f) {
     ${headHtml(f.zh, `涵蓋 ${Acat.COVERED} / ${total} 張`)}<div class="axis-body" hidden>
     <div class="act-tools"><label class="act-cost-toggle"
       title="不勾時只比效果位：「丟一張手牌當費用」的卡不會出現在「丟牌」的搜尋裡；勾了包含與排除都連代價位一起比"><input
-      type="checkbox" class="act-cost-in">含代價</label></div>
+      type="checkbox" class="act-cost-in">含代價</label>
+      <input type="search" class="act-filter" placeholder="過濾節點：例 墓地"
+        aria-label="過濾動作類別節點(比對日文名稱)"></div>
     <ul class="act-tree">${Acat.roots.map(actNodeHtml).join('')}</ul></div></div>`;
 }
 
@@ -204,8 +206,45 @@ function setNodeOpen(li, open) {
   kids.hidden = !open;
 }
 
+/* 過濾框(Acat.filter 決定留哪些、展開哪些祖先):開始過濾前記下各節點的展開狀態,
+   每次換字面都從那份狀態重套,清空時還原——過濾只是「找」,不改展開也不改已選條件
+   (被藏起來的已選節點照樣生效,標題的已選數不變)。 */
+let actSaved = null;
+
+function actNodes() {
+  return Array.prototype.slice.call(actBox().querySelectorAll('.act-node'));
+}
+
+function nodeOpen(li) {
+  const tog = li.querySelector(':scope > .act-row > .act-tog');
+  return !!tog && tog.getAttribute('aria-expanded') === 'true';
+}
+
+function applyActFilter(term) {
+  const f = Acat.filter(term);
+  if (f && !actSaved) {
+    actSaved = {};
+    actNodes().forEach(li => { actSaved[li.dataset.id] = nodeOpen(li); });
+  }
+  if (actSaved) actNodes().forEach(li => setNodeOpen(li, actSaved[li.dataset.id]));
+  actNodes().forEach(li => {
+    li.hidden = !!f && !f.visible.has(li.dataset.id);
+    if (f && f.open.has(li.dataset.id)) setNodeOpen(li, true);
+  });
+  if (!f) actSaved = null;
+}
+
+function resetActFilter() {
+  const input = actBox().querySelector('.act-filter');
+  if (!input.value) return;
+  input.value = '';
+  actSaved = null;
+  actNodes().forEach(li => { li.hidden = false; });
+}
+
 /* 已選節點的祖先展開:網址開進來的條件看得見,不必一層層點開去找。 */
 function writeAct(q) {
+  resetActFilter();
   const sel = q.act || {};
   actBox().querySelector('.act-cost-in').checked = !!q.actCost;
   actTris().forEach(btn => {
@@ -524,6 +563,7 @@ function clear() {
   syncSubs();
   syncOptional();
   all('.axis, .range, .axis-group').forEach(box => setAxisOpen(box, false));
+  resetActFilter();
   all('.act-node').forEach(li => setNodeOpen(li, false));
   all('.act-cost-in').forEach(box => { box.checked = false; });
   updateCounts();
@@ -576,6 +616,7 @@ function init() {
   });
   $('critParams').addEventListener('input', e => {
     if (e.target.closest('.range-in')) updateCounts();
+    if (e.target.closest('.act-filter')) applyActFilter(e.target.value);
   });
 }
 

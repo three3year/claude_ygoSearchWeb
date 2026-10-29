@@ -1774,3 +1774,24 @@ test('動作類別:「含代價」進網址,往返相等', () => {
   assert.deepStrictEqual(harness.parseHash(acatBox, h), st);
   assert.strictEqual(harness.canonHash(acatBox, h), h);
 });
+
+test('動作類別過濾框:只留名稱含字面的節點與其祖先,祖先自動展開', () => {
+  const f = harness.acatFilter(acatBox, '墓地');
+  assert.deepStrictEqual(f.visible, ['召喚', '召喚›特殊召喚', REVIVE].sort());
+  assert.deepStrictEqual(f.open, ['召喚', '召喚›特殊召喚'].sort());
+});
+
+test('動作類別過濾框:命中的上層節點底下的子節點照常留著(可展開)', () => {
+  const f = harness.acatFilter(acatBox, '區域');
+  assert.deepStrictEqual(f.visible, ['區域移動', DISCARD, '區域移動›リリース'].sort());
+  assert.deepStrictEqual(f.open, []);
+});
+
+test('動作類別過濾框:詞元名也命中預設葉;空字面不過濾', () => {
+  const f = harness.acatFilter(acatBox, '破壊');
+  assert.ok(f.visible.includes('破壊›破壊'));
+  assert.ok(f.visible.includes(DESTROY_OPP));
+  assert.strictEqual(harness.acatFilter(acatBox, ''), null);
+  assert.strictEqual(harness.acatFilter(acatBox, '  '), null);
+  assert.deepStrictEqual(harness.acatFilter(acatBox, '不存在'), { visible: [], open: [] });
+});

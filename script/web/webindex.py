@@ -14,6 +14,7 @@
 
 詞彙見 GLOSSARY.md:前端索引、值域正典、效果句、效果類型、同名異圖卡。
 """
+import hashlib
 import json
 import re
 
@@ -457,6 +458,89 @@ def _drop_buttonless_kinds(exported, cross):
     return dropped
 
 
+def _text_hash(text):
+    """標記句日文原文的雜湊;算法同分詞鏈匯出(export_categories.text_hash)與
+    效果標記表的 text_hash。"""
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
+
+
+def _leaf_majors(tree):
+    """巢狀節點 [名, 葉號或 -1, 子節點] → (大類名清單, 葉號 → 大類名)。"""
+    majors, of = [], {}
+
+    def walk(node, major):
+        if node[1] >= 0:
+            of[node[1]] = major
+        for child in node[2]:
+            walk(child, major)
+    for node in tree:
+        majors.append(node[0])
+        walk(node, node[0])
+    return majors, of
+
+
+def _attach_categories(entries, clauses_by_id, categories, checks):
+    """[[動作類別]]匯出檔 → 每張涵蓋卡的 `ae` / `ac`(與 `tx` 對齊的葉號陣列),
+    回傳 (VOCAB 的類別部分, 報告)。
+
+    `ae` 的有無就是涵蓋與否:涵蓋的卡一定帶 `ae`(沒有葉的句是空陣列,整張都沒有
+    葉也照帶),`ac` 全空時省略。匯出檔與標記表對不上(雜湊不符、匯出有標記表
+    沒有的句、涵蓋的段落裡標記表多了一句)記進 `category_stale`,葉不在類別樹記進
+    `category_unknown_leaves`——兩者都讓建置失敗(ADR-0017、ADR-0008)。
+    """
+    leaves = categories["葉"]
+    number = {name: i for i, name in enumerate(leaves)}
+    rows = {(r["card"], r["section"], r["index"]): r for r in categories["句"]}
+    covered_sections = {(card, section) for card, section, _ in rows}
+    tagged = {}
+    for cid, clauses in clauses_by_id.items():
+        for clause in clauses:
+            tagged[(cid, clause.get("section"), clause.get("index"))] = clause
+    for key, row in rows.items():
+        clause = tagged.get(key)
+        if clause is None or _text_hash(clause.get("text_ja") or "") != row["hash"]:
+            checks["category_stale"].append(
+                {"id": key[0], "section": key[1], "index": key[2]})
+    for key, clause in tagged.items():
+        if (key[:2] in covered_sections and clause.get("text_ja")
+                and key not in rows):
+            checks["category_stale"].append(
+                {"id": key[0], "section": key[1], "index": key[2]})
+    covered = sorted({card for card, _ in covered_sections})
+    for cid in covered:
+        entry = entries.get(cid)
+        if entry is None:
+            continue
+        groups = {"ae": [], "ac": []}
+        for clause in clauses_by_id.get(cid) or ():
+            row = rows.get((cid, clause.get("section"), clause.get("index"))) or {}
+            for field, group in (("ae", "effect"), ("ac", "cost")):
+                codes = []
+                for name in row.get(group, ()):
+                    if name in number:
+                        codes.append(number[name])
+                    else:
+                        checks["category_unknown_leaves"].append(
+                            {"id": cid, "index": clause.get("index"), "leaf": name})
+                groups[field].append(codes)
+        entry["ae"] = groups["ae"]
+        if any(groups["ac"]):
+            entry["ac"] = groups["ac"]
+    majors, major_of = _leaf_majors(categories["樹"])
+    by_major = dict.fromkeys(majors, 0)
+    with_leaves = 0
+    for row in rows.values():
+        names = list(row.get("effect", ())) + list(row.get("cost", ()))
+        with_leaves += bool(names)
+        for major in {major_of.get(number.get(n)) for n in names} - {None}:
+            by_major[major] += 1
+    vocab_part = {"zh": "動作類別", "covered": len(covered), "leaves": list(leaves),
+                  "tree": categories["樹"]}
+    report = {"covered_cards": len(covered), "sentences": len(rows),
+              "sentences_with_leaves": with_leaves, "by_major": by_major}
+    return vocab_part, report
+
+
 def _summarise_problems(report):
     """報告 → 問題清單。非空即建置失敗;CLI 薄殼照這一份決定 exit code。"""
     checks = report["checks"]
@@ -477,6 +561,9 @@ def _summarise_problems(report):
         ("卡文勘誤逆推不回原文或差異標不出來", checks["errata_not_reversible"]),
         ("文本改寫的新全文與現行卡文不相等", checks["rewrite_desc_mismatch"]),
         ("同卡同時在勘誤表與改寫表", checks["rewrite_overlaps_errata"]),
+        ("動作類別匯出檔過時(與標記表對不上,請重跑分詞鏈)",
+         checks["category_stale"]),
+        ("動作類別匯出檔的葉不在類別樹", checks["category_unknown_leaves"]),
         ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
         ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
     )
@@ -487,7 +574,7 @@ def _summarise_problems(report):
 
 
 def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
-                rewrites=None, data_updated_at=None):
+                rewrites=None, data_updated_at=None, categories=None):
     """[[卡片總表]]條目 + [[效果標記表]]條目 → (index, report)。
 
     `built_at`、`sources`(來源檔雜湊)與 `data_updated_at`([[資料更新時間]],
@@ -507,6 +594,10 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     不混用;`ow` 不進搜尋(與 `og` 同規則)。改寫筆的 `new` 與現行卡文
     不相等、或同卡同時在勘誤表與改寫表,都進 problems 讓建置失敗——
     上游對不上就吵,不默默帶一份過時的原文。
+
+    `categories` 是分詞鏈匯出的[[動作類別]]檔(ADR-0017,`_attach_categories`):
+    涵蓋的卡多帶 `ae` / `ac`,VOCAB 多一個 `acat`(類別樹與涵蓋卡數)。為 None
+    時索引不帶類別。
     """
     clauses_by_id = {t["id"]: t.get("clauses") or [] for t in tag_cards}
     errata_by_id = {}
@@ -519,7 +610,8 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
               "clauses_not_in_desc": [], "unexplained_type_bits": [],
               "alias_gap_not_extracted": [], "optional_on_non_carrier": [],
               "errata_not_reversible": [], "rewrite_desc_mismatch": [],
-              "rewrite_overlaps_errata": []}
+              "rewrite_overlaps_errata": [], "category_stale": [],
+              "category_unknown_leaves": []}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
     carriers = set(vocab.carriers(vocab.OPTIONAL))
     entries = {}
@@ -582,12 +674,19 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
         if bits:
             checks["unexplained_type_bits"].append({"id": cid,
                                                     "bits": f"{bits:#x}"})
+    category_report = None
+    acat = None
+    if categories is not None:
+        acat, category_report = _attach_categories(entries, clauses_by_id,
+                                                   categories, checks)
     index_cards = [entries[cid] for cid in sorted(entries)]
     exported = vocab.export()
     cross = _cross_type_counts(cards, clauses_by_id)
     dropped = _drop_buttonless_kinds(exported, cross)
     checks["missing_cards"] = sorted({c["id"] for c in cards} - set(entries))
     checks["unknown_values"].extend(_unexported_codes(index_cards, exported))
+    if acat is not None:
+        exported["acat"] = acat
     index = {
         "cards": index_cards,
         "vocab": exported,
@@ -611,6 +710,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
         "known_gaps": known_gaps,
         "checks": checks,
         "monster_invariant": _monster_invariant(cards),
+        "categories": category_report,
     }
     report["problems"] = _summarise_problems(report)
     return index, report

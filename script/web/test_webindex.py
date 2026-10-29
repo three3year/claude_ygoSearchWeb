@@ -835,5 +835,131 @@ class TagAxisTest(unittest.TestCase):
         self.assertEqual(report["problems"], [])
 
 
+def sha(text):
+    import hashlib
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
+
+
+class CategoryTest(unittest.TestCase):
+    """[[動作類別]]:分詞鏈匯出的類別檔進索引(category-search 票 01,ADR-0017)。
+
+    每句標記句多兩個與 `tx` 對齊的欄位 `ae`(效果位葉)/`ac`(代價位葉),葉以
+    類別樹的葉號表示;類別樹與涵蓋卡數進 VOCAB。匯出檔過時或對不上即建置失敗。
+    """
+
+    LEAVES = ["特殊召喚←墓地", "破壊", "捨てる"]
+    TREE = [["召喚", -1, [["特殊召喚", -1, [["特殊召喚←墓地", 0, []]]]]],
+            ["破壊", 1, []],
+            ["區域移動", -1, [["捨てる", 2, []]]]]
+    JA1 = "①：手札を１枚捨てて発動できる。自分の墓地からモンスター１体を特殊召喚する。"
+    JA2 = "②：このカードが墓地へ送られた場合に発動できる。"
+
+    def build(self, rows=None, extra_cards=()):
+        cards = [card(1, desc="①：這樣。②：那樣。"), card(2, desc="①：別張。")]
+        cards += list(extra_cards)
+        tags = [tagged(1, dict(clause("①：這樣。"), text_ja=self.JA1),
+                       dict(clause("②：那樣。", index="②", kind="誘發效果(1速)"),
+                            text_ja=self.JA2)),
+                tagged(2, dict(clause("①：別張。"), text_ja="①：別のカード。"))]
+        tags += [tagged(c["id"]) for c in extra_cards]
+        if rows is None:
+            rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1),
+                     "effect": ["特殊召喚←墓地"], "cost": ["捨てる"]},
+                    {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)}]
+        doc = {"說明": "", "葉": self.LEAVES, "樹": self.TREE, "句": rows}
+        return build_index(cards, tags, categories=doc)
+
+    def test_leaf_fields_align_with_tx(self):
+        index, report = self.build()
+        self.assertEqual(report["problems"], [])
+        entry = index["cards"][0]
+        self.assertEqual(entry["ae"], [[0], []])
+        self.assertEqual(entry["ac"], [[2], []])
+
+    def test_cost_field_is_omitted_when_no_sentence_has_cost(self):
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1),
+                 "effect": ["特殊召喚←墓地"]},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2),
+                 "effect": ["破壊"]}]
+        entry = self.build(rows)[0]["cards"][0]
+        self.assertEqual(entry["ae"], [[0], [1]])
+        self.assertNotIn("ac", entry)
+
+    def test_covered_card_without_any_leaf_still_carries_ae(self):
+        """`ae` 的有無就是涵蓋與否:涵蓋但一個葉都沒有的卡帶全空的 `ae`——只選排除
+        時它要命中,舊式卡文的卡不中。"""
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1)},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)}]
+        entry = self.build(rows)[0]["cards"][0]
+        self.assertEqual(entry["ae"], [[], []])
+
+    def test_uncovered_card_has_no_category_fields(self):
+        other = self.build()[0]["cards"][1]
+        self.assertNotIn("ae", other)
+        self.assertNotIn("ac", other)
+
+    def test_vocab_carries_the_tree_and_coverage(self):
+        index, _ = self.build()
+        acat = index["vocab"]["acat"]
+        self.assertEqual(acat["leaves"], self.LEAVES)
+        self.assertEqual(acat["tree"], self.TREE)
+        self.assertEqual(acat["covered"], 1)
+        self.assertEqual(acat["zh"], "動作類別")
+
+    def test_without_an_export_the_index_has_no_categories(self):
+        index, report = build_index([card(1, desc="①：這樣。")],
+                                    [tagged(1, clause("①：這樣。"))])
+        self.assertNotIn("acat", index["vocab"])
+        self.assertNotIn("ae", index["cards"][0])
+        self.assertEqual(report["problems"], [])
+
+    def test_stale_hash_fails_the_build(self):
+        """卡文勘誤後沒重跑分詞鏈:匯出檔的雜湊對不上標記表的日文原文。"""
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha("舊的原文"),
+                 "effect": ["特殊召喚←墓地"]},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)}]
+        _, report = self.build(rows)
+        self.assertEqual(report["checks"]["category_stale"],
+                         [{"id": 1, "section": "main", "index": "①"}])
+        self.assertTrue(report["problems"])
+
+    def test_export_sentence_missing_from_the_tag_table_fails_the_build(self):
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1)},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)},
+                {"card": 1, "section": "main", "index": "③", "hash": sha("③")}]
+        _, report = self.build(rows)
+        self.assertEqual(report["checks"]["category_stale"],
+                         [{"id": 1, "section": "main", "index": "③"}])
+        self.assertTrue(report["problems"])
+
+    def test_sentence_missing_from_a_covered_section_fails_the_build(self):
+        """標記表在涵蓋的段落多了一句(重拆、新增效果)而匯出沒有:也是過時。"""
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1)}]
+        _, report = self.build(rows)
+        self.assertEqual(report["checks"]["category_stale"],
+                         [{"id": 1, "section": "main", "index": "②"}])
+        self.assertTrue(report["problems"])
+
+    def test_leaf_outside_the_tree_fails_the_build(self):
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1),
+                 "effect": ["蘇生"]},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)}]
+        _, report = self.build(rows)
+        self.assertEqual(report["checks"]["category_unknown_leaves"],
+                         [{"id": 1, "index": "①", "leaf": "蘇生"}])
+        self.assertTrue(report["problems"])
+
+    def test_report_counts_coverage_and_sentences_per_major(self):
+        _, report = self.build()
+        self.assertEqual(report["categories"], {
+            "covered_cards": 1, "sentences": 2, "sentences_with_leaves": 1,
+            "by_major": {"召喚": 1, "破壊": 0, "區域移動": 1}})
+
+    def test_serialized_index_is_deterministic(self):
+        first = serialize_index(self.build()[0])
+        self.assertEqual(first, serialize_index(self.build()[0]))
+        self.assertIn('"ae":[[0],[]]', first)
+
+
 if __name__ == "__main__":
     unittest.main()

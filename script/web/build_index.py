@@ -1,4 +1,4 @@
-"""建置前端索引的 CLI 薄殼:讀總表與標記表 → webindex 管線 → 寫 web/data.js。
+"""建置前端索引的 CLI 薄殼:讀總表、標記表與動作類別匯出檔 → webindex 管線 → 寫 web/data.js。
 
 薄殼只做四件事:讀檔 → 呼叫 → 寫檔 → 印報告,並依 report 的 problems 決定
 exit code。驗收條件全部長在 `build_index` 的 report 裡(與 tag_card 的
@@ -10,6 +10,7 @@ exit code。驗收條件全部長在 `build_index` 的 report 裡(與 tag_card �
 """
 import argparse
 import datetime
+import gzip
 import hashlib
 import json
 import os
@@ -23,6 +24,7 @@ DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_TAGS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_ERRATA = os.path.join(ROOT, "data", "text_errata.json")
 DEFAULT_REWRITES = os.path.join(ROOT, "data", "text_rewrites.json")
+DEFAULT_CATEGORIES = os.path.join(ROOT, "data", "action_categories.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "web", "data.js")
 # 資料更新時間(來源檔下載時間)由 update_cards.py 記錄;不入版控,
 # clean checkout 沒有這個檔 → META 不帶欄位,前端整行省略
@@ -77,6 +79,8 @@ def print_checks(report, p, limit=20):
         ("errata_not_reversible", "卡文勘誤逆推不回原文或差異標不出來"),
         ("rewrite_desc_mismatch", "文本改寫的新全文與現行卡文不相等"),
         ("rewrite_overlaps_errata", "同卡同時在勘誤表與改寫表"),
+        ("category_stale", "動作類別匯出檔過時(與標記表對不上)"),
+        ("category_unknown_leaves", "動作類別匯出檔的葉不在類別樹"),
     )
     gaps = report["known_gaps"]
     p(f"已知缺口: 段落標頭 {gaps['header']} 處、※ 別名 {gaps['alias']} 處")
@@ -103,10 +107,22 @@ def print_invariant(report, p):
         p(f"  非怪獸卻有怪獸參數 id={cid}")
 
 
+def print_categories(report, p):
+    """[[動作類別]]的涵蓋與分佈:這次重建類別資料有沒有大變動,看這幾個數。"""
+    cat = report["categories"]
+    if cat is None:
+        p("動作類別: 未讀匯出檔")
+        return
+    p(f"動作類別: 涵蓋 {cat['covered_cards']} 張卡、標記句 {cat['sentences']} 句"
+      f"(帶葉 {cat['sentences_with_leaves']} 句)")
+    p("  各大類句數: " + " ".join(f"{k}={n}" for k, n in cat["by_major"].items()))
+
+
 def print_report(report, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p(f"索引: {report['cards']} 張卡、{report['clauses']} 個效果句")
     print_census(report, p)
+    print_categories(report, p)
     print_invariant(report, p)
     print_checks(report, p)
     problems = report["problems"]
@@ -116,6 +132,23 @@ def print_report(report, file=sys.stdout):
             p(f"  {problem}")
     else:
         p("全部檢查通過")
+
+
+def _sizes(text):
+    raw = text.encode("utf-8")
+    return len(raw), len(gzip.compress(raw, mtime=0))
+
+
+def print_size(text, previous_path, p):
+    """索引大小與 gzip 大小,對照目前的 data.js:載入成本漲了多少看這一行。"""
+    size, packed = _sizes(text)
+    line = f"索引大小: {size / 1e6:.2f} MB、gzip {packed / 1e6:.2f} MB"
+    if os.path.exists(previous_path):
+        with open(previous_path, encoding="utf-8") as f:
+            old, old_packed = _sizes(f.read())
+        line += (f"(現行 data.js {old / 1e6:.2f} MB、gzip {old_packed / 1e6:.2f} MB;"
+                 f"差 {(size - old) / 1e3:+.0f} KB、gzip {(packed - old_packed) / 1e3:+.0f} KB)")
+    p(line)
 
 
 def main(argv=None):
@@ -131,11 +164,16 @@ def main(argv=None):
     parser.add_argument("--downloaded-at", default=DEFAULT_DOWNLOADED_AT,
                         help="資料更新時間記錄路徑 "
                              "(預設 data/sources/downloaded_at.json)")
+    parser.add_argument("--categories", default=DEFAULT_CATEGORIES,
+                        help="動作類別匯出檔路徑 "
+                             "(預設 data/action_categories.json;由分詞鏈產生)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
                         help="輸出路徑 (預設 web/data.js)")
     parser.add_argument("--no-write", action="store_true",
                         help="只跑檢查與報告,不寫出索引")
     args = parser.parse_args(argv)
+    # 類別的葉名是日文(破壊),cp950 主控台編不出來:跳脫而不是讓建置崩掉
+    sys.stdout.reconfigure(errors="backslashreplace")
 
     built_at = datetime.datetime.now().astimezone().strftime(
         "%Y-%m-%dT%H:%M:%S%z")
@@ -146,9 +184,12 @@ def main(argv=None):
     index, report = build_index(
         _load(args.cards), _load(args.tags), built_at=built_at,
         sources={os.path.basename(args.cards): _digest(args.cards),
-                 os.path.basename(args.tags): _digest(args.tags)},
-        errata=errata, rewrites=rewrites, data_updated_at=data_updated_at)
+                 os.path.basename(args.tags): _digest(args.tags),
+                 os.path.basename(args.categories): _digest(args.categories)},
+        errata=errata, rewrites=rewrites, data_updated_at=data_updated_at,
+        categories=_load(args.categories))
     print_report(report)
+    print_size(serialize_index(index), args.output, print)
     if report["problems"]:
         return 1
     if not args.no_write:

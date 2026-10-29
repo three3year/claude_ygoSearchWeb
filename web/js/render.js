@@ -240,9 +240,22 @@ function effHtml(c, text, i, rows, hl) {
   const badge = hit ? badgeText(hl.marks, c, i) : '';
   return `<p class="eff${roleClass(c, role)}${hit ? ' hit' : ''}" data-ei="${i}">${
     badge ? `<span class="eff-hit">${esc(badge)}</span>` : ''}${
-    lineHtml(text, ranges)}${
+    lineHtml(text, ranges)}${actHtml(c, i)}${
     labels.length ? `<span class="eff-kinds">${labels.map(t =>
       `<span class="eff-kind">${esc(t)}</span>`).join('')}</span>` : ''}</p>`;
+}
+
+/* [[動作類別]]的葉:每句尾列它全部的葉(效果位在前、代價位在後),葉名照類別樹的
+   日文原名;代價位的葉字面帶「代價：」。沒有葉的句子什麼都不加。 */
+function actHtml(c, i) {
+  const eff = (c.ae && c.ae[i]) || [];
+  const cost = (c.ac && c.ac[i]) || [];
+  if (!eff.length && !cost.length) return '';
+  const one = (n, isCost) => `<span class="act${isCost ? ' act-cost' : ''}"${
+    isCost ? ' title="代價位的動作"' : ''}>${
+    esc((isCost ? '代價：' : '') + (Acat.LEAVES[n] || n))}</span>`;
+  return `<span class="eff-acts">${eff.map(n => one(n, false)).join('')}${
+    cost.map(n => one(n, true)).join('')}</span>`;
 }
 
 function roleClass(c, role) {

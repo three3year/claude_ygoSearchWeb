@@ -461,6 +461,21 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   border-radius: 3px; padding: 0 1px;
 }
 
+/* ─── 動作類別的葉(category-search)──────────────────────
+   每句尾自佔一行列出它的葉:常態顯示(「一眼讀出每個效果在做什麼」),但壓成小號
+   淡色膠囊,不搶卡文。代價位的葉虛線框+「代價：」前綴;本次搜尋命中的葉用與
+   關鍵字同一種金底(mark),和「哪幾個字讓這行中的」是同一個問題。 */
+.eff-acts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.act {
+  padding: 0 6px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--surface2); color: var(--muted); font-size: 11px;
+}
+.act-cost { border-style: dashed; opacity: .85; }
+.act mark.act-hit {
+  background: none; color: var(--gold); font-weight: bold;
+}
+.act:has(mark.act-hit) { border-color: var(--hl-border); }
+
 /* ─── 效果外文本的三種弱化樣式 ────────────────────────────
    素材指定 / 召喚條件 / 使用次數限制:一眼分得出哪幾行根本不是效果。
    三種各有形狀而不是統一淡化——它們在卡面上本來就長得不一樣。 */

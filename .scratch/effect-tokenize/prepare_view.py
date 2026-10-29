@@ -217,33 +217,6 @@ def load_categories():
 
 # ── 類別總覽(action-categories 票 05):樹的節點計數、未歸依詞元聚合、每葉的框架清單 ──
 
-def tree_nodes(tree):
-    """類別樹的葉路徑 → 巢狀節點 {"name", "leaf"(葉號或 None), "children"},依樹序。
-    詞元節點帶預設葉時(破壊 底下的 {}),預設葉的路徑與詞元節點相同,節點同時是
-    葉與內部節點。葉宣告了大類時(category-tree-restart 票 04)路徑的頭是宣告的大類,
-    同一詞元節點因此可出現在幾個大類下、各自只掛那裡的葉;大類依樹序先排好,掛到本家
-    以外大類的葉後放,借來的詞元節點因此排在該大類自己的詞元節點之後。大類的中類
-    (category-middle-class)依樹來源檔的清單先排在詞元節點之前;葉宣告了中類時路徑是
-    大類 › 中類 › 葉,詞元節點因此只彙總留在它底下的葉。"""
-    def new_node(name, children=()):
-        return {"name": name, "leaf": None, "children": list(children)}
-
-    root = new_node(None, [new_node(name, [new_node(m) for m in tree.middles.get(name, ())])
-                           for name in tree.majors])
-    order = sorted(range(len(tree.leaves)), key=lambda i: (tree.leaves[i].borrowed, i))
-    for i in order:
-        leaf = tree.leaves[i]
-        node = root
-        for name in leaf.path:
-            child = next((c for c in node["children"] if c["name"] == name), None)
-            if child is None:
-                child = new_node(name)
-                node["children"].append(child)
-            node = child
-        node["leaf"] = i
-    return root["children"]
-
-
 def balanced_shards(groups, count):
     """(鍵, 列數) → 鍵 → 分片號:由大到小(同大小依鍵)放進目前最輕的分片,決定性。"""
     load = [0] * count
@@ -301,7 +274,7 @@ def category_overview(tree, items):
         leaf = -1 if node["leaf"] is None else node["leaf"]
         return [node["name"], len(frames), len(cards), leaf, children], frames, cards
 
-    nodes = [summarize(n, top_level=True)[0] for n in tree_nodes(tree)]
+    nodes = [summarize(n, top_level=True)[0] for n in categories.tree_nodes(tree)]
     groups = sorted(unplaced.items(), key=lambda kv: (-len(kv[1][1]), kv[0]))
     rows_of = {"l%d" % i: rows for i, rows in enumerate(leaf_rows) if rows}
     rows_of.update(("u%d" % j, rows) for j, (_, (_, rows)) in enumerate(groups))

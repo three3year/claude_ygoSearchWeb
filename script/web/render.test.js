@@ -33,6 +33,12 @@ const VOCAB = {
            items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
   ban_m: { zh: 'MD 禁限',
            items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
+  // [[動作類別]]:葉號 → 葉名(類別樹的日文原名),樹本身呈現縫用不到
+  acat: { zh: '動作類別', covered: 1,
+          leaves: ['特殊召喚←墓地', '破壊@相手フィールド', '捨てる'],
+          tree: [['召喚', -1, [['特殊召喚←墓地', 0, []]]],
+                 ['破壊', -1, [['破壊@相手フィールド', 1, []]]],
+                 ['區域移動', -1, [['捨てる', 2, []]]]] },
 };
 
 const sandbox = harness.load({ cards: [], vocab: VOCAB, meta: {} });
@@ -140,4 +146,31 @@ test('被本站改寫的卡:對照鈕在,原文視圖是舊全文純文字、不
   assert.ok(out.includes('反轉：選擇場上1隻守備表示怪獸破壞。'));
   assert.ok(!out.includes('本站勘誤後刪去'));             // 沒有勘誤的差異標註
   assert.ok(!out.includes('本站勘誤後補上'));
+});
+
+/* ── 動作類別:每句標記句尾列它全部的葉(category-search 票 01/02) ── */
+
+const TWO = ['①：丟1張手牌發動。從墓地特殊召喚。', '②：破壞對手場上1張卡。'];
+const textOf = out => out.replace(/<[^>]+>/g, '');
+
+test('每句尾列出它的葉(日文原名),不論有沒有搜類別', () => {
+  const out = html({ tx: TWO, k: ['i', 'q'], ae: [[0], [1]] });
+  const t = textOf(out);
+  assert.ok(t.includes('特殊召喚←墓地'));
+  assert.ok(t.includes('破壊@相手フィールド'));
+  // 葉跟著它的句子:第一句的葉在第二句的文字之前
+  assert.ok(t.indexOf('特殊召喚←墓地') < t.indexOf('②：'));
+  assert.ok(t.indexOf('破壊@相手フィールド') > t.indexOf('②：'));
+});
+
+test('代價位的葉字面上看得出是代價', () => {
+  const t = textOf(html({ tx: TWO, k: ['i', 'q'], ae: [[0], []], ac: [[2], []] }));
+  assert.ok(t.includes('代價：捨てる'));
+  assert.ok(!t.includes('代價：特殊召喚←墓地'));
+});
+
+test('沒有葉的句子句尾不多出任何東西', () => {
+  const bare = html({ tx: TWO, k: ['i', 'q'] });
+  const empty = html({ tx: TWO, k: ['i', 'q'], ae: [[], []] });
+  assert.strictEqual(empty, bare);
 });

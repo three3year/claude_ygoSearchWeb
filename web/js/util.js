@@ -1,12 +1,3 @@
-/**
- * util.js — 共用工具與常數表(DOM 快捷、esc、值域中文表)
- *
- * 載入順序:data -> util -> sort -> engine -> query -> render -> main
- * (見 index.html 的 <script> 順序)。
- *
- * 模組介面凍結:內部關在閉包裡,外面只看得到 Util 這個凍結物件。零建置協定
- * (ADR-0007)下沒有模組系統,顯式掛載的介面就是唯一的邊界。
- */
 'use strict';
 
 const Util = (() => {
@@ -15,16 +6,11 @@ const DB = window.CARD_DATA || [];
 const META = window.META || {};
 const VOCAB = window.VOCAB || {};
 
-/* 碼 → 中文一律由 window.VOCAB 導出(值域正典住建置期,ADR-0008)。
-   在這裡手抄一份的話,新增一個種族時 VOCAB 有、這裡沒有,那批卡在畫面上就
-   沒有名字——與「漏一個碼、某批卡從搜尋結果消失」是同一個失效模式。 */
 function zhTable(name) {
   const table = {};
   ((VOCAB[name] || {}).items || []).forEach(e => { table[e.code] = e.zh; });
   return table;
 }
-/* 宣告序本身(碼的順序)。**領域序排序的比較序就是它**——排序另抄一份順序表的話,
-   在正典裡調一個種族的位置,按鈕會動而畫面上的順序不會動(sort.js)。 */
 function codesOf(name) {
   return ((VOCAB[name] || {}).items || []).map(e => e.code);
 }
@@ -35,14 +21,10 @@ const RACE_ZH = zhTable('race');
 const ROLE_ZH = zhTable('role');
 const OPT_ZH = zhTable('optional');
 const OT_ZH = zhTable('ot');
-/* 連結標記的中文就是箭頭字元(↖↑↗…),宣告序就是九宮格由左上到右下的讀法 */
 const LM_ZH = zhTable('lm');
 const LM_CODES = codesOf('lm');
-/* [[禁限狀態]]:索引欄位 → 該賽制值域的中文表 */
 const BAN_ZH = { bo: zhTable('ban_o'), bt: zhTable('ban_t'),
                  bm: zhTable('ban_m') };
-/* 子類型一側一份:同一個碼在怪獸側是儀式怪獸、在魔法側是儀式魔法,
-   讀哪一份由卡片的大類決定(GLOSSARY.md「卡片子類型」) */
 const SUB_ZH = { m: zhTable('sub_m'), s: zhTable('sub_s'), t: zhTable('sub_t') };
 
 const $ = id => document.getElementById(id);
@@ -52,21 +34,14 @@ function esc(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 }
 
-/* 卡片密碼顯示時補零成 8 位(卡面左下角就是 8 位數) */
 const pad8 = id => String(id).padStart(8, '0');
 
-/* 資料更新時間的顯示格式:`2026-08-08T17:57:00+0800` → `2026-08-08 17:57 (UTC+8)`。
-   秒數捨去(「資料多新」分鐘就夠)。顯示固定 UTC+8(GLOSSARY.md「資料更新時間」),
-   偏移就只認 +0800;其他任何形狀(含別的偏移)都是非預期,原樣返回——
-   footer 顯示原值,不出 NaN/Invalid Date。 */
 function fmtTime(v) {
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):\d{2}\+0800$/
     .exec(typeof v === 'string' ? v : '');
   return m ? `${m[1]} ${m[2]} (UTC+8)` : v;
 }
 
-/* 密碼 → 卡片。異圖切換要從點下去的那張卡取回異圖清單,線性掃 14,207 筆
-   在每次點擊上都做一遍是沒必要的浪費。 */
 const INDEX = new Map(DB.map(c => [c.id, c]));
 const byId = id => INDEX.get(+id);
 

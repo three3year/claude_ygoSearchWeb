@@ -125,6 +125,8 @@ SAHEN_NOUNS = {"発動", "召喚", "破壊", "存在", "除外", "アップ", "�
                "ダウン", "回復", "リバース", "確認", "無視", "発生", "使用", "変更",
                "移動", "シャッフル", "合計", "チェーン", "終了", "スキップ", "指定",
                "公開", "勝利", "代用", "相互リンク", "コントロール"}
+# 法鏈的原詞元(融合・S・X・リンク召喚、融合・S・X素材にする):一法一框(_each_method)
+_METHOD_CHAIN = re.compile(r"(.+?)(召喚|素材[にと](?:する|なる))")
 # 「Xが Yの N」的屬性主語(攻撃力と守備力が０の悪魔族モンスター):併入名詞片語
 # (與補語不併判準共用一份,定義在 action_lemmas)
 ATTR_NOUNS = action_lemmas.ATTRIBUTE_NOUNS
@@ -375,9 +377,13 @@ class FrameExtractor:
         if w == "対象" and j < n and tokens[j] == "p:として":
             return self._finish(tokens, i, i, j + 1, "対象とする", POL_AFFIRM,
                                 "te", False, 0, clause_start)
-        # 〜を素材として/〜をX素材として:當作素材(動作 素材とする)
+        # 〜を素材として/〜をX素材として:當作素材(動作 素材とする);〜の素材として扱う 的
+        # 述語是 扱う(視同),素材として 不成框架(frame-lemma-variants 票 05)
         if w is not None and w.endswith("素材") and j < n \
-                and tokens[j] == "p:として":
+                and tokens[j] == "p:として" and not (
+                    i - 1 >= clause_start and tokens[i - 1] == "p:の"
+                    and j + 1 < n and tokens[j + 1].startswith("W")
+                    and self.lex.lemma_of[tokens[j + 1]] == "扱う"):
             prefix, head = self._method_prefix(tokens, head - 1, clause_start)
             return self._finish(tokens, head, i, j + 1, prefix + w + "とする",
                                 POL_AFFIRM, "te", False, 0, clause_start)
@@ -428,9 +434,13 @@ class FrameExtractor:
             elif form == "potential":
                 polarity = POL_CAN
             if lemma in LIGHT_VERBS:
-                # N に/と なる:補語併入動作(無効になる/対象になる/同じになる)
-                action, fold, complement = self._fold_complement(tokens, i, clause_start,
-                                                                 lemma)
+                # N に/と なる:補語併入動作(無効になる/対象になる/同じになる);対象にもならない
+                # 的 も 夾在 に 與 なる 之間不擋(frame-lemma-variants 票 05)
+                skip = int(i - 2 >= clause_start and tokens[i - 1] == "p:も"
+                           and tokens[i - 2] in ("p:に", "p:と"))
+                action, fold, complement = self._fold_complement(tokens, i - skip,
+                                                                 clause_start, lemma)
+                fold += skip
         elif w is not None and w in SURU_FAMILY:
             # 裸 する家族(前面不是サ変名詞):N に/と する → 併入動作
             # (無効にする/裏側守備表示にする/リンク素材とする);補語是數字時
@@ -570,6 +580,68 @@ class FrameExtractor:
                 return self._compound_action(tokens, i - 2, clause_start) or head
         return None
 
+    def _summon_phrases(self, tokens, start, stop):
+        """[start, stop) 裡的召喚片語「(法(・法)*)召喚」的字面,依原文順序。"""
+        out = []
+        for m in range(start, stop):
+            if self.word(tokens[m]) != "召喚":
+                continue
+            s = m
+            while s - 1 >= start and token_kind(tokens[s - 1]) == "method":
+                s -= 1
+                if s - 2 >= start and tokens[s - 1] == "・" \
+                        and token_kind(tokens[s - 2]) == "method":
+                    s -= 1
+            out.append(self._text(tokens[s:m + 1]))
+        return out
+
+    def _performed_summons(self, tokens, a, args):
+        """行う 的對象是召喚時(frame-lemma-variants 票 01):回 [(召喚的原詞元, 論元)],否則 None。
+        對象(を;主題形 このカードの融合召喚は…行えない 是 は;しか 型沒有對象)以召喚片語收尾:
+        「の」前的名詞片語是新的對象(連同切出的區域),沒有「の」時對象空;主題形的所有格只留子句
+        字面。「〜を３回まで行う」的上限數量併進了對象(通常召喚3回まで):召喚片語接「…まで」
+        也算,數量只留子句字面、對象空。「召喚・特殊召喚」的 ・ 並列與「AのS召喚またはBのX召喚」
+        各出一組、各帶自己的對象;
+        受事者片語切出的區域是整段的,分不到哪一組,這時不帶(語料 1 句、沒有區域)。法鏈
+        (融合・S・X・リンク召喚)由呼叫端照召喚並列展開。"""
+        phrases = sorted(self._summon_phrases(tokens, a["clause_start"], a["head"]),
+                         key=len, reverse=True)
+        if not phrases:
+            return None
+        if args.get("object"):
+            role = "object"
+        elif args.get("topic") and any(args["topic"].endswith(q) for q in phrases):
+            role = "topic"
+        elif tokens[a["head"] - 1] == "p:しか" and self.word(tokens[a["head"] - 2]) == "召喚":
+            return [(self._summon_phrases(tokens, a["clause_start"], a["head"] - 1)[-1], args)]
+        else:
+            return None
+        out = []
+        split = args.get("split", {}).get(role)
+        parts = []
+        for part in args[role].split("または"):
+            pieces = part.split("・")
+            # 召喚・特殊召喚:・ 並列的召喚片語各一組(法鏈 融合・S召喚 整段就是一個片語)
+            parts += pieces if part not in phrases and all(p in phrases for p in pieces) \
+                else [part]
+        for part in parts:
+            phrase = next((q for q in phrases if part == q or part.endswith("の" + q)
+                           or role == "object" and len(parts) == 1 and part.startswith(q)
+                           and part.endswith("まで")), None)
+            if phrase is None:
+                return None
+            owner = part[:-len(phrase) - 1] if part.endswith("の" + phrase) else None
+            argued = dict(args, split={key: v for key, v in args.get("split", {}).items()
+                                       if key != role})
+            argued[role] = owner if role == "object" else None
+            if role == "object" and owner and split and len(parts) == 1:
+                place, rest = split
+                if rest is not None and rest.endswith("の" + phrase):
+                    rest = rest[:-len(phrase) - 1]
+                argued["split"]["object"] = (place, rest)
+            out.append((phrase, argued))
+        return out
+
     def _compound_action(self, tokens, k, clause_start):
         """tokens[k] 的サ変名詞連同前一個詞是完整動作名(攻撃|宣言、直接|攻撃;票 04)時回它,
         否則 None。"""
@@ -597,12 +669,27 @@ class FrameExtractor:
         if self._is_value_complement(tokens[k:i - 1]):
             return particle + lemma, 0, lemma
         text = "".join(self.surface(t) for t in tokens[k:i - 1])
+        methods = self._material_methods(tokens, k, clause_start) if text == "素材" else None
+        if methods:
+            text = methods + text      # 融合・S・X召喚の素材 → 融合・S・X素材(呼叫端一法一框)
         return text + particle + lemma, i - k, None
+
+    def _material_methods(self, tokens, k, clause_start):
+        """tokens[k] 的 素材 前面是「法(・法)*召喚の」(frame-lemma-variants 票 02)→ 法鏈字面
+        (融合・S・X),否則 None;法要都是有素材詞元的(action_lemmas.MATERIAL_METHODS,
+        リンク 照寫法歸一算 L)。"""
+        if k - 2 < clause_start or tokens[k - 1] != "p:の" or self.word(tokens[k - 2]) != "召喚":
+            return None
+        phrase = self._summon_phrases(tokens, clause_start, k - 1)[-1][:-2]
+        if phrase and all(action_lemmas.spell(m + "素材")[:-2] in action_lemmas.MATERIAL_METHODS
+                          for m in phrase.split("・")):
+            return phrase
+        return None
 
     def _is_value_complement(self, complement):
         """補語的最後一個詞是「值」或「屬性」(闇属性、裏側守備表示、エンドフェイズ、レベル、
-        数値…):action_lemmas.COMPLEMENT_VALUE_CLASSES 的封閉值域字面,或 COMPLEMENT_ATTRIBUTES
-        (合計|値、合計|分 兩詞連起來比)。"""
+        数値、以下の効果…):action_lemmas.COMPLEMENT_VALUE_CLASSES 的封閉值域字面、COMPLEMENT_ATTRIBUTES
+        (合計|値、合計|分 兩詞連起來比)或 COMPLEMENT_VALUE_HEADS。"""
         words = [self._base_word(t) for t in complement[-2:]]
         last = complement[-1]
         if words[-1] is None:
@@ -610,6 +697,7 @@ class FrameExtractor:
         wid = last.split(":", 2)[-1]            # 詞典詞本身或 指示詞/省略寫法 指的詞
         return (self.lex.closed_of[wid] in action_lemmas.COMPLEMENT_VALUE_CLASSES
                 or words[-1] in action_lemmas.COMPLEMENT_ATTRIBUTES
+                or words[-1] in action_lemmas.COMPLEMENT_VALUE_HEADS
                 or (None not in words
                     and "".join(words) in action_lemmas.COMPLEMENT_ATTRIBUTES))
 
@@ -1411,13 +1499,6 @@ class FrameExtractor:
                     position = POS_EFFECT
                 span = (span_start(a), a["end"])
                 clause = " ".join(self.surface(t) for t in tokens[span[0]:span[1]])
-                # 「・」並列的述語名詞(召喚・特殊召喚した)與召喚法鏈(儀式・融合・
-                # S・X召喚):各出一框架,共用後綴
-                coordinated = self._coordinated_actions(tokens, a)
-                if "・" in a["action"] and a["action"].endswith("召喚"):
-                    methods = a["action"][:-2].split("・")
-                    coordinated += [m + "召喚" for m in methods[:-1]]
-                    a["action"] = methods[-1] + "召喚"
                 # 效果內容的次數/窗口(１度だけ、追加召喚的 自分メインフェイズに)記在
                 # 動作框架自己身上(約束框架票 06)
                 # 〜よう 子句併入時從併入的起點掃,上一個錨點是併入段之前的那個(票 09)
@@ -1427,15 +1508,24 @@ class FrameExtractor:
                 # 條件子句裡主題在自己的主語之前:主題屬主句,不給條件框架,交給後面延續(票 03)
                 a["lifted_topic"] = args.pop("topic") if (
                     a["conditional"] and args.get("topic_first")) else None
-                for action in coordinated + [a["action"]]:
+                # 「・」並列的述語名詞(召喚・特殊召喚した)與召喚法鏈(儀式・融合・
+                # S・X召喚):各出一框架,共用後綴;行う 的對象是召喚時記那個召喚(票 01;
+                # 主題先交給主句再分框)
+                targets = [(action, args) for action in
+                           self._coordinated_actions(tokens, a) + [a["action"]]]
+                if a["action"] == "行う":
+                    targets = self._performed_summons(tokens, a, args) or targets
+                targets = [(each, argued) for action, argued in targets
+                           for each in _each_method(action)]
+                for action, own_args in targets:
                     # 第三版論元(票 02/04):主題、主語、所在 是可選欄,只在有值時帶;被動是抽取內部的
                     # 標記,正規化時轉成 態=受身
-                    argued = self._frame_arguments(args, action, a["passive"])
+                    argued = self._frame_arguments(own_args, action, a["passive"])
                     frame = dict({"kind": KIND_ACTION, "sentence": s_idx,
                                   "action": action,
                                   "object": argued.pop("object"),
                                   "source": argued.pop("source"),
-                                  "goal": args.get("goal"),
+                                  "goal": own_args.get("goal"),
                                   "position": position,
                                   "polarity": a["polarity"],
                                   "option": option_of[s_idx],
@@ -1745,7 +1835,8 @@ class FrameExtractor:
 def _normalize(frame):
     """動作框架過詞元對照表(action_lemmas.normalize):原詞元 → 動作詞元,態記在 voice(只在有值時
     帶);抽取內部的被動標記併入 態=受身。アップ/ダウン 的態只看框架自己的原文——回填的對象、延續來的
-    主題/主語不算(延續來的主題多半是執行者「自分は…」)。"""
+    主題/主語不算(延續來的主題多半是執行者「自分は…」)。目的併入詞元的(攻撃対象に選択)先併。"""
+    frame["action"], frame["goal"] = action_lemmas.fold_goal(frame["action"], frame["goal"])
     backfilled = frame.get("backfill") or ()
     own = {key: bool(frame.get(key)) and key not in backfilled
            for key in ("object", "subject", "topic")}
@@ -1754,6 +1845,15 @@ def _normalize(frame):
         has_subject=own["subject"] or own["topic"])
     if voice:
         frame["voice"] = voice
+
+
+def _each_method(action):
+    """召喚法鏈(融合・S・X・リンク召喚)→ 各法的召喚;素材的法鏈(融合・S・X素材にする,票 02)→
+    各法的素材詞元;一法一框。其餘動作原樣。"""
+    chain = _METHOD_CHAIN.fullmatch(action) if "・" in action else None
+    if chain is None:
+        return [action]
+    return [method + chain.group(2) for method in chain.group(1).split("・")]
 
 
 def _literal(frame, key):

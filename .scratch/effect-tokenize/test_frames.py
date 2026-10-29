@@ -595,7 +595,7 @@ class TestOptions(unittest.TestCase):
              ("無効にする", None, None, None, "效果", "肯定"),
              ("攻撃", None, None, None, "效果", "否定"),
              ("攻撃対象にする", None, None, None, "效果", "否定"),
-             ("なる", None, None, "効果の対象", "效果", "否定")])
+             ("対象にする", None, None, None, "效果", "否定")])
         self.assertEqual([(f["option"], f["label"]) for f in frames.extract(text)],
                          [(None, None), (None, None), (1, None), (2, None),
                           (2, None), (2, None)])
@@ -1474,11 +1474,6 @@ class TestSpellingUnified(unittest.TestCase):
             actions("①：このカードがリンク召喚した場合に発動できる。デッキからカード１枚を"
                     "手札に加える。")[0]["position"], "條件")
 
-    def test_link_material_cannot(self):
-        """L素材にする 沒有 なる 形被併進來,不在統一組:態空。"""
-        self.assertEqual(voiced("①：このカードはリンク素材にできない。"),
-                         [("L素材にする", None, "否定")])
-
     def test_link_material_as(self):
         """として 系:リンク素材として → L素材とする。"""
         self.assertEqual(
@@ -1490,10 +1485,10 @@ class TestSpellingUnified(unittest.TestCase):
         """そのX素材とする:指示詞 その/この 不併入補語,詞元 X素材とする、對象不變。"""
         self.assertEqual(
             complements("①：このカードをそのX素材とする。"),
-            [("X素材とする", None, None, "このカード", None)])
+            [("X素材とする", "他動", None, "このカード", None)])
         self.assertEqual(
             complements("②：このカード及びこのカードの装備カードを全てそのX素材にする。"),
-            [("X素材にする", None, None, "このカード及びこのカードの装備カード", None)])
+            [("X素材にする", "他動", None, "このカード及びこのカードの装備カード", None)])
 
     def test_coordinated_summons_each_normalized(self):
         """召喚法鏈的「・」並列各框架照樣對照。"""
@@ -1583,7 +1578,7 @@ class TestVoiceUnified(unittest.TestCase):
         self.assertEqual(
             voiced("②：このカードが融合召喚の素材となって墓地へ送られた場合に発動できる。"
                    "このカードを特殊召喚する。")[0],
-            ("素材とする", "自動", "肯定"))
+            ("融合素材とする", "自動", "肯定"))
 
 
 class TestFullActionNames(unittest.TestCase):
@@ -1696,7 +1691,7 @@ class TestComplementNotFolded(unittest.TestCase):
                          ("にする", "自動", "エンドフェイズ"))
 
     def test_state_words_still_fold(self):
-        """照舊併入;対象とする、融合素材とする 沒有 なる 形被併進來,態空。"""
+        """照舊併入;対象とする 沒有 なる 形被併進來,態空。"""
         self.assertEqual(voiced("①：フィールドのモンスター１体を対象として発動できる。")[0][:2],
                          ("対象とする", None))
         self.assertEqual(complements("①：そのモンスターの効果を無効にする。"),
@@ -1704,7 +1699,7 @@ class TestComplementNotFolded(unittest.TestCase):
         self.assertEqual(
             voiced("②：自分の手札・フィールドのモンスターを融合素材とし、融合モンスター１体を"
                    "EXデッキから融合召喚する。")[0][:2],
-            ("融合素材とする", None))
+            ("融合素材とする", "他動"))
         self.assertEqual(voiced("①：このカードは攻撃対象にされない。"),
                          [("攻撃対象にする", "受身", "否定")])
         self.assertEqual(voiced("①：相手が受ける戦闘ダメージを半分にする。"),
@@ -1720,9 +1715,248 @@ class TestComplementNotFolded(unittest.TestCase):
             complements("①：レベルの合計がそのモンスターのレベル以上になる。")[0][:3],
             ("にする", "自動", "そのモンスターのレベル以上"))
 
-    def test_summon_with_perform_stays(self):
-        """「S召喚を行う」不動,留在 行う。"""
-        self.assertEqual(voiced("①：S召喚を行う。")[0][:2], ("行う", None))
+
+class TestPerformSummon(unittest.TestCase):
+    """frame-lemma-variants 票 01:「〜召喚を行う」的詞元是那個召喚,「の」前的名詞片語是對象;
+    對象不是召喚的 行う 不動。"""
+
+    def test_bare_summon_performed(self):
+        self.assertEqual(extract("①：S召喚を行う。"),
+                         [("S召喚", None, None, None, "效果", "肯定")])
+
+    def test_noun_before_no_is_the_object(self):
+        self.assertEqual(extract("③：魚族Sモンスター１体のS召喚を行う。"),
+                         [("S召喚", "魚族Sモンスター1体", None, None, "效果", "肯定")])
+        self.assertEqual(extract("①：このカードの召喚を行う。"),
+                         [("召喚", "このカード", None, None, "效果", "肯定")])
+        self.assertEqual(extract("②：Sモンスターのチューナー１体のS召喚を行う事ができる。"),
+                         [("S召喚", "Sモンスターのチューナー1体", None, None, "效果", "可能")])
+
+    def test_spelling_and_inferred_values_as_a_direct_summon(self):
+        """寫法歸一照舊(A召喚、L召喚),推得的目的 フィールド 與直接寫「〜をS召喚する」一樣補。"""
+        frame = actions("②：「真竜」モンスター１体のA召喚を表側表示で行う。")[0]
+        self.assertEqual((frame["action"], frame["object"], frame["goal"], frame.get("inferred")),
+                         ("A召喚", "「真竜」モンスター1体", "フィールド", ["goal"]))
+        self.assertEqual(extract("②：「ヴァルモニカ」Lモンスター１体のL召喚を行う。")[0][:2],
+                         ("L召喚", "「ヴァルモニカ」Lモンスター1体"))
+
+    def test_zone_of_the_summoned_monster_is_its_source(self):
+        """召喚是移動類:對象片語裡的區域切成來源。"""
+        self.assertEqual(extract("①：手札の「霊獣」モンスター１体の召喚を行う。"),
+                         [("召喚", "「霊獣」モンスター1体", "手札", None, "效果", "肯定")])
+
+    def test_count_and_condition_follow_the_rule(self):
+        self.assertEqual(extract("①：このターン自分は通常召喚を３回まで行う事ができる。"),
+                         [("通常召喚", None, None, None, "效果", "可能")])
+        self.assertEqual(
+            extract("②：自分が儀式召喚を行う場合、その儀式召喚に必要なレベル分のリリースの代わりに"
+                    "このカードを除外できる。")[0],
+            ("儀式召喚", None, None, None, "條件", "肯定"))
+
+    def test_topic_form_keeps_no_owner(self):
+        """主題形:所有格 このカードの 只留子句字面。"""
+        self.assertEqual(topics("②：このカードの融合召喚は上記のカードでしか行えない。"),
+                         [("融合召喚", None, None, None, None)])
+        self.assertEqual(voiced("②：このカードの融合召喚は上記のカードでしか行えない。"),
+                         [("融合召喚", None, "否定")])
+
+    def test_method_chain_one_frame_each(self):
+        self.assertEqual(
+            voiced("②：このカードを素材とした融合・S・X・リンク召喚しか行えない。"),
+            [("融合召喚", None, "否定"), ("S召喚", None, "否定"), ("X召喚", None, "否定"),
+             ("L召喚", None, "否定")])
+
+    def test_summons_coordinated_by_nakaguro(self):
+        """「召喚・特殊召喚を行えない」:・ 並列的兩個召喚各出一框。"""
+        self.assertEqual(voiced("①：このターン、自分は召喚・特殊召喚を行えない。"),
+                         [("召喚", None, "否定"), ("特殊召喚", None, "否定")])
+
+    def test_summons_coordinated_by_matawa(self):
+        self.assertEqual(
+            [f[:2] for f in extract(
+                "①：その後、「覇王眷竜」Sモンスター１体のS召喚または「覇王眷竜」Xモンスター１体の"
+                "X召喚を行う事ができる。")],
+            [("S召喚", "「覇王眷竜」Sモンスター1体"), ("X召喚", "「覇王眷竜」Xモンスター1体")])
+
+    def test_topic_before_the_condition_belongs_to_the_main_clause(self):
+        """條件子句裡主題寫在自己主語之前:和「S召喚する場合」一樣,主題不給條件框架。"""
+        self.assertEqual(topics("①：このカードは、自分がS召喚を行う場合、除外できる。")[0],
+                         ("S召喚", None, "自分", None, None))
+
+    def test_other_objects_stay_perform(self):
+        self.assertEqual(
+            [f[0] for f in voiced("①：このカードが相手モンスターと戦闘を行う場合、"
+                                  "ダメージ計算前に発動できる。")][:1],
+            ["行う"])
+        self.assertEqual(voiced("①：コイントスを１回行い、表が出た場合、このカードを破壊する。")[0],
+                         ("行う", None, "肯定"))
+        self.assertEqual(voiced("①：このターン、相手はバトルフェイズを行えない。"),
+                         [("行う", None, "否定")])
+
+
+class TestSummonMaterialExpanded(unittest.TestCase):
+    """frame-lemma-variants 票 02:「法(・法)*召喚の素材に/と + する/なる」展開成各法的素材詞元,一法一框,
+    不論極性與位置;原文助詞 に/と 照留;法前的所有格不進任何欄。"""
+
+    def test_cannot_be_material_for_each_method(self):
+        self.assertEqual(
+            topics("①：このカードは融合・S・X召喚の素材にできない。"),
+            [("融合素材にする", "このカード", None, None, "他動"),
+             ("S素材にする", "このカード", None, None, "他動"),
+             ("X素材にする", "このカード", None, None, "他動")])
+        self.assertEqual([f[2] for f in voiced("①：このカードは融合・S・X召喚の素材にできない。")],
+                         ["否定"] * 3)
+
+    def test_single_method(self):
+        self.assertEqual([f[:1] + f[2:] for f in voiced("①：このカードはX召喚の素材にできない。")],
+                         [("X素材にする", "否定")])
+
+    def test_mo_between_material_and_cannot(self):
+        self.assertEqual(
+            [f[0] for f in voiced("①：このカードは融合・S・X・L召喚の素材にもできない。")],
+            ["融合素材にする", "S素材にする", "X素材にする", "L素材にする"])
+
+    def test_naru_form_in_a_condition(self):
+        frame = actions("②：このカードが融合召喚の素材となって墓地へ送られた場合に発動できる。"
+                        "このカードを特殊召喚する。")[0]
+        self.assertEqual((frame["action"], frame.get("voice"), frame["position"],
+                          frame.get("subject")),
+                         ("融合素材とする", "自動", "條件", "このカード"))
+        self.assertEqual(
+            [f[:2] for f in voiced("③：装備モンスターが融合・S・X・リンク召喚の素材になった事で"
+                                   "墓地へ送られた場合に発動できる。")][:4],
+            [("融合素材にする", "自動"), ("S素材にする", "自動"), ("X素材にする", "自動"),
+             ("L素材にする", "自動")])
+
+    def test_suru_form_in_a_condition(self):
+        self.assertEqual(
+            [(f[0], f[1], f[4]) for f in extract(
+                "①：このカードをS・X召喚の素材とする場合、このカードはチューナー以外の"
+                "モンスターとして扱う事ができる。")][:2],
+            [("S素材とする", "このカード", "條件"), ("X素材とする", "このカード", "條件")])
+
+    def test_potential(self):
+        self.assertEqual(
+            [f[:1] + f[2:] for f in voiced(
+                "③：そのXモンスターはこのターン、自身のランクと同じ数値のレベルのモンスターとして"
+                "X召喚の素材にできる。")],
+            [("X素材にする", "可能")])
+
+    def test_owner_before_the_method_stays_in_the_clause(self):
+        self.assertEqual(
+            topics("①：元々の持ち主が相手となるモンスターをこのカードのX召喚の素材とする場合、"
+                   "１体で２体分の素材にできる。")[0][0:4:3],
+            ("X素材とする", "元々の持ち主が相手となるモンスター"))
+        self.assertEqual(
+            [(f[0], f[1], f[2]) for f in topics(
+                "②：このカードが墓地へ送られたターン、自分フィールドのモンスター及び、相手の"
+                "融合・S・L召喚の素材となり墓地へ送られたモンスターは効果を発動できない。")
+             if "素材" in f[0]],
+            [("融合素材とする", None, None), ("S素材とする", None, None),
+             ("L素材とする", None, None)])
+
+    def test_material_without_summon_stays(self):
+        self.assertEqual(
+            voiced("①：自分フィールドのランク４モンスターをレベル４モンスターとして素材にできる。"),
+            [("素材にする", "他動", "可能")])
+
+
+class TestMaterialVoice(unittest.TestCase):
+    """frame-lemma-variants 票 03:融合/S/X/L素材にする/とする 有 なる 形併進來,加進態的統一組——
+    原文 する 記他動、なる 記自動,受身照舊。"""
+
+    def test_suru_forms_are_active(self):
+        """融合素材とし、そのX素材とする 的 他動 在 TestComplementNotFolded、TestSpellingUnified。"""
+        self.assertEqual(voiced("①：このカードはリンク素材にできない。"),
+                         [("L素材にする", "他動", "否定")])
+
+    def test_naru_form_is_intransitive(self):
+        self.assertEqual(
+            voiced("①：このカードが融合召喚の素材となって墓地へ送られた場合に発動できる。")[0][:2],
+            ("融合素材とする", "自動"))
+
+    def test_passive_stays_passive(self):
+        self.assertEqual(voiced("①：このカードは融合素材にされない。"),
+                         [("融合素材にする", "受身", "否定")])
+        self.assertEqual(
+            voiced("③：このカードがS素材として墓地へ送られた場合に発動できる。"),
+            [("S素材とする", "他動", "肯定"), ("送る", "受身", "肯定")])
+
+
+class TestAttackTargetSelect(unittest.TestCase):
+    """frame-lemma-variants 票 04:「攻撃対象に選択」是 攻撃対象にする——目的清空、所有格只留子句字面;
+    主題句「攻撃対象は…が選択する」與選效果的 選択 不動。"""
+
+    def test_cannot_select_as_attack_target(self):
+        self.assertEqual(
+            complements("①：相手は「ジェネレイド」効果モンスターを攻撃対象に選択できない。"),
+            [("攻撃対象にする", "他動", None, "「ジェネレイド」効果モンスター", "相手")])
+        self.assertEqual(
+            voiced("①：相手は「竜騎士ガイア」しか攻撃対象に選択できない。"),
+            [("攻撃対象にする", "他動", "否定")])
+        self.assertEqual(
+            voiced("①：相手はこのカードを攻撃対象に選択できず、効果の対象にもできない。")[0],
+            ("攻撃対象にする", "他動", "否定"))
+
+    def test_selected_as_attack_target(self):
+        frame = actions("①：このカードが攻撃対象に選択された場合に発動できる。"
+                        "その攻撃を無効にする。")[0]
+        self.assertEqual((frame["action"], frame.get("voice"), frame["position"], frame["goal"]),
+                         ("攻撃対象にする", "受身", "條件", None))
+        frame = actions("②：このカードが相手モンスターの攻撃対象に選択された時に発動できる。"
+                        "その攻撃を無効にする。")[0]
+        self.assertEqual((frame["action"], frame.get("voice"), frame["goal"]),
+                         ("攻撃対象にする", "受身", None))
+
+    def test_who_selects_stays_select(self):
+        self.assertEqual(
+            [f[0] for f in voiced("①：相手モンスターの攻撃対象は自分が選択する。")], ["選択"])
+        self.assertEqual(
+            voiced("①：以下の効果から１つを選択して発動できる。")[0][0], "選択")
+
+
+class TestComplementMoEffectAndTreat(unittest.TestCase):
+    """frame-lemma-variants 票 05:補語與 なる/する 之間夾 も 不擋併入;補語以 効果 收尾時不併(效果
+    變成什麼,補語是值);「〜の素材として扱う」的述語是 扱う。"""
+
+    def test_mo_between_complement_and_naru(self):
+        self.assertEqual(
+            complements("①：このカードは相手の効果の対象にもならない。"),
+            [("対象にする", "自動", None, None, "このカード")])
+        self.assertEqual(voiced("①：このカードは相手の効果の対象にもならない。")[0][2], "否定")
+
+    def test_mo_after_a_verb_or_noun_is_unchanged(self):
+        self.assertEqual(voiced("①：このカードを特殊召喚する事もできる。"),
+                         [("特殊召喚", None, "可能")])
+        self.assertEqual(voiced("①：このカードは攻撃宣言もできない。"),
+                         [("攻撃宣言", None, "否定")])
+
+    def test_effect_complement_is_a_value(self):
+        self.assertEqual(
+            complements("①：その裏表によってその効果は以下の効果となる。"),
+            [("とする", "自動", "以下の効果", None, "その効果")])
+        self.assertEqual(
+            complements("①：自分にダメージを与える効果は、自分のLPを回復する効果になる。")[0][:3],
+            ("にする", "自動", "自分のLPを回復する効果"))
+        self.assertEqual(complements("①：同じ効果になる。")[0][:3], ("にする", "自動", "同じ効果"))
+
+    def test_negating_an_effect_still_folds(self):
+        self.assertEqual(complements("①：そのモンスターの効果を無効にする。")[0][:4],
+                         ("無効にする", "他動", None, "そのモンスターの効果"))
+        self.assertEqual(voiced("①：その効果を無効化する。")[0][:2], ("無効にする", "他動"))
+
+    def test_treated_as_material_is_treat(self):
+        self.assertEqual(
+            topics("①：このターンにL召喚する場合、このカードは見せたモンスターと同じ"
+                   "カード名・種族・属性の素材として扱う事ができる。")[1:],
+            [("扱う", "このカード", None, None, None)])
+        self.assertEqual(
+            voiced("②：自分の手札・フィールドのモンスターを融合素材として墓地へ送り、"
+                   "融合モンスター１体を特殊召喚する。")[0][:2],
+            ("融合素材とする", "他動"))
+        # 「〜を S素材として扱う」沒有「の」:素材として 照舊成框架
+        self.assertEqual([f[0] for f in voiced("①：このカードをS素材として扱う事ができる。")],
+                         ["S素材とする", "扱う"])
 
 
 if __name__ == "__main__":

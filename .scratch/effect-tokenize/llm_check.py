@@ -17,6 +17,9 @@
 - 動作詞元統一(frame-lemma-unify 票 06;lemma-round1):受寫法歸一/攻撃宣言・直接攻撃/補語不併/
   態歸一/態欄五型影響的卡——依框架資料分層(一張卡依序歸入第一個符合的層),共 100 張、切 4 批;
   錯誤類型在既有五類外加 詞元錯、態錯、補語錯欄;批次檔的框架列多「態=」。
+- 動作詞元變體(frame-lemma-variants 票 06;variant-round1):受 行う:召喚/召喚の素材 展開/攻撃対象に選択/
+  補語夾 も/効果 補語不併/素材として扱う 六型影響的卡——依框架資料分層(一張卡依序歸入第一個符合的層,
+  小型在前、全取),共約 60 張、切 3 批;錯誤類型在詞元統一那輪之外加 展開錯;素材詞元的態補值不算受影響卡。
 - 動作類別(action-categories 票 07;category-round1 起):單位是動作框架、不是卡——依類別樹的
   樹序每葉從帶該葉、還沒被抽過的已歸框架抽 5 個(不足全取),未歸框架另抽 50 個;樣本依框架的
   詞元節點分組(節點的葉清單列一次)連續切 8 批,沒有節點的未歸框架輪流分到各批末尾,另寫
@@ -29,10 +32,11 @@
     v2       --round R --seed S   第二版論元受影響卡抽樣(寫 llm-check/v2-round<R>/)
     v3       --round R --seed S   第三版論元受影響卡抽樣(寫 llm-check/v3-round<R>/)
     lemma    --round R --seed S   動作詞元統一受影響卡抽樣(寫 llm-check/lemma-round<R>/)
+    variants --round R --seed S   動作詞元變體受影響卡抽樣(寫 llm-check/variant-round<R>/)
     categories --round R --seed S 動作類別依葉分層抽框架(寫 llm-check/category-round<R>/)
     report   --round R            讀 llm-check/round<R>/findings-<k>.json 寫 report.md
     recheck  --round R --from R0  用 round R0 的樣本重出批次檔(同批複檢)
-    (report/recheck 加 --line constraints、v2、v3、lemma 或 categories 走各自的目錄)
+    (report/recheck 加 --line constraints、v2、v3、lemma、variants 或 categories 走各自的目錄)
 
 批次檔一張卡一節、一句效果句一段:整段效果句(含 ● 選項;拆開的領起句與子效果句
 各標 index 與效果類型)與它的框架(含選項欄「●n 標籤」)。
@@ -107,6 +111,13 @@ SHORT_SPELLINGS = tuple(action_lemmas.SPELLING.values()) + tuple(
 # 併進 アップ/ダウン 的詞對(上げる/上がる…)在子句字面裡的詞幹
 RAISE_LOWER = tuple(raw[:-1] for raw, (canonical, _voice) in action_lemmas.VOICE_PAIRS.items()
                     if canonical in action_lemmas.PARTICLE_VOICED)
+# 動作詞元變體(frame-lemma-variants 票 06):六型分層,小型在前(配額大於母體即全取)
+STRATA_VARIANTS = ("素材として扱う", "補語夾も", "効果不併", "攻撃対象に選択", "召喚の素材", "行う:召喚")
+QUOTA_VARIANTS = {"素材として扱う": 5, "補語夾も": 10, "効果不併": 10, "攻撃対象に選択": 15,
+                  "召喚の素材": 16, "行う:召喚": 15}
+BATCHES_VARIANTS = 3
+ERROR_TYPES_VARIANTS = ERROR_TYPES_LEMMA + ("展開錯",)
+MATERIAL_LEMMA = re.compile("(%s)素材[にと]する" % "|".join(action_lemmas.MATERIAL_METHODS))
 # 動作類別(action-categories 票 07):依葉分層抽框架——每葉 5 個(不足全取)、未歸另抽 50 個,
 # 切 8 批;錯誤三類,另記成因(歸組規則或樹/框架抽取的錯連帶歸錯)
 PER_LEAF = 5
@@ -389,6 +400,40 @@ def sample_lemma(seed):
     return sample_by_frames(seed, lemma_stratum, STRATA_LEMMA, QUOTA_LEMMA)
 
 
+# ── 動作詞元變體(frame-lemma-variants 票 06)──
+
+def variant_labels(f):
+    """一個動作框架命中的動作詞元變體型(子句字面看原文寫法,框架欄位看正規化後的值)。"""
+    clause, action = f["clause"], f["action"]
+    labels = set()
+    if action == "扱う" and "素材 として 扱" in clause:
+        labels.add("素材として扱う")
+    if action == "対象にする" and "に も なら" in clause:
+        labels.add("補語夾も")
+    if action in ("にする", "とする") and (f.get("goal") or "").endswith("効果"):
+        labels.add("効果不併")
+    if action == "攻撃対象にする" and "選択" in clause:
+        labels.add("攻撃対象に選択")
+    if MATERIAL_LEMMA.fullmatch(action) and "召喚 の 素材" in clause:
+        labels.add("召喚の素材")
+    if action.endswith("召喚") and re.search(r"(^| )行(う|え)( |$)", clause):
+        labels.add("行う:召喚")
+    return labels
+
+
+def variant_stratum(records):
+    labels = set()
+    for r in records:
+        for f in r["frames"]:
+            if f.get("kind") == constraints.KIND_ACTION:
+                labels |= variant_labels(f)
+    return next((k for k in STRATA_VARIANTS if k in labels), None)
+
+
+def sample_variants(seed):
+    return sample_by_frames(seed, variant_stratum, STRATA_VARIANTS, QUOTA_VARIANTS)
+
+
 # ── 批次檔 ──
 
 def sentence_label(s):
@@ -515,7 +560,8 @@ def read_meta(round_dir):
 
 def round_dir_of(line, round_no):
     prefix = {"constraints": "constraint-round", "v2": "v2-round", "v3": "v3-round",
-              "lemma": "lemma-round", "categories": "category-round"}.get(line, "round")
+              "lemma": "lemma-round", "variants": "variant-round",
+              "categories": "category-round"}.get(line, "round")
     return os.path.join(CHECK_DIR, "%s%d" % (prefix, round_no))
 
 
@@ -818,14 +864,15 @@ def report_categories(round_dir):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=("sample", "affected", "constraints", "v2", "v3",
-                                        "lemma", "categories", "report", "recheck"))
+                                        "lemma", "variants", "categories", "report", "recheck"))
     ap.add_argument("--round", type=int, required=True)
     ap.add_argument("--seed", type=int, default=20261009)
     ap.add_argument("--from", dest="from_round", type=int)
-    ap.add_argument("--line", choices=("frames", "constraints", "v2", "v3", "lemma", "categories"),
-                    default="frames")
+    ap.add_argument("--line", choices=("frames", "constraints", "v2", "v3", "lemma", "variants",
+                                       "categories"), default="frames")
     args = ap.parse_args()
-    line = (args.command if args.command in ("constraints", "v2", "v3", "lemma", "categories")
+    line = (args.command if args.command in ("constraints", "v2", "v3", "lemma", "variants",
+                                             "categories")
             else args.line)
     round_dir = round_dir_of(line, args.round)
     if args.command == "categories":
@@ -840,6 +887,11 @@ def main():
         write_category_batches(round_dir, picked, dict(read_meta(src), recheck_of=args.from_round))
     elif args.command == "report" and line == "categories":
         report_categories(round_dir)
+    elif args.command == "variants":
+        write_batches(round_dir, sample_variants(args.seed),
+                      {"mode": "variants", "seed": args.seed, "batches": BATCHES_VARIANTS,
+                       "strata": list(STRATA_VARIANTS),
+                       "error_types": list(ERROR_TYPES_VARIANTS)})
     elif args.command == "lemma":
         write_batches(round_dir, sample_lemma(args.seed),
                       {"mode": "lemma", "seed": args.seed, "batches": BATCHES_LEMMA,

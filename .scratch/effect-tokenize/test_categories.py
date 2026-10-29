@@ -914,6 +914,43 @@ class TestLeafProposalsRealTree(unittest.TestCase):
                      "（そのモンスターから見て相手のフィールドには移動できない）。"))
 
 
+class TestLemmaVariantsRealTree(unittest.TestCase):
+    """動作詞元變體(frame-lemma-variants,2026-10-29):統一後的框架落到既有節點,沒有葉的記未歸;
+    變空的節點與葉刪除。"""
+
+    def test_performed_summon_lands_on_the_summon_node(self):
+        self.assertEqual(
+            classify("①：S召喚を行う。"),
+            [("S召喚", "已歸", ["S召喚"], "召喚", None, None, ["召喚 › S召喚"])])
+
+    def test_summon_material_restriction_per_method(self):
+        """X素材にする 沒有限制葉:記未歸(交類別線的新葉提議)。"""
+        self.assertEqual(
+            classify("①：このカードは融合・S・X召喚の素材にできない。"),
+            [("融合素材にする", "已歸", ["融合素材にする(限制)"], "限制", None, None,
+              ["限制 › 融合素材にする(限制)"]),
+             ("S素材にする", "已歸", ["S素材にする(限制)"], "限制", None, None,
+              ["限制 › S素材にする(限制)"]),
+             ("X素材にする", "未歸", [], None, None, None, [])])
+
+    def test_cannot_select_as_attack_target_is_a_restriction(self):
+        self.assertEqual(
+            classify("①：相手は「ジェネレイド」効果モンスターを攻撃対象に選択できない。"),
+            [("攻撃対象にする", "已歸", ["攻撃対象にする(限制)"], "限制", None, None,
+              ["限制 › 攻撃対象にする(限制)"])])
+
+    def test_not_targeted_even_with_mo_is_resistance(self):
+        self.assertEqual(
+            classify("①：このカードは相手の効果の対象にもならない。"),
+            [("対象にする", "已歸", ["対象にする(耐性)"], "耐性", None, None,
+              ["耐性 › 対象にする(耐性)"])])
+
+    def test_effect_becomes_another_effect_is_rule_rewrite(self):
+        self.assertEqual(
+            classify("①：その裏表によってその効果は以下の効果となる。"),
+            [("とする", "已歸", ["とする"], "規則改寫", None, None, ["規則改寫 › とする"])])
+
+
 # 測試小樹:中類(大類底下列中類清單,葉以名字宣告)
 MIDDLE_TREE = [
     {"大類": "甲", "中類": ["攻撃力", "守備力"], "子": [

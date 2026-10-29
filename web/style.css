@@ -613,3 +613,30 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
      會被擠到第二排,分頁器整個變成三排 */
   .pg-txt { display: none; }
 }
+
+/* ─── 動作類別軸:可展開的類別樹(category-search)──────────
+   檔案總管式:每層縮一格、左側導引線;節點列是「展開箭頭 + 三態鈕」,沒有子節點的
+   以等寬空位對齊。三態鈕沿用 .tri(未選/包含/排除的樣子與其他軸一致)。預設葉是
+   詞元節點的最後一個子節點,鈕上多一個淡色「預設葉」小字。 */
+.axis-note { color: var(--muted); font-size: 11px; opacity: .8; }
+.act-tree, .act-kids { list-style: none; }
+.act-kids { margin-left: 9px; padding-left: 8px; border-left: 1px solid var(--border); }
+.act-row { display: flex; align-items: center; gap: 2px; margin: 2px 0; }
+.act-tog, .act-tog-pad { flex: none; width: 18px; text-align: center; }
+.act-tog {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-family: inherit; font-size: 12px; line-height: 1.4; padding: 0;
+}
+.act-tog::before { content: '▸'; }
+.act-tog[aria-expanded="true"]::before { content: '▾'; }
+.act-tog:hover { color: var(--text); }
+.act-row .tri { text-align: left; }
+.act-default {
+  margin-left: 5px; font-size: 10px; font-weight: normal; opacity: .7;
+}
+
+/* 手機:展開箭頭也是觸控目標(三態鈕的加大沿用上面 .tri 的規則) */
+@media (max-width: 720px) {
+  .act-tog, .act-tog-pad { width: 28px; }
+  .act-tog { font-size: 15px; padding: 4px 0; }
+}

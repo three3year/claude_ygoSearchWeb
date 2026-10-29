@@ -1567,3 +1567,169 @@ test('舊網址帶已拆的 tag/時機/區域/槽位參數時安靜忽略', () =
     assert.ok(!(key in st.q), key);
   }
 });
+
+/* ── 動作類別(category-search 票 02/03)──────────────────────
+   自己一份合成資料集:類別樹 8 葉,涵蓋同詞元在兩個大類(にする)、詞元節點帶
+   預設葉(破壊)、上層節點(召喚 › 特殊召喚)。節點以路徑識別(› 連寫),
+   預設葉的路徑是詞元節點再接一次同名。`ae` / `ac` 與 `tx` 對齊,`ae` 的有無
+   就是涵蓋與否(建置期的形狀,接縫 1)。 */
+
+const ACAT_VOCAB = {
+  ...VOCAB,
+  acat: {
+    zh: '動作類別', covered: 8,
+    leaves: ['特殊召喚←墓地', '特殊召喚←手札', '破壊@相手フィールド', '破壊',
+             '捨てる', 'にする:攻撃力', 'にする→属性', 'リリース'],
+    tree: [
+      ['召喚', -1, [['特殊召喚', -1, [['特殊召喚←手札', 1, []],
+                                       ['特殊召喚←墓地', 0, []]]]]],
+      ['破壊', 3, [['破壊@相手フィールド', 2, []]]],
+      ['區域移動', -1, [['捨てる', 4, []], ['リリース', 7, []]]],
+      ['數值', -1, [['にする', -1, [['にする:攻撃力', 5, []]]]]],
+      ['規則改寫', -1, [['にする', -1, [['にする→属性', 6, []]]]]],
+    ],
+  },
+};
+const REVIVE = '召喚›特殊召喚›特殊召喚←墓地';
+const REVIVE_HAND = '召喚›特殊召喚›特殊召喚←手札';
+const DESTROY_OPP = '破壊›破壊@相手フィールド';
+const DISCARD = '區域移動›捨てる';
+const ACAT_CARDS = [
+  // ① 誘發效果破壞對手場上,② 啟動效果蘇生(兩件事分在不同效果)
+  { id: 3001, n: '分句卡', c: 'm', s: ['effect'],
+    tx: ['①：破壞對手場上1張卡。', '②：從墓地特殊召喚。'], k: ['t', 'i'],
+    ae: [[2], [0]] },
+  // 同一句既破壞又蘇生(誘發即時)
+  { id: 3002, n: '同句卡', c: 'm', s: ['effect'],
+    tx: ['①：破壞對手場上1張卡，從墓地特殊召喚。'], k: ['q'], o: ['o'],
+    ae: [[2, 0]] },
+  // 丟手牌當代價,從手牌特殊召喚(誘發)
+  { id: 3003, n: '代價卡', c: 'm', s: ['effect'],
+    tx: ['①：丟1張手牌發動。從手牌特殊召喚。'], k: ['t'], o: ['m'],
+    ae: [[1]], ac: [[4]] },
+  // 涵蓋但一個葉都沒有
+  { id: 3004, n: '無葉卡', c: 's', s: ['normal'], tx: ['①：什麼都不做。'], k: ['sn'],
+    ae: [[]] },
+  // 舊式卡文:不在涵蓋範圍(沒有 ae)
+  { id: 3005, n: '舊卡', c: 'm', s: ['effect'],
+    tx: ['①：破壞對手場上1張卡，從墓地特殊召喚。'], k: ['q'] },
+  { id: 3006, n: '攻擊力卡', c: 'm', s: ['effect'], tx: ['①：攻擊力變成0。'], k: ['i'],
+    ae: [[5]] },
+  { id: 3007, n: '屬性卡', c: 'm', s: ['effect'], tx: ['①：屬性變成闇。'], k: ['i'],
+    ae: [[6]] },
+  // 破壊 的預設葉;② 在效果文裡寫著墓地
+  { id: 3008, n: '預設葉卡', c: 't', s: ['normal'],
+    tx: ['①：破壞1張卡。', '②：把墓地的這張卡除外，破壞1張卡。'], k: ['tn', 'q'],
+    ae: [[3], [3]] },
+  // 丟手牌是效果(不是代價)
+  { id: 3009, n: '丟牌卡', c: 's', s: ['normal'], tx: ['①：丟1張手牌。'], k: ['sn'],
+    ae: [[4]] },
+];
+const acatBox = harness.load({ cards: ACAT_CARDS, vocab: ACAT_VOCAB, meta: {} });
+const acatIds = q => harness.ids(acatBox, q).slice().sort((a, b) => a - b);
+const acatRows = (q, id) =>
+  (harness.search(acatBox, q).find(e => e.id === id) || {}).rows;
+
+test('動作類別:選一個葉,找出有一句帶它的卡', () => {
+  assert.deepStrictEqual(acatIds({ act: { [REVIVE]: 1 } }), [3001, 3002]);
+});
+
+test('動作類別:上層節點=底下任一葉(大類、詞元節點)', () => {
+  assert.deepStrictEqual(acatIds({ act: { '召喚›特殊召喚': 1 } }), [3001, 3002, 3003]);
+  assert.deepStrictEqual(acatIds({ act: { '召喚': 1 } }), [3001, 3002, 3003]);
+});
+
+test('動作類別:同一詞元在不同大類下各自只含掛在那裡的葉', () => {
+  assert.deepStrictEqual(acatIds({ act: { '數值›にする': 1 } }), [3006]);
+  assert.deepStrictEqual(acatIds({ act: { '規則改寫›にする': 1 } }), [3007]);
+});
+
+test('動作類別:詞元節點的預設葉能單獨選,詞元節點含預設葉', () => {
+  assert.deepStrictEqual(acatIds({ act: { '破壊›破壊': 1 } }), [3008]);
+  assert.deepStrictEqual(acatIds({ act: { '破壊': 1 } }), [3001, 3002, 3008]);
+});
+
+test('動作類別:軸內 AND——每個節點各自要有一句帶它,可以是不同句', () => {
+  assert.deepStrictEqual(acatIds({ act: { [REVIVE]: 1, [DESTROY_OPP]: 1 } }),
+                         [3001, 3002]);
+  assert.deepStrictEqual(acatIds({ act: { [REVIVE]: 1, '數值›にする': 1 } }), []);
+});
+
+test('動作類別:AND 時每一句命中句都要符合效果類型', () => {
+  // 3001 的破壞是誘發、蘇生是啟動:選了誘發就只剩破壞那句,蘇生找不到誘發句
+  assert.deepStrictEqual(acatIds({ act: { [REVIVE]: 1, [DESTROY_OPP]: 1 },
+                                   kind: { t: 1 } }), []);
+  assert.deepStrictEqual(acatIds({ act: { [DESTROY_OPP]: 1 }, kind: { t: 1 } }), [3001]);
+  assert.deepStrictEqual(acatIds({ act: { [REVIVE]: 1, [DESTROY_OPP]: 1 },
+                                   kind: { q: 1 } }), [3002]);
+});
+
+test('動作類別:命中句也要符合必發/選發', () => {
+  assert.deepStrictEqual(acatIds({ act: { '召喚›特殊召喚': 1 }, opt: { m: 1 } }), [3003]);
+  assert.deepStrictEqual(acatIds({ act: { '召喚›特殊召喚': 1 }, opt: { o: 1 } }), [3002]);
+});
+
+test('動作類別:效果文框有字時,命中句也要含那段字', () => {
+  assert.deepStrictEqual(acatIds({ act: { '破壊': 1 }, text: '墓地' }), [3002, 3008]);
+  assert.deepStrictEqual(acatRows({ act: { '破壊': 1 }, text: '墓地' }, 3008), [1]);
+});
+
+test('動作類別:沒有類別紀錄的卡(舊式卡文)一律不中', () => {
+  assert.ok(!acatIds({ act: { [REVIVE]: 1 } }).includes(3005));
+  assert.ok(!acatIds({ act: { '破壊': 1 }, text: '墓地' }).includes(3005));
+});
+
+test('動作類別:命中句是符合句層條件、且帶任一包含節點的葉的句', () => {
+  assert.deepStrictEqual(acatRows({ act: { [REVIVE]: 1 } }, 3001), [1]);
+  assert.deepStrictEqual(acatRows({ act: { [REVIVE]: 1, [DESTROY_OPP]: 1 } }, 3001),
+                         [0, 1]);
+});
+
+test('動作類別:命中標記帶包含節點的葉號(呈現層照它強調)', () => {
+  const marks = harness.marks(acatBox, { act: { '召喚›特殊召喚': 1 } });
+  const act = marks.find(m => m.type === 'act');
+  assert.deepStrictEqual(act.leaves.slice().sort(), [0, 1]);
+});
+
+test('動作類別:與其他軸照常 AND', () => {
+  assert.deepStrictEqual(acatIds({ act: { '破壊': 1 }, cat: { t: 1 } }), [3008]);
+  assert.deepStrictEqual(acatIds({ act: { '破壊': 1 }, name: '同句' }), [3002]);
+});
+
+test('動作類別:不在類別樹的節點路徑安靜忽略(不當條件)', () => {
+  assert.deepStrictEqual(acatIds({ act: { '召喚›蘇生': 1 } }),
+                         acatIds({}));
+});
+
+test('動作類別:節點路徑進網址,往返相等;樹裡找不到的路徑安靜忽略', () => {
+  const box = acatBox;
+  const st = { q: { ...EMPTY_Q, act: { [REVIVE]: 1, '數值›にする': 1, '破壊›破壊': -1 } },
+               sort: DOM_SORT };
+  const h = harness.hash(box, st);
+  assert.deepStrictEqual(harness.parseHash(box, h), st);
+  assert.strictEqual(harness.canonHash(box, h), h);
+  const stale = h + ',' + encodeURIComponent('召喚›蘇生');
+  assert.deepStrictEqual(harness.parseHash(box, stale), st);
+  const onlyStale = harness.parseHash(box, 'act=' + encodeURIComponent('召喚›蘇生'));
+  assert.ok(!('act' in onlyStale.q));
+});
+
+test('動作類別軸:條件數算一條,已選數數節點(排除也算),含代價不單獨算條件', () => {
+  const q = { act: { [REVIVE]: 1, [DESTROY_OPP]: 1, '破壊›破壊': -1 } };
+  assert.strictEqual(harness.critCount(acatBox, q), 1);
+  assert.strictEqual(harness.critCount(acatBox, { actCost: 1 }), 0);
+  assert.strictEqual(harness.axisCounts(acatBox, q).act, 3);
+  assert.strictEqual(harness.treeCounts(acatBox, q).act, 3);
+  assert.strictEqual(harness.axisCounts(acatBox, {}).act, 0);
+});
+
+test('動作類別軸:預設摺疊,有已選節點時還原展開', () => {
+  assert.ok(!harness.expandedAxes(acatBox, {}).includes('act'));
+  assert.ok(harness.expandedAxes(acatBox, { act: { [REVIVE]: 1 } }).includes('act'));
+});
+
+test('動作類別軸不進網址的一般三態軸 schema(其他軸的往返不受影響)', () => {
+  for (const st of STATES) {
+    assert.deepStrictEqual(harness.parseHash(acatBox, harness.hash(acatBox, st)), st);
+  }
+});

@@ -149,6 +149,49 @@ function clauseRows(c, parts, kindSel, optSel, matOn) {
   return rows;
 }
 
+/* [[動作類別]]的條件:節點路徑 → 葉集合(Acat 展開;樹裡找不到的路徑不當條件)。
+   包含是 AND(每個節點一組),排除合成一組;`cost` 時代價位的葉也算有效葉。 */
+function actSel(q) {
+  const inc = [], ex = new Set(), union = new Set();
+  for (const id in q.act || {}) {
+    const leaves = Acat.leavesOf(id);
+    if (!leaves || !q.act[id]) continue;
+    if (q.act[id] > 0) {
+      inc.push(new Set(leaves));
+      leaves.forEach(n => union.add(n));
+    } else {
+      leaves.forEach(n => ex.add(n));
+    }
+  }
+  if (!inc.length && !ex.size) return null;
+  return { inc, ex, union, cost: !!q.actCost };
+}
+
+function actLeaves(c, i, cost) {
+  const eff = (c.ae && c.ae[i]) || [];
+  return cost ? eff.concat((c.ac && c.ac[i]) || []) : eff;
+}
+
+function anyIn(leaves, set) {
+  return leaves.some(n => set.has(n));
+}
+
+function actExcluded(c, act) {
+  if (!act.ex.size) return false;
+  for (let i = 0; i < c.ae.length; i++) {
+    if (anyIn(actLeaves(c, i, act.cost), act.ex)) return true;
+  }
+  return false;
+}
+
+/* 包含:每個節點都要有一句可用的句(已過句層條件的 rows)帶它,不同節點可以是
+   不同句;命中句縮成帶任一包含節點的葉的那幾句。 */
+function actRows(c, rows, act) {
+  const has = rows.map(i => actLeaves(c, i, act.cost));
+  if (!act.inc.every(set => has.some(leaves => anyIn(leaves, set)))) return [];
+  return rows.filter((i, k) => anyIn(has[k], act.union));
+}
+
 function runQuery(db, q) {
   q = q || {};
   const name = term(q.name);
@@ -158,18 +201,23 @@ function runQuery(db, q) {
   const textParts = likeParts(text);
   const kindSel = sel(q.kind);
   const optSel = sel(q.opt);
+  const act = actSel(q);
+  const actInc = !!act && act.inc.length > 0;
   const marks = [];
   if (textParts.length) marks.push({ type: 'text', value: text });
   if (kindSel) marks.push({ type: 'kind' });
   if (optSel) marks.push({ type: 'opt' });
+  if (actInc) marks.push({ type: 'act', leaves: Array.from(act.union), cost: act.cost });
   const cards = [];
   for (const c of db) {
     if (name && !nameHit(c, name, q.nameLang)) continue;
     if (code && !(codeOk && idHit(c, code))) continue;
     if (!paramHit(c, q)) continue;
+    if (act && (!c.ae || actExcluded(c, act))) continue;
     let rows = null;
     if (marks.length) {
       rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
+      if (actInc) rows = actRows(c, rows, act);
       if (!rows.length) continue;
     }
     cards.push({ card: c, rows });

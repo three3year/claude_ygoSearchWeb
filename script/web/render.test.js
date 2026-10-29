@@ -174,3 +174,26 @@ test('沒有葉的句子句尾不多出任何東西', () => {
   const empty = html({ tx: TWO, k: ['i', 'q'], ae: [[], []] });
   assert.strictEqual(empty, bare);
 });
+
+const hl = (kw, rows, act) => harness.cardHtmlHl(
+  sandbox, { card: card(kw), rows }, [Object.assign({ type: 'act' }, act)]);
+const marked = (out, name) => new RegExp('<mark[^>]*>[^<]*' + name + '</mark>').test(out);
+
+test('本次搜尋命中的葉在命中句裡被強調,其他葉照常', () => {
+  const out = hl({ tx: TWO, k: ['i', 'q'], ae: [[0, 1], [1]] }, [0],
+                 { leaves: [0], cost: false });
+  assert.ok(marked(out, '特殊召喚←墓地'));
+  assert.ok(!marked(out, '破壊@相手フィールド'));
+});
+
+test('沒命中的句子即使帶同一個葉也不強調', () => {
+  const out = hl({ tx: TWO, k: ['i', 'q'], ae: [[1], [1]] }, [0],
+                 { leaves: [1], cost: false });
+  assert.strictEqual((out.match(/<mark/g) || []).length, 1);
+});
+
+test('代價位的葉只在「含代價」時算命中、才強調', () => {
+  const kw = { tx: TWO, k: ['i', 'q'], ae: [[0], []], ac: [[2], []] };
+  assert.ok(!marked(hl(kw, [0], { leaves: [2], cost: false }), '捨てる'));
+  assert.ok(marked(hl(kw, [0], { leaves: [2], cost: true }), '捨てる'));
+});

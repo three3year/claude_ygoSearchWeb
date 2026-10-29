@@ -1,7 +1,7 @@
 'use strict';
 
 const Query = (() => {
-const { $, VOCAB, esc } = Util;
+const { $, VOCAB, DB, META, esc } = Util;
 
 const LANGS = [
   { v: 'zh', label: '中', title: '比對中文卡名（含 ※ 別名）' },
@@ -13,6 +13,7 @@ const FIELDS = [
   { tri: 'cat', dom: 'cat', states: 2 },
   { tri: 'kind', dom: 'kind' },
   { tri: 'opt', dom: 'optional' },
+  { act: 'act', zh: '動作類別' },
   { tri: 'sub', dom: 'sub_m', side: 'm', parent: 'cat', groupBlocks: true,
     groupAfter: { '能力': 'race' } },
   { tri: 'sub', dom: 'sub_s', side: 's', parent: 'cat' },
@@ -91,10 +92,12 @@ function triBtn(code, zh, states) {
     data-st="" title="${STATE_TITLE[states || 3]['']}">${esc(zh)}</button>`;
 }
 
-/* 清除鈕與標題鈕並排而不是巢狀:button 不能包 button。 */
-function headHtml(zh) {
+/* 清除鈕與標題鈕並排而不是巢狀:button 不能包 button。note 是標題列上的附註
+   (動作類別軸的涵蓋範圍)。 */
+function headHtml(zh, note) {
   return `<div class="axis-hrow"><button type="button" class="axis-head"
-    aria-expanded="false"><span class="axis-name">${esc(zh)}</span>
+    aria-expanded="false"><span class="axis-name">${esc(zh)}</span>${
+    note ? `<span class="axis-note">${esc(note)}</span>` : ''}
     <span class="axis-count"></span></button>
     <button type="button" class="axis-clear" hidden
       title="清除這一組條件">×</button></div>`;
@@ -148,12 +151,74 @@ function groupBoxHtml(f, kids) {
     (kids || []).map(k => k.html).join('')}</div></div>`;
 }
 
+/* [[動作類別]]軸:由 VOCAB.acat 的類別樹生成(Acat),大類 › (中類) › 詞元 › 葉,
+   每個節點一顆三態鈕(data-code 是節點路徑),有子節點的可展開/收合、預設收合。
+   詞元節點的預設葉是最後一個子節點,鈕上標「預設葉」。不標卡數。軸內 AND、選上層
+   節點=底下任一葉,語意在 Engine;這裡只把鈕的狀態讀成 q.act。 */
+function actNodeHtml(id) {
+  const n = Acat.node(id);
+  const tog = n.kids.length
+    ? '<button type="button" class="act-tog" aria-expanded="false" aria-label="展開或收合"></button>'
+    : '<span class="act-tog-pad"></span>';
+  return `<li class="act-node" data-id="${esc(id)}"><div class="act-row">${tog}
+    <button type="button" class="tri" data-code="${esc(id)}" data-st=""
+      title="${STATE_TITLE[3]['']}">${esc(n.name)}${
+      n.isDefault ? '<span class="act-default">預設葉</span>' : ''}</button></div>${
+    n.kids.length ? `<ul class="act-kids" hidden>${
+      n.kids.map(actNodeHtml).join('')}</ul>` : ''}</li>`;
+}
+
+function actHtml(f) {
+  const total = META.cards || DB.length;
+  return `<div class="axis axis-act" data-axis="${f.act}" data-side=""
+    data-states="3"${Acat.present ? '' : ' hidden'}>
+    ${headHtml(f.zh, `涵蓋 ${Acat.COVERED} / ${total} 張`)}<div class="axis-body" hidden>
+    <ul class="act-tree">${Acat.roots.map(actNodeHtml).join('')}</ul></div></div>`;
+}
+
+function actBox() {
+  return axisEl('act', '');
+}
+
+function actTris() {
+  return Array.prototype.slice.call(actBox().querySelectorAll('.tri'));
+}
+
+function readAct(q) {
+  const sel = {};
+  actTris().forEach(btn => {
+    if (btn.dataset.st) sel[btn.dataset.code] = btn.dataset.st === 'ex' ? -1 : 1;
+  });
+  if (Object.keys(sel).length) q.act = sel;
+}
+
+function setNodeOpen(li, open) {
+  const tog = li.querySelector(':scope > .act-row > .act-tog');
+  const kids = li.querySelector(':scope > .act-kids');
+  if (!tog || !kids) return;
+  tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+  kids.hidden = !open;
+}
+
+/* 已選節點的祖先展開:網址開進來的條件看得見,不必一層層點開去找。 */
+function writeAct(q) {
+  const sel = q.act || {};
+  actTris().forEach(btn => {
+    const v = sel[btn.dataset.code];
+    setTri(btn, v > 0 ? 'in' : (v < 0 ? 'ex' : ''));
+    if (!v) return;
+    for (let li = btn.closest('.act-node').parentElement.closest('.act-node'); li;
+         li = li.parentElement.closest('.act-node')) setNodeOpen(li, true);
+  });
+}
+
 function build() {
   const axisByKey = {};
   axes().forEach(ax => { axisByKey[ax.key + '/' + ax.side] = ax; });
   const htmlOf = f => f.tri
     ? axisHtml(axisByKey[f.tri + '/' + (f.side || '')], kidsOf(blockKey(f)))
     : f.group ? groupBoxHtml(f, kidsOf(blockKey(f)))
+    : f.act ? actHtml(f)
     : rangeHtml(f);
   const kidsOf = key => FIELDS.filter(f => f.parent === key)
     .map(f => ({ key: blockKey(f), html: htmlOf(f) }));
@@ -215,7 +280,7 @@ function read() {
   if ($('fTextMat').checked) q.textMat = 1;
   FIELDS.forEach(f => {
     if (f.group) return;
-    (f.tri ? readTri : readRange)(q, f);
+    (f.tri ? readTri : f.act ? readAct : readRange)(q, f);
   });
   return q;
 }
@@ -227,18 +292,19 @@ function count(q) {
     return Object.keys(v).some(k => v[k] != null);
   };
   return Object.keys(q || {})
-    .filter(k => k !== 'nameLang' && k !== 'textMat' && isSet(q[k])).length;
+    .filter(k => k !== 'nameLang' && k !== 'textMat' && k !== 'actCost' &&
+            isSet(q[k])).length;
 }
 
 function blockKey(f) {
-  return f.tri ? f.dom : (f.range || f.group);
+  return f.tri ? f.dom : (f.range || f.group || f.act);
 }
 
 function blockEl(f) {
   if (f.range) {
     return $('critParams').querySelector(`.range[data-range="${f.range}"]`);
   }
-  return axisEl(f.tri || f.group, f.side);
+  return axisEl(f.tri || f.group || f.act, f.side);
 }
 
 function axisCounts(q) {
@@ -246,6 +312,11 @@ function axisCounts(q) {
   const out = {};
   FIELDS.forEach(f => {
     if (f.group) { out[blockKey(f)] = 0; return; }
+    if (f.act) {
+      const sel = q[f.act] || {};
+      out[blockKey(f)] = Object.keys(sel).filter(k => sel[k]).length;
+      return;
+    }
     if (f.tri) {
       const sel = q[f.tri] || {};
       out[blockKey(f)] = Object.keys(sel).filter(k => sel[k] &&
@@ -428,7 +499,7 @@ function write(q) {
   syncOptional();
   FIELDS.forEach(f => {
     if (f.group) return;
-    (f.tri ? writeTri : writeRange)(q, f);
+    (f.tri ? writeTri : f.act ? writeAct : writeRange)(q, f);
   });
   updateCounts();
   const open = expandedAxes(read());
@@ -448,6 +519,7 @@ function clear() {
   syncSubs();
   syncOptional();
   all('.axis, .range, .axis-group').forEach(box => setAxisOpen(box, false));
+  all('.act-node').forEach(li => setNodeOpen(li, false));
   updateCounts();
 }
 
@@ -474,6 +546,11 @@ function init() {
     const clr = e.target.closest('.axis-clear');
     if (clr) {
       clearBlock(clr.closest('.axis, .range, .axis-group'));
+      return;
+    }
+    const tog = e.target.closest('.act-tog');
+    if (tog) {
+      setNodeOpen(tog.closest('.act-node'), tog.getAttribute('aria-expanded') !== 'true');
       return;
     }
     const head = e.target.closest('.axis-head');

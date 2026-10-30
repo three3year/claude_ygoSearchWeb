@@ -16,7 +16,8 @@
 - 皆非:受事者不是卡(封閉名詞表)、表外判不出的,以及會包含此卡的全部類。
 
 全部類(沒有數量的群體)依**發動位置**判:一句效果句內依序取 條件/代價寫明的此卡區域、
-條件位觸發事件裡此卡的去處、處理中此卡自己移動的起點,都沒有就是場上(此卡在我方)。
+條件位觸發事件裡此卡的去處、處理中此卡自己移動的起點,都沒有就是場上(此卡在我方)。此卡在
+代價或處理中自己移動之後,後面的框架改看移動的目的(手札から特殊召喚 之後 手札全部 不含此卡)。
 群體的區域(所在或來源)含發動位置,而且玩家、卡種、種族、屬性、字段、卡片子類型、數值條件
 全都對得上此卡的卡面參數,才算會包含此卡;比不了的定語(含區域判不出)一律視為對得上,任一
 條件對不上就判非此卡。條件只看群體本身:修飾語(〜を素材とした、〜以外の)裡的種族說的是
@@ -133,6 +134,7 @@ LAUNCH_WRITTEN = "寫明"
 LAUNCH_TRIGGER = "觸發"
 LAUNCH_MOVE = "自己移動"
 LAUNCH_DEFAULT = "預設場上"
+LAUNCH_AFTER_MOVE = "移動後"
 FIELD = "場上"
 PENDULUM_ZONE = "靈擺區"
 OFF_FIELD = "場外"           # 去處不明的「離開場上」:不在場上,也不知道在哪
@@ -235,6 +237,34 @@ def launch(frames, section="main"):
         if found:
             return Launch({zone for _, zone in found}, source)
     return Launch({PENDULUM_ZONE} if section == "pendulum" else {FIELD}, LAUNCH_DEFAULT)
+
+
+def _self_move_zones(frame):
+    """代價或處理中此卡自己移動 → 去處;不是移動時 []。否定的不算(戦闘では破壊されない),
+    沒有去處的 破壊/リリース 當離開場上。"""
+    if (frame.get("position") not in (POS_COST, POS_EFFECT) or frame.get("polarity") == "否定"
+            or not _names_this_card(patient(frame)[0])):
+        return []
+    zones = _zones(frame.get("goal"))
+    if zones:
+        return zones
+    return [(None, OFF_FIELD)] if frame.get("action") in LEAVE_FIELD_ACTIONS else []
+
+
+def _positions(frames, launched):
+    """一句效果句 → 與框架對齊的 Launch:此卡自己移動之前是發動位置,之後看目的。● 選項是
+    替代關係,移動只影響共同部分與同一選項的框架。"""
+    moved = {}
+    out = []
+    for fr in frames:
+        option = fr.get("option")
+        latest = moved.get(option) or moved.get(None)
+        out.append(latest or launched)
+        if fr.get("kind") == KIND_ACTION:
+            zones = _self_move_zones(fr)
+            if zones:
+                moved[option] = Launch({zone for _, zone in zones}, LAUNCH_AFTER_MOVE)
+    return out
 
 
 def group_kinds(text):
@@ -542,7 +572,7 @@ def judge(frame, clause, launched, face):
 def judge_sentence(frames, face=None, section="main"):
     """一句效果句的框架清單(與此卡卡面參數,沒有時不比卡面;段落)→ 與它對齊的 [Verdict];
     約束框架是 Verdict(None, None)。"""
-    launched = launch(frames, section)
-    return [judge(fr, _count_clause(frames, k), launched, face)
+    positions = _positions(frames, launch(frames, section))
+    return [judge(fr, _count_clause(frames, k), positions[k], face)
             if fr.get("kind") == KIND_ACTION else Verdict(None, None)
             for k, fr in enumerate(frames)]

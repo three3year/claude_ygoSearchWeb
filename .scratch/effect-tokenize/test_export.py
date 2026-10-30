@@ -406,8 +406,8 @@ class TestPatientAllClass(unittest.TestCase):
                          {"effect_nonself": ["破壊:モンスター", "破壊@フィールド"]})
 
     def test_launch_from_where_this_card_moves_from_while_resolving(self):
-        """處理中此卡自己移動的起點(手札)當發動位置:手札全部丟棄 會包含此卡。"""
-        self.assertEqual(modes("①：このカードを手札から特殊召喚する。その後、手札を全て捨てる。"),
+        """移動之前的框架:處理中此卡自己移動的起點(手札)當發動位置。"""
+        self.assertEqual(modes("①：手札を全て捨てる。その後、このカードを手札から特殊召喚する。"),
                          {"effect_self": ["特殊召喚←手札"]})
         # 對照:沒有自己移動時預設場上,手札全部丟棄 不會包含此卡
         self.assertEqual(modes("①：手札を全て捨てる。"), {"effect_nonself": ["捨てる"]})
@@ -517,6 +517,46 @@ class TestPatientThisEffect(unittest.TestCase):
         self.assertEqual(modes("①：それ以外の自分フィールドのモンスターを全て破壊する。"), {})
 
 
+class TestPatientAfterSelfMove(unittest.TestCase):
+    """此卡自己移動之後的框架看移動的目的(2026-10-30 站主裁定,取代 story 16 例句判皆非)。"""
+
+    def test_discarding_the_hand_after_leaving_it(self):
+        self.assertEqual(modes("①：このカードを手札から特殊召喚する。その後、手札を全て捨てる。"),
+                         {"effect_self": ["特殊召喚←手札"], "effect_nonself": ["捨てる"]})
+
+    def test_field_wipe_after_summoning_itself_includes_it(self):
+        self.assertEqual(modes("①：このカードを手札から特殊召喚する。その後、フィールドのカードを"
+                               "全て破壊する。"),
+                         {"effect_self": ["特殊召喚←手札"]})
+
+    def test_field_wipe_after_returning_to_hand_does_not_include_it(self):
+        found = modes("①：このカードを手札に戻す。その後、フィールドのモンスターを全て破壊する。")
+        self.assertIn("破壊@フィールド", found.get("effect_nonself", []))
+
+    def test_destroying_itself_leaves_the_field(self):
+        found = modes("①：このカードを破壊し、フィールドのモンスターを全て破壊する。")
+        self.assertIn("破壊@フィールド", found.get("effect_nonself", []))
+
+    def test_moving_itself_as_a_cost_counts(self):
+        self.assertEqual(modes("①：このカードをリリースして発動できる。フィールドのカードを"
+                               "全て破壊する。"),
+                         {"cost_self": ["リリース"], "effect_nonself": ["破壊@フィールド"]})
+
+    def test_negated_move_is_not_a_move(self):
+        self.assertNotIn("effect_nonself", modes("①：このカードは戦闘では破壊されない。"
+                                                 "フィールドのカードを全て破壊する。"))
+
+    def test_move_in_one_option_does_not_affect_another(self):
+        self.assertNotIn("effect_nonself", modes(
+            "①：以下の効果から１つを選択して発動できる。\n●このカードを手札に戻す。\n"
+            "●フィールドのカードを全て破壊する。"))
+
+    def test_stats_report_frames_judged_after_a_self_move(self):
+        doc, _ = export({1: [clause("①", "①：このカードを手札から特殊召喚する。その後、手札を全て"
+                                         "捨てる。")]})
+        self.assertEqual(doc["統計"]["發動位置"].get("移動後"), 1)
+
+
 class TestPatientReviewFindings(unittest.TestCase):
     """code review 用例句實跑抓到的錯。"""
 
@@ -530,8 +570,8 @@ class TestPatientReviewFindings(unittest.TestCase):
         self.assertEqual(modes("①：自分はデッキに戻した数＋１枚をドローする。"), {})
 
     def test_listed_with_this_card_counts_for_the_launch_position(self):
-        self.assertEqual(modes("①：このカードと植物族モンスター１体を手札から特殊召喚する。"
-                               "その後、手札を全て捨てる。"),
+        self.assertEqual(modes("①：手札を全て捨てる。その後、このカードと植物族モンスター１体を"
+                               "手札から特殊召喚する。"),
                          {"effect_self": ["特殊召喚←手札"]})
 
     def test_listed_with_this_card_in_the_cost_counts_for_the_launch_position(self):

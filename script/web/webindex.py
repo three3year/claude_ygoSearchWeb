@@ -464,6 +464,22 @@ def _text_hash(text):
     return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
 
 
+# [[動作對象]]全部類比對用的卡面參數;算法同分詞鏈匯出(export_categories.face_hash)
+_FACE_FIELDS = ("type", "race", "attribute", "level", "atk", "def", "name_ja")
+
+
+def _face_hash(card):
+    payload = json.dumps([card.get(field) for field in _FACE_FIELDS], ensure_ascii=False)
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
+
+
+def _face_stale(faces, covered, cards_by_id):
+    """匯出檔的卡面參數雜湊與卡片總表對不上的涵蓋卡 [{id}](卡面參數改了沒重跑分詞鏈)。"""
+    known = {cid: digest for cid, digest in faces}
+    return [{"id": cid} for cid in covered
+            if cid in cards_by_id and known.get(cid) != _face_hash(cards_by_id[cid])]
+
+
 def _leaf_majors(tree):
     """巢狀節點 [名, 葉號或 -1, 子節點] → (大類名清單, 葉號 → 大類名)。"""
     majors, of = [], {}
@@ -503,14 +519,15 @@ _PATIENT_MODES = (("此卡", ("effect_self", "cost_self")),
 _CATEGORY_GROUPS = ("effect",) + tuple(group for _, group in _SPARSE_CATEGORY_FIELDS)
 
 
-def _attach_categories(entries, clauses_by_id, categories, checks):
+def _attach_categories(entries, clauses_by_id, categories, checks, cards_by_id):
     """[[動作類別]]匯出檔 → 每張涵蓋卡的 `ae` / `ac`(與 `tx` 對齊的葉號陣列),
     回傳 (VOCAB 的類別部分, 報告)。
 
     `ae` 的有無就是涵蓋與否:涵蓋的卡一定帶 `ae`(沒有葉的句是空陣列,整張都沒有
     葉也照帶),`ac` 與[[動作對象]]的 `aes`/`aen`/`acs`/`acn` 全空時省略。匯出檔與標記表對不上記進 `category_stale`
-    (`_category_stale`),葉不在類別樹記進 `category_unknown_leaves`——兩者都讓
-    建置失敗(ADR-0017、ADR-0008)。
+    (`_category_stale`),葉不在類別樹記進 `category_unknown_leaves`,匯出檔帶「卡面」時
+    卡面參數雜湊對不上卡片總表記進 `category_face_stale`——三者都讓建置失敗(ADR-0017、
+    ADR-0008)。
     """
     leaves = categories["葉"]
     number = {name: i for i, name in enumerate(leaves)}
@@ -522,6 +539,9 @@ def _attach_categories(entries, clauses_by_id, categories, checks):
                 checks["category_unknown_leaves"].append(
                     {"id": cid, "index": index, "leaf": name})
     covered = sorted({cid for cid, _, _ in rows})
+    if "卡面" in categories:
+        checks["category_face_stale"].extend(
+            _face_stale(categories["卡面"], covered, cards_by_id))
     for cid in covered:
         entry = entries.get(cid)
         if entry is None:
@@ -588,6 +608,8 @@ def _summarise_problems(report):
         ("動作類別匯出檔過時(與標記表對不上,請重跑分詞鏈)",
          checks["category_stale"]),
         ("動作類別匯出檔的葉不在類別樹", checks["category_unknown_leaves"]),
+        ("動作類別匯出檔的卡面參數過時(與卡片總表對不上,請重跑分詞鏈)",
+         checks["category_face_stale"]),
         ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
         ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
     )
@@ -635,7 +657,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
               "alias_gap_not_extracted": [], "optional_on_non_carrier": [],
               "errata_not_reversible": [], "rewrite_desc_mismatch": [],
               "rewrite_overlaps_errata": [], "category_stale": [],
-              "category_unknown_leaves": []}
+              "category_unknown_leaves": [], "category_face_stale": []}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
     carriers = set(vocab.carriers(vocab.OPTIONAL))
     entries = {}
@@ -701,8 +723,8 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     category_report = None
     acat = None
     if categories is not None:
-        acat, category_report = _attach_categories(entries, clauses_by_id,
-                                                   categories, checks)
+        acat, category_report = _attach_categories(
+            entries, clauses_by_id, categories, checks, {c["id"]: c for c in cards})
     index_cards = [entries[cid] for cid in sorted(entries)]
     exported = vocab.export()
     cross = _cross_type_counts(cards, clauses_by_id)

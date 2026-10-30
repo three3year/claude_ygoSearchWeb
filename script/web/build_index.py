@@ -81,6 +81,7 @@ def print_checks(report, p, limit=20):
         ("rewrite_overlaps_errata", "同卡同時在勘誤表與改寫表"),
         ("category_stale", "動作類別匯出檔過時(與標記表對不上)"),
         ("category_unknown_leaves", "動作類別匯出檔的葉不在類別樹"),
+        ("category_face_stale", "動作類別匯出檔的卡面參數過時(與卡片總表對不上)"),
     )
     gaps = report["known_gaps"]
     p(f"已知缺口: 段落標頭 {gaps['header']} 處、※ 別名 {gaps['alias']} 處")

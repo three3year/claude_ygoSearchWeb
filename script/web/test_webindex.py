@@ -8,6 +8,7 @@ fixture 於測試內程式化建立,不碰網路也不碰真實資料檔(先例:
 一份壞掉的輸入進去,斷言 report 的 problems 非空。
 """
 import hashlib
+import json
 import unittest
 
 import vocab
@@ -1013,6 +1014,41 @@ class CategoryTest(unittest.TestCase):
         entry = self.build()[0]["cards"][0]
         for field in ("aes", "acs", "aen", "acn"):
             self.assertNotIn(field, entry)
+
+    def face(self, card_entry):
+        """卡面參數雜湊(與分詞鏈匯出 export_categories.face_hash 同算法的獨立重算)。"""
+        fields = [card_entry.get(k) for k in
+                  ("type", "race", "attribute", "level", "atk", "def", "name_ja")]
+        payload = json.dumps(fields, ensure_ascii=False)
+        return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
+
+    def build_with_faces(self, faces):
+        cards = [card(1, desc="①：這樣。②：那樣。"), card(2, desc="①：別張。")]
+        tags = [tagged(1, dict(clause("①：這樣。"), text_ja=self.JA1),
+                       dict(clause("②：那樣。", index="②", kind="誘發效果(1速)"),
+                            text_ja=self.JA2)),
+                tagged(2, dict(clause("①：別張。"), text_ja="①：別のカード。"))]
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1)},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)}]
+        doc = {"說明": "", "葉": self.LEAVES, "樹": self.TREE, "卡面": faces, "句": rows}
+        return cards, build_index(cards, tags, categories=doc)[1]
+
+    def test_matching_card_face_digest_passes(self):
+        cards, _ = self.build_with_faces([])
+        _, report = self.build_with_faces([[1, self.face(cards[0])]])
+        self.assertEqual(report["checks"]["category_face_stale"], [])
+        self.assertEqual(report["problems"], [])
+
+    def test_stale_card_face_digest_fails_the_build(self):
+        """卡片總表的卡面參數(等級、種族…)改了而沒重跑分詞鏈:動作對象的全部類比對過時。"""
+        _, report = self.build_with_faces([[1, "0000000000000000"]])
+        self.assertEqual(report["checks"]["category_face_stale"], [{"id": 1}])
+        self.assertTrue(report["problems"])
+
+    def test_covered_card_missing_from_the_face_list_fails_the_build(self):
+        cards, _ = self.build_with_faces([])
+        _, report = self.build_with_faces([[2, self.face(cards[1])]])
+        self.assertEqual(report["checks"]["category_face_stale"], [{"id": 1}])
 
     def test_serialized_index_is_deterministic(self):
         first = serialize_index(self.build()[0])

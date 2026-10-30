@@ -13,11 +13,17 @@
 - 非此卡:受事者是卡、字面不指名此卡,而且是選擇類(帶數量、指示詞)、このカード以外、
   此卡的附屬卡(X 素材、裝備怪獸、リンク先),或主人不是此卡的效果、發動、攻擊。屬性
   (攻撃力、レベル…)跟著它的主人判。
-- 皆非:受事者不是卡(封閉名詞表)、表外判不出的,以及沒有數量的全部類(本版保守當皆非)。
+- 皆非:受事者不是卡(封閉名詞表)、表外判不出的,以及會包含此卡的全部類。
+
+全部類(沒有數量的群體)依**發動位置**判:一句效果句內依序取 條件/代價寫明的此卡區域、
+條件位觸發事件裡此卡的去處、處理中此卡自己移動的起點,都沒有就是場上(此卡在我方)。
+群體的區域(所在或來源)含發動位置,而且玩家、卡種對得上此卡的卡面參數,才算會包含
+此卡;區域判不出時比不了,視為可能包含。
 """
 import re
 
 from constraints import KIND_ACTION
+from places import PLAYER_OPP, ZONE_TERMS, parse_zones
 
 SELF = "此卡"
 NONSELF = "非此卡"
@@ -37,6 +43,11 @@ WHY_SELECTED = "選擇類"
 WHY_OTHERS_EFFECT = "主人不是此卡的效果"
 WHY_THIS_EFFECT = "この効果"
 WHY_ALL = "全部類"
+WHY_ALL_INCLUDES = "全部類含此卡"
+WHY_ALL_NO_ZONE = "全部類區域不明"
+WHY_ALL_ZONE = "全部類區域對不上"
+WHY_ALL_PLAYER = "全部類玩家對不上"
+WHY_ALL_KIND = "全部類卡種對不上"
 WHY_NO_OWNER = "屬性沒有主人"
 WHY_NOT_CARD = "不是卡"
 WHY_UNKNOWN = "表外"
@@ -58,7 +69,8 @@ _ATTRIBUTE_OF_SELF = re.compile(r"%sの+%s$" % (THIS_CARD, _ATTR_LIST))
 _LISTED_WITH_SELF = re.compile(r"^%s(?:と|及び|および|や|または|か)(?!同じ|同名|は|相互|リンクし|"
                                r"リンク状態|戦闘|\(共同\)|異なる|元々)" % THIS_CARD)
 _INCLUDING_SELF = THIS_CARD + "を含む"
-_OTHER_THAN_SELF = THIS_CARD + "以外"
+# このカード以外;群體前的「他の」(フィールドの他のカード)在卡文裡同樣是此卡以外
+_OTHER_THAN_SELF = re.compile(r"%s以外|(?:^|の)他の" % THIS_CARD)
 # 此卡的附屬卡:另一張實體卡(このカードのX素材、このカードの装備モンスター、リンク先)
 _ATTACHED = re.compile(r"^%sの(?:X素材|装備|リンク先)" % THIS_CARD)
 
@@ -81,8 +93,117 @@ _QUOTED = re.compile(r"「[^」]*」")
 _ATTRIBUTE_TAIL = re.compile(r"^(.*?)(?:の)*%s$" % _ATTR_LIST)
 
 
+# 發動位置的來源(建置報告分項)
+LAUNCH_WRITTEN = "寫明"
+LAUNCH_TRIGGER = "觸發"
+LAUNCH_MOVE = "自己移動"
+LAUNCH_DEFAULT = "預設場上"
+FIELD = "場上"
+OFF_FIELD = "場外"           # 去處不明的「離開場上」:不在場上,也不知道在哪
+STATE_ACTIONS = ("存在", "ある", "いる")
+# 觸發事件沒寫去處、但一定是離開場上的動作
+LEAVE_FIELD_ACTIONS = ("離れる", "破壊", "リリース")
+POS_CONDITION, POS_COST, POS_EFFECT = "條件", "代價", "效果"
+
+# 卡種(卡片總表 type 位元)
+KIND_BITS = (("怪獸", 0x1), ("魔法", 0x2), ("陷阱", 0x4))
+_KIND_WORDS = (("モンスター", "怪獸"), ("魔法", "魔法"), ("罠", "陷阱"))
+_KIND_TAIL = {word: re.compile(word + r"(?:\(カード\))?(?:カード)?$") for word, _ in _KIND_WORDS}
+
+
 def _clean(text):
     return _SPACES.sub("", text or "")
+
+
+def _zones(literal):
+    """地點字面 → [(玩家, 區域)];フィールド上 這類尾巴去掉再認,認不出時 []。"""
+    literal = _clean(literal)
+    if not literal:
+        return []
+    return parse_zones(literal) or parse_zones(re.sub(r"上$", "", literal)) or []
+
+
+# 受事者開頭的區域片語(自分フィールドの「天気」魔法・罠カード:框架沒切出所在時)
+_LEADING_ZONE = re.compile(r"^((?:自分|相手|お互い)?の?(?:%s))の" % "|".join(
+    re.escape(term) for term, _ in ZONE_TERMS))
+
+
+def _group_zones(text, frame):
+    """群體的區域:框架的所在或來源;都沒有時看受事者本身(手札を全て捨てる)或它開頭的
+    區域片語。"""
+    zones = _zones(frame.get("place") or frame.get("source"))
+    if zones:
+        return zones
+    zones = _zones(text) if head_kind(text) == "card" else []
+    if zones:
+        return zones
+    lead = _LEADING_ZONE.match(_clean(text))
+    return _zones(lead.group(1)) if lead else []
+
+
+def _is_this_card(text):
+    return _clean(text).endswith(THIS_CARD)
+
+
+def launch(frames):
+    """一句效果句的框架 → (此卡可能所在的區域集合, 來源)。"""
+    written, trigger, move = None, None, None
+    for fr in frames:
+        if fr.get("kind") != KIND_ACTION:
+            continue
+        position = fr.get("position")
+        agent = fr.get("subject") or fr.get("topic")
+        if written is None and position == POS_CONDITION and fr.get("action") in STATE_ACTIONS                 and _is_this_card(agent):
+            written = _zones(fr.get("goal") or fr.get("place"))
+        elif written is None and position == POS_COST and _is_this_card(fr.get("object")):
+            written = _zones(fr.get("source") or fr.get("place"))
+        elif trigger is None and position == POS_CONDITION and _is_this_card(agent)                 and fr.get("action") not in STATE_ACTIONS:
+            trigger = _zones(fr.get("goal"))
+            if not trigger and (fr.get("action") in LEAVE_FIELD_ACTIONS
+                                or FIELD in {z for _, z in _zones(fr.get("source"))}):
+                trigger = [(None, OFF_FIELD)]
+        elif move is None and position == POS_EFFECT and _is_this_card(fr.get("object")):
+            move = _zones(fr.get("source"))
+    for found, source in ((written, LAUNCH_WRITTEN), (trigger, LAUNCH_TRIGGER),
+                          (move, LAUNCH_MOVE)):
+        if found:
+            return {zone for _, zone in found}, source
+    return {FIELD}, LAUNCH_DEFAULT
+
+
+def face_kinds(face):
+    return {name for name, bit in KIND_BITS if face["type"] & bit}
+
+
+def group_kinds(text):
+    """群體字面 → 卡種集合(看並列的每段中心詞;カード、「卡名」、區域是任何卡種 → None)。"""
+    core = _core(text)
+    kinds = set()
+    for part in re.split(r"・|か|または|及び|と|や", core):
+        found = [kind for word, kind in _KIND_WORDS if _KIND_TAIL[word].search(part)]
+        if not found:
+            return None
+        kinds.update(found)
+    return kinds or None
+
+
+def _all_class(text, frame, where, face):
+    """全部類:→ (值, 理由)。"""
+    zones = _group_zones(text, frame)
+    if not zones:
+        return None, WHY_ALL_NO_ZONE
+    possible, _ = where
+    near = [(player, zone) for player, zone in zones
+            if zone in possible or (OFF_FIELD in possible and zone != FIELD)]
+    if not near:
+        return NONSELF, WHY_ALL_ZONE
+    if all(player == PLAYER_OPP for player, _ in near):
+        return NONSELF, WHY_ALL_PLAYER
+    if face is not None:
+        kinds = group_kinds(text)
+        if kinds is not None and not kinds & face_kinds(face):
+            return NONSELF, WHY_ALL_KIND
+    return None, WHY_ALL_INCLUDES
 
 
 def patient(frame):
@@ -133,23 +254,24 @@ def head_kind(text):
     return "unknown"
 
 
-def _card_group(text, clause):
+def _card_group(text, clause, all_class):
     """受事者是卡(或屬性的主人):→ (值, 理由)。"""
     if _ATTACHED.search(text):
         return NONSELF, WHY_ATTACHED
     if _DEMONSTRATIVE.search(text) or _COUNT.search(text) or _COUNT.search(clause):
         return NONSELF, WHY_SELECTED
-    return None, WHY_ALL
+    return all_class(text) if all_class else (None, WHY_ALL)
 
 
-def classify(text, clause=""):
-    """受事者字面(與它所在子句的字面,數量可能只寫在子句裡)→ (值, 理由)。"""
+def classify(text, clause="", all_class=None):
+    """受事者字面(與它所在子句的字面,數量可能只寫在子句裡)→ (值, 理由);all_class 是
+    全部類的判定(群體字面 → (值, 理由)),沒給時全部類一律皆非。"""
     if not text:
         return None, WHY_NONE
     why = self_rule(text)
     if why:
         return SELF, why
-    if _OTHER_THAN_SELF in text:
+    if _OTHER_THAN_SELF.search(text):
         return NONSELF, WHY_OTHER_THAN_SELF
     kind = head_kind(text)
     if kind == "not_card":
@@ -170,21 +292,36 @@ def classify(text, clause=""):
         owner = found.group(1) if found else ""
         if not owner or head_kind(owner) != "card":
             return None, WHY_NO_OWNER
-        return _card_group(owner, clause)
-    return _card_group(text, clause)
+        return _card_group(owner, clause, all_class)
+    return _card_group(text, clause, all_class)
 
 
-def judge(frame):
-    """一個動作框架 → (SELF/NONSELF/None, 理由, 受事者字面)。"""
+class Verdict:
+    """一個框架的判定:值、理由、受事者字面,以及全部類用到的發動位置來源(其餘 None)。"""
+    __slots__ = ("mode", "why", "text", "launch")
+
+    def __init__(self, mode, why, text="", launch_source=None):
+        self.mode, self.why, self.text, self.launch = mode, why, text, launch_source
+
+
+def judge(frame, where=None, face=None):
+    """一個動作框架(與它所在效果句的發動位置、此卡卡面參數)→ Verdict。"""
     text, by_topic = patient(frame)
-    mode, why = classify(text, _clean(frame.get("clause")))
+    where = where or ({FIELD}, LAUNCH_DEFAULT)
+    used = []
+
+    def all_class(group):
+        used.append(where[1])
+        return _all_class(group, frame, where, face)
+    mode, why = classify(text, _clean(frame.get("clause")), all_class)
     if by_topic and why == WHY_PATIENT:
         why = WHY_TOPIC
-    return mode, why, text
+    return Verdict(mode, why, text, used[0] if used else None)
 
 
-def judge_sentence(frames):
-    """一句效果句的框架清單 → 與它對齊的 [(值, 理由, 受事者字面)];約束框架是
-    (None, None, "")。"""
-    return [judge(fr) if fr.get("kind") == KIND_ACTION else (None, None, "")
+def judge_sentence(frames, face=None):
+    """一句效果句的框架清單(與此卡卡面參數,沒有時不比卡種)→ 與它對齊的 [Verdict];
+    約束框架是 Verdict(None, None)。"""
+    where = launch(frames)
+    return [judge(fr, where, face) if fr.get("kind") == KIND_ACTION else Verdict(None, None)
             for fr in frames]

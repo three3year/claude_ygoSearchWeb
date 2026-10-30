@@ -33,6 +33,7 @@ from frames import POS_COST, POS_EFFECT  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 TOKENS = os.path.join(HERE, "tokens.json")
+CARDS = os.path.join(ROOT, "data", "cards.json")
 OUT = os.path.join(ROOT, "data", "action_categories.json")
 
 GROUPS = {POS_EFFECT: "effect", POS_COST: "cost"}
@@ -48,11 +49,27 @@ DOC = ("動作類別匯出檔(.scratch/category-search,ADR-0017):由 .scratch/ef
        "「樹」是巢狀節點 [名, 葉號或 -1, 子節點](節點同時是葉與內部節點時是詞元節點帶預設葉);"
        "「句」每列一句新格式新卡的標記句:卡片密碼、段落、index、日文原文雜湊、效果位葉、"
        "代價位葉,以及[[動作對象]]的效果位此卡葉、效果位非此卡葉、代價位此卡葉、代價位非此卡葉"
-       "(沒有就省略)。「統計」是動作對象判定的框架數與卡數(建置報告照登)。")
+       "(沒有就省略)。「統計」是動作對象判定的框架數與卡數(建置報告照登);「卡面」每列一張卡"
+       "的此卡卡面參數雜湊(索引建置以卡片總表重算比對)。")
 
 
 def text_hash(text):
     return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
+
+
+# [[動作對象]]全部類比對用的此卡卡面參數(卡片總表的欄位);索引建置以總表重算雜湊比對,
+# 卡面參數變了而沒重跑分詞鏈就建置失敗(script/web/webindex.py 的 _face_hash 同算法)
+FACE_FIELDS = ("type", "race", "attribute", "level", "atk", "def", "name_ja")
+
+
+def card_face(card):
+    """卡片總表的一列 → 此卡卡面參數。"""
+    return {field: card.get(field) for field in FACE_FIELDS}
+
+
+def face_hash(face):
+    payload = json.dumps([face.get(field) for field in FACE_FIELDS], ensure_ascii=False)
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
 
 
 def owner(sentence, frame):
@@ -87,9 +104,10 @@ def tree_problems(nodes):
     return found
 
 
-def export(sentences, records, tree):
-    """效果句(frames.json 的列,多帶效果句原文 text_ja)+ 框架類別列 + 類別樹
-    → (匯出文件, 問題清單);問題清單非空即匯出失敗。"""
+def export(sentences, records, tree, faces=None):
+    """效果句(frames.json 的列,多帶效果句原文 text_ja)+ 框架類別列 + 類別樹(+ 卡片密碼
+    → 此卡卡面參數)→ (匯出文件, 問題清單);問題清單非空即匯出失敗。"""
+    faces = faces or {}
     by_frame = {(r["card"], r["section"], r["index"], r["order"]): r for r in records}
     seen = set()
     problems = []
@@ -103,8 +121,8 @@ def export(sentences, records, tree):
                 {"card": s["card"], "section": s["section"], "index": part["index"],
                  "hash": text_hash(s["text_ja"][part["start"]:part["end"]])},
                 **{group: set() for group in ROW_GROUPS})
-        verdicts = patient.judge_sentence(s["frames"])
-        for fr, (mode, why, text) in zip(s["frames"], verdicts):
+        verdicts = patient.judge_sentence(s["frames"], faces.get(s["card"]))
+        for fr, verdict in zip(s["frames"], verdicts):
             if fr["kind"] != KIND_ACTION:
                 continue
             key = (s["card"], s["section"], s["index"], fr["order"])
@@ -120,9 +138,9 @@ def export(sentences, records, tree):
             group = GROUPS.get(fr["position"])
             if group and record["status"] == categories.STATUS_PLACED:
                 rows[index][group].update(record["leaves"])
-                if mode:
-                    rows[index][group + MODE_SUFFIX[mode]].update(record["leaves"])
-                stats.add(s["card"], mode, why, text)
+                if verdict.mode:
+                    rows[index][group + MODE_SUFFIX[verdict.mode]].update(record["leaves"])
+                stats.add(s["card"], verdict)
         for row in rows.values():
             for group in ROW_GROUPS:
                 leaves = sorted(row[group], key=order.__getitem__)
@@ -135,7 +153,10 @@ def export(sentences, records, tree):
         problems.append("框架類別沒有對應的框架:%s" % (key,))
     leaves, nodes = tree_rows(tree)
     problems.extend(tree_problems(nodes))
-    return {"說明": DOC, "葉": leaves, "樹": nodes, "統計": stats.doc(), "句": out}, problems
+    covered = sorted({s["card"] for s in sentences} & set(faces))
+    face_rows = [[card, face_hash(faces[card])] for card in covered]
+    return {"說明": DOC, "葉": leaves, "樹": nodes, "統計": stats.doc(), "卡面": face_rows,
+            "句": out}, problems
 
 
 class Stats:
@@ -148,14 +169,18 @@ class Stats:
         self.cards = {}
         self.reasons = {}
         self.unknown = {}
+        self.launch = {}
 
-    def add(self, card, mode, why, text):
-        key = mode or "皆非"
+    def add(self, card, verdict):
+        key = verdict.mode or "皆非"
+        why = key + ":" + verdict.why
         self.frames[key] = self.frames.get(key, 0) + 1
         self.cards.setdefault(key, set()).add(card)
-        self.reasons[key + ":" + why] = self.reasons.get(key + ":" + why, 0) + 1
-        if why == patient.WHY_UNKNOWN:
-            self.unknown[text] = self.unknown.get(text, 0) + 1
+        self.reasons[why] = self.reasons.get(why, 0) + 1
+        if verdict.why == patient.WHY_UNKNOWN:
+            self.unknown[verdict.text] = self.unknown.get(verdict.text, 0) + 1
+        if verdict.launch:
+            self.launch[verdict.launch] = self.launch.get(verdict.launch, 0) + 1
 
     def doc(self):
         keys = (patient.SELF, patient.NONSELF, "皆非")
@@ -163,6 +188,7 @@ class Stats:
         return {"框架": {k: self.frames.get(k, 0) for k in keys},
                 "卡": {k: len(self.cards.get(k, ())) for k in keys},
                 "理由": dict(sorted(self.reasons.items())),
+                "發動位置": dict(sorted(self.launch.items())),
                 "表外受事者": dict(top)}
 
 
@@ -173,6 +199,7 @@ def serialize(doc):
             + '"葉":' + dump(doc["葉"]) + ",\n"
             + '"樹":' + dump(doc["樹"]) + ",\n"
             + '"統計":' + dump(doc["統計"]) + ",\n"
+            + '"卡面":[\n' + ",\n".join(dump(r) for r in doc["卡面"]) + "\n],\n"
             + '"句":[\n' + ",\n".join(dump(r) for r in doc["句"]) + "\n]\n}\n")
 
 
@@ -195,7 +222,9 @@ def main():
         return 1
     with open(categories.OUT, encoding="utf-8") as f:
         records = json.load(f)
-    doc, problems = export(load_sentences(), records, tree)
+    with open(CARDS, encoding="utf-8") as f:
+        faces = {card["id"]: card_face(card) for card in json.load(f)}
+    doc, problems = export(load_sentences(), records, tree, faces)
     if problems:
         print("**匯出失敗**,%d 個問題(前 20 筆):" % len(problems), file=sys.stderr)
         for p in problems[:20]:
@@ -212,6 +241,8 @@ def main():
         "%s %d 框 %d 張" % (k, n, stats["卡"][k]) for k, n in stats["框架"].items()))
     for why, n in stats["理由"].items():
         print("  %s %d" % (why, n))
+    print("  發動位置(全部類框架):" + "、".join(
+        "%s %d" % kv for kv in stats["發動位置"].items()))
     print("  表外受事者(前 %d 種):%s" % (len(stats["表外受事者"]), "、".join(
         "%s×%d" % kv for kv in stats["表外受事者"].items())))
     return 0

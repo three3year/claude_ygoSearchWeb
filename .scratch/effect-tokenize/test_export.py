@@ -59,9 +59,10 @@ def chain(cards):
     return sentences, records
 
 
-def export(cards):
+def export(cards, faces=None):
     sentences, records = chain(cards)
-    return export_categories.export(sentences, records, categories.default_tree())
+    return export_categories.export(sentences, records, categories.default_tree(),
+                                    faces=faces)
 
 
 def rows(cards):
@@ -193,10 +194,18 @@ class TestExport(unittest.TestCase):
         self.assertEqual(first, export_categories.serialize(export(cards)[0]))
 
 
-def modes(text, card=1, kind="啟動效果"):
+# 合成的卡面參數(卡片總表的欄位):等級 7 的暗屬性龍族效果怪獸、通常魔法
+DRAGON = {"id": 1, "type": 0x21, "race": 0x2000, "attribute": 0x20, "level": 7,
+          "atk": 2500, "def": 2000, "name_ja": "テスト・ドラゴン"}
+SPELL = {"id": 1, "type": 0x2, "race": 0, "attribute": 0, "level": 0,
+         "atk": None, "def": None, "name_ja": "テスト・魔法"}
+
+
+def modes(text, card=1, kind="啟動效果", face=DRAGON):
     """一句效果句 → {效果位此卡葉、效果位非此卡葉、代價位此卡葉、代價位非此卡葉}
     (空的省略);斷言匯出沒有問題。"""
-    doc, problems = export({card: [clause("①", text, kind=kind)]})
+    faces = {card: export_categories.card_face(dict(face, id=card))} if face else None
+    doc, problems = export({card: [clause("①", text, kind=kind)]}, faces)
     assert not problems, problems
     row = doc["句"][0]
     return {k: row[k] for k in ("effect_self", "effect_nonself", "cost_self", "cost_nonself")
@@ -313,6 +322,11 @@ class TestPatientNonSelf(unittest.TestCase):
         self.assertEqual(modes("①：このカード以外の自分フィールドのモンスターを全て破壊する。"),
                          {"effect_nonself": ["破壊:モンスター", "破壊@自分フィールド"]})
 
+    def test_other_cards_written_as_hoka_is_nonself(self):
+        """群體前的「他の」:フィールドの他のカードを全て破壊 不會破壞此卡。"""
+        self.assertEqual(modes("①：フィールドの他のカードを全て破壊する。"),
+                         {"effect_nonself": ["破壊@フィールド"]})
+
     def test_zone_patient_with_a_count_is_nonself(self):
         """受事者寫成區域:手札を１枚捨てる(數量在子句裡)。"""
         self.assertEqual(modes("①：手札を１枚捨てて発動できる。自分はデッキから１枚ドローする。"),
@@ -361,6 +375,79 @@ class TestPatientNonSelf(unittest.TestCase):
         self.assertEqual(stats["卡"]["非此卡"], 1)
         self.assertEqual(stats["理由"].get("皆非:不是卡"), 1)
         self.assertIn("表外受事者", stats)
+
+
+class TestPatientAllClass(unittest.TestCase):
+    """[[動作對象]]全部類(action-patient 票 04):依發動位置與區域、玩家、卡種判斷會不會
+    包含此卡;會包含是皆非,不會是非此卡。"""
+
+    def test_field_wipe_launched_on_the_field_is_neither(self):
+        """都沒寫就是場上:場上的卡全部破壞會連此卡一起破壞。"""
+        self.assertEqual(modes("①：フィールドのカードを全て破壊する。"), {})
+
+    def test_launch_written_in_the_cost_moves_it_off_the_field(self):
+        self.assertEqual(modes("①：墓地のこのカードを除外して発動できる。フィールドのカードを"
+                               "全て破壊する。"),
+                         {"cost_self": ["除外←墓地"], "effect_nonself": ["破壊@フィールド"]})
+
+    def test_launch_written_as_existing_in_the_graveyard(self):
+        self.assertEqual(modes("①：このカードが墓地に存在する場合に発動できる。フィールドの"
+                               "モンスターを全て破壊する。"),
+                         {"effect_nonself": ["破壊:モンスター", "破壊@フィールド"]})
+
+    def test_launch_from_where_the_trigger_sent_this_card(self):
+        self.assertEqual(modes("①：このカードが墓地へ送られた場合に発動できる。フィールドの"
+                               "モンスターを全て破壊する。", kind="誘發效果(1速)"),
+                         {"effect_nonself": ["破壊:モンスター", "破壊@フィールド"]})
+
+    def test_leaving_the_field_with_unknown_destination_is_off_the_field(self):
+        self.assertEqual(modes("①：このカードがフィールドから離れた場合に発動できる。"
+                               "フィールドのモンスターを全て破壊する。", kind="誘發效果(1速)"),
+                         {"effect_nonself": ["破壊:モンスター", "破壊@フィールド"]})
+
+    def test_launch_from_where_this_card_moves_from_while_resolving(self):
+        """處理中此卡自己移動的起點(手札)當發動位置:手札全部丟棄 會包含此卡。"""
+        self.assertEqual(modes("①：このカードを手札から特殊召喚する。その後、手札を全て捨てる。"),
+                         {"effect_self": ["特殊召喚←手札"]})
+        # 對照:沒有自己移動時預設場上,手札全部丟棄 不會包含此卡
+        self.assertEqual(modes("①：手札を全て捨てる。"), {"effect_nonself": ["捨てる"]})
+
+    def test_opponents_side_does_not_include_this_card(self):
+        self.assertEqual(modes("①：相手フィールドのカードを全て破壊する。"),
+                         {"effect_nonself": ["破壊@相手フィールド"]})
+
+    def test_card_kind_that_does_not_match_this_card(self):
+        self.assertEqual(modes("①：フィールドの魔法・罠カードを全て破壊する。"),
+                         {"effect_nonself": ["破壊:魔法カード/罠カード", "破壊@フィールド"]})
+        self.assertEqual(modes("①：フィールドの魔法・罠カードを全て破壊する。", face=SPELL), {})
+
+    def test_zone_written_at_the_head_of_the_patient(self):
+        """所在沒被切出、寫在受事者開頭(自分フィールドの…):同樣當群體區域。"""
+        self.assertEqual(modes("①：自分フィールドの「天気」魔法・罠カードは相手の効果の対象に"
+                               "ならない。").get("effect_nonself"), ["対象にする(耐性)"])
+
+    def test_zone_patient_without_a_count_follows_the_same_rule(self):
+        self.assertEqual(modes("①：このカードが墓地に存在する場合に発動できる。手札を全て捨てる。"),
+                         {"effect_nonself": ["捨てる"]})
+
+    def test_stats_count_launch_sources(self):
+        doc, _ = export({1: [clause("①", "①：フィールドのカードを全て破壊する。")],
+                         2: [clause("①", "①：このカードが墓地に存在する場合に発動できる。"
+                                          "フィールドのモンスターを全て破壊する。")]})
+        launch = doc["統計"]["發動位置"]
+        self.assertEqual(launch.get("預設場上"), 1)
+        self.assertEqual(launch.get("寫明"), 1)
+
+    def test_card_face_digest_rides_along_and_changes_with_the_face(self):
+        faces = {1: export_categories.card_face(DRAGON)}
+        doc, _ = export({1: [clause("①", REVIVE)]}, faces)
+        before = dict(doc["卡面"])
+        faces = {1: export_categories.card_face(dict(DRAGON, level=8))}
+        doc, _ = export({1: [clause("①", REVIVE)]}, faces)
+        self.assertEqual(set(before), {1})
+        self.assertNotEqual(dict(doc["卡面"])[1], before[1])
+        self.assertEqual(dict(doc["卡面"])[1],
+                         export_categories.face_hash(dict(DRAGON, level=8)))
 
 
 if __name__ == "__main__":

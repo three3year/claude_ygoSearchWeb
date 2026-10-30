@@ -71,7 +71,7 @@ LP;keyword-head-noun 票 01,2026-10-30 /grill-with-docs 定案;關鍵詞類條�
 
 測試接縫是 classify(text, context=""):一句效果句原文(帶同卡同段上文)→ 每個
 動作框架的類別紀錄,內部呼叫真的框架抽取與類別樹;卡層彙總經同一接縫多句組裝
-(classify_card)。
+(classify_card)。空葉查詢(empty_leaves)是另一個接縫:類別樹與全語料的句子 → 沒有已歸框的葉名。
 
 用法:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/categories.py
 """

@@ -4,7 +4,7 @@
 唯一接縫:一句效果句原文(帶同卡同段上文)→ 每個動作框架的類別紀錄
 (categories.classify)。包住框架抽取接縫再接歸組,用真的分詞器、詞典、類別樹與
 規則表;只斷言每個框架的(動作、狀態、葉清單、大類、來源玩家、目的玩家、路徑),不測
-規則內部、不測樹怎麼存(預期路徑直接寫出,不依葉名查樹)。每個句型一條回歸例子——
+規則內部、不測樹怎麼存(預期路徑直接寫出,不依葉名查樹);空葉查詢另走自己的接縫(empty-leaf-removal)。每個句型一條回歸例子——
 修規則或改樹前先補一條會失敗的例子。例外:匹配機制本身(所在、玩家、關鍵詞三欄、目的關鍵詞、
 大類宣告、關鍵詞與所在兩軸並收、中類)另以測試小樹驗,免得真樹改葉表時把機制的例子一起
 改掉;經同一接縫(classify 的 tree 參數),分詞器、詞典與規則表仍是真的
@@ -1028,94 +1028,87 @@ class TestHeadNounRealTree(unittest.TestCase):
             ["取り除く:X素材"])
 
 
-# 測試小樹:中類(大類底下列中類清單,葉以名字宣告)
-MIDDLE_TREE = [
-    {"大類": "甲", "中類": ["攻撃力", "守備力"], "子": [
-        {"詞元": "アップ", "子": [
-            {"關鍵詞": ["攻撃力"], "中類": "攻撃力"}, {"關鍵詞": ["守備力"], "中類": "守備力"}, {}]},
-        {"詞元": "にする", "子": [
-            {"關鍵詞": ["攻撃力"], "中類": "攻撃力"}, {"關鍵詞": ["守備力"]},
-            {"關鍵詞": ["ダメージ"], "大類": "乙", "中類": "ダメージ"}, {}]}]},
-    {"大類": "乙", "中類": ["ダメージ"], "子": [{"詞元": "回復"}]},
-]
-
-
 class TestEmptyLeafRemovalRealTree(unittest.TestCase):
     """empty-leaf-removal 票 01 的真樹:刪掉 にする→裏側表示 與 指定、無効にする(耐性) 的預設葉。"""
 
-    def status_and_leaves(self, text):
-        return [(row[0], row[1], row[2]) for row in classify(text)]
+    def actions(self, text):
+        return [(action, status, leaves) for action, status, leaves, *_ in classify(text)]
 
     def test_face_down_goal_falls_to_nisuru_default_leaf(self):
         """語料沒有效果位的「裏側表示にする」,用造句:將來出現時落預設葉、不遺失。"""
-        self.assertEqual(self.status_and_leaves("①：このカードを裏側表示にする。"),
+        self.assertEqual(self.actions("①：このカードを裏側表示にする。"),
                          [("にする", "已歸", ["にする"])])
 
     def test_face_down_defense_keeps_its_two_leaves(self):
+        """真卡 28273805 的句子。"""
         self.assertEqual(
-            self.status_and_leaves("●相手フィールドのモンスター１体を裏側守備表示にする。")[-1][2][:2],
-            ["にする→裏側守備表示", "にする→守備表示"])
+            self.actions("●相手フィールドの攻撃力２０００以下のモンスター１体を裏側守備表示にする。"),
+            [("にする", "已歸", ["にする→裏側守備表示", "にする→守備表示"])])
 
     def test_turned_face_down_condition_has_no_category_leaf(self):
-        """條件位不進動作類別(語料 8 框都是這個句型,留給觸發事件軸)。"""
+        """條件位不進動作類別(語料 8 框的前段都是這個句型,留給觸發事件軸;後段是造句)。"""
         self.assertEqual(
-            self.status_and_leaves("①：自分フィールドの表側表示モンスターが裏側表示になった時に発動できる。"
-                                   "このカードを手札から特殊召喚する。"),
+            self.actions("①：自分フィールドの表側表示モンスターが裏側表示になった時に発動できる。"
+                         "このカードを手札から特殊召喚する。"),
             [("にする", "不適用", []), ("特殊召喚", "已歸", ["特殊召喚←手札"])])
 
     def test_designate_off_field_is_unplaced(self):
         """語料的 指定 全在場上,用造句:所在不是場上的框進未歸、不落預設葉。"""
-        self.assertEqual(self.status_and_leaves("①：相手の墓地のカード１枚を指定する。"),
+        self.assertEqual(self.actions("①：相手の墓地のカード１枚を指定する。"),
                          [("指定", "未歸", [])])
 
     def test_designate_on_field_keeps_its_leaf(self):
-        self.assertEqual(self.status_and_leaves("①：使用していない相手のモンスターゾーンを１ヵ所指定する。"),
+        self.assertEqual(self.actions("①：使用していない相手のモンスターゾーンを１ヵ所指定する。"),
                          [("指定", "已歸", ["指定@フィールド"])])
 
     def test_negate_resistance_without_keyword_is_unplaced(self):
         """語料的耐性 無効にする 都含 効果/発動/召喚,用造句:都不含的框進未歸。"""
-        self.assertEqual(self.status_and_leaves("①：このカードの攻撃は無効にされない。"),
+        self.assertEqual(self.actions("①：このカードの攻撃は無効にされない。"),
                          [("無効にする", "未歸", [])])
 
 
-class TestEmptyLeaves(unittest.TestCase):
-    """empty-leaf-removal 票 02:每片葉在全語料的效果位或代價位至少要有一框,預設葉也一樣。"""
+# 測試小樹:空葉查詢(預設葉與目的關鍵詞葉各可空)
+EMPTY_LEAF_TREE = [
+    {"詞元": "破壊", "子": [{"所在": "墓地"}, {}]},
+    {"詞元": "にする", "子": [{"目的關鍵詞": ["裏側表示"]}, {}]},
+]
+# 補滿 破壊 兩葉的句子,讓各測試只看 にする 那一側
+DESTROY_LEAVES_FILLED = ("①：相手の墓地のカードを破壊する。", "①：このカードを破壊する。")
 
-    SMALL_TREE = {"樹": [{"詞元": "破壊", "子": [{"所在": "墓地"}, {}]},
-                         {"詞元": "にする", "子": [{"目的關鍵詞": ["裏側表示"]}, {}]}]}
+
+class TestEmptyLeaves(unittest.TestCase):
+    """empty-leaf-removal 票 02:每片葉在全語料的效果位或代價位至少要有一框,預設葉也一樣。
+    接縫是空葉查詢,不是 classify:一棵樹對一批框架報哪些空葉(規格裁定的第二個接縫)。"""
 
     def empty_leaves(self, *texts):
-        tree = categories.CategoryTree(self.SMALL_TREE)
+        tree = categories.CategoryTree({"樹": EMPTY_LEAF_TREE})
         return categories.empty_leaves(tree, [{"frames": frames.extract(t)} for t in texts])
 
     def test_reports_empty_leaves_in_tree_order(self):
-        self.assertEqual(self.empty_leaves("①：相手の墓地のカードを破壊する。"),
+        self.assertEqual(self.empty_leaves(DESTROY_LEAVES_FILLED[0]),
                          ["破壊", "にする→裏側表示", "にする"])
 
     def test_default_leaf_without_frames_is_empty(self):
         self.assertEqual(
-            self.empty_leaves("①：相手の墓地のカードを破壊する。", "①：このカードを破壊する。",
-                              "①：このカードを裏側表示にする。"),
+            self.empty_leaves(*DESTROY_LEAVES_FILLED, "①：このカードを裏側表示にする。"),
             ["にする"])
 
     def test_leaf_hit_only_in_condition_position_is_empty(self):
         self.assertEqual(
-            self.empty_leaves("①：相手の墓地のカードを破壊する。", "①：このカードを破壊する。",
-                              "①：このカードを攻撃表示にする。",
+            self.empty_leaves(*DESTROY_LEAVES_FILLED, "①：このカードを攻撃表示にする。",
                               "①：自分のモンスターが裏側表示になった時に発動できる。"),
             ["にする→裏側表示"])
 
     def test_cost_position_counts(self):
         self.assertEqual(
-            self.empty_leaves("①：相手の墓地のカードを破壊する。", "①：このカードを破壊する。",
-                              "①：このカードを攻撃表示にする。",
+            self.empty_leaves(*DESTROY_LEAVES_FILLED, "①：このカードを攻撃表示にする。",
                               "①：このカードを裏側表示にして発動できる。"),
             [])
 
     def test_all_leaves_have_frames(self):
         self.assertEqual(
-            self.empty_leaves("①：相手の墓地のカードを破壊する。", "①：このカードを破壊する。",
-                              "①：このカードを裏側表示にする。", "①：このカードを攻撃表示にする。"),
+            self.empty_leaves(*DESTROY_LEAVES_FILLED, "①：このカードを裏側表示にする。",
+                              "①：このカードを攻撃表示にする。"),
             [])
 
     def test_real_tree_has_no_empty_leaf_in_corpus(self):
@@ -1129,6 +1122,18 @@ class TestEmptyLeaves(unittest.TestCase):
             sentences = json.load(f)
         self.assertEqual(categories.empty_leaves(categories.default_tree(), sentences), [],
                          "這些葉在全語料的效果位與代價位都沒有框,請站主決定刪葉或改規則")
+
+
+# 測試小樹:中類(大類底下列中類清單,葉以名字宣告)
+MIDDLE_TREE = [
+    {"大類": "甲", "中類": ["攻撃力", "守備力"], "子": [
+        {"詞元": "アップ", "子": [
+            {"關鍵詞": ["攻撃力"], "中類": "攻撃力"}, {"關鍵詞": ["守備力"], "中類": "守備力"}, {}]},
+        {"詞元": "にする", "子": [
+            {"關鍵詞": ["攻撃力"], "中類": "攻撃力"}, {"關鍵詞": ["守備力"]},
+            {"關鍵詞": ["ダメージ"], "大類": "乙", "中類": "ダメージ"}, {}]}]},
+    {"大類": "乙", "中類": ["ダメージ"], "子": [{"詞元": "回復"}]},
+]
 
 
 class TestMiddleClass(unittest.TestCase):

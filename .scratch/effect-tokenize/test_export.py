@@ -85,7 +85,8 @@ class TestExport(unittest.TestCase):
         doc, problems = export({1: [clause("①", REVIVE)]})
         self.assertEqual(problems, [])
         self.assertEqual(doc["句"], [{"card": 1, "section": "main", "index": "①",
-                                      "hash": sha(REVIVE), "effect": ["特殊召喚←墓地"]}])
+                                      "hash": sha(REVIVE), "effect": ["特殊召喚←墓地"],
+                                      "effect_nonself": ["特殊召喚←墓地"]}])
 
     def test_cost_leaves_are_grouped_apart_from_effect_leaves(self):
         self.assertEqual(rows({1: [clause("①", "①：手札を１枚捨てて発動できる。デッキから"
@@ -226,7 +227,7 @@ class TestPatientSelf(unittest.TestCase):
         """帶定語、切掉區域的此卡(墓地のこのカード)。"""
         self.assertEqual(modes("①：墓地のこのカードを除外して発動できる。自分フィールドの"
                                "カード１枚を破壊する。"),
-                         {"cost_self": ["除外←墓地"]})
+                         {"cost_self": ["除外←墓地"], "effect_nonself": ["破壊@自分フィールド"]})
 
     def test_releasing_this_card_then_summoning_another_is_not_self_summon(self):
         """代價解放此卡、處理從手牌特召另一隻:特召不是此卡,代價的解放才是。"""
@@ -292,6 +293,74 @@ class TestPatientSelf(unittest.TestCase):
                          2: [clause("①", REVIVE)]})
         self.assertEqual(doc["統計"]["框架"]["此卡"], 1)
         self.assertEqual(doc["統計"]["卡"]["此卡"], 1)
+
+
+class TestPatientNonSelf(unittest.TestCase):
+    """[[動作對象]]「非此卡」(action-patient 票 03):確定不動到此卡;全部類暫當皆非。"""
+
+    def test_selection_with_a_count_is_nonself(self):
+        self.assertEqual(modes("①：フィールドのカード１枚を対象として発動できる。そのカードを"
+                               "破壊する。").get("effect_nonself"), ["破壊"])
+        self.assertEqual(modes("①：自分の墓地からモンスター１体を特殊召喚する。"),
+                         {"effect_nonself": ["特殊召喚←墓地"]})
+
+    def test_summoning_another_monster_from_hand_is_nonself(self):
+        self.assertEqual(modes("①：このカードをリリースして発動できる。手札からモンスター１体を"
+                               "特殊召喚する。"),
+                         {"cost_self": ["リリース"], "effect_nonself": ["特殊召喚←手札"]})
+
+    def test_other_than_this_card_is_nonself(self):
+        self.assertEqual(modes("①：このカード以外の自分フィールドのモンスターを全て破壊する。"),
+                         {"effect_nonself": ["破壊:モンスター", "破壊@自分フィールド"]})
+
+    def test_zone_patient_with_a_count_is_nonself(self):
+        """受事者寫成區域:手札を１枚捨てる(數量在子句裡)。"""
+        self.assertEqual(modes("①：手札を１枚捨てて発動できる。自分はデッキから１枚ドローする。"),
+                         {"cost_nonself": ["捨てる"]})
+
+    def test_effect_or_activation_owned_by_another_is_nonself(self):
+        self.assertEqual(modes("①：相手が魔法カードを発動した時に発動できる。その発動を無効にする。",
+                               kind="誘發即時效果").get("effect_nonself"),
+                         ["無効にする:発動"])
+        self.assertEqual(modes("①：相手の効果を無効にする。").get("effect_nonself"),
+                         ["無効にする:効果"])
+
+    def test_attribute_of_a_selected_card_is_nonself(self):
+        self.assertEqual(modes("①：相手フィールドのモンスター１体を対象として発動できる。"
+                               "そのモンスターの攻撃力は０になる。").get("effect_nonself"),
+                         ["にする:攻撃力"])
+
+    def test_cards_attached_to_this_card_are_nonself(self):
+        self.assertEqual(modes("①：このカードのX素材を１つ取り除いて発動できる。自分はデッキから"
+                               "１枚ドローする。"),
+                         {"cost_nonself": ["取り除く:X素材"]})
+
+    def test_bare_card_count_is_a_selection(self):
+        """受事者只剩量詞(その内の１体)也是選擇類。"""
+        self.assertEqual(modes("①：相手フィールドのモンスター２体を対象として発動できる。"
+                               "その内の１体を破壊する。").get("effect_nonself"), ["破壊"])
+
+    def test_draw_and_damage_have_no_card_patient(self):
+        self.assertEqual(modes("①：自分はデッキから２枚ドローする。"), {})
+        self.assertEqual(modes("①：相手に１０００ダメージを与える。"), {})
+
+    def test_this_card_listed_with_another_is_only_self(self):
+        self.assertEqual(modes("①：このカードと植物族モンスター１体を手札から特殊召喚する。"),
+                         {"effect_self": ["特殊召喚←手札"]})
+
+    def test_same_sentence_can_carry_a_leaf_in_both_modes(self):
+        self.assertEqual(modes("①：このカードを手札から特殊召喚する。その後、手札からモンスター"
+                               "１体を特殊召喚する。"),
+                         {"effect_self": ["特殊召喚←手札"], "effect_nonself": ["特殊召喚←手札"]})
+
+    def test_stats_count_nonself_and_unknown_patients(self):
+        doc, _ = export({1: [clause("①", "①：自分の墓地からモンスター１体を特殊召喚する。")],
+                         2: [clause("①", "①：相手に１０００ダメージを与える。")]})
+        stats = doc["統計"]
+        self.assertEqual(stats["框架"]["非此卡"], 1)
+        self.assertEqual(stats["卡"]["非此卡"], 1)
+        self.assertEqual(stats["理由"].get("皆非:不是卡"), 1)
+        self.assertIn("表外受事者", stats)
 
 
 if __name__ == "__main__":

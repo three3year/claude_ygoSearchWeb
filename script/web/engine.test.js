@@ -1903,3 +1903,42 @@ test('動作對象:不算條件數,也不算類別軸的已選數', () => {
   assert.strictEqual(harness.critCount(patBox, { act: { [REVIVE_HAND]: 1 }, actPat: 'self' }), 1);
   assert.strictEqual(harness.axisCounts(patBox, { act: { [REVIVE_HAND]: 1 }, actPat: 'self' }).act, 1);
 });
+
+test('動作對象「非此卡」:選中的葉只算非此卡葉', () => {
+  assert.deepStrictEqual(patIds({ act: { [REVIVE_HAND]: 1 }, actPat: 'nonself' }),
+                         [4002, 4003, 4004, 4005]);
+});
+
+test('動作對象:同句一葉可同時在兩模式;只有此卡葉的(雪花蓮型)只中此卡', () => {
+  const self = patIds({ act: { [REVIVE_HAND]: 1 }, actPat: 'self' });
+  const non = patIds({ act: { [REVIVE_HAND]: 1 }, actPat: 'nonself' });
+  assert.ok(self.includes(4003) && non.includes(4003));
+  assert.ok(self.includes(4001) && !non.includes(4001));
+});
+
+test('動作對象:皆非的框架只在不限時出現', () => {
+  assert.ok(patIds({ act: { [REVIVE_HAND]: 1 } }).includes(4007));
+  assert.ok(!patIds({ act: { [REVIVE_HAND]: 1 }, actPat: 'self' }).includes(4007));
+  assert.ok(!patIds({ act: { [REVIVE_HAND]: 1 }, actPat: 'nonself' }).includes(4007));
+});
+
+test('動作對象「非此卡」:排除只擋會動到別張卡的;含代價照常', () => {
+  assert.deepStrictEqual(patIds({ act: { [REVIVE_HAND]: -1 }, actPat: 'nonself' }),
+                         [4001, 4006, 4007]);
+  assert.deepStrictEqual(patIds({ act: { [RELEASE]: 1 }, actPat: 'nonself', actCost: 1 }), []);
+});
+
+test('動作對象「非此卡」:AND 時每個節點都在非此卡模式下成立', () => {
+  assert.deepStrictEqual(patIds({ act: { [REVIVE_HAND]: 1, '破壊': 1 }, actPat: 'nonself' }), []);
+  assert.deepStrictEqual(patRows({ act: { '召喚': 1 }, actPat: 'nonself' }, 4005), [1]);
+});
+
+test('動作對象:網址往返三個值', () => {
+  for (const actPat of ['self', 'nonself']) {
+    const st = { q: { ...EMPTY_Q, act: { [REVIVE_HAND]: 1 }, actPat }, sort: DOM_SORT };
+    const h = harness.hash(patBox, st);
+    assert.deepStrictEqual(harness.parseHash(patBox, h), st);
+  }
+  const plain = { q: { ...EMPTY_Q, act: { [REVIVE_HAND]: 1 } }, sort: DOM_SORT };
+  assert.deepStrictEqual(harness.parseHash(patBox, harness.hash(patBox, plain)), plain);
+});

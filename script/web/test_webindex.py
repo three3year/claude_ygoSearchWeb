@@ -997,18 +997,21 @@ class CategoryTest(unittest.TestCase):
     def test_patient_mode_leaf_fields_align_with_tx(self):
         """[[動作對象]]:此卡葉(效果位 `aes`、代價位 `acs`)與 `tx` 對齊,全空時省略。"""
         rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1),
-                 "effect": ["特殊召喚←墓地"], "cost": ["捨てる"], "cost_self": ["捨てる"]},
+                 "effect": ["特殊召喚←墓地"], "cost": ["捨てる"], "cost_self": ["捨てる"],
+                 "effect_nonself": ["特殊召喚←墓地"]},
                 {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2),
-                 "effect": ["破壊"], "effect_self": ["破壊"]}]
+                 "effect": ["破壊"], "effect_self": ["破壊"], "effect_nonself": ["破壊"]}]
         index, report = self.build(rows)
         self.assertEqual(report["problems"], [])
         entry = index["cards"][0]
         self.assertEqual(entry["aes"], [[], [1]])
         self.assertEqual(entry["acs"], [[2], []])
+        self.assertEqual(entry["aen"], [[0], [1]])
+        self.assertNotIn("acn", entry)
 
     def test_patient_mode_fields_are_omitted_when_empty(self):
         entry = self.build()[0]["cards"][0]
-        for field in ("aes", "acs"):
+        for field in ("aes", "acs", "aen", "acn"):
             self.assertNotIn(field, entry)
 
     def test_serialized_index_is_deterministic(self):

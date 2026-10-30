@@ -104,7 +104,7 @@ def export(sentences, records, tree):
                  "hash": text_hash(s["text_ja"][part["start"]:part["end"]])},
                 **{group: set() for group in ROW_GROUPS})
         verdicts = patient.judge_sentence(s["frames"])
-        for fr, (mode, why) in zip(s["frames"], verdicts):
+        for fr, (mode, why, text) in zip(s["frames"], verdicts):
             if fr["kind"] != KIND_ACTION:
                 continue
             key = (s["card"], s["section"], s["index"], fr["order"])
@@ -122,7 +122,7 @@ def export(sentences, records, tree):
                 rows[index][group].update(record["leaves"])
                 if mode:
                     rows[index][group + MODE_SUFFIX[mode]].update(record["leaves"])
-                stats.add(s["card"], mode, why)
+                stats.add(s["card"], mode, why, text)
         for row in rows.values():
             for group in ROW_GROUPS:
                 leaves = sorted(row[group], key=order.__getitem__)
@@ -141,22 +141,29 @@ def export(sentences, records, tree):
 class Stats:
     """動作對象判定的計數:帶葉的效果位/代價位框架,依值與理由分。"""
 
+    SAMPLES = 20
+
     def __init__(self):
         self.frames = {}
         self.cards = {}
         self.reasons = {}
+        self.unknown = {}
 
-    def add(self, card, mode, why):
+    def add(self, card, mode, why, text):
         key = mode or "皆非"
         self.frames[key] = self.frames.get(key, 0) + 1
         self.cards.setdefault(key, set()).add(card)
         self.reasons[key + ":" + why] = self.reasons.get(key + ":" + why, 0) + 1
+        if why == patient.WHY_UNKNOWN:
+            self.unknown[text] = self.unknown.get(text, 0) + 1
 
     def doc(self):
         keys = (patient.SELF, patient.NONSELF, "皆非")
+        top = sorted(self.unknown.items(), key=lambda kv: (-kv[1], kv[0]))[:self.SAMPLES]
         return {"框架": {k: self.frames.get(k, 0) for k in keys},
                 "卡": {k: len(self.cards.get(k, ())) for k in keys},
-                "理由": dict(sorted(self.reasons.items()))}
+                "理由": dict(sorted(self.reasons.items())),
+                "表外受事者": dict(top)}
 
 
 def serialize(doc):
@@ -205,6 +212,8 @@ def main():
         "%s %d 框 %d 張" % (k, n, stats["卡"][k]) for k, n in stats["框架"].items()))
     for why, n in stats["理由"].items():
         print("  %s %d" % (why, n))
+    print("  表外受事者(前 %d 種):%s" % (len(stats["表外受事者"]), "、".join(
+        "%s×%d" % kv for kv in stats["表外受事者"].items())))
     return 0
 
 

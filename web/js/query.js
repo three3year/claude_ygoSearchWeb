@@ -174,6 +174,8 @@ function actNodeHtml(id) {
 const PAT_OPTIONS = [
   { v: '', zh: '不限', title: '不分動到的是不是此卡' },
   { v: 'self', zh: '此卡', title: '只算動到此卡本身的動作（此卡特殊召喚、此卡回到手牌、此卡攻擊力上升）' },
+  { v: 'nonself', zh: '非此卡',
+    title: '只算確定不動到此卡的動作（從手牌特殊召喚別隻、破壞對手1張卡）；「此卡和另1隻」、會連此卡一起動到的全場效果不算' },
 ];
 
 function patZh(v) {

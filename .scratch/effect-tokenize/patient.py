@@ -15,6 +15,12 @@
   (攻撃力、レベル…)跟著它的主人判。
 - 皆非:受事者不是卡(封閉名詞表)、表外判不出的,以及會包含此卡的全部類。
 
+受事者是指示詞時讀框架的[[回指]](anaphora.py),沿用目標的判定:目標含此卡 → 此卡;このカード以外、
+他の → 非此卡;目標或指示詞自己帶數量 → 非此卡;無數量的群體 → 全部類比對(區域、玩家用回指欄,
+事件主語是相手算對手,事件主語是此卡時目標確定是別張,發動位置用受事者那個框架當時的位置)。效果類(その発動、その効果、その攻撃)
+事件主人字面是此卡才算此卡,其餘非此卡。回指留空 → 非此卡。修飾語(そのモンスターより…Xモンスター)
+不算指示詞,照受事者自己的字面判。字面指名此卡的規則(そのカードとこのカード)優先於回指。
+
 全部類(沒有數量的群體)依**發動位置**判:一句效果句內依序取 條件/代價寫明的此卡區域、
 條件位觸發事件裡此卡的去處、處理中此卡自己移動的起點,都沒有就是場上(此卡在我方)。此卡在
 代價或處理中自己移動之後,後面的框架改看移動的目的(手札から特殊召喚 之後 手札全部 不含此卡)。
@@ -29,6 +35,7 @@ import re
 import sys
 import unicodedata
 
+import anaphora
 from constraints import KIND_ACTION
 from frames import POS_COND, POS_COST, POS_EFFECT
 from places import PLAYER_OPP, ZONE_TERMS, parse_zones
@@ -71,6 +78,18 @@ WHY_NO_OWNER = "屬性沒有主人"
 WHY_NOT_CARD = "不是卡"
 WHY_UNKNOWN = "表外"
 WHY_NONE = "沒有受事者"
+# 回指(全部類的結果另以「回指」為前綴記,例 回指全部類含此卡)
+WHY_ANAPHORA_SELECTED = "回指選擇類"
+WHY_ANAPHORA_SELF = "回指含此卡"
+WHY_ANAPHORA_OTHER_THAN_SELF = "回指此卡以外"
+WHY_ANAPHORA_ATTACHED = "回指此卡的附屬卡"
+WHY_ANAPHORA_SELF_AGENT = "回指此卡是事件主語"
+WHY_ANAPHORA_OWNER_SELF = "回指事件主人是此卡"
+WHY_ANAPHORA_OWNER_OTHER = "回指事件主人不是此卡"
+WHY_ANAPHORA_BLANK = "回指留空"
+WHY_MODIFIER_SELECTED = "修飾語選擇類"
+ANAPHORA_PREFIX = "回指"
+MODIFIER_PREFIX = "修飾語"
 # 全部類的判定(用到發動位置的框架)
 _WHY_ALL_CLASS = {WHY_ALL_INCLUDES, WHY_ALL_NO_ZONE, WHY_ALL_ZONE, WHY_ALL_PLAYER, WHY_ALL_KIND,
                   WHY_ALL_RACE, WHY_ALL_ATTR, WHY_ALL_ARCHETYPE, WHY_ALL_SUBTYPE, WHY_ALL_NUMERIC,
@@ -111,9 +130,7 @@ _CARD_HEADS = ("モンスター", "カード", "トークン", "チューナー"
                "デッキ", "墓地", "フィールド", "それ", "それら", "いずれか", "内", "対象", "残り",
                "魔法", "罠")
 # 不是卡——傷害、LP、數值、指示物與遊戲程序
-_NOT_CARD_HEADS = ("ダメージ", "LP", "ライフポイント", "カウンター", "サイコロ", "コイントス",
-                   "フェイズ", "ダメージ計算", "召喚条件", "数値", "数", "ターン", "目", "枚数",
-                   "合計", "種類")
+_NOT_CARD_HEADS = anaphora.NOT_CARD_HEADS
 # 選擇類:受事者帶數量(數字+量詞、〜まで)或指示詞。數量只寫在子句裡時要緊接受事者
 # (手札を１枚捨てる、カードを３枚まで)或是「〜の數まで/任意の數」——子句裡別的數字不算:
 # ターン終了時まで 是期間、レベルは５つ上がる 是升降值。全て 優先於子句裡的數量
@@ -123,7 +140,6 @@ _CLAUSE_COUNT = re.compile(r"を%s|数まで|任意の数|好きな数" % _QUANT
 _ALL_OF_THEM = re.compile(r"全て")
 _COUNT_TAIL = re.compile(r"(?:%s)?(?:まで|以上)?$" % _QUANTITY)
 _CARD_COUNT = re.compile(r"[0-9０-９]+(?:枚|体)")
-_DEMONSTRATIVE = re.compile(r"^(?:その|それら?(?:$|の)|対象の|この効果の対象)")
 _PAREN_TAIL = re.compile(r"[（(][^（()）]*[)）]$")
 _QUOTED = re.compile(r"「[^」]*」")
 _ATTRIBUTE_TAIL = re.compile(r"^(.*?)(?:の)*%s$" % _ATTR_LIST)
@@ -498,15 +514,44 @@ def _card_group(text, clause, all_class):
     """受事者是卡(或屬性的主人):→ (值, 理由)。"""
     if _ATTACHED.search(text):
         return NONSELF, WHY_ATTACHED
-    if _DEMONSTRATIVE.search(text) or _COUNT.search(text) or (
+    if anaphora.is_demonstrative(text) or _COUNT.search(text) or (
             _CLAUSE_COUNT.search(clause) and not _ALL_OF_THEM.search(clause)):
         return NONSELF, WHY_SELECTED
     return all_class(text)
 
 
-def classify(text, clause, all_class):
+def _follow_target(text, target, target_class):
+    """受事者是指示詞、帶回指:→ (值, 理由);target_class 是目標的全部類判定(回指欄 → (值, 理由))。"""
+    if target["via"] == anaphora.VIA_EVENT:
+        if target.get("subject") and anaphora.only_this_card(target["subject"]):
+            return SELF, WHY_ANAPHORA_OWNER_SELF
+        return NONSELF, WHY_ANAPHORA_OWNER_OTHER
+    if _names_this_card(target["text"]):
+        return SELF, WHY_ANAPHORA_SELF
+    if _OTHER_THAN_SELF.search(target["text"]):
+        return NONSELF, WHY_ANAPHORA_OTHER_THAN_SELF
+    if _ATTACHED.search(target["text"]):
+        return NONSELF, WHY_ANAPHORA_ATTACHED
+    # このカードが戦闘でモンスターを破壊し…そのモンスター:此卡是施事者,目標確定是別張
+    if target.get("subject") and anaphora.only_this_card(target["subject"]):
+        return NONSELF, WHY_ANAPHORA_SELF_AGENT
+    if target.get("count") or _COUNT.search(target["text"]) or anaphora.reference(text).counted:
+        return NONSELF, WHY_ANAPHORA_SELECTED
+    mode, why = target_class(target)
+    return mode, ANAPHORA_PREFIX + why
+
+
+def _modifier_group(text, clause, all_class):
+    """指示詞只修飾另一張卡:受事者照自己的字面判,帶數量是選擇類,沒有數量走全部類。"""
+    if _COUNT.search(text) or (_CLAUSE_COUNT.search(clause) and not _ALL_OF_THEM.search(clause)):
+        return NONSELF, WHY_MODIFIER_SELECTED
+    mode, why = all_class(text)
+    return mode, MODIFIER_PREFIX + why
+
+
+def classify(text, clause, all_class, target=None, target_class=None):
     """受事者字面(與它所在子句的字面,數量可能只寫在子句裡)→ (值, 理由);all_class 是
-    全部類的判定(群體字面 → (值, 理由))。"""
+    全部類的判定(群體字面 → (值, 理由));target 是框架的回指欄,target_class 是目標的全部類判定。"""
     if not text:
         return None, WHY_NONE
     why = self_rule(text)
@@ -514,6 +559,11 @@ def classify(text, clause, all_class):
         return SELF, why
     if _OTHER_THAN_SELF.search(text):
         return NONSELF, WHY_OTHER_THAN_SELF
+    if anaphora.modifier(text):
+        return _modifier_group(text, clause, all_class)
+    if anaphora.reference(text):
+        return _follow_target(text, target, target_class) if target \
+            else (NONSELF, WHY_ANAPHORA_BLANK)
     kind = head_kind(text)
     if kind == "not_card":
         return None, WHY_NOT_CARD
@@ -527,7 +577,7 @@ def classify(text, clause, all_class):
             return None, WHY_THIS_NAME
         return NONSELF, WHY_OTHERS_EFFECT
     if kind == "value":
-        if _DEMONSTRATIVE.search(text):
+        if anaphora.is_demonstrative(text):
             return NONSELF, WHY_SELECTED
         found = _ATTRIBUTE_TAIL.match(_core(text))
         owner = found.group(1) if found else ""
@@ -535,6 +585,21 @@ def classify(text, clause, all_class):
             return None, WHY_NO_OWNER
         return _card_group(owner, clause, all_class)
     return _card_group(text, clause, all_class)
+
+
+def _target_class(target, launched, face):
+    """回指目標是無數量的群體:全部類比對;區域用回指欄,玩家或事件主語是相手時確定不是此卡。"""
+    if target.get("player") == PLAYER_OPP or _clean(target.get("subject")).startswith(PLAYER_OPP):
+        return NONSELF, WHY_ALL_PLAYER
+    return _all_class(target["text"], {"place": target.get("place")}, launched, face)
+
+
+def _is_all_class(why):
+    """理由是全部類比對的結果(含回指、修飾語前綴):用到發動位置。"""
+    for prefix in (ANAPHORA_PREFIX, MODIFIER_PREFIX):
+        if why and why.startswith(prefix):
+            why = why[len(prefix):]
+    return why in _WHY_ALL_CLASS
 
 
 class Verdict:
@@ -563,10 +628,11 @@ def judge(frame, clause, launched, face):
     text, by_topic = patient(frame)
     if frame.get("action") in _NOT_CARD_ACTIONS:
         return Verdict(None, WHY_NOT_CARD, text)
-    mode, why = classify(text, clause, lambda group: _all_class(group, frame, launched, face))
+    mode, why = classify(text, clause, lambda group: _all_class(group, frame, launched, face),
+                         frame.get("anaphora"), lambda target: _target_class(target, launched, face))
     if by_topic and why == WHY_PATIENT:
         why = WHY_TOPIC
-    return Verdict(mode, why, text, launched.source if why in _WHY_ALL_CLASS else None)
+    return Verdict(mode, why, text, launched.source if _is_all_class(why) else None)
 
 
 def judge_sentence(frames, face=None, section="main"):

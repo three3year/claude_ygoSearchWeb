@@ -594,6 +594,127 @@ class TestPatientReviewFindings(unittest.TestCase):
         self.assertEqual(doc["統計"]["皆非發動位置"].get("預設場上"), 1)
 
 
+class TestPatientReadsAnaphora(unittest.TestCase):
+    """[[動作對象]]讀[[回指]](action-patient-anaphora 票 05、06):斷言此卡葉、非此卡葉。"""
+
+    def assert_nonself(self, found, group="effect"):
+        self.assertTrue(found.get(group + "_nonself"), found)
+        self.assertNotIn(group + "_self", found)
+
+    def assert_self(self, found, group="effect"):
+        self.assertTrue(found.get(group + "_self"), found)
+        self.assertNotIn(group + "_nonself", found)
+
+    def assert_neither(self, found, group="effect"):
+        self.assertNotIn(group + "_self", found)
+        self.assertNotIn(group + "_nonself", found)
+
+    # ── 票 05:選擇類、含此卡、留空 ──
+
+    def test_selected_target_stays_nonself(self):
+        self.assert_nonself(modes("①：フィールドのモンスター１体を対象として発動できる。そのモンスターを破壊する。"))
+
+    def test_other_than_this_card_target_is_nonself(self):
+        self.assert_nonself(modes("①：このカード以外のモンスター１体を対象として発動できる。そのモンスターを破壊する。"))
+
+    def test_listed_target_is_only_self(self):
+        self.assert_self(modes("①：手札のこのカードと手札のモンスター１体を相手に見せて発動できる。その２体を特殊召喚する。"))
+
+    def test_one_of_listed_target_is_self(self):
+        self.assert_self(modes("①：手札のこのカードと手札のモンスター１体を相手に見せて発動できる。"
+                               "その２体の内の１体を特殊召喚する。"))
+
+    def test_this_card_or_alternative_is_self(self):
+        self.assert_self(modes("①：このカードまたは自分フィールドのモンスター１体を対象として発動できる。"
+                               "そのモンスターを破壊する。"))
+
+    def test_attribute_follows_target(self):
+        self.assert_nonself(modes("①：フィールドのモンスター１体を対象として発動できる。そのモンスターの攻撃力は０になる。"))
+        self.assert_self(modes("①：このカードまたは自分のモンスター１体を選び、その攻撃力を１０００アップする。"))
+
+    def test_blank_stays_nonself(self):
+        self.assert_nonself(modes("①：そのモンスターを破壊する。"))
+        self.assert_nonself(modes("①：その効果を無効にする。"))
+
+    def test_this_card_alone_is_skipped_so_blank(self):
+        self.assert_nonself(modes("①：このカードを手札から捨てて発動できる。そのモンスターを破壊する。"))
+
+    def test_literal_this_card_rule_goes_first(self):
+        self.assert_self(modes("①：相手のモンスター１体を対象として発動できる。そのカードとこのカードを破壊する。"))
+
+    def test_modifier_with_count_is_selected(self):
+        self.assert_nonself(modes("①：自分フィールドのXモンスター１体を対象として発動できる。"
+                                  "そのモンスターよりランクが２つ高いXモンスター１体を特殊召喚する。"))
+
+    def test_modifier_without_count_is_all_class(self):
+        found = modes("①：フィールドのモンスター１体を対象として発動できる。"
+                      "そのモンスターより低い攻撃力を持つフィールドのモンスターを破壊する。")
+        self.assert_neither(found)
+
+    # ── 票 06:全部類與效果類 ──
+
+    def test_event_subject_opponent_is_nonself(self):
+        self.assert_nonself(modes("①：相手がモンスターを特殊召喚した時に発動できる。そのモンスターを破壊する。"))
+
+    def test_group_target_that_may_include_self_is_neither(self):
+        self.assert_neither(modes("①：自分のモンスターが戦闘を行うダメージ計算時に発動できる。"
+                                  "そのモンスターの攻撃力はターン終了時まで１０００アップする。"))
+
+    def test_race_mismatch_is_nonself(self):
+        self.assert_nonself(modes("①：自分の戦士族モンスターが戦闘を行うダメージ計算時に発動できる。"
+                                  "そのモンスターの攻撃力はターン終了時まで１０００アップする。"))
+
+    def test_race_match_is_neither(self):
+        self.assert_neither(modes("①：自分のドラゴン族モンスターが戦闘を行うダメージ計算時に発動できる。"
+                                  "そのモンスターの攻撃力はターン終了時まで１０００アップする。"))
+
+    def test_target_group_uses_position_after_self_move(self):
+        """此卡移動之後:目標的區域看移動的目的。"""
+        self.assert_nonself(
+            {k: v for k, v in modes("①：このカードを手札から特殊召喚する。その後、手札のモンスターが"
+                                    "存在する場合、そのモンスターを破壊する。").items()
+             if "破壊" in str(v)})
+
+    def test_owner_this_card_is_self(self):
+        self.assert_self(modes("①：このカードの攻撃宣言時に発動できる。その攻撃を無効にする。"))
+
+    def test_owner_other_is_nonself(self):
+        self.assert_nonself(modes("①：相手が効果を発動した時に発動できる。その発動を無効にする。"))
+        self.assert_nonself(modes("①：相手モンスターの攻撃宣言時に発動できる。その攻撃を無効にする。"))
+
+    def test_targeted_this_card_is_not_owner(self):
+        self.assert_nonself(modes("①：このカードが攻撃対象に選択された時に発動できる。その攻撃を無効にする。"))
+        self.assert_nonself(modes("①：このカードを対象とする効果が発動した時に発動できる。その効果を無効にする。"))
+
+    def test_owner_mentioning_this_card_is_not_self(self):
+        """47946130:主人字面只是提到此卡(このカードまたは…を対象とする相手)不算此卡。"""
+        self.assert_nonself(modes("①：このカードまたはこのカードのリンク先のモンスターを対象とする相手の効果が"
+                                  "発動した時に発動できる。その発動を無効にする。"))
+
+    def test_target_attached_to_this_card_is_nonself(self):
+        """12067160:このカードのリンク先のモンスター 是另一張卡。"""
+        self.assert_nonself(modes("①：このカードのリンク先のモンスターは攻撃できず、そのモンスターの攻撃力は０になる。"))
+
+    def test_this_card_as_event_subject_means_another_card(self):
+        """10602628:このカードが戦闘でモンスターを破壊し…その破壊されたモンスター。"""
+        self.assert_nonself(
+            {k: v for k, v in modes("①：このカードが戦闘でモンスターを破壊した時に発動できる。"
+                                    "その破壊されたモンスターを除外する。").items()})
+
+    def test_reasons_are_reported(self):
+        doc, _ = export({1: [clause("①", "①：フィールドのモンスター１体を対象として発動できる。そのモンスターを破壊する。"),
+                             clause("②", "②：このカードの攻撃宣言時に発動できる。その攻撃を無効にする。")]},
+                        faces={1: DRAGON})
+        reasons = doc["統計"]["理由"]
+        self.assertEqual(reasons["非此卡:回指選擇類"], 1)
+        self.assertEqual(reasons["此卡:回指事件主人是此卡"], 1)
+
+    def test_rerun_is_byte_identical(self):
+        cards = {1: [clause("①", "①：相手がモンスターを特殊召喚した時に発動できる。そのモンスターを破壊する。")]}
+        once = export_categories.serialize(export(cards, faces={1: DRAGON})[0])
+        self.assertEqual(once, export_categories.serialize(export(cards, faces={1: DRAGON})[0]))
+
+
 XYZ = {"id": 1, "type": 0x800021, "race": 0x1, "attribute": 0x10, "level": 4,
        "atk": 2000, "def": 1000, "name_ja": "テスト・エクシーズ"}
 UNKNOWN_ATK = dict(DRAGON, atk=-2, **{"def": -2})

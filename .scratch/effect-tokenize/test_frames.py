@@ -1978,5 +1978,325 @@ class TestComplementMoEffectAndTreat(unittest.TestCase):
                          ["S素材とする", "扱う"])
 
 
+def anaphora_of(text, action=None, context=""):
+    """效果句 → 第一個(或第一個動作是 action 的)帶指示詞受事者框架的回指欄;沒有回指時 None。"""
+    found = [f for f in actions(text, context)
+             if (action is None and f.get("anaphora")) or f["action"] == action]
+    return found[0].get("anaphora") if found else None
+
+
+class TestAnaphoraTargeted(unittest.TestCase):
+    """回指(action-patient-anaphora 票 01):対象の 與 対象とする 的目標。"""
+
+    def test_across_full_stop_keeps_text_and_place(self):
+        found = anaphora_of("①：フィールドのモンスター１体を対象として発動できる。"
+                            "そのモンスターを破壊する。")
+        self.assertEqual((found["text"], found["place"]), ("モンスター1体", "フィールド"))
+
+    def test_player_comes_from_place(self):
+        found = anaphora_of("①：相手フィールドのモンスター１体を対象として発動できる。"
+                            "そのモンスターを破壊する。")
+        self.assertEqual((found["place"], found["player"]), ("相手フィールド", "相手"))
+
+    def test_taishou_no_skips_this_card_and_points_to_target_frame(self):
+        found = anaphora_of("①：自分フィールドの魔法・罠カード１枚を対象として発動できる。"
+                            "このカードを特殊召喚し、対象のカードをデッキに戻す。", "戻す")
+        self.assertEqual((found["text"], found["via"]), ("魔法(カード)・罠カード1枚", "対象"))
+
+    def test_taishou_no_without_target_frame_is_blank(self):
+        self.assertIsNone(anaphora_of("①：このカードを特殊召喚し、対象のカードをデッキに戻す。", "戻す"))
+
+    def test_this_effects_target(self):
+        found = anaphora_of("①：相手フィールドのカード１枚を対象として発動できる。"
+                            "この効果の対象を破壊する。", "破壊")
+        self.assertEqual(found["text"], "カード1枚")
+
+    def test_backfilled_demonstrative_object(self):
+        # 破壊 的對象由か群組從 そのカード 回填
+        found = anaphora_of("①：フィールドのカード１枚を対象として発動できる。"
+                            "そのカードを除外するか破壊する。", "破壊")
+        self.assertEqual(found["text"], "カード1枚")
+
+    def test_no_demonstrative_no_field(self):
+        self.assertNotIn("anaphora", actions("①：フィールドのカード１枚を破壊する。")[0])
+
+
+class TestAnaphoraGeneral(unittest.TestCase):
+    """回指(票 02):欄位候選、此卡、範圍、解到底、修飾語、不是卡。"""
+
+    def test_singular_skips_this_card(self):
+        self.assertIsNone(anaphora_of("①：このカードを手札から捨てて発動できる。"
+                                      "その破壊されたモンスターを除外する。", "除外"))
+        found = anaphora_of("①：相手モンスター１体を破壊し、このカードを手札に戻す。"
+                            "その破壊されたモンスターを除外する。", "除外")
+        self.assertEqual(found["text"], "相手モンスター1体")
+
+    def test_listed_with_this_card_is_not_skipped(self):
+        found = anaphora_of("①：手札のこのカードと手札のモンスター１体を相手に見せて発動できる。"
+                            "その２体を特殊召喚する。", "特殊召喚")
+        self.assertEqual((found["text"], found["place"]), ("このカードとモンスター1体", "手札"))
+
+    def test_this_card_or_alternative_is_not_skipped(self):
+        found = anaphora_of("①：このカードまたは自分フィールドのモンスター１体を対象として発動できる。"
+                            "そのモンスターの攻撃力は１０００アップする。", "アップ")
+        self.assertIn("このカード", found["text"])
+
+    def test_this_card_other_than_is_a_candidate(self):
+        found = anaphora_of("①：このカード以外のモンスター１体を対象として発動できる。"
+                            "そのモンスターを破壊する。", "破壊")
+        self.assertEqual(found["text"], "このカード以外のモンスター1体")
+
+    def test_qualifier_beats_nearest(self):
+        found = anaphora_of("①：相手の墓地のモンスター１体を除外し、自分の墓地のモンスター１体を手札に加える。"
+                            "その相手モンスターを戻す。", "戻す")
+        self.assertEqual(found["player"], "相手")
+        found = anaphora_of("①：デッキから融合モンスター１体を墓地へ送り、手札からモンスター１体を特殊召喚する。"
+                            "その融合モンスターを除外する。", "除外")
+        self.assertEqual(found["text"], "融合モンスター1体")
+
+    def test_nearest_when_qualifiers_tie(self):
+        found = anaphora_of("①：墓地のモンスター１体を除外し、手札のモンスター１体を墓地へ送る。"
+                            "そのモンスターを破壊する。", "破壊")
+        self.assertEqual(found["place"], "手札")
+
+    def test_options_are_isolated(self):
+        text = ("①：以下の効果から１つを選択して発動できる。\n"
+                "●自分フィールドのカード１枚を対象として発動できる。そのカードを破壊する。\n"
+                "●そのカードを除外する。")
+        self.assertEqual(anaphora_of(text, "破壊")["text"], "カード1枚")
+        self.assertIsNone(anaphora_of(text, "除外"))
+
+    def test_common_part_reaches_both_options(self):
+        text = ("①：フィールドのカード１枚を対象として発動できる。\n"
+                "●そのカードを破壊する。\n●そのカードを除外する。")
+        self.assertEqual(anaphora_of(text, "破壊")["text"], "カード1枚")
+        self.assertEqual(anaphora_of(text, "除外")["text"], "カード1枚")
+
+    def test_no_reach_into_context(self):
+        self.assertIsNone(anaphora_of("②：そのモンスターを破壊する。", "破壊",
+                                      context="①：モンスター１体を対象として発動できる。"))
+
+    def test_chain_resolves_to_the_end(self):
+        found = anaphora_of("①：相手フィールドのモンスター１体を対象として発動できる。"
+                            "そのモンスターを破壊し、それを除外する。", "除外")
+        self.assertEqual((found["text"], found["player"]), ("モンスター1体", "相手"))
+
+    def test_modifier_is_not_anaphora(self):
+        for text, action in (
+                ("①：自分フィールドのXモンスター１体を対象として発動できる。"
+                 "そのモンスターよりランクが２つ高いXモンスター１体を特殊召喚する。", "特殊召喚"),
+                ("①：墓地のモンスター１体を対象として発動できる。"
+                 "そのモンスターと同じ種族のモンスター１体を破壊する。", "破壊"),
+                ("①：墓地のモンスター１体を対象として発動できる。"
+                 "そのモンスターとはカード名が異なるモンスター１体を破壊する。", "破壊"),
+                ("①：墓地のモンスター１体を対象として発動できる。"
+                 "そのモンスターのレベル以下のレベルを持つモンスターを破壊する。", "破壊"),
+                ("①：墓地のモンスター１体を対象として発動できる。"
+                 "そのモンスターにカード名が記されたモンスター１体を破壊する。", "破壊")):
+            self.assertIsNone(anaphora_of(text, action), text)
+
+    def test_not_a_card_has_no_anaphora(self):
+        self.assertIsNone(anaphora_of("①：モンスター１体を対象として発動できる。"
+                                      "その戦闘で発生する戦闘ダメージを０にする。", "にする"))
+        self.assertIsNone(anaphora_of("①：モンスター１体を対象として発動できる。"
+                                      "その数を０にする。", "にする"))
+
+    def test_attribute_follows_owner(self):
+        found = anaphora_of("①：フィールドのモンスター１体を対象として発動できる。"
+                            "そのモンスターの攻撃力は０になる。", "にする")
+        self.assertEqual(found["text"], "モンスター1体")
+
+    def test_card_effect_follows_owner(self):
+        found = anaphora_of("①：相手フィールドのモンスター１体を対象として発動できる。"
+                            "そのモンスターの効果を無効にする。", "無効にする")
+        self.assertEqual((found["text"], found["via"]), ("モンスター1体", "欄位"))
+
+    def test_condition_position_too(self):
+        found = [f for f in actions("①：モンスター１体を対象として発動できる。"
+                                    "そのモンスターが破壊された場合、このカードを破壊する。")
+                 if f.get("anaphora")]
+        self.assertEqual([f["position"] for f in found], ["條件"])
+
+    def test_count_only_in_clause_is_kept(self):
+        found = anaphora_of("①：自分の墓地からモンスターを１体選んで特殊召喚する。"
+                            "そのモンスターの攻撃力は０になる。", "にする")
+        self.assertEqual((found["text"], found["count"]), ("モンスター", "1体"))
+
+
+class TestAnaphoraEvent(unittest.TestCase):
+    """回指(票 03):事件主語、效果類的主人、字面備援、留空。"""
+
+    def test_event_object_records_subject(self):
+        found = anaphora_of("①：相手がモンスターを特殊召喚した時に発動できる。"
+                            "そのモンスターを破壊する。", "破壊")
+        self.assertEqual((found["text"], found["subject"]), ("モンスター", "相手"))
+
+    def test_effect_owner_from_subject(self):
+        found = anaphora_of("①：相手が効果を発動した時に発動できる。その発動を無効にする。", "無効にする")
+        self.assertEqual((found["subject"], found["via"]), ("相手", "事件"))
+
+    def test_effect_owner_from_clause_literal(self):
+        found = anaphora_of("①：相手モンスターの攻撃宣言時に発動できる。その攻撃を無効にする。",
+                            "無効にする")
+        self.assertEqual(found["subject"], "相手モンスター")
+        found = anaphora_of("①：このカードの攻撃宣言時に発動できる。その攻撃を無効にする。", "無効にする")
+        self.assertEqual(found["subject"], "このカード")
+
+    def test_targeted_card_is_not_the_owner(self):
+        found = anaphora_of("①：このカードが攻撃対象に選択された時に発動できる。その攻撃を無効にする。",
+                            "無効にする")
+        self.assertNotIn("subject", found)
+        found = anaphora_of("①：このカードを対象とする効果が発動した時に発動できる。その効果を無効にする。",
+                            "無効にする")
+        self.assertEqual(found["subject"], "このカードを対象とする効果")
+
+    def test_effect_with_no_event_is_blank(self):
+        self.assertIsNone(anaphora_of("①：その効果を無効にする。", "無効にする"))
+
+    def test_literal_fallback(self):
+        found = anaphora_of("①：このカードが相手モンスターと戦闘を行う時に発動できる。"
+                            "その相手モンスターの攻撃力は０になる。", "にする")
+        self.assertEqual((found["text"], found["via"], found["player"]),
+                         ("相手モンスター", "字面", "相手"))
+
+    def test_literal_fallback_from_unframed_clause(self):
+        # 「戦闘を行う|ダメージ計算時」定語不出框架,仍從字面找到
+        found = anaphora_of("①：自分のモンスターが戦闘を行うダメージ計算時に発動できる。"
+                            "そのモンスターの攻撃力はターン終了時まで１０００アップする。", "アップ")
+        self.assertEqual((found["text"], found["player"]), ("自分のモンスター", "自分"))
+
+    def test_blank_when_nothing_matches(self):
+        self.assertIsNone(anaphora_of("①：このカードを破壊する。そのモンスターを除外する。", "除外"))
+
+
+class TestAnaphoraRound1(unittest.TestCase):
+    """回指 LLM 檢驗第一輪(anaphora-round1)抓到的錯,每類一條。"""
+
+    def test_bare_attribute(self):
+        """6622715:光禿禿的 その攻撃力 指前一個選的卡。"""
+        found = anaphora_of("①：このカードまたは自分のモンスター１体を選び、その攻撃力を１０００アップする。",
+                            "アップ")
+        self.assertEqual(found["text"], "このカードまたは自分のモンスター1体")
+
+    def test_target_of_listed_with_its_material(self):
+        """10424147:対象のモンスターとそのX素材 的 そのX素材 不是「另一張實體卡」的寫法。"""
+        found = anaphora_of("①：自分のXモンスター１体を対象として発動できる。"
+                            "対象のモンスターとそのX素材を除外する。", "除外")
+        self.assertEqual(found["text"], "自分のXモンスター1体")
+
+    def test_within_points_to_zone(self):
+        """39576656、91501248:その内の１枚 指前面確認的區域。"""
+        found = anaphora_of("①：相手の手札を確認し、その内の１枚を墓地へ送る。", "送る")
+        self.assertEqual(found["text"], "相手の手札")
+
+    def test_modified_this_card_is_still_this_card(self):
+        """39576656:S召喚したこのカード 字面只是此卡,不是候選。"""
+        self.assertIsNone(anaphora_of("①：S召喚したこのカードを破壊する。そのモンスターを除外する。", "除外"))
+
+    def test_fusion_monster_is_not_fusion_material(self):
+        """46136942:その融合モンスター 不指融合素材モンスター。"""
+        found = anaphora_of("①：EXデッキの融合モンスターカードに決められた融合素材モンスターを墓地へ送り、"
+                            "その融合モンスター１体を特殊召喚する。", "特殊召喚")
+        self.assertEqual(found["text"], "融合モンスターカード")
+
+    def test_used_material_is_a_modifier(self):
+        """76647978:その融合召喚に使用した融合素材 是另一組實體卡。"""
+        self.assertIsNone(anaphora_of("①：融合モンスター１体を対象として発動できる。そのモンスターの"
+                                      "融合召喚に使用した融合素材モンスター１組を特殊召喚する。", "特殊召喚"))
+
+    def test_literal_keeps_listed_names_and_ranges(self):
+        """64283880、29085954:字面片語不切開並列與範圍。"""
+        found = anaphora_of("①：「ガガガ」か「ドドド」モンスターが存在する場合に発動できる。"
+                            "そのモンスターを破壊する。", "破壊")
+        self.assertEqual(found["text"], "「ガガガ」か「ドドド」モンスター")
+
+    def test_literal_card_drops_event_tail(self):
+        """99157310、71442223:その攻撃モンスター 的目標是相手モンスター,不是攻撃宣言。"""
+        found = anaphora_of("①：相手モンスターの直接攻撃宣言時に発動できる。"
+                            "その攻撃モンスターを破壊する。", "破壊")
+        self.assertEqual((found["text"], found["via"]), ("相手モンスター", "字面"))
+
+    def test_field_target_drops_attribute(self):
+        """46947713:目標是卡本身,不帶屬性尾巴。"""
+        found = anaphora_of("①：自分のモンスターの攻撃力は５００アップする。それらを破壊する。", "破壊")
+        self.assertEqual(found["text"], "自分のモンスター")
+
+    def test_each_other_literal_and_own_qualifier_sets_player(self):
+        """86449372:モンスター同士 也是字面候選;その相手モンスター 的玩家看自己的限定語。"""
+        found = anaphora_of("①：自分と相手のモンスター同士が戦闘を行うダメージ計算時に発動できる。"
+                            "その相手モンスターの攻撃力を０にする。", "にする")
+        self.assertEqual((found["text"], found["player"]), ("自分と相手のモンスター", "相手"))
+
+    def test_bare_activation_word_is_not_an_event(self):
+        """8690387:「発動できる」的 発動 不是事件,沒有主人的片語不當目標。"""
+        self.assertIsNone(anaphora_of("①：モンスター１体を対象として発動できる。自分はその効果を適用する。",
+                                      "適用"))
+
+    def test_owner_from_relative_clause(self):
+        """34536828、6798031:相手が発動したモンスターの効果 的主人是相手。"""
+        found = anaphora_of("①：相手が発動したモンスターの効果の処理時に、その効果を無効にできる。",
+                            "無効にする")
+        self.assertEqual((found["subject"], found["via"]), ("相手", "事件"))
+
+    def test_owner_from_literal_with_processing_tail(self):
+        """46796664:魔法カードの効果の処理時に、その効果。"""
+        found = anaphora_of("①：魔法カードの効果の処理時に、その効果を無効にできる。", "無効にする")
+        self.assertEqual(found["subject"], "魔法カード")
+
+    def test_targeted_players_are_not_the_owners(self):
+        """19502505:自分フィールドの…を対象とする魔法カード 的玩家不是自分。"""
+        found = anaphora_of("①：自分フィールドのモンスター１体を対象とする魔法カードが発動した時に発動できる。"
+                            "その発動を無効にする。", "無効にする")
+        self.assertNotIn("player", found)
+
+    def test_activation_time_effect_follows_card(self):
+        """2815176 等(anaphora-round2):その魔法カード発動時の効果 跟著那張魔法卡。"""
+        found = anaphora_of("①：自分の墓地の魔法カード１枚を対象として発動できる。"
+                            "その魔法カード発動時の効果を適用する。", "適用")
+        self.assertEqual((found["text"], found["via"]), ("魔法カード1枚", "欄位"))
+
+    def test_bare_count_phrase_is_not_a_target(self):
+        """88494120(round2):モンスターが１体のみの場合 的「1体」不是目標。"""
+        found = anaphora_of("①：自分フィールドの表側表示モンスターが１体のみの場合、"
+                            "そのモンスター１体を対象として発動できる。", "対象とする")
+        self.assertEqual(found["text"], "表側表示モンスター")
+
+    def test_earlier_demonstrative_in_clause_does_not_cut_literal(self):
+        """46613515(round2):そのドローしたカードがモンスターだった場合、そのモンスター。"""
+        found = anaphora_of("①：相手モンスターの攻撃宣言時に発動できる。自分はデッキから１枚ドローする。"
+                            "そのドローしたカードがモンスターだった場合、そのモンスターを特殊召喚する。",
+                            "特殊召喚")
+        self.assertEqual(found["text"], "モンスター")
+
+    def test_literal_summon_success_keeps_event_subject(self):
+        """72971064(round2):相手がモンスターの特殊召喚に成功した時…そのモンスター。"""
+        found = anaphora_of("①：相手がモンスターの特殊召喚に成功した時に発動できる。"
+                            "そのモンスターを破壊する。", "破壊")
+        self.assertEqual((found["text"], found["subject"]), ("モンスター", "相手"))
+
+    def test_bare_sore_with_negation_is_the_event(self):
+        """10300821(round2):それを無効にし 無效的是事件,不是剛取除的素材。"""
+        found = anaphora_of("①：相手がモンスターを特殊召喚する際に、このカードのX素材を１つ取り除いて発動できる。"
+                            "それを無効にする。", "無効にする")
+        self.assertEqual((found["via"], found["subject"]), ("事件", "相手"))
+
+    def test_count_after_attribute(self):
+        """29251488(round2):そのモンスターのレベル３つまで。"""
+        found = anaphora_of("①：自分・相手ターンに１度、フィールドの効果モンスター１体を対象として発動できる。"
+                            "そのモンスターのレベルを３つまで上げる。", "アップ")
+        self.assertEqual(found["text"], "効果モンスター1体")
+
+    def test_processing_tail_not_in_text(self):
+        """17473466(round2):字面去掉「の処理」。"""
+        found = anaphora_of("①：魔法カードの効果の処理時に、その効果を無効にできる。", "無効にする")
+        self.assertEqual(found["text"], "魔法カードの効果")
+
+    def test_own_frame_subject_owns_the_effect(self):
+        """48497555:魔法カードがその効果を発動した時。"""
+        found = anaphora_of("①：相手の魔法カードがその効果を発動した時に発動できる。そのカードを破壊する。",
+                            "発動")
+        self.assertEqual((found["subject"], found["via"]), ("相手の魔法カード", "事件"))
+
+
 if __name__ == "__main__":
     unittest.main()

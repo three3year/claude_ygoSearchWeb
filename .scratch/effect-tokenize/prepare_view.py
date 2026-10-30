@@ -191,7 +191,7 @@ def frame_row(fr, offsets, category):
             chars, fr.get("option"), fr.get("label"), None,
             constraints.describe_action(fr), fr.get("backfill"), category,
             fr.get("topic"), fr.get("subject"), fr.get("place"), fr.get("inferred"),
-            fr.get("voice")]
+            fr.get("voice"), fr.get("anaphora")]
 
 
 def load_categories():

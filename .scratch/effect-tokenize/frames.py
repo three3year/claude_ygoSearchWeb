@@ -52,6 +52,9 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
     voice     可選(frame-lemma-unify 票 01/03):態 他動/自動/受身——受身是述語錨點判出的被動
               (取代 2026-10-27 前的 passive 旗標),他動/自動只在詞元對照表合併的詞元上記;
               沒值時不帶(空是沒判,不是他動)
+    anaphora  可選(action-patient-anaphora,anaphora.py):受事者位的指示詞(そのモンスター、対象の
+              カード、その発動)指的目標——字面 text、區域 place、玩家 player、事件主語或主人 subject、
+              只寫在子句裡的數量 count、找法 via(対象/欄位/字面/事件);不是卡、修飾語、找不到時不帶
 
 單位是效果句(一個編號效果的全文,連同它的 ● 選項;tokenize.py 的 assemble 把
 拆開的領起句與子效果句接回一段):選項邊界 token「●」與「。」同樣結束一句,
@@ -75,6 +78,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from constraints import KIND_ACTION, KIND_CONSTRAINT, ConstraintFinder  # noqa: E402
 import action_lemmas  # noqa: E402
+import anaphora  # noqa: E402
 from places import parse_place  # noqa: E402
 from report import frame_stats, token_kind  # noqa: E402
 
@@ -178,6 +182,7 @@ SPECIAL_POTENTIAL = {"出せ", "出せる", "選べ", "行え", "取り除け", 
 NON_PREDICATE_NOUNS = {"対", "な", "通常の", "際", "後", "前"}
 # 「N に する/なる」能併入動作的補語:至多三格、全是名詞類、不含數字
 FOLD_MAX = 3
+PHRASE_JOINERS = {"p:の", "・", "～", "p:か", "p:または", "p:及び", "p:や"}   # 回指字面片語的連接
 IRREALIS_TAIL = "あかさたなはまやらわがざだばぱ"
 NOUN_KINDS = {"name", "dem", "elided", "attr", "method", "cname", "num", "quant",
               "range", "counter"}
@@ -1552,7 +1557,40 @@ class FrameExtractor:
         # 依原文位置混排;同起點時約束框架在前(穩定排序保住並列述語的順序)
         frames.sort(key=lambda f: (f["sentence"], f["span"][0],
                                    f["kind"] != KIND_CONSTRAINT))
+        # 回指(action-patient-anaphora):讀回填、正規化之後的值,跨句號,所以排在最後
+        anaphora.resolve(frames, self._phrases(tokens, sentences, option_of))
         return frames
+
+    def _phrases(self, tokens, sentences, option_of):
+        """回指的字面備援:一個編號效果裡的名詞片語,→ [(句序, 起點, 選項, 字面, 發動者)],依原文順序;
+        沒出框架的子句(戦闘を行う|ダメージ計算時)也找得到。片語是名詞的連續段,の、・、～、か、または、
+        及び、や 連著的不切開,と 只連 自分と相手;發動者是片語前的「Xが発動した」「Xが」的 X。"""
+        def joins(k):
+            return (tokens[k] in PHRASE_JOINERS
+                    or tokens[k] == "p:と" and self.word(tokens[k - 1]) == "自分")
+
+        out = []
+        for s_idx, (s_start, s_end) in enumerate(sentences):
+            k = s_start
+            while k < s_end:
+                if not self.is_noun_like(tokens[k]):
+                    k += 1
+                    continue
+                m = k + 1
+                while m < s_end and (self.is_noun_like(tokens[m]) or (
+                        joins(m) and m + 1 < s_end and self.is_noun_like(tokens[m + 1]))):
+                    m += 1
+                agent = None
+                # 発動 本身也是片語,主人在它前一段
+                if (k - 3 >= s_start and tokens[k - 3] == "p:が" and len(out) >= 2
+                        and self.word(tokens[k - 2]) == "発動" and self.word(tokens[k - 1]) == "した"):
+                    agent = out[-2][3]
+                elif k - 1 >= s_start and tokens[k - 1] == "p:が" and out and out[-1][0] == s_idx:
+                    agent = out[-1][3]
+                out.append((s_idx, k, option_of[s_idx],
+                            "".join(self.surface(t) for t in tokens[k:m]), agent))
+                k = m
+        return out
 
     # ── 第二版論元(frame-args-v2 票 01〜03)──
     def _link_groups(self, tokens, anchors_by_sentence, made, marker_of):

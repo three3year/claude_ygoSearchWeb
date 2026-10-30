@@ -25,6 +25,9 @@
   詞元節點分組(節點的葉清單列一次)連續切 8 批,沒有節點的未歸框架輪流分到各批末尾,另寫
   tree.md(整棵樹)。批次檔的歸組讀當下的框架類別檔(先跑 categories.py;複檢時是修後的歸組)。
   錯誤三類 歸錯葉/該歸未歸/葉定義有問題,另記成因 規則/樹 或 框架抽取。
+- 回指(action-patient-anaphora 票 04;anaphora-round1 起):依回指來源七層(対象の/一般欄位/字面備援/
+  效果類/並列含此卡/修飾語/留空;一張卡依序歸入第一個符合的層,小層在前),約 80 張、切 4 批;
+  批次檔的框架列帶回指欄;錯誤類型 指錯/該指未指/不該指。
 種子固定,同一種子重抽得到同一批(複檢沿用);不同種子抽新樣本(過擬合抽驗)。
 
     sample   --round R --seed S   全語料抽樣:寫 llm-check/round<R>/sample.json 與 batch-<k>.md
@@ -34,9 +37,10 @@
     lemma    --round R --seed S   動作詞元統一受影響卡抽樣(寫 llm-check/lemma-round<R>/)
     variants --round R --seed S   動作詞元變體受影響卡抽樣(寫 llm-check/variant-round<R>/)
     categories --round R --seed S 動作類別依葉分層抽框架(寫 llm-check/category-round<R>/)
+    anaphora --round R --seed S   回指依來源分層抽樣(寫 llm-check/anaphora-round<R>/)
     report   --round R            讀 llm-check/round<R>/findings-<k>.json 寫 report.md
     recheck  --round R --from R0  用 round R0 的樣本重出批次檔(同批複檢)
-    (report/recheck 加 --line constraints、v2、v3、lemma、variants 或 categories 走各自的目錄)
+    (report/recheck 加 --line constraints、v2、v3、lemma、variants、categories 或 anaphora 走各自的目錄)
 
 批次檔一張卡一節、一句效果句一段:整段效果句(含 ● 選項;拆開的領起句與子效果句
 各標 index 與效果類型)與它的框架(含選項欄「●n 標籤」)。
@@ -59,6 +63,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import constraints  # noqa: E402
 import action_lemmas  # noqa: E402
+import anaphora  # noqa: E402
 import categories  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -117,6 +122,14 @@ QUOTA_VARIANTS = {"素材として扱う": 5, "補語夾も": 10, "効果不併"
                   "召喚の素材": 16, "行う:召喚": 15}
 BATCHES_VARIANTS = 3
 ERROR_TYPES_VARIANTS = ERROR_TYPES_LEMMA + ("展開錯",)
+# 回指(action-patient-anaphora 票 04):依回指來源七層(小層在前);錯誤類型三類
+STRATA_ANAPHORA = ("並列含此卡", "留空", "修飾語", "字面備援", "対象の", "效果類", "一般欄位")
+QUOTA_ANAPHORA = {"並列含此卡": 12, "留空": 12, "修飾語": 10, "字面備援": 16, "対象の": 10, "效果類": 12,
+                  "一般欄位": 12}
+BATCHES_ANAPHORA = 4
+ERROR_TYPES_ANAPHORA = ("指錯", "該指未指", "不該指")
+ANAPHORA_VIA = {anaphora.VIA_TARGET: "対象の", anaphora.VIA_FIELD: "一般欄位",
+                anaphora.VIA_LITERAL: "字面備援", anaphora.VIA_EVENT: "效果類"}
 MATERIAL_LEMMA = re.compile("(%s)素材[にと]する" % "|".join(action_lemmas.MATERIAL_METHODS))
 # 動作類別(action-categories 票 07):依葉分層抽框架——每葉 5 個(不足全取)、未歸另抽 50 個,
 # 切 8 批;錯誤三類,另記成因(歸組規則或樹/框架抽取的錯連帶歸錯)
@@ -434,6 +447,32 @@ def sample_variants(seed):
     return sample_by_frames(seed, variant_stratum, STRATA_VARIANTS, QUOTA_VARIANTS)
 
 
+# ── 回指(action-patient-anaphora 票 04)──
+
+def anaphora_label(f):
+    """一個動作框架的回指來源;受事者不是指示詞或指示詞不是卡時 None。"""
+    literal = f.get(anaphora.patient_key(f))
+    if not anaphora.is_demonstrative(literal):
+        return None
+    target = f.get("anaphora")
+    if target:
+        names_self = "このカード" in target["text"] and "このカード以外" not in target["text"]
+        return "並列含此卡" if names_self else ANAPHORA_VIA[target["via"]]
+    if anaphora.modifier(literal):
+        return "修飾語"
+    return "留空" if anaphora.reference(literal) else None
+
+
+def anaphora_stratum(records):
+    labels = {anaphora_label(f) for r in records for f in r["frames"]
+              if f.get("kind") == constraints.KIND_ACTION}
+    return next((k for k in STRATA_ANAPHORA if k in labels), None)
+
+
+def sample_anaphora(seed):
+    return sample_by_frames(seed, anaphora_stratum, STRATA_ANAPHORA, QUOTA_ANAPHORA)
+
+
 # ── 批次檔 ──
 
 def sentence_label(s):
@@ -483,9 +522,18 @@ ARGUMENT_CELLS = (("topic", "主題"), ("subject", "主語"), ("object", "對象
                   ("place", "所在"), ("goal", "目的"))
 
 
+def anaphora_cell(target):
+    """回指欄 → 批次檔的一格:目標字面、數量、區域、玩家、事件主語或主人、找法。"""
+    parts = ["回指=%s" % target["text"]]
+    parts += ["%s:%s" % (label, target[key])
+              for key, label in (("count", "數量"), ("place", "區域"), ("player", "玩家"),
+                                 ("subject", "事件主語/主人"), ("via", "找法")) if target.get(key)]
+    return " ".join(parts)
+
+
 def argument_cells(f):
     """動作框架 → 「欄=值」清單;回填的格標「(回填)」、推得的格標「(推得)」——子代理回報時
-    分「抽錯」「回填錯/延續錯」「推得錯」。主題/主語/所在沒有值時不列。"""
+    分「抽錯」「回填錯/延續錯」「推得錯」。主題/主語/所在沒有值時不列;回指欄只在有值時列。"""
     backfill, inferred = f.get("backfill") or [], f.get("inferred") or []
     cells = []
     for key, label in ARGUMENT_CELLS:
@@ -493,6 +541,8 @@ def argument_cells(f):
             continue
         mark = "(回填)" if key in backfill else "(推得)" if key in inferred else ""
         cells.append("%s=%s%s" % (label, f.get(key) or "", mark))
+    if f.get("anaphora"):
+        cells.append(anaphora_cell(f["anaphora"]))
     return cells
 
 
@@ -561,7 +611,7 @@ def read_meta(round_dir):
 def round_dir_of(line, round_no):
     prefix = {"constraints": "constraint-round", "v2": "v2-round", "v3": "v3-round",
               "lemma": "lemma-round", "variants": "variant-round",
-              "categories": "category-round"}.get(line, "round")
+              "anaphora": "anaphora-round", "categories": "category-round"}.get(line, "round")
     return os.path.join(CHECK_DIR, "%s%d" % (prefix, round_no))
 
 
@@ -864,15 +914,16 @@ def report_categories(round_dir):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=("sample", "affected", "constraints", "v2", "v3",
-                                        "lemma", "variants", "categories", "report", "recheck"))
+                                        "lemma", "variants", "categories", "anaphora", "report",
+                                        "recheck"))
     ap.add_argument("--round", type=int, required=True)
     ap.add_argument("--seed", type=int, default=20261009)
     ap.add_argument("--from", dest="from_round", type=int)
     ap.add_argument("--line", choices=("frames", "constraints", "v2", "v3", "lemma", "variants",
-                                       "categories"), default="frames")
+                                       "categories", "anaphora"), default="frames")
     args = ap.parse_args()
     line = (args.command if args.command in ("constraints", "v2", "v3", "lemma", "variants",
-                                             "categories")
+                                             "categories", "anaphora")
             else args.line)
     round_dir = round_dir_of(line, args.round)
     if args.command == "categories":
@@ -887,6 +938,10 @@ def main():
         write_category_batches(round_dir, picked, dict(read_meta(src), recheck_of=args.from_round))
     elif args.command == "report" and line == "categories":
         report_categories(round_dir)
+    elif args.command == "anaphora":
+        write_batches(round_dir, sample_anaphora(args.seed),
+                      {"mode": "anaphora", "seed": args.seed, "batches": BATCHES_ANAPHORA,
+                       "strata": list(STRATA_ANAPHORA), "error_types": list(ERROR_TYPES_ANAPHORA)})
     elif args.command == "variants":
         write_batches(round_dir, sample_variants(args.seed),
                       {"mode": "variants", "seed": args.seed, "batches": BATCHES_VARIANTS,

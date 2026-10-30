@@ -22,14 +22,23 @@
 條件對不上就判非此卡。條件只看群體本身:修飾語(〜を素材とした、〜以外の)裡的種族說的是
 別的東西,切掉後記為比不了;か/と 並列的是替代項,任一項全對得上就算包含。
 """
+from collections import namedtuple
+import os
 import re
+import sys
 import unicodedata
 
 from constraints import KIND_ACTION
+from frames import POS_COND, POS_COST, POS_EFFECT
 from places import PLAYER_OPP, ZONE_TERMS, parse_zones
+
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "..", "..", "script", "web"))
+import vocab  # noqa: E402
 
 SELF = "此卡"
 NONSELF = "非此卡"
+NEITHER = "皆非"       # 統計的鍵;Verdict.mode 以 None 表示
 
 THIS_CARD = "このカード"
 INTRANSITIVE = ("自動", "受身")
@@ -46,7 +55,6 @@ WHY_SELECTED = "選擇類"
 WHY_OTHERS_EFFECT = "主人不是此卡的效果"
 WHY_THIS_EFFECT = "この効果"
 WHY_THIS_NAME = "このカード名の效果"
-WHY_ALL = "全部類"
 WHY_ALL_INCLUDES = "全部類含此卡"
 WHY_ALL_NO_ZONE = "全部類區域不明"
 WHY_ALL_ZONE = "全部類區域對不上"
@@ -62,6 +70,14 @@ WHY_NO_OWNER = "屬性沒有主人"
 WHY_NOT_CARD = "不是卡"
 WHY_UNKNOWN = "表外"
 WHY_NONE = "沒有受事者"
+# 全部類的判定(用到發動位置的框架)
+_WHY_ALL_CLASS = {WHY_ALL_INCLUDES, WHY_ALL_NO_ZONE, WHY_ALL_ZONE, WHY_ALL_PLAYER, WHY_ALL_KIND,
+                  WHY_ALL_RACE, WHY_ALL_ATTR, WHY_ALL_ARCHETYPE, WHY_ALL_SUBTYPE, WHY_ALL_NUMERIC,
+                  WHY_ALL_UNCOMPARABLE}
+# 動作本身就沒有卡片受事者:デッキに戻した数＋１枚をドローする 的「１枚」是張數
+_NOT_CARD_ACTIONS = ("ドロー",)
+# 並列詞(替代項的切分與並列含此卡共用)
+_CONJUNCTIONS = "または|か|や|及び|および|と"
 
 _SPACES = re.compile(r"\s+")
 # 此卡的屬性(このカードの攻撃力・守備力、この効果で特殊召喚したこのカードのレベル):
@@ -76,8 +92,9 @@ _ATTR_LIST = r"%s(?:(?:・|と|及び|および)%s)*" % (_ATTR, _ATTR)
 _ATTRIBUTE_OF_SELF = re.compile(r"%sの+%s$" % (THIS_CARD, _ATTR_LIST))
 # 並列含此卡:このカードと〜、このカード及び〜(〜とこのカード 以此卡收尾,已算);
 # このカードと同じ縦列、このカードとは種族が異なる 這類比較不是並列
-_LISTED_WITH_SELF = re.compile(r"^%s(?:と|及び|および|や|または|か)(?!同じ|同名|は|相互|リンクし|"
-                               r"リンク状態|戦闘|\(共同\)|異なる|元々)" % THIS_CARD)
+_LISTED_WITH_SELF = re.compile(r"%s(?:%s)(?!同じ|同名|は|相互|リンクし|リンク状態|戦闘|\(共同\)|異なる"
+                               r"|元々|(?:種族|属性|カード名|レベル|攻撃力|守備力)が)"
+                               % (THIS_CARD, _CONJUNCTIONS))
 _INCLUDING_SELF = THIS_CARD + "を含む"
 # この効果、この効果の発動、この発動とこの効果:主人是此卡(この効果で特殊召喚したモンスターの
 # 効果 主人是別張)
@@ -103,7 +120,7 @@ _QUANTITY = r"[0-9０-９]+(?:枚|体|つ|種類|ヵ所|箇所|個)"
 _COUNT = re.compile(r"%s|まで" % _QUANTITY)
 _CLAUSE_COUNT = re.compile(r"を%s|数まで|任意の数|好きな数" % _QUANTITY)
 _ALL_OF_THEM = re.compile(r"全て")
-_COUNT_TAIL = re.compile(r"(?:[0-9０-９]+(?:枚|体|つ|種類|ヵ所|箇所|個))?(?:まで|以上)?$")
+_COUNT_TAIL = re.compile(r"(?:%s)?(?:まで|以上)?$" % _QUANTITY)
 _CARD_COUNT = re.compile(r"[0-9０-９]+(?:枚|体)")
 _DEMONSTRATIVE = re.compile(r"^(?:その|それら?(?:$|の)|対象の|この効果の対象)")
 _PAREN_TAIL = re.compile(r"[（(][^（()）]*[)）]$")
@@ -122,12 +139,29 @@ OFF_FIELD = "場外"           # 去處不明的「離開場上」:不在場上,
 STATE_ACTIONS = ("存在", "ある", "いる")
 # 觸發事件沒寫去處、但一定是離開場上的動作
 LEAVE_FIELD_ACTIONS = ("破壊", "リリース")
-POS_CONDITION, POS_COST, POS_EFFECT = "條件", "代價", "效果"
+
+# 發動位置:此卡可能所在的區域集合與判定來源
+Launch = namedtuple("Launch", "zones source")
+
+
+def _source_bits(domain):
+    """值域正典的 碼 → 來源位元(ADR-0008:位元只在 script/web/vocab.py 宣告一次)。"""
+    return {e["code"]: e["src"] for e in vocab.DOMAINS[domain]["entries"]}
+
+
+def _bits_by_word(words, domain, exhaustive=False):
+    """卡文的日文寫法 → 碼 的對照 + 值域正典 → 日文寫法 → 位元。exhaustive 的值域多一個成員
+    而這裡沒有寫法時就吵:漏了的話那個條件會安靜地比不到(ADR-0008 的無聲失效)。"""
+    bits = _source_bits(domain)
+    missing = set(bits) - set(words.values()) if exhaustive else set()
+    if missing:
+        raise ValueError("%s 有值域成員沒有日文寫法:%s" % (domain, sorted(missing)))
+    return {word: bits[code] for word, code in words.items()}
+
 
 # 卡種(卡片總表 type 位元)
-KIND_BITS = (("怪獸", 0x1), ("魔法", 0x2), ("陷阱", 0x4))
-_KIND_WORDS = (("モンスター", "怪獸"), ("魔法", "魔法"), ("罠", "陷阱"))
-_KIND_TAIL = {word: re.compile(word + r"(?:\(カード\))?(?:カード)?$") for word, _ in _KIND_WORDS}
+_KIND_BITS = _bits_by_word({"モンスター": "m", "魔法": "s", "罠": "t"}, vocab.CAT, exhaustive=True)
+_KIND_TAIL = {word: re.compile(word + r"(?:\(カード\))?(?:カード)?$") for word in _KIND_BITS}
 
 
 def _clean(text):
@@ -160,8 +194,9 @@ def _group_zones(text, frame):
     return _zones(lead.group(1)) if lead else []
 
 
-def _is_this_card(text):
-    return _clean(text).endswith(THIS_CARD)
+def _names_this_card(text):
+    """字面把此卡本身算進去:以此卡收尾、並列含此卡、包含此卡(此卡的屬性不算移動此卡)。"""
+    return self_rule(_clean(text)) in (WHY_PATIENT, WHY_LISTED, WHY_INCLUDING)
 
 
 def _trigger_zones(frame):
@@ -179,74 +214,75 @@ def _trigger_zones(frame):
 
 
 def launch(frames, section="main"):
-    """一句效果句的框架 → (此卡可能所在的區域集合, 來源);靈擺段落的效果預設在靈擺區。"""
+    """一句效果句的框架 → Launch;靈擺段落的效果預設在靈擺區。"""
     written, trigger, move = [], [], []
     for fr in frames:
         if fr.get("kind") != KIND_ACTION:
             continue
         position = fr.get("position")
         agent = fr.get("subject") or fr.get("topic")
-        if position == POS_CONDITION and _is_this_card(agent):
+        if position == POS_COND and _names_this_card(agent):
             if fr.get("action") in STATE_ACTIONS:
                 written = written or _zones(fr.get("goal") or fr.get("place"))
             else:
                 trigger = trigger or _trigger_zones(fr)
-        elif position == POS_COST and _is_this_card(fr.get("object")):
+        elif position == POS_COST and _names_this_card(fr.get("object")):
             written = written or _zones(fr.get("source") or fr.get("place"))
-        elif position == POS_EFFECT and _is_this_card(patient(fr)[0]):
+        elif position == POS_EFFECT and _names_this_card(patient(fr)[0]):
             move = move or _zones(fr.get("source"))
     for found, source in ((written, LAUNCH_WRITTEN), (trigger, LAUNCH_TRIGGER),
                           (move, LAUNCH_MOVE)):
         if found:
-            return {zone for _, zone in found}, source
-    return ({PENDULUM_ZONE} if section == "pendulum" else {FIELD}), LAUNCH_DEFAULT
-
-
-def face_kinds(face):
-    return {name for name, bit in KIND_BITS if face["type"] & bit}
+            return Launch({zone for _, zone in found}, source)
+    return Launch({PENDULUM_ZONE} if section == "pendulum" else {FIELD}, LAUNCH_DEFAULT)
 
 
 def group_kinds(text):
-    """群體字面 → 卡種集合(看並列的每段中心詞;カード、「卡名」、區域是任何卡種 → None)。"""
-    core = _core(text)
+    """群體字面 → 卡種位元的集合(看並列的每段中心詞;カード、「卡名」、區域是任何卡種 →
+    None)。"""
     kinds = set()
-    for part in re.split(r"・|か|または|及び|と|や", core):
-        found = [kind for word, kind in _KIND_WORDS if _KIND_TAIL[word].search(part)]
+    for part in re.split("・|" + _CONJUNCTIONS, _core(text)):
+        found = [bit for word, bit in _KIND_BITS.items() if _KIND_TAIL[word].search(part)]
         if not found:
             return None
         kinds.update(found)
     return kinds or None
 
 
-# 卡面參數:總表的位元(同 script/web/vocab.py 的值域正典)與卡文的日文寫法
-_RACE_BITS = {"戦士族": 0x1, "魔法使い族": 0x2, "天使族": 0x4, "悪魔族": 0x8, "アンデット族": 0x10,
-              "機械族": 0x20, "水族": 0x40, "炎族": 0x80, "岩石族": 0x100, "鳥獣族": 0x200,
-              "植物族": 0x400, "昆虫族": 0x800, "雷族": 0x1000, "ドラゴン族": 0x2000, "獣族": 0x4000,
-              "獣戦士族": 0x8000, "恐竜族": 0x10000, "魚族": 0x20000, "海竜族": 0x40000,
-              "爬虫類族": 0x80000, "サイキック族": 0x100000, "幻神獣族": 0x200000,
-              "創造神族": 0x400000, "幻竜族": 0x800000, "サイバース族": 0x1000000,
-              "幻想魔族": 0x2000000}
+# 卡面參數:卡文的日文寫法 → 值域正典的碼(位元由正典來)
+_RACE_BITS = _bits_by_word(
+    {"戦士族": "warrior", "魔法使い族": "spellcaster", "天使族": "fairy", "悪魔族": "fiend",
+     "アンデット族": "zombie", "機械族": "machine", "水族": "aqua", "炎族": "pyro", "岩石族": "rock",
+     "鳥獣族": "winged_beast", "植物族": "plant", "昆虫族": "insect", "雷族": "thunder",
+     "ドラゴン族": "dragon", "獣族": "beast", "獣戦士族": "beast_warrior", "恐竜族": "dinosaur",
+     "魚族": "fish", "海竜族": "sea_serpent", "爬虫類族": "reptile", "サイキック族": "psychic",
+     "幻神獣族": "divine_beast", "創造神族": "creator_god", "幻竜族": "wyrm",
+     "サイバース族": "cyberse", "幻想魔族": "illusion"}, vocab.RACE, exhaustive=True)
 _RACE = re.compile("|".join(sorted(_RACE_BITS, key=len, reverse=True)))
-_ATTR_BITS = {"地": 0x1, "水": 0x2, "炎": 0x4, "風": 0x8, "光": 0x10, "闇": 0x20, "神": 0x40}
-_ATTRIBUTE = re.compile(r"((?:[地水炎風光闇神]・)*[地水炎風光闇神])属性")
-_MONSTER_TYPE_BITS = {"融合": 0x40, "シンクロ": 0x2000, "S": 0x2000, "エクシーズ": 0x800000,
-                      "X": 0x800000, "リンク": 0x4000000, "L": 0x4000000, "儀式": 0x80,
-                      "ペンデュラム": 0x1000000, "P": 0x1000000, "通常": 0x10, "効果": 0x20,
-                      "トゥーン": 0x400000, "スピリット": 0x200, "ユニオン": 0x400,
-                      "デュアル": 0x800, "リバース": 0x200000, "チューナー": 0x1000}
+_ATTR_BITS = _bits_by_word({"地": "earth", "水": "water", "炎": "fire", "風": "wind", "光": "light",
+                            "闇": "dark", "神": "divine"}, vocab.ATTR, exhaustive=True)
+_ATTR_CHARS = "".join(_ATTR_BITS)
+_ATTRIBUTE = re.compile(r"((?:[%s]・)*[%s])属性" % (_ATTR_CHARS, _ATTR_CHARS))
+_MONSTER_TYPE_BITS = _bits_by_word(
+    {"融合": "fusion", "シンクロ": "synchro", "S": "synchro", "エクシーズ": "xyz", "X": "xyz",
+     "リンク": "link", "L": "link", "儀式": "ritual", "ペンデュラム": "pendulum", "P": "pendulum",
+     "通常": "normal", "効果": "effect", "トゥーン": "toon", "スピリット": "spirit", "ユニオン": "union",
+     "デュアル": "dual", "リバース": "flip", "チューナー": "tuner"}, vocab.SUB["m"])
 _MONSTER_TYPE_ALT = "|".join(sorted(_MONSTER_TYPE_BITS, key=len, reverse=True))
 _MONSTER_TYPES = re.compile(r"((?:(?:%s)・?)+)モンスター|チューナー" % _MONSTER_TYPE_ALT)
-_SPELL_TYPE_BITS = {"速攻": 0x10000, "永続": 0x20000, "装備": 0x40000, "フィールド": 0x80000,
-                    "儀式": 0x80}
-_TRAP_TYPE_BITS = {"永続": 0x20000, "カウンター": 0x100000}
+_SPELL_TRAP_TYPE_BITS = {
+    "魔法": _bits_by_word({"速攻": "quick", "永続": "continuous", "装備": "equip",
+                           "フィールド": "field", "儀式": "ritual"}, vocab.SUB["s"]),
+    "罠": _bits_by_word({"永続": "continuous", "カウンター": "counter"}, vocab.SUB["t"])}
 _SPELL_TRAP_TYPES = re.compile(r"(通常|速攻|永続|装備|フィールド|儀式|カウンター)(魔法|罠)")
 _NUMERIC = re.compile(r"(レベル|ランク|リンク|攻撃力|守備力)が?([0-9０-９]+)(以上|以下|未満)?")
-XYZ_BIT, LINK_BIT = 0x800000, 0x4000000
+XYZ_BIT, LINK_BIT = _MONSTER_TYPE_BITS["X"], _MONSTER_TYPE_BITS["L"]
+TUNER_BIT = _MONSTER_TYPE_BITS["チューナー"]
 
 # 修飾語:最後一個述語或關係詞之前都是別的東西的條件(〜を素材とした、〜以外の、〜と同じ)
 _MODIFIER = re.compile(r"^.*(?:した|する|された|される|されて|している|となる|とする|を含む|と同じ"
                        r"|異なる|持つ|以外の|より|いる|ある|ない)")
-_ALTERNATIVE = re.compile(r"または|か|や|及び|および|と")
+_ALTERNATIVE = re.compile(_CONJUNCTIONS)
 _KNOWN_TOKENS = re.compile("|".join(
     [r"「\d+」", _RACE.pattern, _ATTRIBUTE.pattern, _NUMERIC.pattern, _MONSTER_TYPES.pattern,
      _SPELL_TRAP_TYPES.pattern]
@@ -282,17 +318,16 @@ def _subtype_block(segment, face):
         return False
     for m in wanted:
         if m.group(0) == "チューナー":
-            if types & 0x1000:
+            if types & TUNER_BIT:
                 return False
             continue
         names = re.findall(_MONSTER_TYPE_ALT, m.group(1))
-        if types & 0x1 and any(types & _MONSTER_TYPE_BITS[n] for n in names):
+        if types & _KIND_BITS["モンスター"] and any(types & _MONSTER_TYPE_BITS[n] for n in names):
             return False
     for m in spell_trap:
         name, kind = m.groups()
-        bits = _SPELL_TYPE_BITS if kind == "魔法" else _TRAP_TYPE_BITS
-        kind_bit = 0x2 if kind == "魔法" else 0x4
-        if not types & kind_bit:
+        bits = _SPELL_TRAP_TYPE_BITS[kind]
+        if not types & _KIND_BITS[kind]:
             continue
         if name == "通常" and not any(types & bit for bit in bits.values()):
             return False
@@ -327,7 +362,7 @@ def _numeric_block(segment, face):
 def _segment_blocker(segment, names, face):
     """一個替代項對此卡卡面參數的第一個擋下的條件(理由),全對得上時 None。"""
     kinds = group_kinds(segment)
-    if kinds is not None and not kinds & face_kinds(face):
+    if kinds is not None and not any(face["type"] & bit for bit in kinds):
         return WHY_ALL_KIND
     races = _RACE.findall(segment)
     if races and not any(face["race"] & _RACE_BITS[r] for r in races):
@@ -357,17 +392,17 @@ def _compare_face(text, face):
     return blockers[0], uncomparable
 
 
-def _all_class(text, frame, where, face):
+def _all_class(text, frame, launched, face):
     """全部類:→ (值, 理由)。"""
     zones = _group_zones(text, frame)
-    possible, _ = where
+    possible = launched.zones
     # 靈擺區在場上:群體寫場上時含靈擺區的此卡
-    near = [(player, zone) for player, zone in zones
-            if zone in possible or (OFF_FIELD in possible and zone != FIELD)
-            or (zone == FIELD and PENDULUM_ZONE in possible)]
-    if zones and not near:
+    reachable = [(player, zone) for player, zone in zones
+                 if zone in possible or (OFF_FIELD in possible and zone != FIELD)
+                 or (zone == FIELD and PENDULUM_ZONE in possible)]
+    if zones and not reachable:
         return NONSELF, WHY_ALL_ZONE
-    if near and all(player == PLAYER_OPP for player, _ in near):
+    if reachable and all(player == PLAYER_OPP for player, _ in reachable):
         return NONSELF, WHY_ALL_PLAYER
     uncomparable = False
     if face is not None:
@@ -436,12 +471,12 @@ def _card_group(text, clause, all_class):
     if _DEMONSTRATIVE.search(text) or _COUNT.search(text) or (
             _CLAUSE_COUNT.search(clause) and not _ALL_OF_THEM.search(clause)):
         return NONSELF, WHY_SELECTED
-    return all_class(text) if all_class else (None, WHY_ALL)
+    return all_class(text)
 
 
-def classify(text, clause="", all_class=None):
+def classify(text, clause, all_class):
     """受事者字面(與它所在子句的字面,數量可能只寫在子句裡)→ (值, 理由);all_class 是
-    全部類的判定(群體字面 → (值, 理由)),沒給時全部類一律皆非。"""
+    全部類的判定(群體字面 → (值, 理由))。"""
     if not text:
         return None, WHY_NONE
     why = self_rule(text)
@@ -480,24 +515,34 @@ class Verdict:
         self.mode, self.why, self.text, self.launch = mode, why, text, launch_source
 
 
-def judge(frame, where=None, face=None):
-    """一個動作框架(與它所在效果句的發動位置、此卡卡面參數)→ Verdict。"""
-    text, by_topic = patient(frame)
-    where = where or ({FIELD}, LAUNCH_DEFAULT)
-    used = []
+def _count_clause(frames, k):
+    """第 k 個框架比對數量用的子句字面:對象是回填來的(１枚選んで破壊する),數量寫在提供
+    對象的那個框架的子句裡,一起看。"""
+    frame = frames[k]
+    clause = _clean(frame.get("clause"))
+    if "object" not in (frame.get("backfill") or ()):
+        return clause
+    for earlier in reversed(frames[:k]):
+        if earlier.get("kind") == KIND_ACTION and earlier.get("object") == frame.get("object"):
+            return _clean(earlier.get("clause")) + clause
+    return clause
 
-    def all_class(group):
-        used.append(where[1])
-        return _all_class(group, frame, where, face)
-    mode, why = classify(text, _clean(frame.get("clause")), all_class)
+
+def judge(frame, clause, launched, face):
+    """一個動作框架(比對數量用的子句字面、所在效果句的發動位置、此卡卡面參數)→ Verdict。"""
+    text, by_topic = patient(frame)
+    if frame.get("action") in _NOT_CARD_ACTIONS:
+        return Verdict(None, WHY_NOT_CARD, text)
+    mode, why = classify(text, clause, lambda group: _all_class(group, frame, launched, face))
     if by_topic and why == WHY_PATIENT:
         why = WHY_TOPIC
-    return Verdict(mode, why, text, used[0] if used else None)
+    return Verdict(mode, why, text, launched.source if why in _WHY_ALL_CLASS else None)
 
 
 def judge_sentence(frames, face=None, section="main"):
     """一句效果句的框架清單(與此卡卡面參數,沒有時不比卡面;段落)→ 與它對齊的 [Verdict];
     約束框架是 Verdict(None, None)。"""
-    where = launch(frames, section)
-    return [judge(fr, where, face) if fr.get("kind") == KIND_ACTION else Verdict(None, None)
-            for fr in frames]
+    launched = launch(frames, section)
+    return [judge(fr, _count_clause(frames, k), launched, face)
+            if fr.get("kind") == KIND_ACTION else Verdict(None, None)
+            for k, fr in enumerate(frames)]

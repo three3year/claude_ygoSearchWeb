@@ -841,6 +841,14 @@ def sha(text):
     return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
 
 
+def face_digest(card_entry):
+    """卡面參數雜湊(與分詞鏈匯出 export_categories.face_hash 同算法的獨立重算)。"""
+    fields = [card_entry.get(k) for k in
+              ("type", "race", "attribute", "level", "atk", "def", "name_ja")]
+    payload = json.dumps(fields, ensure_ascii=False)
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
+
+
 class CategoryTest(unittest.TestCase):
     """[[動作類別]]:分詞鏈匯出的類別檔進索引(category-search 票 01,ADR-0017)。
 
@@ -867,7 +875,8 @@ class CategoryTest(unittest.TestCase):
             rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1),
                      "effect": ["特殊召喚←墓地"], "cost": ["捨てる"]},
                     {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)}]
-        doc = {"說明": "", "葉": self.LEAVES, "樹": self.TREE, "句": rows}
+        doc = {"說明": "", "葉": self.LEAVES, "樹": self.TREE, "句": rows,
+               "卡面": [[c["id"], face_digest(c)] for c in cards]}
         return build_index(cards, tags, categories=doc)
 
     def test_leaf_fields_align_with_tx(self):
@@ -967,7 +976,7 @@ class CategoryTest(unittest.TestCase):
                 {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2),
                  "effect": ["破壊"], "effect_self": ["破壊"]}]
         stats = {"框架": {"此卡": 2, "非此卡": 0, "皆非": 1}}
-        doc = {"說明": "", "葉": self.LEAVES, "樹": self.TREE, "統計": stats, "句": rows}
+        doc = {"說明": "", "葉": self.LEAVES, "樹": self.TREE, "統計": stats, "句": rows, "卡面": []}
         cards = [card(1, desc="①：這樣。②：那樣。"), card(2, desc="①：別張。")]
         tags = [tagged(1, dict(clause("①：這樣。"), text_ja=self.JA1),
                        dict(clause("②：那樣。", index="②", kind="誘發效果(1速)"),
@@ -1015,13 +1024,6 @@ class CategoryTest(unittest.TestCase):
         for field in ("aes", "acs", "aen", "acn"):
             self.assertNotIn(field, entry)
 
-    def face(self, card_entry):
-        """卡面參數雜湊(與分詞鏈匯出 export_categories.face_hash 同算法的獨立重算)。"""
-        fields = [card_entry.get(k) for k in
-                  ("type", "race", "attribute", "level", "atk", "def", "name_ja")]
-        payload = json.dumps(fields, ensure_ascii=False)
-        return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
-
     def build_with_faces(self, faces):
         cards = [card(1, desc="①：這樣。②：那樣。"), card(2, desc="①：別張。")]
         tags = [tagged(1, dict(clause("①：這樣。"), text_ja=self.JA1),
@@ -1030,12 +1032,14 @@ class CategoryTest(unittest.TestCase):
                 tagged(2, dict(clause("①：別張。"), text_ja="①：別のカード。"))]
         rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1)},
                 {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)}]
-        doc = {"說明": "", "葉": self.LEAVES, "樹": self.TREE, "卡面": faces, "句": rows}
+        doc = {"說明": "", "葉": self.LEAVES, "樹": self.TREE, "句": rows}
+        if faces is not None:
+            doc["卡面"] = faces
         return cards, build_index(cards, tags, categories=doc)[1]
 
     def test_matching_card_face_digest_passes(self):
         cards, _ = self.build_with_faces([])
-        _, report = self.build_with_faces([[1, self.face(cards[0])]])
+        _, report = self.build_with_faces([[1, face_digest(cards[0])]])
         self.assertEqual(report["checks"]["category_face_stale"], [])
         self.assertEqual(report["problems"], [])
 
@@ -1047,7 +1051,12 @@ class CategoryTest(unittest.TestCase):
 
     def test_covered_card_missing_from_the_face_list_fails_the_build(self):
         cards, _ = self.build_with_faces([])
-        _, report = self.build_with_faces([[2, self.face(cards[1])]])
+        _, report = self.build_with_faces([[2, face_digest(cards[1])]])
+        self.assertEqual(report["checks"]["category_face_stale"], [{"id": 1}])
+
+    def test_export_without_a_face_section_fails_the_build(self):
+        """舊格式的匯出檔沒有「卡面」段:不是略過檢查,是過時。"""
+        _, report = self.build_with_faces(None)
         self.assertEqual(report["checks"]["category_face_stale"], [{"id": 1}])
 
     def test_serialized_index_is_deterministic(self):

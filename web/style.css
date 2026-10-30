@@ -670,7 +670,6 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 }
 .act-filter:focus { outline: none; border-color: var(--accent); }
 @media (max-width: 720px) {
-  .act-filter { font-size: 16px; padding: 6px 8px; }
+  .act-filter { flex-basis: 100%; font-size: 16px; padding: 6px 8px; }
   .act-pat-btn { font-size: 14px; padding: 6px 12px; }
-  .act-filter { flex-basis: 100%; }
 }

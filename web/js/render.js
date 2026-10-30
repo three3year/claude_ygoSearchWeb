@@ -251,12 +251,12 @@ function effHtml(c, text, i, rows, hl) {
    (代價位的葉只在「含代價」時算;選了[[動作對象]]時只算該模式下的葉)。沒有葉的
    句子什麼都不加。 */
 function leafBadgesHtml(c, i, hl) {
-  const eff = (c.ae && c.ae[i]) || [];
-  const cost = (c.ac && c.ac[i]) || [];
+  const eff = Engine.modeLeaves(c, i, '', false);
+  const cost = Engine.modeLeaves(c, i, '', true);
   if (!eff.length && !cost.length) return '';
   const mark = hl ? hl.marks.find(m => m.type === 'act') : null;
-  const pool = isCost => (mark ? Engine.modeLeaves(c, i, mark.mode, isCost) : []);
-  const hitEff = pool(false), hitCost = pool(true);
+  const modeLeavesOf = isCost => (mark ? Engine.modeLeaves(c, i, mark.mode, isCost) : []);
+  const hitEff = modeLeavesOf(false), hitCost = modeLeavesOf(true);
   const one = (n, isCost) => {
     const label = esc((isCost ? '代價：' : '') + (Acat.LEAVES[n] || n));
     const on = !!mark && (!isCost || mark.cost) && mark.leaves.indexOf(n) >= 0 &&

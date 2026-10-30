@@ -18,6 +18,7 @@ index)。框架對標記句:效果句只有一段時框架全屬那一句;拆開
 
 用法:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/export_categories.py
 """
+from collections import Counter
 import hashlib
 import json
 import os
@@ -165,34 +166,37 @@ class Stats:
     SAMPLES = 20
 
     def __init__(self):
-        self.frames = {}
+        self.frames = Counter()
         self.cards = {}
-        self.reasons = {}
-        self.unknown = {}
-        self.launch = {}
-        self.uncomparable = {}
+        self.reasons = Counter()
+        self.unknown = Counter()
+        self.launch = Counter()
+        self.neither_launch = Counter()
+        self.uncomparable = Counter()
 
     def add(self, card, verdict):
-        key = verdict.mode or "皆非"
-        why = key + ":" + verdict.why
-        self.frames[key] = self.frames.get(key, 0) + 1
+        key = verdict.mode or patient.NEITHER
+        self.frames[key] += 1
         self.cards.setdefault(key, set()).add(card)
-        self.reasons[why] = self.reasons.get(why, 0) + 1
+        self.reasons[key + ":" + verdict.why] += 1
         if verdict.why == patient.WHY_UNKNOWN:
-            self.unknown[verdict.text] = self.unknown.get(verdict.text, 0) + 1
+            self.unknown[verdict.text] += 1
         if verdict.why in (patient.WHY_ALL_UNCOMPARABLE, patient.WHY_ALL_NO_ZONE):
-            self.uncomparable[verdict.text] = self.uncomparable.get(verdict.text, 0) + 1
+            self.uncomparable[verdict.text] += 1
         if verdict.launch:
-            self.launch[verdict.launch] = self.launch.get(verdict.launch, 0) + 1
+            self.launch[verdict.launch] += 1
+            if not verdict.mode:
+                self.neither_launch[verdict.launch] += 1
 
     def doc(self):
-        keys = (patient.SELF, patient.NONSELF, "皆非")
+        keys = (patient.SELF, patient.NONSELF, patient.NEITHER)
         top = lambda counts: dict(sorted(  # noqa: E731
             counts.items(), key=lambda kv: (-kv[1], kv[0]))[:self.SAMPLES])
-        return {"框架": {k: self.frames.get(k, 0) for k in keys},
+        return {"框架": {k: self.frames[k] for k in keys},
                 "卡": {k: len(self.cards.get(k, ())) for k in keys},
                 "理由": dict(sorted(self.reasons.items())),
                 "發動位置": dict(sorted(self.launch.items())),
+                "皆非發動位置": dict(sorted(self.neither_launch.items())),
                 "表外受事者": top(self.unknown),
                 "比不了字面": top(self.uncomparable),
                 "比不了": sum(self.uncomparable.values())}
@@ -248,7 +252,8 @@ def main():
     for why, n in stats["理由"].items():
         print("  %s %d" % (why, n))
     print("  發動位置(全部類框架):" + "、".join(
-        "%s %d" % kv for kv in stats["發動位置"].items()))
+        "%s %d" % kv for kv in stats["發動位置"].items()) + ";其中皆非:" + "、".join(
+        "%s %d" % kv for kv in stats["皆非發動位置"].items()))
     print("  比不了而視為可能包含 %d 框,前 %d 種:%s" % (
         stats["比不了"], len(stats["比不了字面"]), "、".join(
             "%s×%d" % kv for kv in stats["比不了字面"].items())))

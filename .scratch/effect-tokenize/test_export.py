@@ -517,6 +517,43 @@ class TestPatientThisEffect(unittest.TestCase):
         self.assertEqual(modes("①：それ以外の自分フィールドのモンスターを全て破壊する。"), {})
 
 
+class TestPatientReviewFindings(unittest.TestCase):
+    """code review 用例句實跑抓到的錯。"""
+
+    def test_count_on_the_choosing_clause_carries_to_the_backfilled_frame(self):
+        """１枚選んで破壊する:破壊 的對象是回填的,數量在 選ぶ 的子句裡。"""
+        found = modes("①：フィールドのカードを１枚選んで破壊する。")
+        self.assertIn("破壊@フィールド", found.get("effect_nonself", []))
+
+    def test_draw_never_has_a_card_patient(self):
+        """「N枚」是抽卡張數,不是卡的選擇。"""
+        self.assertEqual(modes("①：自分はデッキに戻した数＋１枚をドローする。"), {})
+
+    def test_listed_with_this_card_counts_for_the_launch_position(self):
+        self.assertEqual(modes("①：このカードと植物族モンスター１体を手札から特殊召喚する。"
+                               "その後、手札を全て捨てる。"),
+                         {"effect_self": ["特殊召喚←手札"]})
+
+    def test_listed_with_this_card_in_the_cost_counts_for_the_launch_position(self):
+        found = modes("①：墓地のこのカードとモンスター１体を除外して発動できる。フィールドの"
+                      "カードを全て破壊する。")
+        self.assertEqual(found.get("effect_nonself"), ["破壊@フィールド"])
+
+    def test_listed_with_this_card_may_carry_a_modifier(self):
+        self.assertTrue(modes("①：リンク状態のこのカード及びこのカードのリンク先のモンスターを"
+                              "破壊する。").get("effect_self"))
+
+    def test_comparing_with_this_card_is_not_listing_it(self):
+        self.assertNotIn("effect_self", modes("①：このカードとカード名が異なるモンスターを全て"
+                                              "破壊する。"))
+
+    def test_stats_split_launch_sources_of_the_neither_frames(self):
+        doc, _ = export({1: [clause("①", "①：フィールドのカードを全て破壊する。")],
+                         2: [clause("①", "①：相手フィールドのカードを全て破壊する。")]})
+        self.assertEqual(doc["統計"]["發動位置"].get("預設場上"), 2)
+        self.assertEqual(doc["統計"]["皆非發動位置"].get("預設場上"), 1)
+
+
 XYZ = {"id": 1, "type": 0x800021, "race": 0x1, "attribute": 0x10, "level": 4,
        "atk": 2000, "def": 1000, "name_ja": "テスト・エクシーズ"}
 UNKNOWN_ATK = dict(DRAGON, atk=-2, **{"def": -2})

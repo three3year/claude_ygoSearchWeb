@@ -525,8 +525,8 @@ def _attach_categories(entries, clauses_by_id, categories, checks, cards_by_id):
 
     `ae` 的有無就是涵蓋與否:涵蓋的卡一定帶 `ae`(沒有葉的句是空陣列,整張都沒有
     葉也照帶),`ac` 與[[動作對象]]的 `aes`/`aen`/`acs`/`acn` 全空時省略。匯出檔與標記表對不上記進 `category_stale`
-    (`_category_stale`),葉不在類別樹記進 `category_unknown_leaves`,匯出檔帶「卡面」時
-    卡面參數雜湊對不上卡片總表記進 `category_face_stale`——三者都讓建置失敗(ADR-0017、
+    (`_category_stale`),葉不在類別樹記進 `category_unknown_leaves`,卡面參數雜湊對不上
+    卡片總表(或匯出檔沒帶)記進 `category_face_stale`——三者都讓建置失敗(ADR-0017、
     ADR-0008)。
     """
     leaves = categories["葉"]
@@ -539,9 +539,8 @@ def _attach_categories(entries, clauses_by_id, categories, checks, cards_by_id):
                 checks["category_unknown_leaves"].append(
                     {"id": cid, "index": index, "leaf": name})
     covered = sorted({cid for cid, _, _ in rows})
-    if "卡面" in categories:
-        checks["category_face_stale"].extend(
-            _face_stale(categories["卡面"], covered, cards_by_id))
+    checks["category_face_stale"].extend(
+        _face_stale(categories.get("卡面", ()), covered, cards_by_id))
     for cid in covered:
         entry = entries.get(cid)
         if entry is None:

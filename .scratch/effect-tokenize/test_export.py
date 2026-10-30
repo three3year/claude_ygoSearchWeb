@@ -235,6 +235,58 @@ class TestPatientSelf(unittest.TestCase):
         self.assertEqual(found.get("cost_self"), ["リリース"])
         self.assertNotIn("effect_self", found)
 
+    # ── 票 02:此卡字面規則 ──
+
+    def test_attribute_of_this_card_is_self(self):
+        self.assertEqual(modes("①：このカードの攻撃力は５００アップする。"),
+                         {"effect_self": ["アップ:攻撃力"]})
+        self.assertEqual(modes("①：このカードのレベルを１つ上げる。"),
+                         {"effect_self": ["アップ:レベル"]})
+
+    def test_attribute_of_this_card_with_a_modifier_is_self(self):
+        self.assertEqual(modes("①：この効果で特殊召喚したこのカードの攻撃力は倍になる。"),
+                         {"effect_self": ["倍にする:攻撃力"]})
+
+    def test_effect_owned_by_this_card_is_self(self):
+        self.assertEqual(modes("①：このカードの効果を無効にする。"),
+                         {"effect_self": ["無効にする:効果"]})
+
+    def test_this_card_listed_with_another_card_is_self(self):
+        self.assertEqual(modes("①：このカードと植物族モンスター１体を手札から特殊召喚する。"),
+                         {"effect_self": ["特殊召喚←手札"]})
+
+    def test_group_including_this_card_is_self(self):
+        self.assertEqual(modes("①：このカードを含む自分フィールドのモンスター２体をリリースして"
+                               "発動できる。自分はデッキから１枚ドローする。"),
+                         {"cost_self": ["リリース"]})
+
+    def test_this_card_treated_as_something_is_self(self):
+        self.assertEqual(modes("①：このカードはフィールド上に存在する限り、闇属性として扱う。")
+                         .get("effect_self"), ["扱う"])
+
+    def test_equipped_monster_and_xyz_material_of_this_card_are_not_self(self):
+        self.assertNotIn("effect_self",
+                         modes("①：このカードの装備モンスターの攻撃力は５００アップする。"))
+        self.assertNotIn("cost_self", modes("①：このカードのX素材を１つ取り除いて発動できる。"
+                                            "自分はデッキから１枚ドローする。"))
+
+    def test_this_card_name_and_other_than_this_card_are_not_self(self):
+        self.assertNotIn("effect_self", modes("①：このカード以外の自分フィールドのモンスターを"
+                                              "全て破壊する。"))
+        self.assertNotIn("effect_self", modes("①：このカードと同じ縦列の他のモンスターを全て"
+                                              "破壊する。"))
+        self.assertNotIn("effect_self", modes("①：このカードと戦闘を行うモンスターを破壊する。"))
+        self.assertNotIn("effect_self", modes("①：このカードと(共同)戦闘を行うモンスターの"
+                                              "攻撃力は０になる。"))
+
+    def test_stats_count_each_self_rule(self):
+        doc, _ = export({1: [clause("①", "①：このカードの攻撃力は５００アップする。")],
+                         2: [clause("①", "①：このカードと植物族モンスター１体を手札から"
+                                          "特殊召喚する。")]})
+        reasons = doc["統計"]["理由"]
+        self.assertEqual(reasons.get("此卡:此卡的屬性"), 1)
+        self.assertEqual(reasons.get("此卡:並列含此卡"), 1)
+
     def test_frames_on_this_card_are_counted_in_the_stats(self):
         doc, _ = export({1: [clause("①", "①：このカードは手札から特殊召喚できる。")],
                          2: [clause("①", REVIVE)]})

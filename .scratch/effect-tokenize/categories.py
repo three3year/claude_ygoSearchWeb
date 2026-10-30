@@ -641,6 +641,17 @@ def classify_card(sentences):
     return rollup(pairs, tree)
 
 
+def empty_leaves(tree, sentences):
+    """全語料的句子(每句帶 frames 清單)→ 沒有任何已歸框的葉名,依樹序。條件位的框不是已歸,
+    只在條件位命中的葉算空。只給真樹回歸測試用,不進建置流程。"""
+    placed = set()
+    for sentence in sentences:
+        for _, record in classified(tree, sentence["frames"]):
+            if record["status"] == STATUS_PLACED:
+                placed.update(record["leaves"])
+    return [leaf.name for leaf in tree.leaves if leaf.name not in placed]
+
+
 def main():
     try:
         tree = load_tree()

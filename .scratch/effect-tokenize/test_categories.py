@@ -13,12 +13,14 @@ category-lemma-followup 票 02)。
 
 執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize
 """
+import json
 import os
 import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import categories  # noqa: E402
+import frames  # noqa: E402
 
 
 def classify(text, context="", tree=None):
@@ -1074,6 +1076,59 @@ class TestEmptyLeafRemovalRealTree(unittest.TestCase):
         """語料的耐性 無効にする 都含 効果/発動/召喚,用造句:都不含的框進未歸。"""
         self.assertEqual(self.status_and_leaves("①：このカードの攻撃は無効にされない。"),
                          [("無効にする", "未歸", [])])
+
+
+class TestEmptyLeaves(unittest.TestCase):
+    """empty-leaf-removal 票 02:每片葉在全語料的效果位或代價位至少要有一框,預設葉也一樣。"""
+
+    SMALL_TREE = {"樹": [{"詞元": "破壊", "子": [{"所在": "墓地"}, {}]},
+                         {"詞元": "にする", "子": [{"目的關鍵詞": ["裏側表示"]}, {}]}]}
+
+    def empty_leaves(self, *texts):
+        tree = categories.CategoryTree(self.SMALL_TREE)
+        return categories.empty_leaves(tree, [{"frames": frames.extract(t)} for t in texts])
+
+    def test_reports_empty_leaves_in_tree_order(self):
+        self.assertEqual(self.empty_leaves("①：相手の墓地のカードを破壊する。"),
+                         ["破壊", "にする→裏側表示", "にする"])
+
+    def test_default_leaf_without_frames_is_empty(self):
+        self.assertEqual(
+            self.empty_leaves("①：相手の墓地のカードを破壊する。", "①：このカードを破壊する。",
+                              "①：このカードを裏側表示にする。"),
+            ["にする"])
+
+    def test_leaf_hit_only_in_condition_position_is_empty(self):
+        self.assertEqual(
+            self.empty_leaves("①：相手の墓地のカードを破壊する。", "①：このカードを破壊する。",
+                              "①：このカードを攻撃表示にする。",
+                              "①：自分のモンスターが裏側表示になった時に発動できる。"),
+            ["にする→裏側表示"])
+
+    def test_cost_position_counts(self):
+        self.assertEqual(
+            self.empty_leaves("①：相手の墓地のカードを破壊する。", "①：このカードを破壊する。",
+                              "①：このカードを攻撃表示にする。",
+                              "①：このカードを裏側表示にして発動できる。"),
+            [])
+
+    def test_all_leaves_have_frames(self):
+        self.assertEqual(
+            self.empty_leaves("①：相手の墓地のカードを破壊する。", "①：このカードを破壊する。",
+                              "①：このカードを裏側表示にする。", "①：このカードを攻撃表示にする。"),
+            [])
+
+    def test_real_tree_has_no_empty_leaf_in_corpus(self):
+        """真樹對框架檔重新歸類(不讀舊的類別產物):改樹後不必重跑分詞鏈就驗得到。卡文更新或
+        改規則讓這條變紅時,由站主決定刪葉或改規則。"""
+        if not os.path.exists(categories.FRAMES):
+            reason = "空葉防線沒有生效:沒有 frames.json,先跑分詞鏈(run_chain.py)"
+            print(reason, file=sys.stderr)
+            self.skipTest(reason)
+        with open(categories.FRAMES, encoding="utf-8") as f:
+            sentences = json.load(f)
+        self.assertEqual(categories.empty_leaves(categories.default_tree(), sentences), [],
+                         "這些葉在全語料的效果位與代價位都沒有框,請站主決定刪葉或改規則")
 
 
 class TestMiddleClass(unittest.TestCase):

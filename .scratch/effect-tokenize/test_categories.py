@@ -656,7 +656,7 @@ class TestGoalKeywords(unittest.TestCase):
 
 class TestLemmaFollowupRealTree(unittest.TestCase):
     """category-lemma-followup 票 01〜04 的真樹:直接攻撃 在 戰鬥/限制 各一節點;にする 依目的
-    分出表示形式六葉、→属性/→族(規則改寫)、→レベル(數值 › レベル);ダメージ 與 LP 各一葉。
+    分出表示形式五葉、→属性/→族(規則改寫)、→レベル(數值 › レベル);ダメージ 與 LP 各一葉。
     →レベル 的兩個句型見 TestMiddleClassRealTree.test_level_complements_land_on_nisuru,
     半分になる/０になる 的 ダメージ 葉見 TestDraftTree、TestMajorByLeaf。"""
 
@@ -1036,6 +1036,44 @@ MIDDLE_TREE = [
             {"關鍵詞": ["ダメージ"], "大類": "乙", "中類": "ダメージ"}, {}]}]},
     {"大類": "乙", "中類": ["ダメージ"], "子": [{"詞元": "回復"}]},
 ]
+
+
+class TestEmptyLeafRemovalRealTree(unittest.TestCase):
+    """empty-leaf-removal 票 01 的真樹:刪掉 にする→裏側表示 與 指定、無効にする(耐性) 的預設葉。"""
+
+    def status_and_leaves(self, text):
+        return [(row[0], row[1], row[2]) for row in classify(text)]
+
+    def test_face_down_goal_falls_to_nisuru_default_leaf(self):
+        """語料沒有效果位的「裏側表示にする」,用造句:將來出現時落預設葉、不遺失。"""
+        self.assertEqual(self.status_and_leaves("①：このカードを裏側表示にする。"),
+                         [("にする", "已歸", ["にする"])])
+
+    def test_face_down_defense_keeps_its_two_leaves(self):
+        self.assertEqual(
+            self.status_and_leaves("●相手フィールドのモンスター１体を裏側守備表示にする。")[-1][2][:2],
+            ["にする→裏側守備表示", "にする→守備表示"])
+
+    def test_turned_face_down_condition_has_no_category_leaf(self):
+        """條件位不進動作類別(語料 8 框都是這個句型,留給觸發事件軸)。"""
+        self.assertEqual(
+            self.status_and_leaves("①：自分フィールドの表側表示モンスターが裏側表示になった時に発動できる。"
+                                   "このカードを手札から特殊召喚する。"),
+            [("にする", "不適用", []), ("特殊召喚", "已歸", ["特殊召喚←手札"])])
+
+    def test_designate_off_field_is_unplaced(self):
+        """語料的 指定 全在場上,用造句:所在不是場上的框進未歸、不落預設葉。"""
+        self.assertEqual(self.status_and_leaves("①：相手の墓地のカード１枚を指定する。"),
+                         [("指定", "未歸", [])])
+
+    def test_designate_on_field_keeps_its_leaf(self):
+        self.assertEqual(self.status_and_leaves("①：使用していない相手のモンスターゾーンを１ヵ所指定する。"),
+                         [("指定", "已歸", ["指定@フィールド"])])
+
+    def test_negate_resistance_without_keyword_is_unplaced(self):
+        """語料的耐性 無効にする 都含 効果/発動/召喚,用造句:都不含的框進未歸。"""
+        self.assertEqual(self.status_and_leaves("①：このカードの攻撃は無効にされない。"),
+                         [("無効にする", "未歸", [])])
 
 
 class TestMiddleClass(unittest.TestCase):

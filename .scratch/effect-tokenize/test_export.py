@@ -201,11 +201,11 @@ SPELL = {"id": 1, "type": 0x2, "race": 0, "attribute": 0, "level": 0,
          "atk": None, "def": None, "name_ja": "テスト・魔法"}
 
 
-def modes(text, card=1, kind="啟動效果", face=DRAGON):
+def modes(text, card=1, kind="啟動效果", face=DRAGON, section="main"):
     """一句效果句 → {效果位此卡葉、效果位非此卡葉、代價位此卡葉、代價位非此卡葉}
     (空的省略);斷言匯出沒有問題。"""
     faces = {card: export_categories.card_face(dict(face, id=card))} if face else None
-    doc, problems = export({card: [clause("①", text, kind=kind)]}, faces)
+    doc, problems = export({card: [clause("①", text, kind=kind, section=section)]}, faces)
     assert not problems, problems
     row = doc["句"][0]
     return {k: row[k] for k in ("effect_self", "effect_nonself", "cost_self", "cost_nonself")
@@ -448,6 +448,160 @@ class TestPatientAllClass(unittest.TestCase):
         self.assertNotEqual(dict(doc["卡面"])[1], before[1])
         self.assertEqual(dict(doc["卡面"])[1],
                          export_categories.face_hash(dict(DRAGON, level=8)))
+
+
+class TestPatientCountIsNotDuration(unittest.TestCase):
+    """數量要是受事者的數量:子句裡的期間、升降值不是選擇類(回歸:真資料抽樣發現)。"""
+
+    def test_until_end_of_turn_is_not_a_count(self):
+        self.assertEqual(modes("①：自分フィールドの全てのモンスターの攻撃力はターン終了時まで"
+                               "倍になる。"), {})
+
+    def test_level_change_amount_is_not_a_count(self):
+        self.assertEqual(modes("①：自分フィールドの全てのモンスターのレベルは５つ上がる。"), {})
+
+    def test_all_of_them_wins_over_a_duration(self):
+        self.assertEqual(modes("①：発動後２回目の相手エンドフェイズまで、フィールドのモンスターを"
+                               "全て除外する。"), {})
+
+    def test_count_right_after_the_patient_still_counts(self):
+        self.assertEqual(modes("①：手札を２枚まで捨てて発動できる。自分はデッキから１枚"
+                               "ドローする。").get("cost_nonself"), ["捨てる"])
+
+    def test_up_to_a_number_written_before_the_patient(self):
+        self.assertTrue(modes("①：自分の墓地の魔法カードの数まで、デッキからモンスターを"
+                              "手札に加える。").get("effect_nonself"))
+
+
+class TestPatientLaunchEdgeCases(unittest.TestCase):
+    """發動位置:此卡是施事者時沒有移動;靈擺區在場上。"""
+
+    def test_this_card_destroying_another_does_not_leave_the_field(self):
+        self.assertEqual(modes("①：このカードが相手モンスターを戦闘で破壊した場合に発動できる。"
+                               "フィールドのモンスターを全て破壊する。",
+                               kind="誘發效果(1速)"), {})
+
+    def test_this_card_sending_another_does_not_move_it(self):
+        self.assertEqual(modes("①：このカードがモンスターを墓地へ送った場合に発動できる。"
+                               "フィールドのモンスターを全て破壊する。",
+                               kind="誘發效果(1速)"), {})
+
+    def test_this_card_destroyed_leaves_the_field(self):
+        self.assertTrue(modes("①：このカードが破壊された場合に発動できる。フィールドのモンスターを"
+                              "全て破壊する。", kind="誘發效果(1速)").get("effect_nonself"))
+
+    def test_pendulum_zone_is_on_the_field(self):
+        self.assertEqual(modes("①：このカードがPゾーンに存在する場合に発動できる。フィールドの"
+                               "カードを全て破壊する。"), {})
+
+    def test_pendulum_section_launches_from_the_pendulum_zone(self):
+        text = "①：自分のPゾーンのカードを全て破壊する。"
+        self.assertEqual(modes(text, section="pendulum"), {})
+        self.assertTrue(modes(text).get("effect_nonself"))
+
+
+class TestPatientThisEffect(unittest.TestCase):
+    """受事者是效果、發動:主人是此卡就是此卡;「この効果で…したモンスターの効果」主人是別張。"""
+
+    def test_this_effect_is_owned_by_this_card(self):
+        self.assertTrue(modes("①：この効果の発動は無効化されない。").get("effect_self"))
+
+    def test_effect_of_a_monster_summoned_by_this_effect_is_nonself(self):
+        found = modes("①：手札からモンスター１体を特殊召喚する。この効果で特殊召喚した"
+                      "モンスターの効果は無効化される。")
+        self.assertIn("無効にする:効果", found.get("effect_nonself", []))
+        self.assertNotIn("effect_self", found)
+
+    def test_sorezore_is_not_a_demonstrative(self):
+        """それぞれ・それ以外 不是指示詞:沒有數量仍是全部類。"""
+        self.assertEqual(modes("①：それ以外の自分フィールドのモンスターを全て破壊する。"), {})
+
+
+XYZ = {"id": 1, "type": 0x800021, "race": 0x1, "attribute": 0x10, "level": 4,
+       "atk": 2000, "def": 1000, "name_ja": "テスト・エクシーズ"}
+UNKNOWN_ATK = dict(DRAGON, atk=-2, **{"def": -2})
+
+
+def wipe(group, face=DRAGON):
+    """「自分フィールドの〈群體〉を全て破壊する」:會不會判成非此卡。"""
+    return "effect_nonself" in modes("①：自分フィールドの%sを全て破壊する。" % group, face=face)
+
+
+class TestPatientAllClassConditions(unittest.TestCase):
+    """[[動作對象]]全部類(action-patient 票 05):種族、屬性、字段、子類型、數值。合成的此卡是
+    等級 7、攻 2500 守 2000 的暗屬性龍族效果怪獸「テスト・ドラゴン」。"""
+
+    def test_race(self):
+        self.assertTrue(wipe("戦士族モンスター"))
+        self.assertFalse(wipe("ドラゴン族モンスター"))
+        self.assertFalse(wipe("戦士族・ドラゴン族モンスター"))
+
+    def test_attribute(self):
+        self.assertTrue(wipe("光属性モンスター"))
+        self.assertFalse(wipe("闇属性モンスター"))
+        self.assertFalse(wipe("光・闇属性モンスター"))
+
+    def test_archetype_is_contained_in_the_japanese_card_name(self):
+        self.assertTrue(wipe("「サイバー」モンスター"))
+        self.assertFalse(wipe("「テスト」モンスター"))
+
+    def test_card_subtype(self):
+        self.assertTrue(wipe("融合モンスター"))
+        self.assertFalse(wipe("効果モンスター"))
+        self.assertTrue(wipe("通常モンスター"))
+        self.assertTrue(wipe("融合・S・Xモンスター"))
+        self.assertFalse(wipe("融合・S・Xモンスター", face=XYZ))
+
+    def test_spell_subtype(self):
+        self.assertTrue(wipe("永続魔法カード", face=SPELL))
+        self.assertFalse(wipe("通常魔法カード", face=SPELL))
+
+    def test_numeric_conditions(self):
+        self.assertTrue(wipe("レベル４以下のモンスター"))
+        self.assertFalse(wipe("レベル７以上のモンスター"))
+        self.assertTrue(wipe("攻撃力１０００以下のモンスター"))
+        self.assertFalse(wipe("攻撃力２５００以上のモンスター"))
+        self.assertTrue(wipe("守備力１０００以下のモンスター"))
+        self.assertFalse(wipe("守備力２０００のモンスター"))
+
+    def test_rank_and_level_do_not_mix(self):
+        """超量怪獸沒有等級、只有階級(總表的 level 欄存階級)。"""
+        self.assertTrue(wipe("レベル４以下のモンスター", face=XYZ))
+        self.assertFalse(wipe("ランク４以下のモンスター", face=XYZ))
+        self.assertTrue(wipe("ランク４のモンスター"))
+
+    def test_unknown_atk_cannot_be_compared(self):
+        self.assertFalse(wipe("攻撃力１０００以下のモンスター", face=UNKNOWN_ATK))
+
+    def test_uncomparable_modifiers_may_include_this_card(self):
+        self.assertFalse(wipe("表側表示モンスター"))
+        self.assertFalse(wipe("このカードと同じ種族のモンスター"))
+
+    def test_condition_inside_a_modifier_does_not_count(self):
+        """修飾語裡的種族說的是素材,不是群體本身。"""
+        self.assertFalse(wipe("戦士族モンスターを素材としたモンスター"))
+        self.assertFalse(wipe("戦士族以外のモンスター"))
+
+    def test_alternatives_match_when_any_of_them_matches(self):
+        self.assertFalse(wipe("「サイバー」モンスターかドラゴン族モンスター"))
+        self.assertTrue(wipe("「サイバー」モンスターか戦士族モンスター"))
+
+    def test_conditions_of_one_alternative_are_all_required(self):
+        self.assertTrue(wipe("闇属性の戦士族モンスター"))
+        self.assertFalse(wipe("闇属性のドラゴン族モンスター"))
+
+    def test_archetype_compares_across_full_and_half_width(self):
+        self.assertFalse(wipe("「DD」モンスター", face=dict(DRAGON, name_ja="ＤＤ魔導賢者")))
+
+    def test_stats_count_each_blocker_and_uncomparable_literals(self):
+        doc, _ = export({1: [clause("①", "①：自分フィールドの戦士族モンスターを全て破壊する。")],
+                         2: [clause("①", "①：自分フィールドの表側表示モンスターを全て破壊する。")]},
+                        {1: export_categories.card_face(DRAGON),
+                         2: export_categories.card_face(DRAGON)})
+        stats = doc["統計"]
+        self.assertEqual(stats["理由"].get("非此卡:全部類種族對不上"), 1)
+        self.assertEqual(stats["理由"].get("皆非:全部類比不了"), 1)
+        self.assertEqual(stats["比不了字面"], {"表側表示モンスター": 1})
 
 
 if __name__ == "__main__":

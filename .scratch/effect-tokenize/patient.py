@@ -17,10 +17,13 @@
 
 全部類(沒有數量的群體)依**發動位置**判:一句效果句內依序取 條件/代價寫明的此卡區域、
 條件位觸發事件裡此卡的去處、處理中此卡自己移動的起點,都沒有就是場上(此卡在我方)。
-群體的區域(所在或來源)含發動位置,而且玩家、卡種對得上此卡的卡面參數,才算會包含
-此卡;區域判不出時比不了,視為可能包含。
+群體的區域(所在或來源)含發動位置,而且玩家、卡種、種族、屬性、字段、卡片子類型、數值條件
+全都對得上此卡的卡面參數,才算會包含此卡;比不了的定語(含區域判不出)一律視為對得上,任一
+條件對不上就判非此卡。條件只看群體本身:修飾語(〜を素材とした、〜以外の)裡的種族說的是
+別的東西,切掉後記為比不了;か/と 並列的是替代項,任一項全對得上就算包含。
 """
 import re
+import unicodedata
 
 from constraints import KIND_ACTION
 from places import PLAYER_OPP, ZONE_TERMS, parse_zones
@@ -42,12 +45,19 @@ WHY_ATTACHED = "此卡的附屬卡"
 WHY_SELECTED = "選擇類"
 WHY_OTHERS_EFFECT = "主人不是此卡的效果"
 WHY_THIS_EFFECT = "この効果"
+WHY_THIS_NAME = "このカード名の效果"
 WHY_ALL = "全部類"
 WHY_ALL_INCLUDES = "全部類含此卡"
 WHY_ALL_NO_ZONE = "全部類區域不明"
 WHY_ALL_ZONE = "全部類區域對不上"
 WHY_ALL_PLAYER = "全部類玩家對不上"
 WHY_ALL_KIND = "全部類卡種對不上"
+WHY_ALL_RACE = "全部類種族對不上"
+WHY_ALL_ATTR = "全部類屬性對不上"
+WHY_ALL_ARCHETYPE = "全部類字段對不上"
+WHY_ALL_SUBTYPE = "全部類子類型對不上"
+WHY_ALL_NUMERIC = "全部類數值對不上"
+WHY_ALL_UNCOMPARABLE = "全部類比不了"
 WHY_NO_OWNER = "屬性沒有主人"
 WHY_NOT_CARD = "不是卡"
 WHY_UNKNOWN = "表外"
@@ -69,6 +79,9 @@ _ATTRIBUTE_OF_SELF = re.compile(r"%sの+%s$" % (THIS_CARD, _ATTR_LIST))
 _LISTED_WITH_SELF = re.compile(r"^%s(?:と|及び|および|や|または|か)(?!同じ|同名|は|相互|リンクし|"
                                r"リンク状態|戦闘|\(共同\)|異なる|元々)" % THIS_CARD)
 _INCLUDING_SELF = THIS_CARD + "を含む"
+# この効果、この効果の発動、この発動とこの効果:主人是此卡(この効果で特殊召喚したモンスターの
+# 効果 主人是別張)
+_THIS_EFFECT = re.compile(r"^この(?:効果|発動)(?:の発動)?(?:(?:と|・)(?:この)?(?:効果|発動))*$")
 # このカード以外;群體前的「他の」(フィールドの他のカード)在卡文裡同樣是此卡以外
 _OTHER_THAN_SELF = re.compile(r"%s以外|(?:^|の)他の" % THIS_CARD)
 # 此卡的附屬卡:另一張實體卡(このカードのX素材、このカードの装備モンスター、リンク先)
@@ -83,11 +96,16 @@ _CARD_HEADS = ("モンスター", "カード", "トークン", "チューナー"
 _NOT_CARD_HEADS = ("ダメージ", "LP", "ライフポイント", "カウンター", "サイコロ", "コイントス",
                    "フェイズ", "ダメージ計算", "召喚条件", "数値", "数", "ターン", "目", "枚数",
                    "合計", "種類")
-# 選擇類:數量(數字+量詞、〜まで)或指示詞
-_COUNT = re.compile(r"[0-9０-９]+(?:枚|体|つ|種類|ヵ所|箇所|個)|まで")
+# 選擇類:受事者帶數量(數字+量詞、〜まで)或指示詞。數量只寫在子句裡時要緊接受事者
+# (手札を１枚捨てる、カードを３枚まで)或是「〜の數まで/任意の數」——子句裡別的數字不算:
+# ターン終了時まで 是期間、レベルは５つ上がる 是升降值。全て 優先於子句裡的數量
+_QUANTITY = r"[0-9０-９]+(?:枚|体|つ|種類|ヵ所|箇所|個)"
+_COUNT = re.compile(r"%s|まで" % _QUANTITY)
+_CLAUSE_COUNT = re.compile(r"を%s|数まで|任意の数|好きな数" % _QUANTITY)
+_ALL_OF_THEM = re.compile(r"全て")
 _COUNT_TAIL = re.compile(r"(?:[0-9０-９]+(?:枚|体|つ|種類|ヵ所|箇所|個))?(?:まで|以上)?$")
 _CARD_COUNT = re.compile(r"[0-9０-９]+(?:枚|体)")
-_DEMONSTRATIVE = re.compile(r"^(?:その|それ|対象の|この効果の対象)")
+_DEMONSTRATIVE = re.compile(r"^(?:その|それら?(?:$|の)|対象の|この効果の対象)")
 _PAREN_TAIL = re.compile(r"[（(][^（()）]*[)）]$")
 _QUOTED = re.compile(r"「[^」]*」")
 _ATTRIBUTE_TAIL = re.compile(r"^(.*?)(?:の)*%s$" % _ATTR_LIST)
@@ -99,10 +117,11 @@ LAUNCH_TRIGGER = "觸發"
 LAUNCH_MOVE = "自己移動"
 LAUNCH_DEFAULT = "預設場上"
 FIELD = "場上"
+PENDULUM_ZONE = "靈擺區"
 OFF_FIELD = "場外"           # 去處不明的「離開場上」:不在場上,也不知道在哪
 STATE_ACTIONS = ("存在", "ある", "いる")
 # 觸發事件沒寫去處、但一定是離開場上的動作
-LEAVE_FIELD_ACTIONS = ("離れる", "破壊", "リリース")
+LEAVE_FIELD_ACTIONS = ("破壊", "リリース")
 POS_CONDITION, POS_COST, POS_EFFECT = "條件", "代價", "效果"
 
 # 卡種(卡片總表 type 位元)
@@ -145,30 +164,42 @@ def _is_this_card(text):
     return _clean(text).endswith(THIS_CARD)
 
 
-def launch(frames):
-    """一句效果句的框架 → (此卡可能所在的區域集合, 來源)。"""
-    written, trigger, move = None, None, None
+def _trigger_zones(frame):
+    """條件位以此卡為主語的事件 → 此卡的去處。此卡是施事者(對象另有其物、破壊した)時此卡
+    沒有移動。"""
+    if frame.get("object"):
+        return []
+    zones = _zones(frame.get("goal"))
+    if zones:
+        return zones
+    leaves = frame.get("action") == "離れる" or FIELD in {z for _, z in _zones(frame.get("source"))}
+    if leaves or (frame.get("action") in LEAVE_FIELD_ACTIONS and frame.get("voice") == "受身"):
+        return [(None, OFF_FIELD)]
+    return []
+
+
+def launch(frames, section="main"):
+    """一句效果句的框架 → (此卡可能所在的區域集合, 來源);靈擺段落的效果預設在靈擺區。"""
+    written, trigger, move = [], [], []
     for fr in frames:
         if fr.get("kind") != KIND_ACTION:
             continue
         position = fr.get("position")
         agent = fr.get("subject") or fr.get("topic")
-        if written is None and position == POS_CONDITION and fr.get("action") in STATE_ACTIONS                 and _is_this_card(agent):
-            written = _zones(fr.get("goal") or fr.get("place"))
-        elif written is None and position == POS_COST and _is_this_card(fr.get("object")):
-            written = _zones(fr.get("source") or fr.get("place"))
-        elif trigger is None and position == POS_CONDITION and _is_this_card(agent)                 and fr.get("action") not in STATE_ACTIONS:
-            trigger = _zones(fr.get("goal"))
-            if not trigger and (fr.get("action") in LEAVE_FIELD_ACTIONS
-                                or FIELD in {z for _, z in _zones(fr.get("source"))}):
-                trigger = [(None, OFF_FIELD)]
-        elif move is None and position == POS_EFFECT and _is_this_card(fr.get("object")):
-            move = _zones(fr.get("source"))
+        if position == POS_CONDITION and _is_this_card(agent):
+            if fr.get("action") in STATE_ACTIONS:
+                written = written or _zones(fr.get("goal") or fr.get("place"))
+            else:
+                trigger = trigger or _trigger_zones(fr)
+        elif position == POS_COST and _is_this_card(fr.get("object")):
+            written = written or _zones(fr.get("source") or fr.get("place"))
+        elif position == POS_EFFECT and _is_this_card(patient(fr)[0]):
+            move = move or _zones(fr.get("source"))
     for found, source in ((written, LAUNCH_WRITTEN), (trigger, LAUNCH_TRIGGER),
                           (move, LAUNCH_MOVE)):
         if found:
             return {zone for _, zone in found}, source
-    return {FIELD}, LAUNCH_DEFAULT
+    return ({PENDULUM_ZONE} if section == "pendulum" else {FIELD}), LAUNCH_DEFAULT
 
 
 def face_kinds(face):
@@ -187,23 +218,165 @@ def group_kinds(text):
     return kinds or None
 
 
+# 卡面參數:總表的位元(同 script/web/vocab.py 的值域正典)與卡文的日文寫法
+_RACE_BITS = {"戦士族": 0x1, "魔法使い族": 0x2, "天使族": 0x4, "悪魔族": 0x8, "アンデット族": 0x10,
+              "機械族": 0x20, "水族": 0x40, "炎族": 0x80, "岩石族": 0x100, "鳥獣族": 0x200,
+              "植物族": 0x400, "昆虫族": 0x800, "雷族": 0x1000, "ドラゴン族": 0x2000, "獣族": 0x4000,
+              "獣戦士族": 0x8000, "恐竜族": 0x10000, "魚族": 0x20000, "海竜族": 0x40000,
+              "爬虫類族": 0x80000, "サイキック族": 0x100000, "幻神獣族": 0x200000,
+              "創造神族": 0x400000, "幻竜族": 0x800000, "サイバース族": 0x1000000,
+              "幻想魔族": 0x2000000}
+_RACE = re.compile("|".join(sorted(_RACE_BITS, key=len, reverse=True)))
+_ATTR_BITS = {"地": 0x1, "水": 0x2, "炎": 0x4, "風": 0x8, "光": 0x10, "闇": 0x20, "神": 0x40}
+_ATTRIBUTE = re.compile(r"((?:[地水炎風光闇神]・)*[地水炎風光闇神])属性")
+_MONSTER_TYPE_BITS = {"融合": 0x40, "シンクロ": 0x2000, "S": 0x2000, "エクシーズ": 0x800000,
+                      "X": 0x800000, "リンク": 0x4000000, "L": 0x4000000, "儀式": 0x80,
+                      "ペンデュラム": 0x1000000, "P": 0x1000000, "通常": 0x10, "効果": 0x20,
+                      "トゥーン": 0x400000, "スピリット": 0x200, "ユニオン": 0x400,
+                      "デュアル": 0x800, "リバース": 0x200000, "チューナー": 0x1000}
+_MONSTER_TYPE_ALT = "|".join(sorted(_MONSTER_TYPE_BITS, key=len, reverse=True))
+_MONSTER_TYPES = re.compile(r"((?:(?:%s)・?)+)モンスター|チューナー" % _MONSTER_TYPE_ALT)
+_SPELL_TYPE_BITS = {"速攻": 0x10000, "永続": 0x20000, "装備": 0x40000, "フィールド": 0x80000,
+                    "儀式": 0x80}
+_TRAP_TYPE_BITS = {"永続": 0x20000, "カウンター": 0x100000}
+_SPELL_TRAP_TYPES = re.compile(r"(通常|速攻|永続|装備|フィールド|儀式|カウンター)(魔法|罠)")
+_NUMERIC = re.compile(r"(レベル|ランク|リンク|攻撃力|守備力)が?([0-9０-９]+)(以上|以下|未満)?")
+XYZ_BIT, LINK_BIT = 0x800000, 0x4000000
+
+# 修飾語:最後一個述語或關係詞之前都是別的東西的條件(〜を素材とした、〜以外の、〜と同じ)
+_MODIFIER = re.compile(r"^.*(?:した|する|された|される|されて|している|となる|とする|を含む|と同じ"
+                       r"|異なる|持つ|以外の|より|いる|ある|ない)")
+_ALTERNATIVE = re.compile(r"または|か|や|及び|および|と")
+_KNOWN_TOKENS = re.compile("|".join(
+    [r"「\d+」", _RACE.pattern, _ATTRIBUTE.pattern, _NUMERIC.pattern, _MONSTER_TYPES.pattern,
+     _SPELL_TRAP_TYPES.pattern]
+    + [re.escape(term) for term, _ in ZONE_TERMS]
+    + ["モンスター", r"\(カード\)", "カード", "魔法", "罠", "トークン", "全ての", "全て", "自分",
+       "相手", "お互い", "上", "の", "・", "または", "か", "や", "及び", "および", "と"]))
+
+
+def _nfkc(text):
+    return unicodedata.normalize("NFKC", text or "")
+
+
+def _mask_names(text):
+    """「卡名」換成編號佔位(名字裡的字不干擾切分)→ (字面, 名字清單)。"""
+    names = []
+
+    def mask(match):
+        names.append(match.group(1))
+        return "「%d」" % (len(names) - 1)
+    return re.sub(r"「([^」]*)」", mask, text), names
+
+
+def _subtype_block(segment, face):
+    """子類型條件:群體寫了卻對不上 → True。同一替代項有沒帶子類型的卡種名詞時不算條件
+    (融合モンスター・魔法カード)。"""
+    types = face["type"]
+    wanted = [m for m in _MONSTER_TYPES.finditer(segment)]
+    spell_trap = list(_SPELL_TRAP_TYPES.finditer(segment))
+    if not wanted and not spell_trap:
+        return False
+    nouns = len(re.findall(r"モンスター|魔法|罠|チューナー", segment))
+    if nouns > len(wanted) + len(spell_trap):
+        return False
+    for m in wanted:
+        if m.group(0) == "チューナー":
+            if types & 0x1000:
+                return False
+            continue
+        names = re.findall(_MONSTER_TYPE_ALT, m.group(1))
+        if types & 0x1 and any(types & _MONSTER_TYPE_BITS[n] for n in names):
+            return False
+    for m in spell_trap:
+        name, kind = m.groups()
+        bits = _SPELL_TYPE_BITS if kind == "魔法" else _TRAP_TYPE_BITS
+        kind_bit = 0x2 if kind == "魔法" else 0x4
+        if not types & kind_bit:
+            continue
+        if name == "通常" and not any(types & bit for bit in bits.values()):
+            return False
+        if bits.get(name, 0) & types:
+            return False
+    return True
+
+
+def _numeric_block(segment, face):
+    """數值條件:對不上 → True;攻守未知(?)比不了,不擋。"""
+    types = face["type"]
+    for field, digits, op in _NUMERIC.findall(segment):
+        wanted = int(digits)
+        if field == "レベル":
+            value = None if types & (XYZ_BIT | LINK_BIT) else face.get("level")
+        elif field == "ランク":
+            value = face.get("level") if types & XYZ_BIT else None
+        elif field == "リンク":
+            value = face.get("level") if types & LINK_BIT else None
+        else:
+            value = face.get("atk" if field == "攻撃力" else "def")
+            if value is not None and value < 0:
+                continue
+        if value is None:
+            return True
+        if op == "以上" and value < wanted or op == "以下" and value > wanted \
+                or op == "未満" and value >= wanted or not op and value != wanted:
+            return True
+    return False
+
+
+def _segment_blocker(segment, names, face):
+    """一個替代項對此卡卡面參數的第一個擋下的條件(理由),全對得上時 None。"""
+    kinds = group_kinds(segment)
+    if kinds is not None and not kinds & face_kinds(face):
+        return WHY_ALL_KIND
+    races = _RACE.findall(segment)
+    if races and not any(face["race"] & _RACE_BITS[r] for r in races):
+        return WHY_ALL_RACE
+    attrs = [a for found in _ATTRIBUTE.findall(segment) for a in found.split("・")]
+    if attrs and not any(face["attribute"] & _ATTR_BITS[a] for a in attrs):
+        return WHY_ALL_ATTR
+    quoted = [names[int(i)] for i in re.findall(r"「(\d+)」", segment)]
+    if quoted and not any(_nfkc(q) in _nfkc(face.get("name_ja")) for q in quoted):
+        return WHY_ALL_ARCHETYPE
+    if _subtype_block(segment, face):
+        return WHY_ALL_SUBTYPE
+    if _numeric_block(segment, face):
+        return WHY_ALL_NUMERIC
+    return None
+
+
+def _compare_face(text, face):
+    """群體字面 × 此卡卡面參數 → (擋下的理由或 None, 有沒有比不了的定語)。"""
+    masked, names = _mask_names(_nfkc(text))
+    body = _MODIFIER.sub("", masked)
+    uncomparable = body != masked or bool(_KNOWN_TOKENS.sub("", body))
+    blockers = [_segment_blocker(segment, names, face)
+                for segment in _ALTERNATIVE.split(body) if segment]
+    if not blockers or None in blockers:
+        return None, uncomparable
+    return blockers[0], uncomparable
+
+
 def _all_class(text, frame, where, face):
     """全部類:→ (值, 理由)。"""
     zones = _group_zones(text, frame)
+    possible, _ = where
+    # 靈擺區在場上:群體寫場上時含靈擺區的此卡
+    near = [(player, zone) for player, zone in zones
+            if zone in possible or (OFF_FIELD in possible and zone != FIELD)
+            or (zone == FIELD and PENDULUM_ZONE in possible)]
+    if zones and not near:
+        return NONSELF, WHY_ALL_ZONE
+    if near and all(player == PLAYER_OPP for player, _ in near):
+        return NONSELF, WHY_ALL_PLAYER
+    uncomparable = False
+    if face is not None:
+        blocker, uncomparable = _compare_face(text, face)
+        if blocker:
+            return NONSELF, blocker
     if not zones:
         return None, WHY_ALL_NO_ZONE
-    possible, _ = where
-    near = [(player, zone) for player, zone in zones
-            if zone in possible or (OFF_FIELD in possible and zone != FIELD)]
-    if not near:
-        return NONSELF, WHY_ALL_ZONE
-    if all(player == PLAYER_OPP for player, _ in near):
-        return NONSELF, WHY_ALL_PLAYER
-    if face is not None:
-        kinds = group_kinds(text)
-        if kinds is not None and not kinds & face_kinds(face):
-            return NONSELF, WHY_ALL_KIND
-    return None, WHY_ALL_INCLUDES
+    return None, WHY_ALL_UNCOMPARABLE if uncomparable else WHY_ALL_INCLUDES
 
 
 def patient(frame):
@@ -231,6 +404,8 @@ def self_rule(text):
         return WHY_LISTED
     if _INCLUDING_SELF in text:
         return WHY_INCLUDING
+    if _THIS_EFFECT.search(text):
+        return WHY_THIS_EFFECT
     return None
 
 
@@ -258,7 +433,8 @@ def _card_group(text, clause, all_class):
     """受事者是卡(或屬性的主人):→ (值, 理由)。"""
     if _ATTACHED.search(text):
         return NONSELF, WHY_ATTACHED
-    if _DEMONSTRATIVE.search(text) or _COUNT.search(text) or _COUNT.search(clause):
+    if _DEMONSTRATIVE.search(text) or _COUNT.search(text) or (
+            _CLAUSE_COUNT.search(clause) and not _ALL_OF_THEM.search(clause)):
         return NONSELF, WHY_SELECTED
     return all_class(text) if all_class else (None, WHY_ALL)
 
@@ -282,8 +458,8 @@ def classify(text, clause="", all_class=None):
             return NONSELF, WHY_SELECTED
         return None, WHY_UNKNOWN
     if kind == "effect":
-        if text.startswith("この"):
-            return None, WHY_THIS_EFFECT
+        if text.startswith(THIS_CARD + "名"):
+            return None, WHY_THIS_NAME
         return NONSELF, WHY_OTHERS_EFFECT
     if kind == "value":
         if _DEMONSTRATIVE.search(text):
@@ -319,9 +495,9 @@ def judge(frame, where=None, face=None):
     return Verdict(mode, why, text, used[0] if used else None)
 
 
-def judge_sentence(frames, face=None):
-    """一句效果句的框架清單(與此卡卡面參數,沒有時不比卡種)→ 與它對齊的 [Verdict];
+def judge_sentence(frames, face=None, section="main"):
+    """一句效果句的框架清單(與此卡卡面參數,沒有時不比卡面;段落)→ 與它對齊的 [Verdict];
     約束框架是 Verdict(None, None)。"""
-    where = launch(frames)
+    where = launch(frames, section)
     return [judge(fr, where, face) if fr.get("kind") == KIND_ACTION else Verdict(None, None)
             for fr in frames]

@@ -123,8 +123,9 @@ def print_categories(report, p):
         f"{k}={pat['sentences'][k]}/{pat['cards'][k]}" for k in pat["sentences"]))
     stats = pat["stats"] or {}
     for key, counts in stats.items():
-        if isinstance(counts, dict):
-            p(f"  動作對象{key}: " + " ".join(f"{k}={n}" for k, n in counts.items()))
+        cells = (" ".join(f"{k}={n}" for k, n in counts.items())
+                 if isinstance(counts, dict) else counts)
+        p(f"  動作對象{key}: {cells}")
 
 
 def print_report(report, file=sys.stdout):

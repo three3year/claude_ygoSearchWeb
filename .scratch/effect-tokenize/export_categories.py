@@ -121,7 +121,7 @@ def export(sentences, records, tree, faces=None):
                 {"card": s["card"], "section": s["section"], "index": part["index"],
                  "hash": text_hash(s["text_ja"][part["start"]:part["end"]])},
                 **{group: set() for group in ROW_GROUPS})
-        verdicts = patient.judge_sentence(s["frames"], faces.get(s["card"]))
+        verdicts = patient.judge_sentence(s["frames"], faces.get(s["card"]), s["section"])
         for fr, verdict in zip(s["frames"], verdicts):
             if fr["kind"] != KIND_ACTION:
                 continue
@@ -170,6 +170,7 @@ class Stats:
         self.reasons = {}
         self.unknown = {}
         self.launch = {}
+        self.uncomparable = {}
 
     def add(self, card, verdict):
         key = verdict.mode or "皆非"
@@ -179,17 +180,22 @@ class Stats:
         self.reasons[why] = self.reasons.get(why, 0) + 1
         if verdict.why == patient.WHY_UNKNOWN:
             self.unknown[verdict.text] = self.unknown.get(verdict.text, 0) + 1
+        if verdict.why in (patient.WHY_ALL_UNCOMPARABLE, patient.WHY_ALL_NO_ZONE):
+            self.uncomparable[verdict.text] = self.uncomparable.get(verdict.text, 0) + 1
         if verdict.launch:
             self.launch[verdict.launch] = self.launch.get(verdict.launch, 0) + 1
 
     def doc(self):
         keys = (patient.SELF, patient.NONSELF, "皆非")
-        top = sorted(self.unknown.items(), key=lambda kv: (-kv[1], kv[0]))[:self.SAMPLES]
+        top = lambda counts: dict(sorted(  # noqa: E731
+            counts.items(), key=lambda kv: (-kv[1], kv[0]))[:self.SAMPLES])
         return {"框架": {k: self.frames.get(k, 0) for k in keys},
                 "卡": {k: len(self.cards.get(k, ())) for k in keys},
                 "理由": dict(sorted(self.reasons.items())),
                 "發動位置": dict(sorted(self.launch.items())),
-                "表外受事者": dict(top)}
+                "表外受事者": top(self.unknown),
+                "比不了字面": top(self.uncomparable),
+                "比不了": sum(self.uncomparable.values())}
 
 
 def serialize(doc):
@@ -243,6 +249,9 @@ def main():
         print("  %s %d" % (why, n))
     print("  發動位置(全部類框架):" + "、".join(
         "%s %d" % kv for kv in stats["發動位置"].items()))
+    print("  比不了而視為可能包含 %d 框,前 %d 種:%s" % (
+        stats["比不了"], len(stats["比不了字面"]), "、".join(
+            "%s×%d" % kv for kv in stats["比不了字面"].items())))
     print("  表外受事者(前 %d 種):%s" % (len(stats["表外受事者"]), "、".join(
         "%s×%d" % kv for kv in stats["表外受事者"].items())))
     return 0

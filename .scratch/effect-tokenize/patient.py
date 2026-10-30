@@ -17,7 +17,8 @@
 
 受事者是指示詞時讀框架的[[回指]](anaphora.py),沿用目標的判定:目標含此卡 → 此卡;このカード以外、
 他の → 非此卡;目標或指示詞自己帶數量 → 非此卡;無數量的群體 → 全部類比對(區域、玩家用回指欄,
-事件主語是相手算對手,事件主語是此卡時目標確定是別張,發動位置用受事者那個框架當時的位置)。效果類(その発動、その効果、その攻撃)
+事件主語是相手算對手,事件主語是此卡時目標確定是別張,
+發動位置用受事者那個框架當時的位置)。效果類(その発動、その効果、その攻撃)
 事件主人字面是此卡才算此卡,其餘非此卡。回指留空 → 非此卡。修飾語(そのモンスターより…Xモンスター)
 不算指示詞,照受事者自己的字面判。字面指名此卡的規則(そのカードとこのカード)優先於回指。
 
@@ -48,8 +49,8 @@ SELF = "此卡"
 NONSELF = "非此卡"
 NEITHER = "皆非"       # 統計的鍵;Verdict.mode 以 None 表示
 
-THIS_CARD = "このカード"
-INTRANSITIVE = ("自動", "受身")
+THIS_CARD = anaphora.THIS_CARD
+INTRANSITIVE = anaphora.INTRANSITIVE
 
 # 判定的理由(建置報告依它分項計數)
 WHY_PATIENT = "受事者是此卡"
@@ -104,8 +105,7 @@ _SPACES = re.compile(r"\s+")
 # 屬性跟著此卡走;效果、發動、召喚、攻擊也是屬性(受事者是效果、發動時跟著主人走)。
 # 裝備怪獸、X 素材、カウンター、リンク先 不在表上——那是另一張實體卡或別的東西
 _EFFECT_HEADS = ("効果", "発動", "攻撃", "特殊召喚", "召喚")
-_VALUE_HEADS = ("攻撃力", "守備力", "レベル", "ランク", "Pスケール", "属性", "種族", "カード名",
-                "表示形式", "コントロール", "位置")
+_VALUE_HEADS = anaphora.VALUE_HEADS
 _ATTRIBUTES = _VALUE_HEADS + _EFFECT_HEADS
 _ATTR = "(?:元々の)?(?:%s)" % "|".join(_ATTRIBUTES)
 _ATTR_LIST = r"%s(?:(?:・|と|及び|および)%s)*" % (_ATTR, _ATTR)
@@ -130,7 +130,6 @@ _CARD_HEADS = ("モンスター", "カード", "トークン", "チューナー"
                "デッキ", "墓地", "フィールド", "それ", "それら", "いずれか", "内", "対象", "残り",
                "魔法", "罠")
 # 不是卡——傷害、LP、數值、指示物與遊戲程序
-_NOT_CARD_HEADS = anaphora.NOT_CARD_HEADS
 # 選擇類:受事者帶數量(數字+量詞、〜まで)或指示詞。數量只寫在子句裡時要緊接受事者
 # (手札を１枚捨てる、カードを３枚まで)或是「〜の數まで/任意の數」——子句裡別的數字不算:
 # ターン終了時まで 是期間、レベルは５つ上がる 是升降值。全て 優先於子句裡的數量
@@ -499,7 +498,7 @@ def _core(text):
 def head_kind(text):
     """受事者字面 → 中心詞類別 card/effect/value/not_card/unknown。"""
     core = _core(text)
-    if core.endswith(_NOT_CARD_HEADS):
+    if core.endswith(anaphora.NOT_CARD_HEADS):
         return "not_card"
     if core.endswith(_VALUE_HEADS):
         return "value"
@@ -510,12 +509,17 @@ def head_kind(text):
     return "unknown"
 
 
+def _has_count(text, clause):
+    """受事者帶數量,或數量寫在子句裡(全て 優先)。"""
+    return bool(_COUNT.search(text) or (
+        _CLAUSE_COUNT.search(clause) and not _ALL_OF_THEM.search(clause)))
+
+
 def _card_group(text, clause, all_class):
     """受事者是卡(或屬性的主人):→ (值, 理由)。"""
     if _ATTACHED.search(text):
         return NONSELF, WHY_ATTACHED
-    if anaphora.is_demonstrative(text) or _COUNT.search(text) or (
-            _CLAUSE_COUNT.search(clause) and not _ALL_OF_THEM.search(clause)):
+    if anaphora.is_demonstrative(text) or _has_count(text, clause):
         return NONSELF, WHY_SELECTED
     return all_class(text)
 
@@ -543,7 +547,7 @@ def _follow_target(text, target, target_class):
 
 def _modifier_group(text, clause, all_class):
     """指示詞只修飾另一張卡:受事者照自己的字面判,帶數量是選擇類,沒有數量走全部類。"""
-    if _COUNT.search(text) or (_CLAUSE_COUNT.search(clause) and not _ALL_OF_THEM.search(clause)):
+    if _has_count(text, clause):
         return NONSELF, WHY_MODIFIER_SELECTED
     mode, why = all_class(text)
     return mode, MODIFIER_PREFIX + why
@@ -589,17 +593,29 @@ def classify(text, clause, all_class, target=None, target_class=None):
 
 def _target_class(target, launched, face):
     """回指目標是無數量的群體:全部類比對;區域用回指欄,玩家或事件主語是相手時確定不是此卡。"""
-    if target.get("player") == PLAYER_OPP or _clean(target.get("subject")).startswith(PLAYER_OPP):
+    # 目標自己寫的玩家優先:相手が自分のモンスターを破壊した時 的目標是自分的
+    if target.get("player", PLAYER_OPP if _clean(target.get("subject")).startswith(PLAYER_OPP)
+                  else None) == PLAYER_OPP:
         return NONSELF, WHY_ALL_PLAYER
     return _all_class(target["text"], {"place": target.get("place")}, launched, face)
 
 
-def _is_all_class(why):
-    """理由是全部類比對的結果(含回指、修飾語前綴):用到發動位置。"""
+def _plain_why(why):
+    """去掉回指、修飾語前綴 → 全部類的理由本身。"""
     for prefix in (ANAPHORA_PREFIX, MODIFIER_PREFIX):
         if why and why.startswith(prefix):
-            why = why[len(prefix):]
-    return why in _WHY_ALL_CLASS
+            return why[len(prefix):]
+    return why
+
+
+def _is_all_class(why):
+    """理由是全部類比對的結果(含回指、修飾語前綴):用到發動位置。"""
+    return _plain_why(why) in _WHY_ALL_CLASS
+
+
+def is_uncomparable(why):
+    """全部類因為比不了或區域不明而視為可能包含此卡。"""
+    return _plain_why(why) in (WHY_ALL_UNCOMPARABLE, WHY_ALL_NO_ZONE)
 
 
 class Verdict:

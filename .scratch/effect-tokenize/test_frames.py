@@ -2291,6 +2291,40 @@ class TestAnaphoraRound1(unittest.TestCase):
         found = anaphora_of("①：魔法カードの効果の処理時に、その効果を無効にできる。", "無効にする")
         self.assertEqual(found["text"], "魔法カードの効果")
 
+    def test_attack_target_is_never_the_owner(self):
+        """3507053(code review):攻撃対象になった 是自動,主語仍是被攻擊的那張。"""
+        found = anaphora_of("①：このカードが攻撃対象になった時に発動できる。その攻撃を無効にする。",
+                            "無効にする")
+        self.assertNotIn("subject", found)
+
+    def test_agent_before_phrase_does_not_own_the_effect(self):
+        """code review:このカードが相手の効果を受ける場合…その効果 的主人是相手。"""
+        found = anaphora_of("①：このカードが相手の効果を受ける場合に発動できる。その効果を無効にする。",
+                            "無効にする")
+        self.assertEqual(found["subject"], "相手")
+
+    def test_owner_in_clause_does_not_cross_case_particles(self):
+        """code review:相手がこのカードの効果を無効にする効果を発動した時 的主人不是「相手がこのカード」。"""
+        found = anaphora_of("①：相手がこのカードの効果を無効にする効果を発動した時に発動できる。"
+                            "その発動を無効にする。", "無効にする")
+        self.assertNotIn("このカード", found.get("subject", ""))
+
+    def test_player_qualifier_reads_the_candidate_not_its_clause(self):
+        """code review:子句裡有 相手モンスター 不算主語 自分のモンスター 帶限定語 相手。"""
+        found = anaphora_of("①：自分のモンスターが相手モンスターと戦闘を行う時に発動できる。"
+                            "その相手モンスターの攻撃力を０にする。", "にする")
+        self.assertEqual((found["text"], found["player"]), ("相手モンスター", "相手"))
+
+    def test_type_qualifier_reads_the_candidate_not_its_clause(self):
+        found = anaphora_of("①：自分のモンスターが融合モンスターと戦闘を行う時に発動できる。"
+                            "その融合モンスターの攻撃力を０にする。", "にする")
+        self.assertEqual(found["text"], "融合モンスター")
+
+    def test_modifier_with_effect_tail(self):
+        """19271881(code review):そのモンスター以外の…カードの効果 受事者是別的卡。"""
+        self.assertIsNone(anaphora_of("①：モンスター１体を対象として発動できる。"
+                                      "そのモンスター以外の全ての表側表示カードの効果を無効にする。", "無効にする"))
+
     def test_own_frame_subject_owns_the_effect(self):
         """48497555:魔法カードがその効果を発動した時。"""
         found = anaphora_of("①：相手の魔法カードがその効果を発動した時に発動できる。そのカードを破壊する。",

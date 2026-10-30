@@ -701,6 +701,25 @@ class TestPatientReadsAnaphora(unittest.TestCase):
             {k: v for k, v in modes("①：このカードが戦闘でモンスターを破壊した時に発動できる。"
                                     "その破壊されたモンスターを除外する。").items()})
 
+    def test_attack_target_is_not_owner(self):
+        """3507053(code review):攻撃対象になった。"""
+        self.assert_nonself(modes("①：このカードが攻撃対象になった時に発動できる。その攻撃を無効にする。"))
+
+    def test_target_own_player_beats_event_subject(self):
+        """code review:相手が自分のモンスターを破壊した時…そのモンスター 可能就是此卡。"""
+        self.assert_neither(modes("①：相手が自分のモンスターを破壊した時に発動できる。そのモンスターの攻撃力を０にする。"))
+
+    def test_reason_card_counts_and_uncomparable_are_reported(self):
+        doc, _ = export({1: [clause("①", "①：自分のモンスターが戦闘を行うダメージ計算時に発動できる。"
+                                        "そのモンスターの攻撃力はターン終了時まで１０００アップする。")],
+                         2: [clause("①", "①：フィールドのモンスター１体を対象として発動できる。そのモンスターを破壊する。"),
+                             clause("②", "②：墓地のモンスター１体を対象として発動できる。そのモンスターを除外する。")]},
+                        faces={1: DRAGON, 2: DRAGON})
+        stats = doc["統計"]
+        self.assertEqual(stats["理由"]["非此卡:回指選擇類"], 2)
+        self.assertEqual(stats["理由卡"]["非此卡:回指選擇類"], 1)
+        self.assertEqual(stats["比不了"], 1)
+
     def test_reasons_are_reported(self):
         doc, _ = export({1: [clause("①", "①：フィールドのモンスター１体を対象として発動できる。そのモンスターを破壊する。"),
                              clause("②", "②：このカードの攻撃宣言時に発動できる。その攻撃を無効にする。")]},

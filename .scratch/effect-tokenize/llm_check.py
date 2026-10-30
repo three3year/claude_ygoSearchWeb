@@ -456,7 +456,7 @@ def anaphora_label(f):
         return None
     target = f.get("anaphora")
     if target:
-        names_self = "このカード" in target["text"] and "このカード以外" not in target["text"]
+        names_self = anaphora.THIS_CARD in target["text"] and anaphora.THIS_CARD + "以外" not in target["text"]
         return "並列含此卡" if names_self else ANAPHORA_VIA[target["via"]]
     if anaphora.modifier(literal):
         return "修飾語"

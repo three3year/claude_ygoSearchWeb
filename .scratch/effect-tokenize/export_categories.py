@@ -173,6 +173,7 @@ class Stats:
         self.frames = Counter()
         self.cards = {}
         self.reasons = Counter()
+        self.reason_cards = {}
         self.unknown = Counter()
         self.launch = Counter()
         self.neither_launch = Counter()
@@ -183,9 +184,10 @@ class Stats:
         self.frames[key] += 1
         self.cards.setdefault(key, set()).add(card)
         self.reasons[key + ":" + verdict.why] += 1
+        self.reason_cards.setdefault(key + ":" + verdict.why, set()).add(card)
         if verdict.why == patient.WHY_UNKNOWN:
             self.unknown[verdict.text] += 1
-        if verdict.why in (patient.WHY_ALL_UNCOMPARABLE, patient.WHY_ALL_NO_ZONE):
+        if patient.is_uncomparable(verdict.why):
             self.uncomparable[verdict.text] += 1
         if verdict.launch:
             self.launch[verdict.launch] += 1
@@ -199,6 +201,7 @@ class Stats:
         return {"框架": {k: self.frames[k] for k in keys},
                 "卡": {k: len(self.cards.get(k, ())) for k in keys},
                 "理由": dict(sorted(self.reasons.items())),
+                "理由卡": {k: len(v) for k, v in sorted(self.reason_cards.items())},
                 "發動位置": dict(sorted(self.launch.items())),
                 "皆非發動位置": dict(sorted(self.neither_launch.items())),
                 "表外受事者": top(self.unknown),
@@ -254,7 +257,7 @@ def main():
     print("動作對象(帶葉的效果位/代價位框架):" + "、".join(
         "%s %d 框 %d 張" % (k, n, stats["卡"][k]) for k, n in stats["框架"].items()))
     for why, n in stats["理由"].items():
-        print("  %s %d" % (why, n))
+        print("  %s %d 框 %d 張" % (why, n, stats["理由卡"][why]))
     print("  發動位置(全部類框架):" + "、".join(
         "%s %d" % kv for kv in stats["發動位置"].items()) + ";其中皆非:" + "、".join(
         "%s %d" % kv for kv in stats["皆非發動位置"].items()))

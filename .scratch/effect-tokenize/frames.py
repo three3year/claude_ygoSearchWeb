@@ -1562,9 +1562,9 @@ class FrameExtractor:
         return frames
 
     def _phrases(self, tokens, sentences, option_of):
-        """回指的字面備援:一個編號效果裡的名詞片語,→ [(句序, 起點, 選項, 字面, 發動者)],依原文順序;
-        沒出框架的子句(戦闘を行う|ダメージ計算時)也找得到。片語是名詞的連續段,の、・、～、か、または、
-        及び、や 連著的不切開,と 只連 自分と相手;發動者是片語前的「Xが発動した」「Xが」的 X。"""
+        """回指的字面備援:一個編號效果裡的名詞片語 → [anaphora.Phrase],依原文順序;沒出框架的子句
+        (戦闘を行う|ダメージ計算時)也找得到。片語是名詞的連續段,の、・、～、か、または、及び、や
+        連著的不切開,と 只連 自分と相手。"""
         def joins(k):
             return (tokens[k] in PHRASE_JOINERS
                     or tokens[k] == "p:と" and self.word(tokens[k - 1]) == "自分")
@@ -1580,15 +1580,16 @@ class FrameExtractor:
                 while m < s_end and (self.is_noun_like(tokens[m]) or (
                         joins(m) and m + 1 < s_end and self.is_noun_like(tokens[m + 1]))):
                     m += 1
-                agent = None
-                # 発動 本身也是片語,主人在它前一段
+                agent = activator = None
+                # 発動 本身也是片語,發動者在它前一段
                 if (k - 3 >= s_start and tokens[k - 3] == "p:が" and len(out) >= 2
                         and self.word(tokens[k - 2]) == "発動" and self.word(tokens[k - 1]) == "した"):
-                    agent = out[-2][3]
-                elif k - 1 >= s_start and tokens[k - 1] == "p:が" and out and out[-1][0] == s_idx:
-                    agent = out[-1][3]
-                out.append((s_idx, k, option_of[s_idx],
-                            "".join(self.surface(t) for t in tokens[k:m]), agent))
+                    activator = out[-2].text
+                elif k - 1 >= s_start and tokens[k - 1] == "p:が" and out and out[-1].sentence == s_idx:
+                    agent = out[-1].text
+                out.append(anaphora.Phrase(s_idx, k, option_of[s_idx],
+                                           "".join(self.surface(t) for t in tokens[k:m]),
+                                           agent, activator))
                 k = m
         return out
 

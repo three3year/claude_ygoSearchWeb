@@ -954,7 +954,28 @@ class CategoryTest(unittest.TestCase):
         self.assertEqual(report["categories"], {
             "covered_cards": 1, "sentences": 2, "sentences_with_leaves": 1,
             "by_major": {"召喚": 1, "破壊": 0, "區域移動": 1},
-            "by_leaf": {"特殊召喚←墓地": 1, "破壊": 0, "捨てる": 1}})
+            "by_leaf": {"特殊召喚←墓地": 1, "破壊": 0, "捨てる": 1},
+            "patient": {"stats": None, "sentences": {"此卡": 0, "非此卡": 0},
+                        "cards": {"此卡": 0, "非此卡": 0}}})
+
+    def test_report_carries_patient_stats_and_counts_per_mode(self):
+        """[[動作對象]]:匯出檔的判定統計照登,各模式的句數與卡數由索引端數(效果位或
+        代價位任一有此卡/非此卡葉)。"""
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1),
+                 "effect": ["特殊召喚←墓地"], "cost": ["捨てる"], "cost_self": ["捨てる"]},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2),
+                 "effect": ["破壊"], "effect_self": ["破壊"]}]
+        stats = {"框架": {"此卡": 2, "非此卡": 0, "皆非": 1}}
+        doc = {"說明": "", "葉": self.LEAVES, "樹": self.TREE, "統計": stats, "句": rows}
+        cards = [card(1, desc="①：這樣。②：那樣。"), card(2, desc="①：別張。")]
+        tags = [tagged(1, dict(clause("①：這樣。"), text_ja=self.JA1),
+                       dict(clause("②：那樣。", index="②", kind="誘發效果(1速)"),
+                            text_ja=self.JA2)),
+                tagged(2, dict(clause("①：別張。"), text_ja="①：別のカード。"))]
+        _, report = build_index(cards, tags, categories=doc)
+        self.assertEqual(report["categories"]["patient"], {
+            "stats": stats, "sentences": {"此卡": 2, "非此卡": 0},
+            "cards": {"此卡": 1, "非此卡": 0}})
 
     def test_leaf_outside_the_tree_fails_even_for_a_card_missing_from_the_list(self):
         rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1)},
@@ -972,6 +993,23 @@ class CategoryTest(unittest.TestCase):
         rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1)},
                 {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2)}]
         self.assertNotEqual(self.build(rows)[0]["meta"]["acat_digest"], before)
+
+    def test_patient_mode_leaf_fields_align_with_tx(self):
+        """[[動作對象]]:此卡葉(效果位 `aes`、代價位 `acs`)與 `tx` 對齊,全空時省略。"""
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1),
+                 "effect": ["特殊召喚←墓地"], "cost": ["捨てる"], "cost_self": ["捨てる"]},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2),
+                 "effect": ["破壊"], "effect_self": ["破壊"]}]
+        index, report = self.build(rows)
+        self.assertEqual(report["problems"], [])
+        entry = index["cards"][0]
+        self.assertEqual(entry["aes"], [[], [1]])
+        self.assertEqual(entry["acs"], [[2], []])
+
+    def test_patient_mode_fields_are_omitted_when_empty(self):
+        entry = self.build()[0]["cards"][0]
+        for field in ("aes", "acs"):
+            self.assertNotIn(field, entry)
 
     def test_serialized_index_is_deterministic(self):
         first = serialize_index(self.build()[0])

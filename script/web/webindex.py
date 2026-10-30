@@ -494,12 +494,21 @@ def _category_stale(rows, clauses_by_id):
             for cid, section, index in stale]
 
 
+# 索引欄位 ← 匯出檔的組:`ae` 必帶(有無=涵蓋),其餘全空時省略;此卡/非此卡葉是
+# [[動作對象]]的四組(效果位/代價位 × 此卡/非此卡)
+_SPARSE_CATEGORY_FIELDS = (("ac", "cost"), ("aes", "effect_self"), ("aen", "effect_nonself"),
+                           ("acs", "cost_self"), ("acn", "cost_nonself"))
+_PATIENT_MODES = (("此卡", ("effect_self", "cost_self")),
+                  ("非此卡", ("effect_nonself", "cost_nonself")))
+_CATEGORY_GROUPS = ("effect",) + tuple(group for _, group in _SPARSE_CATEGORY_FIELDS)
+
+
 def _attach_categories(entries, clauses_by_id, categories, checks):
     """[[動作類別]]匯出檔 → 每張涵蓋卡的 `ae` / `ac`(與 `tx` 對齊的葉號陣列),
     回傳 (VOCAB 的類別部分, 報告)。
 
     `ae` 的有無就是涵蓋與否:涵蓋的卡一定帶 `ae`(沒有葉的句是空陣列,整張都沒有
-    葉也照帶),`ac` 全空時省略。匯出檔與標記表對不上記進 `category_stale`
+    葉也照帶),`ac` 與[[動作對象]]的 `aes`/`aen`/`acs`/`acn` 全空時省略。匯出檔與標記表對不上記進 `category_stale`
     (`_category_stale`),葉不在類別樹記進 `category_unknown_leaves`——兩者都讓
     建置失敗(ADR-0017、ADR-0008)。
     """
@@ -508,7 +517,7 @@ def _attach_categories(entries, clauses_by_id, categories, checks):
     rows = {(r["card"], r["section"], r["index"]): r for r in categories["句"]}
     checks["category_stale"].extend(_category_stale(rows, clauses_by_id))
     for (cid, _, index), row in rows.items():
-        for name in list(row.get("effect", ())) + list(row.get("cost", ())):
+        for name in [n for group in _CATEGORY_GROUPS for n in row.get(group, ())]:
             if name not in number:
                 checks["category_unknown_leaves"].append(
                     {"id": cid, "index": index, "leaf": name})
@@ -522,9 +531,10 @@ def _attach_categories(entries, clauses_by_id, categories, checks):
         codes = lambda group: [[number[n] for n in row.get(group, ())  # noqa: E731
                                 if n in number] for row in found]
         entry["ae"] = codes("effect")
-        cost = codes("cost")
-        if any(cost):
-            entry["ac"] = cost
+        for field, group in _SPARSE_CATEGORY_FIELDS:
+            found_codes = codes(group)
+            if any(found_codes):
+                entry[field] = found_codes
     majors, major_of = _leaf_majors(categories["樹"])
     by_major = dict.fromkeys(majors, 0)
     by_leaf = dict.fromkeys(leaves, 0)
@@ -536,11 +546,16 @@ def _attach_categories(entries, clauses_by_id, categories, checks):
             by_leaf[name] += 1
         for major in {major_of.get(number.get(n)) for n in names} - {None}:
             by_major[major] += 1
+    patient = {"stats": categories.get("統計"), "sentences": {}, "cards": {}}
+    for label, groups in _PATIENT_MODES:
+        hit = [key for key, row in rows.items() if any(row.get(g) for g in groups)]
+        patient["sentences"][label] = len(hit)
+        patient["cards"][label] = len({cid for cid, _, _ in hit})
     vocab_part = {"zh": "動作類別", "covered": len(covered), "leaves": list(leaves),
                   "tree": categories["樹"]}
     report = {"covered_cards": len(covered), "sentences": len(rows),
               "sentences_with_leaves": with_leaves, "by_major": by_major,
-              "by_leaf": by_leaf}
+              "by_leaf": by_leaf, "patient": patient}
     return vocab_part, report
 
 

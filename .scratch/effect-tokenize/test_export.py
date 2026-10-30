@@ -192,5 +192,55 @@ class TestExport(unittest.TestCase):
         self.assertEqual(first, export_categories.serialize(export(cards)[0]))
 
 
+def modes(text, card=1, kind="啟動效果"):
+    """一句效果句 → {效果位此卡葉、效果位非此卡葉、代價位此卡葉、代價位非此卡葉}
+    (空的省略);斷言匯出沒有問題。"""
+    doc, problems = export({card: [clause("①", text, kind=kind)]})
+    assert not problems, problems
+    row = doc["句"][0]
+    return {k: row[k] for k in ("effect_self", "effect_nonself", "cost_self", "cost_nonself")
+            if k in row}
+
+
+class TestPatientSelf(unittest.TestCase):
+    """[[動作對象]]「此卡」(action-patient 票 01):受事者以 このカード 收尾,與主題規則。"""
+
+    def test_this_card_special_summoned_from_hand_is_self(self):
+        self.assertEqual(modes("①：自分メインフェイズに発動できる。このカードを手札から"
+                               "特殊召喚する。"),
+                         {"effect_self": ["特殊召喚←手札"]})
+
+    def test_this_card_written_as_topic_is_self(self):
+        """「このカードは手札から特殊召喚できる」:對象空著、主題是此卡。"""
+        self.assertEqual(modes("①：このカードは手札から特殊召喚できる。"),
+                         {"effect_self": ["特殊召喚←手札"]})
+
+    def test_topic_carried_over_within_the_sentence_is_self(self):
+        """主題延續給後面沒有自己主題的子句。"""
+        self.assertEqual(
+            modes("①：このカードは相手フィールドにモンスターが存在する場合、"
+                  "手札から特殊召喚できる。"),
+            {"effect_self": ["特殊召喚←手札"]})
+
+    def test_this_card_with_a_modifier_is_self(self):
+        """帶定語、切掉區域的此卡(墓地のこのカード)。"""
+        self.assertEqual(modes("①：墓地のこのカードを除外して発動できる。自分フィールドの"
+                               "カード１枚を破壊する。"),
+                         {"cost_self": ["除外←墓地"]})
+
+    def test_releasing_this_card_then_summoning_another_is_not_self_summon(self):
+        """代價解放此卡、處理從手牌特召另一隻:特召不是此卡,代價的解放才是。"""
+        found = modes("①：このカードをリリースして発動できる。手札からモンスター１体を"
+                      "特殊召喚する。")
+        self.assertEqual(found.get("cost_self"), ["リリース"])
+        self.assertNotIn("effect_self", found)
+
+    def test_frames_on_this_card_are_counted_in_the_stats(self):
+        doc, _ = export({1: [clause("①", "①：このカードは手札から特殊召喚できる。")],
+                         2: [clause("①", REVIVE)]})
+        self.assertEqual(doc["統計"]["框架"]["此卡"], 1)
+        self.assertEqual(doc["統計"]["卡"]["此卡"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -197,3 +197,22 @@ test('代價位的葉只在「含代價」時算命中、才強調', () => {
   assert.ok(!marked(hl(kw, [0], { leaves: [2], cost: false }), '捨てる'));
   assert.ok(marked(hl(kw, [0], { leaves: [2], cost: true }), '捨てる'));
 });
+
+test('動作對象「此卡」:同句兩框架時只強調此卡帶來的葉', () => {
+  // 一句裡「此卡從墓地特召」(此卡葉)與「破壞對手場上1張」(非此卡葉),兩葉都在包含節點裡
+  const kw = { tx: TWO, k: ['i', 'q'], ae: [[0, 1], []], aes: [[0], []], aen: [[1], []] };
+  const self = hl(kw, [0], { leaves: [0, 1], cost: false, mode: 'self' });
+  assert.ok(marked(self, '特殊召喚←墓地'));
+  assert.ok(!marked(self, '破壊@相手フィールド'));
+  const none = hl(kw, [0], { leaves: [0, 1], cost: false, mode: '' });
+  assert.ok(marked(none, '特殊召喚←墓地') && marked(none, '破壊@相手フィールド'));
+  // 句尾仍列該句全部的葉
+  const t = textOf(self);
+  assert.ok(t.includes('破壊@相手フィールド'));
+});
+
+test('動作對象:代價位的葉也只在該模式的代價位葉裡才強調', () => {
+  const kw = { tx: TWO, k: ['i', 'q'], ae: [[0], []], ac: [[2], []], acs: [[2], []] };
+  assert.ok(marked(hl(kw, [0], { leaves: [2], cost: true, mode: 'self' }), '捨てる'));
+  assert.ok(!marked(hl(kw, [0], { leaves: [2], cost: true, mode: 'nonself' }), '捨てる'));
+});

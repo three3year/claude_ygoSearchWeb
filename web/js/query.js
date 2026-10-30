@@ -93,11 +93,13 @@ function triBtn(code, zh, states) {
 }
 
 /* 清除鈕與標題鈕並排而不是巢狀:button 不能包 button。note 是標題列上的附註
-   (動作類別軸的涵蓋範圍)。 */
-function headHtml(zh, note) {
+   (動作類別軸的涵蓋範圍);modeTag 留一格給[[動作對象]]的模式提示(摺疊時看得出
+   模式在生效)。 */
+function headHtml(zh, note, modeTag) {
   return `<div class="axis-hrow"><button type="button" class="axis-head"
     aria-expanded="false"><span class="axis-name">${esc(zh)}</span>${
-    note ? `<span class="axis-note">${esc(note)}</span>` : ''}
+    note ? `<span class="axis-note">${esc(note)}</span>` : ''}${
+    modeTag ? '<span class="axis-mode" hidden></span>' : ''}
     <span class="axis-count"></span></button>
     <button type="button" class="axis-clear" hidden
       title="清除這一組條件">×</button></div>`;
@@ -168,15 +170,33 @@ function actNodeHtml(id) {
       n.kids.map(actNodeHtml).join('')}</ul>` : ''}</li>`;
 }
 
+/* [[動作對象]]三選一:值是 Engine 認得的模式('' 是不限)。 */
+const PAT_OPTIONS = [
+  { v: '', zh: '不限', title: '不分動到的是不是此卡' },
+  { v: 'self', zh: '此卡', title: '只算動到此卡本身的動作（此卡特殊召喚、此卡回到手牌、此卡攻擊力上升）' },
+];
+
+function patZh(v) {
+  return (PAT_OPTIONS.find(o => o.v === v) || PAT_OPTIONS[0]).zh;
+}
+
+function patHtml() {
+  return `<div class="act-pat" role="radiogroup" aria-label="動作對象">
+    <span class="act-pat-label">動作對象</span>${PAT_OPTIONS.map(o =>
+    `<button type="button" class="act-pat-btn" role="radio" data-pat="${o.v}"
+      aria-checked="${o.v ? 'false' : 'true'}" title="${esc(o.title)}">${esc(o.zh)}</button>`
+  ).join('')}</div>`;
+}
+
 function actAxisHtml(f) {
   const total = META.cards || DB.length;
   const zh = (VOCAB[f.dom] || {}).zh || f.act;
   return `<div class="axis axis-act" data-axis="${f.act}" data-side=""
     data-states="3"${Acat.present ? '' : ' hidden'}>
-    ${headHtml(zh, `涵蓋 ${Acat.COVERED} / ${total} 張`)}<div class="axis-body" hidden>
+    ${headHtml(zh, `涵蓋 ${Acat.COVERED} / ${total} 張`, true)}<div class="axis-body" hidden>
     <div class="act-tools"><label class="act-cost-toggle"
       title="不勾時只比效果位：「丟一張手牌當費用」的卡不會出現在「丟牌」的搜尋裡；勾了包含與排除都連代價位一起比"><input
-      type="checkbox" class="act-cost-in">含代價</label>
+      type="checkbox" class="act-cost-in">含代價</label>${patHtml()}
       <input type="search" class="act-filter" placeholder="過濾節點：例 墓地"
         aria-label="過濾動作類別節點(比對日文名稱)"></div>
     <ul class="act-tree">${Acat.roots.map(actNodeHtml).join('')}</ul></div></div>`;
@@ -197,6 +217,20 @@ function readAct(q) {
   });
   if (Object.keys(sel).length) q.act = sel;
   if (actBox().querySelector('.act-cost-in').checked) q.actCost = 1;
+  const pat = actPat();
+  if (pat) q.actPat = pat;
+}
+
+function actPat() {
+  const on = actBox().querySelector('.act-pat-btn[aria-checked="true"]');
+  return on ? Engine.patMode(on.dataset.pat) : '';
+}
+
+function setActPat(box, v) {
+  const mode = Engine.patMode(v);
+  box.querySelectorAll('.act-pat-btn').forEach(btn => {
+    btn.setAttribute('aria-checked', btn.dataset.pat === mode ? 'true' : 'false');
+  });
 }
 
 function setNodeOpen(li, open) {
@@ -248,6 +282,7 @@ function writeAct(q) {
   resetActFilter();
   const sel = q.act || {};
   actBox().querySelector('.act-cost-in').checked = !!q.actCost;
+  setActPat(actBox(), q.actPat);
   actTris().forEach(btn => {
     const v = sel[btn.dataset.code];
     setTri(btn, v > 0 ? 'in' : (v < 0 ? 'ex' : ''));
@@ -337,7 +372,7 @@ function count(q) {
     return Object.keys(v).some(k => v[k] != null);
   };
   return Object.keys(q || {})
-    .filter(k => k !== 'nameLang' && k !== 'textMat' && k !== 'actCost' &&
+    .filter(k => k !== 'nameLang' && k !== 'textMat' && k !== 'actCost' && k !== 'actPat' &&
             isSet(q[k])).length;
 }
 
@@ -464,6 +499,9 @@ function updateCounts() {
   };
   const tree = treeCounts(q);
   FIELDS.forEach(f => stamp(blockEl(f), tree[blockKey(f)]));
+  const mode = actBox().querySelector('.axis-mode');
+  mode.textContent = q.actPat ? '動作對象：' + patZh(q.actPat) : '';
+  mode.hidden = !q.actPat;
   const flat = axisCounts(q);
   all('.axis-group').forEach(box => stamp(box, flat[box.dataset.groupKey]));
 }
@@ -567,12 +605,14 @@ function clear() {
   resetActFilter();
   all('.act-node').forEach(li => setNodeOpen(li, false));
   all('.act-cost-in').forEach(box => { box.checked = false; });
+  setActPat(actBox(), '');
   updateCounts();
 }
 
 function clearBlock(box) {
   box.querySelectorAll('.tri').forEach(b => setTri(b, ''));
   box.querySelectorAll('.act-cost-in').forEach(b => { b.checked = false; });
+  setActPat(box, '');
   box.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
   syncSubs();
   syncOptional();
@@ -594,6 +634,12 @@ function init() {
     const clr = e.target.closest('.axis-clear');
     if (clr) {
       clearBlock(clr.closest('.axis, .range, .axis-group'));
+      return;
+    }
+    const patBtn = e.target.closest('.act-pat-btn');
+    if (patBtn) {
+      setActPat(actBox(), patBtn.dataset.pat);
+      updateCounts();
       return;
     }
     const tog = e.target.closest('.act-tog');

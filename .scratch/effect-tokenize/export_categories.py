@@ -27,6 +27,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import categories  # noqa: E402
+import patient  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
 from frames import POS_COST, POS_EFFECT  # noqa: E402
 
@@ -35,6 +36,9 @@ TOKENS = os.path.join(HERE, "tokens.json")
 OUT = os.path.join(ROOT, "data", "action_categories.json")
 
 GROUPS = {POS_EFFECT: "effect", POS_COST: "cost"}
+# [[動作對象]]:每組再分此卡葉與非此卡葉(皆非的框架只在原本那一組)
+MODE_SUFFIX = {patient.SELF: "_self", patient.NONSELF: "_nonself"}
+ROW_GROUPS = ("effect", "cost", "effect_self", "effect_nonself", "cost_self", "cost_nonself")
 SUB_INDEX = re.compile(r"^(.+)-●(\d+)$")
 # 網址以 › 連寫節點路徑(category-search spec「網址 hash」),節點名不能含它
 PATH_SEP = "›"
@@ -43,7 +47,8 @@ DOC = ("動作類別匯出檔(.scratch/category-search,ADR-0017):由 .scratch/ef
        "export_categories.py 產生,不要手改。「葉」是類別樹的葉名(樹序,索引以序號引用);"
        "「樹」是巢狀節點 [名, 葉號或 -1, 子節點](節點同時是葉與內部節點時是詞元節點帶預設葉);"
        "「句」每列一句新格式新卡的標記句:卡片密碼、段落、index、日文原文雜湊、效果位葉、"
-       "代價位葉(沒有就省略)。")
+       "代價位葉,以及[[動作對象]]的效果位此卡葉、效果位非此卡葉、代價位此卡葉、代價位非此卡葉"
+       "(沒有就省略)。「統計」是動作對象判定的框架數與卡數(建置報告照登)。")
 
 
 def text_hash(text):
@@ -90,14 +95,16 @@ def export(sentences, records, tree):
     problems = []
     order = tree.leaf_order
     out = []
+    stats = Stats()
     for s in sentences:
         rows = {}
         for part in s["parts"]:
-            rows[part["index"]] = {
-                "card": s["card"], "section": s["section"], "index": part["index"],
-                "hash": text_hash(s["text_ja"][part["start"]:part["end"]]),
-                "effect": set(), "cost": set()}
-        for fr in s["frames"]:
+            rows[part["index"]] = dict(
+                {"card": s["card"], "section": s["section"], "index": part["index"],
+                 "hash": text_hash(s["text_ja"][part["start"]:part["end"]])},
+                **{group: set() for group in ROW_GROUPS})
+        verdicts = patient.judge_sentence(s["frames"])
+        for fr, (mode, why) in zip(s["frames"], verdicts):
             if fr["kind"] != KIND_ACTION:
                 continue
             key = (s["card"], s["section"], s["index"], fr["order"])
@@ -113,8 +120,11 @@ def export(sentences, records, tree):
             group = GROUPS.get(fr["position"])
             if group and record["status"] == categories.STATUS_PLACED:
                 rows[index][group].update(record["leaves"])
+                if mode:
+                    rows[index][group + MODE_SUFFIX[mode]].update(record["leaves"])
+                stats.add(s["card"], mode, why)
         for row in rows.values():
-            for group in ("effect", "cost"):
+            for group in ROW_GROUPS:
                 leaves = sorted(row[group], key=order.__getitem__)
                 if leaves:
                     row[group] = leaves
@@ -125,7 +135,28 @@ def export(sentences, records, tree):
         problems.append("框架類別沒有對應的框架:%s" % (key,))
     leaves, nodes = tree_rows(tree)
     problems.extend(tree_problems(nodes))
-    return {"說明": DOC, "葉": leaves, "樹": nodes, "句": out}, problems
+    return {"說明": DOC, "葉": leaves, "樹": nodes, "統計": stats.doc(), "句": out}, problems
+
+
+class Stats:
+    """動作對象判定的計數:帶葉的效果位/代價位框架,依值與理由分。"""
+
+    def __init__(self):
+        self.frames = {}
+        self.cards = {}
+        self.reasons = {}
+
+    def add(self, card, mode, why):
+        key = mode or "皆非"
+        self.frames[key] = self.frames.get(key, 0) + 1
+        self.cards.setdefault(key, set()).add(card)
+        self.reasons[key + ":" + why] = self.reasons.get(key + ":" + why, 0) + 1
+
+    def doc(self):
+        keys = (patient.SELF, patient.NONSELF, "皆非")
+        return {"框架": {k: self.frames.get(k, 0) for k in keys},
+                "卡": {k: len(self.cards.get(k, ())) for k in keys},
+                "理由": dict(sorted(self.reasons.items()))}
 
 
 def serialize(doc):
@@ -134,6 +165,7 @@ def serialize(doc):
     return ("{\n" + '"說明":' + dump(doc["說明"]) + ",\n"
             + '"葉":' + dump(doc["葉"]) + ",\n"
             + '"樹":' + dump(doc["樹"]) + ",\n"
+            + '"統計":' + dump(doc["統計"]) + ",\n"
             + '"句":[\n' + ",\n".join(dump(r) for r in doc["句"]) + "\n]\n}\n")
 
 
@@ -168,6 +200,11 @@ def main():
     print("標記句 %d(卡 %d 張);帶效果位葉 %d、帶代價位葉 %d;類別樹葉 %d;已寫出 %s" % (
         len(rows), len({r["card"] for r in rows}), sum("effect" in r for r in rows),
         sum("cost" in r for r in rows), len(doc["葉"]), OUT))
+    stats = doc["統計"]
+    print("動作對象(帶葉的效果位/代價位框架):" + "、".join(
+        "%s %d 框 %d 張" % (k, n, stats["卡"][k]) for k, n in stats["框架"].items()))
+    for why, n in stats["理由"].items():
+        print("  %s %d" % (why, n))
     return 0
 
 

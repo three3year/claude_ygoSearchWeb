@@ -149,8 +149,27 @@ function clauseRows(c, parts, kindSel, optSel, matOn) {
   return rows;
 }
 
+/* [[動作對象]]:模式 → 每句取哪兩個欄位(效果位、代價位)。不限讀原本的葉;此卡/非此卡
+   改讀該模式的葉,欄位全空時建置期省略。未知的模式當不限。 */
+const PAT_FIELDS = {
+  '': ['ae', 'ac'],
+  self: ['aes', 'acs'],
+  nonself: ['aen', 'acn'],
+};
+
+function patMode(v) {
+  return Object.prototype.hasOwnProperty.call(PAT_FIELDS, v) ? v : '';
+}
+
+/* 一句在該模式下的葉:效果位或代價位(呈現層照它決定強調哪些葉)。 */
+function modeLeaves(c, i, mode, isCost) {
+  const field = PAT_FIELDS[patMode(mode)][isCost ? 1 : 0];
+  return (c[field] && c[field][i]) || [];
+}
+
 /* [[動作類別]]的條件:節點路徑 → 葉集合(Acat 展開;樹裡找不到的路徑不當條件)。
-   包含是 AND(每個節點一組),排除合成一組;`cost` 時代價位的葉也算有效葉。 */
+   包含是 AND(每個節點一組),排除合成一組;`cost` 時代價位的葉也算有效葉;`mode` 是
+   [[動作對象]],包含與排除都改讀該模式的葉。 */
 function actSel(q) {
   const inc = [], ex = new Set(), union = new Set();
   for (const id in q.act || {}) {
@@ -164,12 +183,12 @@ function actSel(q) {
     }
   }
   if (!inc.length && !ex.size) return null;
-  return { inc, ex, union, cost: !!q.actCost };
+  return { inc, ex, union, cost: !!q.actCost, mode: patMode(q.actPat) };
 }
 
-function actLeaves(c, i, cost) {
-  const eff = (c.ae && c.ae[i]) || [];
-  return cost ? eff.concat((c.ac && c.ac[i]) || []) : eff;
+function actLeaves(c, i, act) {
+  const eff = modeLeaves(c, i, act.mode, false);
+  return act.cost ? eff.concat(modeLeaves(c, i, act.mode, true)) : eff;
 }
 
 function anyIn(leaves, set) {
@@ -179,7 +198,7 @@ function anyIn(leaves, set) {
 function actExcluded(c, act) {
   if (!act.ex.size) return false;
   for (let i = 0; i < c.ae.length; i++) {
-    if (anyIn(actLeaves(c, i, act.cost), act.ex)) return true;
+    if (anyIn(actLeaves(c, i, act), act.ex)) return true;
   }
   return false;
 }
@@ -187,7 +206,7 @@ function actExcluded(c, act) {
 /* 包含:每個節點都要有一句可用的句(已過句層條件的 rows)帶它,不同節點可以是
    不同句;命中句縮成帶任一包含節點的葉的那幾句。 */
 function actRows(c, rows, act) {
-  const has = rows.map(i => actLeaves(c, i, act.cost));
+  const has = rows.map(i => actLeaves(c, i, act));
   if (!act.inc.every(set => has.some(leaves => anyIn(leaves, set)))) return [];
   return rows.filter((i, k) => anyIn(has[k], act.union));
 }
@@ -207,7 +226,9 @@ function runQuery(db, q) {
   if (textParts.length) marks.push({ type: 'text', value: text });
   if (kindSel) marks.push({ type: 'kind' });
   if (optSel) marks.push({ type: 'opt' });
-  if (actInc) marks.push({ type: 'act', leaves: Array.from(act.union), cost: act.cost });
+  if (actInc) {
+    marks.push({ type: 'act', leaves: Array.from(act.union), cost: act.cost, mode: act.mode });
+  }
   const cards = [];
   for (const c of db) {
     if (name && !nameHit(c, name, q.nameLang)) continue;
@@ -225,5 +246,5 @@ function runQuery(db, q) {
   return { cards, marks };
 }
 
-  return Object.freeze({ runQuery, likeParts, likeRanges });
+  return Object.freeze({ runQuery, likeParts, likeRanges, modeLeaves, patMode });
 })();

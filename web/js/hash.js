@@ -10,6 +10,8 @@ const LANG = 'nameLang';
    的舊網址)解析時安靜忽略。 */
 const ACT = 'act';
 const ACT_COST = 'actCost';
+/* [[動作對象]]:不限時不寫;未知值安靜忽略(Engine.patMode 認得的才收)。 */
+const ACT_PAT = 'actPat';
 
 function schema() {
   const tri = [], range = [];
@@ -33,7 +35,7 @@ const DEFAULT_LANG = Query.LANGS[0].v;
 const DEFAULT_SORT = Sort.KEYS[0].key;
 
 const PARAM_NAMES = [].concat(
-  TEXTS, ['textMat', LANG, 'sort', 'dir', ACT, ACT_COST],
+  TEXTS, ['textMat', LANG, 'sort', 'dir', ACT, ACT_COST, ACT_PAT],
   SCHEMA.tri.map(a => a.key),
   SCHEMA.range.map(f => f.key),
   SCHEMA.range.map(f => f.unknown).filter(Boolean)
@@ -87,6 +89,8 @@ function stringify(state) {
       (act[id] < 0 ? '-' : '') + encodeURIComponent(id)).join(','));
   }
   if (q[ACT_COST]) parts.push(ACT_COST + '=1');
+  const pat = Engine.patMode(q[ACT_PAT]);
+  if (pat) parts.push(ACT_PAT + '=' + pat);
   SCHEMA.range.forEach(f => {
     const r = q[f.key];
     if (r && (r.min != null || r.max != null)) {
@@ -166,6 +170,7 @@ function parse(hash) {
     if (TEXTS.indexOf(key) >= 0) { q[key] = v.trim(); return; }
     if (key === 'textMat') { if (v === '1') q.textMat = 1; return; }
     if (key === ACT_COST) { if (v === '1') q[ACT_COST] = 1; return; }
+    if (key === ACT_PAT) { if (Engine.patMode(v)) q[ACT_PAT] = v; return; }
     if (key === LANG) { q[LANG] = langOf(v); return; }
     if (key === 'sort' || key === 'dir') { raw[key] = v; return; }
     const ax = SCHEMA.tri.find(a => a.key === key);

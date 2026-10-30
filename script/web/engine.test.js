@@ -1795,3 +1795,111 @@ test('動作類別過濾框:詞元名也命中預設葉;空字面不過濾', () 
   assert.strictEqual(harness.acatFilter(acatBox, '  '), null);
   assert.deepStrictEqual(harness.acatFilter(acatBox, '不存在'), { visible: [], open: [] });
 });
+
+/* ── 動作對象(action-patient 票 01/03)──────────────────────
+   自己一份合成資料集,沿用 ACAT_VOCAB 的類別樹。`aes`/`acs` 是效果位/代價位的此卡葉,
+   `aen`/`acn` 是非此卡葉,與 `tx` 對齊、全空時省略(建置期的形狀,接縫 1)。
+   葉號:0 特殊召喚←墓地、1 特殊召喚←手札、2 破壊@相手フィールド、3 破壊、4 捨てる、
+   7 リリース。 */
+
+const PAT_CARDS = [
+  // 此卡從手牌特殊召喚
+  { id: 4001, n: '自己出場', c: 'm', s: ['effect'], tx: ['①：此卡從手牌特殊召喚。'],
+    k: ['i'], ae: [[1]], aes: [[1]] },
+  // 從手牌特殊召喚別隻
+  { id: 4002, n: '叫別隻', c: 'm', s: ['effect'], tx: ['①：從手牌特殊召喚1隻怪獸。'],
+    k: ['i'], ae: [[1]], aen: [[1]] },
+  // 同一句兩個框架:此卡從手牌特召,再從手牌特召別隻(同一葉同時在兩模式)
+  { id: 4003, n: '兩框同句', c: 'm', s: ['effect'],
+    tx: ['①：此卡和另1隻從手牌分別特殊召喚。'], k: ['i'], ae: [[1]], aes: [[1]], aen: [[1]] },
+  // 解放此卡當代價,處理從手牌特召別隻
+  { id: 4004, n: '解放自己', c: 'm', s: ['effect'],
+    tx: ['①：解放此卡發動。從手牌特殊召喚1隻怪獸。'], k: ['i'],
+    ae: [[1]], ac: [[7]], aen: [[1]], acs: [[7]] },
+  // ① 破壞此卡、② 從手牌特召別隻
+  { id: 4005, n: '破壞自己', c: 'm', s: ['effect'],
+    tx: ['①：破壞此卡。', '②：從手牌特殊召喚1隻怪獸。'], k: ['i', 'i'],
+    ae: [[3], [1]], aes: [[3], []], aen: [[], [1]] },
+  // ① 此卡從手牌特召、② 破壞此卡
+  { id: 4006, n: '兩件都自己', c: 'm', s: ['effect'],
+    tx: ['①：此卡從手牌特殊召喚。', '②：破壞此卡。'], k: ['i', 't'],
+    ae: [[1], [3]], aes: [[1], [3]] },
+  // 抽卡這類沒有卡片受事者的動作:只有原本的葉(皆非)
+  { id: 4007, n: '皆非', c: 's', s: ['normal'], tx: ['①：從手牌特殊召喚。'], k: ['sn'],
+    ae: [[1]] },
+  // 舊式卡文
+  { id: 4008, n: '舊卡', c: 'm', s: ['effect'], tx: ['①：此卡從手牌特殊召喚。'], k: ['i'] },
+];
+const patBox = harness.load({ cards: PAT_CARDS, vocab: ACAT_VOCAB, meta: {} });
+const patIds = q => harness.ids(patBox, q).slice().sort((a, b) => a - b);
+const patRows = (q, id) => (harness.search(patBox, q).find(e => e.id === id) || {}).rows;
+const RELEASE = '區域移動›リリース';
+
+test('動作對象「此卡」:選中的葉只算此卡葉', () => {
+  assert.deepStrictEqual(patIds({ act: { [REVIVE_HAND]: 1 } }),
+                         [4001, 4002, 4003, 4004, 4005, 4006, 4007]);
+  assert.deepStrictEqual(patIds({ act: { [REVIVE_HAND]: 1 }, actPat: 'self' }),
+                         [4001, 4003, 4006]);
+});
+
+test('動作對象「此卡」:上層節點=底下任一葉的此卡葉', () => {
+  assert.deepStrictEqual(patIds({ act: { '召喚': 1 }, actPat: 'self' }), [4001, 4003, 4006]);
+  assert.deepStrictEqual(patIds({ act: { '破壊': 1 }, actPat: 'self' }), [4005, 4006]);
+});
+
+test('動作對象「此卡」:含代價時加代價位此卡葉', () => {
+  assert.deepStrictEqual(patIds({ act: { [RELEASE]: 1 }, actPat: 'self' }), []);
+  assert.deepStrictEqual(patIds({ act: { [RELEASE]: 1 }, actPat: 'self', actCost: 1 }),
+                         [4004]);
+});
+
+test('動作對象「此卡」:排除也套用模式——只擋會動到此卡的', () => {
+  const all = patIds({ act: { '破壊': -1 } });
+  assert.ok(!all.includes(4005) && !all.includes(4006));
+  const self = patIds({ act: { '破壊': -1 }, actPat: 'self' });
+  assert.deepStrictEqual(self, [4001, 4002, 4003, 4004, 4007]);
+  assert.deepStrictEqual(patIds({ act: { [REVIVE_HAND]: -1 }, actPat: 'self' }),
+                         [4002, 4004, 4005, 4007]);
+});
+
+test('動作對象「此卡」:AND 時每個節點都要在此卡模式下各自找到一句', () => {
+  assert.deepStrictEqual(patIds({ act: { [REVIVE_HAND]: 1, '破壊': 1 } }), [4005, 4006]);
+  assert.deepStrictEqual(patIds({ act: { [REVIVE_HAND]: 1, '破壊': 1 }, actPat: 'self' }),
+                         [4006]);
+});
+
+test('動作對象:命中句只算該模式下帶包含節點的句', () => {
+  assert.deepStrictEqual(patRows({ act: { '召喚': 1, '破壊': 1 } }, 4005), [0, 1]);
+  assert.deepStrictEqual(patRows({ act: { '破壊': 1 }, actPat: 'self' }, 4006), [1]);
+});
+
+test('動作對象:沒選任何類別節點時不影響結果;舊式卡文照舊不中', () => {
+  assert.deepStrictEqual(patIds({ actPat: 'self' }), patIds({}));
+  assert.ok(!patIds({ act: { [REVIVE_HAND]: 1 }, actPat: 'self' }).includes(4008));
+});
+
+test('動作對象:命中標記帶模式(呈現層照它只強調該模式的葉)', () => {
+  const act = harness.marks(patBox, { act: { '召喚': 1 }, actPat: 'self' })
+    .find(m => m.type === 'act');
+  assert.strictEqual(act.mode, 'self');
+  const none = harness.marks(patBox, { act: { '召喚': 1 } }).find(m => m.type === 'act');
+  assert.strictEqual(none.mode, '');
+});
+
+test('動作對象:模式進網址,不限時不寫;未知值安靜忽略', () => {
+  const st = { q: { ...EMPTY_Q, act: { [REVIVE_HAND]: 1 }, actPat: 'self' }, sort: DOM_SORT };
+  const h = harness.hash(patBox, st);
+  assert.ok(h.includes('actPat=self'));
+  assert.deepStrictEqual(harness.parseHash(patBox, h), st);
+  assert.strictEqual(harness.canonHash(patBox, h), h);
+  const plain = { q: { ...EMPTY_Q, act: { [REVIVE_HAND]: 1 } }, sort: DOM_SORT };
+  assert.ok(!harness.hash(patBox, plain).includes('actPat'));
+  assert.deepStrictEqual(harness.parseHash(patBox, harness.hash(patBox, plain) + '&actPat=xyz'),
+                         plain);
+});
+
+test('動作對象:不算條件數,也不算類別軸的已選數', () => {
+  assert.strictEqual(harness.critCount(patBox, { actPat: 'self' }), 0);
+  assert.strictEqual(harness.critCount(patBox, { act: { [REVIVE_HAND]: 1 }, actPat: 'self' }), 1);
+  assert.strictEqual(harness.axisCounts(patBox, { act: { [REVIVE_HAND]: 1 }, actPat: 'self' }).act, 1);
+});

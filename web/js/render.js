@@ -248,15 +248,19 @@ function effHtml(c, text, i, rows, hl) {
 
 /* [[動作類別]]的葉:每句尾列它全部的葉(效果位在前、代價位在後),葉名照類別樹的
    日文原名;代價位的葉字面帶「代價：」。命中句裡、本次搜尋包含節點的葉包 <mark>
-   (代價位的葉只在「含代價」時算)。沒有葉的句子什麼都不加。 */
+   (代價位的葉只在「含代價」時算;選了[[動作對象]]時只算該模式下的葉)。沒有葉的
+   句子什麼都不加。 */
 function leafBadgesHtml(c, i, hl) {
   const eff = (c.ae && c.ae[i]) || [];
   const cost = (c.ac && c.ac[i]) || [];
   if (!eff.length && !cost.length) return '';
   const mark = hl ? hl.marks.find(m => m.type === 'act') : null;
+  const pool = isCost => (mark ? Engine.modeLeaves(c, i, mark.mode, isCost) : []);
+  const hitEff = pool(false), hitCost = pool(true);
   const one = (n, isCost) => {
     const label = esc((isCost ? '代價：' : '') + (Acat.LEAVES[n] || n));
-    const on = !!mark && (!isCost || mark.cost) && mark.leaves.indexOf(n) >= 0;
+    const on = !!mark && (!isCost || mark.cost) && mark.leaves.indexOf(n) >= 0 &&
+      (isCost ? hitCost : hitEff).indexOf(n) >= 0;
     return `<span class="act${isCost ? ' act-cost' : ''}"${
       isCost ? ' title="代價位的動作"' : ''}>${
       on ? `<mark class="act-hit" title="本次搜尋命中">${label}</mark>` : label}</span>`;

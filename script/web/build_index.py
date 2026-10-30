@@ -117,6 +117,13 @@ def print_categories(report, p):
       f"(帶葉 {cat['sentences_with_leaves']} 句)")
     p("  各大類句數: " + " ".join(f"{k}={n}" for k, n in cat["by_major"].items()))
     p("  各葉句數: " + " ".join(f"{k}={n}" for k, n in cat["by_leaf"].items()))
+    pat = cat["patient"]
+    p("  動作對象(句/卡): " + " ".join(
+        f"{k}={pat['sentences'][k]}/{pat['cards'][k]}" for k in pat["sentences"]))
+    stats = pat["stats"] or {}
+    for key, counts in stats.items():
+        if isinstance(counts, dict):
+            p(f"  動作對象{key}: " + " ".join(f"{k}={n}" for k, n in counts.items()))
 
 
 def print_report(report, file=sys.stdout):

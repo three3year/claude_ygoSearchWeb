@@ -596,7 +596,7 @@ GOAL_TREE = [
         {"目的關鍵詞": ["守備表示"]},
         {"目的關鍵詞": ["属性", "族"]},
         {"目的關鍵詞": ["レベル"]},
-        {"關鍵詞": ["攻撃力"], "目的關鍵詞": ["元々"]},
+        {"關鍵詞": ["攻撃力"], "目的關鍵詞": ["攻撃力"]},
         {"所在": "場上"},
         {}]},
 ]
@@ -643,11 +643,12 @@ class TestGoalKeywords(unittest.TestCase):
               ["にする › にする→属性/族"])])
 
     def test_keyword_and_goal_keyword_on_one_leaf_both_required(self):
-        """一葉同時宣告關鍵詞與目的關鍵詞:葉名 にする:攻撃力→元々,兩者都中才收。"""
+        """一葉同時宣告關鍵詞與目的關鍵詞:葉名 にする:攻撃力→攻撃力,兩者都中才收(目的關鍵詞
+        原為 元々,keyword-head-noun 起它在「元々の攻撃力」裡是修飾語,改比中心詞)。"""
         self.assertEqual(
             classify("①：そのモンスターの攻撃力を元々の攻撃力にする。", tree=GOAL_TREE),
-            [("にする", "已歸", ["にする:攻撃力→元々"], "にする", None, None,
-              ["にする › にする:攻撃力→元々"])])
+            [("にする", "已歸", ["にする:攻撃力→攻撃力"], "にする", None, None,
+              ["にする › にする:攻撃力→攻撃力"])])
         self.assertEqual(
             classify("①：そのモンスターは元々の攻撃力になる。", tree=GOAL_TREE),
             [("にする", "已歸", ["にする"], "にする", None, None, ["にする"])])
@@ -950,6 +951,65 @@ class TestLemmaVariantsRealTree(unittest.TestCase):
         self.assertEqual(
             classify("①：その裏表によってその効果は以下の効果となる。"),
             [("とする", "已歸", ["とする"], "規則改寫", None, None, ["規則改寫 › とする"])])
+
+
+class TestHeadNounRealTree(unittest.TestCase):
+    """keyword-head-noun 票 01(2026-10-30 /grill-with-docs 定案):關鍵詞類條件只比欄位的中心詞——
+    依並列詞切段、每段取最後一個修飾標記之後、去數量尾;只出現在修飾語裡的字面不算命中。"""
+
+    def test_lp_in_modifier_is_not_lp_leaf(self):
+        self.assertEqual(
+            classify("①：このカードがフィールドゾーンに存在する限り、相手よりLPが少ないプレイヤーが"
+                     "受ける全てのダメージは０になる。")[-1],
+            ("にする", "已歸", ["にする:ダメージ"], "LP・ダメージ", None, None,
+             ["LP・ダメージ › ダメージ › にする:ダメージ"]))
+
+    def test_quantity_tail_with_uchi_keeps_head(self):
+        """「その内の1体」這種數量尾連同 の内の 一起去掉,中心詞仍是 モンスター。"""
+        self.assertEqual(
+            classify("●EXデッキ：EXデッキから特殊召喚されたそのモンスターの内の１体を破壊する。")[-1][2],
+            ["破壊:モンスター"])
+
+    def test_level_in_modifier_is_not_level_up(self):
+        self.assertEqual(
+            classify("③：墓地のこのカードを除外して発動できる。自分フィールドの全てのレベル８以上の"
+                     "ドラゴン族モンスターの攻撃力は１０００アップする。")[-1][2],
+            ["アップ:攻撃力"])
+
+    def test_attack_position_in_modifier_is_not_negate_attack(self):
+        self.assertEqual(
+            classify("②：自分・相手のバトルフェイズ開始時に発動できる。"
+                     "相手フィールドの全ての攻撃表示モンスターの効果は無効化される。")[-1][2],
+            ["無効にする:効果", "無効にする@相手フィールド"])
+
+    def test_attack_in_modifier_is_not_set_attack(self):
+        self.assertEqual(
+            classify("●相手フィールドの攻撃力２０００以下のモンスター１体を裏側守備表示にする。")[-1][2],
+            ["にする→裏側守備表示", "にする→守備表示"])
+
+    def test_goal_keyword_in_modifier_is_not_a_hit(self):
+        self.assertEqual(
+            classify("①：１ターンに１度、自分フィールドの表側守備表示モンスター１体を対象として発動できる。"
+                     "そのモンスターの守備力は、自分フィールドの全ての表側守備表示モンスターの"
+                     "元々の守備力を合計した数値になる。")[-1][2],
+            ["にする:守備力"])
+
+    def test_damage_to_recovery_drops_lp_and_damage(self):
+        self.assertEqual(
+            classify("①：自分が効果ダメージを受けた時にこの効果を発動できる。このカードを破壊し、"
+                     "さらにこのターン、LPにダメージを与える効果は、LPを回復する効果になる。")[-1][2],
+            ["にする"])
+
+    def test_head_hits_are_kept(self):
+        """不誤傷:中心詞本身就是關鍵詞(或含它)的照中。"""
+        self.assertEqual(classify("●相手のLPを１００にする。")[-1][2], ["にする:LP"])
+        self.assertEqual(
+            classify("①：このカードがモンスターゾーンに存在する限り、"
+                     "自分が受ける効果ダメージは０になる。")[-1][2],
+            ["にする:ダメージ"])
+        self.assertEqual(
+            classify("①：このカードのX素材を２つまで取り除いて発動できる。")[0][2],
+            ["取り除く:X素材"])
 
 
 # 測試小樹:中類(大類底下列中類清單,葉以名字宣告)

@@ -46,7 +46,9 @@ frame-args-v3 票 01),各比自己那一欄(category-tree-restart 票 01):移動
 關鍵詞條件(字面子字串清單)依 對象→主語→主題 找第一個有值的欄、只比那一欄(主題含回填
 延續的值;三欄都空不中;category-tree-restart 票 03);關鍵詞緊接 した/する/され 的出現是動詞用法、
 修飾後面的名詞(特殊召喚したモンスターの効果、発動した効果),不算命中(票 08,2026-10-28 站主
-裁定;關鍵詞類條件都適用)。目的關鍵詞條件(字面子字串清單)只比
+裁定;關鍵詞類條件都適用);而且只比欄位的中心詞——依並列詞切段、每段去掉數量尾、取最後一個
+修飾標記(平假名結束接非平假名的位置)之後,只出現在修飾語裡的不算(LPにダメージを与える効果 不中
+LP;keyword-head-noun 票 01,2026-10-30 /grill-with-docs 定案;關鍵詞類條件都適用)。目的關鍵詞條件(字面子字串清單)只比
 目的欄(原文字面,推得的值也照字面比),與關鍵詞各自獨立——收補語是值或屬性、留在目的欄的框架
 (にする→裏側守備表示、にする→属性;category-lemma-followup 票 02);一葉兩種都宣告時兩者都要中。
 關鍵詞與目的關鍵詞合稱關鍵詞類條件。匹配:對每個(來源區域, 目的區域,
@@ -138,6 +140,12 @@ KEYWORD_FIELDS = ("object", "subject", "topic")
 # 關鍵詞緊接這些字時是動詞用法、修飾後面的名詞(特殊召喚したモンスター、発動した効果、召喚された),
 # 不算命中(票 08,2026-10-28 站主裁定);召喚・特殊召喚を無効 的 召喚 照中
 KEYWORD_VERB_TAILS = ("した", "する", "され")
+HIRAGANA = re.compile(r"[ぁ-ゟ]")
+# 中心詞的並列詞:字面先依這些切段,每段各有中心詞(攻撃力・守備力、発動と効果)
+HEAD_CONJUNCTIONS = re.compile(r"・|及び|または|か|と|や|、")
+# 段尾的數量(1枚、2つまで、その内の1体),先去掉再找中心詞
+HEAD_QUANTITY_TAIL = re.compile(
+    r"(?:の(?:内|うち)の?)?[0-9０-９]+(?:枚|体|つ|個|回|ターン|ヶ所)?(?:まで|以上|以下)?$")
 
 
 class TreeError(ValueError):
@@ -182,6 +190,20 @@ def keyword_in(keyword, text):
         if not tail.startswith(KEYWORD_VERB_TAILS):
             return True
         start = i + 1
+
+
+def head_nouns(text):
+    """欄位字面的各段中心詞(keyword-head-noun 票 01):依並列詞切段,每段取最後一個修飾標記
+    (平假名結束、接著非平假名的位置——の、述語連體形)之後的部分;段尾的數量先去掉。"""
+    heads = []
+    for segment in HEAD_CONJUNCTIONS.split(text):
+        segment = HEAD_QUANTITY_TAIL.sub("", segment)
+        cut = 0
+        for i in range(1, len(segment)):
+            if HIRAGANA.match(segment[i - 1]) and not HIRAGANA.match(segment[i]):
+                cut = i
+        heads.append(segment[cut:])
+    return heads
 
 
 def leaf_name(lemma, polarity, conditions=None):
@@ -285,7 +307,7 @@ class Leaf:
         目的關鍵詞時,目的欄的字面(或 None)要含其中一個;兩者都宣告時都要中。不帶關鍵詞類條件
         的葉恆為假。"""
         return self.keyed and all(
-            bool(value) and any(keyword_in(k, value) for k in keys)
+            bool(value) and any(keyword_in(k, head) for k in keys for head in head_nouns(value))
             for keys, value in ((self.keywords, text), (self.goal_keywords, goal)) if keys)
 
 

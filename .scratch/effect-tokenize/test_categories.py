@@ -994,11 +994,25 @@ class TestHeadNounRealTree(unittest.TestCase):
                      "元々の守備力を合計した数値になる。")[-1][2],
             ["にする:守備力"])
 
-    def test_damage_to_recovery_drops_lp_and_damage(self):
+    def test_damage_to_recovery_is_effect_rewrite(self):
+        """傷害效果變回復效果:不帶 にする:LP/にする:ダメージ,歸 にする→効果(票 02)。"""
         self.assertEqual(
             classify("①：自分が効果ダメージを受けた時にこの効果を発動できる。このカードを破壊し、"
-                     "さらにこのターン、LPにダメージを与える効果は、LPを回復する効果になる。")[-1][2],
-            ["にする"])
+                     "さらにこのターン、LPにダメージを与える効果は、LPを回復する効果になる。")[-1],
+            ("にする", "已歸", ["にする→効果"], "規則改寫", None, None,
+             ["規則改寫 › にする › にする→効果"]))
+        self.assertEqual(
+            classify("①：このカードがモンスターゾーンに存在する限り、自分にダメージを与える効果は、"
+                     "自分のLPを回復する効果になる。")[-1][2],
+            ["にする→効果"])
+
+    def test_effect_becomes_activatable_effect_is_rule_rewrite(self):
+        self.assertEqual(
+            classify("①：自分フィールドに「獄神」Lモンスターが存在する限り、元々のカード名に"
+                     "「アルス＝マグナ」を含む、自分フィールドのモンスターが発動する効果は、"
+                     "相手ターンでも発動できる効果になる。")[-1],
+            ("にする", "已歸", ["にする→効果"], "規則改寫", None, None,
+             ["規則改寫 › にする › にする→効果"]))
 
     def test_head_hits_are_kept(self):
         """不誤傷:中心詞本身就是關鍵詞(或含它)的照中。"""

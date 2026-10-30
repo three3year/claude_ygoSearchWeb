@@ -137,7 +137,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 分詞鏈;分詞程式仍在試點目錄 `.scratch/effect-tokenize/`。**差值更新的順序**:更新卡片
 總表 → 效果標記表(判定票、合併、`build_tag_cards.py`)→ `run_chain.py` → `build_index.py`。
 不重跑分詞鏈時,卡文有變的標記句雜湊對不上,索引建置會以「動作類別匯出檔過時」失敗——
-類別不會靜默沿用過時的結果。只涵蓋新格式新卡;改了類別樹或類別規則,同樣重跑
+類別不會靜默沿用過時的結果;卡面參數(種族、屬性、子類型、等級、攻守、日文卡名)變了同樣
+要重跑,否則以「卡面參數過時」失敗(動作對象的比對依它,見 GLOSSARY)。只涵蓋新格式新卡;改了類別樹或類別規則,同樣重跑
 `run_chain.py` 再重建索引,網站就反映。
 
 `web/data.js` 是**入版控的建置產物**(GitHub Pages 直接吃 repo 內容,產物不進版控就沒有站),
@@ -177,6 +178,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/web/build_index.py` | 建置 CLI 薄殼(讀檔 → 寫 web/data.js → 印報告 → 依 problems 定 exit code) |
 | `.scratch/effect-tokenize/run_chain.py` | 重跑分詞鏈(分詞 → 框架 → 類別 → 匯出);任一步失敗即停並說是哪一步 |
 | `.scratch/effect-tokenize/export_categories.py` | 類別匯出:框架類別落到標記句 → `data/action_categories.json` |
+| `.scratch/effect-tokenize/patient.py` | 動作對象判定:動作框架 → 此卡/非此卡/皆非(類別匯出呼叫) |
 | `script/web/frontend_harness.js` | 接縫 3 的沙箱載入器(`node:vm` 依 index.html 的順序載入真實前端程式碼) |
 | `script/web/engine.test.js` | 前端查詢引擎的接縫測試(`node:test`,合成資料集) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |

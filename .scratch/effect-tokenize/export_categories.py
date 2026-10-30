@@ -16,6 +16,10 @@ index)。框架對標記句:效果句只有一段時框架全屬那一句;拆開
 以標記表的原文重算比對,對不上就建置失敗。另帶類別樹(葉名清單與巢狀節點)當網站值域
 的類別部分。同一份輸入兩次匯出逐位元組相同。
 
+[[動作對象]](.scratch/action-patient):逐框架判定此卡/非此卡/皆非(patient.py),每句在
+效果位葉、代價位葉之外再記兩組的此卡葉與非此卡葉;多讀卡片總表的卡面參數,逐卡記雜湊
+(「卡面」),索引建置以總表重算比對。判定的框架數與理由記在「統計」,建置報告照登。
+
 用法:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/export_categories.py
 """
 from collections import Counter

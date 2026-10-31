@@ -9,7 +9,10 @@
 頂層:
     說明    本檔怎麼來的(字串)。
     版本    格式版本(整數,VERSION;欄位語意變就加一,讀的人不符即失敗)。
-    目錄    具名查詢目錄(票 08 填;本票空清單;列的欄預留在 CATALOG_KEYS)。
+    目錄    具名查詢目錄(票 08;每個節點一列、目錄序,欄在 CATALOG_KEYS):name 節點名、path 路徑(大類 › 中類或
+            詞元節點 › 名)、predicate 明文述詞(大類/中類列是 null)、cards 三個位置各命中幾張卡、hash 三個位置
+            各自的卡集合雜湊(predicate.cards_hash;規格 3 的 JS 評估器重算要相同);大類/中類列是底下具名
+            查詢的聯集。「至少命中一張」違反即匯出失敗(問題清單)。
     統計    動作對象判定的框數與理由(Stats.doc(),同舊匯出),另加「位置」:匯出的框數分位置。
     卡面    每列 [卡片密碼, 此卡卡面參數雜湊](只含語料有的卡)。
     句      每列一句標記句:card、section、index、hash(原文雜湊)、frames(框列清單,依原文順序)。
@@ -42,12 +45,13 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import catalog as catalog_module  # noqa: E402
 import patient  # noqa: E402
 from closed_values import MODIFIER_KINDS, REGION_KEYS  # noqa: E402
 from constraints import KIND_ACTION, POSITIONS  # noqa: E402
 from export_common import (ROOT, Stats, face_hash, load_faces, load_sentences, owner,  # noqa: E402
                            print_stats, text_hash)
-from predicate import FRAME_KEYS, PHRASE_KEYS, SEGMENT_KEYS  # noqa: E402
+from predicate import FRAME_KEYS, PHRASE_KEYS, SEGMENT_KEYS, card_sets, cards_hash  # noqa: E402
 
 OUT = os.path.join(ROOT, "data", "action_frames.json")
 
@@ -59,7 +63,7 @@ _COPIED_KEYS = ("action", "position", "polarity", "voice", "negation", "agent", 
 PATIENT_PHRASE, GOAL_PHRASE = PHRASE_KEYS
 # 受事者片語取哪一欄:對象 → 主語 → 主題 第一個有片語的(與舊關鍵詞類條件的取法同)
 PATIENT_SOURCES = ("object", "subject", "topic")
-# 目錄列的欄(票 08 填:名、路徑、述詞或空、三個位置的張數、卡集合雜湊;本票目錄是空清單)
+# 目錄列的欄(票 08:名、路徑、述詞或空、三個位置的張數、三個位置的卡集合雜湊)
 CATALOG_KEYS = ("name", "path", "predicate", "cards", "hash")
 
 DOC = ("動作框架匯出檔(.scratch/named-queries,ADR-0018):由 .scratch/effect-tokenize/export_frames.py 產生,"
@@ -109,9 +113,50 @@ def frame_row(frame, mode):
             if key in row or extra.get(key)}
 
 
-def export(sentences, faces=None):
-    """效果句(frames.json 的列,多帶效果句原文 text_ja)+ 卡片密碼 → 此卡卡面參數
-    → (匯出文件, 問題清單);問題清單非空即匯出失敗。"""
+def frame_rows(sentence, faces):
+    """一句效果句(frames.json 的列)+ 卡面表 → [(動作框架, 它的框列, 動作對象判定)…](依原文順序)。
+    框架 → 框列的轉換只有這一份:匯出與具名查詢命中(catalog_hits.py)都經這裡。"""
+    verdicts = patient.judge_sentence(sentence["frames"], faces.get(sentence["card"]), sentence["section"])
+    return [(fr, frame_row(fr, verdict.mode), verdict) for fr, verdict in zip(sentence["frames"], verdicts)
+            if fr["kind"] == KIND_ACTION]
+
+
+def query_sets(cat, rows):
+    """目錄 × 匯出的句列 → {具名查詢名: {位置: 卡集合}}(參考評估器 predicate.card_sets 算;目錄序)。"""
+    found = card_sets([q.predicate for q in cat.queries], rows)
+    return {q.name: sets for q, sets in zip(cat.queries, found)}
+
+
+def unmatched(cat, sets):
+    """「每個具名查詢在全語料三個位置合計至少命中一張」(規格「不留位置口徑」(a))→ 違反的名字(目錄序)。"""
+    return [q.name for q in cat.queries if not any(sets[q.name].values())]
+
+
+def catalog_rows(cat, sets):
+    """目錄 + 每個具名查詢的卡集合 → 目錄欄的列(CATALOG_KEYS;目錄序):每個節點一列——大類列、它宣告的
+    中類列、底下的具名查詢列;大類/中類的卡集合是底下具名查詢的聯集(catalog.Catalog.members),述詞空。"""
+    def row(name, path, pred, cards):
+        return {"name": name, "path": list(path), "predicate": pred,
+                "cards": {position: len(cards[position]) for position in POSITIONS},
+                "hash": {position: cards_hash(cards[position]) for position in POSITIONS}}
+
+    def union(names):
+        return {position: set().union(*(sets[name][position] for name in names)) for position in POSITIONS}
+
+    out = []
+    for node, _ in cat.walk():
+        if node.predicate is None:
+            out.append(row(node.name, node.path, None, union(cat.members(node.name))))
+            for middle in cat.middles.get(node.name, ()):
+                out.append(row(middle, node.path + (middle,), None, union(cat.members(node.name, middle))))
+        else:
+            out.append(row(node.name, node.path, node.predicate, sets[node.name]))
+    return out
+
+
+def export(sentences, faces=None, cat=None):
+    """效果句(frames.json 的列,多帶效果句原文 text_ja)+ 卡片密碼 → 此卡卡面參數 + 具名查詢目錄(catalog.Catalog;
+    沒給就目錄欄空)→ (匯出文件, 問題清單);問題清單非空即匯出失敗(框架對不到標記句、具名查詢沒命中任何一張)。"""
     faces = faces or {}
     problems = []
     out = []
@@ -122,22 +167,24 @@ def export(sentences, faces=None):
         for part in s["parts"]:
             rows[part["index"]] = {"card": s["card"], "section": s["section"], "index": part["index"],
                                    "hash": text_hash(s["text_ja"][part["start"]:part["end"]]), "frames": []}
-        verdicts = patient.judge_sentence(s["frames"], faces.get(s["card"]), s["section"])
-        for fr, verdict in zip(s["frames"], verdicts):
-            if fr["kind"] != KIND_ACTION:
-                continue
+        for fr, row, verdict in frame_rows(s, faces):
             index = owner(s, fr)
             if index is None:
                 problems.append("框架對不到標記句(選項 %s):%s" % (
                     fr.get("option"), (s["card"], s["section"], s["index"], fr["order"])))
                 continue
-            rows[index]["frames"].append(frame_row(fr, verdict.mode))
+            rows[index]["frames"].append(row)
             positions[fr["position"]] += 1
             stats.add(s["card"], verdict)
         out.extend(rows.values())
     covered = sorted({s["card"] for s in sentences} & set(faces))
     face_rows = [[card, face_hash(faces[card])] for card in covered]
-    return {"說明": DOC, "版本": VERSION, "目錄": [], "統計": dict(stats.doc(), 位置=positions),
+    catalog = []
+    if cat is not None:
+        sets = query_sets(cat, out)
+        problems.extend("具名查詢在全語料三個位置都沒有命中(不留):%s" % name for name in unmatched(cat, sets))
+        catalog = catalog_rows(cat, sets)
+    return {"說明": DOC, "版本": VERSION, "目錄": catalog, "統計": dict(stats.doc(), 位置=positions),
             "卡面": face_rows, "句": out}, problems
 
 
@@ -164,7 +211,12 @@ def column_counts(rows):
 
 
 def main():
-    doc, problems = export(load_sentences(), load_faces())
+    try:
+        cat = catalog_module.load()
+    except catalog_module.CatalogError as e:
+        print(e, file=sys.stderr)
+        return 1
+    doc, problems = export(load_sentences(), load_faces(), cat)
     if problems:
         print("**匯出失敗**,%d 個問題(前 20 筆):" % len(problems), file=sys.stderr)
         for p in problems[:20]:
@@ -178,6 +230,10 @@ def main():
         len(rows), len({r["card"] for r in rows}), sum(positions.values()),
         "、".join("%s %d" % kv for kv in positions.items()), doc["版本"], OUT))
     print("各欄有值的框數:" + "、".join("%s %d" % kv for kv in column_counts(rows).items()))
+    queries = [r for r in doc["目錄"] if r["predicate"] is not None]
+    print("目錄 %d 列(具名查詢 %d);具名查詢三個位置的張數合計:%s" % (
+        len(doc["目錄"]), len(queries),
+        "、".join("%s %d" % (position, sum(r["cards"][position] for r in queries)) for position in POSITIONS)))
     print_stats(doc["統計"], "動作對象(匯出的全部動作框架)")
     return 0
 

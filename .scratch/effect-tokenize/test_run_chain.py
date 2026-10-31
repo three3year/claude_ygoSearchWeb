@@ -17,12 +17,12 @@ import run_chain  # noqa: E402
 class TestRunChain(unittest.TestCase):
 
     def test_steps_run_in_chain_order_ending_with_the_export(self):
-        """框列匯出(named-queries 票 05)緊接框架之後、舊的類別兩步之前。"""
+        """目錄(named-queries 票 08)與框列匯出(票 05)緊接框架之後、舊的類別兩步之前。"""
         ran = []
         ok, failed = run_chain.run(lambda script: ran.append(script) or 0)
         self.assertTrue(ok)
         self.assertIsNone(failed)
-        self.assertEqual(ran, ["tokenize.py", "frames.py", "export_frames.py", "categories.py",
+        self.assertEqual(ran, ["tokenize.py", "frames.py", "catalog_hits.py", "export_frames.py", "categories.py",
                                "export_categories.py"])
 
     def test_a_failing_step_stops_the_chain_and_is_named(self):
@@ -34,7 +34,7 @@ class TestRunChain(unittest.TestCase):
         ok, failed = run_chain.run(runner)
         self.assertFalse(ok)
         self.assertEqual(failed, "類別")
-        self.assertEqual(ran, ["tokenize.py", "frames.py", "export_frames.py", "categories.py"])
+        self.assertEqual(ran, ["tokenize.py", "frames.py", "catalog_hits.py", "export_frames.py", "categories.py"])
 
 
 if __name__ == "__main__":

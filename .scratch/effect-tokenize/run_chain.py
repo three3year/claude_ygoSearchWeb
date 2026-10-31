@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-"""重跑分詞鏈(.scratch/category-search 票 05,ADR-0017;named-queries 票 05 加框列匯出):
-分詞 → 框架 → 框列匯出 → 類別 → 類別匯出。
+"""重跑分詞鏈(.scratch/category-search 票 05,ADR-0017;named-queries 票 05 加框列匯出、票 08 加目錄):
+分詞 → 框架 → 目錄 → 框列匯出 → 類別 → 類別匯出。
 
 [[差值更新]]在效果標記表更新之後、重建網站資料(script/web/build_index.py)之前跑這一支:
 新卡與勘誤改了標記句的日文原文時,匯出檔的雜湊會對不上,索引建置因此失敗——重跑全鏈讓
 匯出跟上卡文。任一步失敗就停下並說是哪一步,後面的步驟不跑(半新半舊的中間產物不往下傳)。
 
-框列匯出(data/action_frames.json,ADR-0018)緊接框架之後、在舊的 類別 → 類別匯出 之前(規格 2 總則的
-順序是 框架 → 目錄 → 匯出,具名查詢目錄那一步由票 08 插在框架與框列匯出之間);舊的兩步過渡期照跑、
-規格 3 切換索引後刪。
+目錄(catalog_hits.py:載入檢查具名查詢目錄、每個動作框架的命中寫 frame_queries.json、「至少命中一張」檢查)與
+框列匯出(export_frames.py → data/action_frames.json,目錄欄的張數與雜湊;ADR-0018)緊接框架之後、在舊的
+類別 → 類別匯出 之前(規格 2 總則的順序 框架 → 目錄 → 匯出);舊的兩步過渡期照跑、規格 3 切換索引後刪。
 
 用法(repo 任意位置皆可):python .scratch/effect-tokenize/run_chain.py
 """
@@ -23,6 +23,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 STEPS = (
     ("分詞", "tokenize.py"),
     ("框架", "frames.py"),
+    ("目錄", "catalog_hits.py"),
     ("框列匯出", "export_frames.py"),
     ("類別", "categories.py"),
     ("類別匯出", "export_categories.py"),

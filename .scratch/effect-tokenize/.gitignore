@@ -4,6 +4,7 @@
 tokens.json
 frames.json
 frame_categories.json
+frame_queries.json
 card_categories.json
 view_data.js
 view_frames_*.js

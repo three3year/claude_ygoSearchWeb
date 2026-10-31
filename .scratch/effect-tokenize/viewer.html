@@ -598,8 +598,9 @@ function agentText(v){
 }
 var PHRASE_LABELS=[["object","對象"],["topic","主題"],["subject","主語"],["goal","目的"]];
 function phrasesHtml(p){
-  // 論元片語(票 02):每欄一個可展開的區塊——摘要列各段的中心詞(中心詞類),展開列段字面、中心詞、中心詞類、
-  // 指示詞、玩家、區域,再接 segmentExtra 的修飾語(票 03)與數量(票 04)
+  // 論元片語(票 02):每欄一個可展開的區塊——摘要列各段的中心詞(中心詞類:卡/屬性/非卡/指示詞/玩家/位置/表示形式/其他,
+  // 後三值 2026-11-01 裁定加),展開列段字面、中心詞、中心詞類、指示詞(段首 その 綁在定語子句裡時不標,2026-11-01 裁定)、
+  // 玩家、區域,再接 segmentExtra 的修飾語(票 03)與數量(票 04;全ての/任意の 與受事者前的引用量 2026-11-01 裁定起也收)
   return PHRASE_LABELS.filter(function(kv){return p[kv[0]]}).map(function(kv){
     var ph=p[kv[0]];
     var summary=ph.segments.map(function(s){return esc(s.head===null?'—':s.head)+'<span class="muted">('+esc(s.head_kind)+')</span>'}).join('・');
@@ -655,10 +656,10 @@ function regionsText(v){
   return out.join(' ');
 }
 function mannerText(v){
-  // 方式(票 06):述語前同一子句內的 で 片語字面 + 方式類(手段:效果/手段:戰鬥/手段:方法/表示形式(帶值)/視同/順序/其他);
-  // 其他 類淡色斜體(封閉表沒有合值,只留字面);で 接區域不在這裡,看結構化所在的 取自で
+  // 方式(票 06):述語前同一子句內的 で 片語字面 + 方式類(手段:效果/手段:戰鬥/手段:戰鬥或效果(2026-11-01 裁定加:戦闘・効果で 一族)/
+  // 手段:方法/表示形式(帶值)/視同/順序/其他);其他 類淡色斜體(封閉表沒有合值,只留字面);で 接區域不在這裡,看結構化所在的 取自で
   var cls=v.manner_kind==="其他"?' class="bf"':'';
-  var title='方式:述語前同一子句內的 で 片語(含 で、不含 は/も 後綴),一框至多一個、取離述語最近的;方式類='+v.manner_kind+(v.manner_kind==="其他"?'(封閉表沒有對應的類:なしで、ままで、戦闘・効果で 這類兩類並列,只留字面)':'')+(v.manner_value?';表示形式值='+v.manner_value:'')+'。定語裡的 で、繫詞 で 不收;で 接區域進結構化所在、標 取自で';
+  var title='方式:述語前同一子句內的 で 片語(含 で、不含 は/も 後綴),一框至多一個、取離述語最近的;方式類='+v.manner_kind+(v.manner_kind==="其他"?'(封閉表沒有對應的類:なしで、ままで、X以外で,只留字面)':'')+(v.manner_value?';表示形式值='+v.manner_value:'')+'。定語裡的 で、繫詞 で 不收;で 接區域進結構化所在、標 取自で';
   return '<span class="muted">方式</span><span'+cls+' title="'+esc(title)+'">'+esc(v.manner)+' '+esc(v.manner_kind)+(v.manner_value?'='+esc(v.manner_value):'')+'</span>';
 }
 function negationText(n){

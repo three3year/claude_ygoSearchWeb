@@ -17,16 +17,16 @@ from constraints import KIND_ACTION
 
 OTHER = "其他"
 
-# 中心詞類(票 02):段的中心詞是哪一類
-HEAD_KINDS = ("卡", "屬性", "非卡", "指示詞", OTHER)
-HEAD_CARD, HEAD_ATTRIBUTE, HEAD_NON_CARD, HEAD_DEMONSTRATIVE = HEAD_KINDS[:4]
+# 中心詞類(票 02;玩家/位置/表示形式 三值依 2026-11-01 站主裁定加):段的中心詞是哪一類
+HEAD_KINDS = ("卡", "屬性", "非卡", "指示詞", "玩家", "位置", "表示形式", OTHER)
+HEAD_CARD, HEAD_ATTRIBUTE, HEAD_NON_CARD, HEAD_DEMONSTRATIVE, HEAD_PLAYER, HEAD_POSITION, HEAD_DISPLAY_FORM = HEAD_KINDS[:7]
 # 中心詞字面 → 類 的判定表與 head_kind() 在 phrases.py(這裡只放值域)
 # 修飾語類(票 03)
 MODIFIER_KINDS = ("種族", "屬性", "字段", "卡片子類型", "數值", "區域", "玩家", "表示形式", OTHER)
 # 數量類(票 04);引用量(数の分だけ/同じ数)類空,不在表裡
 QUANTITY_KINDS = ("定數", "上限", "下限", "任意", "全部")
-# 方式類(票 06)
-MANNER_KINDS = ("手段:效果", "手段:戰鬥", "手段:方法", "表示形式", "視同", "順序", OTHER)
+# 方式類(票 06;手段:戰鬥或效果 依 2026-11-01 站主裁定加:戦闘・効果で 一族)
+MANNER_KINDS = ("手段:效果", "手段:戰鬥", "手段:戰鬥或效果", "手段:方法", "表示形式", "視同", "順序", OTHER)
 # 施事者與它的來源(票 07)
 AGENTS = ("自分", "相手", "お互い", "此卡", "其他卡")
 AGENT_SOURCES = ("主題", "主語", "事件主語", "によって", "預設")

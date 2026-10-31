@@ -2347,7 +2347,9 @@ def segments(text, key="object", action=None, context=""):
 class TestArgumentPhrases(unittest.TestCase):
     """frame-args-v4 票 02:受事者位三欄與目的欄各帶論元片語——依並列詞切段,每段的中心詞是去掉數量尾
     後的最後一個名詞格、中心詞類走封閉表、指示詞旗標看段首、玩家與區域沿用區域辨識(切走的仍留一份);
-    推得的目的沒有片語。只斷言輸出框架的 phrases 欄。"""
+    推得的目的沒有片語。只斷言輸出框架的 phrases 欄。指示詞旗標依 2026-11-01 站主裁定改成語意判定(段首指示詞
+    之後先有格助詞再有定語述語或比較詞時旗標假),test_to_onaji_is_comparison_not_a_segment_boundary 的預期
+    跟著從真改假;規則例子在 TestV4Decisions。"""
 
     def test_single_segment_keeps_the_region_cut_into_place(self):
         """相手フィールドの表側表示モンスター１体:一段,中心詞 モンスター(卡),玩家 相手、區域 場上;
@@ -2372,9 +2374,11 @@ class TestArgumentPhrases(unittest.TestCase):
              ("罠カード", "罠カード", "卡", False, None, [])])
 
     def test_to_onaji_is_comparison_not_a_segment_boundary(self):
+        """と同じ 的 と 不切段;指示詞旗標 票 02 時為真(段首字面),2026-11-01 裁定改語意判定後為假
+        (その 綁在比較子句裡的另一張卡)。"""
         self.assertEqual(
             segments("①：デッキからそのモンスターと同じ種族のモンスター１体を手札に加える。"),
-            [("そのモンスターと同じ種族のモンスター1体", "モンスター", "卡", True, None, [])])
+            [("そのモンスターと同じ種族のモンスター1体", "モンスター", "卡", False, None, [])])
 
     def test_closed_value_compound_is_the_head_itself(self):
         """分詞一格的封閉值域複合詞(戦闘ダメージ、自分フィールド)本身就是中心詞。"""
@@ -3122,7 +3126,8 @@ class TestManner(unittest.TestCase):
     """frame-args-v4 票 06:述語前同一子句內的 で 片語是方式(字面含 で、不含 は/も 後綴),配封閉類
     方式類(手段:效果/手段:戰鬥/手段:方法/表示形式(另帶值)/視同/順序/其他);一框至多一個、取離述語
     最近的。定語裡的 で(並列修飾、定語子句裡的 で)與繫詞 で 不是方式;で 接區域不是方式,進結構化
-    所在、標 取自で(2026-10-31 定案)。"""
+    所在、標 取自で(2026-10-31 定案)。戦闘・効果で 一族原本落 其他,依 2026-11-01 站主裁定改記
+    手段:戰鬥或效果(兩條例子的預期跟著改,規則例子在 TestV4Decisions)。"""
 
     def test_battle_is_means_battle(self):
         self.assertEqual(mannered("①：このカードが戦闘で破壊された場合に発動できる。")[0],
@@ -3175,10 +3180,10 @@ class TestManner(unittest.TestCase):
         self.assertEqual(mannered("①：このカードはリリースなしで召喚できる。"),
                          [("召喚", "リリースなしで", "其他", None)])
 
-    def test_battle_or_effect_coordination_is_other(self):
-        """戦闘・効果で:兩類並列,封閉表沒有合值,落 其他、字面保留。"""
+    def test_battle_or_effect_coordination_is_battle_or_effect(self):
+        """戦闘・効果で:兩類並列,記 手段:戰鬥或效果、字面保留(票 06 時落 其他;2026-11-01 裁定改)。"""
         self.assertEqual(mannered("①：フィールドのこのカードが戦闘・効果で破壊された場合に発動できる。")[0],
-                         ("破壊", "戦闘・効果で", "其他", None))
+                         ("破壊", "戦闘・効果で", "手段:戰鬥或效果", None))
 
     def test_attributive_coordination_de_is_not_manner(self):
         """攻撃力2400以上で守備力1000の:定語裡的並列修飾。"""
@@ -3247,9 +3252,10 @@ class TestManner(unittest.TestCase):
         self.assertEqual(mannered("①：そのモンスターを表側攻撃表示か裏側守備表示で特殊召喚する。"),
                          [("特殊召喚", "表側攻撃表示か裏側守備表示で", "表示形式", "表側攻撃表示か裏側守備表示")])
 
-    def test_battle_or_effect_alternatives_are_other(self):
+    def test_battle_or_effect_alternatives_are_battle_or_effect(self):
+        """票 06 時落 其他;2026-11-01 裁定改記 手段:戰鬥或效果。"""
         self.assertEqual(mannered("①：このカードが戦闘または相手の効果で破壊された場合に発動できる。")[0],
-                         ("破壊", "戦闘または相手の効果で", "其他", None))
+                         ("破壊", "戦闘または相手の効果で", "手段:戰鬥或效果", None))
 
     def test_relative_clause_after_a_comma_does_not_swallow_the_de_phrase(self):
         """扱いで、 後面另一個論元裡的定語子句(この効果で特殊召喚したモンスターに)不影響前面的 扱いで。"""
@@ -3338,9 +3344,102 @@ class TestV4Round1Fixes(unittest.TestCase):
         """攻撃表示モンスターの攻撃力、「No.」Xモンスターの攻撃力:の 前的段裡封閉值/字段/召喚法直接接所有者名詞——
         各項照類記、所有者名詞落 其他(v4-round2,和 「X」モンスターの攻撃力 同一條)。"""
         self.assertEqual(modifiers("①：相手フィールドの全ての攻撃表示モンスターの攻撃力は０になる。", key="topic"),
-                         [[("相手フィールド", "區域"), ("全て", "其他"), ("攻撃表示", "表示形式"), ("モンスター", "其他")]])
+                         [[("相手フィールド", "區域"), ("攻撃表示", "表示形式"), ("モンスター", "其他")]])   # 全ての 是數量(2026-11-01 裁定)
         self.assertEqual(modifiers("①：自分フィールドの全ての「No.」Xモンスターの攻撃力は５００アップする。", key="topic"),
-                         [[("自分フィールド", "區域"), ("全て", "其他"), ("「No.」", "字段"), ("X", "卡片子類型"), ("モンスター", "其他")]])
+                         [[("自分フィールド", "區域"), ("「No.」", "字段"), ("X", "卡片子類型"), ("モンスター", "其他")]])
+
+
+class TestV4Decisions(unittest.TestCase):
+    """frame-args-v4 待裁定九項的落地(2026-11-01 站主裁定:檢驗摘要「需要你決定的」第四版論元九項全採建議 (a)):
+    (1)受事者之前的引用量與主語位 が+數量 取進片語;(2)方式 戦闘・効果で 一族記 手段:戰鬥或效果;(3)全ての/任意の
+    連體寫法記該段的數量、修飾語不留;(5)段首指示詞之後先有格助詞再有定語述語或比較詞時旗標假;(6)中心詞類加
+    玩家/位置/表示形式。(4)(7)(8)(9)維持現狀、不改程式。只斷言輸出框架的 phrases/manner 欄。"""
+
+    def test_reference_quantity_before_the_object_is_taken_from_the_clause(self):
+        """…の数まで/数だけ/数の分だけ/枚数まで 寫在受事者之前(同一子句):記進受事者最後一段,只記字面、類空、
+        標取自子句,與 を 後的引用量同形;字面從 数 往前收到讀點或 の 以外的助詞為止。"""
+        self.assertEqual(quantities("①：相手フィールドのモンスターの数まで、手札からレベル４以下のモンスターを特殊召喚する。"),
+                         [("相手フィールドのモンスターの数まで", None, None, True)])
+        self.assertEqual(quantities("①：除外した数だけ相手フィールドのカードを除外する。"),
+                         [("除外した数だけ", None, None, True)])
+        self.assertEqual(quantities("①：その数の分だけ相手フィールドのカードを破壊する。"),
+                         [("その数の分だけ", None, None, True)])
+        self.assertEqual(quantities("①：手札の枚数まで相手フィールドのカードを破壊する。"),
+                         [("手札の枚数まで", None, None, True)])
+
+    def test_reference_quantity_in_another_clause_is_not_taken(self):
+        """数が５体以上の場合、 是條件子句;主句的受事者沒有數量。"""
+        self.assertEqual(quantities("①：墓地のモンスターの数が５体以上の場合、手札から「X」モンスターを特殊召喚する。",
+                                    action="特殊召喚"), [None])
+
+    def test_subject_count_after_ga_is_taken_from_the_clause(self):
+        """「DD」カードが２枚存在する:主語位緊接 が 的數量取進主語段、標取自子句;數量後接 に(３つになった)是值,不收。"""
+        self.assertEqual(
+            quantities("①：自分フィールドに「DD」カードが２枚存在する場合、手札から「DD」モンスター１体を特殊召喚する。",
+                       key="subject", action="存在"), [("2枚", "定數", 2, True)])
+        self.assertEqual(quantities("①：自分フィールドにモンスターが２体以上存在する場合に発動できる。", key="subject",
+                                    action="存在"), [("2体以上", "下限", 2, True)])
+        self.assertEqual(quantities("①：このカードのX素材が３つになった場合に発動できる。", key="subject"), [None])
+
+    def test_battle_or_effect_manner_is_its_own_kind(self):
+        """戦闘・効果で、戦闘または相手の効果で、相手モンスターの攻撃または相手の効果で:手段:戰鬥 與 手段:效果
+        的並列記 手段:戰鬥或效果;其他組合(戦闘以外で)仍落 其他。"""
+        self.assertEqual(mannered("①：このカードが戦闘・効果で破壊された場合に発動できる。")[0],
+                         ("破壊", "戦闘・効果で", "手段:戰鬥或效果", None))
+        self.assertEqual(mannered("①：このカードが戦闘または相手の効果で破壊された場合に発動できる。")[0],
+                         ("破壊", "戦闘または相手の効果で", "手段:戰鬥或效果", None))
+        self.assertEqual(mannered("①：このカードが相手モンスターの攻撃または相手の効果で破壊された場合に発動できる。")[0],
+                         ("破壊", "相手モンスターの攻撃または相手の効果で", "手段:戰鬥或效果", None))
+        self.assertEqual(mannered("①：自分のモンスターが戦闘以外で墓地へ送られた場合に発動できる。")[0],
+                         ("送る", "戦闘以外で", "其他", None))
+
+    def test_adnominal_subete_and_nin_i_are_the_segment_quantity(self):
+        """全てのモンスター、任意のレベル:記成該段的數量(全部/任意、字面 全ての/任意の、不是取自子句),修飾語不留。"""
+        text = "①：相手フィールドの全てのモンスターを破壊する。"
+        self.assertEqual(quantities(text), [("全ての", "全部", None, False)])
+        self.assertEqual(modifiers(text), [[("相手フィールド", "區域")]])
+        text = "①：このカードのレベルを１～８までの任意のレベルにする。"
+        self.assertEqual(quantities(text, key="goal"), [("任意の", "任意", None, False)])
+        self.assertNotIn(("任意", "其他"), modifiers(text, key="goal")[0])
+
+    def test_demonstrative_bound_inside_a_relative_clause_is_not_a_demonstrative_segment(self):
+        """段首指示詞之後先有格助詞(と/が/は/より/を/で…)再有定語述語或比較詞:指示詞綁在定語子句裡的另一張卡,
+        旗標假;その破壊された(沒有格助詞)、その無効にした(する名詞的 に)、その手札に加えた(區域的 に)仍為真。"""
+        self.assertFalse(segments("①：そのカードとはカード名が異なる「戦華」魔法・罠カード１枚を手札に加える。")[0][3])
+        self.assertFalse(segments("①：そのモンスターよりランクが２つ高いXモンスター１体を特殊召喚する。")[0][3])
+        self.assertFalse(segments("①：デッキからそのモンスターと同じ種族のモンスター１体を手札に加える。")[0][3])
+        self.assertFalse(segments("①：そのカード名が記されたモンスター１体を手札に加える。")[0][3])
+        self.assertTrue(segments("①：その破壊されたモンスターを特殊召喚する。")[0][3])
+        self.assertTrue(segments("①：その無効にしたカードを破壊する。")[0][3])
+        self.assertTrue(segments("①：その手札に加えたカードを相手に見せる。")[0][3])
+        self.assertTrue(segments("①：そのモンスターの攻撃力は５００アップする。", key="topic")[0][3])
+
+    def test_player_position_and_display_form_heads(self):
+        """玩家詞(相手/自分/プレイヤー/コントローラー/持ち主)→ 玩家;牌組位置(一番上/一番下/上/下)→ 位置;
+        表示形式的值(裏側守備表示…)→ 表示形式;表示形式 這個詞本身仍是 屬性。"""
+        self.assertEqual(segments("①：相手に５００ダメージを与える。", key="goal"),
+                         [("相手", "相手", "玩家", False, "相手", [])])
+        self.assertEqual(segments("①：相手プレイヤーに１０００ダメージを与える。", key="goal"),
+                         [("相手プレイヤー", "プレイヤー", "玩家", False, "相手", [])])
+        self.assertEqual(segments("①：そのモンスターのコントローラーは手札を１枚捨てる。", key="topic")[0][1:3],
+                         ("コントローラー", "玩家"))
+        self.assertEqual(segments("①：自分はデッキから１枚ドローする。", key="topic"),
+                         [("自分", "自分", "玩家", False, "自分", [])])
+        self.assertEqual(segments("①：このカードをデッキの一番下に戻す。", key="goal"),
+                         [("デッキの一番下", "一番下", "位置", False, "無", ["牌組"])])
+        self.assertEqual(segments("①：そのモンスターを裏側守備表示にする。", key="goal"),
+                         [("裏側守備表示", "裏側守備表示", "表示形式", False, None, [])])
+        self.assertEqual(segments("①：そのモンスターの表示形式を変更する。")[0][1:3], ("表示形式", "屬性"))
+
+    def test_player_heads_keep_the_old_segmentation_and_region_rules(self):
+        """自分・相手 仍是一段(玩家的並列不切);自分または相手 不從前面的玩家修飾語補玩家(玩家仍空);
+        対象の自分のモンスターの上 的 自分 修飾的是怪獸,位置段不補玩家。"""
+        self.assertEqual(segments("①：自分・相手がコイントスを行う度に発動する。", key="subject")[0][:3],
+                         ("自分・相手", "相手", "玩家"))
+        self.assertEqual(segments("①：自分または相手が戦闘ダメージを受けた時に発動できる。", key="subject"),
+                         [("自分または相手", "相手", "玩家", False, None, [])])
+        self.assertEqual(segments("①：Xモンスター１体を、対象の自分のモンスターの上に重ねてX召喚扱いでEXデッキから特殊召喚する。",
+                                  key="goal", action="重ねる")[0][1:6], ("上", "位置", True, None, []))
 
 
 if __name__ == "__main__":

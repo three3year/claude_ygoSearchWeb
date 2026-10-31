@@ -25,7 +25,11 @@ structure(ctx, tokens, frame):替動作框架加 frame["phrases"] = {"object"|"t
 カード|名 合記一格。只剩數量的段(1枚、2体以上)中心詞就是那段數量、類 指示詞(名詞省略);純數值(0、1000)
 類 非卡。
 
-指示詞:段以 その/それ/それら/対象の/この効果の対象 起頭(この 不算)。玩家與區域:段裡最後一個定語述語之後
+指示詞:段以 その/それ/それら/対象の/この効果の対象 起頭(この 不算);指示詞綁的格之後先有格助詞(と/が/は/より/
+を/で/も/として;に/へ/から 只在綁的格不是區域也不是 する名詞時算)再有定語述語或比較詞時,指示詞綁在定語子句裡
+的另一張卡(そのモンスターと同じ種族のモンスター、そのカード名が記されたモンスター、そのモンスターよりランクが
+２つ高いXモンスター),旗標假(2026-11-01 站主裁定,語意判定取代段首字面);その破壊されたモンスター、その無効にした
+カード、その手札に加えたカード 仍為真。玩家與區域:段裡最後一個定語述語之後
 的字面交給區域辨識(places.parse_place;除外されている… 的狀態寫法例外看整段);沒認出玩家而段以玩家詞
 起頭、段裡沒有述語或 の 以外的助詞時,玩家就是段首那個(相手モンスター、自分のLP)。玩家拼法走
 closed_values.PLACE_PLAYER。
@@ -44,8 +48,8 @@ from collections import Counter, defaultdict
 
 import places
 from action_lemmas import MATERIAL_METHODS
-from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_NON_CARD, MODIFIER_KINDS, OTHER,
-                           PHRASE_KEYS, PLACE_PLAYER, QUANTITY_KINDS)
+from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_DISPLAY_FORM, HEAD_KINDS, HEAD_NON_CARD,
+                           HEAD_PLAYER, HEAD_POSITION, MODIFIER_KINDS, OTHER, PHRASE_KEYS, PLACE_PLAYER, QUANTITY_KINDS)
 from constraints import POS_COND, POS_COST, POS_EFFECT
 from extract_seed import CLOSED_VALUES  # 封閉值域(種族/卡片子類型/表示形式)的單一來源
 from report import token_kind
@@ -74,12 +78,24 @@ QUANTITY_TAIL_PARTICLES = {"p:まで", "p:の", "p:ずつ"}                  # �
 CLAUSE_QUANTITY_SKIP = (("ランダム", "に"), ("それぞれ",))             # を 與數量之間可夾的副詞(不進字面)
 CLAUSE_QUANTITY_STOP = {"。", "、", "p:を"}                            # 引用量往後找的邊界
 CLAUSE_QUANTITY_REACH = 12                                             # 引用量最多往後看幾格
+CLAUSE_QUANTITY_PARTICLES = {"object": "p:を", "subject": "p:が"}       # 哪些欄從子句取數量、接在哪個格之後
+# 受事者之前的引用量(2026-11-01 裁定):…の数まで/数だけ/数の分だけ/枚数まで 的字面從 数 往前收到讀點/主題的 は 為止;
+# 其他助詞只在它後面(数 之前)還有定語述語時才收(この効果で特殊召喚したモンスターの数まで 的 で 屬定語子句;
+# 手札から|相手フィールドのモンスターの数まで 的 から 屬主句,不收)
+REFERENCE_PHRASE_STOP = {"。", "、", "p:は"}
+# 主語位 が 後的數量(「DD」カードが２枚存在する;2026-11-01 裁定):數量後接這些助詞的是值(X素材が３つになった),不收
+SUBJECT_QUANTITY_NOT_BEFORE = {"p:に", "p:を", "p:と", "p:へ"}
+ADNOMINAL_QUANTITY = {"全て": Q_ALL, "任意": Q_ANY}   # 全ての/任意の 連體寫法(2026-11-01 裁定):該段的數量,修飾語不留
 
 # ── 修飾語(票 03)的表 ──
 MOD_RACE, MOD_ATTRIBUTE, MOD_ARCHETYPE, MOD_SUBTYPE, MOD_NUMERIC, MOD_ZONE, MOD_PLAYER, MOD_POSITION = MODIFIER_KINDS[:8]
 MODIFIER_BOUNDARIES = {"p:の", "、"}                           # 修飾語段的邊界(規格:依 の 與讀點切)
 ITEM_SEPARATORS = {"・", "／"}                                   # 一段裡並列項的分隔(光・闇属性、融合・S・X)
 CASE_PARTICLES = {"p:を", "p:が", "p:に", "p:へ", "p:から", "p:で", "p:と", "p:は", "p:も", "p:より", "p:として"}
+# 指示詞綁的格之後、把它關進定語子句的格助詞(2026-11-01 裁定):方向格 に/へ/から 只在綁的格是可移動的東西
+# (不是區域 その手札に加えた、不是 する名詞 その無効にした)時算
+DEMONSTRATIVE_CLAUSE_PARTICLES = CASE_PARTICLES - {"p:に", "p:へ", "p:から"}
+DEMONSTRATIVE_DIRECTION_PARTICLES = {"p:に", "p:へ", "p:から"}
 ADNOMINAL_COMPARE = {"同じ", "異なる", "違う"}                   # 連體的比較詞:後面的名詞還是同一個修飾語(同じ種族);
 #                                                                 前面有格助詞(数値が同じ|機械族)時是子句的述語、之後是邊界
 NUMERIC_FIELDS = frozenset({"攻撃力", "守備力", "レベル", "ランク", "リンク", "Pスケール", "LP"})
@@ -109,7 +125,11 @@ SUBTYPE_PREFIXES = frozenset({v[:-len("モンスター")] for v in CLOSED_VALUES
 # 複合詞(以尾字比)、受事者本身是區域(手札、デッキ、墓地、自分フィールド…,交給 places 認);
 # 屬性——數值與性質欄位,與跟主人走的事件類(効果/発動/攻撃/各召喚);非卡——傷害/LP/指示物/數/擲幣/
 # 戰鬥/ゾーン 與純數值;指示詞——沒有名詞中心的段(それ/それら/いずれか/内/対象/残り,與只剩數量的段
-# 「1枚」「2体以上」:名詞省略了,指的是上文的卡;量詞就是 QUANTITY_COUNTERS 那一張表)
+# 「1枚」「2体以上」:名詞省略了,指的是上文的卡;量詞就是 QUANTITY_COUNTERS 那一張表);
+# 玩家/位置/表示形式(2026-11-01 站主裁定加)——玩家詞(區域辨識的裸玩家詞 自分/相手/お互い 加 プレイヤー/
+# コントローラー/持ち主:ダメージを与える 的對象、主題/主語的執行者)、牌組位置(デッキの一番下に戻す 的
+# 一番上/一番下/上/下)、表示形式的值(裏側守備表示にする 的目的;分詞封閉值域 表示形式 七值——表示形式 這個詞
+# 本身仍是 屬性)
 _HEAD_CARD_WORDS = frozenset({"モンスター", "カード", "トークン", "チューナー", "素材", "魔法", "罠"})
 _HEAD_CARD_SUFFIXES = ("カード", "モンスター", "素材", "トークン", "魔法", "罠")
 _HEAD_ATTRIBUTE_WORDS = frozenset({
@@ -119,6 +139,12 @@ _HEAD_ATTRIBUTE_SUFFIXES = ("召喚", "カード名")
 _HEAD_NON_CARD_WORDS = frozenset({"ダメージ", "LP", "カウンター", "数", "コイントス", "戦闘", "ゾーン"})
 _HEAD_NON_CARD_SUFFIXES = ("ダメージ", "カウンター")
 _HEAD_DEMONSTRATIVE_WORDS = frozenset({"それ", "それら", "いずれか", "内", "対象", "残り", "両方", "どちらか"})
+_HEAD_PLAYER_WORDS = PLAYER_WORDS | {"プレイヤー", "コントローラー", "持ち主"}
+# 票 02 的四類:「・」切段與從修飾語補玩家/區域的判準照舊只看這四類,2026-11-01 加的 玩家/位置/表示形式 在這兩處
+# 與 其他 同待遇(自分・相手 不切成兩段;自分または相手、対象の自分のモンスターの上 不從前面的玩家修飾語補玩家)
+CORE_HEAD_KINDS = frozenset((HEAD_CARD, HEAD_ATTRIBUTE, HEAD_NON_CARD, HEAD_DEMONSTRATIVE))
+_HEAD_POSITION_WORDS = frozenset({"一番上", "一番下", "上", "下"})
+_HEAD_DISPLAY_FORMS = frozenset(CLOSED_VALUES["表示形式"])
 _NUMERIC = re.compile(r"[0-9]+")
 _QUANTITY_ONLY = re.compile(r"[0-9]+(?:%s)(?:まで|以上|以下|未満)?" % "|".join(sorted(QUANTITY_COUNTERS)))
 
@@ -137,6 +163,12 @@ def head_kind(head):
         return HEAD_NON_CARD
     if head in _HEAD_DEMONSTRATIVE_WORDS or _QUANTITY_ONLY.fullmatch(head):
         return HEAD_DEMONSTRATIVE
+    if head in _HEAD_PLAYER_WORDS:
+        return HEAD_PLAYER
+    if head in _HEAD_POSITION_WORDS:
+        return HEAD_POSITION
+    if head in _HEAD_DISPLAY_FORMS:
+        return HEAD_DISPLAY_FORM
     if places.parse_place(head)[1]:
         return HEAD_CARD
     return OTHER
@@ -160,9 +192,9 @@ def structure(ctx, tokens, frame):
         if found and "、" not in (raw.get(key) or text):
             run = [t for t in run if t != "、"]
         segments = [segment(ctx, chunk) for chunk in split(ctx, run)]
-        if key == "object" and found and not any(seg["quantity"] for seg in segments):
-            quantity = clause_quantity(ctx, tokens, surfaces, found[1], span,
-                                       "object" in (frame.get("backfill") or ()))
+        if key in CLAUSE_QUANTITY_PARTICLES and found and not any(seg["quantity"] for seg in segments):
+            quantity = clause_quantity(ctx, tokens, surfaces, found, span, key,
+                                       key in (frame.get("backfill") or ()))
             if quantity:
                 segments[-1]["quantity"] = quantity
         phrases[key] = {"text": text, "segments": segments}
@@ -224,8 +256,8 @@ def _is_boundary(ctx, run, k):
         return not is_dot                 # 融合・S・X、光・闇:前綴的並列;並列詞之後照切
     kind = head_kind(_head_text(ctx, run, k - 1))
     if is_dot:
-        if kind == OTHER:
-            return False                  # 魔法使い族・ドラゴン族モンスター:修飾語的並列
+        if kind not in CORE_HEAD_KINDS:
+            return False                  # 魔法使い族・ドラゴン族モンスター、自分・相手:修飾語/玩家的並列
     elif kind == HEAD_CARD:
         return True                       # このカードと…のモンスター:兩個受事者
     rest = run[k + 1:]
@@ -287,9 +319,26 @@ def segment(ctx, chunk):
             kind = HEAD_DEMONSTRATIVE if any(token_kind(t) == "counter" for t in tail) else HEAD_NON_CARD
     mods = modifiers(ctx, core, head_at, head) if head_at is not None else []
     player, zones = _place_of(ctx, chunk, text, head, kind, mods, len(core))
+    quantity = _tail_quantity(ctx, chunk, core)
+    if quantity is None and head_at is not None:
+        quantity = _adnominal_quantity(ctx, core, head_at, mods)
     return {"text": text, "head": head, "head_kind": kind, "demonstrative": _demonstrative(ctx, chunk),
-            "player": player, "zones": zones, "modifiers": mods,
-            "quantity": _tail_quantity(ctx, chunk, core)}
+            "player": player, "zones": zones, "modifiers": mods, "quantity": quantity}
+
+
+def _adnominal_quantity(ctx, core, head_at, mods):
+    """中心詞前的 全ての/任意の(2026-11-01 裁定)→ 該段的數量(全部/任意,字面 全ての/任意の,不是取自子句),
+    對應的 其他 類修飾語拿掉;段尾已有數量時不動(呼叫端)。沒有 None。"""
+    for i in range(head_at):
+        word = ctx.word(core[i])
+        if word in ADNOMINAL_QUANTITY and core[i + 1] == "p:の":
+            surface = ctx.surface(core[i])
+            mod = next((m for m in mods if m["text"] == surface and m["kind"] == OTHER), None)
+            if mod is None:
+                continue
+            mods.remove(mod)
+            return _quantity(surface + "の", ADNOMINAL_QUANTITY[word], None)
+    return None
 
 
 def _is_quantity_tail(ctx, core):
@@ -357,17 +406,41 @@ def _head_text(ctx, core, i):
 
 
 def _demonstrative(ctx, chunk):
+    """段的指示詞旗標:段首是 その/それ/それら/対象の/この効果の対象,且指示詞綁的格沒被關進定語子句
+    (2026-11-01 裁定的語意判定,見 _bound_in_relative_clause)。"""
     first = chunk[0]
     if token_kind(first) == "dem":
         dem = first.split(":", 2)[1]
         if dem == "その":
-            return True
-        return (dem == "この" and _base(ctx, first) == "効果" and len(chunk) > 2
-                and chunk[1] == "p:の" and ctx.word(chunk[2]) == "対象")
-    word = ctx.word(first)
-    if word in DEMONSTRATIVE_WORDS:
-        return True
-    return word == "対象" and len(chunk) > 1 and chunk[1] == "p:の"
+            bound_at, rest_at = 0, 1
+        elif dem == "この" and _base(ctx, first) == "効果" and len(chunk) > 2 \
+                and chunk[1] == "p:の" and ctx.word(chunk[2]) == "対象":
+            bound_at, rest_at = 2, 3
+        else:
+            return False
+    else:
+        word = ctx.word(first)
+        if word in DEMONSTRATIVE_WORDS:
+            bound_at, rest_at = (1, 2) if word == "その" and len(chunk) > 1 else (0, 1)   # その3枚、その「X」
+        elif word == "対象" and len(chunk) > 1 and chunk[1] == "p:の":
+            bound_at, rest_at = 0, 2
+        else:
+            return False
+    return not _bound_in_relative_clause(ctx, chunk, bound_at, rest_at)
+
+
+def _bound_in_relative_clause(ctx, chunk, bound_at, rest_at):
+    """指示詞綁的格(chunk[bound_at])之後先有格助詞、再有定語述語或比較詞:指示詞說的是定語子句裡的另一張卡
+    (そのモンスターと同じ種族の|モンスター、そのカード名が記された|モンスター、そのモンスターより…高い|Xモンスター),
+    不是這一段的中心詞。方向格 に/へ/から 只在綁的格是可移動的東西時算:區域(その手札に加えたカード)與
+    する名詞(その無効にしたカード)的 に 是述語自己的格,指示詞仍綁中心詞。"""
+    bound = _head_text(ctx, chunk, bound_at)
+    movable = head_kind(bound) != OTHER and not places.parse_place(bound)[1]
+    for i in range(rest_at, len(chunk)):
+        t = chunk[i]
+        if t in DEMONSTRATIVE_CLAUSE_PARTICLES or (movable and t in DEMONSTRATIVE_DIRECTION_PARTICLES):
+            return any(ctx.is_predicate(u) or ctx.word(u) in ADNOMINAL_COMPARE for u in chunk[i + 1:])
+    return False
 
 
 def _place_of(ctx, chunk, text, head, kind, mods, core_len):
@@ -390,7 +463,7 @@ def _place_of(ctx, chunk, text, head, kind, mods, core_len):
             and _base(ctx, chunk[0]) in PLAYER_WORDS \
             and all(token_kind(t) != "particle" or t == "p:の" for t in chunk):
         player = places.BARE_PLAYERS[_base(ctx, chunk[0])]
-    if player is None and not zones and head not in COUNT_HEADS and kind != OTHER:
+    if player is None and not zones and head not in COUNT_HEADS and kind in CORE_HEAD_KINDS:
         texts = [m["text"] for m in mods if m["kind"] in (MOD_PLAYER, MOD_ZONE)]
         if texts and texts[0] in text and texts[-1] in text:
             lo, hi = text.index(texts[0]), text.index(texts[-1]) + len(texts[-1])
@@ -457,11 +530,14 @@ def _tail_quantity(ctx, chunk, core):
     return found[0] if found and found[1] == len(tail) else None
 
 
-def clause_quantity(ctx, tokens, surfaces, end, span, backfilled):
+def clause_quantity(ctx, tokens, surfaces, found, span, key, backfilled):
     """受事者字面沒有數量時,子句裡緊接受事者的 を+數量(手札を１枚捨てる)→ Quantity(from_clause),沒有 None。
     を 要在本框的子句範圍內;對象是回填來的時 を 在提供它的前面子句(子句範圍之前)。を 與數量之間可夾
-    ランダムに/それぞれ。數量不是定形時往後找引用量(…の数まで、同じ数だけ、…の数の分だけ):只記字面、類空。"""
-    if end >= len(tokens) or tokens[end] != "p:を" or not span:
+    ランダムに/それぞれ。數量不是定形時往後找引用量(…の数まで、同じ数だけ、…の数の分だけ):只記字面、類空;
+    を 後都沒有時再找受事者**之前**、同一子句裡的引用量(相手フィールドのモンスターの数まで、手札から…を特殊召喚する;
+    2026-11-01 裁定)。主語位(「DD」カードが２枚存在する)只收 が 後緊接的定形數量,數量後接 に/を/と/へ 的是值,不收。"""
+    end = found[1]
+    if end >= len(tokens) or tokens[end] != CLAUSE_QUANTITY_PARTICLES[key] or not span:
         return None
     if span[0] <= end < span[1]:
         bound = min(span[1], len(tokens))
@@ -476,10 +552,47 @@ def clause_quantity(ctx, tokens, surfaces, end, span, backfilled):
             j += n
     if j >= bound:
         return None
-    found = match_quantity(ctx, tokens, j)
-    if found:
-        return dict(found[0], from_clause=True)
-    return _later_quantity(ctx, tokens, surfaces, j, min(bound, j + CLAUSE_QUANTITY_REACH))
+    matched = match_quantity(ctx, tokens, j)
+    if key == "subject":
+        if matched and not (matched[1] < bound and tokens[matched[1]] in SUBJECT_QUANTITY_NOT_BEFORE):
+            return dict(matched[0], from_clause=True)
+        return None
+    if matched:
+        return dict(matched[0], from_clause=True)
+    later = _later_quantity(ctx, tokens, surfaces, j, min(bound, j + CLAUSE_QUANTITY_REACH))
+    if later or found[0] < span[0]:
+        return later
+    return _earlier_quantity(ctx, tokens, surfaces, span[0], found[0])
+
+
+def _reference_end(ctx, tokens, k, bound):
+    """tokens[k] 是 数 時引用量的結束位置(数まで/数だけ/数の分だけ);不是這幾型時 None。"""
+    rest = tokens[k + 1:bound]
+    if rest[:1] == ["p:まで"] or rest[:1] == ["p:だけ"]:
+        return k + 2
+    if rest[:1] == ["p:の"] and len(rest) > 2 and ctx.word(rest[1]) == "分" and rest[2] == "p:だけ":
+        return k + 4
+    return None
+
+
+def _earlier_quantity(ctx, tokens, surfaces, start, end):
+    """受事者之前(同一子句裡 tokens[start:end])的引用量:最後一個 …の数まで/数だけ/数の分だけ/枚数まで,字面從 数
+    往前收到讀點、は、或主句的助詞為止(除外した数だけ、相手フィールドのモンスターの数まで、この効果で特殊召喚した
+    モンスターの数まで——定語子句裡的助詞照收);只記字面、類空。沒有 None。"""
+    for k in range(end - 1, start - 1, -1):
+        if _base(ctx, tokens[k]) != "数":
+            continue
+        stop = _reference_end(ctx, tokens, k, end)
+        if stop is None:
+            continue
+        lo = k
+        while lo - 1 >= start and tokens[lo - 1] not in REFERENCE_PHRASE_STOP:
+            t = tokens[lo - 1]
+            if token_kind(t) == "particle" and t != "p:の" and not any(ctx.is_predicate(u) for u in tokens[lo:k]):
+                break
+            lo -= 1
+        return _quantity("".join(surfaces[lo:stop]), None, None, True)
+    return None
 
 
 def _later_quantity(ctx, tokens, surfaces, start, bound):
@@ -493,15 +606,11 @@ def _later_quantity(ctx, tokens, surfaces, start, bound):
             return dict(found[0], from_clause=True)
         if _base(ctx, tokens[k]) != "数":
             continue
-        rest = tokens[k + 1:bound]
-        if rest[:1] == ["p:まで"] or rest[:1] == ["p:だけ"]:
-            end = k + 2
-        elif rest[:1] == ["p:の"] and len(rest) > 2 and ctx.word(rest[1]) == "分" and rest[2] == "p:だけ":
-            end = k + 4
-        elif k > start and ctx.word(tokens[k - 1]) == "同じ":
+        end = _reference_end(ctx, tokens, k, bound)
+        if end is None:
+            if not (k > start and ctx.word(tokens[k - 1]) == "同じ"):
+                continue
             end = k + 1
-        else:
-            continue
         return _quantity("".join(surfaces[start:end]), None, None, True)
     return None
 
@@ -885,7 +994,7 @@ def other_heads_section(records):
     total = sum(kinds.values()) or 1
     lines = ["片語段 {:,};中心詞類:".format(total) + "、".join(
         "%s %s(%.1f%%)" % (kind, format(kinds[kind], ","), 100.0 * kinds[kind] / total)
-        for kind in ("卡", "屬性", "非卡", "指示詞", OTHER)),
+        for kind in HEAD_KINDS),
         "其他類的中心詞 {:,} 種;下表依段數排序。".format(len(others)), "",
         "| # | 中心詞 | 段數 | 欄 |", "|---:|---|---:|---|"]
     ranked = sorted(others.items(), key=lambda kv: (-kv[1], kv[0] or ""))[:100]

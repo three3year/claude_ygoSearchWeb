@@ -20,9 +20,10 @@ mark(ctx, tokens, frame):述語前同一子句內(frame["span"])的 で 片語 �
 
 方式類(closed_values.MANNER_KINDS):片語依並列切成幾段,各段依尾詞歸類——効果 → 手段:效果;戦闘/攻撃 →
 手段:戰鬥;方法 → 手段:方法;表示形式字面(守備表示/表側表示/…)→ 表示形式;扱い → 視同;順番 → 順序;
-其餘 → 其他。各段同一類才是那一類(表側守備表示または裏側守備表示で → 表示形式,值是整段字面),
-不同類(戦闘・効果で)落 其他、只留字面。這裡不 import frames(循環 import);定語述語的判準由
-frames.py 經 ctx.is_predicate 傳進來。
+其餘 → 其他。各段同一類才是那一類(表側守備表示または裏側守備表示で → 表示形式,值是整段字面);
+手段:戰鬥 與 手段:效果 的並列(戦闘・効果で、戦闘または相手の効果で、相手モンスターの攻撃または相手の効果で)
+記 手段:戰鬥或效果(2026-11-01 站主裁定);其他組合的不同類落 其他、只留字面。這裡不 import frames
+(循環 import);定語述語的判準由 frames.py 經 ctx.is_predicate 傳進來。
 """
 from collections import Counter
 
@@ -32,7 +33,9 @@ from closed_values import MANNER_KINDS, OTHER
 from extract_seed import CLOSED_VALUES
 from report import count_by_position, position_table, token_kind
 
-MEANS_EFFECT, MEANS_BATTLE, MEANS_METHOD, DISPLAY_FORM, REGARDED, ORDER = MANNER_KINDS[:6]
+MEANS_EFFECT, MEANS_BATTLE, MEANS_BATTLE_OR_EFFECT, MEANS_METHOD, DISPLAY_FORM, REGARDED, ORDER = MANNER_KINDS[:7]
+# 戰鬥與效果的並列(各段是這幾類之一、不只一類)合記 手段:戰鬥或效果
+BATTLE_OR_EFFECT_KINDS = frozenset((MEANS_BATTLE, MEANS_EFFECT, MEANS_BATTLE_OR_EFFECT))
 
 DE, SUFFIXES = "p:で", ("p:は", "p:も", "p:のみ", "p:しか")
 # 片語內的並列與連接(字面照原文接起來:戦闘・効果、表側守備表示または裏側守備表示):
@@ -136,12 +139,17 @@ def _after_suffixes(tokens, i, end):
 def kind_of(ctx, tokens, literal):
     """方式片語的 token(不含 で)→ (方式類, 表示形式值|None)。擇一並列(または/か/及び/や)各段要同一類;
     ・ 並列的各段同一類,或只有最後一段落得進類、其餘是裸修飾語(魔法・罠カードの効果 → 手段:效果);
-    不同類(戦闘・効果、戦闘または相手の効果)落 其他。"""
+    戰鬥與效果的並列(戦闘・効果、戦闘または相手の効果)記 手段:戰鬥或效果,其他不同類落 其他。"""
     kinds = {_alternative_kind(ctx, alt) for alt in _split(tokens, ALT_JOINERS)}
-    if len(kinds) != 1:
-        return OTHER, None
-    kind = kinds.pop()
+    kind = _merged_kind(kinds)
     return kind, (literal if kind == DISPLAY_FORM else None)
+
+
+def _merged_kind(kinds):
+    """並列各段的類集合 → 一個類:同一類照用;戰鬥/效果混合 → 手段:戰鬥或效果;其餘混合 → 其他。"""
+    if len(kinds) == 1:
+        return next(iter(kinds))
+    return MEANS_BATTLE_OR_EFFECT if kinds <= BATTLE_OR_EFFECT_KINDS else OTHER
 
 
 def _split(tokens, joiners):
@@ -159,8 +167,8 @@ def _split(tokens, joiners):
 def _alternative_kind(ctx, tokens):
     groups = _split(tokens, {"・"})
     kinds = [_part_kind("".join(ctx.surface(t) for t in g)) for g in groups]
-    if len(set(kinds)) == 1:
-        return kinds[0]
+    if len(set(kinds)) == 1 or set(kinds) <= BATTLE_OR_EFFECT_KINDS:
+        return _merged_kind(set(kinds))
     if all(k == OTHER for k in kinds[:-1]):
         return kinds[-1]
     return OTHER
@@ -234,8 +242,9 @@ def fill_state(frame):
 def count_section(records):
     """報告小節「方式各類框數」:七類 × 位置(代價/效果/條件)的動作框架數,與 其他 類的字面 top 30。"""
     others = Counter(fr["manner"] for rec in records for fr in rec["frames"] if fr.get("manner_kind") == OTHER)
-    lines = ["方式=述語前同一子句內的 で 片語(字面含 で);方式類依片語尾詞歸類,並列不同類(戦闘・効果で)"
-             "落 其他。定語裡的 で、繫詞 で 不收;で 接區域不是方式,進結構化所在、標 取自で。", ""]
+    lines = ["方式=述語前同一子句內的 で 片語(字面含 で);方式類依片語尾詞歸類,戰鬥與效果的並列(戦闘・効果で)"
+             "記 手段:戰鬥或效果,其他並列不同類落 其他。定語裡的 で、繫詞 で 不收;で 接區域不是方式,"
+             "進結構化所在、標 取自で。", ""]
     lines += position_table(count_by_position(records, "manner_kind"), MANNER_KINDS, "方式類")
     lines += ["", "其他類的方式字面 top 30:", ""]
     lines += ["- %s %s" % (literal, format(n, ",")) for literal, n in others.most_common(30)]

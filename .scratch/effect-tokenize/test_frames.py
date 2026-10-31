@@ -2864,6 +2864,141 @@ class TestV4AgentEventAndDefault(unittest.TestCase):
         found = agents("①：自分フィールドのモンスター１体を選んで破壊する。この効果は相手ターンでも発動できる。")
         self.assertEqual([a for a in found if a[0] == "発動"], [])
         self.assertEqual(found[:2], [("選ぶ", "自分", "預設", True), ("破壊", "自分", "預設", True)])
+def mannered(text, context=""):
+    """框架 → (動作, 方式字面, 方式類, 表示形式值):frame-args-v4 票 06 的方式欄;沒有值時 None。"""
+    return [(f["action"], f.get("manner"), f.get("manner_kind"), f.get("manner_value"))
+            for f in actions(text, context)]
+
+
+class TestManner(unittest.TestCase):
+    """frame-args-v4 票 06:述語前同一子句內的 で 片語是方式(字面含 で、不含 は/も 後綴),配封閉類
+    方式類(手段:效果/手段:戰鬥/手段:方法/表示形式(另帶值)/視同/順序/其他);一框至多一個、取離述語
+    最近的。定語裡的 で(並列修飾、定語子句裡的 で)與繫詞 で 不是方式;で 接區域不是方式,進結構化
+    所在、標 取自で(2026-10-31 定案)。"""
+
+    def test_battle_is_means_battle(self):
+        self.assertEqual(mannered("①：このカードが戦闘で破壊された場合に発動できる。")[0],
+                         ("破壊", "戦闘で", "手段:戰鬥", None))
+
+    def test_de_wa_suffix_is_not_part_of_the_literal(self):
+        self.assertEqual(mannered("①：このカードは戦闘では破壊されない。"),
+                         [("破壊", "戦闘で", "手段:戰鬥", None)])
+
+    def test_this_effect_is_means_effect(self):
+        self.assertEqual(mannered("①：この効果でカードを２枚破壊できなかった場合、自分は１０００ダメージを受ける。")[0],
+                         ("破壊", "この効果で", "手段:效果", None))
+
+    def test_this_method_is_means_method(self):
+        self.assertEqual(mannered("①：このカードはこの方法でのみ特殊召喚できる。"),
+                         [("特殊召喚", "この方法で", "手段:方法", None)])
+
+    def test_display_form_carries_its_value(self):
+        self.assertEqual(mannered("①：デッキからレベル４以下のモンスター１体を守備表示で特殊召喚する。"),
+                         [("特殊召喚", "守備表示で", "表示形式", "守備表示")])
+
+    def test_leading_quantity_adverb_belongs_to_the_object(self):
+        """全て 是對象的數量,不進方式字面。"""
+        self.assertEqual(mannered("①：相手の手札を全て裏側表示で除外する。"),
+                         [("除外", "裏側表示で", "表示形式", "裏側表示")])
+
+    def test_coordinated_display_forms_keep_the_whole_phrase(self):
+        self.assertEqual(mannered("①：そのモンスターを表側守備表示または裏側守備表示で特殊召喚する。"),
+                         [("特殊召喚", "表側守備表示または裏側守備表示で", "表示形式",
+                           "表側守備表示または裏側守備表示")])
+
+    def test_treated_as_is_regarded(self):
+        found = mannered("①：自分の墓地のモンスター１体を対象として発動できる。"
+                         "そのモンスターを装備カード扱いでこのカードに装備する。")
+        self.assertEqual(found[-1], ("装備", "装備カード扱いで", "視同", None))
+
+    def test_order_phrase_is_order(self):
+        found = mannered("①：自分の墓地のカード３枚を対象として発動できる。そのカードを好きな順番でデッキの上に戻す。")
+        self.assertEqual(found[-1], ("戻す", "好きな順番で", "順序", None))
+
+    def test_nashi_de_is_other_with_literal(self):
+        self.assertEqual(mannered("①：このカードはリリースなしで召喚できる。"),
+                         [("召喚", "リリースなしで", "其他", None)])
+
+    def test_battle_or_effect_coordination_is_other(self):
+        """戦闘・効果で:兩類並列,封閉表沒有合值,落 其他、字面保留。"""
+        self.assertEqual(mannered("①：フィールドのこのカードが戦闘・効果で破壊された場合に発動できる。")[0],
+                         ("破壊", "戦闘・効果で", "其他", None))
+
+    def test_attributive_coordination_de_is_not_manner(self):
+        """攻撃力2400以上で守備力1000の:定語裡的並列修飾。"""
+        self.assertEqual(mannered("①：自分の墓地の攻撃力２４００以上で守備力１０００のモンスター１体を対象として発動できる。")[0],
+                         ("対象とする", None, None, None))
+        self.assertEqual(mannered("①：デッキから戦士族・ドラゴン族で光属性のモンスター１体を手札に加える。"),
+                         [("加える", None, None, None)])
+
+    def test_de_inside_relative_clause_is_not_manner(self):
+        """この効果で特殊召喚したモンスター 的 で 屬定語子句,不是主述語的方式。"""
+        self.assertEqual(mannered("①：この効果で特殊召喚したモンスターの効果は無効化される。"),
+                         [("無効にする", None, None, None)])
+
+    def test_copula_de_is_not_manner(self):
+        self.assertEqual(mannered("①：融合素材モンスターは全てアンデット族モンスターでなければならない。"),
+                         [("なる", None, None, None)])
+        self.assertEqual(mannered("①：自分の手札が０枚ではない場合、このカードは墓地へ送られる。")[-1],
+                         ("送る", None, None, None))
+
+    def test_nearest_de_phrase_wins(self):
+        self.assertEqual(mannered("①：デッキからレベル４以下のモンスター１体をこの効果で守備表示で特殊召喚する。"),
+                         [("特殊召喚", "守備表示で", "表示形式", "守備表示")])
+
+    def test_zone_de_goes_to_structured_place_as_transfer(self):
+        text = "①：このカードがPゾーンで破壊された場合に発動できる。"
+        self.assertEqual(mannered(text)[0], ("破壊", None, None, None))
+        self.assertEqual(regioned(text)[0], ("破壊", {"place": [["無", "靈擺區"]]}, "取自で"))
+        self.assertIsNone(actions(text)[0].get("place"))
+        found = regioned("①：自分の永続罠カードが相手フィールドで効果を発動した場合に発動できる。")[0]
+        self.assertEqual(found, ("発動", {"place": [["相手", "場上"]]}, "取自で"))
+
+    def test_zone_de_does_not_override_a_literal_place(self):
+        """字面所在已有值:で 接的區域不轉、不標。"""
+        self.assertEqual(regioned("①：自分フィールドのモンスターがモンスターゾーンで破壊された場合に発動できる。")[0],
+                         ("破壊", {"place": [["自分", "場上"]]}, None))
+
+    def test_zone_de_does_not_override_source_transfer(self):
+        """已 取自來源 的結構化所在不被 取自で 蓋掉(全語料沒有兩者同框的句子,直接餵手寫框架)。"""
+        import regions
+        fr = {"action": "選ぶ", "object": "カード１枚", "source": "自分の墓地", "goal": None,
+              "position": "效果", "polarity": "肯定", "regions": {"source": [["自分", "墓地"]],
+                                                                 "place": [["自分", "墓地"]]},
+              "transfer": "取自來源"}
+        regions.place_from_de(fr, "フィールド")
+        self.assertEqual((fr["regions"]["place"], fr["transfer"]), ([["自分", "墓地"]], "取自來源"))
+
+    def test_non_zone_de_is_still_manner(self):
+        """同じ縦列 不是區域七值:仍是方式、落 其他。"""
+        self.assertEqual(mannered("①：このカードと同じ縦列で魔法・罠カードが発動した場合に発動できる。")[0],
+                         ("発動", "同じ縦列で", "其他", None))
+
+    def test_mama_de_is_other_with_literal(self):
+        self.assertEqual(mannered("①：このカードは表側守備表示のままで攻撃できる。"),
+                         [("攻撃", "表側守備表示のままで", "其他", None)])
+
+    def test_igai_de_is_other_not_attributive(self):
+        self.assertEqual(mannered("①：自分のモンスターが戦闘以外で墓地へ送られた場合に発動できる。")[0],
+                         ("送る", "戦闘以外で", "其他", None))
+
+    def test_coordinated_modifier_takes_the_head_kind(self):
+        """魔法・罠カードの効果で:・ 並列的是修飾語,類看中心的 効果(省略格的字面照分詞器寫法 魔法(カード))。"""
+        self.assertEqual(mannered("①：魔法・罠カードの効果で、EXデッキからモンスターが特殊召喚された場合に発動できる。")[0],
+                         ("特殊召喚", "魔法(カード)・罠カードの効果で", "手段:效果", None))
+
+    def test_ka_coordinated_display_forms(self):
+        self.assertEqual(mannered("①：そのモンスターを表側攻撃表示か裏側守備表示で特殊召喚する。"),
+                         [("特殊召喚", "表側攻撃表示か裏側守備表示で", "表示形式", "表側攻撃表示か裏側守備表示")])
+
+    def test_battle_or_effect_alternatives_are_other(self):
+        self.assertEqual(mannered("①：このカードが戦闘または相手の効果で破壊された場合に発動できる。")[0],
+                         ("破壊", "戦闘または相手の効果で", "其他", None))
+
+    def test_relative_clause_after_a_comma_does_not_swallow_the_de_phrase(self):
+        """扱いで、 後面另一個論元裡的定語子句(この効果で特殊召喚したモンスターに)不影響前面的 扱いで。"""
+        found = mannered("①：デッキからモンスター１体を装備魔法カード扱いで、この効果で特殊召喚したモンスターに装備する。")
+        self.assertEqual(found[-1], ("装備", "装備魔法カード扱いで", "視同", None))
 
 
 if __name__ == "__main__":

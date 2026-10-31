@@ -1573,7 +1573,7 @@ class FrameExtractor:
     def _context(self):
         """enrich 要的常數與分詞輔助(enrich 與各步驟模組不 import frames,免得循環 import)。"""
         return enrich.Context(self.surface, self.word, self.is_noun_like, MOVE_ACTIONS,
-                              INTRANSITIVE_MOVES, PATIENT_COORDINATORS, POL_NEG)
+                              INTRANSITIVE_MOVES, PATIENT_COORDINATORS, POL_NEG, self._is_predicate)
 
     def _phrases(self, tokens, sentences, option_of):
         """回指的字面備援:一個編號效果裡的名詞片語 → [anaphora.Phrase],依原文順序;沒出框架的子句

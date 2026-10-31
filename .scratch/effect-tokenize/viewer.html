@@ -580,8 +580,16 @@ function v4Text(v){
   if(!v)return '';
   var parts=[];
   if(v.regions)parts.push(regionsText(v));
+  if(v.manner)parts.push(mannerText(v));
   if(v.negation)parts.push(negationText(v.negation));
   return parts.join(' ');
+}
+function mannerText(v){
+  // 方式(票 06):述語前同一子句內的 で 片語字面 + 方式類(手段:效果/手段:戰鬥/手段:方法/表示形式(帶值)/視同/順序/其他);
+  // 其他 類淡色斜體(封閉表沒有合值,只留字面);で 接區域不在這裡,看結構化所在的 取自で
+  var cls=v.manner_kind==="其他"?' class="bf"':'';
+  var title='方式:述語前同一子句內的 で 片語(含 で、不含 は/も 後綴),一框至多一個、取離述語最近的;方式類='+v.manner_kind+(v.manner_kind==="其他"?'(封閉表沒有對應的類:なしで、ままで、戦闘・効果で 這類兩類並列,只留字面)':'')+(v.manner_value?';表示形式值='+v.manner_value:'')+'。定語裡的 で、繫詞 で 不收;で 接區域進結構化所在、標 取自で';
+  return '<span class="muted">方式</span><span'+cls+' title="'+esc(title)+'">'+esc(v.manner)+' '+esc(v.manner_kind)+(v.manner_value?'='+esc(v.manner_value):'')+'</span>';
 }
 function regionsText(v){
   // 票 05:來源/目的/所在的結構化值 [(玩家,區域)…](字面欄不動);所在是轉欄來的(取自來源/取自で)時那格淡色加點線

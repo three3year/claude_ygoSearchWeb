@@ -5,13 +5,15 @@ structure(ctx, tokens, frame):frame["regions"] = {"source"|"goal"|"place": [[玩
 順序去重;只放算得出區域的欄;推得的欄玩家 無),非移動類所在空而來源有字面時所在取來源的並
 frame["transfer"] = "取自來源";算法就是 places.parse_zones,不另寫(玩家拼法過 closed_values.PLACE_PLAYER:
 雙方 → お互い)。字面欄一個位元組不動。
+place_from_de(frame, literal):票 06——で 接的區域進 regions["place"]、frame["transfer"] = "取自で"(字面所在、
+取自來源 優先;manner.py 找到區域 で 片語時呼叫)。
 backfill_from_anaphora(ctx, tokens, actions):回指回填——把目標 place 字面的結構化值寫進本框架的
 regions[來源|所在],frame["region_backfill"] 記欄名;字面欄不動。票 01 只建骨架:什麼都不做。
 """
 import places
-from closed_values import PLACE_PLAYER, REGION_KEYS, PLAYER_NONE_SPELLING
+from closed_values import PLACE_PLAYER, REGION_KEYS, PLAYER_NONE_SPELLING, TRANSFERS
 
-TRANSFER_FROM_SOURCE = "取自來源"
+TRANSFER_FROM_SOURCE, TRANSFER_FROM_DE = TRANSFERS
 
 
 def zones_of(literal, inferred=False):
@@ -40,6 +42,19 @@ def structure(ctx, tokens, frame):
         frame["regions"] = regions
 
 
+def place_from_de(frame, literal):
+    """票 06:で 接的區域(Pゾーンで破壊された、フィールドで発動した)不是方式,結構化所在取它、標 取自で
+    (2026-10-31 定案;不分移動類)。優先序:字面所在已有值不動(字面優先)、已 取自來源 不蓋、只在
+    結構化所在空時寫;認不出區域時沒有東西可寫。字面所在欄維持空。"""
+    if frame.get("place") or frame.get("transfer") or "place" in (frame.get("regions") or {}):
+        return
+    pairs = zones_of(literal)
+    if not pairs:
+        return
+    frame.setdefault("regions", {})["place"] = pairs
+    frame["transfer"] = TRANSFER_FROM_DE
+
+
 def backfill_from_anaphora(ctx, tokens, actions):
     """票 09 填。actions 是同一句效果句的全部動作框架(含回指的目標)。"""
 
@@ -57,12 +72,13 @@ def fill_state(key):
     return state_of
 
 
-def transfer_state(frame):
-    """填充率的列:取自來源 → 轉欄(票 06 的取自で 另一列)。"""
-    return "轉欄" if frame.get("transfer") == TRANSFER_FROM_SOURCE else None
+def transfer_state(which):
+    """填充率的列:轉欄記號是 which(取自來源/取自で)→ 轉欄。"""
+    return lambda frame: "轉欄" if frame.get("transfer") == which else None
 
 
 FILL_RATE_ROWS = [("結構化來源 regions.source", fill_state("source")),
                   ("結構化目的 regions.goal", fill_state("goal")),
                   ("結構化所在 regions.place", fill_state("place")),
-                  ("轉欄 取自來源", transfer_state)]
+                  ("轉欄 取自來源", transfer_state(TRANSFER_FROM_SOURCE)),
+                  ("轉欄 取自で", transfer_state(TRANSFER_FROM_DE))]

@@ -11,6 +11,11 @@
     subject  事件主語或效果類的主人(相手がモンスターを特殊召喚した時、このカードの攻撃宣言時)
     count    目標的數量只寫在子句裡時的數量字面(モンスターを１体選んで)
     via      找到的方法:対象/欄位/字面/事件
+    moving   目標框架的動作是不是移動類(frame-args-v4 票 09;enrich.py 在事後補,這裡不寫)
+
+目標框架:解析時把目標是哪幾個框架(欄位候選的框架;候選自己是解到底的指示詞時連同它鏈上的
+目標;事件框架)記在框架的內部鍵 _anaphora_targets(frame-args-v4 票 09 的回指回填要判目標是不是
+移動類;enrich.py 讀完 pop 掉,不進 frames.json);字面備援的目標不是框架,清單空。
 
 找法:対象の、この効果の対象 → 該效果的 対象とする 框架;效果類 → 最近的事件框架;其餘往前找框架
 的對象、主語、主題,都沒有才找字面。候選多個時先比限定語與中心詞,都對得上取最近的。單數或複數
@@ -270,7 +275,7 @@ def _qualified(ref, candidate):
 
 def _value_from_field(frame, key, literal):
     literal = _bare_target(literal)
-    out = {"text": literal}
+    out = {"text": literal, "_targets": [frame]}
     if key == patient_key(frame) and _region(frame):
         out["place"] = _region(frame)
     if key == "object":
@@ -303,7 +308,9 @@ def _field_candidates(earlier):
                     yield _Candidate(resolved["text"],
                                      resolved["text"] + (resolved.get("place") or "")
                                      + (resolved.get("subject") or ""),
-                                     _clean(frame.get("clause")), lambda r=resolved: dict(r))
+                                     _clean(frame.get("clause")),
+                                     lambda r=resolved, f=frame: dict(
+                                         r, _targets=[f] + list(f.get("_anaphora_targets") or [])))
                 continue
             if is_demonstrative(literal) and not modifier(literal):
                 continue
@@ -372,8 +379,8 @@ def _owner(frame):
     return found.group(1) if found else None
 
 
-def _event_value(text, owner):
-    out = {"text": text}
+def _event_value(text, owner, frame=None):
+    out = {"text": text, "_targets": [frame] if frame is not None else []}
     if owner:
         out["subject"] = owner
         player = _player(owner)
@@ -387,9 +394,10 @@ def _event_target(ref, earlier, phrases):
     events = [f for f in reversed(earlier) if wanted(f["action"])]
     for frame in events:
         if all(q in _clean(frame.get("clause")) for q in ref.qualifiers):
-            return _event_value(_clean(frame.get("object")) or frame["action"], _owner(frame))
+            return _event_value(_clean(frame.get("object")) or frame["action"], _owner(frame), frame)
     if events:
-        return _event_value(_clean(events[0].get("object")) or events[0]["action"], _owner(events[0]))
+        return _event_value(_clean(events[0].get("object")) or events[0]["action"], _owner(events[0]),
+                            events[0])
     # 字面:要有「Xの」主人,光禿禿的 発動(発動できる)不是事件;相手が発動した〜 的主人是相手
     for phrase in reversed(phrases):
         if is_demonstrative(phrase.text) or not tail.search(phrase.text):
@@ -460,4 +468,5 @@ def resolve(frames, phrases):
             own = next((q for q in ref.qualifiers if q in ("相手", "自分")), None)
             if own and ref.kind != KIND_EVENT:
                 found["player"] = own
+            frame["_anaphora_targets"] = found.pop("_targets", [])
             frame["anaphora"] = found

@@ -10,6 +10,7 @@
 雙方 在這裡寫成 お互い(PLACE_PLAYER 對照);既有的類別檔仍是 雙方,規格 2 改讀時統一。
 """
 import os
+import re
 import sys
 from collections import Counter
 
@@ -21,6 +22,44 @@ OTHER = "其他"
 
 # 中心詞類(票 02):段的中心詞是哪一類
 HEAD_KINDS = ("卡", "屬性", "非卡", "指示詞", OTHER)
+HEAD_CARD, HEAD_ATTRIBUTE, HEAD_NON_CARD, HEAD_DEMONSTRATIVE = HEAD_KINDS[:4]
+# 中心詞類判定表(規格 Implementation Decisions 的中心詞類段;依中心詞字面比,表外落 其他):
+# 卡——モンスター/カード/トークン/チューナー/素材、卡名「…」、卡種+カード 與 子類型+モンスター 這類封閉值域
+# 複合詞(以尾字比)、受事者本身是區域(手札、デッキ、墓地、自分フィールド…,交給 places 認);
+# 屬性——數值與性質欄位,與跟主人走的事件類(効果/発動/攻撃/各召喚);非卡——傷害/LP/指示物/數/擲幣/
+# 戰鬥/ゾーン 與純數值;指示詞——沒有名詞中心的段(それ/それら/いずれか/内/対象/残り,與只剩數量的段
+# 「1枚」「2体以上」:名詞省略了,指的是上文的卡)
+_HEAD_CARD_WORDS = frozenset({"モンスター", "カード", "トークン", "チューナー", "素材", "魔法", "罠"})
+_HEAD_CARD_SUFFIXES = ("カード", "モンスター", "素材", "トークン", "魔法", "罠")
+_HEAD_ATTRIBUTE_WORDS = frozenset({
+    "攻撃力", "守備力", "レベル", "ランク", "Pスケール", "属性", "種族", "カード名", "表示形式", "コントロール",
+    "位置", "効果", "発動", "攻撃", "召喚"})
+_HEAD_ATTRIBUTE_SUFFIXES = ("召喚", "カード名")
+_HEAD_NON_CARD_WORDS = frozenset({"ダメージ", "LP", "カウンター", "数", "コイントス", "戦闘", "ゾーン"})
+_HEAD_NON_CARD_SUFFIXES = ("ダメージ", "カウンター")
+_HEAD_DEMONSTRATIVE_WORDS = frozenset({"それ", "それら", "いずれか", "内", "対象", "残り", "両方", "どちらか"})
+_NUMERIC = re.compile(r"[0-9]+")
+_QUANTITY_ONLY = re.compile(r"[0-9]+(?:枚|体|つ|種類|個|組|回|ヵ所)(?:まで|以上|以下|未満)?")
+
+
+def head_kind(head):
+    """中心詞字面 → 中心詞類(HEAD_KINDS 之一);None 與表外的落 其他。"""
+    if not head:
+        return OTHER
+    if head.startswith("「") and head.endswith("」"):
+        return HEAD_CARD
+    if head in _HEAD_CARD_WORDS or head.endswith(_HEAD_CARD_SUFFIXES):
+        return HEAD_CARD
+    if head in _HEAD_ATTRIBUTE_WORDS or head.endswith(_HEAD_ATTRIBUTE_SUFFIXES):
+        return HEAD_ATTRIBUTE
+    if head in _HEAD_NON_CARD_WORDS or head.endswith(_HEAD_NON_CARD_SUFFIXES) or _NUMERIC.fullmatch(head):
+        return HEAD_NON_CARD
+    if head in _HEAD_DEMONSTRATIVE_WORDS or _QUANTITY_ONLY.fullmatch(head):
+        return HEAD_DEMONSTRATIVE
+    if places.parse_place(head)[1]:
+        return HEAD_CARD
+    return OTHER
+
 # 修飾語類(票 03)
 MODIFIER_KINDS = ("種族", "屬性", "字段", "卡片子類型", "數值", "區域", "玩家", "表示形式", OTHER)
 # 數量類(票 04);引用量(数の分だけ/同じ数)類空,不在表裡

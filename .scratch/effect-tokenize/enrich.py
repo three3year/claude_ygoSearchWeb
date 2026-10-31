@@ -19,6 +19,9 @@ Context 欄位:
     move_actions / intransitive_moves                  移動類動作與其中的自動詞(frames.MOVE_ACTIONS…)
     patient_coordinators                               受事者並列詞(frames.PATIENT_COORDINATORS;切段判準)
     pol_neg                                            極性 否定 的值(frames.POL_NEG)
+    coordinates(chunk, k) / is_predicate(token)        FrameExtractor 的並列分隔判準(と同じ 的 と 不算)與
+                                                       片語裡的定語述語判準(票 02 切段、讀區域用)
+    tokenize(text)                                     分詞器(票 02:字面對不回句子的詞序列時的備援)
 
 報告的 registry(report.py 讀):
     FILL_RATE_ROWS   [(新欄名稱, 函式 frame → 狀態字串 | None)];狀態字串是 FILL_STATES 之一(None 是 空)。
@@ -37,12 +40,12 @@ import phrases
 import regions
 
 Context = namedtuple("Context", "surface word is_noun_like move_actions intransitive_moves "
-                                "patient_coordinators pol_neg")
+                                "patient_coordinators pol_neg coordinates is_predicate tokenize")
 
 # 填充率的狀態欄(報告表的欄序);None 算 空
 FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "其他")
-FILL_RATE_ROWS = []
-REPORT_SECTIONS = []
+FILL_RATE_ROWS = [*phrases.FILL_RATE_ROWS]
+REPORT_SECTIONS = [*phrases.REPORT_SECTIONS]
 
 _STEPS = (phrases.structure, regions.structure, agent.mark, manner.mark, negation.mark)
 

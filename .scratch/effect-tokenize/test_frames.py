@@ -2332,5 +2332,151 @@ class TestAnaphoraRound1(unittest.TestCase):
         self.assertEqual((found["subject"], found["via"]), ("相手の魔法カード", "事件"))
 
 
+
+def segments(text, key="object", action=None, context=""):
+    """票 02 的接縫輔助:第一個(指定動作的)動作框架該欄的論元片語 → 各段
+    (字面, 中心詞, 中心詞類, 指示詞, 玩家, 區域);該欄沒有片語時 None。"""
+    frame = next(f for f in actions(text, context) if action is None or f["action"] == action)
+    phrase = (frame.get("phrases") or {}).get(key)
+    if phrase is None:
+        return None
+    return [(s["text"], s["head"], s["head_kind"], s["demonstrative"], s["player"], s["zones"])
+            for s in phrase["segments"]]
+
+
+class TestArgumentPhrases(unittest.TestCase):
+    """frame-args-v4 票 02:受事者位三欄與目的欄各帶論元片語——依並列詞切段,每段的中心詞是去掉數量尾
+    後的最後一個名詞格、中心詞類走封閉表、指示詞旗標看段首、玩家與區域沿用區域辨識(切走的仍留一份);
+    推得的目的沒有片語。只斷言輸出框架的 phrases 欄。"""
+
+    def test_single_segment_keeps_the_region_cut_into_place(self):
+        """相手フィールドの表側表示モンスター１体:一段,中心詞 モンスター(卡),玩家 相手、區域 場上;
+        整段字面是對象欄現在的值(區域已切走)。"""
+        frame = actions("①：相手フィールドの表側表示モンスター１体を破壊する。")[0]
+        self.assertEqual(frame["phrases"]["object"]["text"], "表側表示モンスター1体")
+        self.assertEqual(segments("①：相手フィールドの表側表示モンスター１体を破壊する。"),
+                         [("相手フィールドの表側表示モンスター1体", "モンスター", "卡", False, "相手", ["場上"])])
+
+    def test_coordinated_patients_are_separate_segments_with_their_own_regions(self):
+        """區域寫了、玩家沒寫:玩家照區域辨識記 無(和結構化區域同一套)。"""
+        self.assertEqual(
+            segments("①：墓地のモンスター１体と手札のカード１枚を除外する。"),
+            [("墓地のモンスター1体", "モンスター", "卡", False, "無", ["墓地"]),
+             ("手札のカード1枚", "カード", "卡", False, "無", ["手牌"])])
+
+    def test_dot_coordinated_card_kinds_are_two_segments(self):
+        """魔法・罠カード 是兩段;省略寫法 魔法(カード) 的中心詞是補全的 魔法カード。"""
+        self.assertEqual(
+            segments("①：相手フィールドの魔法・罠カードを全て破壊する。"),
+            [("相手フィールドの魔法(カード)", "魔法カード", "卡", False, "相手", ["場上"]),
+             ("罠カード", "罠カード", "卡", False, None, [])])
+
+    def test_to_onaji_is_comparison_not_a_segment_boundary(self):
+        self.assertEqual(
+            segments("①：デッキからそのモンスターと同じ種族のモンスター１体を手札に加える。"),
+            [("そのモンスターと同じ種族のモンスター1体", "モンスター", "卡", True, None, [])])
+
+    def test_closed_value_compound_is_the_head_itself(self):
+        """分詞一格的封閉值域複合詞(戦闘ダメージ、自分フィールド)本身就是中心詞。"""
+        self.assertEqual(
+            segments("①：このカードが相手に与える戦闘ダメージは倍になる。", key="topic"),
+            [("このカードが相手に与える戦闘ダメージ", "戦闘ダメージ", "非卡", False, None, [])])
+        self.assertEqual(
+            segments("①：自分フィールドにモンスターが存在しない場合、このカードは手札から特殊召喚できる。",
+                     key="goal", action="存在"),
+            [("自分フィールド", "自分フィールド", "卡", False, "自分", ["場上"])])
+
+    def test_attribute_prefix_is_not_part_of_the_head(self):
+        """闇属性モンスター 的中心詞是 モンスター(屬性字是前面的格)。"""
+        self.assertEqual(
+            segments("①：手札から闇属性モンスター１体を特殊召喚する。"),
+            [("闇属性モンスター1体", "モンスター", "卡", False, None, [])])
+
+    def test_card_name_is_the_whole_head(self):
+        self.assertEqual(
+            segments("①：デッキから「青眼の白龍」１体を手札に加える。"),
+            [("「青眼の白龍」1体", "「青眼の白龍」", "卡", False, None, [])])
+
+    def test_attribute_head_with_demonstrative_and_numeric_goal(self):
+        text = "①：そのモンスターの攻撃力を０にする。"
+        self.assertEqual(segments(text), [("そのモンスターの攻撃力", "攻撃力", "屬性", True, None, [])])
+        self.assertEqual(segments(text, key="goal"), [("0", "0", "非卡", False, None, [])])
+
+    def test_kono_is_not_a_demonstrative_flag_but_taishou_no_is(self):
+        self.assertEqual(segments("①：このカードは戦闘では破壊されない。", key="topic"),
+                         [("このカード", "カード", "卡", False, None, [])])
+        self.assertEqual(segments("①：対象のモンスターを破壊する。"),
+                         [("対象のモンスター", "モンスター", "卡", True, None, [])])
+
+    def test_segment_without_a_noun_head_is_a_demonstrative_kind(self):
+        self.assertEqual(segments("①：その内の１体を手札に加える。"),
+                         [("その内の1体", "内", "指示詞", True, None, [])])
+
+    def test_method_prefix_joins_the_event_head(self):
+        """特殊召喚 的分詞是 特殊|召喚 兩格,中心詞合記 特殊召喚(屬性);カード|名 合記 カード名。"""
+        self.assertEqual(
+            segments("①：このカードが特殊召喚に成功した場合に発動できる。デッキから１枚ドローする。",
+                     key="goal", action="成功"),
+            [("特殊召喚", "特殊召喚", "屬性", False, None, [])])
+        self.assertEqual(
+            segments("①：このカードのカード名は「青眼の白龍」として扱う。", key="topic"),
+            [("このカードのカード名", "カード名", "屬性", False, None, [])])
+
+    def test_counter_head_is_non_card(self):
+        found = segments("①：このカードに〈魔力〉カウンターを１つ置く。")
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0][2], "非卡")
+
+    def test_leading_player_word_is_the_segments_player(self):
+        self.assertEqual(segments("①：相手モンスター１体を破壊する。"),
+                         [("相手モンスター1体", "モンスター", "卡", False, "相手", [])])
+
+    def test_inferred_goal_has_no_phrase(self):
+        frame = actions("①：手札から闇属性モンスター１体を特殊召喚する。")[0]
+        self.assertEqual(frame["goal"], "フィールド")
+        self.assertNotIn("goal", frame["phrases"])
+        self.assertEqual(sorted(frame["phrases"]), ["object"])
+
+    def test_coordinated_modifiers_do_not_split_the_segment(self):
+        """攻撃力か守備力が2100の…、ドラゴン族か植物族の…:並列的是修飾語(後面還有 が/の),不是兩個受事者。"""
+        self.assertEqual(
+            segments("①：攻撃力か守備力が２１００の自分の墓地の機械族モンスター１体を対象として発動できる。"),
+            [("攻撃力か守備力が2100の自分の墓地の機械族モンスター1体", "モンスター", "卡", False, "自分", ["墓地"])])
+        self.assertEqual(
+            segments("①：自分フィールドにドラゴン族か植物族のチューナーが存在する場合に発動できる。",
+                     key="subject"),
+            [("ドラゴン族か植物族のチューナー", "チューナー", "卡", False, None, [])])
+
+    def test_dot_before_a_no_chain_is_a_modifier_list(self):
+        """魔法・罠カードの効果:「・」並列的是修飾語(後面還有 の),一段、中心詞 効果。"""
+        self.assertEqual(
+            segments("①：相手フィールドの魔法・罠カードの効果を無効にする。"),
+            [("相手フィールドの魔法(カード)・罠カードの効果", "効果", "屬性", False, "相手", ["場上"])])
+
+    def test_bare_coordinated_heads_still_split(self):
+        self.assertEqual(
+            segments("①：そのモンスターの攻撃力と守備力を入れ替える。"),
+            [("そのモンスターの攻撃力", "攻撃力", "屬性", True, None, []), ("守備力", "守備力", "屬性", False, None, [])])
+
+    def test_token_stat_block_is_not_the_head(self):
+        self.assertEqual(
+            segments("①：自分フィールドに「ガジェット・トークン」（サイバース族・光・星２・攻／守０）１体を特殊召喚する。"),
+            [("「ガジェット・トークン」（サイバース族・光・星2・攻／守0）1体", "「ガジェット・トークン」", "卡",
+              False, None, [])])
+
+    def test_standalone_sono_with_a_count_is_a_demonstrative_quantity_segment(self):
+        self.assertEqual(segments("①：その３枚をシャッフルしてデッキに戻す。"),
+                         [("その3枚", "3枚", "指示詞", True, None, [])])
+
+    def test_zone_is_found_when_the_description_after_no_has_a_dot(self):
+        self.assertEqual(
+            segments("①：自分の墓地の攻撃力２５００の悪魔族・レベル６モンスター１体を対象として発動できる。"),
+            [("自分の墓地の攻撃力2500の悪魔族・レベル6モンスター1体", "モンスター", "卡", False, "自分", ["墓地"])])
+
+    def test_no_underscore_key_leaks_into_the_frame(self):
+        for frame in actions("①：相手フィールドの表側表示モンスター１体を破壊する。"):
+            self.assertEqual([k for k in frame if k.startswith("_")], [])
+
+
 if __name__ == "__main__":
     unittest.main()

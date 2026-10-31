@@ -547,9 +547,37 @@ def argument_cells(f):
 
 
 def v4_cells(f):
-    """第四版論元(frame-args-v4)→ ["片語=…", "施事者=…", …];各票填自己的格,推得/轉欄/取自子句
-    標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。票 01 只有骨架:回空清單。"""
-    return []
+    """第四版論元(frame-args-v4)→ ["片語·對象=…", "施事者=…", …];各票填自己的格,推得/轉欄/取自子句
+    標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。"""
+    return phrase_cells(f)
+
+
+PHRASE_LABELS = (("object", "對象"), ("topic", "主題"), ("subject", "主語"), ("goal", "目的"))
+
+
+def phrase_cells(f):
+    """論元片語(票 02)→ 每欄一格「片語·對象=段 … 中心詞 X(類) 指示詞 玩家 Y 區域 Z | 段 …」;
+    修飾語與數量由票 03/04 接在 segment_bits 後面。"""
+    cells = []
+    for key, label in PHRASE_LABELS:
+        phrase = (f.get("phrases") or {}).get(key)
+        if not phrase:
+            continue
+        cells.append("片語·%s=%s" % (label, " | ".join(
+            " ".join(segment_bits(seg)) for seg in phrase["segments"])))
+    return cells
+
+
+def segment_bits(seg):
+    bits = ["段 %s" % seg["text"],
+            "中心詞 %s(%s)" % (seg["head"] if seg["head"] is not None else "—", seg["head_kind"])]
+    if seg.get("demonstrative"):
+        bits.append("指示詞")
+    if seg.get("player"):
+        bits.append("玩家 %s" % seg["player"])
+    if seg.get("zones"):
+        bits.append("區域 %s" % "・".join(seg["zones"]))
+    return bits
 
 
 def card_block(cid, cards, recs, frames_by_key):

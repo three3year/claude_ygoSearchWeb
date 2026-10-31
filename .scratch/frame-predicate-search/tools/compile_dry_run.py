@@ -21,8 +21,13 @@ data/action_categories.json,不改任何網站資料、不改樹。輸出 result
 所在欄另分兩種:嚴格(只讀框架的所在欄)與沿用 categories.place_literal(非移動類所在空、
 來源有字面時來源當所在;2026-10-28 裁定),差額就是規格 1 要不要把 から 搬進所在的代價。
 
-用法:PYTHONIOENCODING=utf-8 python .scratch/frame-predicate-search/tools/compile_dry_run.py
+用法:PYTHONIOENCODING=utf-8 python .scratch/frame-predicate-search/tools/compile_dry_run.py [--heads old|v4]
+--heads v4(frame-args-v4 票 02):關鍵詞與目的關鍵詞改讀論元片語各段的中心詞(frame["phrases"][欄]
+的 segments[].head;欄的取法同舊:對象→主語→主題第一個有值的欄),比對仍用 keyword_in(子字串);
+結果另存 results/compile-v4.json / compile-v4.md,不蓋舊結果。預設 old = categories.head_nouns 的
+平假名邊界中心詞。
 """
+import argparse
 import json
 import os
 import sys
@@ -47,6 +52,7 @@ REASON_PARALLEL = "並收取消(關鍵詞葉命中時來源/目的葉現在不�
 REASON_KARA = "非移動類 から 不當所在"
 REASON_UNPLACED = "原未歸(預期外)"
 REASON_OTHER = "其他(預期外)"
+HEADS_OLD, HEADS_V4 = "old", "v4"
 
 
 def zone_pairs(frame, field, literal=None):
@@ -58,11 +64,24 @@ def zone_pairs(frame, field, literal=None):
     return pairs
 
 
-def project(frame):
-    """動作框架 → 述詞比對用的欄位。"""
-    text = next((frame[f] for f in categories.KEYWORD_FIELDS if frame.get(f)), None)
+def phrase_heads(frame, field):
+    """frame-args-v4 的中心詞:該欄論元片語各段的 head(沒有片語、或段沒有中心詞的略過)。"""
+    phrase = (frame.get("phrases") or {}).get(field) if field else None
+    return [seg["head"] for seg in (phrase or {}).get("segments", ()) if seg.get("head")]
+
+
+def project(frame, heads=HEADS_OLD):
+    """動作框架 → 述詞比對用的欄位;heads 選中心詞的來源(old=平假名邊界、v4=論元片語)。"""
+    field = next((f for f in categories.KEYWORD_FIELDS if frame.get(f)), None)
+    text = frame.get(field) if field else None
     goal = frame.get("goal")
     neg = frame["polarity"] == POL_NEG
+    if heads == HEADS_V4:
+        head_list = phrase_heads(frame, field)
+        goal_heads = phrase_heads(frame, "goal")
+    else:
+        head_list = [h for h in head_nouns(text)] if text else []
+        goal_heads = [h for h in head_nouns(goal)] if goal else []
     return {
         "lemma": frame["action"],
         "position": frame["position"],
@@ -74,8 +93,8 @@ def project(frame):
         "goal": zone_pairs(frame, "goal"),
         "place_strict": zone_pairs(frame, "place"),
         "place_rule": zone_pairs(frame, "place", place_literal(frame)),
-        "heads": [h for h in head_nouns(text)] if text else [],
-        "goal_heads": [h for h in head_nouns(goal)] if goal else [],
+        "heads": head_list,
+        "goal_heads": goal_heads,
     }
 
 
@@ -119,7 +138,13 @@ def is_default(leaf):
     return not (leaf.source or leaf.goal or leaf.place or leaf.keyed)
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="具名查詢編譯試跑")
+    parser.add_argument("--heads", choices=(HEADS_OLD, HEADS_V4), default=HEADS_OLD,
+                        help="中心詞來源:old=平假名邊界(預設)、v4=論元片語的中心詞(結果另存 compile-v4.*)")
+    args = parser.parse_args(argv)
+    heads = args.heads
+    suffix = "" if heads == HEADS_OLD else "-" + heads
     tree = categories.load_tree()
     with open(FRAMES, encoding="utf-8") as f:
         sentences = json.load(f)
@@ -138,7 +163,7 @@ def main():
         for fr in s["frames"]:
             if fr["kind"] != "動作" or fr["position"] != POS_EFFECT:
                 continue
-            effect_frames.append((s["card"], project(fr), tree.classify_frame(fr), fr))
+            effect_frames.append((s["card"], project(fr, heads), tree.classify_frame(fr), fr))
     # 驗證自己讀出的「現在」與匯出檔一致(同一份 frames.json 重跑 classify_frame)
     check = defaultdict(set)
     for card, _, record, _ in effect_frames:
@@ -218,14 +243,14 @@ def main():
             neg[(fr.get("voice") or "—", proj["class_derived"] or "一般否定")] += 1
 
     os.makedirs(RESULTS, exist_ok=True)
-    result = {"leaves": leaves_out, "lemma_nodes": nodes_out,
+    result = {"heads": heads, "leaves": leaves_out, "lemma_nodes": nodes_out,
               "reason_card_totals": dict(reason_totals),
               "negation_forms_effect_position": {"%s/%s" % k: v for k, v in sorted(neg.items())},
               "effect_frames": len(effect_frames),
               "cards_covered": len({c for c, _, _, _ in effect_frames})}
-    with open(os.path.join(RESULTS, "compile.json"), "w", encoding="utf-8", newline="\n") as f:
+    with open(os.path.join(RESULTS, "compile%s.json" % suffix), "w", encoding="utf-8", newline="\n") as f:
         json.dump(result, f, ensure_ascii=False, indent=1)
-    with open(os.path.join(RESULTS, "compile.md"), "w", encoding="utf-8", newline="\n") as f:
+    with open(os.path.join(RESULTS, "compile%s.md" % suffix), "w", encoding="utf-8", newline="\n") as f:
         f.write(report(result))
     print(summary(result))
 
@@ -234,8 +259,11 @@ def report(result):
     same = [l for l in result["leaves"] if l["new"] == l["old"] and not l["default"]]
     diff = [l for l in result["leaves"] if l["new"] != l["old"] and not l["default"]]
     defaults = [l for l in result["leaves"] if l["default"]]
-    out = ["# 具名查詢編譯試跑:三張清單(效果位張數;現在 = data/action_categories.json 的 effect 欄)",
-           "", "工具:tools/compile_dry_run.py;數字原檔 results/compile.json。", ""]
+    heads = result.get("heads", HEADS_OLD)
+    out = ["# 具名查詢編譯試跑:三張清單(效果位張數;現在 = data/action_categories.json 的 effect 欄)%s"
+           % ("——中心詞讀論元片語(frame-args-v4 票 02,--heads v4)" if heads == HEADS_V4 else ""),
+           "", "工具:tools/compile_dry_run.py%s;數字原檔 results/compile%s.json。" % (
+               " --heads v4" if heads == HEADS_V4 else "", "" if heads == HEADS_OLD else "-" + heads), ""]
     out.append("## 一、可機械編譯且張數相同(%d 葉)" % len(same))
     out.append("")
     out.append("| 葉 | 張數 | 述詞 | 備註 |")

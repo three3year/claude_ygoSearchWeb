@@ -1573,7 +1573,9 @@ class FrameExtractor:
     def _context(self):
         """enrich 要的常數與分詞輔助(enrich 與各步驟模組不 import frames,免得循環 import)。"""
         return enrich.Context(self.surface, self.word, self.is_noun_like, MOVE_ACTIONS,
-                              INTRANSITIVE_MOVES, PATIENT_COORDINATORS, POL_NEG)
+                              INTRANSITIVE_MOVES, PATIENT_COORDINATORS, POL_NEG,
+                              self._coordinates, self._is_predicate,
+                              lambda text: self.tokenizer.tokenize(text, ""))
 
     def _phrases(self, tokens, sentences, option_of):
         """回指的字面備援:一個編號效果裡的名詞片語 → [anaphora.Phrase],依原文順序;沒出框架的子句
@@ -1669,6 +1671,9 @@ class FrameExtractor:
         if split and not args.get("source") and out.get(patient):
             place, rest = split
             if rest is not None:
+                # 切前字面(frame-args-v4 票 02):論元片語讀它——切走的區域在片語裡仍留一份;
+                # 底線鍵是抽取內部用,enrich 用完 pop 掉,不進 frames.json
+                out["_raw"] = {patient: out[patient]}
                 out[patient] = rest
             out[region_key(action)] = place
         if passive:
@@ -1693,12 +1698,12 @@ class FrameExtractor:
         之前時(このカードは、相手モンスターが攻撃した場合、…),主題屬主句:條件框架不帶,
         從它之後接著延續。光禿禿的屬性主題(…の攻撃力・守備力は０になり、効果は無効化され、…)
         不算新的主題,補成「Xの効果」(標回填),延續中的 X 照舊往下接。主語不延續。"""
-        current, cur_sentence = None, None
+        current, current_raw, cur_sentence = None, None, None   # current_raw:延續值的切前字面(票 02)
         for s_idx, _k, a, fr in made:
             if s_idx != cur_sentence:
-                current, cur_sentence = None, s_idx
+                current, current_raw, cur_sentence = None, None, s_idx
             if a.get("lifted_topic"):
-                current = a["lifted_topic"]
+                current, current_raw = a["lifted_topic"], None
                 continue
             if fr.get("topic"):
                 if current and BARE_ATTRIBUTE_TOPIC.fullmatch(fr["topic"]):
@@ -1709,12 +1714,15 @@ class FrameExtractor:
                 # 「Xの攻撃力は…アップし、…破壊されない」:延續下去的是屬性的主人 X
                 owner = ATTRIBUTE_TOPIC.fullmatch(fr["topic"])
                 current = owner.group(1) if owner else fr["topic"]
+                current_raw = None if owner else (fr.get("_raw") or {}).get("topic")
                 continue
             if a["conditional"] and fr.get("subject"):
-                current = None
+                current, current_raw = None, None
                 continue
             if current:
                 fr["topic"] = current
+                if current_raw:
+                    fr.setdefault("_raw", {})["topic"] = current_raw
                 self._mark_carried_topic(fr)
 
     def _mark_carried_topic(self, fr):
@@ -1731,6 +1739,7 @@ class FrameExtractor:
             return
         place, rest = found
         if rest is not None:
+            fr.setdefault("_raw", {}).setdefault("topic", fr["topic"])   # 切前字面(票 02 的片語讀)
             fr["topic"] = rest
         _put_region(fr, place)
 
@@ -1749,6 +1758,9 @@ class FrameExtractor:
             if OBJECT in parts and not fr.get("object") and donor.get("object"):
                 fr["object"] = donor["object"]
                 fr.setdefault("backfill", []).append("object")
+                raw = (donor.get("_raw") or {}).get("object")
+                if raw:                       # 上游的切前字面一起接過來(票 02 的片語讀)
+                    fr.setdefault("_raw", {})["object"] = raw
             if REGION in parts and _region(donor) and not _region(fr):
                 _put_region(fr, _region(donor))
 

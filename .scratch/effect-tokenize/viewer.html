@@ -160,6 +160,10 @@ table.frames td.bf{color:var(--muted);opacity:.55;font-style:italic}
 table.frames td.inf{color:var(--muted);opacity:.55;text-decoration:underline dotted}
 table.frames td.v4 span.inf{color:var(--muted);opacity:.55;text-decoration:underline dotted}
 table.frames td.v4 span.bf{color:var(--muted);opacity:.55;font-style:italic}
+table.frames td.v4 details.ph{margin:0}
+table.frames td.v4 details.ph summary{cursor:pointer;white-space:nowrap}
+table.frames td.v4 details.ph ul{margin:.2em 0 .3em;padding-left:1.1em}
+table.frames td.v4 details.ph li{white-space:normal}
 table.frames td.v4 details{display:inline-block}
 table.frames td.v4 summary{cursor:pointer}
 table.frames td.cat{font-size:.82rem;min-width:7em}
@@ -580,7 +584,29 @@ function v4Text(v){
   // 票 01 只有骨架:沒有值時顯示空。
   if(!v)return '';
   var parts=[];
+  if(v.phrases)parts.push(phrasesHtml(v.phrases));
   return parts.join(' ');
+}
+var PHRASE_LABELS=[["object","對象"],["topic","主題"],["subject","主語"],["goal","目的"]];
+function phrasesHtml(p){
+  // 論元片語(票 02):每欄一個可展開的區塊——摘要列各段的中心詞(中心詞類),展開列段字面、中心詞、中心詞類、
+  // 指示詞、玩家、區域(修飾語與數量由票 03/04 接進 segmentExtra)
+  return PHRASE_LABELS.filter(function(kv){return p[kv[0]]}).map(function(kv){
+    var ph=p[kv[0]];
+    var summary=ph.segments.map(function(s){return esc(s.head===null?'—':s.head)+'<span class="muted">('+esc(s.head_kind)+')</span>'}).join('・');
+    var items=ph.segments.map(function(s){
+      var bits=['段 '+esc(s.text),'中心詞 '+esc(s.head===null?'—':s.head)+'('+esc(s.head_kind)+')'];
+      if(s.demonstrative)bits.push('指示詞');
+      if(s.player)bits.push('玩家 '+esc(s.player));
+      if(s.zones&&s.zones.length)bits.push('區域 '+esc(s.zones.join('・')));
+      return '<li>'+bits.concat(segmentExtra(s)).join(' <span class="muted">·</span> ')+'</li>';
+    }).join('');
+    return '<details class="ph" title="'+esc(ph.text)+'"><summary><span class="muted">'+kv[1]+'</span> '+summary+'</summary><ul>'+items+'</ul></details>';
+  }).join('');
+}
+function segmentExtra(s){
+  // 票 03(修飾語)、票 04(數量)各加自己的項目
+  return [];
 }
 function anaphoraText(a){
   // 回指:目標字面@區域、玩家、事件主語或主人、只寫在子句裡的數量;灰字是找法

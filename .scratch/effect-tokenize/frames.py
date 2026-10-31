@@ -1985,6 +1985,12 @@ def default_extractor():
     return _DEFAULT
 
 
+def context():
+    """enrich 的 Context(詞面、詞典、並列、述語與分詞輔助):步驟模組之外要把一段字面切成片語段時用
+    (動作對象把回指欄的目標字面交給 phrases.split/segment,不自己拆字面;named-queries 票 04)。"""
+    return default_extractor()._context()
+
+
 def extract(text, context="", extra=None, card_type=None):
     """接縫:一句效果句原文(整段,含 ● 選項;帶同卡同段上文;可選 效果外文本 旗標與
     卡片子類型)→ 框架清單(動作框架與約束框架混排)。"""

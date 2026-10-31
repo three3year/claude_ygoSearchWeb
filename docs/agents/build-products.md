@@ -4,7 +4,8 @@
 
 | 檔 | 重生指令 |
 |---|---|
-| `data/action_categories.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → categories.py → export_categories.py 三步) |
+| `data/action_frames.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → export_frames.py 兩步;框列匯出,ADR-0018,規格 3 的索引建置讀它) |
+| `data/action_categories.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → categories.py → export_categories.py 三步;過渡期照產,規格 3 切換後刪) |
 | `.scratch/effect-tokenize/report.md` | `python .scratch/effect-tokenize/report.py` |
 | `.scratch/frame-predicate-search/tools/results/*` | `python .scratch/frame-predicate-search/tools/compile_dry_run.py --heads v4` |
 | `.scratch/effect-tokenize/baseline-digest.json` | `python .scratch/effect-tokenize/baseline_diff.py --freeze`(只在刻意改既有欄之後) |

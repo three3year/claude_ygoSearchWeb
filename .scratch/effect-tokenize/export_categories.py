@@ -20,10 +20,11 @@ index)。框架對標記句:效果句只有一段時框架全屬那一句;拆開
 效果位葉、代價位葉之外再記兩組的此卡葉與非此卡葉;多讀卡片總表的卡面參數,逐卡記雜湊
 (「卡面」),索引建置以總表重算比對。判定的框架數與理由記在「統計」,建置報告照登。
 
+原文雜湊、卡面雜湊、框架對標記句、統計與讀效果句都在 export_common.py(named-queries 票 05 抽出,
+與框列匯出 export_frames.py 共用);本檔過渡期照產,規格 3 切換索引後刪。
+
 用法:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/export_categories.py
 """
-from collections import Counter
-import hashlib
 import json
 import os
 import re
@@ -34,11 +35,11 @@ sys.path.insert(0, HERE)
 import categories  # noqa: E402
 import patient  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
+# 原文雜湊、卡面、框架對標記句、統計、讀效果句:兩份匯出共用(export_common.py,票 05 抽出)
+from export_common import (CARDS, FACE_FIELDS, ROOT, TOKENS, Stats, card_face, face_hash,  # noqa: E402,F401
+                           load_faces, load_sentences, owner, print_stats, text_hash)
 from frames import POS_COST, POS_EFFECT  # noqa: E402
 
-ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-TOKENS = os.path.join(HERE, "tokens.json")
-CARDS = os.path.join(ROOT, "data", "cards.json")
 OUT = os.path.join(ROOT, "data", "action_categories.json")
 
 GROUPS = {POS_EFFECT: "effect", POS_COST: "cost"}
@@ -56,36 +57,6 @@ DOC = ("動作類別匯出檔(.scratch/category-search,ADR-0017):由 .scratch/ef
        "代價位葉,以及[[動作對象]]的效果位此卡葉、效果位非此卡葉、代價位此卡葉、代價位非此卡葉"
        "(沒有就省略)。「統計」是動作對象判定的框架數與卡數(建置報告照登);「卡面」每列一張卡"
        "的此卡卡面參數雜湊(索引建置以卡片總表重算比對)。")
-
-
-def text_hash(text):
-    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
-
-
-# [[動作對象]]全部類比對用的此卡卡面參數(卡片總表的欄位);索引建置以總表重算雜湊比對,
-# 卡面參數變了而沒重跑分詞鏈就建置失敗(script/web/webindex.py 的 _face_hash 同算法)
-FACE_FIELDS = ("type", "race", "attribute", "level", "atk", "def", "name_ja")
-
-
-def card_face(card):
-    """卡片總表的一列 → 此卡卡面參數。"""
-    return {field: card.get(field) for field in FACE_FIELDS}
-
-
-def face_hash(face):
-    payload = json.dumps([face.get(field) for field in FACE_FIELDS], ensure_ascii=False)
-    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
-
-
-def owner(sentence, frame):
-    """框架所屬標記句的 index;對不到時回 None。"""
-    parts = sentence["parts"]
-    if len(parts) == 1:
-        return parts[0]["index"]
-    if frame.get("option") is None:
-        return parts[0]["index"]
-    wanted = "%s-●%d" % (parts[0]["index"], frame["option"])
-    return wanted if any(p["index"] == wanted for p in parts) else None
 
 
 def tree_rows(tree):
@@ -164,51 +135,6 @@ def export(sentences, records, tree, faces=None):
             "句": out}, problems
 
 
-class Stats:
-    """動作對象判定的計數:帶葉的效果位/代價位框架,依值與理由分。"""
-
-    SAMPLES = 20
-
-    def __init__(self):
-        self.frames = Counter()
-        self.cards = {}
-        self.reasons = Counter()
-        self.reason_cards = {}
-        self.unknown = Counter()
-        self.launch = Counter()
-        self.neither_launch = Counter()
-        self.uncomparable = Counter()
-
-    def add(self, card, verdict):
-        key = verdict.mode or patient.NEITHER
-        self.frames[key] += 1
-        self.cards.setdefault(key, set()).add(card)
-        self.reasons[key + ":" + verdict.why] += 1
-        self.reason_cards.setdefault(key + ":" + verdict.why, set()).add(card)
-        if verdict.why == patient.WHY_UNKNOWN:
-            self.unknown[verdict.text] += 1
-        if patient.is_uncomparable(verdict.why):
-            self.uncomparable[verdict.text] += 1
-        if verdict.launch:
-            self.launch[verdict.launch] += 1
-            if not verdict.mode:
-                self.neither_launch[verdict.launch] += 1
-
-    def doc(self):
-        keys = (patient.SELF, patient.NONSELF, patient.NEITHER)
-        top = lambda counts: dict(sorted(  # noqa: E731
-            counts.items(), key=lambda kv: (-kv[1], kv[0]))[:self.SAMPLES])
-        return {"框架": {k: self.frames[k] for k in keys},
-                "卡": {k: len(self.cards.get(k, ())) for k in keys},
-                "理由": dict(sorted(self.reasons.items())),
-                "理由卡": {k: len(v) for k, v in sorted(self.reason_cards.items())},
-                "發動位置": dict(sorted(self.launch.items())),
-                "皆非發動位置": dict(sorted(self.neither_launch.items())),
-                "表外受事者": top(self.unknown),
-                "比不了字面": top(self.uncomparable),
-                "比不了": sum(self.uncomparable.values())}
-
-
 def serialize(doc):
     """一句一行、樹一行:入版控的檔要 diff 讀得出改了什麼。"""
     dump = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))  # noqa: E731
@@ -220,17 +146,6 @@ def serialize(doc):
             + '"句":[\n' + ",\n".join(dump(r) for r in doc["句"]) + "\n]\n}\n")
 
 
-def load_sentences():
-    """frames.json 的效果句,補上 tokens.json 的效果句原文(兩檔同序同鍵)。"""
-    with open(categories.FRAMES, encoding="utf-8") as f:
-        sentences = json.load(f)
-    with open(TOKENS, encoding="utf-8") as f:
-        texts = {(t["card"], t["section"], t["index"]): t["text_ja"] for t in json.load(f)}
-    for s in sentences:
-        s["text_ja"] = texts[(s["card"], s["section"], s["index"])]
-    return sentences
-
-
 def main():
     try:
         tree = categories.load_tree()
@@ -239,9 +154,7 @@ def main():
         return 1
     with open(categories.OUT, encoding="utf-8") as f:
         records = json.load(f)
-    with open(CARDS, encoding="utf-8") as f:
-        faces = {card["id"]: card_face(card) for card in json.load(f)}
-    doc, problems = export(load_sentences(), records, tree, faces)
+    doc, problems = export(load_sentences(), records, tree, load_faces())
     if problems:
         print("**匯出失敗**,%d 個問題(前 20 筆):" % len(problems), file=sys.stderr)
         for p in problems[:20]:
@@ -253,19 +166,7 @@ def main():
     print("標記句 %d(卡 %d 張);帶效果位葉 %d、帶代價位葉 %d;類別樹葉 %d;已寫出 %s" % (
         len(rows), len({r["card"] for r in rows}), sum("effect" in r for r in rows),
         sum("cost" in r for r in rows), len(doc["葉"]), OUT))
-    stats = doc["統計"]
-    print("動作對象(帶葉的效果位/代價位框架):" + "、".join(
-        "%s %d 框 %d 張" % (k, n, stats["卡"][k]) for k, n in stats["框架"].items()))
-    for why, n in stats["理由"].items():
-        print("  %s %d 框 %d 張" % (why, n, stats["理由卡"][why]))
-    print("  發動位置(全部類框架):" + "、".join(
-        "%s %d" % kv for kv in stats["發動位置"].items()) + ";其中皆非:" + "、".join(
-        "%s %d" % kv for kv in stats["皆非發動位置"].items()))
-    print("  比不了而視為可能包含 %d 框,前 %d 種:%s" % (
-        stats["比不了"], len(stats["比不了字面"]), "、".join(
-            "%s×%d" % kv for kv in stats["比不了字面"].items())))
-    print("  表外受事者(前 %d 種):%s" % (len(stats["表外受事者"]), "、".join(
-        "%s×%d" % kv for kv in stats["表外受事者"].items())))
+    print_stats(doc["統計"], "動作對象(帶葉的效果位/代價位框架)")
     return 0
 
 

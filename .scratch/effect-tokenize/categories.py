@@ -87,7 +87,7 @@ import frames  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
 from frames import MOVE_ACTIONS, POL_AFFIRM, POL_NEG, POS_COND, POS_COST, POS_EFFECT  # noqa: E402
 import action_lemmas  # noqa: E402
-from action_lemmas import VOICE_PASSIVE  # noqa: E402
+import negation  # noqa: E402
 from places import PLAYER_BOTH, PLAYER_OPP, PLAYER_SELF, parse_place, parse_zones  # noqa: E402
 
 TREE = os.path.join(HERE, "category_tree.json")
@@ -104,15 +104,12 @@ STATUSES = (STATUS_PLACED, STATUS_UNPLACED, STATUS_NA)
 POL_RESIST = "耐性"
 POL_RESTRICT = "限制"
 POLARITY_CLASSES = (POL_AFFIRM, POL_RESIST, POL_RESTRICT)
-# 否定框架的述語形 → 極性類:態是受身(被動否定,frame-lemma-unify 票 01 起讀框架的態欄)為
-# 耐性;其餘取子句裡最後一個否定述語(框架的子句收在它自己的述語);
-# 〜ければならない/〜ねばならない 是義務、不是否定述語。
-# 受けない 字面是一般否定,但 受ける 的否定就是不受影響,歸耐性;行えない 是五段動詞
-# 行う 的可能否定。其餘一般否定(送らず、戻さず、リリースせず)不屬任何一類。
-NEGATION_FORMS = (
-    (re.compile(r"(?:でき|出来)(?:ない|ず|なく|ませ)|行え(?:ない|ず|なく)"), POL_RESTRICT),
-    (re.compile(r"(?:(?<!ば)なら|受け)(?:ない|ず|なく)"), POL_RESIST),
-)
+# 否定框架的否定形(frame-args-v4 票 08 起由框架線 negation.form_of 讀:態 受身 → 受身,其餘取子句裡
+# 最後一個否定述語形;字面表在 negation.LITERAL_FORMS)→ 極性類:受身與不成不受(にならない/受けない)
+# 是耐性、不可能(できない/行えない)是限制、一般否定(送らず、戻さず、リリースせず)不屬任何一類。
+# 規格 2 類別線改讀否定形欄時刪這張對照。
+POLARITY_CLASS_OF = {negation.PASSIVE: POL_RESIST, negation.NOT_BECOME: POL_RESIST,
+                     negation.CANNOT: POL_RESTRICT, negation.GENERAL: None}
 
 # 區域七值(值域正典的區域,與第一版同一組)與葉名裡的日文區域名
 ZONE_LABEL = {"手牌": "手札", "牌組": "デッキ", "額外牌組": "EXデッキ", "墓地": "墓地",
@@ -163,19 +160,12 @@ def unplaced_label(frame):
 
 
 def polarity_class(frame):
-    """框架的極性 → 極性類:可能視同肯定;被動否定(態 受身)是耐性;其餘否定依子句裡最後一個
-    否定述語分耐性/限制,一般否定回 None(沒有節點)。"""
+    """框架的極性 → 極性類:可能視同肯定;否定依否定形(negation.form_of:態 受身 → 受身;其餘看子句裡
+    最後一個否定述語)對照 POLARITY_CLASS_OF——受身/不成不受 是耐性、不可能 是限制、一般否定回 None
+    (沒有節點)。"""
     if frame["polarity"] != POL_NEG:
         return POL_AFFIRM
-    if frame.get("voice") == VOICE_PASSIVE:
-        return POL_RESIST
-    clause = frame["clause"].replace(" ", "")
-    last, found = -1, None
-    for pattern, cls in NEGATION_FORMS:
-        for m in pattern.finditer(clause):
-            if m.end() > last:
-                last, found = m.end(), cls
-    return found
+    return POLARITY_CLASS_OF[negation.form_of(frame)]
 
 
 def keyword_in(keyword, text):

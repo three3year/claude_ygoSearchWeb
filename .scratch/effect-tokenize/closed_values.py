@@ -78,6 +78,7 @@ REGION_BACKFILLS = ("source", "place")
 PLAYERS = ("自分", "相手", "お互い", "相對", "無")
 PLACE_PLAYER = {places.PLAYER_SELF: "自分", places.PLAYER_OPP: "相手", places.PLAYER_BOTH: "お互い",
                 places.PLAYER_RELATIVE: "相對", places.PLAYER_NONE: "無"}
+PLAYER_NONE_SPELLING = PLACE_PLAYER[places.PLAYER_NONE]   # 推得欄的結構化值一律這個玩家
 # 區域七值(places.ZONE_TERMS 的值域,依字典序)
 ZONES = tuple(sorted({zone for _, zone in places.ZONE_TERMS}))
 

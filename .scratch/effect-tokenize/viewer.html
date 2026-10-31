@@ -581,10 +581,11 @@ function cardHtml(c,recs){
 function v4Text(v){
   // 第四版論元(frame-args-v4):各票各加一個小函式組一格再接進這裡;推得/轉欄/取自子句/回填的格用
   // .inf/.bf 淡色樣式與 title 說明;片語用 details/summary 展開列段、中心詞、中心詞類、修飾語、數量、玩家、區域、指示詞。
-  // 票 01 只有骨架:沒有值時顯示空。
   if(!v)return '';
   var parts=[];
   if(v.phrases)parts.push(phrasesHtml(v.phrases));
+  if(v.regions)parts.push(regionsText(v));
+  if(v.negation)parts.push(negationText(v.negation));
   return parts.join(' ');
 }
 var PHRASE_LABELS=[["object","對象"],["topic","主題"],["subject","主語"],["goal","目的"]];
@@ -608,10 +609,29 @@ function segmentExtra(s){
   // 票 03(修飾語)、票 04(數量)各加自己的項目
   return [];
 }
+function regionsText(v){
+  // 票 05:來源/目的/所在的結構化值 [(玩家,區域)…](字面欄不動);所在是轉欄來的(取自來源/取自で)時那格淡色加點線;
+  // 票 09:回指回填寫進的欄(region_backfill)標 來源(回指)/所在(回指)、淡色斜體(同既有回填的 .bf)
+  var labels={source:"來源",goal:"目的",place:"所在"}, out=[];
+  ["source","goal","place"].forEach(function(k){
+    var pairs=v.regions[k]; if(!pairs)return;
+    var text=pairs.map(function(p){return '('+esc(p[0])+','+esc(p[1])+')'}).join('');
+    var label=labels[k];
+    if(v.region_backfill===k){label+='(回指)';text='<span class="bf" title="回指回填:受事者是指示詞、本框沒有'+label.slice(0,2)+'字面,結構化值取回指目標(非移動類框架)的區域與玩家;字面欄不動,原本推得的同欄結構化值被蓋過">'+text+'</span>';}
+    else if(k==="place"&&v.transfer)text='<span class="inf" title="'+esc(v.transfer)+':所在字面空著,結構化所在取'+(v.transfer==="取自來源"?'來源欄的區域與玩家(非移動類的 から 說的是受事者在哪裡)':'で 接的區域')+'">'+text+'</span>';
+    out.push('<span class="muted">'+label+'</span>'+text);
+  });
+  return out.join(' ');
+}
+function negationText(n){
+  // 否定形(票 08):只在極性 否定 的框架上有值——受身=態 受身;不成不受=にならない/受けない;不可能=できない/行えない;一般=其餘 ず/ない/なく
+  return '<span title="否定形:受身=被動否定(態 受身);不成不受=にならない/受けない;不可能=できない/行えない;一般=其餘 ず/ない/なく。只在極性 否定 的框架上有值">否定形 '+esc(n)+'</span>';
+}
 function anaphoraText(a){
-  // 回指:目標字面@區域、玩家、事件主語或主人、只寫在子句裡的數量;灰字是找法
+  // 回指:目標字面@區域、玩家、事件主語或主人、只寫在子句裡的數量;灰字是找法;票 09 多「目標移動類」旗標
+  // (目標框架或解到底鏈上的框架是移動類——卡已不在目標的區域,回指回填不接)
   if(!a)return '';
-  return esc(a.text)+(a.count?esc(' '+a.count):'')+(a.place?'@'+esc(a.place):'')+(a.player?' <span class="muted">玩家</span> '+esc(a.player):'')+(a.subject?' <span class="muted">主語</span> '+esc(a.subject):'')+' <span class="muted">'+esc(a.via)+'</span>';
+  return esc(a.text)+(a.count?esc(' '+a.count):'')+(a.place?'@'+esc(a.place):'')+(a.player?' <span class="muted">玩家</span> '+esc(a.player):'')+(a.subject?' <span class="muted">主語</span> '+esc(a.subject):'')+' <span class="muted">'+esc(a.via)+'</span>'+(a.moving?' <span class="bf" title="目標框架(或回指解到底鏈上的框架)的動作是移動類:卡已不在目標的區域,回指回填不接">目標移動類</span>':'');
 }
 function cardsSection(){
   var box=document.createElement("section");

@@ -2477,6 +2477,147 @@ class TestArgumentPhrases(unittest.TestCase):
         for frame in actions("①：相手フィールドの表側表示モンスター１体を破壊する。"):
             self.assertEqual([k for k in frame if k.startswith("_")], [])
 
+def modifiers(text, key="object", action=None, context=""):
+    """frame-args-v4 票 03:各段的修飾語清單 [(字面, 類)…];數值類的多帶 (欄位, 比較, 數字)。
+    回每段一個清單;沒有該欄片語時 None。"""
+    frame = next((f for f in actions(text, context) if action is None or f["action"] == action), None)
+    phrase = (frame.get("phrases") or {}).get(key) if frame else None
+    if phrase is None:
+        return None
+    return [[(m["text"], m["kind"], m["field"], m["compare"], m["number"]) if m["kind"] == "數值"
+             else (m["text"], m["kind"]) for m in seg["modifiers"]]
+            for seg in phrase["segments"]]
+
+
+class TestArgumentPhraseModifiers(unittest.TestCase):
+    """frame-args-v4 票 03:中心詞之前的各格依 の 與讀點切成修飾語段,每段記字面與修飾語類
+    (種族/屬性/字段/卡片子類型/數值/區域/玩家/表示形式/其他);數值段另帶欄位、比較、數字。
+    只斷言輸出框架 phrases 欄裡各段的 modifiers。"""
+
+    def test_attribute_race_and_subtype_compound_head(self):
+        """闇属性・ドラゴン族の効果モンスター:修飾語 闇属性(屬性)、ドラゴン族(種族);効果モンスター 是分詞一格的
+        封閉值域複合詞、整個是中心詞(票 02 的決定),効果 不另記修飾語。"""
+        self.assertEqual(modifiers("①：闇属性・ドラゴン族の効果モンスター１体を破壊する。"),
+                         [[("闇属性", "屬性"), ("ドラゴン族", "種族")]])
+
+    def test_position_modifier(self):
+        self.assertEqual(modifiers("①：相手フィールドの表側表示モンスター１体を破壊する。"),
+                         [[("相手フィールド", "區域"), ("表側表示", "表示形式")]])
+
+    def test_summon_methods_are_subtypes_each(self):
+        self.assertEqual(modifiers("①：融合・S・Xモンスター１体を破壊する。"),
+                         [[("融合", "卡片子類型"), ("S", "卡片子類型"), ("X", "卡片子類型")]])
+        self.assertEqual(modifiers("①：チューナーモンスター１体を破壊する。"), [[("チューナー", "卡片子類型")]])
+
+    def test_coordinated_attributes_are_separate_modifiers(self):
+        self.assertEqual(modifiers("①：光・闇属性モンスターを破壊する。"), [[("光", "屬性"), ("闇属性", "屬性")]])
+        self.assertEqual(modifiers("①：ドラゴン族か植物族のモンスターを破壊する。"),
+                         [[("ドラゴン族", "種族"), ("植物族", "種族")]])
+
+    def test_player_and_zone_modifiers(self):
+        self.assertEqual(modifiers("①：相手の手札のカードを捨てる。"), [[("相手", "玩家"), ("手札", "區域")]])
+        self.assertEqual(modifiers("①：相手モンスター１体を破壊する。"), [[("相手", "玩家")]])
+        self.assertEqual(modifiers("①：自分か相手の墓地のモンスターを除外する。"),
+                         [[("自分", "玩家"), ("相手", "玩家"), ("墓地", "區域")]])
+
+    def test_head_without_modifiers_has_an_empty_list(self):
+        self.assertEqual(modifiers("①：デッキから「青眼の白龍」１体を手札に加える。"), [[]])
+        self.assertEqual(modifiers("①：このカードは戦闘では破壊されない。", key="topic"), [[]])
+
+    def test_numeric_with_comparator(self):
+        """レベル４以下のモンスター:數值,欄位 レベル、比較 以下、數字 4;攻撃力2400以上 同形;欄位寫在 が 前也一樣。"""
+        self.assertEqual(modifiers("①：レベル４以下のモンスター１体を破壊する。"),
+                         [[("レベル4以下", "數值", "レベル", "以下", 4)]])
+        self.assertEqual(modifiers("①：攻撃力２４００以上のモンスターを破壊する。"),
+                         [[("攻撃力2400以上", "數值", "攻撃力", "以上", 2400)]])
+        self.assertEqual(modifiers("①：攻撃力が０のモンスターを破壊する。"),
+                         [[("攻撃力が0", "數值", "攻撃力", None, 0)]])
+
+    def test_numeric_slash_form_is_one_modifier_per_field(self):
+        """攻撃力N／守備力N:兩個數值修飾語,各帶自己的欄位與數字。"""
+        self.assertEqual(modifiers("①：攻撃力１０００／守備力１０００のモンスター１体を特殊召喚する。"),
+                         [[("攻撃力1000", "數值", "攻撃力", None, 1000), ("守備力1000", "數值", "守備力", None, 1000)]])
+        self.assertEqual(modifiers("①：攻撃力２４００以上で守備力１０００のモンスターを破壊する。"),
+                         [[("攻撃力2400以上", "數值", "攻撃力", "以上", 2400), ("守備力1000", "數值", "守備力", None, 1000)]])
+
+    def test_numeric_level_list_is_one_modifier_with_the_numbers(self):
+        """レベルN・N:一個數值修飾語,number 空、numbers 列兩個數。"""
+        frame = actions("①：レベル４・５のモンスターを破壊する。")[0]
+        mods = frame["phrases"]["object"]["segments"][0]["modifiers"]
+        self.assertEqual(mods, [{"text": "レベル4・5", "kind": "數值", "field": "レベル", "compare": None,
+                                 "number": None, "numbers": [4, 5]}])
+
+    def test_coordinated_fields_share_one_number(self):
+        self.assertEqual(
+            modifiers("①：攻撃力か守備力が２１００の自分の墓地の機械族モンスター１体を対象として発動できる。"),
+            [[("攻撃力か守備力が2100", "數值", "攻撃力か守備力", None, 2100), ("自分", "玩家"), ("墓地", "區域"),
+              ("機械族", "種族")]])
+
+    def test_counter_count_is_not_a_numeric_modifier(self):
+        """３つ以上の:量詞的數是數量不是數值欄位,落 其他(對象字面本身已被既有規則切成 3つ以上のモンスター)。"""
+        self.assertEqual(modifiers("①：〈魔力〉カウンターが３つ以上のモンスターを破壊する。"),
+                         [[("3つ以上", "其他")]])
+
+    def test_archetype_versus_card_name(self):
+        """「DD」モンスター 的 「DD」 是字段(引號段後面還有中心詞);「青眼の白龍」の攻撃力 的引號段接 の,是卡名、落 其他。"""
+        self.assertEqual(modifiers("①：デッキから「DD」モンスター１体を手札に加える。"), [[("「DD」", "字段")]])
+        self.assertEqual(modifiers("①：「HERO」融合モンスター１体を破壊する。"),
+                         [[("「HERO」", "字段"), ("融合", "卡片子類型")]])
+        self.assertEqual(modifiers("①：「青眼の白龍」の攻撃力を０にする。"), [[("「青眼の白龍」", "其他")]])
+
+    def test_relative_clause_is_other_with_its_literal(self):
+        self.assertEqual(modifiers("①：この効果で特殊召喚したモンスターを破壊する。"),
+                         [[("この効果で特殊召喚したモンスター"[:-5], "其他")]])
+        self.assertEqual(modifiers("①：相手が特殊召喚したレベル４以下のモンスターを破壊する。"),
+                         [[("相手が特殊召喚した", "其他"), ("レベル4以下", "數值", "レベル", "以下", 4)]])
+
+    def test_relative_clause_with_an_argument_absorbs_its_own_modifiers(self):
+        """墓地のモンスターを対象とする効果:墓地 修飾的是子句裡的 モンスター,不是 効果——整個子句一段 其他。"""
+        self.assertEqual(modifiers("①：墓地のモンスターを対象とする効果を無効にする。"),
+                         [[("墓地のモンスターを対象とする", "其他")]])
+
+    def test_igai_hoka_motomoto_nokori_are_other(self):
+        self.assertEqual(modifiers("①：チューナー以外のモンスター１体を破壊する。"), [[("チューナー以外", "其他")]])
+        self.assertEqual(modifiers("①：自分の墓地の表側表示モンスター以外の他のモンスターを破壊する。"),
+                         [[("自分", "玩家"), ("墓地", "區域"), ("表側表示モンスター以外", "其他"), ("他", "其他")]])
+        self.assertEqual(modifiers("①：元々の攻撃力を０にする。"), [[("元々", "其他")]])
+        self.assertEqual(modifiers("①：残りのカードを墓地へ送る。"), [[("残り", "其他")]])
+        self.assertEqual(modifiers("①：そのモンスターと同じ種族のモンスター１体を破壊する。"),
+                         [[("そのモンスターと同じ種族", "其他")]])
+
+    def test_zone_spelled_over_two_tokens_and_elided_zone_pairs(self):
+        """墓地・除外状態 是兩個區域(除外|状態 兩格合起來才是區域辨識認得的字面);自分(フィールド)・相手フィールド
+        的省略寫法補全後交給區域辨識。"""
+        self.assertEqual(modifiers("①：自分の墓地・除外状態のモンスター１体を手札に加える。"),
+                         [[("自分", "玩家"), ("墓地", "區域"), ("除外状態", "區域")]])
+        self.assertEqual(modifiers("①：自分・相手フィールドのモンスター１体を破壊する。"),
+                         [[("自分(フィールド)", "區域"), ("相手フィールド", "區域")]])
+
+    def test_owner_is_a_player_and_leading_sono_is_transparent(self):
+        """持ち主の手札:持ち主 沿用區域辨識的玩家前綴(相對玩家)記 玩家;その自分のモンスター 的 その自分 是指示詞
+        綁在玩家詞上的一格,類照玩家詞記 玩家、字面含 その;自身の攻撃力 的 自身 指卡片自己,落 其他。"""
+        self.assertEqual(modifiers("①：そのモンスターを持ち主の手札に戻す。", key="goal", action="戻す"),
+                         [[("持ち主", "玩家"), ]])
+        self.assertEqual(modifiers("①：その自分のモンスター１体を破壊する。"), [[("その自分", "玩家")]])
+        self.assertEqual(modifiers("①：自身の攻撃力を１０００アップする。", action="アップ"), [[("自身", "其他")]])
+
+    def test_bare_number_before_a_non_card_head_is_numeric_without_a_field(self):
+        """500ダメージ、1000LP:中心詞前只有一個數,記 數值、欄位空、數字照記。"""
+        self.assertEqual(modifiers("①：相手に５００ダメージを与える。"), [[("500", "數值", None, None, 500)]])
+
+    def test_demonstrative_bound_closed_values_keep_their_kind(self):
+        """その表側表示のモンスター、その融合モンスター:指示詞綁在封閉值/召喚法上的一格,類照詞記、字面含 その;
+        その特殊召喚 的單獨一格 その 不是修飾語。"""
+        self.assertEqual(modifiers("①：その表側表示のモンスターを破壊する。"), [[("その表側表示", "表示形式")]])
+        self.assertEqual(modifiers("①：その融合モンスター１体を破壊する。"), [[("その融合", "卡片子類型")]])
+        self.assertEqual(modifiers("①：その特殊召喚を無効にする。"), [[]])
+
+    def test_joined_head_keeps_its_prefix_out_of_the_modifiers(self):
+        """カード|名 合記 カード名:修飾語到 このカード 為止。"""
+        self.assertEqual(modifiers("①：このカードのカード名は「青眼の白龍」として扱う。", key="topic"),
+                         [[("このカード", "其他")]])
+
+
 def regioned(text, context=""):
     """frame-args-v4 票 05:(動作, 來源/目的/所在的結構化值, 轉欄記號)。結構化值是
     {"source"|"goal"|"place": [[玩家, 區域七值], …]},只放算得出區域的欄;沒有時 None。"""

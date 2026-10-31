@@ -577,7 +577,7 @@ PHRASE_LABELS = (("object", "對象"), ("topic", "主題"), ("subject", "主語"
 
 def phrase_cells(f):
     """論元片語(票 02)→ 每欄一格「片語·對象=段 … 中心詞 X(類) 指示詞 玩家 Y 區域 Z | 段 …」;
-    修飾語與數量由票 03/04 接在 segment_bits 後面。"""
+    segment_bits 後面接修飾語(票 03:修飾語 字面(類)、…)與數量(票 04)。"""
     cells = []
     for key, label in PHRASE_LABELS:
         phrase = (f.get("phrases") or {}).get(key)
@@ -597,6 +597,8 @@ def segment_bits(seg):
         bits.append("玩家 %s" % seg["player"])
     if seg.get("zones"):
         bits.append("區域 %s" % "・".join(seg["zones"]))
+    if seg.get("modifiers"):
+        bits.append("修飾語 " + "、".join(modifier_bit(m) for m in seg["modifiers"]))
     return bits + quantity_bits(seg)
 
 
@@ -607,6 +609,15 @@ def quantity_bits(seg):
         return []
     kind = "引用量" if q["kind"] is None else q["kind"] + ("" if q["number"] is None else " %d" % q["number"])
     return ["數量 %s(%s)%s" % (q["text"], kind, "(取自子句)" if q["from_clause"] else "")]
+
+
+def modifier_bit(m):
+    """票 03:字面(類);數值類列 欄位/比較/數字——レベル4以下(數值:レベル 以下 4)。"""
+    if m["kind"] != "數值":
+        return "%s(%s)" % (m["text"], m["kind"])
+    numbers = "・".join(str(n) for n in m["numbers"]) if m.get("numbers") else m["number"]
+    detail = " ".join(str(x) for x in (m["field"], m["compare"], numbers) if x is not None)
+    return "%s(數值:%s)" % (m["text"], detail)
 
 
 def card_block(cid, cards, recs, frames_by_key):

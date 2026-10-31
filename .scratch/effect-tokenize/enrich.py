@@ -41,7 +41,7 @@ Context = namedtuple("Context", "surface word is_noun_like move_actions intransi
 
 # 填充率的狀態欄(報告表的欄序);None 算 空
 FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "其他")
-FILL_RATE_ROWS = []
+FILL_RATE_ROWS = list(regions.FILL_RATE_ROWS)   # 票 05:結構化來源/目的/所在、取自來源
 REPORT_SECTIONS = []
 
 _STEPS = (phrases.structure, regions.structure, agent.mark, manner.mark, negation.mark)

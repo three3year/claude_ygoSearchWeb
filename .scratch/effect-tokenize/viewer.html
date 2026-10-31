@@ -580,7 +580,19 @@ function v4Text(v){
   // 票 01 只有骨架:沒有值時顯示空。
   if(!v)return '';
   var parts=[];
+  if(v.regions)parts.push(regionsText(v));
   return parts.join(' ');
+}
+function regionsText(v){
+  // 票 05:來源/目的/所在的結構化值 [(玩家,區域)…](字面欄不動);所在是轉欄來的(取自來源/取自で)時那格淡色加點線
+  var labels={source:"來源",goal:"目的",place:"所在"}, out=[];
+  ["source","goal","place"].forEach(function(k){
+    var pairs=v.regions[k]; if(!pairs)return;
+    var text=pairs.map(function(p){return '('+esc(p[0])+','+esc(p[1])+')'}).join('');
+    if(k==="place"&&v.transfer)text='<span class="inf" title="'+esc(v.transfer)+':所在字面空著,結構化所在取'+(v.transfer==="取自來源"?'來源欄的區域與玩家(非移動類的 から 說的是受事者在哪裡)':'で 接的區域')+'">'+text+'</span>';
+    out.push('<span class="muted">'+labels[k]+'</span>'+text);
+  });
+  return out.join(' ');
 }
 function anaphoraText(a){
   // 回指:目標字面@區域、玩家、事件主語或主人、只寫在子句裡的數量;灰字是找法

@@ -5,8 +5,12 @@ mark(ctx, tokens, frame):替動作框架加 frame["phrases"] = {"object"|"topic"
 只放有字面的欄;推得的目的沒有片語。Phrase/Segment/Modifier/Quantity 的形狀見 enrich.py 與
 `.scratch/frame-args-v4/spec.md`;封閉值域在 closed_values.py。
 
-片語讀**切區域之前**的受事者字面(frame["_raw"],frames.py 切出來源/所在時暫存;enrich 用完 pop),
+片語讀**切區域之前**的受事者字面(frame["_raw"],frames.py 切出來源/所在時暫存;enrich 的後段用完 pop),
 所以切走的區域在片語裡仍留一份;Phrase 的 text 是該欄現在的值(切後),不改。
+
+執行位置(named-queries 票 02):在回指(anaphora.resolve)**之前**——這裡只讀既有欄、_raw 與句子的詞序列,
+不讀回指欄,也不讀回指後的新欄(regions/agent/manner/negation);回指(票 03 起)改讀這裡的段。所以向 enrich
+宣告 BEFORE_ANAPHORA。
 
 字面 → 詞序列:在句子的詞序列裡找字面相連的一段(先子句範圍、再整句——延續來的主題與回填的對象
 在別的子句),找不到時(讀點接起來的多格、省略寫法)把字面重新分詞。
@@ -172,6 +176,10 @@ def head_kind(head):
     if places.parse_place(head)[1]:
         return HEAD_CARD
     return OTHER
+
+
+# named-queries 票 02:片語在回指之前算(只讀既有欄與 _raw;回指改讀片語段);enrich.before_anaphora 讀這個宣告
+BEFORE_ANAPHORA = True
 
 
 def mark(ctx, tokens, frame):

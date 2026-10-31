@@ -61,6 +61,12 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
               結構化值與轉欄記號、施事者與其來源、方式與方式類、否定形、回指回填記號;值域在
               closed_values.py,鍵的清單在 baseline_diff.NEW_KEYS(剝掉後與修前基準逐框相同)
 
+處理順序(frames_of_tokens;named-queries 票 02 定):錨點/子句/論元 → 建框架、推得 → か 並列的連接與群組
+→ 主題延續 → 回填 → 純列舉 → 詞元正規化 → 依原文位置排序 → **片語結構化**(enrich.before_anaphora:phrases)
+→ **回指**(anaphora.resolve)→ **回指後的第四版論元**(enrich.after_anaphora:regions → agent → manner →
+negation → 回指回填,結尾 pop 底線開頭的內部鍵 _raw/_anaphora_targets)。片語只讀既有欄與切區域前的字面、
+不讀回指,所以在回指前;回指(named-queries 票 03 起)改讀片語段;結構化區域等讀回指欄的留在回指後。
+
 單位是效果句(一個編號效果的全文,連同它的 ● 選項;tokenize.py 的 assemble 把
 拆開的領起句與子效果句接回一段):選項邊界 token「●」與「。」同樣結束一句,
 發動句、位置、極性各句照既有規則判定,選項各有自己的發動句。
@@ -1563,10 +1569,14 @@ class FrameExtractor:
         # 依原文位置混排;同起點時約束框架在前(穩定排序保住並列述語的順序)
         frames.sort(key=lambda f: (f["sentence"], f["span"][0],
                                    f["kind"] != KIND_CONSTRAINT))
-        # 回指(action-patient-anaphora):讀回填、正規化之後的值,跨句號,所以排在最後
+        # 以下三步的順序(named-queries 票 02;見檔頭「處理順序」):片語結構化 → 回指 → 其餘第四版論元
+        ctx = self._context()
+        # 片語結構化(frame-args-v4 phrases):只讀既有欄的最終字面與切區域前的 _raw,不讀回指;回指改讀片語段
+        enrich.before_anaphora(ctx, tokens, frames)
+        # 回指(action-patient-anaphora):讀回填、正規化之後的值與片語,跨句號
         anaphora.resolve(frames, self._phrases(tokens, sentences, option_of))
-        # 第四版論元(frame-args-v4):新欄全是新鍵、讀既有欄的最終字面,所以是最後一步
-        enrich.enrich(self._context(), tokens, frames)
+        # 回指後的第四版論元(regions/agent/manner/negation、回指回填):讀回指欄,所以是最後一步;結尾 pop 底線鍵
+        enrich.after_anaphora(ctx, tokens, frames)
         return frames
 
     def _context(self):

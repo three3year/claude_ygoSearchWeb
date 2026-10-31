@@ -591,7 +591,7 @@ function v4Text(v){
 var PHRASE_LABELS=[["object","對象"],["topic","主題"],["subject","主語"],["goal","目的"]];
 function phrasesHtml(p){
   // 論元片語(票 02):每欄一個可展開的區塊——摘要列各段的中心詞(中心詞類),展開列段字面、中心詞、中心詞類、
-  // 指示詞、玩家、區域(修飾語與數量由票 03/04 接進 segmentExtra)
+  // 指示詞、玩家、區域,再接 segmentExtra 的修飾語(票 03)與數量(票 04)
   return PHRASE_LABELS.filter(function(kv){return p[kv[0]]}).map(function(kv){
     var ph=p[kv[0]];
     var summary=ph.segments.map(function(s){return esc(s.head===null?'—':s.head)+'<span class="muted">('+esc(s.head_kind)+')</span>'}).join('・');
@@ -607,7 +607,21 @@ function phrasesHtml(p){
 }
 function segmentExtra(s){
   // 票 03(修飾語)、票 04(數量)各加自己的項目
-  return [];
+  var out=[];
+  if(s.modifiers&&s.modifiers.length)out.push(modifiersText(s.modifiers));
+  return out;
+}
+function modifiersText(mods){
+  // 票 03:修飾語 字面(類)、字面(類)…;數值類另列 欄位/比較/數字(レベル4以下(數值:レベル 以下 4));其他類淡色
+  return '修飾語 '+mods.map(function(m){
+    var kind=m.kind;
+    if(kind==='數值'){
+      var bits=[m.field,m.compare,m.numbers?m.numbers.join('・'):m.number].filter(function(x){return x!==null&&x!==undefined});
+      kind+=': '+bits.map(function(x){return esc(String(x))}).join(' ');
+    }
+    var cls=m.kind==='其他'?' class="muted" title="修飾語類 其他:封閉表外,只留字面"':'';
+    return '<span'+cls+'>'+esc(m.text)+'<span class="muted">('+kind+')</span></span>';
+  }).join('、');
 }
 function regionsText(v){
   // 票 05:來源/目的/所在的結構化值 [(玩家,區域)…](字面欄不動);所在是轉欄來的(取自來源/取自で)時那格淡色加點線;

@@ -528,6 +528,8 @@ def anaphora_cell(target):
     parts += ["%s:%s" % (label, target[key])
               for key, label in (("count", "數量"), ("place", "區域"), ("player", "玩家"),
                                  ("subject", "事件主語/主人"), ("via", "找法")) if target.get(key)]
+    if target.get("moving"):
+        parts.append("目標移動類")     # frame-args-v4 票 09:目標框架是移動類,回指回填不接
     return " ".join(parts)
 
 
@@ -549,12 +551,13 @@ def argument_cells(f):
 def v4_cells(f):
     """第四版論元(frame-args-v4)→ ["片語=…", "施事者=…", …];各票填自己的格,推得/轉欄/取自子句
     標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。票 05:結構化來源/目的/所在 (玩家,區域)・…,
-    轉欄來的所在標 (取自來源)/(取自で)。否定形(票 08)只在否定框架上有值。"""
+    轉欄來的所在標 (取自來源)/(取自で);回指回填寫進的欄(票 09)標 (回指)。否定形(票 08)只在否定框架上有值。"""
     cells = []
     regions = f.get("regions") or {}
     for key, label in (("source", "結構化來源"), ("goal", "結構化目的"), ("place", "結構化所在")):
         if key in regions:
-            mark = "(%s)" % f["transfer"] if key == "place" and f.get("transfer") else ""
+            mark = ("(回指)" if f.get("region_backfill") == key
+                    else "(%s)" % f["transfer"] if key == "place" and f.get("transfer") else "")
             cells.append("%s=%s%s" % (label, "・".join("(%s,%s)" % tuple(p) for p in regions[key]), mark))
     if f.get("negation"):
         cells.append("否定形=%s" % f["negation"])

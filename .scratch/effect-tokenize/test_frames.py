@@ -2425,6 +2425,106 @@ class TestV4StructuredRegions(unittest.TestCase):
              ("破壊", {"place": [["自分", "墓地"]]}, None)])
 
 
+def region_backfilled(text, context=""):
+    """frame-args-v4 票 09:(動作, 結構化值 regions, 回指回填記號 region_backfill, 回指欄的目標移動類旗標
+    anaphora.moving);沒有的欄 None。"""
+    return [(f["action"], f.get("regions"), f.get("region_backfill"), (f.get("anaphora") or {}).get("moving"))
+            for f in actions(text, context)]
+
+
+class TestV4AnaphoraBackfill(unittest.TestCase):
+    """frame-args-v4 票 09:回指回填——受事者是指示詞、回指欄有目標且目標帶區域、回指不是事件類、
+    本框缺該欄字面(移動類看來源、非移動類看所在;推得的不算有)、目標非移動類時,把目標的區域字面
+    的結構化值寫進本框的 regions[來源|所在],region_backfill 記欄名,蓋過推得的同欄結構化值;字面欄
+    不動;跨句號。回指欄多記 moving:目標框架(回指鏈上經過的框架任一)是不是移動類;目標不是框架
+    (字面備援)時 false。"""
+
+    def test_non_move_target_fills_source_of_move_frame(self):
+        """對象として…。そのモンスターを特殊召喚する:特殊召喚 的來源結構化值是目標的 (自分, 墓地)。"""
+        self.assertEqual(
+            region_backfilled("①：自分の墓地のモンスター１体を対象として発動できる。そのモンスターを特殊召喚する。")[1],
+            ("特殊召喚", {"source": [["自分", "墓地"]], "goal": [["無", "場上"]]}, "source", False))
+
+    def test_non_move_target_fills_place_of_non_move_frame(self):
+        self.assertEqual(
+            region_backfilled("①：相手フィールドのモンスター１体を対象として発動できる。そのモンスターを破壊する。")[1],
+            ("破壊", {"place": [["相手", "場上"]]}, "place", False))
+
+    def test_literal_columns_are_untouched(self):
+        fr = actions("①：相手フィールドのモンスター１体を対象として発動できる。そのモンスターを破壊する。")[1]
+        self.assertEqual((fr.get("place"), fr.get("source"), fr.get("backfill")), (None, None, None))
+
+    def test_move_target_is_rejected(self):
+        """手札に加える…そのモンスターを破壊する:目標是移動類(卡已經不在墓地),不填、旗標 true。"""
+        self.assertEqual(
+            region_backfilled("①：自分の墓地のモンスター１体を手札に加える。その後、そのモンスターを破壊する。")[1],
+            ("破壊", None, None, True))
+
+    def test_own_literal_is_not_overridden(self):
+        """本框自己寫了 墓地から:來源照自己的字面(玩家 無),不回填。"""
+        self.assertEqual(
+            region_backfilled("①：自分の墓地のモンスター１体を対象として発動できる。"
+                              "そのモンスターを墓地から特殊召喚する。")[1],
+            ("特殊召喚", {"source": [["無", "墓地"]], "goal": [["無", "場上"]]}, None, False))
+
+    def test_backfilled_literal_counts_as_written(self):
+        """選んで破壊する:破壊 的所在是回填來的字面,算有字面,不回填。"""
+        self.assertEqual(
+            region_backfilled("①：フィールドのモンスター１体を対象として発動できる。"
+                              "そのモンスターを自分の墓地から選んで破壊する。")[2],
+            ("破壊", {"place": [["自分", "墓地"]]}, None, False))
+
+    def test_transferred_place_counts_as_written(self):
+        """そのモンスターを自分のデッキから選ぶ:非移動類本框的所在是取自來源轉欄來的(自己的字面),不回填。"""
+        self.assertEqual(
+            region_backfilled("①：自分の墓地のモンスター１体を対象として発動できる。"
+                              "そのモンスターを自分のデッキから選ぶ。")[1],
+            ("選ぶ", {"source": [["自分", "牌組"]], "place": [["自分", "牌組"]]}, None, False))
+
+    def test_backfill_overrides_inferred_source(self):
+        """手札のモンスターを見せ、そのカードを捨てる:捨てる 推得的來源 (無, 手牌) 被目標的 (自分, 手牌) 蓋過;
+        字面欄仍是推得的 手札。"""
+        frs = actions("①：自分の手札のモンスター１体を相手に見せ、そのカードを捨てる。")
+        self.assertEqual(
+            (frs[1]["action"], frs[1]["regions"], frs[1]["region_backfill"]),
+            ("捨てる", {"source": [["自分", "手牌"]], "goal": [["無", "墓地"]]}, "source"))
+        self.assertEqual((frs[1]["source"], frs[1]["inferred"]), ("手札", ["source", "goal"]))
+
+    def test_across_full_stops(self):
+        self.assertEqual(
+            region_backfilled("①：自分の墓地のモンスター１体を対象として発動できる。このカードを特殊召喚する。"
+                              "その後、そのモンスターを破壊する。")[2],
+            ("破壊", {"place": [["自分", "墓地"]]}, "place", False))
+
+    def test_event_target_is_not_backfilled(self):
+        """その発動を無効にし:回指是事件類,沒有區域可填;目標 発動 不是移動類。"""
+        self.assertEqual(
+            region_backfilled("①：相手フィールドの魔法カードが発動した時に発動できる。その発動を無効にし破壊する。")[1],
+            ("無効にする", None, None, False))
+
+    def test_chain_through_a_move_frame_is_rejected(self):
+        """対象として…。そのモンスターを特殊召喚する。その後、そのモンスターを破壊する:破壊 的回指是經
+        特殊召喚 解到底的,鏈上有移動類 → 旗標 true、不填;特殊召喚 自己照填來源。"""
+        frs = region_backfilled("①：自分の墓地のモンスター１体を対象として発動できる。そのモンスターを特殊召喚する。"
+                                "その後、そのモンスターを破壊する。")
+        self.assertEqual(frs[1], ("特殊召喚", {"source": [["自分", "墓地"]], "goal": [["無", "場上"]]}, "source", False))
+        self.assertEqual(frs[2], ("破壊", None, None, True))
+
+    def test_literal_target_is_not_a_frame(self):
+        """墓地のモンスターが３体以上の場合…そのモンスター１体を特殊召喚する:目標從字面備援找到,沒有框架
+        → 旗標 false,照填來源。"""
+        self.assertEqual(
+            region_backfilled("①：自分の墓地のモンスターが３体以上の場合に発動できる。そのモンスター１体を特殊召喚する。")[0],
+            ("特殊召喚", {"source": [["自分", "墓地"]], "goal": [["無", "場上"]]}, "source", False))
+
+    def test_target_without_region_is_not_backfilled(self):
+        """相手の墓地にモンスターが存在する…そのモンスター１体を特殊召喚:目標沒有區域,不填、旗標 false。"""
+        self.assertEqual(
+            region_backfilled("①：相手の墓地にモンスターが存在する場合に発動できる。"
+                              "そのモンスター１体を自分フィールドに特殊召喚する。")[1],
+            ("特殊召喚", {"goal": [["自分", "場上"]]}, None, False))
+
+
 def negations(text, context=""):
     """框架 → (動作, 極性, 否定形):frame-args-v4 票 08 的否定形欄;沒有值時 None。"""
     return [(f["action"], f["polarity"], f.get("negation")) for f in actions(text, context)]

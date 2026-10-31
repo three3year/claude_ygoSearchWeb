@@ -40,13 +40,14 @@ Context = namedtuple("Context", "surface word is_noun_like move_actions intransi
                                 "patient_coordinators pol_neg")
 
 # 填充率的狀態欄(報告表的欄序);None 算 空
-FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "其他")
-FILL_RATE_ROWS = list(regions.FILL_RATE_ROWS)   # 票 05:結構化來源/目的/所在、取自來源
+FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "回填", "其他")
+FILL_RATE_ROWS = list(regions.FILL_RATE_ROWS)   # 票 05:結構化來源/目的/所在、取自來源;票 09:回指回填
 FILL_RATE_ROWS += [
     ("否定形", negation.fill_state),                                   # 票 08
 ]
 REPORT_SECTIONS = [
     ("否定形各值框數", negation.count_section),                          # 票 08
+    ("回指回填 填/拒(依原因)", regions.backfill_section),                # 票 09
 ]
 
 _STEPS = (phrases.structure, regions.structure, agent.mark, manner.mark, negation.mark)

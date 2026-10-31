@@ -5,8 +5,13 @@ structure(ctx, tokens, frame):frame["regions"] = {"source"|"goal"|"place": [[玩
 順序去重;只放算得出區域的欄;推得的欄玩家 無),非移動類所在空而來源有字面時所在取來源的並
 frame["transfer"] = "取自來源";算法就是 places.parse_zones,不另寫(玩家拼法過 closed_values.PLACE_PLAYER:
 雙方 → お互い)。字面欄一個位元組不動。
-backfill_from_anaphora(ctx, tokens, actions):回指回填——把目標 place 字面的結構化值寫進本框架的
-regions[來源|所在],frame["region_backfill"] 記欄名;字面欄不動。票 01 只建骨架:什麼都不做。
+backfill_from_anaphora(ctx, tokens, actions):回指回填(票 09)——受事者是指示詞的框架(回指欄只在那時
+才帶)、回指欄有 place、找法不是事件、本框缺該欄字面(移動類看來源、非移動類看所在;推得的不算有、
+取自來源轉欄來的算有)、目標非移動類時,把目標 place 字面經 parse_zones 寫進 regions[來源|所在],
+frame["region_backfill"] 記欄名,蓋過推得的同欄結構化值;字面欄不動;跨句號(回指本來就跨)。回指欄
+先補 moving:目標框架(anaphora.resolve 記在內部鍵 _anaphora_targets 的框架,含解到底的鏈上每一框)
+任一是移動類就 true——鏈上有移動類表示卡已經不在目標的區域(対象として…特殊召喚し…その後そのモンスター
+を破壊 的 破壊);目標是字面備援(沒有框架)時 false。拒絕的框依原因計數進報告(backfill_section)。
 """
 import places
 from closed_values import PLACE_PLAYER, REGION_KEYS, PLAYER_NONE_SPELLING
@@ -40,8 +45,69 @@ def structure(ctx, tokens, frame):
         frame["regions"] = regions
 
 
+# 回指回填的結果(report 的小節依此計數;從框架內容算得,不用知道移動類清單)
+BACKFILL_FILLED = "填"
+BACKFILL_REJECT_MOVING = "拒:目標移動類"
+BACKFILL_REJECT_OWN = "拒:本框已有字面"
+BACKFILL_REJECT_NO_ZONE = "拒:目標區域認不出"
+BACKFILL_STATUSES = (BACKFILL_FILLED, BACKFILL_REJECT_MOVING, BACKFILL_REJECT_OWN, BACKFILL_REJECT_NO_ZONE)
+_VIA_EVENT = "事件"
+
+
+def _target_moving(ctx, frame):
+    """目標框架(回指鏈上經過的每一框)任一是移動類 → True;字面備援沒有框架 → False。"""
+    return any(f["action"] in ctx.move_actions for f in frame.get("_anaphora_targets") or ())
+
+
+def _backfill_column(ctx, frame):
+    return "source" if frame["action"] in ctx.move_actions else "place"
+
+
+def _has_own_literal(frame, column):
+    """本框該欄有自己的字面:推得的不算;非移動類所在轉欄(取自來源/取自で)來的算——那是本框自己的
+    から/で 字面。回填來的字面(選んで破壊する)也是字面。"""
+    if column == "place":
+        return bool(frame.get("place")) or bool(frame.get("transfer"))
+    return bool(frame.get("source")) and "source" not in (frame.get("inferred") or ())
+
+
+def _is_candidate(anaphora):
+    return bool(anaphora and anaphora.get("place") and anaphora.get("via") != _VIA_EVENT)
+
+
 def backfill_from_anaphora(ctx, tokens, actions):
-    """票 09 填。actions 是同一句效果句的全部動作框架(含回指的目標)。"""
+    """票 09:actions 是同一句效果句的全部動作框架。先替每個回指欄補 moving,再對候選框回填。"""
+    for frame in actions:
+        anaphora = frame.get("anaphora")
+        if not anaphora:
+            continue
+        anaphora["moving"] = _target_moving(ctx, frame)
+        if not _is_candidate(anaphora) or anaphora["moving"]:
+            continue
+        column = _backfill_column(ctx, frame)
+        if _has_own_literal(frame, column):
+            continue
+        pairs = zones_of(anaphora["place"])
+        if not pairs:
+            continue
+        regions = frame.setdefault("regions", {})
+        regions[column] = pairs
+        frame["region_backfill"] = column
+
+
+def backfill_status(frame):
+    """一個動作框架的回指回填結果:BACKFILL_STATUSES 之一,不是候選(沒有回指、回指沒有區域、事件類)
+    時 None。從框架內容算得(report.py 讀 frames.json 時用)。"""
+    anaphora = frame.get("anaphora")
+    if not _is_candidate(anaphora):
+        return None
+    if frame.get("region_backfill"):
+        return BACKFILL_FILLED
+    if anaphora.get("moving"):
+        return BACKFILL_REJECT_MOVING
+    if not zones_of(anaphora["place"]):
+        return BACKFILL_REJECT_NO_ZONE
+    return BACKFILL_REJECT_OWN
 
 
 def fill_state(key):
@@ -49,12 +115,47 @@ def fill_state(key):
     def state_of(frame):
         if key not in (frame.get("regions") or {}):
             return None
+        if frame.get("region_backfill") == key:
+            return "回填"
         if key == "place" and frame.get("transfer"):
             return "轉欄"
         if key in (frame.get("inferred") or ()):
             return "推得"
         return "有值"
     return state_of
+
+
+def backfill_state(frame):
+    """填充率的列:回指回填寫進了哪一欄 → 回填。"""
+    return "回填" if frame.get("region_backfill") else None
+
+
+def backfill_section(records):
+    """報告小節「回指回填 填/拒(依原因)」:候選(回指欄有區域、找法不是事件)的動作框架依結果 × 位置
+    計數;填的再分寫進來源(移動類本框)/所在(非移動類本框)。"""
+    from collections import Counter
+    positions = ("代價", "效果", "條件")
+    counts = Counter()
+    columns = Counter()
+    for rec in records:
+        for fr in rec["frames"]:
+            status = backfill_status(fr)
+            if status:
+                counts[(status, fr["position"])] += 1
+                if status == BACKFILL_FILLED:
+                    columns[fr["region_backfill"]] += 1
+    total = sum(counts.values())
+    lines = ["候選是回指欄有區域(目標的所在/來源字面)且找法不是事件的動作框架,共 {:,} 框。填=目標區域的結構化值"
+             "寫進本框的 regions 來源(移動類本框 {:,} 框)/所在(非移動類本框 {:,} 框),region_backfill 記欄名,"
+             "字面欄不動;拒:目標移動類=目標框架(含解到底鏈上的框)是移動類,卡已不在那個區域;拒:本框已有字面="
+             "本框該欄自己有字面(推得的不算、取自來源轉欄的算);拒:目標區域認不出=目標的區域字面過不了區域辨識。"
+             .format(total, columns["source"], columns["place"]), "",
+             "| 結果 | " + " | ".join(positions) + " | 合計 |", "|---|" + "---|" * (len(positions) + 1)]
+    for status in BACKFILL_STATUSES:
+        row = [counts[(status, pos)] for pos in positions]
+        lines.append("| %s | %s | %s |" % (status, " | ".join(format(c, ",") for c in row),
+                                           format(sum(row), ",")))
+    return lines
 
 
 def transfer_state(frame):
@@ -65,4 +166,5 @@ def transfer_state(frame):
 FILL_RATE_ROWS = [("結構化來源 regions.source", fill_state("source")),
                   ("結構化目的 regions.goal", fill_state("goal")),
                   ("結構化所在 regions.place", fill_state("place")),
-                  ("轉欄 取自來源", transfer_state)]
+                  ("轉欄 取自來源", transfer_state),
+                  ("回指回填 region_backfill", backfill_state)]

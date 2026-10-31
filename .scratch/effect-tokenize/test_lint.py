@@ -8,10 +8,13 @@
 - enrich.STEPS 裡的每個步驟模組自己宣告 mark(ctx, tokens, frame)、batch_cells(frame) 與 FILL_RATE_ROWS(retro
   第 9 項:收集端只有 STEPS 一張表;步驟模組一定加了新鍵,新鍵就要有填充率列與批次檔格;REPORT_SECTIONS 可選)。
   步驟模組清單也從 enrich.py 的 STEPS 讀,不另抄。
+- 宣告 BEFORE_ANAPHORA = True 的步驟模組(片語)要排在 STEPS 前段(named-queries 票 02:enrich 依宣告分回指前後
+  兩段跑,STEPS 的順序才仍是執行順序;後段模組夾在前段模組之前就是順序寫錯了)。
 
 只讀原始碼(ast),不執行模組。執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize
 """
 import ast
+import itertools
 import os
 import unittest
 
@@ -36,6 +39,13 @@ def enrich_steps():
 
 ENRICH_STEPS = enrich_steps()
 STEP_MODULES = ("enrich", *ENRICH_STEPS, "closed_values")
+
+
+def declares_true(tree, name):
+    """頂層 `name = True` 的宣告(只讀原始碼)。"""
+    return any(isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant) and node.value.value is True
+               and any(isinstance(t, ast.Name) and t.id == name for t in node.targets)
+               for node in tree.body)
 
 
 def top_level_defs(tree):
@@ -90,6 +100,12 @@ class TestStepModules(unittest.TestCase):
         self.assertEqual({k: v for k, v in missing.items() if v}, {},
                          "enrich.STEPS 的模組要自己定義 mark(ctx, tokens, frame)、batch_cells(frame) 與 FILL_RATE_ROWS,"
                          "enrich 只迭代清單")
+
+    def test_before_anaphora_steps_lead_the_list(self):
+        flags = [declares_true(parse(name), "BEFORE_ANAPHORA") for name in ENRICH_STEPS]
+        leading = len(flags) - len(list(itertools.dropwhile(lambda f: f, flags)))
+        self.assertEqual(flags[leading:], [False] * (len(flags) - leading),
+                         "宣告 BEFORE_ANAPHORA 的模組排 STEPS 前段:enrich 先跑它們、再回指、再跑其餘,STEPS 順序才是執行順序")
 
     def test_position_literals_live_only_in_constraints(self):
         offenders = {name: [line for line, text in string_literals(parse(name)) if text in POSITION_LITERALS]

@@ -46,14 +46,14 @@ Context = namedtuple("Context", "surface word is_noun_like move_actions intransi
 
 # 填充率的狀態欄(報告表的欄序);None 算 空
 FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "回填", "其他")
-FILL_RATE_ROWS = [*phrases.FILL_RATE_ROWS]      # 票 02:片語·對象/主題/主語/目的
+FILL_RATE_ROWS = [*phrases.FILL_RATE_ROWS]      # 票 02:片語·對象/主題/主語/目的;票 04:片語·數量
 FILL_RATE_ROWS += list(regions.FILL_RATE_ROWS)   # 票 05:結構化來源/目的/所在、取自來源;票 09:回指回填
 FILL_RATE_ROWS += [
     ("施事者 agent", agent.fill_state),                                # 票 07
     ("方式", manner.fill_state),                                       # 票 06
     ("否定形", negation.fill_state),                                   # 票 08
 ]
-REPORT_SECTIONS = [*phrases.REPORT_SECTIONS]    # 票 02:其他類的中心詞 top 100
+REPORT_SECTIONS = [*phrases.REPORT_SECTIONS]    # 票 02:其他類的中心詞 top 100;票 04:數量各類框數
 REPORT_SECTIONS += [
     ("施事者各值 × 來源", agent.count_section),                          # 票 07
     ("方式各類框數", manner.count_section),                              # 票 06

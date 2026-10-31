@@ -2864,6 +2864,113 @@ class TestV4AgentEventAndDefault(unittest.TestCase):
         found = agents("①：自分フィールドのモンスター１体を選んで破壊する。この効果は相手ターンでも発動できる。")
         self.assertEqual([a for a in found if a[0] == "発動"], [])
         self.assertEqual(found[:2], [("選ぶ", "自分", "預設", True), ("破壊", "自分", "預設", True)])
+
+
+def quantities(text, key="object", action=None, context=""):
+    """票 04 的接縫輔助:第一個(指定動作的)動作框架該欄的論元片語 → 各段的數量
+    (字面, 數量類, 數字, 取自子句),沒有數量的段是 None;該欄沒有片語時 None。"""
+    frame = next(f for f in actions(text, context) if action is None or f["action"] == action)
+    phrase = (frame.get("phrases") or {}).get(key)
+    if phrase is None:
+        return None
+    return [None if s.get("quantity") is None else
+            (s["quantity"]["text"], s["quantity"]["kind"], s["quantity"]["number"], s["quantity"]["from_clause"])
+            for s in phrase["segments"]]
+
+
+class TestArgumentPhraseQuantity(unittest.TestCase):
+    """frame-args-v4 票 04:每段的數量——段尾的 數字+量詞(+まで/以上)→ 定數/上限/下限 帶數字、全て → 全部、
+    任意の数/好きな数 → 任意;引用量(数まで/同じ数/数の分だけ)只記字面、類空;受事者字面沒有數量而子句裡
+    緊接受事者的 を+數量 取進那段、標取自子句;それぞれ、ターン終了時まで、５つ上がる、修飾語裡的數值不算。
+    只斷言輸出框架 phrases 各段的 quantity。"""
+
+    def test_fixed_count_at_segment_tail(self):
+        self.assertEqual(quantities("①：相手フィールドのモンスター１体を破壊する。"), [("1体", "定數", 1, False)])
+
+    def test_upper_bound_made_is_in_the_literal_already(self):
+        """手札を２枚まで捨てる:框架抽取已把 ２枚まで 併回對象字面,段尾就是上限。"""
+        self.assertEqual(quantities("①：手札を２枚まで捨てる。"), [("2枚まで", "上限", 2, False)])
+
+    def test_lower_bound_ijou(self):
+        self.assertEqual(quantities("①：自分フィールドのモンスター１体以上を除外して発動できる。"),
+                         [("1体以上", "下限", 1, False)])
+
+    def test_subete_at_goal_tail_is_all(self):
+        self.assertEqual(quantities("②：このカードは相手モンスター全てに１回ずつ攻撃できる。", key="goal"),
+                         [("全て", "全部", None, False)])
+
+    def test_each_coordinated_segment_has_its_own_count(self):
+        self.assertEqual(quantities("①：墓地のモンスター１体と手札のカード２枚を除外する。"),
+                         [("1体", "定數", 1, False), ("2枚", "定數", 2, False)])
+
+    def test_numeric_modifier_before_the_head_is_not_a_quantity(self):
+        """カウンターが３つ以上のこのカード:３つ以上 是修飾語裡的數值,不是這段的數量。"""
+        self.assertEqual(quantities("①：カウンターが３つ以上のこのカードを墓地へ送る。"), [None])
+
+    def test_sorezore_is_not_a_quantity(self):
+        self.assertEqual(quantities("①：自分フィールドのモンスターの攻撃力はそれぞれ３００アップする。", key="topic"),
+                         [None])
+
+    def test_other_numbers_in_the_clause_are_not_quantities(self):
+        """ターン終了時まで、５つ上がる:不是 を 後緊接受事者的數量。"""
+        self.assertEqual(quantities("①：このカードの攻撃力はターン終了時まで５００アップする。", key="topic"), [None])
+        self.assertEqual(quantities("①：このカードのレベルは５つ上がる。", key="topic"), [None])
+        self.assertEqual(quantities("①：このカードの攻撃力を５００アップする。"), [None])
+
+    def test_count_right_after_wo_is_taken_from_the_clause(self):
+        """手札を１枚捨てる:受事者字面沒有數量,子句裡緊接 を 的 １枚 取進這段、標取自子句。"""
+        self.assertEqual(quantities("①：手札を１枚捨てる。"), [("1枚", "定數", 1, True)])
+
+    def test_subete_after_wo_is_all_from_the_clause(self):
+        self.assertEqual(quantities("①：相手フィールドのカードを全て破壊する。"), [("全て", "全部", None, True)])
+
+    def test_nin_i_no_kazu_after_wo_is_any(self):
+        self.assertEqual(quantities("①：手札のカードを任意の数選んで捨てる。", action="選ぶ"),
+                         [("任意の数", "任意", None, True)])
+        self.assertEqual(quantities("①：手札を任意の枚数捨てる。"), [("任意の枚数", "任意", None, True)])
+
+    def test_nin_i_no_kazu_after_a_source_phrase_is_still_any(self):
+        """をデッキから任意の数だけ:來源片語夾在中間,數量仍是 任意(字面只記 任意の数)。"""
+        self.assertEqual(quantities("①：「X」モンスターをデッキから任意の数だけ選んで手札に加える。", action="選ぶ"),
+                         [("任意の数", "任意", None, True)])
+
+    def test_reference_quantities_keep_the_literal_with_no_kind(self):
+        """その数まで、同じ数だけ、数の分だけ:引用量只記字面、類空(それぞれ 不進字面)。"""
+        self.assertEqual(quantities("①：墓地のモンスターをその数まで特殊召喚する。"), [("その数まで", None, None, True)])
+        self.assertEqual(quantities("①：相手フィールドのカードをその数の分だけ破壊する。"),
+                         [("その数の分だけ", None, None, True)])
+        self.assertEqual(
+            quantities("①：自分の墓地の「閃刀姫」モンスターと「閃刀」魔法カードをそれぞれ同じ数だけ対象として発動できる。"),
+            [None, ("同じ数だけ", None, None, True)])
+
+    def test_backfilled_object_takes_the_count_from_the_providing_clause(self):
+        """手札を１枚選んで捨てる:捨てる 的對象是回填來的,數量寫在 選ぶ 的子句裡,兩框都帶。"""
+        text = "①：手札を１枚選んで捨てる。"
+        self.assertEqual(quantities(text, action="選ぶ"), [("1枚", "定數", 1, True)])
+        self.assertEqual(quantities(text, action="捨てる"), [("1枚", "定數", 1, True)])
+
+    def test_random_ni_and_sorezore_may_stand_between_wo_and_the_count(self):
+        self.assertEqual(quantities("①：相手の手札をランダムに１枚選んで捨てる。", action="選ぶ"),
+                         [("1枚", "定數", 1, True)])
+        self.assertEqual(
+            quantities("①：自分及び相手の墓地の同じランクのXモンスターをそれぞれ１体以上対象として発動できる。"),
+            [("1体以上", "下限", 1, True)])
+
+    def test_zutsu_is_part_of_the_count_literal(self):
+        self.assertEqual(
+            quantities("②：このカード以外の光・闇属性モンスターを１体ずつ、自分の手札・墓地から除外して発動できる。"),
+            [("1体ずつ", "定數", 1, True)])
+
+    def test_count_in_another_clause_is_not_taken(self):
+        """手札を１枚捨てる。その後、…カードを１枚墓地へ送る:各框只看自己(或提供對象)的子句。"""
+        text = "①：手札を１枚捨てる。その後、デッキからカードを１枚墓地へ送る。"
+        self.assertEqual(quantities(text, action="捨てる"), [("1枚", "定數", 1, True)])
+        self.assertEqual(quantities(text, action="送る"), [("1枚", "定數", 1, False)])
+
+    def test_counter_outside_the_closed_list_is_not_a_quantity(self):
+        self.assertEqual(quantities("①：相手の魔法＆罠ゾーンを１ヵ所指定して発動できる。"), [None])
+
+
 def mannered(text, context=""):
     """框架 → (動作, 方式字面, 方式類, 表示形式值):frame-args-v4 票 06 的方式欄;沒有值時 None。"""
     return [(f["action"], f.get("manner"), f.get("manner_kind"), f.get("manner_value"))

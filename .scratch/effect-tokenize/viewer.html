@@ -579,8 +579,20 @@ function v4Text(v){
   // .inf/.bf 淡色樣式與 title 說明;片語用 details/summary 展開列段、中心詞、中心詞類、修飾語、數量、玩家、區域、指示詞。
   if(!v)return '';
   var parts=[];
+  if(v.regions)parts.push(regionsText(v));
   if(v.negation)parts.push(negationText(v.negation));
   return parts.join(' ');
+}
+function regionsText(v){
+  // 票 05:來源/目的/所在的結構化值 [(玩家,區域)…](字面欄不動);所在是轉欄來的(取自來源/取自で)時那格淡色加點線
+  var labels={source:"來源",goal:"目的",place:"所在"}, out=[];
+  ["source","goal","place"].forEach(function(k){
+    var pairs=v.regions[k]; if(!pairs)return;
+    var text=pairs.map(function(p){return '('+esc(p[0])+','+esc(p[1])+')'}).join('');
+    if(k==="place"&&v.transfer)text='<span class="inf" title="'+esc(v.transfer)+':所在字面空著,結構化所在取'+(v.transfer==="取自來源"?'來源欄的區域與玩家(非移動類的 から 說的是受事者在哪裡)':'で 接的區域')+'">'+text+'</span>';
+    out.push('<span class="muted">'+labels[k]+'</span>'+text);
+  });
+  return out.join(' ');
 }
 function negationText(n){
   // 否定形(票 08):只在極性 否定 的框架上有值——受身=態 受身;不成不受=にならない/受けない;不可能=できない/行えない;一般=其餘 ず/ない/なく

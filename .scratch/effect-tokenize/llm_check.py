@@ -548,8 +548,14 @@ def argument_cells(f):
 
 def v4_cells(f):
     """第四版論元(frame-args-v4)→ ["片語=…", "施事者=…", …];各票填自己的格,推得/轉欄/取自子句
-    標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。否定形(票 08)只在否定框架上有值。"""
+    標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。票 05:結構化來源/目的/所在 (玩家,區域)・…,
+    轉欄來的所在標 (取自來源)/(取自で)。否定形(票 08)只在否定框架上有值。"""
     cells = []
+    regions = f.get("regions") or {}
+    for key, label in (("source", "結構化來源"), ("goal", "結構化目的"), ("place", "結構化所在")):
+        if key in regions:
+            mark = "(%s)" % f["transfer"] if key == "place" and f.get("transfer") else ""
+            cells.append("%s=%s%s" % (label, "・".join("(%s,%s)" % tuple(p) for p in regions[key]), mark))
     if f.get("negation"):
         cells.append("否定形=%s" % f["negation"])
     return cells

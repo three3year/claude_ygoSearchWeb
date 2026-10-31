@@ -45,7 +45,7 @@ import unicodedata
 
 from anaphora import INTRANSITIVE, THIS_CARD, VIA_EVENT
 from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_NON_CARD, MODIFIER_KINDS, OTHER,
-                           PLACE_PLAYER, REGION_GOAL, REGION_PLACE, REGION_SOURCE)
+                           PATIENT_MODES, PLACE_PLAYER, REGION_GOAL, REGION_PLACE, REGION_SOURCE)
 from constraints import KIND_ACTION
 import frames
 from frames import POS_COND, POS_COST, POS_EFFECT
@@ -58,8 +58,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              "..", "..", "script", "web"))
 import vocab  # noqa: E402
 
-SELF = "此卡"
-NONSELF = "非此卡"
+SELF, NONSELF = PATIENT_MODES
 NEITHER = "皆非"       # 統計的鍵;Verdict.mode 以 None 表示
 
 # 判定的理由(建置報告依它分項計數)

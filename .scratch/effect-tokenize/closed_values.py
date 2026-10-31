@@ -32,6 +32,9 @@ AGENTS = ("自分", "相手", "お互い", "此卡", "其他卡")
 AGENT_SOURCES = ("主題", "主語", "事件主語", "によって", "預設")
 # 否定形(票 08)
 NEGATION_FORMS = ("受身", "不成不受", "不可能", "一般")
+# 動作對象(GLOSSARY「動作對象」:此卡/非此卡;皆非不帶——patient.py 判定、框列匯出與述詞字彙都讀這裡;
+# named-queries 票 06 從 patient.py 搬來)
+PATIENT_MODES = ("此卡", "非此卡")
 # 轉欄記號(票 05/06)與回指回填記號(票 09)
 TRANSFERS = ("取自來源", "取自で")
 TRANSFER_FROM_SOURCE, TRANSFER_FROM_DE = TRANSFERS

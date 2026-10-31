@@ -29,8 +29,8 @@
                   head_kind 中心詞類、quantity 數量類(引用量類空時不帶)、modifiers 修飾語類集合
                   (去重、依封閉表序)
     patient_mode  動作對象(此卡/非此卡;皆非不帶),patient.judge_sentence 的 Verdict.mode
-鍵名沿用 frames.json 與 closed_values.py 的拼法;玩家 自分/相手/お互い/相對/無。述詞字彙(欄名、值域)票 06
-開單一來源模組時接 FRAME_KEYS/SEGMENT_KEYS/PHRASE_KEYS。
+鍵名沿用 frames.json 與 closed_values.py 的拼法;玩家 自分/相手/お互い/相對/無。框列鍵名(FRAME_KEYS)、片語鍵
+(PHRASE_KEYS)、段的鍵(SEGMENT_KEYS)定在述詞字彙模組 predicate.py(票 06:述詞欄名 ↔ 匯出鍵一張表、值域),這裡 import。
 
 每個動作框架都要剛好對到一句標記句,否則匯出失敗、不寫檔(問題清單)。
 
@@ -47,21 +47,18 @@ from closed_values import MODIFIER_KINDS, REGION_KEYS  # noqa: E402
 from constraints import KIND_ACTION, POSITIONS  # noqa: E402
 from export_common import (ROOT, Stats, face_hash, load_faces, load_sentences, owner,  # noqa: E402
                            print_stats, text_hash)
+from predicate import FRAME_KEYS, PHRASE_KEYS, SEGMENT_KEYS  # noqa: E402
 
 OUT = os.path.join(ROOT, "data", "action_frames.json")
 
 # 格式版本:欄位語意變就加一(規格「匯出檔要不要格式版本號」(a));索引建置與參考評估器比對不符即失敗
 VERSION = 1
-# 框列的鍵(匯出順序);票 06 的述詞字彙模組接這裡
-FRAME_KEYS = ("action", "position", "polarity", "voice", "negation", "regions", "agent",
-              "manner_kind", "manner_value", "phrases", "patient_mode")
+# 框列的鍵(匯出順序)、片語鍵、段的鍵:拼法定在述詞字彙模組 predicate.py(票 06),這裡只 import
 # 框架上照抄的單值鍵(有值才帶)
 _COPIED_KEYS = ("action", "position", "polarity", "voice", "negation", "agent", "manner_kind", "manner_value")
-PHRASE_KEYS = ("patient", "goal")
 PATIENT_PHRASE, GOAL_PHRASE = PHRASE_KEYS
 # 受事者片語取哪一欄:對象 → 主語 → 主題 第一個有片語的(與舊關鍵詞類條件的取法同)
 PATIENT_SOURCES = ("object", "subject", "topic")
-SEGMENT_KEYS = ("head", "head_kind", "quantity", "modifiers")
 # 目錄列的欄(票 08 填:名、路徑、述詞或空、三個位置的張數、卡集合雜湊;本票目錄是空清單)
 CATALOG_KEYS = ("name", "path", "predicate", "cards", "hash")
 

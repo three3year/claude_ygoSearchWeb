@@ -71,6 +71,7 @@ import action_lemmas  # noqa: E402
 import anaphora  # noqa: E402
 import categories  # noqa: E402
 import enrich  # noqa: E402
+import frames  # noqa: E402
 from closed_values import TRANSFER_FROM_SOURCE  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -473,9 +474,11 @@ def anaphora_label(f):
     if target:
         names_self = anaphora.THIS_CARD in target["text"] and anaphora.THIS_CARD + "以外" not in target["text"]
         return "並列含此卡" if names_self else ANAPHORA_VIA[target["via"]]
-    if anaphora.modifier(literal):
+    # named-queries 票 03:回指讀片語的段;沒有回指欄時由段判是修飾語(指示詞只修飾另一張卡)還是留空
+    found = anaphora.field_reference(frames.context(), f, anaphora.patient_key(f))
+    if found == anaphora.MODIFIER:
         return "修飾語"
-    return "留空" if anaphora.reference(literal) else None
+    return "留空" if found else None
 
 
 def anaphora_stratum(records):

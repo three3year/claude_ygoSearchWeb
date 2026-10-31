@@ -38,12 +38,11 @@ pop 掉,不進 frames.json);字面備援的目標不是框架,清單空。
   段的數量與段數;子句裡的數量讀段的 取自子句 數量。
 封閉表在模組頂,一份;判定讀表。沒有正則式。
 
-過渡期的字面 API(票 04 交件前的 patient.py 與 llm_check 仍傳字面進來):is_demonstrative(text)、modifier(text)、
-reference(text)、only_this_card(text)——前三個把字面切成段再走同一套判定(用預設抽取器的分詞),票 04 改讀片語後
-可刪。
+對外的介面:resolve(ctx, tokens, frames, phrases)(frames.py 呼叫)、field_reference(ctx, frame, key) → Reference |
+MODIFIER | None(llm_check 的回指分層用;ctx 從 frames.context() 拿)、is_demonstrative(text)(切區域後的字面是不是指示詞
+起頭)、only_this_card(text)、patient_key(frame);patient.py 只讀常數 THIS_CARD/INTRANSITIVE/VIA_EVENT。
 """
 from collections import namedtuple
-from functools import lru_cache
 
 import places
 import phrases
@@ -71,11 +70,6 @@ MONSTER_HEAD_SUFFIXES = ("モンスター", "モンスターカード", "トー�
 CARD_SUFFIX = "カード"                                     # 魔法カード 的 魔法 是卡種限定語
 MONSTER_COUNTER, CARD_COUNTER = "体", "枚"                 # 只剩數量的段(その2体)與候選的量詞 → 怪獸/卡
 MATERIAL = "素材"                                          # 融合素材 不算 融合;中心詞是素材時卡片子類型限定語對不上
-VALUE_HEADS = ("攻撃力", "守備力", "レベル", "ランク", "Pスケール", "属性", "種族", "カード名",
-               "表示形式", "コントロール", "位置")         # (過渡:patient.py 讀;回指讀中心詞類 屬性)
-NOT_CARD_HEADS = ("ダメージ", "LP", "ライフポイント", "カウンター", "サイコロ", "コイントス",
-                  "フェイズ", "ダメージ計算", "召喚条件", "数値", "数", "ターン", "目", "枚数",
-                  "合計", "種類")                          # (過渡:patient.py 讀;回指讀中心詞類 非卡/其他)
 # 事件類:中心詞(或字面片語的事件名詞)→ 事件組;召喚 看尾字(特殊召喚、S召喚)
 EVENT_HEADS = {"発動": "発動", "効果": "発動", "攻撃": "攻撃", "宣言": "攻撃"}
 EVENT_SUMMON, SUMMON_SUFFIX = "召喚", "召喚"
@@ -128,7 +122,9 @@ def _clean(text):
     return "".join((text or "").split())
 
 
-def _starts_demonstrative(text):
+def is_demonstrative(text):
+    """字面(切區域後的受事者、段、字面片語)是不是指示詞起頭。"""
+    text = _clean(text)
     return text in DEMONSTRATIVE_BARE or text.startswith(DEMONSTRATIVE_PREFIXES)
 
 
@@ -185,11 +181,11 @@ def _segments(ctx, text):
     return [phrases.segment(ctx, chunk) for chunk in phrases.split(ctx, run)] if run else []
 
 
-def _field_reference(ctx, frame, key):
+def field_reference(ctx, frame, key):
     """框架欄位 → Reference | MODIFIER | None:切區域後的字面(frame[key])要以指示詞起頭(その墓地のモンスター 切成
     所在 その墓地 與對象 モンスター 後,對象不是指示詞)。"""
     literal = _clean(frame.get(key))
-    if not _starts_demonstrative(literal):
+    if not is_demonstrative(literal):
         return None
     return reference_of(ctx, _field_segments(ctx, frame, key), literal)
 
@@ -202,7 +198,7 @@ def _field_segments(ctx, frame, key):
         return _segments(ctx, literal)
     segments = found["segments"]
     # 段是切區域前的字面(墓地のそのモンスター2体);指示詞在切後的字面開頭時照切後的字面切段
-    if segments and _starts_demonstrative(literal) and not _starts_demonstrative(segments[0]["text"]):
+    if segments and is_demonstrative(literal) and not is_demonstrative(segments[0]["text"]):
         return _segments(ctx, literal)
     return segments
 
@@ -263,7 +259,7 @@ def reference_of(ctx, segments, literal=None):
         return None
     seg = segments[0]
     text = seg["text"]
-    if not _starts_demonstrative(text):
+    if not is_demonstrative(text):
         return None
     if literal and any(mark in literal for mark in COMPARE_MARKS):
         return MODIFIER      # そのモンスターと同名のXモンスター、そのカードと同じ種類の手札:比較的對象
@@ -273,7 +269,7 @@ def reference_of(ctx, segments, literal=None):
         if segments[-1]["head_kind"] not in (HEAD_CARD, HEAD_ATTRIBUTE, HEAD_DEMONSTRATIVE):
             return None      # その攻撃モンスターと対象のモンスターの攻撃力の差分のダメージ:受事者整個不是卡
         for later in segments[1:]:
-            if _starts_demonstrative(later["text"]):
+            if is_demonstrative(later["text"]):
                 continue         # そのモンスター及びその同名モンスター:後段自己是另一個指示詞,不影響第一段
             # 被 ・/並列 切到後段的定語子句(…攻撃力を持つ「X」1体):指示詞只修飾另一張卡
             if any(_is_clause(t) for t in _other_modifiers(later)):
@@ -584,7 +580,7 @@ def _field_candidates(ctx, earlier):
                 continue
             literal = _clean(frame[key])
             segments = _field_segments(ctx, frame, key)
-            ref = _field_reference(ctx, frame, key)
+            ref = field_reference(ctx, frame, key)
             if ref is not None and ref != MODIFIER:
                 resolved = frame.get("anaphora")
                 if key == patient_key(frame) and resolved:
@@ -593,7 +589,7 @@ def _field_candidates(ctx, earlier):
                                      lambda r=resolved, f=frame: dict(
                                          r, _targets=[f] + list(f.get("_anaphora_targets") or [])))
                 continue
-            if ref is None and _starts_demonstrative(literal):
+            if ref is None and is_demonstrative(literal):
                 continue          # 指示詞但不是卡(その数)、另一張實體卡:不是候選
             yield _candidate(ctx, literal, segments, (_region(frame), frame.get("subject")), clause,
                              lambda f=frame, k=key, v=literal, s=segments: _value_from_field(ctx, f, k, v, s))
@@ -636,7 +632,7 @@ def _value_from_phrase(ctx, phrase, segments):
 def _phrase_candidates(ctx, phrase_list, segmented):
     for phrase in reversed(phrase_list):
         segments = segmented[phrase]
-        if not segments or _starts_demonstrative(segments[0]["text"]):
+        if not segments or is_demonstrative(segments[0]["text"]):
             continue
         yield _candidate(ctx, phrase.text, segments, (), "",
                          lambda p=phrase, s=segments: _value_from_phrase(ctx, p, s))
@@ -744,7 +740,7 @@ def _event_target(ctx, tokens, ref, earlier, phrase_list):
                             events[0])
     # 字面:相手が発動した〜 的主人是相手(activator),否則片語裡「Xの」的 X
     for phrase in reversed(phrase_list):
-        if _starts_demonstrative(phrase.text):
+        if is_demonstrative(phrase.text):
             continue
         found = _event_phrase(ctx, phrase)
         if not found or found[0] not in groups:
@@ -791,7 +787,7 @@ def resolve(ctx, tokens, frames, phrase_list):
         key = patient_key(frame)
         if not frame.get(key):
             continue
-        ref = _field_reference(ctx, frame, key)
+        ref = field_reference(ctx, frame, key)
         if ref is None or ref == MODIFIER:
             continue
         option = frame.get("option")
@@ -818,36 +814,3 @@ def resolve(ctx, tokens, frames, phrase_list):
                 found["player"] = own
             frame["_anaphora_targets"] = found.pop("_targets", [])
             frame["anaphora"] = found
-
-
-# ── 過渡期的字面 API(票 04 交件前的 patient.py 與 llm_check 讀字面;票 04 改讀片語後可刪)──
-_DEFAULT_CTX = None
-
-
-def _default_ctx():
-    """預設抽取器的 Context(frames.py 在模組載入後才 import 得到;框架抽取裡回指由 frames 傳 ctx 進來)。"""
-    global _DEFAULT_CTX
-    if _DEFAULT_CTX is None:
-        import frames
-        _DEFAULT_CTX = frames.default_extractor()._context()
-    return _DEFAULT_CTX
-
-
-def is_demonstrative(text):
-    return _starts_demonstrative(_clean(text))
-
-
-@lru_cache(maxsize=None)
-def _classify_text(text):
-    return reference_of(_default_ctx(), _segments(_default_ctx(), text), text)
-
-
-def modifier(text):
-    """受事者字面:指示詞只修飾另一張卡 → True。"""
-    return _classify_text(_clean(text)) == MODIFIER
-
-
-def reference(text):
-    """受事者字面 → Reference;不是回指時 None。"""
-    found = _classify_text(_clean(text))
-    return None if found == MODIFIER else found

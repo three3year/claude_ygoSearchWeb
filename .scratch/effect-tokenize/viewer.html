@@ -607,7 +607,16 @@ function phrasesHtml(p){
 }
 function segmentExtra(s){
   // 票 03(修飾語)、票 04(數量)各加自己的項目
-  return [];
+  return [].concat(quantityHtml(s));
+}
+function quantityHtml(s){
+  // 票 04:段的數量 字面(類 數字);引用量(数まで/同じ数/数の分だけ)類空、記 引用量;取自子句(受事者字面沒有數量、
+  // 子句裡緊接受事者的 を+數量)淡色加點線
+  var q=s.quantity; if(!q)return [];
+  var kind=q.kind===null?'引用量':q.kind+(q.number!==null&&q.number!==undefined?' '+q.number:'');
+  var t='數量 '+esc(q.text)+'<span class="muted">('+esc(kind)+')</span>';
+  if(q.from_clause)t='<span class="inf" title="取自子句:受事者字面沒有數量,子句裡緊接受事者的 を+數量(手札を１枚捨てる、カードを全て破壊する)取進這段">'+t+'</span>';
+  return [t];
 }
 function regionsText(v){
   // 票 05:來源/目的/所在的結構化值 [(玩家,區域)…](字面欄不動);所在是轉欄來的(取自來源/取自で)時那格淡色加點線;

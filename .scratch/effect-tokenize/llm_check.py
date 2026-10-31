@@ -590,7 +590,16 @@ def segment_bits(seg):
         bits.append("玩家 %s" % seg["player"])
     if seg.get("zones"):
         bits.append("區域 %s" % "・".join(seg["zones"]))
-    return bits
+    return bits + quantity_bits(seg)
+
+
+def quantity_bits(seg):
+    """票 04:「數量 2枚まで(上限 2)」;引用量類空記 (引用量);取自子句的標 (取自子句)。"""
+    q = seg.get("quantity")
+    if not q:
+        return []
+    kind = "引用量" if q["kind"] is None else q["kind"] + ("" if q["number"] is None else " %d" % q["number"])
+    return ["數量 %s(%s)%s" % (q["text"], kind, "(取自子句)" if q["from_clause"] else "")]
 
 
 def card_block(cid, cards, recs, frames_by_key):

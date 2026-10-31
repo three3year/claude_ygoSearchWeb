@@ -37,7 +37,7 @@ from collections import Counter, defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import places  # noqa: E402
 from closed_values import (HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_NON_CARD, OTHER,  # noqa: E402
-                           PHRASE_KEYS, PLACE_PLAYER, head_kind)
+                           PHRASE_KEYS, PLACE_PLAYER, QUANTITY_KINDS, head_kind)
 from report import token_kind  # noqa: E402
 
 PHRASE_LABELS = (("object", "對象"), ("topic", "主題"), ("subject", "主語"), ("goal", "目的"))
@@ -55,6 +55,16 @@ LINK_PARTICLES = {"p:の", "p:が"}                            # 並列詞之後
 PAREN_OPEN, PAREN_CLOSE = "（", "）"
 SKIP_IN_CORE = {"、", PAREN_OPEN, PAREN_CLOSE, "・"}
 COUNT_HEADS = {"数", "合計"}                                 # 中心詞是數:區域修飾的是數,不是受事者
+# 數量(票 04)
+Q_FIXED, Q_UPPER, Q_LOWER, Q_ANY, Q_ALL = QUANTITY_KINDS
+QUANTITY_COUNTERS = {"枚", "体", "つ", "種類", "個", "組", "回"}      # 規格列的量詞;ヵ所/度 不算
+QUANTITY_COMPARE_KIND = {"以上": Q_LOWER, "以下": Q_UPPER}            # N体以上 下限、N体以下 上限
+QUANTITY_ANY_PHRASES = (("任意", "の", "数"), ("任意", "の", "枚", "数"), ("任意", "の", "個", "数"),
+                        ("好き", "な", "数"))                         # 任意の数/任意の枚数/好きな数(字面比)
+QUANTITY_TAIL_PARTICLES = {"p:まで", "p:の", "p:ずつ"}                  # 段尾數量裡會出現的助詞
+CLAUSE_QUANTITY_SKIP = (("ランダム", "に"), ("それぞれ",))             # を 與數量之間可夾的副詞(不進字面)
+CLAUSE_QUANTITY_STOP = {"。", "、", "p:を"}                            # 引用量往後找的邊界
+CLAUSE_QUANTITY_REACH = 12                                             # 引用量最多往後看幾格
 
 
 def structure(ctx, tokens, frame):
@@ -69,15 +79,23 @@ def structure(ctx, tokens, frame):
             continue
         if surfaces is None:
             surfaces = [ctx.surface(t) for t in tokens]
-        run = locate(ctx, tokens, surfaces, raw.get(key) or text, frame.get("span"))
-        phrases[key] = {"text": text,
-                        "segments": [segment(ctx, chunk) for chunk in split(ctx, run)]}
+        span = frame.get("span")
+        found = locate(ctx, tokens, surfaces, raw.get(key) or text, span)
+        run = tokens[found[0]:found[1]] if found else ctx.tokenize(raw.get(key) or text)
+        segments = [segment(ctx, chunk) for chunk in split(ctx, run)]
+        if key == "object" and found and not any(seg["quantity"] for seg in segments):
+            quantity = clause_quantity(ctx, tokens, surfaces, found[1], span,
+                                       "object" in (frame.get("backfill") or ()))
+            if quantity:
+                segments[-1]["quantity"] = quantity
+        phrases[key] = {"text": text, "segments": segments}
     if phrases:
         frame["phrases"] = phrases
 
 
 def locate(ctx, tokens, surfaces, literal, span):
-    """字面 → 句子詞序列裡字面相連的一段(先子句範圍、再整句);對不回時重新分詞。"""
+    """字面 → 句子詞序列裡字面相連的一段的位置 (起, 迄)(先子句範圍、再整句);對不回時 None
+    (呼叫端重新分詞)。"""
     windows = ([(span[0], span[1])] if span else []) + [(0, len(tokens))]
     for lo, hi in windows:
         hi = min(hi, len(tokens))
@@ -88,10 +106,10 @@ def locate(ctx, tokens, surfaces, literal, span):
             for j in range(i, hi):
                 acc += surfaces[j]
                 if acc == literal:
-                    return tokens[i:j + 1]
+                    return i, j + 1
                 if not literal.startswith(acc):
                     break
-    return ctx.tokenize(literal)
+    return None
 
 
 # ── 切段 ──
@@ -164,7 +182,7 @@ def segment(ctx, chunk):
             kind = HEAD_DEMONSTRATIVE if any(token_kind(t) == "counter" for t in tail) else HEAD_NON_CARD
     player, zones = _place_of(ctx, chunk, text, head)
     return {"text": text, "head": head, "head_kind": kind, "demonstrative": _demonstrative(ctx, chunk),
-            "player": player, "zones": zones}
+            "player": player, "zones": zones, "quantity": _tail_quantity(ctx, chunk, core)}
 
 
 def _is_quantity_tail(ctx, core):
@@ -269,6 +287,113 @@ def _place_of(ctx, chunk, text, head):
     return (PLACE_PLAYER[player] if player else None), list(zones)
 
 
+# ── 數量(票 04)──
+def _quantity(text, kind, number, from_clause=False):
+    return {"text": text, "kind": kind, "number": number, "from_clause": from_clause}
+
+
+def _number(token):
+    value = token.split(":", 1)[1]
+    return int(value) if value.isdigit() else None
+
+
+def match_quantity(ctx, run, i):
+    """run[i:] 起頭是不是一個數量 → (Quantity, 結束位置) 或 None。數字+量詞(+まで → 上限;+ずつ 一併記進字面)、
+    數量約束格 N体以上/以下(下限/上限)、範圍 ２～５体(只記字面、類空)、全て(全部)、任意の数/好きな数(任意)。"""
+    token = run[i]
+    kind = token_kind(token)
+    if kind == "num":
+        if i + 1 < len(run) and token_kind(run[i + 1]) == "counter" and run[i + 1][2:] in QUANTITY_COUNTERS:
+            text, end, qkind = ctx.surface(token) + run[i + 1][2:], i + 2, Q_FIXED
+            if end < len(run) and run[end] == "p:まで":
+                text, end, qkind = text + "まで", end + 1, Q_UPPER
+            elif end < len(run) and run[end] == "p:ずつ":
+                text, end = text + "ずつ", end + 1
+            return _quantity(text, qkind, _number(token)), end
+        return None
+    if kind == "quant":
+        _, wid, value, counter, compare = token.split(":", 4)
+        if wid == "" and counter in QUANTITY_COUNTERS:
+            return _quantity(ctx.surface(token), QUANTITY_COMPARE_KIND.get(compare),
+                             int(value) if value.isdigit() else None), i + 1
+        return None
+    if kind == "range":
+        return (_quantity(ctx.surface(token), None, None), i + 1) if token.split(":")[3] in QUANTITY_COUNTERS else None
+    if kind == "lex" and ctx.word(token) == "全て":
+        return _quantity("全て", Q_ALL, None), i + 1
+    for pattern in QUANTITY_ANY_PHRASES:
+        n = len(pattern)
+        if i + n <= len(run) and all(ctx.surface(run[i + k]) == p for k, p in enumerate(pattern)):
+            return _quantity("".join(pattern), Q_ANY, None), i + n
+    return None
+
+
+def _tail_quantity(ctx, chunk, core):
+    """段尾(中心詞之後)的數量:去掉括號註記、讀點與無關助詞後,整個尾巴要剛好是一個數量。"""
+    tail = []
+    depth = 0
+    for t in chunk[len(core):]:
+        if t == PAREN_OPEN:
+            depth += 1
+        elif t == PAREN_CLOSE:
+            depth = max(0, depth - 1)
+        elif depth == 0 and t not in SKIP_IN_CORE and (token_kind(t) != "particle" or t in QUANTITY_TAIL_PARTICLES):
+            tail.append(t)
+    if not tail:
+        return None
+    found = match_quantity(ctx, tail, 0)
+    return found[0] if found and found[1] == len(tail) else None
+
+
+def clause_quantity(ctx, tokens, surfaces, end, span, backfilled):
+    """受事者字面沒有數量時,子句裡緊接受事者的 を+數量(手札を１枚捨てる)→ Quantity(from_clause),沒有 None。
+    を 要在本框的子句範圍內;對象是回填來的時 を 在提供它的前面子句(子句範圍之前)。を 與數量之間可夾
+    ランダムに/それぞれ。數量不是定形時往後找引用量(…の数まで、同じ数だけ、…の数の分だけ):只記字面、類空。"""
+    if end >= len(tokens) or tokens[end] != "p:を" or not span:
+        return None
+    if span[0] <= end < span[1]:
+        bound = min(span[1], len(tokens))
+    elif backfilled and end < span[0]:
+        bound = span[0]
+    else:
+        return None
+    j = end + 1
+    for prefix in CLAUSE_QUANTITY_SKIP:
+        n = len(prefix)
+        if j + n <= bound and all(surfaces[j + k] == p for k, p in enumerate(prefix)):
+            j += n
+    if j >= bound:
+        return None
+    found = match_quantity(ctx, tokens, j)
+    if found:
+        return dict(found[0], from_clause=True)
+    return _later_quantity(ctx, tokens, surfaces, j, min(bound, j + CLAUSE_QUANTITY_REACH))
+
+
+def _later_quantity(ctx, tokens, surfaces, start, bound):
+    """を 後不是定形數量時往後找:任意の数/好きな数 隔著來源片語(をEXデッキから任意の数だけ)仍是 任意;
+    引用量(…の数まで、同じ数(だけ)、…の数の分だけ、…の数だけ)只記 を 後到它為止的字面、類空。沒有 None。"""
+    for k in range(start, bound):
+        if tokens[k] in CLAUSE_QUANTITY_STOP:
+            return None
+        found = match_quantity(ctx, tokens, k)
+        if found and found[0]["kind"] == Q_ANY:
+            return dict(found[0], from_clause=True)
+        if _base(ctx, tokens[k]) != "数":
+            continue
+        rest = tokens[k + 1:bound]
+        if rest[:1] == ["p:まで"] or rest[:1] == ["p:だけ"]:
+            end = k + 2
+        elif rest[:1] == ["p:の"] and len(rest) > 2 and ctx.word(rest[1]) == "分" and rest[2] == "p:だけ":
+            end = k + 4
+        elif k > start and ctx.word(tokens[k - 1]) == "同じ":
+            end = k + 1
+        else:
+            continue
+        return _quantity("".join(surfaces[start:end]), None, None, True)
+    return None
+
+
 # ── 報告 ──
 def _fill_state(key):
     def state(frame):
@@ -281,7 +406,49 @@ def _fill_state(key):
     return state
 
 
+def _segment_quantities(frame):
+    for phrase in (frame.get("phrases") or {}).values():
+        for seg in phrase["segments"]:
+            if seg.get("quantity"):
+                yield seg["quantity"]
+
+
+def quantity_fill_state(frame):
+    """填充率的列「片語·數量」(票 04):任一段的數量取自子句 → 取自子句;否則有數量 → 有值;沒有 None。"""
+    found = list(_segment_quantities(frame))
+    if not found:
+        return None
+    return "取自子句" if any(q["from_clause"] for q in found) else "有值"
+
+
 FILL_RATE_ROWS = [("片語·" + label, _fill_state(key)) for key, label in PHRASE_LABELS]
+FILL_RATE_ROWS.append(("片語·數量", quantity_fill_state))
+
+QUANTITY_REFERENCE_LABEL = "引用量(類空)"
+
+
+def quantity_section(records):
+    """「數量各類框數」(票 04):帶各類數量的動作框架數,分 段尾字面/取自子句,另列位置分佈。"""
+    counts, positions = Counter(), Counter()
+    for rec in records:
+        for fr in rec["frames"]:
+            seen = set()
+            for q in _segment_quantities(fr):
+                seen.add((q["kind"] or QUANTITY_REFERENCE_LABEL, q["from_clause"]))
+            for kind, from_clause in seen:
+                counts[(kind, from_clause)] += 1
+            if seen:
+                positions[fr["position"]] += 1
+    total = sum(positions.values())
+    lines = ["帶數量的動作框架 {:,}(代價 {:,}、效果 {:,}、條件 {:,});一框同時帶幾類時各類都計。段尾字面=數量寫在受事者"
+             "字面的段尾(モンスター１体、２枚まで、全て);取自子句=受事者字面沒有數量、子句裡緊接受事者的 を+數量"
+             "(手札を１枚捨てる、カードを全て破壊する、任意の数);引用量(数まで/同じ数/数の分だけ)只記字面、類空。"
+             .format(total, positions["代價"], positions["效果"], positions["條件"]), "",
+             "| 數量類 | 段尾字面 | 取自子句 | 合計 |", "|---|---:|---:|---:|"]
+    for kind in (*QUANTITY_KINDS, QUANTITY_REFERENCE_LABEL):
+        tail, clause = counts[(kind, False)], counts[(kind, True)]
+        lines.append("| %s | %s | %s | %s |" % (kind, format(tail, ","), format(clause, ","), format(tail + clause, ",")))
+    return lines
 
 
 def other_heads_section(records):
@@ -310,4 +477,4 @@ def other_heads_section(records):
     return lines
 
 
-REPORT_SECTIONS = [("其他類的中心詞 top 100", other_heads_section)]
+REPORT_SECTIONS = [("其他類的中心詞 top 100", other_heads_section), ("數量各類框數", quantity_section)]

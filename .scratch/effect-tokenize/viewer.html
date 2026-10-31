@@ -585,8 +585,16 @@ function v4Text(v){
   var parts=[];
   if(v.phrases)parts.push(phrasesHtml(v.phrases));
   if(v.regions)parts.push(regionsText(v));
+  if(v.agent)parts.push(agentText(v));
+  if(v.manner)parts.push(mannerText(v));
   if(v.negation)parts.push(negationText(v.negation));
   return parts.join(' ');
+}
+function agentText(v){
+  // 施事者(票 07):值(來源);預設補的(agent_inferred)淡色加點線——代價/效果位、他動、帶對象、原文沒寫誰做 → 自分
+  var text=esc(v.agent)+'<span class="muted">('+esc(v.agent_source)+')</span>';
+  if(v.agent_inferred)text='<span class="inf" title="推得:原文沒寫誰做(沒有主題/主語、によって、事件主語),代價/效果位的他動框架預設發動者 自分">'+text+'</span>';
+  return '<span class="muted" title="施事者:誰做這個動作。來源 主題/主語=受事者位的字面(玩家、このカード、卡片片語);によって=受身(或沒對象)框架的 によって 片語;事件主語=效果類事件框架的回指主人;預設=規則補的 自分">施事者</span> '+text;
 }
 var PHRASE_LABELS=[["object","對象"],["topic","主題"],["subject","主語"],["goal","目的"]];
 function phrasesHtml(p){
@@ -636,6 +644,13 @@ function regionsText(v){
     out.push('<span class="muted">'+label+'</span>'+text);
   });
   return out.join(' ');
+}
+function mannerText(v){
+  // 方式(票 06):述語前同一子句內的 で 片語字面 + 方式類(手段:效果/手段:戰鬥/手段:方法/表示形式(帶值)/視同/順序/其他);
+  // 其他 類淡色斜體(封閉表沒有合值,只留字面);で 接區域不在這裡,看結構化所在的 取自で
+  var cls=v.manner_kind==="其他"?' class="bf"':'';
+  var title='方式:述語前同一子句內的 で 片語(含 で、不含 は/も 後綴),一框至多一個、取離述語最近的;方式類='+v.manner_kind+(v.manner_kind==="其他"?'(封閉表沒有對應的類:なしで、ままで、戦闘・効果で 這類兩類並列,只留字面)':'')+(v.manner_value?';表示形式值='+v.manner_value:'')+'。定語裡的 で、繫詞 で 不收;で 接區域進結構化所在、標 取自で';
+  return '<span class="muted">方式</span><span'+cls+' title="'+esc(title)+'">'+esc(v.manner)+' '+esc(v.manner_kind)+(v.manner_value?'='+esc(v.manner_value):'')+'</span>';
 }
 function negationText(n){
   // 否定形(票 08):只在極性 否定 的框架上有值——受身=態 受身;不成不受=にならない/受けない;不可能=できない/行えない;一般=其餘 ず/ない/なく

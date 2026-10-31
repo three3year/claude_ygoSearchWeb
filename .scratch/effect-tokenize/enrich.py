@@ -19,8 +19,10 @@ Context 欄位:
     move_actions / intransitive_moves                  移動類動作與其中的自動詞(frames.MOVE_ACTIONS…)
     patient_coordinators                               受事者並列詞(frames.PATIENT_COORDINATORS;切段判準)
     pol_neg                                            極性 否定 的值(frames.POL_NEG)
-    coordinates(chunk, k) / is_predicate(token)        FrameExtractor 的並列分隔判準(と同じ 的 と 不算)與
-                                                       片語裡的定語述語判準(票 02 切段、讀區域用)
+    coordinates(chunk, k)                              FrameExtractor 的並列分隔判準(と同じ 的 と 不算;票 02 切段用)
+    is_predicate(token)                                定語述語判準(FrameExtractor._is_predicate:動詞/形容詞/
+                                                       する家族/補助/否定/活用尾;票 02 切段、讀區域用,票 06 用來
+                                                       認定語子句裡的 で)
     tokenize(text)                                     分詞器(票 02:字面對不回句子的詞序列時的備援)
 
 報告的 registry(report.py 讀):
@@ -47,10 +49,14 @@ FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "回填", "其他")
 FILL_RATE_ROWS = [*phrases.FILL_RATE_ROWS]      # 票 02:片語·對象/主題/主語/目的
 FILL_RATE_ROWS += list(regions.FILL_RATE_ROWS)   # 票 05:結構化來源/目的/所在、取自來源;票 09:回指回填
 FILL_RATE_ROWS += [
+    ("施事者 agent", agent.fill_state),                                # 票 07
+    ("方式", manner.fill_state),                                       # 票 06
     ("否定形", negation.fill_state),                                   # 票 08
 ]
 REPORT_SECTIONS = [*phrases.REPORT_SECTIONS]    # 票 02:其他類的中心詞 top 100
 REPORT_SECTIONS += [
+    ("施事者各值 × 來源", agent.count_section),                          # 票 07
+    ("方式各類框數", manner.count_section),                              # 票 06
     ("否定形各值框數", negation.count_section),                          # 票 08
     ("回指回填 填/拒(依原因)", regions.backfill_section),                # 票 09
 ]

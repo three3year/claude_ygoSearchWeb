@@ -2871,5 +2871,276 @@ class TestNegationForm(unittest.TestCase):
                          ("対象にする", "否定", "不成不受"))
 
 
+def agents(text, context=""):
+    """框架 → (動作, 施事者, 來源, 推得旗標):frame-args-v4 票 07 的施事者欄;沒有值時 None/None/False。"""
+    return [(f["action"], f.get("agent"), f.get("agent_source"), bool(f.get("agent_inferred")))
+            for f in actions(text, context)]
+
+
+class TestV4Agent(unittest.TestCase):
+    """frame-args-v4 票 07:施事者(自分/相手/お互い/此卡/其他卡)與來源(主題/主語/事件主語/によって/預設)。
+    (1)主題或主語是玩家 → 該玩家(受身除外);是 このカード(含帶定語)或卡片片語 → 此卡/其他卡,只在框架
+    自己帶對象時(受身、自動、沒對象的 このカード 是受事者)。"""
+
+    def test_topic_player_is_agent(self):
+        """自分はデッキから１枚ドローする:沒對象也記——ドロー 的執行者由主題給。"""
+        self.assertEqual(agents("①：自分はデッキから１枚ドローする。"), [("ドロー", "自分", "主題", False)])
+
+    def test_topic_opponent_and_both(self):
+        self.assertEqual(agents("①：相手は手札を１枚捨てる。"), [("捨てる", "相手", "主題", False)])
+        self.assertEqual(agents("①：お互いはデッキから１枚ドローする。"), [("ドロー", "お互い", "主題", False)])
+
+    def test_subject_player_in_condition(self):
+        """相手がモンスターを特殊召喚した時:條件框架的主語是玩家 → 相手(主語)。"""
+        self.assertEqual(agents("①：相手がモンスターを特殊召喚した時に発動できる。")[0],
+                         ("特殊召喚", "相手", "主語", False))
+
+    def test_this_card_with_object_is_agent(self):
+        self.assertEqual(agents("①：このカードが相手モンスターを攻撃した場合に発動できる。")[0],
+                         ("攻撃", "此卡", "主語", False))
+        self.assertEqual(agents("①：このカードは相手フィールドのモンスター１体を破壊する。"),
+                         [("破壊", "此卡", "主題", False)])
+
+    def test_this_card_with_modifier_is_agent(self):
+        """墓地のこのカード、S召喚したこのカード:帶定語的此卡仍是此卡。"""
+        self.assertEqual(agents("①：S召喚したこのカードが相手モンスターを攻撃した場合に発動できる。")[0],
+                         ("攻撃", "此卡", "主語", False))
+
+    def test_passive_this_card_is_not_agent(self):
+        """このカードは破壊されない:受身的主題是承受方,沒有施事者。"""
+        self.assertEqual(agents("①：このカードは戦闘では破壊されない。"), [("破壊", None, None, False)])
+
+    def test_this_card_without_object_is_patient(self):
+        """墓地のこのカードは手札に戻す事ができる:他動但沒對象,主題是受事者。"""
+        self.assertEqual(agents("①：墓地のこのカードは手札に戻す事ができる。"), [("戻す", None, None, False)])
+
+    def test_card_phrase_is_other_card(self):
+        """主語是卡片片語(中心詞類 卡)且帶對象 → 其他卡。"""
+        self.assertEqual(agents("①：相手モンスターがこのカードを攻撃した場合に発動できる。")[0],
+                         ("攻撃", "其他卡", "主語", False))
+        self.assertEqual(agents("①：装備モンスターは相手モンスター１体を破壊する。"),
+                         [("破壊", "其他卡", "主題", False)])
+
+    def test_player_noun_topic(self):
+        """お互いのプレイヤーは…:玩家名詞帶玩家 → 該玩家;分不出哪個玩家的(ターンプレイヤー)留空、不補預設。"""
+        self.assertEqual(agents("①：お互いのプレイヤーはデッキから１枚ドローする。"),
+                         [("ドロー", "お互い", "主題", False)])
+        self.assertEqual(agents("①：ターンプレイヤーは手札を１枚捨てる。"), [("捨てる", None, None, False)])
+
+    def test_continued_topic_is_used(self):
+        """延續來的主題(回填 topic)照用:自分は…ドローし、その後手札を１枚捨てる。"""
+        self.assertEqual(agents("①：自分はデッキから２枚ドローし、その後手札を１枚捨てる。"),
+                         [("ドロー", "自分", "主題", False), ("捨てる", "自分", "主題", False)])
+
+
+class TestV4AgentNiyotte(unittest.TestCase):
+    """frame-args-v4 票 07 (2):受身框架(與態空/自動且沒對象的框架)讀子句裡的 によって 片語——玩家或玩家起頭
+    → 該玩家、卡片片語 → 其他卡、指名此卡 → 此卡,其他不記;定語裡的 によって 不讀。"""
+
+    def test_player_effect_niyotte(self):
+        self.assertEqual(agents("①：このカードが相手の効果によって破壊された場合に発動できる。")[0],
+                         ("破壊", "相手", "によって", False))
+
+    def test_bare_player_niyotte_on_intransitive(self):
+        """相手によってフィールドから離れた:態空、沒對象的自動詞框架也讀 によって。"""
+        self.assertEqual(agents("①：このカードが相手によってフィールドから離れた場合に発動できる。")[0],
+                         ("離れる", "相手", "によって", False))
+
+    def test_card_effect_niyotte_is_other_card(self):
+        self.assertEqual(agents("①：このカードがカードの効果によって破壊された場合に発動できる。")[0],
+                         ("破壊", "其他卡", "によって", False))
+
+    def test_this_card_effect_niyotte(self):
+        self.assertEqual(agents("①：相手フィールドのモンスターがこのカードの効果によって破壊された場合に発動できる。")[0],
+                         ("破壊", "此卡", "によって", False))
+
+    def test_non_agent_niyotte_is_not_recorded(self):
+        """出た目によって/数によって:不是施事者,不記。"""
+        self.assertEqual(agents("①：このカードがコイントスの結果によって破壊された場合に発動できる。")[0],
+                         ("破壊", None, None, False))
+        self.assertEqual(agents("①：自分の墓地のモンスターの数によって以下の効果を適用する。"),
+                         [("適用", "自分", "預設", True)])
+
+    def test_attributive_niyotte_is_not_read(self):
+        """融合モンスターカードによって決められた融合素材モンスターを墓地へ送り:によって 在定語裡,框架自己帶對象
+        → 預設 自分。"""
+        found = agents("①：自分の手札・フィールドから、融合モンスターカードによって決められた融合素材モンスターを墓地へ送り、"
+                       "その融合モンスター１体をEXデッキから融合召喚する。")
+        self.assertEqual(found[0], ("送る", "自分", "預設", True))
+
+
+class TestV4AgentEventAndDefault(unittest.TestCase):
+    """frame-args-v4 票 07 (3)(4):效果類事件框架讀回指欄的事件主語;一般受事者的回指事件主語不用。預設只補
+    代價/效果位、態不是受身/自動、帶對象的框架(自分、推得);條件位、受身、自動、沒對象留空;「この効果は」註記
+    不是施事者。"""
+
+    def test_event_owner_is_not_agent_of_negation(self):
+        """相手がモンスターの効果を発動した時…その発動を無効にし破壊する:発動 的主語是 相手;無効にする 與 破壊
+        的回指事件主語(相手)是目標的來歷,不是施事者 → 無効にする 預設 自分;破壊 沒有自己的對象,留空。"""
+        self.assertEqual(agents("①：相手がモンスターの効果を発動した時に発動できる。その発動を無効にし破壊する。"),
+                         [("発動", "相手", "主語", False), ("無効にする", "自分", "預設", True),
+                          ("破壊", None, None, False)])
+
+    def test_anaphora_event_subject_not_used_for_patient(self):
+        """相手がモンスターを特殊召喚した時…そのモンスターを破壊する:破壊 不是 相手 做的 → 預設 自分。"""
+        self.assertEqual(agents("①：相手がモンスターを特殊召喚した時に発動できる。そのモンスターを破壊する。"),
+                         [("特殊召喚", "相手", "主語", False), ("破壊", "自分", "預設", True)])
+
+    def test_default_self_in_effect(self):
+        self.assertEqual(agents("①：デッキからモンスター１体を手札に加える。"), [("加える", "自分", "預設", True)])
+
+    def test_default_self_in_cost(self):
+        self.assertEqual(agents("①：手札を１枚捨てて発動できる。")[0], ("捨てる", "自分", "預設", True))
+
+    def test_no_default_in_condition(self):
+        self.assertEqual(agents("①：モンスターを特殊召喚した場合に発動できる。")[0], ("特殊召喚", None, None, False))
+
+    def test_no_default_for_intransitive_or_passive_or_objectless(self):
+        self.assertEqual(agents("①：このカードの攻撃力は５００アップする。"), [("アップ", None, None, False)])
+        self.assertEqual(agents("①：このカードは戦闘では破壊されない。"), [("破壊", None, None, False)])
+        self.assertEqual(agents("①：デッキから１枚ドローする。"), [("ドロー", None, None, False)])
+
+    def test_this_effect_note_topic_is_not_agent(self):
+        """この効果は相手ターンでも発動できる:註記主題,上游已排除、沒有帶施事者的框架。"""
+        found = agents("①：自分フィールドのモンスター１体を選んで破壊する。この効果は相手ターンでも発動できる。")
+        self.assertEqual([a for a in found if a[0] == "発動"], [])
+        self.assertEqual(found[:2], [("選ぶ", "自分", "預設", True), ("破壊", "自分", "預設", True)])
+def mannered(text, context=""):
+    """框架 → (動作, 方式字面, 方式類, 表示形式值):frame-args-v4 票 06 的方式欄;沒有值時 None。"""
+    return [(f["action"], f.get("manner"), f.get("manner_kind"), f.get("manner_value"))
+            for f in actions(text, context)]
+
+
+class TestManner(unittest.TestCase):
+    """frame-args-v4 票 06:述語前同一子句內的 で 片語是方式(字面含 で、不含 は/も 後綴),配封閉類
+    方式類(手段:效果/手段:戰鬥/手段:方法/表示形式(另帶值)/視同/順序/其他);一框至多一個、取離述語
+    最近的。定語裡的 で(並列修飾、定語子句裡的 で)與繫詞 で 不是方式;で 接區域不是方式,進結構化
+    所在、標 取自で(2026-10-31 定案)。"""
+
+    def test_battle_is_means_battle(self):
+        self.assertEqual(mannered("①：このカードが戦闘で破壊された場合に発動できる。")[0],
+                         ("破壊", "戦闘で", "手段:戰鬥", None))
+
+    def test_de_wa_suffix_is_not_part_of_the_literal(self):
+        self.assertEqual(mannered("①：このカードは戦闘では破壊されない。"),
+                         [("破壊", "戦闘で", "手段:戰鬥", None)])
+
+    def test_this_effect_is_means_effect(self):
+        self.assertEqual(mannered("①：この効果でカードを２枚破壊できなかった場合、自分は１０００ダメージを受ける。")[0],
+                         ("破壊", "この効果で", "手段:效果", None))
+
+    def test_this_method_is_means_method(self):
+        self.assertEqual(mannered("①：このカードはこの方法でのみ特殊召喚できる。"),
+                         [("特殊召喚", "この方法で", "手段:方法", None)])
+
+    def test_display_form_carries_its_value(self):
+        self.assertEqual(mannered("①：デッキからレベル４以下のモンスター１体を守備表示で特殊召喚する。"),
+                         [("特殊召喚", "守備表示で", "表示形式", "守備表示")])
+
+    def test_leading_quantity_adverb_belongs_to_the_object(self):
+        """全て 是對象的數量,不進方式字面。"""
+        self.assertEqual(mannered("①：相手の手札を全て裏側表示で除外する。"),
+                         [("除外", "裏側表示で", "表示形式", "裏側表示")])
+
+    def test_coordinated_display_forms_keep_the_whole_phrase(self):
+        self.assertEqual(mannered("①：そのモンスターを表側守備表示または裏側守備表示で特殊召喚する。"),
+                         [("特殊召喚", "表側守備表示または裏側守備表示で", "表示形式",
+                           "表側守備表示または裏側守備表示")])
+
+    def test_treated_as_is_regarded(self):
+        found = mannered("①：自分の墓地のモンスター１体を対象として発動できる。"
+                         "そのモンスターを装備カード扱いでこのカードに装備する。")
+        self.assertEqual(found[-1], ("装備", "装備カード扱いで", "視同", None))
+
+    def test_order_phrase_is_order(self):
+        found = mannered("①：自分の墓地のカード３枚を対象として発動できる。そのカードを好きな順番でデッキの上に戻す。")
+        self.assertEqual(found[-1], ("戻す", "好きな順番で", "順序", None))
+
+    def test_nashi_de_is_other_with_literal(self):
+        self.assertEqual(mannered("①：このカードはリリースなしで召喚できる。"),
+                         [("召喚", "リリースなしで", "其他", None)])
+
+    def test_battle_or_effect_coordination_is_other(self):
+        """戦闘・効果で:兩類並列,封閉表沒有合值,落 其他、字面保留。"""
+        self.assertEqual(mannered("①：フィールドのこのカードが戦闘・効果で破壊された場合に発動できる。")[0],
+                         ("破壊", "戦闘・効果で", "其他", None))
+
+    def test_attributive_coordination_de_is_not_manner(self):
+        """攻撃力2400以上で守備力1000の:定語裡的並列修飾。"""
+        self.assertEqual(mannered("①：自分の墓地の攻撃力２４００以上で守備力１０００のモンスター１体を対象として発動できる。")[0],
+                         ("対象とする", None, None, None))
+        self.assertEqual(mannered("①：デッキから戦士族・ドラゴン族で光属性のモンスター１体を手札に加える。"),
+                         [("加える", None, None, None)])
+
+    def test_de_inside_relative_clause_is_not_manner(self):
+        """この効果で特殊召喚したモンスター 的 で 屬定語子句,不是主述語的方式。"""
+        self.assertEqual(mannered("①：この効果で特殊召喚したモンスターの効果は無効化される。"),
+                         [("無効にする", None, None, None)])
+
+    def test_copula_de_is_not_manner(self):
+        self.assertEqual(mannered("①：融合素材モンスターは全てアンデット族モンスターでなければならない。"),
+                         [("なる", None, None, None)])
+        self.assertEqual(mannered("①：自分の手札が０枚ではない場合、このカードは墓地へ送られる。")[-1],
+                         ("送る", None, None, None))
+
+    def test_nearest_de_phrase_wins(self):
+        self.assertEqual(mannered("①：デッキからレベル４以下のモンスター１体をこの効果で守備表示で特殊召喚する。"),
+                         [("特殊召喚", "守備表示で", "表示形式", "守備表示")])
+
+    def test_zone_de_goes_to_structured_place_as_transfer(self):
+        text = "①：このカードがPゾーンで破壊された場合に発動できる。"
+        self.assertEqual(mannered(text)[0], ("破壊", None, None, None))
+        self.assertEqual(regioned(text)[0], ("破壊", {"place": [["無", "靈擺區"]]}, "取自で"))
+        self.assertIsNone(actions(text)[0].get("place"))
+        found = regioned("①：自分の永続罠カードが相手フィールドで効果を発動した場合に発動できる。")[0]
+        self.assertEqual(found, ("発動", {"place": [["相手", "場上"]]}, "取自で"))
+
+    def test_zone_de_does_not_override_a_literal_place(self):
+        """字面所在已有值:で 接的區域不轉、不標。"""
+        self.assertEqual(regioned("①：自分フィールドのモンスターがモンスターゾーンで破壊された場合に発動できる。")[0],
+                         ("破壊", {"place": [["自分", "場上"]]}, None))
+
+    def test_zone_de_does_not_override_source_transfer(self):
+        """已 取自來源 的結構化所在不被 取自で 蓋掉(全語料沒有兩者同框的句子,直接餵手寫框架)。"""
+        import regions
+        fr = {"action": "選ぶ", "object": "カード１枚", "source": "自分の墓地", "goal": None,
+              "position": "效果", "polarity": "肯定", "regions": {"source": [["自分", "墓地"]],
+                                                                 "place": [["自分", "墓地"]]},
+              "transfer": "取自來源"}
+        regions.place_from_de(fr, "フィールド")
+        self.assertEqual((fr["regions"]["place"], fr["transfer"]), ([["自分", "墓地"]], "取自來源"))
+
+    def test_non_zone_de_is_still_manner(self):
+        """同じ縦列 不是區域七值:仍是方式、落 其他。"""
+        self.assertEqual(mannered("①：このカードと同じ縦列で魔法・罠カードが発動した場合に発動できる。")[0],
+                         ("発動", "同じ縦列で", "其他", None))
+
+    def test_mama_de_is_other_with_literal(self):
+        self.assertEqual(mannered("①：このカードは表側守備表示のままで攻撃できる。"),
+                         [("攻撃", "表側守備表示のままで", "其他", None)])
+
+    def test_igai_de_is_other_not_attributive(self):
+        self.assertEqual(mannered("①：自分のモンスターが戦闘以外で墓地へ送られた場合に発動できる。")[0],
+                         ("送る", "戦闘以外で", "其他", None))
+
+    def test_coordinated_modifier_takes_the_head_kind(self):
+        """魔法・罠カードの効果で:・ 並列的是修飾語,類看中心的 効果(省略格的字面照分詞器寫法 魔法(カード))。"""
+        self.assertEqual(mannered("①：魔法・罠カードの効果で、EXデッキからモンスターが特殊召喚された場合に発動できる。")[0],
+                         ("特殊召喚", "魔法(カード)・罠カードの効果で", "手段:效果", None))
+
+    def test_ka_coordinated_display_forms(self):
+        self.assertEqual(mannered("①：そのモンスターを表側攻撃表示か裏側守備表示で特殊召喚する。"),
+                         [("特殊召喚", "表側攻撃表示か裏側守備表示で", "表示形式", "表側攻撃表示か裏側守備表示")])
+
+    def test_battle_or_effect_alternatives_are_other(self):
+        self.assertEqual(mannered("①：このカードが戦闘または相手の効果で破壊された場合に発動できる。")[0],
+                         ("破壊", "戦闘または相手の効果で", "其他", None))
+
+    def test_relative_clause_after_a_comma_does_not_swallow_the_de_phrase(self):
+        """扱いで、 後面另一個論元裡的定語子句(この効果で特殊召喚したモンスターに)不影響前面的 扱いで。"""
+        found = mannered("①：デッキからモンスター１体を装備魔法カード扱いで、この効果で特殊召喚したモンスターに装備する。")
+        self.assertEqual(found[-1], ("装備", "装備魔法カード扱いで", "視同", None))
+
+
 if __name__ == "__main__":
     unittest.main()

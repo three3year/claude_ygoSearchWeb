@@ -8,6 +8,8 @@
    序列=同一模板;top 50 各附例句+模板大小分佈直方圖)
 4. 動作框架覆蓋率(frames.json 存在時;票 05):有抽到框架的句比例、位置/極性
    分佈、動作詞元 top 50——儀表板參考,不是通過門檻
+5. 新欄填充率(frame-args-v4)與具名查詢目錄(named-queries 票 09;frame_queries.json
+   存在時):節點數、三個位置的命中框數分佈(命中 0/1/2/3+ 個具名查詢的框數)、不留清單
 
 統計單位是效果句(ADR-0015:一個編號效果的全文,連同它的 ● 選項;tokens.json
 一筆就是一句,拆開的領起句與子效果句已由 tokenize.py 接回一段)。效果外文本
@@ -29,6 +31,7 @@ sys.path.insert(0, _HERE)
 LEXICON = os.path.join(_HERE, "lexicon.json")
 TOKENS = os.path.join(_HERE, "tokens.json")
 FRAMES = os.path.join(_HERE, "frames.json")
+QUERIES = os.path.join(_HERE, "frame_queries.json")   # catalog_hits.py 的命中中間產物(一框一列)
 OUT_MD = os.path.join(_HERE, "report.md")
 OUT_FREQ = os.path.join(_HERE, "wordfreq.json")
 
@@ -37,6 +40,8 @@ FREQ_TOP = {"effect": 100, "extra": 50}   # 詞頻表列數(prepare_view.py 共�
 # 模板大小分佈的桶(句數下限,遞減檢查)
 BUCKETS = ((100, "≥100 句"), (50, "50–99 句"), (20, "20–49 句"),
            (10, "10–19 句"), (5, "5–9 句"), (2, "2–4 句"), (1, "1 句"))
+# 一框命中幾個具名查詢的桶(named-queries 票 09;拆解頁總覽與報告同一把尺)
+HIT_BUCKETS = ("0", "1", "2", "3+")
 
 
 def load():
@@ -420,6 +425,64 @@ def fill_rate_section(frames):
     return lines
 
 
+def hit_distribution(hits):
+    """命中紀錄(frame_queries.json 的列:position、queries)→ {位置: Counter(HIT_BUCKETS 的桶)}:
+    一框命中 0/1/2/3+ 個具名查詢的框數,分位置。constraints 在這裡才 import(模組層級會循環)。"""
+    from constraints import POSITIONS
+    out = {position: Counter() for position in POSITIONS}
+    for hit in hits:
+        n = len(hit["queries"])
+        out[hit["position"]][HIT_BUCKETS[min(n, len(HIT_BUCKETS) - 1)]] += 1
+    return out
+
+
+def is_lemma_node(query):
+    """詞元節點:述詞只有詞元(極性是預設、否定形是耐性/限制的極性類節點),不帶區域與中心詞條件;其餘是葉。
+    predicate 在這裡才 import(它 import constraints,模組層級會循環)。"""
+    import predicate
+    return set(query.predicate) <= {predicate.FIELD_LEMMA, predicate.FIELD_POLARITY, predicate.FIELD_NEGATION}
+
+
+def queries_section(cat, hits):
+    """具名查詢目錄(named-queries 票 09):目錄(catalog.Catalog)與命中紀錄 → 小節的行——節點數(大類/中類/
+    具名查詢,具名查詢再分詞元節點與葉)、三個位置的命中框數分佈、每框平均命中、不留清單(三個位置都沒命中的
+    具名查詢;目錄步驟會擋下,這裡登的是中間產物的現況)。"""
+    from constraints import POSITIONS
+    major_nodes = sum(1 for node in cat.roots if node.predicate is None)
+    middles = sum(len(m) for m in cat.middles.values())
+    lemma_nodes = sum(1 for q in cat.queries if is_lemma_node(q))
+    distribution = hit_distribution(hits)
+    hit_names = {name for hit in hits for name in hit["queries"]}
+    unmatched = [q.name for q in cat.queries if q.name not in hit_names]
+    total = sum(len(hit["queries"]) for hit in hits)
+    lines = [
+        "## 具名查詢目錄(named-queries)",
+        "",
+        "動作類別第三版:類別樹退成具名查詢的目錄(`catalog.json`),每個節點是一個框架述詞,動作框架可同時命中"
+        "幾個、不互斥、沒有預設葉;三個位置都算。命中由 `catalog_hits.py` 對匯出框列用參考評估器算"
+        "(`frame_queries.json`);大類/中類是底下具名查詢的聯集。沒有「未歸」——沒命中任何具名查詢的框"
+        "只是目錄還沒開那個述詞。",
+        "",
+        "節點數:頂層 %d(大類 %d、自成大類的具名查詢 %d)、中類 %d、具名查詢 %d(詞元節點 %d、葉 %d)。" % (
+            len(cat.roots), major_nodes, len(cat.roots) - major_nodes, middles, len(cat.queries), lemma_nodes,
+            len(cat.queries) - lemma_nodes),
+        "",
+        "一框命中幾個具名查詢(動作框架 {:,};合計 {:,} 框·查詢,每框平均 {:.2f}):".format(
+            len(hits), total, total / max(1, len(hits))),
+        "",
+        "| 命中數 | " + " | ".join(POSITIONS) + " | 合計 |",
+        "|---|" + "---|" * (len(POSITIONS) + 1),
+    ]
+    for bucket in HIT_BUCKETS:
+        row = [distribution[position][bucket] for position in POSITIONS]
+        lines.append("| %s | %s | %s |" % (bucket, " | ".join(format(c, ",") for c in row), format(sum(row), ",")))
+    lines += ["",
+              "不留(三個位置都沒命中)%s" % (
+                  "%d 個:%s" % (len(unmatched), "、".join(unmatched)) if unmatched else ":無"),
+              ""]
+    return lines
+
+
 def main():
     lexicon, sentences = load()
     surface_of = {e["id"]: e["surface"] for e in lexicon}
@@ -590,6 +653,10 @@ def main():
     if os.path.exists(FRAMES):
         with open(FRAMES, encoding="utf-8") as f:
             lines += fill_rate_section(json.load(f))
+    if os.path.exists(QUERIES):
+        import catalog
+        with open(QUERIES, encoding="utf-8") as f:
+            lines += queries_section(catalog.load(), json.load(f))
 
     with open(OUT_MD, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))

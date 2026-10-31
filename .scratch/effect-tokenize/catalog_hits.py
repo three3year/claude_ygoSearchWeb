@@ -16,6 +16,8 @@ frame_queries.json(JSON 清單,一框一行;前四鍵是框架身分,同舊框�
     action    動作詞元
     position  位置(代價/效果/條件)
     queries   命中的具名查詢名清單(目錄序;空清單 = 沒命中任何具名查詢)
+    patient   動作對象(此卡/非此卡;皆非是 null)——票 09 拆解頁每框照舊顯示,與匯出框列的 patient_mode 同一個判定
+    why       動作對象的理由(patient.WHY_*;拆解頁的 title)
 
 接縫:query_names(原文, 上文, 目錄, 卡面) → 每個動作框架命中的具名查詢名清單(依原文順序;目錄預設是真目錄,
 測試可傳小目錄驗機制)。hits(目錄, 框列清單) → 每框列的命中名清單。
@@ -77,11 +79,12 @@ def records(cat, sentences, faces):
     pseudo = []                         # 句列的形狀 {card, frames},給 predicate.card_sets
     for s in sentences:
         rows = []
-        for fr, row, _ in export_frames.frame_rows(s, faces):
+        for fr, row, verdict in export_frames.frame_rows(s, faces):
             rows.append(row)
             out.append({"card": s["card"], "section": s["section"], "index": s["index"], "order": fr["order"],
                         "action": fr["action"], "position": fr["position"],
-                        "queries": [name for name, match in matchers if match(row)]})
+                        "queries": [name for name, match in matchers if match(row)],
+                        "patient": verdict.mode, "why": verdict.why})
         pseudo.append({"card": s["card"], "frames": rows})
     return out, export_frames.query_sets(cat, pseudo)
 

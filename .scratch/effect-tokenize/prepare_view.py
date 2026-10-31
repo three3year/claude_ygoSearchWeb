@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """產生檢視頁資料 view_data.js(window.VIEW_DATA=...)、卡片拆解分頁的分片
-view_frames_<k>.js(window.VIEW_FRAMES[k]=...,依卡號分片、按需載入)、類別總覽分頁
-每葉的框架清單分片 view_cats_<k>.js(window.VIEW_CATS[k]=...,按需載入),以及
-conventions.md 審閱鏡像的資料塊 JSON(mirror-data/,格式見 review-mirror skill
+view_frames_<k>.js(window.VIEW_FRAMES[k]=...,依卡號分片、按需載入)、具名查詢總覽分頁
+每個具名查詢的框架清單分片 view_queries_<k>.js(window.VIEW_QUERIES[k]=...,按需載入),
+以及 conventions.md 審閱鏡像的資料塊 JSON(mirror-data/,格式見 review-mirror skill
 的「資料塊」)。
 
 重用 report.py 的 token_kind/normalize/scan_stratum,保證與報表同一把尺;
-框架資料讀 frames.json(frames.py 的輸出),動作類別讀 frame_categories.json 與
-card_categories.json(categories.py 的輸出)、葉的路徑由 category_tree.json 展開。
+框架資料讀 frames.json(frames.py 的輸出),具名查詢的命中讀 frame_queries.json
+(catalog_hits.py 的輸出;named-queries 票 09)、名與路徑由目錄 catalog.json 推得,
+每框的動作對象也從命中中間產物來(與匯出框列同一個判定)。總覽資料的接縫
+query_overview(目錄, 命中) → (總覽表, 分片)。
 決定性輸出:排序穩定、不讀時鐘;全部純 ASCII(\\uXXXX 轉義)避開伺服器 charset。
 """
 import importlib.util
@@ -26,15 +28,17 @@ _spec = importlib.util.spec_from_file_location(
 effect_tokenize = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(effect_tokenize)
 import baseline_diff  # noqa: E402
-import categories  # noqa: E402
+import catalog  # noqa: E402
+import catalog_hits  # noqa: E402
 import constraints  # noqa: E402
 import extract_seed  # noqa: E402
+from constraints import POSITIONS  # noqa: E402
 
 MIRROR_DIR = os.path.join(HERE, "mirror-data")
 FRAMES = os.path.join(HERE, "frames.json")
 CARDS = os.path.join(HERE, "..", "..", "data", "cards.json")
 FRAME_SHARDS = 12
-CATEGORY_SHARDS = 4       # 類別總覽每葉/每個未歸詞元的框架清單(view_cats_<k>.js)
+QUERY_SHARDS = 4          # 具名查詢總覽每個具名查詢的框架清單(view_queries_<k>.js)
 TOP_ACTIONS = 80
 
 TOP_TEMPLATES = {"effect": 300, "extra": 150}
@@ -180,8 +184,9 @@ def span_chars(offsets, span):
         return None
     return [offsets[start][0], offsets[end - 1][1]]
 
-def frame_row(fr, offsets, category):
-    """一個框架 → 拆解頁的列(欄位順序見 write_frame_shards 的註解)。"""
+def frame_row(fr, offsets, queries, patient):
+    """一個框架 → 拆解頁的列(欄位順序見 write_frame_shards 的註解)。queries 是命中的具名查詢號清單
+    (目錄序;約束框架 None)、patient 是動作對象 [值或 null, 理由](約束框架 None)。"""
     chars = span_chars(offsets, fr["span"])
     if fr.get("kind") == constraints.KIND_CONSTRAINT:
         return [fr["sentence"], None, None, fr.get("polarity"), None, None, None,
@@ -192,33 +197,20 @@ def frame_row(fr, offsets, category):
     return [fr["sentence"], fr["position"], fr["action"], fr["polarity"],
             fr.get("object"), fr.get("source"), fr.get("goal"), fr["clause"],
             chars, fr.get("option"), fr.get("label"), None,
-            constraints.describe_action(fr), fr.get("backfill"), category,
+            constraints.describe_action(fr), fr.get("backfill"), queries,
             fr.get("topic"), fr.get("subject"), fr.get("place"), fr.get("inferred"),
-            fr.get("voice"), fr.get("anaphora"), v4 or None]
+            fr.get("voice"), fr.get("anaphora"), v4 or None, patient]
 
 
-def load_categories():
-    """動作類別(票 04):類別樹、(卡號, 段落, 句序, 框架序) → 類別紀錄、同鍵 → [狀態碼,
-    葉號…]、卡號 → [效果組葉號, 代價組葉號]、葉號 → 大類到葉的路徑。狀態碼是
-    categories.STATUSES 的位置(0 已歸、1 未歸、2 不適用),葉號是樹序;分片只放號碼,
-    名稱查 view_data 的表。"""
-    tree = categories.load_tree()
-    index = tree.leaf_order
-    code = {status: i for i, status in enumerate(categories.STATUSES)}
-    with open(categories.OUT, encoding="utf-8") as f:
-        records = {(r["card"], r["section"], r["index"], r["order"]): r for r in json.load(f)}
-    per_frame = {key: [code[r["status"]]] + [index[name] for name in r["leaves"]]
-                 for key, r in records.items()}
-    with open(categories.CARDS_OUT, encoding="utf-8") as f:
-        per_card = {c["card"]: [[index[name] for name in c["effect"]],
-                                [index[name] for name in c["cost"]]]
-                    for c in json.load(f)}
-    table = {"statuses": list(categories.STATUSES),
-             "paths": [list(leaf.path) for leaf in tree.leaves]}
-    return tree, records, per_frame, per_card, table
+def load_queries():
+    """具名查詢(named-queries 票 09):真目錄與命中中間產物 frame_queries.json(catalog_hits.py 的輸出,
+    一框一列)→ (目錄, 命中紀錄清單)。拆解頁只放查詢號(目錄序),名稱與路徑查 view_data 的表。"""
+    cat = catalog.load()
+    with open(catalog_hits.OUT, encoding="utf-8") as f:
+        return cat, json.load(f)
 
 
-# ── 類別總覽(action-categories 票 05):樹的節點計數、未歸依詞元聚合、每葉的框架清單 ──
+# ── 具名查詢總覽(named-queries 票 09):每個具名查詢三個位置的框數/卡數、大類/中類是聯集、展開看框架 ──
 
 def balanced_shards(groups, count):
     """(鍵, 列數) → 鍵 → 分片號:由大到小(同大小依鍵)放進目前最輕的分片,決定性。"""
@@ -236,76 +228,93 @@ def frame_key(row):
     return tuple(row[:4])
 
 
-def category_overview(tree, items):
-    """items:依語料順序的 (卡號, 段落, 句序, 框架, 類別紀錄, 子句原文)(只有動作框架)。
-    回傳 (總覽表, 分片清單):總覽表放進 view_data 的 frames.categories——儀表板三個數、
-    樹節點 [名, 框架數, 卡數, 葉號或 -1, 子節點](詞元層由掛在那裡的葉彙總,多葉框架只算
-    一次;大類層只算框架大類是它的——多葉跨大類的框架只算進第一葉的大類)、
-    未歸依 (詞元, 極性類) 聚合 [標籤, 詞元有節點, 框架數, 卡數];分片是
-    {"l<葉號>"/"u<未歸序>": [[卡號, 段落, 句序, 框架序, 位置, 子句原文]…]},按需載入。"""
-    counts = Counter()
-    leaf_rows = [[] for _ in tree.leaves]
-    unplaced = {}
-    major_of = {}                       # 已歸框架鍵 → 框架的大類
-    for card, section, index, fr, rec, text in items:
-        counts[rec["status"]] += 1
-        row = [card, section, index, fr["order"], fr["position"], text]
-        if rec["status"] == categories.STATUS_PLACED:
-            major_of[frame_key(row)] = rec["major"]
-            for name in rec["leaves"]:
-                leaf_rows[tree.leaf_order[name]].append(row)
-        elif rec["status"] == categories.STATUS_UNPLACED:
-            label, key = categories.unplaced_label(fr)
-            unplaced.setdefault(label, (key in tree.by_key, []))[1].append(row)
+def _counts(rows):
+    """一個節點底下的總覽列(多命中去重後)→ ([各位置框數…, 合計], [各位置卡數…, 合計])。"""
+    frames = [[frame_key(r) for r in rows if r[4] == position] for position in POSITIONS]
+    return ([len(set(keys)) for keys in frames] + [len({frame_key(r) for r in rows})],
+            [len({key[0] for key in keys}) for keys in frames] + [len({r[0] for r in rows})])
 
-    def summarize(node, top_level=False):
-        """節點 → (輸出列 [名, 框架數, 卡數, 葉號或 -1, 子節點列], 框架鍵集合, 卡號集合);
-        集合往上併,多葉框架在上層只算一次;頂層大類只留大類是它的框架。"""
-        frames, cards, children = set(), set(), []
+
+def query_overview(cat, hits):
+    """hits:依語料順序的命中紀錄(frame_queries.json 的列,多帶子句原文 text;只有動作框架)。
+    回傳 (總覽表, 分片清單):總覽表放進 view_data 的 frames.queries——names/paths 是具名查詢的名與路徑
+    (查詢號 = 目錄序)、nodes 是樹 [名, 查詢號或 -1, [代價, 效果, 條件, 合計 框數], [同 卡數], 子節點]
+    (大類與中類是底下具名查詢的聯集,一框多命中只算一次;路徑由目錄推得:宣告的大類取代本家、中類取代
+    詞元層,中類列在大類的詞元節點之前、借來的節點排在本家的之後)、節點數、hits 是三個位置的命中框數
+    分佈(命中 0/1/2/3+ 個具名查詢的框數,report.hit_distribution 同一把尺;節點數的 majors 是頂層數、
+    lemma_nodes 依 report.is_lemma_node);分片是
+    {"q<查詢號>": [[卡號, 段落, 句序, 框架序, 位置, 子句原文]…]},按需載入,沒有框的具名查詢沒有分片。"""
+    number = {q.name: i for i, q in enumerate(cat.queries)}
+    query_rows = [[] for _ in cat.queries]
+    for hit in hits:
+        row = [hit["card"], hit["section"], hit["index"], hit["order"], hit["position"], hit["text"]]
+        for name in hit["queries"]:
+            query_rows[number[name]].append(row)
+
+    def tree_node(name, qid):
+        return {"name": name, "qid": qid, "children": [], "by_name": {}}
+
+    def child_of(parent, name, qid=-1):
+        if name not in parent["by_name"]:
+            node = tree_node(name, qid)
+            parent["by_name"][name] = node
+            parent["children"].append(node)
+        return parent["by_name"][name]
+
+    root = tree_node("", -1)
+    for name in cat.majors:
+        top = child_of(root, name)
+        for middle in cat.middles.get(name, ()):
+            child_of(top, middle)
+    # 本家的節點先、借來的(宣告到別的大類)後,各自目錄序;路徑上的詞元節點自己也是具名查詢
+    ordered = sorted(cat.queries, key=lambda q: (cat.majors.index(q.major), q.major != q.home))
+    for query in ordered:
+        node = root
+        for step in query.path[:-1]:
+            node = child_of(node, step, number.get(step, -1))
+        child_of(node, query.path[-1], number[query.name])["qid"] = number[query.name]
+
+    def summarize(node):
+        """節點 → (輸出列, 底下全部總覽列):集合往上併,多命中的框在上層只算一次。"""
+        rows = list(query_rows[node["qid"]]) if node["qid"] >= 0 else []
+        children = []
         for child in node["children"]:
-            row, child_frames, child_cards = summarize(child)
-            children.append(row)
-            frames |= child_frames
-            cards |= child_cards
-        if node["leaf"] is not None:
-            rows = leaf_rows[node["leaf"]]
-            frames |= {frame_key(r) for r in rows}
-            cards |= {r[0] for r in rows}
-        if top_level:
-            frames = {key for key in frames if major_of[key] == node["name"]}
-            cards = {key[0] for key in frames}
-        leaf = -1 if node["leaf"] is None else node["leaf"]
-        return [node["name"], len(frames), len(cards), leaf, children], frames, cards
+            child_row, child_rows = summarize(child)
+            children.append(child_row)
+            rows += child_rows
+        frames, cards = _counts(rows)
+        return [node["name"], node["qid"], frames, cards, children], rows
 
-    nodes = [summarize(n, top_level=True)[0] for n in categories.tree_nodes(tree)]
-    groups = sorted(unplaced.items(), key=lambda kv: (-len(kv[1][1]), kv[0]))
-    rows_of = {"l%d" % i: rows for i, rows in enumerate(leaf_rows) if rows}
-    rows_of.update(("u%d" % j, rows) for j, (_, (_, rows)) in enumerate(groups))
-    assign = balanced_shards([(key, len(rows)) for key, rows in rows_of.items()],
-                             CATEGORY_SHARDS)
-    shards = [{} for _ in range(CATEGORY_SHARDS)]
+    nodes = [summarize(child)[0] for child in root["children"]]
+    rows_of = {"q%d" % i: rows for i, rows in enumerate(query_rows) if rows}
+    assign = balanced_shards([(key, len(rows)) for key, rows in rows_of.items()], QUERY_SHARDS)
+    shards = [{} for _ in range(QUERY_SHARDS)]
     for key, rows in rows_of.items():
         shards[assign[key]][key] = rows
+    distribution = report.hit_distribution(hits)
     overview = {
-        "counts": [counts[s] for s in categories.STATUSES],
-        "majors": len(tree.majors),
+        "names": [q.name for q in cat.queries],
+        "paths": [list(q.path) for q in cat.queries],
         "nodes": nodes,
-        # 每葉自己的 [框架數, 卡數](同時是內部節點的預設葉要單獨顯示)
-        "leaf_counts": [[len({frame_key(r) for r in rows}), len({r[0] for r in rows})]
-                        for rows in leaf_rows],
-        "unplaced": [[label, has_node, len(rows), len({r[0] for r in rows})]
-                     for label, (has_node, rows) in groups],
+        "majors": len(cat.majors),
+        "middles": sum(len(m) for m in cat.middles.values()),
+        "queries": len(cat.queries),
+        "lemma_nodes": sum(1 for q in cat.queries if report.is_lemma_node(q)),
+        "frames": len(hits),
+        "positions": list(POSITIONS),
+        "hits": {position: [distribution[position][bucket] for bucket in report.HIT_BUCKETS]
+                 for position in POSITIONS},
         "shard_of": assign,
     }
     return overview, shards
 
 
-def write_category_shards(shards):
+def write_query_shards(shards):
     for k, shard in enumerate(shards):
-        js = ("window.VIEW_CATS=window.VIEW_CATS||{};window.VIEW_CATS[%d]=" % k
+        js = ("window.VIEW_QUERIES=window.VIEW_QUERIES||{};window.VIEW_QUERIES[%d]=" % k
               + json.dumps(shard, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
               + ";")
-        path = os.path.join(HERE, "view_cats_%d.js" % k)
+        path = os.path.join(HERE, "view_queries_%d.js" % k)
         with open(path, "w", encoding="utf-8") as f:
             f.write(js)
         print("written", path, len(js), "bytes")
@@ -321,44 +330,53 @@ def write_frame_shards(sentences, surface_of):
     with open(CARDS, encoding="utf-8") as f:
         names = {c["id"]: (c["name_ja"], c["name_zh"]) for c in json.load(f)}
     by_key = {(s["card"], s["section"], s["index"]): s for s in sentences}
-    tree, cat_records, frame_cats, card_cats, cat_table = load_categories()
+    cat, hits = load_queries()
+    number = {q.name: i for i, q in enumerate(cat.queries)}
+    hit_of = {(h["card"], h["section"], h["index"], h["order"]): h for h in hits}
 
     per_card = {}
     stats, position, polarity, actions, con_dist = report.frame_stats(frames)
     uncovered = []
     unaligned = 0
     overview_items = []
+    # 卡層彙總:這張卡效果位與代價位的框命中的具名查詢號(各自目錄序去重)
+    rollup = {}
     for r in frames:
         s = by_key[(r["card"], r["section"], r["index"])]
         # 原文字元範圍:框架的詞序列範圍對回 text_ja(對不上時為 null,頁面不高亮)
         offsets = char_offsets(s["text_ja"], s["tokens"])
         unaligned += offsets is None
-        # 類別總覽的框架清單:子句原文取字元範圍,對不上時用子句的詞序列接起來
+        rows = []
         for fr in r["frames"]:
             if fr.get("kind") == constraints.KIND_CONSTRAINT:
+                rows.append(frame_row(fr, offsets, None, None))
                 continue
+            hit = hit_of[(r["card"], r["section"], r["index"], fr["order"])]
+            qids = [number[name] for name in hit["queries"]]
+            rows.append(frame_row(fr, offsets, qids, [hit["patient"], hit["why"]]))
+            groups = rollup.setdefault(r["card"], {constraints.POS_EFFECT: set(), constraints.POS_COST: set()})
+            if fr["position"] in groups:
+                groups[fr["position"]].update(qids)
+            # 總覽的框架清單:子句原文取字元範圍,對不上時用子句的詞序列接起來
             chars = span_chars(offsets, fr["span"])
             text = (s["text_ja"][chars[0]:chars[1]] if chars
                     else fr["clause"].replace(" ", ""))
-            key = (r["card"], r["section"], r["index"], fr["order"])
-            overview_items.append((r["card"], r["section"], r["index"], fr,
-                                   cat_records[key], text))
+            overview_items.append(dict(hit, text=text))
         # 欄位:句序、位置、動作、極性、對象、來源、目的、子句、原文 [起,迄)、
         # 選項(第幾個 ●)、標籤、約束框架的 類別·子類(動作框架為 null)、內容
         # (約束框架的專屬欄位併成一欄;動作框架為次數/窗口/回合條件/連接·群組/回填/
         # 列舉欄,沒有時 null)、回填的欄名清單(topic/subject/object/source/place;頁面把那幾格
-        # 淡色,沒有時 null)、動作類別 [狀態碼, 葉號…](約束框架 null,見 load_categories)、
-        # 主題、主語、所在、推得的欄名清單(source/goal,頁面淡色並與回填區分)(frame-args-v3)、
-        # 態(他動/自動/受身,空是 null;frame-lemma-unify 票 01)——約束框架的列沒有這五欄;
-        # 回指(action-patient-anaphora)、第四版論元的新鍵 dict(frame-args-v4,沒有時 null);
+        # 淡色,沒有時 null)、命中的具名查詢號清單(目錄序,約束框架 null;名稱與路徑查 view_data
+        # 的 frames.queries)、主題、主語、所在、推得的欄名清單(source/goal,頁面淡色並與回填區分)
+        # (frame-args-v3)、態(他動/自動/受身,空是 null;frame-lemma-unify 票 01)——約束框架的列沒有
+        # 這五欄;回指(action-patient-anaphora)、第四版論元的新鍵 dict(frame-args-v4,沒有時 null)、
+        # 動作對象 [此卡/非此卡/null, 理由](named-queries 票 09;約束框架的列沒有這欄);
         # p=各段(標記句)的 index、效果類型、字元範圍
         rec = {"s": r["section"], "i": r["index"], "k": s["kind"],
                "st": r["stratum"], "t": s["text_ja"],
                "p": [[p["index"], p["kind"], p["start"], p["end"]]
                      for p in s["parts"]],
-               "f": [frame_row(fr, offsets, frame_cats.get(
-                   (r["card"], r["section"], r["index"], fr["order"])))
-                     for fr in r["frames"]]}
+               "f": rows}
         per_card.setdefault(r["card"], []).append(rec)
         if not r["frames"]:
             uncovered.append({"card": r["card"], "section": r["section"],
@@ -381,15 +399,16 @@ def write_frame_shards(sentences, surface_of):
         for cid in chunk:
             recs = per_card[cid]
             ja, zh = names.get(cid, ("", ""))
-            # 末欄:卡層彙總 [效果組葉號, 代價組葉號](票 04)
+            # 末欄:卡層彙總 [效果位命中的具名查詢號, 代價位命中的具名查詢號](目錄序去重)
+            groups = rollup.get(cid, {})
             index.append([cid, ja, zh, k, len(recs),
                           sum(len(r["f"]) for r in recs),
                           sum(1 for r in recs if not r["f"]),
-                          card_cats.get(cid, [[], []])])
-    overview, cat_shards = category_overview(tree, overview_items)
-    write_category_shards(cat_shards)
-    cat_table.update(overview)
-    cat_table["shards"] = CATEGORY_SHARDS
+                          [sorted(groups.get(constraints.POS_EFFECT, ())),
+                           sorted(groups.get(constraints.POS_COST, ()))]])
+    overview, query_shards = query_overview(cat, overview_items)
+    write_query_shards(query_shards)
+    overview["shards"] = QUERY_SHARDS
     return {
         "shards": FRAME_SHARDS,
         "cards": index,
@@ -402,7 +421,7 @@ def write_frame_shards(sentences, surface_of):
         "distinct_actions": len(actions),
         "uncovered": uncovered,
         "unaligned": unaligned,
-        "categories": cat_table,
+        "queries": overview,
     }
 
 

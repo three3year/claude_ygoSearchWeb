@@ -1,198 +1,387 @@
 # -*- coding: utf-8 -*-
-"""[[回指]](.scratch/action-patient-anaphora):動作框架受事者位的指示詞實際指的目標。
+"""[[回指]](.scratch/action-patient-anaphora;named-queries 票 03 改讀論元片語):動作框架受事者位的指示詞
+實際指的目標。
 
-框架抽取最後一步(frames.py,主題延續、回填、列舉、正規化之後),在一個編號效果的動作框架上
-解析;受事者字面開頭是 その、それ、それら、対象の、この効果の対象,而且中心詞是卡、屬性或效果類的
-框架帶可選欄 anaphora:
+執行位置:框架抽取的既有步驟(主題延續、回填、列舉、正規化)與片語結構化(phrases.mark)之後、其餘第四版
+論元之前(frames.py 的處理順序段)。受事者片語的第一段是指示詞(段的 demonstrative 旗標;その、それ、それら、
+対象の、この効果の対象 起頭)而且中心詞是卡、屬性或事件類的框架帶可選欄 anaphora:
 
     text     目標字面(上游原值,不是框架序號)
     place    目標框架的所在或來源字面(推得的不算)
     player   玩家:從 place 或目標字面開頭的 自分/相手/お互い
     subject  事件主語或效果類的主人(相手がモンスターを特殊召喚した時、このカードの攻撃宣言時)
-    count    目標的數量只寫在子句裡時的數量字面(モンスターを１体選んで)
+    count    目標的數量只寫在子句裡時的數量字面(モンスターを１体選んで;片語段的 取自子句 數量)
     via      找到的方法:対象/欄位/字面/事件
     moving   目標框架的動作是不是移動類(frame-args-v4 票 09;enrich.py 在事後補,這裡不寫)
 
 目標框架:解析時把目標是哪幾個框架(欄位候選的框架;候選自己是解到底的指示詞時連同它鏈上的
-目標;事件框架)記在框架的內部鍵 _anaphora_targets(frame-args-v4 票 09 的回指回填要判目標是不是
-移動類;enrich.py 讀完 pop 掉,不進 frames.json);字面備援的目標不是框架,清單空。
+目標;事件框架)記在框架的內部鍵 _anaphora_targets(回指回填要判目標是不是移動類;enrich.py 讀完
+pop 掉,不進 frames.json);字面備援的目標不是框架,清單空。
 
-找法:対象の、この効果の対象 → 該效果的 対象とする 框架;效果類 → 最近的事件框架;其餘往前找框架
+找法(不變):対象の、この効果の対象 → 該效果的 対象とする 框架;效果類 → 最近的事件框架;其餘往前找框架
 的對象、主語、主題,都沒有才找字面。候選多個時先比限定語與中心詞,都對得上取最近的。單數或複數
 都不回指字面只是 このカード 的值;並列含此卡的算。範圍是整個編號效果,● 選項只看共同部分與自己
 這個選項。指示詞只修飾另一張卡時不是回指(modifier)。
+
+讀法(票 03):指示詞字面與候選都讀論元片語的段(phrases.segment:中心詞、中心詞類、修飾語的類與字面、
+數量、玩家、區域、指示詞旗標),不再自己拆字面——
+- 指示詞字面:受事者片語的第一段。中心詞類 卡 → 卡類回指(モンスター/トークン/チューナー 尾是怪獸、其餘是卡);
+  屬性類而中心詞不是事件詞(攻撃力、種族…)→ 跟著主人走(中心詞前最後一個 の 之前的字面再切一段);
+  事件詞(発動/効果/攻撃/〜召喚)→ 主人是卡時跟著卡、否則效果類;指示詞類(それ/それら/内/只剩數量的段)→
+  中心詞不限。限定語 = 段的玩家、修飾語(玩家/卡片子類型/表示形式/種族/屬性/字段 依類與字面比;其他 類裡的
+  動作詞 攻撃/破壊/… 也比候選所在的子句)與中心詞自帶的卡種(効果モンスター、チューナー、魔法カード)。
+  指示詞綁的修飾語不是卡的屬性/事件、而是屬性詞(その属性のモンスター)、區域(その手札のカード)、
+  時間/程度詞(その場合、その同名)或 以外 時,指示詞只修飾另一張卡(modifier);綁的是卡而中心詞是別的卡
+  (そのモンスターのX素材/装備カード/攻撃対象)時是另一張實體卡,不回指也不算修飾語。
+- 候選:框架欄位的段(frames 的 phrases 欄;切區域前的字面)與字面備援片語的段;中心詞是屬性時目標是主人,
+  同士/のいずれか 收尾的去尾。中心詞相符:卡類 vs 怪獸類(そのモンスター×カード１枚 勉強算);單複數看
+  段的數量與段數;子句裡的數量讀段的 取自子句 數量。
+封閉表在模組頂,一份;判定讀表。沒有正則式。
+
+過渡期的字面 API(票 04 交件前的 patient.py 與 llm_check 仍傳字面進來):is_demonstrative(text)、modifier(text)、
+reference(text)、only_this_card(text)——前三個把字面切成段再走同一套判定(用預設抽取器的分詞),票 04 改讀片語後
+可刪。
 """
 from collections import namedtuple
-import re
+from functools import lru_cache
 
-from places import PLAYER_BOTH, PLAYER_OPP, PLAYER_PREFIXES, PLAYER_SELF, ZONE_TERMS
+import places
+import phrases
+from closed_values import HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, MODIFIER_KINDS, OTHER, PLACE_PLAYER
+from places import PLAYER_BOTH, PLAYER_OPP, PLAYER_PREFIXES, PLAYER_SELF
 
 VIA_TARGET, VIA_FIELD, VIA_LITERAL, VIA_EVENT = "対象", "欄位", "字面", "事件"
-HEAD_MONSTER, HEAD_CARD, HEAD_ANY = "monster", "card", "any"
+# 回指目標的中心詞要求:怪獸、卡(怪獸也算卡)、不限
+TARGET_MONSTER, TARGET_CARD, TARGET_ANY = "monster", "card", "any"
+MOD_RACE, MOD_ATTRIBUTE, MOD_ARCHETYPE, MOD_SUBTYPE, MOD_NUMERIC, MOD_ZONE, MOD_PLAYER, MOD_POSITION = MODIFIER_KINDS[:8]
 
 THIS_CARD = "このカード"
 TARGET_ACTIONS = ("対象とする", "対象にする")
 INTRANSITIVE = ("自動", "受身")
 
-_SPACES = re.compile(r"\s+")
-_DEMONSTRATIVE = re.compile(r"^(?:それら?(?:の|$)|その|対象の|この効果の対象)")
-_TARGETED = re.compile(r"^(?:対象の|この効果の対象)")
-# 卡片名詞的尾巴與數量;多一個 組(その１組)是指示詞才有的寫法,動作對象的數量表不收
-_QUANTITY = r"[0-9０-９]+(?:枚|体|つ|種類|ヵ所|箇所|個|組)"
-_COUNT_TAIL = re.compile(r"(%s)?(?:まで|以上)?$" % _QUANTITY)
-_CLAUSE_COUNT = re.compile(r"を(%s)|数まで|任意の数|好きな数" % _QUANTITY)
-_ALL_OF_THEM = re.compile(r"全て")
-_PLURAL_COUNT = re.compile(r"^(?:[2-9２-９]|[0-9０-９]{2,})")
+# ── 封閉表(2026-11-01 票 03:原本的正則式收成表;來源 action-patient-anaphora 票 01〜04 與 anaphora-round1/2)──
+# 指示詞字面的起頭(字面 API 與候選過濾用;指示詞是不是綁在定語子句裡讀段的 demonstrative 旗標)
+DEMONSTRATIVE_BARE = ("それ", "それら")
+DEMONSTRATIVE_PREFIXES = ("それらの", "それの", "その", "対象の", "この効果の対象")
+TARGETED_PREFIXES = ("対象の", "この効果の対象")           # → 找該效果的 対象とする 框架
+TARGET_WORD = "対象"                                       # この効果の対象 的中心詞;対象のモンスター 的第一個修飾語
+WITHIN = "内"                                              # その内の1枚:目標是前面確認的區域/群,複數
+ORIGINAL = "元々"                                          # 元々の攻撃力 的 元々 不是主人
+MONSTER_HEAD_SUFFIXES = ("モンスター", "モンスターカード", "トークン", "チューナー")   # 中心詞類 卡 之中的怪獸
+CARD_SUFFIX = "カード"                                     # 魔法カード 的 魔法 是卡種限定語
+MONSTER_COUNTER, CARD_COUNTER = "体", "枚"                 # 只剩數量的段(その2体)與候選的量詞 → 怪獸/卡
+MATERIAL = "素材"                                          # 融合素材 不算 融合;中心詞是素材時卡片子類型限定語對不上
 VALUE_HEADS = ("攻撃力", "守備力", "レベル", "ランク", "Pスケール", "属性", "種族", "カード名",
-               "表示形式", "コントロール", "位置")
-_VALUE = r"(?:元々の)?(?:%s)" % "|".join(VALUE_HEADS)
-_VALUE_TAIL = re.compile(r"^(.*?)の*%s(?:(?:・|と|及び|および)%s)*$" % (_VALUE, _VALUE))
-# 卡的效果、發動:そのモンスターの効果 跟著卡走,光禿禿的 その効果 是效果類
-_EFFECT_TAIL = re.compile(r"^(.*?)の(?:発動した)?(?:効果|発動)(?:の発動)?$")
-# 字面片語裡事件名詞前的主人:モンスターの特殊召喚、相手モンスターの直接攻撃宣言
-_EVENT_NOUN_TAIL = re.compile(r"^(.*?)の(?:[^の]*召喚(?:成功)?|(?:直接)?攻撃(?:宣言)?|発動|効果)(?:の発動|の処理)?$")
-# その魔法カード発動時の効果、その儀式魔法カード発動時の儀式召喚する効果:跟著那張卡
-_ACTIVATION_EFFECT = re.compile(r"^(.+?)発動時の.*効果$")
-_PROCESSING_TAIL = re.compile(r"の処理$")
-_EVENT_WORDS = (("発動", "発動"), ("効果", "発動"), ("攻撃", "攻撃"), ("召喚", "召喚"))
-_ATTACK_ACTIONS = ("攻撃宣言", "攻撃", "直接攻撃", "攻撃対象にする")
-# 主語是被攻擊的那張,不是主人(攻撃対象になった 是自動,攻撃対象に選択された 是受身)
-_TARGETED_EVENTS = ("攻撃対象にする",)
+               "表示形式", "コントロール", "位置")         # (過渡:patient.py 讀;回指讀中心詞類 屬性)
 NOT_CARD_HEADS = ("ダメージ", "LP", "ライフポイント", "カウンター", "サイコロ", "コイントス",
                   "フェイズ", "ダメージ計算", "召喚条件", "数値", "数", "ターン", "目", "枚数",
-                  "合計", "種類")
-_ZONES = "|".join(re.escape(term) for term, _ in ZONE_TERMS)
-_MONSTER_TAIL = re.compile(r"(?:モンスター(?:カード)?|トークン|チューナー)$")
-_CARD_TAIL = re.compile(r"(?:カード|カード\)|魔法|罠|」|素材)$")
-_ZONE_ONLY = re.compile(r"^(?:自分の?|相手の?|お互いの?)?(?:%s)$" % _ZONES)
-_LEADING_ZONE = re.compile(r"^((?:自分|相手|お互い)?の?(?:%s))の(.+)$" % _ZONES)
-# 不是指目標的 その:時間、程度、數值的修飾(その場合このカード、その時のS素材モンスター)
-_NOT_REFERENCE = re.compile(r"^その(?:場合|時|中|後|他|度|まま|差|数|属性の|種族の|レベルの|カード名が"
-                            r"|同名|手札)")
-# 指示詞只修飾另一張卡:關係詞之後才是受事者的中心詞
-_MODIFIER = re.compile(r"より|と同じ|と同名|とは|と元々|とカード名|と異|と種類|と属性|と種族|とリンク"
-                       r"|以外|以下|以上|未満|を持つ|が|に記|にカード名|に自身|を含む|の同名|の中|に使用")
-# 另一張實體卡:そのモンスターのX素材、そのモンスターの装備カード、その相手モンスターの攻撃対象
-_ATTACHED = re.compile(r"(?<!そ)の(?:X素材|装備|攻撃対象)")
-_LISTING = re.compile(r"(?:と|及び|および|または|か|や)(?!は)")
-_LISTED_THIS_CARD = re.compile(r"(?:と|及び|および|または|か|や).*%s$" % THIS_CARD)
-_THIS_CARD_TAIL = re.compile(r"%s(?:の.*)?$" % THIS_CARD)
-_TYPE_QUALIFIERS = ("融合", "シンクロ", "S", "エクシーズ", "X", "リンク", "儀式", "ペンデュラム", "P")
-# 限定語:玩家、卡種這些比候選自己的字面;動作(その破壊されたモンスター)也比它所在的子句
-_ACTION_QUALIFIERS = ("攻撃", "装備", "破壊", "特殊召喚", "発動", "除外", "戦闘", "無効")
-_QUALIFIERS = ("相手", "自分") + _TYPE_QUALIFIERS + (
-    "チューナー", "守備", "表側", "裏側", "効果", "通常", "魔法", "罠") + _ACTION_QUALIFIERS
-# 主人的「Xの」不跨格助詞:相手がこのカードの効果を… 的主人不是「相手がこのカード」
-_OWNER_IN_CLAUSE = re.compile(r"^([^がをはにで]+?)の(?:攻撃宣言|攻撃|発動|効果)")
-# 比限定語時,融合素材 不算 融合、S素材 不算 S
-_MATERIAL = re.compile(r"(?:融合|シンクロ|エクシーズ|リンク|S|X|L)?素材(?:モンスター)?")
-_MATERIAL_TAIL = re.compile(r"素材(?:モンスター)?(?:%s)?$" % _QUANTITY)
-_GROUP_TAIL = re.compile(r"(?:同士|のいずれか)$")
-
-
-def _is_activation(action):
-    return action == "発動"
-
-
-def _is_summon(action):
-    return action.endswith("召喚")
-
-
-# 效果類的中心詞 → (事件框架的動作, 字面片語的尾巴)
-_EVENTS = {"発動": (_is_activation, re.compile(r"の(?:発動|効果)(?:の発動|の処理)?$")),
-           "攻撃": (_ATTACK_ACTIONS.__contains__, re.compile(r"の(?:直接)?攻撃(?:宣言)?$")),
-           "召喚": (_is_summon, re.compile(r"召喚$")),
-           HEAD_ANY: (lambda action: _is_activation(action) or _is_summon(action),
-                      re.compile(r"の(?:発動|効果|[^の]*召喚)(?:の発動|の処理)?$"))}
+                  "合計", "種類")                          # (過渡:patient.py 讀;回指讀中心詞類 非卡/其他)
+# 事件類:中心詞(或字面片語的事件名詞)→ 事件組;召喚 看尾字(特殊召喚、S召喚)
+EVENT_HEADS = {"発動": "発動", "効果": "発動", "攻撃": "攻撃", "宣言": "攻撃"}
+EVENT_SUMMON, SUMMON_SUFFIX = "召喚", "召喚"
+SUMMON_SUCCESS = "召喚成功"                                 # 特殊召喚成功時:段尾是 成功 的召喚事件
+EVENT_WORDS = ("発動", "効果", "攻撃", "召喚")             # 事件詞不當限定語
+OWNER_EVENT_WORDS = ("攻撃", "発動", "効果")               # 子句裡「Xの攻撃宣言/攻撃/発動/効果」的主人 X
+EVENT_TAILS = ("処理", "発動")                             # 効果の処理/効果の発動:字面片語尾的事件後綴
+PROCESSING_TAIL = "の処理"                                 # 回指值的字面去掉 の処理(效果本身才是目標)
+ACTIVATION_TIME = "発動時"                                 # その魔法カード発動時の効果 跟著那張卡
+ATTACK_ACTIONS = ("攻撃宣言", "攻撃", "直接攻撃", "攻撃対象にする")
+# 主語是被攻擊的那張,不是主人(攻撃対象になった 是自動,攻撃対象に選択された 是受身)
+TARGETED_EVENTS = ("攻撃対象にする",)
+# 效果類的中心詞 → (事件框架的動作判準, 字面片語允許的事件組)
+_EVENTS = {"発動": (lambda action: action == "発動", ("発動",)),
+           "攻撃": (ATTACK_ACTIONS.__contains__, ("攻撃",)),
+           EVENT_SUMMON: (lambda action: action.endswith(SUMMON_SUFFIX), (EVENT_SUMMON,)),
+           TARGET_ANY: (lambda action: action == "発動" or action.endswith(SUMMON_SUFFIX), ("発動", EVENT_SUMMON))}
+# 指示詞綁的詞是時間、程度、數值的修飾(その場合このカード、その時のS素材モンスター、その同名カード):不是回指
+NON_REFERENCE_BOUND = ("場合", "時", "中", "後", "他", "度", "まま", "差", "数", "同名")
+MODIFIER_TAILS = ("以外",)                                 # そのモンスター以外の…:指示詞只修飾另一張卡
+# 其他 類修飾語裡的這些字:那段是帶格助詞/比較的定語子句(そのモンスターが装備可能な…、…と同じカード名),指示詞只修飾
+# 另一張卡——片語的指示詞旗標認不出的定語(述語不在詞典)與被 ・ 切到後段的子句由這張表補
+CLAUSE_MARKS = ("が", "を", "と", "より", "に記", "に使用")
+# 整個字面裡的比較(そのモンスターと同名のXモンスター、そのカードと同じ種類の…):並列切段後比較詞落在後段,從字面補
+COMPARE_MARKS = ("と同名", "と同じ", "と異なる", "と違う")
+ACTIVATED = ("発動", "した")                                # Xの発動した効果:主人仍是 X
+# 限定語:動作(その破壊されたモンスター)也比候選所在的子句;其餘只比候選自己的段
+ACTION_QUALIFIERS = ("攻撃", "装備", "破壊", "特殊召喚", "発動", "除外", "戦闘", "無効") \
+    + tuple(sorted(word + "召喚" for word in phrases.SUMMON_METHOD_WORDS))   # そのP召喚されたモンスター 的 P召喚
+# 中心詞自帶的卡種與召喚法(その効果モンスター、その魔法カード、その儀式魔法カード;召喚法詞是片語的那一份)
+HEAD_QUALIFIERS = ("チューナー", "効果", "通常", "魔法", "罠") + tuple(sorted(phrases.SUMMON_METHOD_WORDS))
+PLAYER_QUALIFIERS = (PLACE_PLAYER[PLAYER_SELF], PLACE_PLAYER[PLAYER_OPP])   # 其他玩家值不當限定語
+TYPED_QUALIFIER_KINDS = (MOD_PLAYER, MOD_SUBTYPE, MOD_POSITION, MOD_RACE, MOD_ATTRIBUTE, MOD_ARCHETYPE)
+QUALIFIER_ACTION, QUALIFIER_HEAD, QUALIFIER_MATERIAL = "動作", "卡種", "素材"   # 修飾語類之外的限定語類
+GROUP_TAILS = ("同士", "のいずれか")                        # 候選字面的群組尾巴:モンスター同士 → モンスター
+GROUP_HEADS = ("いずれか",)                                 # 「X」のいずれか1枚:中心詞是群組詞時目標是 X(字面不改)
+LISTING_WORDS = ("と", "及び", "および", "または", "か", "や")   # 並列含此卡(このカードと…)不是只有此卡
+OWNER_STOP_PARTICLES = ("p:が", "p:を", "p:は", "p:に", "p:で")   # 主人的「Xの」不跨格助詞
+NAME_OPEN = "「"
 
 Reference = namedtuple("Reference", "kind head qualifiers plural within counted")
-# 字面片語:句序、起點、選項、字面、前面的 が 片語、「Xが発動した」的 X
-Phrase = namedtuple("Phrase", "sentence start option text agent activator")
+# 字面片語:句序、起點、選項、字面、前面的 が 片語、「Xが発動した」的 X、詞序列(tuple;主人用)
+Phrase = namedtuple("Phrase", "sentence start option text agent activator run")
 KIND_TARGETED, KIND_CARD, KIND_EVENT = "targeted", "card", "event"
+# 指示詞只修飾另一張卡(reference_of 的回傳之一;patient 的修飾語組)
+MODIFIER = "modifier"
 
 
 def _clean(text):
-    return _SPACES.sub("", text or "")
+    return "".join((text or "").split())
 
 
-def _strip_count(text):
-    return _COUNT_TAIL.sub("", text)
+def _starts_demonstrative(text):
+    return text in DEMONSTRATIVE_BARE or text.startswith(DEMONSTRATIVE_PREFIXES)
 
 
-def is_demonstrative(text):
-    return bool(_DEMONSTRATIVE.match(_clean(text)))
+def _strip_demonstrative(text):
+    for prefix in DEMONSTRATIVE_PREFIXES:
+        if text.startswith(prefix):
+            return text[len(prefix):]
+    return text
 
 
-def modifier(text):
-    """受事者開頭是指示詞,但指示詞只修飾另一張卡(そのモンスターより…Xモンスター):受事者照自己
-    的字面判。"""
-    text = _clean(text)
-    if not is_demonstrative(text) or _is_not_card(text):
-        return False
-    # 屬性與效果跟著卡走:そのモンスター以外の…カードの効果 的中心詞是那些卡
-    tail = _VALUE_TAIL.match(text) or _EFFECT_TAIL.match(text)
-    core = _strip_count(tail.group(1) if tail else text)
-    if not _is_card_tail(core):
-        return False
-    return bool(_NOT_REFERENCE.match(text) or _MODIFIER.search(_DEMONSTRATIVE.sub("", core)))
+def _is_region_word(word):
+    return bool(word) and bool(places.parse_place(word)[1])
 
 
-def _is_not_card(text):
-    return _strip_count(text).endswith(NOT_CARD_HEADS)
+def _zone_only(text):
+    """整段只是一個區域詞,前面至多一個裸玩家詞(相手の手札、自分フィールド)。"""
+    for player in places.BARE_PLAYERS:
+        prefix = next((p for p in (player + "の", player) if text.startswith(p)), None)
+        if prefix:
+            text = text[len(prefix):]
+            break
+    return any(text == term for term, _ in places.ZONE_TERMS)
 
 
-def _is_card_tail(core):
-    return bool(_MONSTER_TAIL.search(core) or _CARD_TAIL.search(core))
+def _is_monster_head(head):
+    return head.endswith(MONSTER_HEAD_SUFFIXES)
 
 
-def reference(text):
-    """受事者字面 → Reference;不是回指(不是指示詞、修飾語、不是卡、另一張實體卡)時 None。"""
-    text = _clean(text)
-    if not is_demonstrative(text) or _NOT_REFERENCE.match(text) or modifier(text) \
-            or _is_not_card(text) or _ATTACHED.search(text):
+def _is_material(seg):
+    """中心詞是素材(X素材)、或素材緊接在中心詞前(融合素材モンスター)。"""
+    mods = seg["modifiers"]
+    return (seg["head"] or "").endswith(MATERIAL) or bool(mods and mods[-1]["text"] == MATERIAL)
+
+
+def _event_group(head):
+    """中心詞 → 事件組(発動/攻撃/召喚)或 None。"""
+    if not head:
         return None
-    targeted = bool(_TARGETED.match(text))
-    # そのモンスターとこのカード:並列時回指只關於開頭那段;〜分このカードの攻撃力 不是指示詞的受事者
-    if _THIS_CARD_TAIL.search(text) and not re.search(r"(?:と|及び|および)%s" % THIS_CARD, text):
-        return None
-    rest = _DEMONSTRATIVE.sub("", text)
-    value = _VALUE_TAIL.match(_strip_count(rest))
-    body = value.group(1) if value else rest
-    owner = _ACTIVATION_EFFECT.match(body) or _EFFECT_TAIL.match(body)
-    if owner and _is_card_tail(_strip_count(owner.group(1))):
-        body = owner.group(1)
-    elif text.startswith("それ") and body in ("効果", "発動"):
-        body = ""
-    body = _LISTING.split(body, maxsplit=1)[0]
-    within = "内" in body
-    plural = text.startswith("それら") or within
-    count = _COUNT_TAIL.search(body).group(1)
-    core = _strip_count(body)
-    if count and _PLURAL_COUNT.match(count):
-        plural = True
-    qualifiers = tuple(q for q in _QUALIFIERS if q in core)
-    if targeted:
-        return Reference(KIND_TARGETED, _head_of(core, count), qualifiers, plural, within, bool(count))
-    if not value and core.endswith(tuple(word for word, _ in _EVENT_WORDS)):
-        event = next(action for word, action in _EVENT_WORDS if core.endswith(word))
-        return Reference(KIND_EVENT, event, tuple(q for q in qualifiers if q not in ("効果", "発動", "攻撃")),
-                         False, False, False)
-    head = _head_of(core, count)
-    return Reference(KIND_CARD, head, qualifiers, plural, within, bool(count)) if head else None
+    return EVENT_HEADS.get(head) or (EVENT_SUMMON if head.endswith(SUMMON_SUFFIX) else None)
 
 
-def _head_of(core, count):
-    if _MONSTER_TAIL.search(core):
-        return HEAD_MONSTER
-    if _CARD_TAIL.search(core):
-        return HEAD_CARD
-    if core and not core.endswith("内") and not core.endswith("の"):
+def _event_of(seg):
+    """候選的一段是事件名詞(Xの発動/効果/攻撃/〜召喚、〜召喚成功)→ 事件組 | None。"""
+    return _event_group(seg["head"]) or (EVENT_SUMMON if seg["text"].endswith(SUMMON_SUCCESS) else None)
+
+
+def _plural_count(quantity):
+    return bool(quantity and quantity["number"] is not None and quantity["number"] >= 2)
+
+
+def _segments(ctx, text):
+    """沒有現成段的字面(指示詞的主人、字面備援片語、過渡期的字面 API)→ 片語的段清單。"""
+    run = ctx.tokenize(text) if text else []
+    return [phrases.segment(ctx, chunk) for chunk in phrases.split(ctx, run)] if run else []
+
+
+def _field_reference(ctx, frame, key):
+    """框架欄位 → Reference | MODIFIER | None:切區域後的字面(frame[key])要以指示詞起頭(その墓地のモンスター 切成
+    所在 その墓地 與對象 モンスター 後,對象不是指示詞)。"""
+    literal = _clean(frame.get(key))
+    if not _starts_demonstrative(literal):
         return None
-    if count and "体" in count:
-        return HEAD_MONSTER
-    if count:
-        return HEAD_CARD
-    return HEAD_ANY
+    return reference_of(ctx, _field_segments(ctx, frame, key), literal)
+
+
+def _field_segments(ctx, frame, key):
+    """框架欄位的段:片語結構化已寫在 frame["phrases"];沒有時(手寫框架)把字面切段。"""
+    literal = _clean(frame.get(key))
+    found = (frame.get("phrases") or {}).get(key)
+    if not found:
+        return _segments(ctx, literal)
+    segments = found["segments"]
+    # 段是切區域前的字面(墓地のそのモンスター2体);指示詞在切後的字面開頭時照切後的字面切段
+    if segments and _starts_demonstrative(literal) and not _starts_demonstrative(segments[0]["text"]):
+        return _segments(ctx, literal)
+    return segments
+
+
+def _owner_of(ctx, text, head):
+    """字面 → 主人字面 | None:中心詞(合記的 特殊|召喚 佔兩格)前最後一個 の 格之前是主人,の 與中心詞之間只能是
+    名詞格(そのモンスターの|攻撃力、相手モンスターの|直接攻撃宣言;このカードを対象とする効果 沒有 の、相手がこの
+    カードの効果を無効にする効果 的 の 後有格助詞,都沒有主人);元々の 不是主人(そのモンスターの元々の攻撃力)。"""
+    run = ctx.tokenize(text)
+    surfaces = [ctx.surface(t) for t in run]
+    # 中心詞的格:第一個收在段尾(字面尾、・、並列詞之前)的;モンスターの攻撃力・守備力、モンスターの召喚・特殊召喚 取第一段的
+    ends = [i for i in range(len(run)) if "".join(surfaces[:i + 1]).endswith(head)]
+    end = next((i for i in ends if i == len(run) - 1 or run[i + 1] == "・" or ctx.coordinates(run, i + 1)),
+               ends[-1] if ends else None)
+    if end is None:
+        return None
+    start = end
+    while start > 0 and len("".join(surfaces[start:end + 1])) < len(head):
+        start -= 1
+    if start >= len(ACTIVATED) and tuple(surfaces[start - len(ACTIVATED):start]) == ACTIVATED:
+        start -= len(ACTIVATED)
+    k = start - 1
+    while k >= 0:
+        if run[k] == "p:の":
+            if k > 0 and surfaces[k - 1].endswith(ORIGINAL):
+                k -= 2
+                continue
+            return "".join(surfaces[:k]) or None
+        if not ctx.is_noun_like(run[k]):
+            return None
+        k -= 1
+    return None
+
+
+def _is_clause(text):
+    return any(mark in text for mark in CLAUSE_MARKS)
+
+
+def _other_modifiers(seg):
+    return [m["text"] for m in seg["modifiers"] if m["kind"] == OTHER]
+
+
+def _tail_count(ctx, text):
+    """字面尾的數量(その内の1枚:中心詞 内 之後隔著 の 的數量,段的數量欄沒收)→ Quantity | None。"""
+    run = ctx.tokenize(text)
+    for i in range(max(0, len(run) - 3), len(run)):
+        found = phrases.match_quantity(ctx, run, i)
+        if found and found[1] == len(run):
+            return found[0]
+    return None
+
+
+# ── 指示詞字面 → Reference ──
+def reference_of(ctx, segments, literal=None):
+    """受事者片語的段清單(與整個字面)→ Reference;指示詞只修飾另一張卡時 MODIFIER;不是回指(不是指示詞起頭、
+    不是卡、另一張實體卡、字面只是此卡)時 None。並列(そのモンスターとこのカード)時回指只關於第一段。"""
+    if not segments:
+        return None
+    seg = segments[0]
+    text = seg["text"]
+    if not _starts_demonstrative(text):
+        return None
+    if literal and any(mark in literal for mark in COMPARE_MARKS):
+        return MODIFIER      # そのモンスターと同名のXモンスター、そのカードと同じ種類の手札:比較的對象
+    if len(segments) == 1 and text.endswith(THIS_CARD):
+        return None          # その場合このカード、〜分このカードの攻撃力:受事者是此卡
+    if len(segments) > 1:
+        if segments[-1]["head_kind"] not in (HEAD_CARD, HEAD_ATTRIBUTE, HEAD_DEMONSTRATIVE):
+            return None      # その攻撃モンスターと対象のモンスターの攻撃力の差分のダメージ:受事者整個不是卡
+        for later in segments[1:]:
+            if _starts_demonstrative(later["text"]):
+                continue         # そのモンスター及びその同名モンスター:後段自己是另一個指示詞,不影響第一段
+            # 被 ・/並列 切到後段的定語子句(…攻撃力を持つ「X」1体):指示詞只修飾另一張卡
+            if any(_is_clause(t) for t in _other_modifiers(later)):
+                return MODIFIER
+        # その召喚・反転召喚・特殊召喚されたモンスター:「・」切開的是定語,指示詞綁的是最後一段的中心詞
+        if not seg["modifiers"] and _event_group(seg["head"]) and segments[-1]["head_kind"] == HEAD_CARD:
+            seg = dict(segments[-1], demonstrative=True)
+    return _reference_segment(ctx, seg, text.startswith(TARGETED_PREFIXES))
+
+
+def _reference_segment(ctx, seg, targeted):
+    head, kind, text = seg["head"], seg["head_kind"], seg["text"]
+    if head is None or text.endswith(THIS_CARD):
+        return None
+    if not seg["demonstrative"]:
+        return MODIFIER      # そのモンスターと同じ種族のモンスター:指示詞綁在定語子句裡的另一張卡
+    modifiers = seg["modifiers"]
+    if targeted and modifiers and modifiers[0]["text"] == TARGET_WORD:
+        modifiers = modifiers[1:]
+    if kind == HEAD_DEMONSTRATIVE:
+        return _demonstrative_reference(ctx, seg, head, text, targeted)
+    if kind == HEAD_ATTRIBUTE:
+        return _attribute_reference(ctx, seg, head, text, modifiers, targeted)
+    if kind != HEAD_CARD or _is_region_word(head):
+        return None          # 非卡(その数、そのダメージ)、其他(その場合)、玩家、區域(その手札)
+    if any(_strip_demonstrative(t).startswith(NON_REFERENCE_BOUND) or t.endswith(MODIFIER_TAILS) or _is_clause(t)
+           for t in _other_modifiers(seg) if not (targeted and t == TARGET_WORD)):
+        return MODIFIER      # その同名カード、その場合このカード、その中から…、そのモンスター以外の…、そのモンスターが装備可能な…
+    owner = _owner_of(ctx, text, head)
+    if owner is not None and not (targeted and owner == TARGET_WORD):
+        owner_segments = _segments(ctx, owner)
+        owner_seg = owner_segments[0] if owner_segments else None
+        if owner_seg is not None:
+            owner_head, owner_kind = owner_seg["head"], owner_seg["head_kind"]
+            owner_quantity = owner_seg["quantity"] or (_tail_count(ctx, owner) if owner_head == WITHIN else None)
+            if owner_head in NON_REFERENCE_BOUND or (owner_kind == HEAD_ATTRIBUTE and owner_head not in EVENT_WORDS):
+                return MODIFIER  # その手札のカード、その属性のモンスター:指示詞只修飾另一張卡
+            if (owner_kind == HEAD_CARD and not _is_region_word(owner_head)) \
+                    or (owner_kind == HEAD_DEMONSTRATIVE and owner_quantity is not None):
+                return None      # そのモンスターのX素材/装備カード、その内の1体のX素材:另一張實體卡
+    quantity = seg["quantity"]
+    return Reference(KIND_TARGETED if targeted else KIND_CARD,
+                     TARGET_MONSTER if _is_monster_head(head) else TARGET_CARD,
+                     _qualifiers(seg, modifiers), _within(seg) or _plural_count(quantity), _within(seg),
+                     quantity is not None)
+
+
+def _within(seg):
+    return seg["head"] == WITHIN or any(_strip_demonstrative(m["text"]) == WITHIN for m in seg["modifiers"])
+
+
+def _demonstrative_reference(ctx, seg, head, text, targeted):
+    """中心詞類 指示詞 的段:それ/それら、その内の1枚、只剩數量的 その2体、この効果の対象。"""
+    quantity = seg["quantity"] or (_tail_count(ctx, text) if head == WITHIN else None)
+    if quantity and quantity["from_clause"]:
+        quantity = None
+    if not (head == WITHIN or head in DEMONSTRATIVE_BARE or (quantity and head == quantity["text"])
+            or (targeted and head == TARGET_WORD)):
+        return None          # その相手モンスターの攻撃対象(另一張實體卡)、その両方、そのいずれか
+    target = TARGET_ANY
+    if quantity:
+        target = TARGET_MONSTER if MONSTER_COUNTER in quantity["text"] else TARGET_CARD
+    plural = head == DEMONSTRATIVE_BARE[1] or head == WITHIN or _plural_count(quantity)
+    return Reference(KIND_TARGETED if targeted else KIND_CARD, target, _qualifiers(seg, seg["modifiers"]),
+                     plural, head == WITHIN, quantity is not None)
+
+
+def _attribute_reference(ctx, seg, head, text, modifiers, targeted):
+    """中心詞類 屬性 的段:跟著主人走(そのモンスターの攻撃力 → そのモンスター);事件詞(発動/効果/攻撃/〜召喚)
+    主人是卡時也跟著卡(その魔法カード発動時の効果 也是),否則是效果類;沒有主人的屬性(その攻撃力)指前一個選的卡。"""
+    event = _event_group(head)
+    activation = text.find(ACTIVATION_TIME + "の") if event else -1
+    owner = text[:activation] if activation > 0 else _owner_of(ctx, text, head)
+    if owner is not None:
+        owner_text = owner
+        owner_segments = _segments(ctx, owner_text)
+        found = _reference_segment(ctx, owner_segments[0], targeted or owner_text.startswith(TARGETED_PREFIXES)) \
+            if owner_segments else None
+        if found is not None and found != MODIFIER and found.kind != KIND_EVENT and event in (None, "発動"):
+            return found      # そのモンスターの攻撃力/効果 跟著卡;そのモンスターの攻撃 是事件
+        if not event:
+            return found      # 主人不是卡(その数の…)、或主人是修飾語(そのモンスター以外の…カードの効果)
+    if event:
+        qualifiers = tuple(q for q in _qualifiers(seg, modifiers) if q[1] not in EVENT_WORDS)
+        return Reference(KIND_EVENT, event, qualifiers, False, False, False)
+    return Reference(KIND_TARGETED if targeted else KIND_CARD, TARGET_ANY, (), False, False, False)
+
+
+def _qualifiers(seg, modifiers):
+    """段 → 限定語 ((類, 字面)…):玩家、依類比的修飾語、其他類修飾語裡的動作詞、中心詞自帶的卡種。"""
+    out = []
+    if seg["player"] in PLAYER_QUALIFIERS:
+        out.append((MOD_PLAYER, seg["player"]))
+    for m in modifiers:
+        text = _strip_demonstrative(m["text"])
+        if m["kind"] in TYPED_QUALIFIER_KINDS:
+            if m["kind"] != MOD_PLAYER or text in PLAYER_QUALIFIERS:
+                out.append((m["kind"], text))
+        elif m["kind"] == OTHER:
+            out.extend((QUALIFIER_ACTION, word) for word in ACTION_QUALIFIERS if word in text)
+    head = seg["head"] or ""
+    out.extend((QUALIFIER_HEAD, word) for word in HEAD_QUALIFIERS if word in head)
+    return tuple(dict.fromkeys(out))
+
+
+def modifier_of(ctx, segments):
+    """受事者片語的段清單 → 指示詞只修飾另一張卡(そのモンスターより…Xモンスター):受事者照自己的字面判。"""
+    return reference_of(ctx, segments) == MODIFIER
 
 
 def patient_key(frame):
@@ -219,62 +408,154 @@ def _player(*texts):
     return None
 
 
-def _bare_target(text):
-    """候選字面 → 目標本身:去掉屬性、事件名詞與群組的尾巴(相手モンスターの攻撃力 → 相手モンスター、
-    モンスター同士 → モンスター)。"""
-    found = _VALUE_TAIL.match(text) or _EVENT_NOUN_TAIL.match(text)
-    return _GROUP_TAIL.sub("", found.group(1) if found and found.group(1) else text)
-
-
 def only_this_card(text):
     """字面只是此卡(帶定語的也算:S召喚したこのカード);並列含此卡的不算。"""
     text = _clean(text)
-    return text.endswith(THIS_CARD) and not _LISTED_THIS_CARD.search(text)
+    return text.endswith(THIS_CARD) and not any(word in text[:-len(THIS_CARD)] for word in LISTING_WORDS)
 
 
-def _head_fit(ref, literal):
-    """目標中心詞 × 候選字面 → 2 對得上、1 勉強(そのモンスター×カード１枚)、0 不行。"""
-    text = _bare_target(literal)
-    if only_this_card(text):
-        return 0
-    core = _strip_count(text)
-    if not core:              # 只剩數量(モンスターが１体のみの場合 的 1体)不是目標
-        return 0
-    if ref.within and _ZONE_ONLY.search(core):
-        return 2
-    counted = core != text
-    monster = bool(_MONSTER_TAIL.search(core)) or (counted and text.endswith("体"))
-    card = bool(_CARD_TAIL.search(core)) or (counted and text.endswith("枚"))
-    if not (monster or card) and counted and _ZONE_ONLY.search(core):
-        card = True
-    if not (monster or card):
-        return 0
-    if ref.head == HEAD_MONSTER:
-        return 2 if monster or core.endswith("」") else 1
-    return 2
+# ── 候選 ──
+# 一個候選:輸出用的字面、目標段 [(字面, 段)…]、各類限定語的值 {類: 集合}、所在的子句字面、組回指值的函式
+_Candidate = namedtuple("_Candidate", "text targets qualifiers clause build")
 
 
-def _plural_fit(ref, literal):
-    if not ref.plural:
-        return True
-    count = _COUNT_TAIL.search(literal).group(1)
-    return bool(_LISTING.search(literal)) or bool(count and _PLURAL_COUNT.match(count)) \
-        or not count
+def _target_of(ctx, text, seg):
+    """候選的一段 → (目標字面, 目標段):中心詞是屬性或事件名詞時目標是主人(自分のモンスターの攻撃力 →
+    自分のモンスター、モンスターの特殊召喚 → モンスター);同士/のいずれか 收尾的去尾;其餘照段。"""
+    head = seg["head"]
+    if head is None:
+        return text, seg
+    if seg["head_kind"] == HEAD_ATTRIBUTE or _event_of(seg):
+        owner = _owner_of(ctx, text, head)
+        if owner is not None:
+            found = _segments(ctx, owner)
+            return _target_of(ctx, owner, found[0]) if found else (text, seg)   # モンスターの効果の発動 → モンスター
+        return text, seg
+    for tail in GROUP_TAILS:
+        if text.endswith(tail) and len(text) > len(tail):
+            found = _segments(ctx, text[:-len(tail)])
+            return (text[:-len(tail)], found[0]) if found else (text, seg)
+    if head in GROUP_HEADS:
+        owner = _owner_of(ctx, text, head)
+        found = _segments(ctx, owner) if owner else []
+        if found:
+            return text, found[0]
+    return text, seg
 
 
-# 一個候選:比對用的字面、候選自己的字面(含區域、主語)、它所在的子句、組回指值的函式
-_Candidate = namedtuple("_Candidate", "text own clause build")
+def _candidate(ctx, text, segments, extra_texts, clause, build):
+    """候選:目標段與各類限定語的值 {類: 集合}(玩家也從區域/主語字面收;中心詞是素材時卡片子類型不收)。"""
+    if segments and all(seg["head_kind"] == HEAD_ATTRIBUTE or _event_of(seg) for seg in segments):
+        targets = [_target_of(ctx, text, segments[0])]       # モンスターの召喚・特殊召喚、相手モンスターの攻撃力・守備力:一個目標
+    else:
+        targets = [_target_of(ctx, seg["text"], seg) for seg in segments]
+    values = {kind: set() for kind in TYPED_QUALIFIER_KINDS}
+    values[QUALIFIER_HEAD] = set()
+    values[QUALIFIER_MATERIAL] = any(_is_material(seg) for _, seg in targets)
+    texts = [seg["text"] for seg in segments] + [t for t, _ in targets] + [_clean(t) for t in extra_texts if t]
+    for _, seg in targets:
+        if seg["player"]:
+            values[MOD_PLAYER].add(seg["player"])
+        mods = seg["modifiers"]
+        for i, m in enumerate(mods):
+            # 融合|素材:素材之前的召喚法不算卡片子類型(X素材の無いXモンスター 的後一個 X 仍算)
+            if m["kind"] in TYPED_QUALIFIER_KINDS and not (
+                    m["kind"] == MOD_SUBTYPE and i + 1 < len(mods) and mods[i + 1]["text"] == MATERIAL):
+                values[m["kind"]].add(_strip_demonstrative(m["text"]))
+        head = seg["head"] or ""
+        if not _is_material(seg):
+            values[QUALIFIER_HEAD].add(head)
+            values[QUALIFIER_HEAD].update(word for word in HEAD_QUALIFIERS if word in head)
+    for extra in extra_texts:
+        player = _player(extra)
+        if player:
+            values[MOD_PLAYER].add(PLACE_PLAYER[player])
+    values[QUALIFIER_ACTION] = {word for word in ACTION_QUALIFIERS if any(word in t for t in texts)}
+    return _Candidate(text, targets, values, clause, build)
 
 
 def _qualified(ref, candidate):
-    """指示詞的限定語候選都有:融合素材 不算 融合;玩家、卡種只比候選自己,不比同子句別的片語。"""
-    own = _MATERIAL.sub("", candidate.own)
-    clause = _MATERIAL.sub("", candidate.clause)
-    return all(q in own or (q in _ACTION_QUALIFIERS and q in clause) for q in ref.qualifiers)
+    """指示詞的限定語候選都有:玩家、卡種、修飾語依類比字面(融合素材 不算 融合);動作也比候選所在的子句。"""
+    values = candidate.qualifiers
+    for kind, value in ref.qualifiers:
+        if kind == QUALIFIER_ACTION:
+            if value not in values[kind] and value not in candidate.clause:
+                return False
+        elif kind in (MOD_SUBTYPE, QUALIFIER_HEAD):
+            if value not in values[MOD_SUBTYPE] and value not in values[QUALIFIER_HEAD]:
+                return False
+        elif value not in values[kind]:
+            return False
+    return True
 
 
-def _value_from_field(frame, key, literal):
-    literal = _bare_target(literal)
+def _segment_fit(ref, seg):
+    """目標中心詞 × 候選的一段 → 2 對得上、1 勉強(そのモンスター×カード１枚)、0 不行。"""
+    head, kind, quantity = seg["head"], seg["head_kind"], seg["quantity"]
+    if quantity and quantity["from_clause"]:
+        quantity = None         # 子句裡的數量不是段自己的(相手がランダムに１枚選び 的 相手 不是卡)
+    if head is None:
+        return 0
+    if kind == HEAD_DEMONSTRATIVE:
+        # それ、いずれか、両方、只剩數量(モンスターが１体のみの場合 的 1体)不是目標;「X」の内2体 的數量尾說的是怪獸/卡
+        if not quantity or head == quantity["text"]:
+            return 0
+        monster = MONSTER_COUNTER in quantity["text"]
+        if not (monster or CARD_COUNTER in quantity["text"]):
+            return 0
+        return 2 if monster or ref.head != TARGET_MONSTER else 1
+    region = _is_region_word(head)
+    if ref.within and region and not quantity and _zone_only(seg["text"]):
+        return 2                # 相手の手札:整段只是(玩家)區域(自分か相手のEXデッキ、自身の手札・デッキ 不算)
+    counted_monster = bool(quantity and MONSTER_COUNTER in quantity["text"])
+    counted_card = bool(quantity and CARD_COUNTER in quantity["text"])
+    monster = (kind == HEAD_CARD and not region and _is_monster_head(head)) or counted_monster
+    card = (kind == HEAD_CARD and not region) or counted_card or (region and quantity is not None)
+    if not (monster or card):
+        return 0
+    if ref.head == TARGET_MONSTER:
+        return 2 if monster or head.startswith(NAME_OPEN) else 1
+    return 2
+
+
+def _head_fit(ref, candidate):
+    """候選看最後一段(字面的尾巴:このカードとモンスター1体 是怪獸、モンスター1体とカード1枚 是卡);字面只是此卡的不是候選。"""
+    if not candidate.targets or (len(candidate.targets) == 1 and only_this_card(candidate.targets[0][0])):
+        return 0                # このカードのレベル 的目標是此卡
+    segments = [seg for _, seg in candidate.targets]
+    while len(segments) > 1 and segments[-1]["quantity"] and segments[-1]["head"] == segments[-1]["quantity"]["text"]:
+        segments.pop()          # 通常罠カード3枚または6枚:尾段只剩數量,看前一段
+    return _segment_fit(ref, segments[-1])
+
+
+def _plural_fit(ref, candidate):
+    if not ref.plural:
+        return True
+    counts = [seg["quantity"]["number"] for _, seg in candidate.targets
+              if seg["quantity"] and seg["quantity"]["number"] is not None and not seg["quantity"]["from_clause"]]
+    return len(candidate.targets) > 1 or any(word in candidate.text for word in LISTING_WORDS) \
+        or any(n >= 2 for n in counts) or not counts
+
+
+def _target_text(ctx, literal, segments):
+    """候選欄位的字面 → 目標本身:單段、或各段都是屬性/事件名詞時照第一段取主人(相手モンスターの攻撃力・守備力 →
+    相手モンスター、モンスターの効果の発動 → モンスター);群組尾去掉(モンスター同士 → モンスター)。"""
+    if segments and (len(segments) == 1
+                     or all(seg["head_kind"] == HEAD_ATTRIBUTE or _event_of(seg) for seg in segments)):
+        return _target_of(ctx, literal, segments[0])[0]
+    if segments and segments[-1]["head_kind"] == HEAD_ATTRIBUTE and not _event_of(segments[-1]):
+        last = segments[-1]["text"]
+        owner = _owner_of(ctx, last, segments[-1]["head"])
+        if owner is not None and literal.endswith(last[len(owner):]):
+            return literal[:len(literal) - (len(last) - len(owner))]   # このカード及び…モンスターの攻撃力 → …モンスター
+    for tail in GROUP_TAILS:
+        if literal.endswith(tail) and len(literal) > len(tail):
+            return literal[:-len(tail)]
+    return literal
+
+
+def _value_from_field(ctx, frame, key, literal, segments):
+    literal = _target_text(ctx, literal, segments)
     out = {"text": literal, "_targets": [frame]}
     if key == patient_key(frame) and _region(frame):
         out["place"] = _region(frame)
@@ -285,98 +566,139 @@ def _value_from_field(frame, key, literal):
     player = _player(out.get("place"), literal)
     if player:
         out["player"] = player
-    clause = _clean(frame.get("clause"))
-    if not _COUNT_TAIL.search(literal).group(1) and not _ALL_OF_THEM.search(clause):
-        count = _CLAUSE_COUNT.search(clause)
-        if count:
-            out["count"] = count.group(1) or count.group(0)
+    # 目標的數量只寫在子句裡(モンスターを１体選んで):片語段的 取自子句 數量;全て 不是數量
+    quantity = next((seg["quantity"] for seg in segments if seg["quantity"] and seg["quantity"]["from_clause"]), None)
+    if quantity and quantity["kind"] != phrases.Q_ALL:
+        out["count"] = quantity["text"]
     return dict(out, via=VIA_FIELD)
 
 
-def _field_candidates(earlier):
+def _field_candidates(ctx, earlier):
     """往前的框架 → 候選(近的在前);字面是指示詞的用它解到的值(解到底)。回填來的對象與主題
     不算候選:提供它的框架更前面,值相同,數量也寫在那裡。"""
     for frame in reversed(earlier):
         filled = frame.get("backfill") or ()
+        clause = _clean(frame.get("clause"))
         for key in ("object", "subject", "topic"):
             if not frame.get(key) or (key != "subject" and key in filled):
                 continue
             literal = _clean(frame[key])
-            if reference(literal):
+            segments = _field_segments(ctx, frame, key)
+            ref = _field_reference(ctx, frame, key)
+            if ref is not None and ref != MODIFIER:
                 resolved = frame.get("anaphora")
                 if key == patient_key(frame) and resolved:
-                    yield _Candidate(resolved["text"],
-                                     resolved["text"] + (resolved.get("place") or "")
-                                     + (resolved.get("subject") or ""),
-                                     _clean(frame.get("clause")),
+                    yield _candidate(ctx, resolved["text"], _segments(ctx, resolved["text"]),
+                                     (resolved.get("place"), resolved.get("subject")), clause,
                                      lambda r=resolved, f=frame: dict(
                                          r, _targets=[f] + list(f.get("_anaphora_targets") or [])))
                 continue
-            if is_demonstrative(literal) and not modifier(literal):
-                continue
-            yield _Candidate(literal, literal + _clean(_region(frame)) + _clean(frame.get("subject")),
-                             _clean(frame.get("clause")),
-                             lambda f=frame, k=key, v=literal: _value_from_field(f, k, v))
+            if ref is None and _starts_demonstrative(literal):
+                continue          # 指示詞但不是卡(その数)、另一張實體卡:不是候選
+            yield _candidate(ctx, literal, segments, (_region(frame), frame.get("subject")), clause,
+                             lambda f=frame, k=key, v=literal, s=segments: _value_from_field(ctx, f, k, v, s))
 
 
-def _value_from_phrase(phrase, agent=None):
-    event = _EVENT_NOUN_TAIL.match(phrase)
-    phrase = _bare_target(phrase)
-    found = _LEADING_ZONE.match(phrase)
-    out = {"text": found.group(2), "place": found.group(1)} if found else {"text": phrase}
+def _leading_zone(text, seg):
+    """字面片語開頭的區域(自分の墓地のモンスター → 自分の墓地、モンスター):段的第一個區域修飾語,前面至多一個玩家詞。"""
+    zone = next((m for m in seg["modifiers"] if m["kind"] == MOD_ZONE), None)
+    if zone is None or zone["text"] not in text:
+        return None, text
+    at = text.index(zone["text"])
+    before = text[:at]
+    if before and before.rstrip("の") not in places.BARE_PLAYERS:
+        return None, text
+    end = at + len(zone["text"])
+    if end >= len(text) or text[end] != "の" or not text[end + 1:]:
+        return None, text
+    return text[:end], text[end + 1:]
+
+
+def _value_from_phrase(ctx, phrase, segments):
+    text = phrase.text
+    seg = segments[0] if segments else None
+    event = seg is not None and _event_of(seg) is not None
+    if seg is not None:
+        text, seg = _target_of(ctx, text, seg)
+        found_place, text = _leading_zone(text, seg)
+    else:
+        found_place = None
+    out = {"text": text, "place": found_place} if found_place else {"text": text}
     # 相手がモンスターの特殊召喚に成功した時:片語是事件時,前面的 が 片語是事件主語
-    if event and agent:
-        out["subject"] = agent
-    player = _player(out.get("place"), phrase, out.get("subject"))
+    if event and phrase.agent:
+        out["subject"] = phrase.agent
+    player = _player(out.get("place"), text, out.get("subject"))
     if player:
         out["player"] = player
     return dict(out, via=VIA_LITERAL)
 
 
-def _phrase_candidates(phrases):
-    for phrase in reversed(phrases):
-        if is_demonstrative(phrase.text):
+def _phrase_candidates(ctx, phrase_list, segmented):
+    for phrase in reversed(phrase_list):
+        segments = segmented[phrase]
+        if not segments or _starts_demonstrative(segments[0]["text"]):
             continue
-        yield _Candidate(phrase.text, phrase.text, "",
-                         lambda p=phrase: _value_from_phrase(p.text, p.agent))
+        yield _candidate(ctx, phrase.text, segments, (), "",
+                         lambda p=phrase, s=segments: _value_from_phrase(ctx, p, s))
 
 
-def _best(ref, fields, phrases):
+def _best(ref, fields, phrase_candidates):
     """欄位對得上 → 字面對得上 → 欄位勉強(限定語對不上)→ 字面勉強;同層取最近。"""
     def tier(candidates, strict):
         for candidate in candidates:
-            fit = _head_fit(ref, candidate.text)
+            fit = _head_fit(ref, candidate)
             if not fit:
                 continue
             # その融合モンスター 不指融合素材モンスター:中心詞是素材時卡種限定語對不上
-            material = _MATERIAL_TAIL.search(candidate.text) \
-                and any(q in _TYPE_QUALIFIERS for q in ref.qualifiers)
-            exact = not material and _qualified(ref, candidate) and _plural_fit(ref, candidate.text)
+            material = candidate.qualifiers[QUALIFIER_MATERIAL] and any(kind == MOD_SUBTYPE for kind, _ in ref.qualifiers)
+            exact = not material and _qualified(ref, candidate) and _plural_fit(ref, candidate)
             if not strict or (exact and fit == 2):
                 return candidate
         return None
-    for candidates, strict in ((fields, True), (phrases, True), (fields, False), (phrases, False)):
+    for candidates, strict in ((fields, True), (phrase_candidates, True), (fields, False), (phrase_candidates, False)):
         found = tier(candidates, strict)
         if found:
             return found.build()
     return None
 
 
-def _owner(frame):
-    """事件框架 → 事件的主人:主語、主題,再來是 Xの効果 的對象,子句字面的「Xの」。受身的主語是被
+# ── 事件 ──
+def _owner_in_run(ctx, run):
+    """詞序列裡「Xの攻撃宣言/攻撃/発動/効果」的 X(不跨格助詞:相手がこのカードの効果を… 的主人不是「相手がこのカード」)。"""
+    for i, token in enumerate(run):
+        if token in OWNER_STOP_PARTICLES:
+            return None
+        if token == "p:の" and i + 1 < len(run) and ctx.word(run[i + 1]) in OWNER_EVENT_WORDS:
+            return "".join(ctx.surface(t) for t in run[:i]) or None
+    return None
+
+
+def _effect_owner(ctx, frame, key):
+    """欄位字面是「Xの効果/発動」時的 X,否則字面本身。"""
+    literal = _clean(frame.get(key))
+    segments = _field_segments(ctx, frame, key)
+    if len(segments) == 1 and _event_group(segments[0]["head"]) == "発動":
+        owner = _owner_of(ctx, literal, segments[0]["head"])
+        if owner is not None:
+            return owner
+    return literal
+
+
+def _owner(ctx, tokens, frame):
+    """事件框架 → 事件的主人:主語、主題,再來是 Xの効果 的對象,子句詞序列的「Xの」。受身的主語是被
     攻擊、被召喚的那張,不是主人。"""
-    passive = frame.get("voice") == "受身" or frame["action"] in _TARGETED_EVENTS
-    agent = None if passive else (frame.get("subject") or frame.get("topic"))
-    if agent:
-        found = _EFFECT_TAIL.match(_clean(agent))
-        return found.group(1) if found else _clean(agent)
+    passive = frame.get("voice") == "受身" or frame["action"] in TARGETED_EVENTS
+    agent_key = None if passive else next((k for k in ("subject", "topic") if frame.get(k)), None)
+    if agent_key:
+        return _effect_owner(ctx, frame, agent_key)
     if passive:
         return None
-    found = _EFFECT_TAIL.match(_clean(frame.get("object")))
-    if found:
-        return found.group(1)
-    found = _OWNER_IN_CLAUSE.match(_clean(frame.get("clause")))
-    return found.group(1) if found else None
+    if frame.get("object"):
+        owner = _effect_owner(ctx, frame, "object")
+        if owner != _clean(frame["object"]):
+            return owner
+    span = frame.get("span") or (0, 0)
+    return _owner_in_run(ctx, tokens[span[0]:span[1]])
 
 
 def _event_value(text, owner, frame=None):
@@ -389,29 +711,51 @@ def _event_value(text, owner, frame=None):
     return dict(out, via=VIA_EVENT)
 
 
-def _event_target(ref, earlier, phrases):
-    wanted, tail = _EVENTS[ref.head]
+def _event_phrase(ctx, phrase):
+    """字面片語是事件(Xの発動/効果(の処理)、Xの攻撃(宣言)、〜召喚)→ (事件組, 目標字面);不是 None。
+    要有「Xの」主人,光禿禿的 発動(発動できる)不是事件;召喚 例外(特殊召喚に成功した)。"""
+    base = phrase.text
+    for tail in EVENT_TAILS:
+        if base.endswith("の" + tail) and len(base) > len(tail) + 1:
+            base = base[:-len(tail) - 1]
+            break
+    segments = _segments(ctx, base)
+    if not segments:
+        return None
+    head = segments[-1]["head"]
+    group = _event_of(segments[-1])
+    if group is None or not head:
+        return None
+    owner = _owner_of(ctx, base, head)
+    if owner is None and group != EVENT_SUMMON:
+        return None
+    text = phrase.text[:-len(PROCESSING_TAIL)] if phrase.text.endswith(PROCESSING_TAIL) else phrase.text
+    return group, text
+
+
+def _event_target(ctx, tokens, ref, earlier, phrase_list):
+    wanted, groups = _EVENTS[ref.head]
     events = [f for f in reversed(earlier) if wanted(f["action"])]
     for frame in events:
-        if all(q in _clean(frame.get("clause")) for q in ref.qualifiers):
-            return _event_value(_clean(frame.get("object")) or frame["action"], _owner(frame), frame)
+        if all(value in _clean(frame.get("clause")) for _, value in ref.qualifiers):
+            return _event_value(_clean(frame.get("object")) or frame["action"], _owner(ctx, tokens, frame), frame)
     if events:
-        return _event_value(_clean(events[0].get("object")) or events[0]["action"], _owner(events[0]),
+        return _event_value(_clean(events[0].get("object")) or events[0]["action"], _owner(ctx, tokens, events[0]),
                             events[0])
-    # 字面:要有「Xの」主人,光禿禿的 発動(発動できる)不是事件;相手が発動した〜 的主人是相手
-    for phrase in reversed(phrases):
-        if is_demonstrative(phrase.text) or not tail.search(phrase.text):
+    # 字面:相手が発動した〜 的主人是相手(activator),否則片語裡「Xの」的 X
+    for phrase in reversed(phrase_list):
+        if _starts_demonstrative(phrase.text):
             continue
-        found = _OWNER_IN_CLAUSE.match(phrase.text)
-        return _event_value(_PROCESSING_TAIL.sub("", phrase.text),
-                            phrase.activator or (found.group(1) if found else None))
+        found = _event_phrase(ctx, phrase)
+        if not found or found[0] not in groups:
+            continue
+        return _event_value(found[1], phrase.activator or _owner_in_run(ctx, list(phrase.run)))
     return None
 
 
-def _targeted(ref, earlier):
+def _targeted(ctx, ref, earlier):
     targets = [f for f in earlier if f["action"] in TARGET_ACTIONS and f.get("object")]
-    candidates = [c for c in _field_candidates(targets)
-                  if not only_this_card(c.text)]
+    candidates = [c for c in _field_candidates(ctx, targets) if not only_this_card(c.text)]
     for candidate in candidates:
         if _qualified(ref, candidate):
             return dict(candidate.build(), via=VIA_TARGET)
@@ -422,11 +766,11 @@ def _in_scope(option, other):
     return other is None or other == option
 
 
-def _phrases_before(phrases, frame, option):
+def _phrases_before(phrase_list, frame, option):
     """指示詞之前的字面片語:到子句裡受事者自己那個片語為止,述語前的片語也算在前面。"""
     literal = _clean(frame.get(patient_key(frame)))
     out = []
-    for phrase in phrases:
+    for phrase in phrase_list:
         at = (phrase.sentence, phrase.start)
         if at >= (frame["sentence"], frame["span"][1]):
             break
@@ -438,35 +782,72 @@ def _phrases_before(phrases, frame, option):
     return out
 
 
-def resolve(frames, phrases):
-    """一個編號效果依原文排序的框架清單(含約束框架),與它的字面片語(Phrase):
-    → 動作框架上就地寫 anaphora 欄;找不到不寫。"""
+def resolve(ctx, tokens, frames, phrase_list):
+    """一個編號效果依原文排序的框架清單(含約束框架;片語結構化已做)、它的詞序列與字面片語(Phrase):
+    → 動作框架上就地寫 anaphora 欄;找不到不寫。ctx 是 enrich.Context(切段與中心詞用片語的函式)。"""
     actions = [f for f in frames if f["kind"] == "動作"]
+    segmented = {phrase: _segments(ctx, phrase.text) for phrase in phrase_list}
     for k, frame in enumerate(actions):
-        ref = reference(frame.get(patient_key(frame)))
-        if ref is None:
+        key = patient_key(frame)
+        if not frame.get(key):
+            continue
+        ref = _field_reference(ctx, frame, key)
+        if ref is None or ref == MODIFIER:
             continue
         option = frame.get("option")
         start = (frame["sentence"], frame["span"][0])
         earlier = [f for f in actions[:k] if _in_scope(option, f.get("option"))
                    and (f["sentence"], f["span"][0]) < start]
-        before = _phrases_before(phrases, frame, option)
+        before = _phrases_before(phrase_list, frame, option)
         # それを無効にし:無效的是事件,不是剛提到的卡
-        if frame["action"] == "無効にする" and _clean(frame.get(patient_key(frame))) == "それ":
-            ref = ref._replace(kind=KIND_EVENT)
+        if frame["action"] == "無効にする" and _clean(frame[key]) == DEMONSTRATIVE_BARE[0]:
+            ref = ref._replace(kind=KIND_EVENT, head=TARGET_ANY)
         if ref.kind == KIND_TARGETED:
-            found = _targeted(ref, earlier)
+            found = _targeted(ctx, ref, earlier)
         elif ref.kind == KIND_EVENT:
             # 魔法カードがその効果を発動した時:主人就是這個框架的主語
             found = ({"text": frame["action"], "subject": _clean(frame["subject"]), "via": VIA_EVENT}
                      if frame.get("subject") and frame["action"] == "発動"
-                     else _event_target(ref, earlier, before))
+                     else _event_target(ctx, tokens, ref, earlier, before))
         else:
-            found = _best(ref, list(_field_candidates(earlier)), list(_phrase_candidates(before)))
+            found = _best(ref, list(_field_candidates(ctx, earlier)), list(_phrase_candidates(ctx, before, segmented)))
         if found:
             # その相手モンスター:指示詞自己寫的玩家優先
-            own = next((q for q in ref.qualifiers if q in ("相手", "自分")), None)
+            own = next((value for kind, value in ref.qualifiers if kind == MOD_PLAYER), None)
             if own and ref.kind != KIND_EVENT:
                 found["player"] = own
             frame["_anaphora_targets"] = found.pop("_targets", [])
             frame["anaphora"] = found
+
+
+# ── 過渡期的字面 API(票 04 交件前的 patient.py 與 llm_check 讀字面;票 04 改讀片語後可刪)──
+_DEFAULT_CTX = None
+
+
+def _default_ctx():
+    """預設抽取器的 Context(frames.py 在模組載入後才 import 得到;框架抽取裡回指由 frames 傳 ctx 進來)。"""
+    global _DEFAULT_CTX
+    if _DEFAULT_CTX is None:
+        import frames
+        _DEFAULT_CTX = frames.default_extractor()._context()
+    return _DEFAULT_CTX
+
+
+def is_demonstrative(text):
+    return _starts_demonstrative(_clean(text))
+
+
+@lru_cache(maxsize=None)
+def _classify_text(text):
+    return reference_of(_default_ctx(), _segments(_default_ctx(), text), text)
+
+
+def modifier(text):
+    """受事者字面:指示詞只修飾另一張卡 → True。"""
+    return _classify_text(_clean(text)) == MODIFIER
+
+
+def reference(text):
+    """受事者字面 → Reference;不是回指時 None。"""
+    found = _classify_text(_clean(text))
+    return None if found == MODIFIER else found

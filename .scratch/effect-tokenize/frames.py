@@ -52,9 +52,10 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
     voice     可選(frame-lemma-unify 票 01/03):態 他動/自動/受身——受身是述語錨點判出的被動
               (取代 2026-10-27 前的 passive 旗標),他動/自動只在詞元對照表合併的詞元上記;
               沒值時不帶(空是沒判,不是他動)
-    anaphora  可選(action-patient-anaphora,anaphora.py):受事者位的指示詞(そのモンスター、対象の
-              カード、その発動)指的目標——字面 text、區域 place、玩家 player、事件主語或主人 subject、
-              只寫在子句裡的數量 count、找法 via(対象/欄位/字面/事件);不是卡、修飾語、找不到時不帶
+    anaphora  可選(action-patient-anaphora,anaphora.py;named-queries 票 03 起讀片語的段):受事者位的指示詞
+              (そのモンスター、対象のカード、その発動)指的目標——字面 text、區域 place、玩家 player、事件主語或
+              主人 subject、只寫在子句裡的數量 count(片語段的 取自子句 數量字面)、找法 via(対象/欄位/字面/事件);
+              不是卡、修飾語、找不到時不帶
     phrases/regions/transfer/agent/agent_source/agent_inferred/manner/manner_kind/manner_value/
     negation/region_backfill  可選(frame-args-v4,enrich.py 的後處理 pass,全是新鍵、只在有值時帶):
               論元片語的結構(段/中心詞/中心詞類/修飾語/數量/玩家/區域/指示詞)、來源/目的/所在的
@@ -1573,8 +1574,8 @@ class FrameExtractor:
         ctx = self._context()
         # 片語結構化(frame-args-v4 phrases):只讀既有欄的最終字面與切區域前的 _raw,不讀回指;回指改讀片語段
         enrich.before_anaphora(ctx, tokens, frames)
-        # 回指(action-patient-anaphora):讀回填、正規化之後的值與片語,跨句號
-        anaphora.resolve(frames, self._phrases(tokens, sentences, option_of))
+        # 回指(action-patient-anaphora;named-queries 票 03 改讀片語段):讀回填、正規化之後的值與片語,跨句號
+        anaphora.resolve(ctx, tokens, frames, self._phrases(tokens, sentences, option_of))
         # 回指後的第四版論元(regions/agent/manner/negation、回指回填):讀回指欄,所以是最後一步;結尾 pop 底線鍵
         enrich.after_anaphora(ctx, tokens, frames)
         return frames
@@ -1613,7 +1614,7 @@ class FrameExtractor:
                     agent = out[-1].text
                 out.append(anaphora.Phrase(s_idx, k, option_of[s_idx],
                                            "".join(self.surface(t) for t in tokens[k:m]),
-                                           agent, activator))
+                                           agent, activator, tuple(tokens[k:m])))
                 k = m
         return out
 

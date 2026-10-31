@@ -8,6 +8,7 @@
 - enrich.STEPS 裡的每個步驟模組自己宣告 mark(ctx, tokens, frame)、batch_cells(frame) 與 FILL_RATE_ROWS(retro
   第 9 項:收集端只有 STEPS 一張表;步驟模組一定加了新鍵,新鍵就要有填充率列與批次檔格;REPORT_SECTIONS 可選)。
   步驟模組清單也從 enrich.py 的 STEPS 讀,不另抄。
+- 具名查詢目錄線的模組(predicate、catalog)不 import 舊歸葉程式(categories、export_categories):規格 3 刪舊的時它們留下。
 - 宣告 BEFORE_ANAPHORA = True 的步驟模組(片語)要排在 STEPS 前段(named-queries 票 02:enrich 依宣告分回指前後
   兩段跑,STEPS 的順序才仍是執行順序;後段模組夾在前段模組之前就是順序寫錯了)。
 
@@ -39,6 +40,9 @@ def enrich_steps():
 
 ENRICH_STEPS = enrich_steps()
 STEP_MODULES = ("enrich", *ENRICH_STEPS, "closed_values")
+# 具名查詢目錄線的模組與它們不能 import 的舊歸葉程式(named-queries 票 07)
+CATALOG_MODULES = ("predicate", "catalog")
+OLD_CLASSIFIER_MODULES = frozenset(("categories", "export_categories"))
 
 
 def declares_true(tree, name):
@@ -112,6 +116,16 @@ class TestStepModules(unittest.TestCase):
                      for name in STEP_MODULES + ("report", "llm_check", "prepare_view")}
         self.assertEqual({k: v for k, v in offenders.items() if v}, {},
                          "位置用 constraints.POS_COST/POS_EFFECT/POS_COND,別抄字面")
+
+
+class TestCatalogModules(unittest.TestCase):
+    """具名查詢目錄與述詞字彙(named-queries 票 06/07)不 import 舊歸葉程式:類別線退場後它們留下,
+    舊的 categories/export_categories 在規格 3 刪。"""
+
+    def test_catalog_modules_do_not_import_the_old_classifier(self):
+        offenders = {name: sorted(set(imported_modules(parse(name))) & OLD_CLASSIFIER_MODULES)
+                     for name in CATALOG_MODULES}
+        self.assertEqual({k: v for k, v in offenders.items() if v}, {}, "目錄模組只讀 predicate 與封閉表")
 
 
 if __name__ == "__main__":

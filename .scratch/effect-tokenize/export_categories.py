@@ -47,8 +47,8 @@ GROUPS = {POS_EFFECT: "effect", POS_COST: "cost"}
 MODE_SUFFIX = {patient.SELF: "_self", patient.NONSELF: "_nonself"}
 ROW_GROUPS = ("effect", "cost", "effect_self", "effect_nonself", "cost_self", "cost_nonself")
 SUB_INDEX = re.compile(r"^(.+)-●(\d+)$")
-# 網址以 › 連寫節點路徑(category-search spec「網址 hash」),節點名不能含它
-PATH_SEP = "›"
+# 網址以 › 連寫節點路徑(category-search spec「網址 hash」),節點名不能含它;定義在具名查詢目錄(named-queries 票 07)
+from catalog import PATH_SEP  # noqa: E402
 
 DOC = ("動作類別匯出檔(.scratch/category-search,ADR-0017):由 .scratch/effect-tokenize/"
        "export_categories.py 產生,不要手改。「葉」是類別樹的葉名(樹序,索引以序號引用);"

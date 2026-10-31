@@ -111,9 +111,8 @@ POLARITY_CLASSES = (POL_AFFIRM, POL_RESIST, POL_RESTRICT)
 POLARITY_CLASS_OF = {negation.PASSIVE: POL_RESIST, negation.NOT_BECOME: POL_RESIST,
                      negation.CANNOT: POL_RESTRICT, negation.GENERAL: None}
 
-# 區域七值(值域正典的區域,與第一版同一組)與葉名裡的日文區域名
-ZONE_LABEL = {"手牌": "手札", "牌組": "デッキ", "額外牌組": "EXデッキ", "墓地": "墓地",
-              "除外": "除外", "場上": "フィールド", "靈擺區": "Pゾーン"}
+# 區域七值 → 葉名裡的日文區域名:與具名查詢目錄的命名同一張表(named-queries 票 07,catalog.py),這裡 import
+from catalog import ZONE_LABEL  # noqa: E402
 
 # 樹來源檔的鍵
 KEY_MAJOR = "大類"

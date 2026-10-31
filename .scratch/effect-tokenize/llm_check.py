@@ -32,6 +32,20 @@
   方式/數量/片語結構化;一張卡依序歸入第一個符合的層,小層在前、配額大於母體即全取),共 100 張、切 4 批;
   批次檔的框架列帶全部新欄(片語、結構化區域、施事者、方式、否定形);錯誤類型在既有五類外加
   中心詞錯/修飾語類錯、數量錯、施事者錯、方式錯、否定形錯、回填錯。推得的施事者是一條規則、靠回歸例子,不抽。
+- 具名查詢命中(named-queries 票 10;queries-round1 起):類別線改讀命中中間產物 frame_queries.json(catalog_hits.py
+  產,一框一行的命中具名查詢名清單),對照舊歸葉 frame_categories.json(過渡期 categories.py 照產)逐框比
+  「命中集合與舊歸葉」,差異逐名歸因(query_diff):多收 +名——詞元節點成了具名查詢 → 預設葉取消(舊預設葉只在
+  沒有別的葉時貼、舊沒預設葉的節點是未歸;現在詞元節點對全部框架都中)、具名查詢有所在而框架 取自來源 →
+  取自來源收回、具名查詢有來源/所在而框架的該欄是回指回填寫進的 → 回指回填、其餘 → 不再互斥(舊樹序 first-match
+  與並收只貼一部分);少收 −名——具名查詢有受事者/目的中心詞 → 尾綴(舊子字串比平假名邊界中心詞,現在尾綴比
+  片語中心詞)、其餘 → 其他(全語料 0 框;舊的並收取消在現在的語意下 0 框,不成一層)。條件位的框架舊的不歸葉、
+  現在三個位置都算,不當差異。另一層「動作對象變動」:票 03/04 改讀論元片語後判定值變了、逐卡說明過的框
+  (PATIENT_CHANGED,抄自兩票 Comments 的清單;基準已重凍,算不回來)。六層依卡母體小層在前(2026-11-01:
+  尾綴 16、動作對象變動 164、取自來源收回 438、回指回填 2,342、不再互斥 2,448、預設葉取消 7,238 張;一張卡依序
+  歸入第一個符合的層),尾綴 全取、其餘各 17/16,合計 100 張、切 4 批(與第四版論元同種子 20261101);批次檔
+  每框列既有欄與第四版格之後多三格:命中=具名查詢名清單、較舊歸葉=+名(原因)、−名(原因)(效果位與代價位才列)、
+  動作對象=值(理由),判定值變過的框尾綴【改讀後判定值變】;另寫 catalog.md(整本目錄:名、路徑、述詞明文)。
+  錯誤類型 漏收/誤收/位置/述詞語意(類別線的三類改名,加「述詞語意」:目錄裡這條述詞本身寫錯)與 動作對象錯。
 種子固定,同一種子重抽得到同一批(複檢沿用);不同種子抽新樣本(過擬合抽驗)。
 
     sample   --round R --seed S   全語料抽樣:寫 llm-check/round<R>/sample.json 與 batch-<k>.md
@@ -43,9 +57,11 @@
     categories --round R --seed S 動作類別依葉分層抽框架(寫 llm-check/category-round<R>/)
     anaphora --round R --seed S   回指依來源分層抽樣(寫 llm-check/anaphora-round<R>/)
     v4       --round R --seed S   第四版論元依新欄分層抽樣(寫 llm-check/v4-round<R>/)
+    queries  --round R --seed S   具名查詢命中依「命中集合與舊歸葉」差異分層抽樣(寫 llm-check/queries-round<R>/;
+                                  先跑 categories.py 與 catalog_hits.py)
     report   --round R            讀 llm-check/round<R>/findings-<k>.json 寫 report.md
     recheck  --round R --from R0  用 round R0 的樣本重出批次檔(同批複檢)
-    (report/recheck 加 --line constraints、v2、v3、lemma、variants、categories、anaphora 或 v4 走各自的目錄)
+    (report/recheck 加 --line constraints、v2、v3、lemma、variants、categories、anaphora、v4 或 queries 走各自的目錄)
 
 批次檔一張卡一節、一句效果句一段:整段效果句(含 ● 選項;拆開的領起句與子效果句
 各標 index 與效果類型)與它的框架(含選項欄「●n 標籤」)。
@@ -69,16 +85,21 @@ sys.path.insert(0, HERE)
 import constraints  # noqa: E402
 import action_lemmas  # noqa: E402
 import anaphora  # noqa: E402
+import catalog  # noqa: E402
 import categories  # noqa: E402
 import enrich  # noqa: E402
 import frames  # noqa: E402
-from closed_values import TRANSFER_FROM_SOURCE  # noqa: E402
+import patient  # noqa: E402
+import predicate  # noqa: E402
+from closed_values import REGION_PLACE, REGION_SOURCE, TRANSFER_FROM_SOURCE  # noqa: E402
+from export_common import load_faces  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 CARDS = os.path.join(ROOT, "data", "cards.json")
 TOKENS = os.path.join(HERE, "tokens.json")
 FRAMES = os.path.join(HERE, "frames.json")
 FRAME_CATEGORIES = os.path.join(HERE, "frame_categories.json")
+FRAME_QUERIES = os.path.join(HERE, "frame_queries.json")
 CHECK_DIR = os.path.join(HERE, "llm-check")
 
 QUOTA = {"mono": 100, "multi": 100, "st": 70, "pendulum": 30}
@@ -144,6 +165,55 @@ QUOTA_V4 = {"所在取自來源": 14, "否定形": 14, "施事者": 14, "回指�
             "片語結構化": 16}
 BATCHES_V4 = 4
 ERROR_TYPES_V4 = ERROR_TYPES + ("中心詞錯/修飾語類錯", "數量錯", "施事者錯", "方式錯", "否定形錯", "回填錯")
+# 具名查詢命中(named-queries 票 10):命中集合與舊歸葉的差異原因(query_diff 的歸因;DIFF_OTHER 不成一層),
+# 加 動作對象變動;依卡母體小層在前(見 docstring),尾綴 全取(母體 16)、其餘 17/16,合計 100
+DIFF_DEFAULT, DIFF_KARA, DIFF_BACKFILL, DIFF_EXCLUSIVE, DIFF_SUFFIX, DIFF_OTHER = (
+    "預設葉取消", "取自來源收回", "回指回填", "不再互斥", "尾綴", "其他")
+STRATUM_PATIENT = "動作對象變動"
+STRATA_QUERIES = (DIFF_SUFFIX, STRATUM_PATIENT, DIFF_KARA, DIFF_BACKFILL, DIFF_EXCLUSIVE, DIFF_DEFAULT)
+QUOTA_QUERIES = {DIFF_SUFFIX: 16, STRATUM_PATIENT: 17, DIFF_KARA: 17, DIFF_BACKFILL: 17, DIFF_EXCLUSIVE: 17,
+                 DIFF_DEFAULT: 16}
+BATCHES_QUERIES = 4
+ERROR_TYPES_QUERIES = ("漏收", "誤收", "位置", "述詞語意", "動作對象錯")
+# 述詞的區域欄 ↔ 框架結構化區域的鍵(回指回填/取自來源 寫進哪一欄,歸因時對照)
+REGION_FIELD_KEY = {predicate.FIELD_SOURCE: REGION_SOURCE, predicate.FIELD_PLACE: REGION_PLACE}
+# 票 03/04 改讀論元片語後動作對象判定值變了的框(卡號[/pendulum]句框序;抄自兩票 Comments 的逐卡清單:
+# 票 04 的 132 框與變差 14 框、票 03 的 皆非 → 非此卡 11 框 + 6374519①框2、票 03「有 → 無」48 框(16 框判定值
+# 非此卡 → 皆非 在其中)。基準已重凍成改讀後的值,算不回來,所以是封閉表;框序是 frames.json 的 order(從 0 起)
+PATIENT_CHANGED = (
+    "1580833①框0", "2372506①框0", "2372506①框4", "2606417②框8", "2665273③框4", "3048768②框4", "3103067①框2",
+    "4433488①框1", "4628897①框1", "5489987②框1", "5641251②框1", "5997110/pendulum①框4", "6182103②框1",
+    "6374519①框2", "9097866②框2", "9097866②框3", "10497636②框1", "10529441①框2", "10584050①框1", "10851853②框1",
+    "12877076①框3", "13694209③框1", "13735899②框0", "13735899②框2", "14442329②框1", "14469229①框2",
+    "14529511②框1", "14529511②框2", "14761450②框3", "14839621①框1", "15449853③框1", "15609017①框1",
+    "15609017①框2", "17020474①框2", "18486927①框3", "18585765①框1", "18752707①框0", "20065259②框3",
+    "20447641①框4", "21419436②框3", "21862633②框1", "22802010①框1", "23442438①框1", "24793135②框0",
+    "24793135②框1", "25334372①框0", "26050548①框1", "27993919/pendulum①框1", "28770951②框1", "29208536②框1",
+    "29951323②框1", "31123642②框0", "32354768②框1", "32615065②框0", "32775808②框1", "32887445①框0",
+    "33609093①框2", "33760966②框1", "33814281①框0", "34536828②框0", "35479109①框2", "35800511②框2",
+    "36708764①框13", "36736723①框1", "37006702③框2", "38265153①框8", "38391684①框1", "38695361①框4",
+    "39275698①框0", "39552584①框0", "40669071①框1", "40847034①框4", "40998517②框1", "40998517②框2",
+    "41458361①框3", "41908872/pendulum①框3", "42125140②框1", "42166000①框0", "42517468①框5", "43455065①框4",
+    "44536921①框2", "44874522③框1", "44891812①框3", "44994712②框3", "45014450①框3", "45948430①框0",
+    "45951104①框6", "46647144①框1", "47346782②框3", "47439573①框2", "47504322①框1", "47810543②框2",
+    "48546368①框1", "48784854①框0", "48784854①框1", "48784854①框2", "48784854①框3", "50696588①框0",
+    "51339637②框1", "51369889①框2", "51369889①框3", "52653092①框0", "53077251①框1", "53490455①框2",
+    "54387923/pendulum①框1", "55496220①框0", "56574543①框1", "56838842②框1", "56920308①框3", "58270977①框4",
+    "58297729①框2", "58884063①框2", "60600821①框1", "61980241②框1", "62941499①框0", "62941499①框2",
+    "63184227②框1", "63492244①框1", "64454614①框2", "65172015①框0", "65236257①框0", "65236257①框1",
+    "65472618/pendulum①框1", "65976795③框1", "65976795③框2", "67586735①框2", "69228245/pendulum①框2",
+    "69680031②框1", "69792699③框3", "71222868③框3", "71440209①框3", "71595845②框1", "72129804①框3",
+    "73167098②框2", "73193552②框0", "73714736③框4", "73936388②框0", "74063034①框3", "74202664①框1",
+    "74202664①框2", "75988594①框4", "75988594①框5", "77675029②框0", "78748366②框1", "79561872①框1",
+    "79561872①框2", "79755671②框1", "80776622③框1", "80776622/pendulum①框1", "81269231③框1", "82255872②框0",
+    "83152482①框4", "83293635①框5", "84031736①框3", "84673574①框2", "84792926③框1", "86196216①框3",
+    "86449372①框0", "87390798①框1", "87669904①框5", "88000953②框1", "88000953②框2", "88504133①框3",
+    "88724332①框1", "89558743①框3", "90488465①框1", "90809975②框1", "91598270/pendulum①框1", "91703676①框0",
+    "91703676①框1", "93014827①框1", "93014827①框2", "93368494①框0", "93507434②框2", "93953933①框3",
+    "93953933①框4", "94016752①框5", "94183877②框0", "94423983①框0", "94503794②框2", "94693857②框1",
+    "95793022②框1", "96084564②框0", "96352712①框3", "97584719①框1", "97584719①框2", "99927991①框0",
+)
+PATIENT_REF = re.compile(r"^(\d+)(?:/(pendulum))?(\S)框(\d+)$")
 ANAPHORA_VIA = {anaphora.VIA_TARGET: "対象の", anaphora.VIA_FIELD: "一般欄位",
                 anaphora.VIA_LITERAL: "字面備援", anaphora.VIA_EVENT: "效果類"}
 MATERIAL_LEMMA = re.compile("(%s)素材[にと]する" % "|".join(action_lemmas.MATERIAL_METHODS))
@@ -159,14 +229,20 @@ TYPE_PENDULUM, TYPE_SPELL, TYPE_TRAP = 0x1000000, 0x2, 0x4
 OPTION = "●"
 
 
+_loaded = []
+
+
 def load():
-    with open(CARDS, encoding="utf-8") as f:
-        cards = {c["id"]: c for c in json.load(f)}
-    with open(TOKENS, encoding="utf-8") as f:
-        tokens = json.load(f)
-    with open(FRAMES, encoding="utf-8") as f:
-        frames = json.load(f)
-    return cards, tokens, frames
+    """卡片總表(卡號 → 卡)、tokens.json 的效果句、frames.json 的效果句;一次執行只讀一遍。"""
+    if not _loaded:
+        with open(CARDS, encoding="utf-8") as f:
+            cards = {c["id"]: c for c in json.load(f)}
+        with open(TOKENS, encoding="utf-8") as f:
+            tokens = json.load(f)
+        with open(FRAMES, encoding="utf-8") as f:
+            frames = json.load(f)
+        _loaded.append((cards, tokens, frames))
+    return _loaded[0]
 
 
 def stratum_of(card, effect_count):
@@ -319,13 +395,18 @@ def sample_by_frames(seed, stratum_of_records, strata, quota):
         stratum = stratum_of_records(by_card[cid])
         if stratum:
             pools[stratum].append(cid)
+    print("母體:" + "、".join("%s %d" % (k, len(pools.get(k, []))) for k in strata))
+    return pick(seed, pools, strata, quota)
+
+
+def pick(seed, pools, strata, quota):
+    """各層母體(層 → 卡號清單,已排序)依配額以固定種子抽:同種子同結果;配額大於母體時全取。"""
     rng = random.Random(seed)
     picked = []
     for key in strata:
         pool = pools.get(key, [])
         chosen = sorted(rng.sample(pool, min(quota[key], len(pool))))
         picked += [{"card": cid, "stratum": key} for cid in chosen]
-    print("母體:" + "、".join("%s %d" % (k, len(pools.get(k, []))) for k in strata))
     return picked
 
 
@@ -528,6 +609,83 @@ def sample_v4(seed):
     return sample_by_frames(seed, v4_stratum, STRATA_V4, QUOTA_V4)
 
 
+# ── 具名查詢命中(named-queries 票 10)──
+
+def patient_changed_keys():
+    """PATIENT_CHANGED 的字串 → frames.json 的框架鍵集合 {(卡號, 段落, 句序, 框序)}。"""
+    keys = set()
+    for ref in PATIENT_CHANGED:
+        card, section, index, order = PATIENT_REF.match(ref).groups()
+        keys.add((int(card), section or "main", index, int(order)))
+    return keys
+
+
+def query_diff(cat, old_leaves, queries, frame):
+    """一框的 命中集合 vs 舊歸葉 → [(+/−, 具名查詢名, 原因)…](目錄序;空清單 = 相同)。原因見 docstring:
+    + 預設葉取消/取自來源收回/回指回填/不再互斥,− 尾綴/其他。舊名與新名同(改寫不改名)。"""
+    old, new = set(old_leaves), set(queries)
+    out = []
+    for name in queries:
+        if name in old:
+            continue
+        node = cat.by_name[name]
+        pred = node.predicate
+        if node.children:
+            why = DIFF_DEFAULT
+        elif predicate.FIELD_PLACE in pred and frame.get("transfer") == TRANSFER_FROM_SOURCE:
+            why = DIFF_KARA
+        elif frame.get("region_backfill") and any(
+                REGION_FIELD_KEY.get(field) == frame["region_backfill"] for field in pred):
+            why = DIFF_BACKFILL
+        else:
+            why = DIFF_EXCLUSIVE
+        out.append(("+", name, why))
+    for name in old_leaves:
+        if name not in new:
+            pred = cat.by_name[name].predicate if name in cat.by_name else {}
+            out.append(("−", name, DIFF_SUFFIX if any(f in pred for f in predicate.HEAD_FIELDS) else DIFF_OTHER))
+    return out
+
+
+def query_frames():
+    """命中中間產物的每列、同框的舊歸葉與 frames.json 的框架:{框架鍵: (命中列, 舊葉列, 框架)}。
+    舊的只歸效果位與代價位(條件位是 不適用、葉空),比對時條件位的框不算差異。"""
+    with open(FRAME_QUERIES, encoding="utf-8") as f:
+        hits = json.load(f)
+    with open(FRAME_CATEGORIES, encoding="utf-8") as f:
+        old = {frame_key(row): row for row in json.load(f)}
+    _cards, _tokens, records = load()
+    by_key = {(r["card"], r["section"], r["index"], fr["order"]): fr for r in records for fr in r["frames"]}
+    return {frame_key(row): (row, old[frame_key(row)], by_key[frame_key(row)]) for row in hits}
+
+
+def queries_labels(cat, row, old_row, frame, changed):
+    """一框命中的層(STRATA_QUERIES 的名字):差異原因各一層(條件位不比),判定值變過的框加 動作對象變動。"""
+    labels = set()
+    if frame["position"] != constraints.POS_COND:
+        labels |= {why for _sign, _name, why in query_diff(cat, old_row["leaves"], row["queries"], frame)}
+    if frame_key(row) in changed:
+        labels.add(STRATUM_PATIENT)
+    return labels & set(STRATA_QUERIES)
+
+
+def sample_queries(seed):
+    cat = catalog.load()
+    current = query_frames()
+    changed = patient_changed_keys()
+
+    def stratum(records):
+        labels = set()
+        for r in records:
+            for fr in r["frames"]:
+                if fr.get("kind") == constraints.KIND_ACTION:
+                    row, old_row, frame = current[(r["card"], r["section"], r["index"], fr["order"])]
+                    labels |= queries_labels(cat, row, old_row, frame, changed)
+        return next((k for k in STRATA_QUERIES if k in labels), None)
+
+    return sample_by_frames(seed, stratum, STRATA_QUERIES, QUOTA_QUERIES)
+
+
 # ── 批次檔 ──
 
 def sentence_label(s):
@@ -547,8 +705,9 @@ def sentence_lines(s):
     return lines
 
 
-def frame_line(k, f):
-    """一個框架 → 批次檔的一列(動作框架列出位置、極性・態、論元欄、內容、選項與子句)。"""
+def frame_line(k, f, cells=()):
+    """一個框架 → 批次檔的一列(動作框架列出位置、極性・態、論元欄、內容、選項與子句);cells 是該線
+    另加在子句前的格(具名查詢線的 命中/較舊歸葉/動作對象)。"""
     opt = ""
     if f.get("option") is not None:
         opt = " | 選項=●%d%s" % (f["option"], " " + f["label"] if f.get("label") else "")
@@ -556,18 +715,20 @@ def frame_line(k, f):
         return "框架 %d:[約束 %s] %s%s | 子句=%s" % (
             k, constraints.label_of(f), constraints.describe(f), opt, f["clause"])
     extra = constraints.describe_action(f)
-    return "框架 %d:[%s] %s(%s%s)| %s%s%s | 子句=%s" % (
+    return "框架 %d:[%s] %s(%s%s)| %s%s%s%s | 子句=%s" % (
         k, f["position"], f["action"], f["polarity"],
         "・態=" + f["voice"] if f.get("voice") else "",
-        " | ".join(argument_cells(f)), " | " + extra if extra else "", opt, f["clause"])
+        " | ".join(argument_cells(f)), " | " + extra if extra else "", opt,
+        "".join(" | " + cell for cell in cells), f["clause"])
 
 
-def record_lines(s, fr):
-    """一句效果句 → 批次檔的一段:整段原文(拆開的各段標 index・效果類型)+ 框架。"""
+def record_lines(s, fr, cells_of=None):
+    """一句效果句 → 批次檔的一段:整段原文(拆開的各段標 index・效果類型)+ 框架。cells_of(句, 框序, 框架)
+    → 另加的格(沒有就不加)。"""
     lines = ["### 句 %s" % sentence_label(s)] + sentence_lines(s)
     if not fr:
         lines.append("框架:(無)")
-    lines += [frame_line(k, f) for k, f in enumerate(fr, 1)]
+    lines += [frame_line(k, f, cells_of(s, k - 1, f) if cells_of else ()) for k, f in enumerate(fr, 1)]
     lines.append("")
     return lines
 
@@ -605,15 +766,16 @@ def argument_cells(f):
     return cells + enrich.batch_cells(f)
 
 
-def card_block(cid, cards, recs, frames_by_key):
+def card_block(cid, cards, recs, frames_by_key, cells_of=None):
     c = cards[cid]
     lines = ["## 卡 %d %s(%s)" % (cid, c["name_ja"], c["name_zh"]), ""]
     for s in recs:
-        lines += record_lines(s, frames_by_key[(s["card"], s["section"], s["index"])])
+        lines += record_lines(s, frames_by_key[(s["card"], s["section"], s["index"])], cells_of)
     return lines
 
 
-def write_batches(round_dir, picked, meta):
+def write_batches(round_dir, picked, meta, cells_of=None):
+    """樣本卡輪流分到各批、寫 batch-<k>.md;cells_of(句, 框序, 框架) → 該線另加在每框列的格。"""
     cards, tokens, frames = load()
     frames_by_key = {(r["card"], r["section"], r["index"]): r["frames"]
                      for r in frames}
@@ -628,7 +790,7 @@ def write_batches(round_dir, picked, meta):
         lines = ["# 批次 %d(%d 張卡)" % (k, len(chunk)), ""]
         for p in chunk:
             lines += card_block(p["card"], cards, recs_by_card[p["card"]],
-                                frames_by_key)
+                                frames_by_key, cells_of)
         with open(os.path.join(round_dir, "batch-%d.md" % k), "w",
                   encoding="utf-8", newline="\n") as f:
             f.write("\n".join(lines))
@@ -671,7 +833,7 @@ def round_dir_of(line, round_no):
     prefix = {"constraints": "constraint-round", "v2": "v2-round", "v3": "v3-round",
               "lemma": "lemma-round", "variants": "variant-round",
               "anaphora": "anaphora-round", "categories": "category-round",
-              "v4": "v4-round"}.get(line, "round")
+              "v4": "v4-round", "queries": "queries-round"}.get(line, "round")
     return os.path.join(CHECK_DIR, "%s%d" % (prefix, round_no))
 
 
@@ -971,22 +1133,99 @@ def report_categories(round_dir):
     print("written", path, "findings", len(findings))
 
 
+# ── 具名查詢命中的批次檔(named-queries 票 10)──
+
+def predicate_text(pred):
+    """明文述詞 → 批次檔/目錄檔的一行:欄=值(區域 (玩家或不限,區域)、清單以 / 並列)。"""
+    parts = []
+    for field in predicate.FIELDS:
+        if field not in pred:
+            continue
+        values = predicate.values_of(pred, field)
+        if field in predicate.REGION_FIELDS:
+            shown = "・".join("(%s,%s)" % (player or "不限", zone) for player, zone in values)
+        else:
+            shown = "/".join(str(v) for v in values)
+        parts.append("%s=%s" % (field, shown))
+    return " ".join(parts)
+
+
+def catalog_lines(cat):
+    """整本目錄(目錄序、縮排表樹):每個具名查詢的名、述詞明文、路徑;大類/中類只列名。"""
+    lines = ["# 具名查詢目錄(catalog.json;名、述詞、路徑)", "",
+             "述詞的語意:欄間 AND、同欄多值 OR(以 / 或 ・ 並列)、全部在同一框上;區域欄 (玩家,區域) 任一項相配,"
+             "玩家寫 不限 時不看玩家;受事者中心詞/目的中心詞 比片語任一段中心詞的**尾綴**;沒寫的欄不看。"
+             "帶子的具名查詢是詞元節點(述詞只有詞元與極性,對該詞元的全部框架都中);大類/中類的命中是底下的聯集。", ""]
+    for node, depth in cat.walk():
+        indent = "  " * depth
+        if node.predicate is None:
+            lines.append("%s- 大類 **%s**%s" % (indent, node.name, "(中類:%s)" % "、".join(
+                cat.middles[node.name]) if cat.middles.get(node.name) else ""))
+        else:
+            lines.append("%s- **%s** — %s — 路徑 %s" % (indent, node.name, predicate_text(node.predicate),
+                                                    " › ".join(node.path)))
+    return lines
+
+
+def write_query_batches(round_dir, picked, meta):
+    """具名查詢線的批次檔:每框列多三格 命中/較舊歸葉/動作對象(讀當下的命中中間產物與舊歸葉檔;複檢時是
+    修後的命中),另寫 catalog.md。"""
+    cat = catalog.load()
+    current = query_frames()
+    changed = patient_changed_keys()
+    faces = load_faces()
+    _cards, _tokens, records = load()
+    frames_of = {(r["card"], r["section"], r["index"]): r["frames"] for r in records}
+    verdicts = {}
+
+    def cells_of(s, k, f):
+        if f.get("kind") != constraints.KIND_ACTION:
+            return ()
+        sentence_key = (s["card"], s["section"], s["index"])
+        if sentence_key not in verdicts:
+            verdicts[sentence_key] = patient.judge_sentence(frames_of[sentence_key], faces.get(s["card"]),
+                                                            s["section"])
+        row, old_row, frame = current[sentence_key + (f["order"],)]
+        cells = ["命中=%s" % ("、".join(row["queries"]) or "(無)")]
+        if frame["position"] != constraints.POS_COND:
+            diff = query_diff(cat, old_row["leaves"], row["queries"], frame)
+            cells.append("較舊歸葉=%s" % ("、".join("%s%s(%s)" % item for item in diff) if diff else "同"))
+        verdict = verdicts[sentence_key][k]
+        cells.append("動作對象=%s(%s)%s" % (verdict.mode or patient.NEITHER, verdict.why,
+                                        "【改讀後判定值變】" if frame_key(row) in changed else ""))
+        return cells
+
+    os.makedirs(round_dir, exist_ok=True)
+    with open(os.path.join(round_dir, "catalog.md"), "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(catalog_lines(cat)) + "\n")
+    write_batches(round_dir, picked, meta, cells_of)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=("sample", "affected", "constraints", "v2", "v3",
                                         "lemma", "variants", "categories", "anaphora", "v4",
-                                        "report", "recheck"))
+                                        "queries", "report", "recheck"))
     ap.add_argument("--round", type=int, required=True)
     ap.add_argument("--seed", type=int, default=20261009)
     ap.add_argument("--from", dest="from_round", type=int)
     ap.add_argument("--line", choices=("frames", "constraints", "v2", "v3", "lemma", "variants",
-                                       "categories", "anaphora", "v4"), default="frames")
+                                       "categories", "anaphora", "v4", "queries"), default="frames")
     args = ap.parse_args()
     line = (args.command if args.command in ("constraints", "v2", "v3", "lemma", "variants",
-                                             "categories", "anaphora", "v4")
+                                             "categories", "anaphora", "v4", "queries")
             else args.line)
     round_dir = round_dir_of(line, args.round)
-    if args.command == "categories":
+    if args.command == "queries":
+        write_query_batches(round_dir, sample_queries(args.seed),
+                            {"mode": "queries", "seed": args.seed, "batches": BATCHES_QUERIES,
+                             "strata": list(STRATA_QUERIES), "error_types": list(ERROR_TYPES_QUERIES)})
+    elif args.command == "recheck" and line == "queries":
+        src = round_dir_of(line, args.from_round)
+        with open(os.path.join(src, "sample.json"), encoding="utf-8") as f:
+            picked = json.load(f)
+        write_query_batches(round_dir, picked, dict(read_meta(src), recheck_of=args.from_round))
+    elif args.command == "categories":
         write_category_batches(round_dir, sample_categories(args.seed),
                                {"mode": "categories", "seed": args.seed,
                                 "batches": BATCHES_CATEGORY,

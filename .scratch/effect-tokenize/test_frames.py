@@ -2332,5 +2332,65 @@ class TestAnaphoraRound1(unittest.TestCase):
         self.assertEqual((found["subject"], found["via"]), ("相手の魔法カード", "事件"))
 
 
+def negations(text, context=""):
+    """框架 → (動作, 極性, 否定形):frame-args-v4 票 08 的否定形欄;沒有值時 None。"""
+    return [(f["action"], f["polarity"], f.get("negation")) for f in actions(text, context)]
+
+
+class TestNegationForm(unittest.TestCase):
+    """frame-args-v4 票 08:否定框架加封閉類欄 否定形(受身/不成不受/不可能/一般)。態 受身 → 受身;
+    否則看述語自己的否定形;肯定與可能框架沒有這一格。"""
+
+    def test_passive_negation_is_passive(self):
+        self.assertEqual(negations("①：このカードは戦闘では破壊されない。"),
+                         [("破壊", "否定", "受身")])
+
+    def test_ni_naranai_is_not_become(self):
+        self.assertEqual(negations("①：このカードは相手の効果の対象にならない。"),
+                         [("対象にする", "否定", "不成不受")])
+
+    def test_ukenai_is_not_receive(self):
+        self.assertEqual(negations("①：このカードは相手の効果を受けない。"),
+                         [("受ける", "否定", "不成不受")])
+
+    def test_dekinai_is_cannot(self):
+        self.assertEqual(negations("①：このカードは攻撃できない。"), [("攻撃", "否定", "不可能")])
+
+    def test_okonaenai_is_cannot(self):
+        self.assertEqual(negations("①：このターン、自分は通常召喚を行えない。"),
+                         [("通常召喚", "否定", "不可能")])
+
+    def test_plain_zu_is_general(self):
+        """送らず 是一般否定;後面的肯定框架沒有這一格。"""
+        self.assertEqual(negations("①：発動後、このカードは墓地へ送らず、そのままセットする。"),
+                         [("送る", "否定", "一般"), ("セット", "肯定", None)])
+
+    def test_potential_has_no_negation_form(self):
+        self.assertEqual(negations("①：相手フィールドのカード１枚を選んで破壊できる。"),
+                         [("選ぶ", "肯定", None), ("破壊", "可能", None)])
+
+    def test_nakereba_naranai_is_obligation_not_negation(self):
+        """〜しなければならない 是義務:極性不是否定,沒有否定形。"""
+        self.assertEqual(negations("①：このカードは攻撃可能な場合、攻撃しなければならない。"),
+                         [("攻撃", "肯定", None)])
+
+    def test_de_nakereba_naranai_is_not_naranai(self):
+        """Xでなければならない 的 ならない 不是 にならない:不記 不成不受(極性 否定 是上游既有判法,
+        這裡只管否定形)。"""
+        self.assertEqual(negations("①：融合素材モンスターは全てアンデット族モンスターでなければならない。"),
+                         [("なる", "否定", "一般")])
+
+    def test_passive_wins_over_literal_in_clause(self):
+        """受身優先於字面:定語裡的 受けない/できない 不改被動否定的否定形。"""
+        self.assertEqual(negations("①：このカードは効果を受けないモンスターには攻撃されない。"),
+                         [("攻撃", "否定", "受身")])
+        self.assertEqual(negations("①：このカードは攻撃できないモンスターとの戦闘では破壊されない。"),
+                         [("破壊", "否定", "受身")])
+
+    def test_negation_form_in_condition_position(self):
+        self.assertEqual(negations("①：このカードが相手の効果の対象にならない場合に発動できる。")[0],
+                         ("対象にする", "否定", "不成不受"))
+
+
 if __name__ == "__main__":
     unittest.main()

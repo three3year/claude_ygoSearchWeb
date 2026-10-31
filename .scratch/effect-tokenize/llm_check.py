@@ -548,8 +548,11 @@ def argument_cells(f):
 
 def v4_cells(f):
     """第四版論元(frame-args-v4)→ ["片語=…", "施事者=…", …];各票填自己的格,推得/轉欄/取自子句
-    標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。票 01 只有骨架:回空清單。"""
-    return []
+    標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。否定形(票 08)只在否定框架上有值。"""
+    cells = []
+    if f.get("negation"):
+        cells.append("否定形=%s" % f["negation"])
+    return cells
 
 
 def card_block(cid, cards, recs, frames_by_key):

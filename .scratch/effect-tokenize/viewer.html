@@ -577,10 +577,14 @@ function cardHtml(c,recs){
 function v4Text(v){
   // 第四版論元(frame-args-v4):各票各加一個小函式組一格再接進這裡;推得/轉欄/取自子句/回填的格用
   // .inf/.bf 淡色樣式與 title 說明;片語用 details/summary 展開列段、中心詞、中心詞類、修飾語、數量、玩家、區域、指示詞。
-  // 票 01 只有骨架:沒有值時顯示空。
   if(!v)return '';
   var parts=[];
+  if(v.negation)parts.push(negationText(v.negation));
   return parts.join(' ');
+}
+function negationText(n){
+  // 否定形(票 08):只在極性 否定 的框架上有值——受身=態 受身;不成不受=にならない/受けない;不可能=できない/行えない;一般=其餘 ず/ない/なく
+  return '<span title="否定形:受身=被動否定(態 受身);不成不受=にならない/受けない;不可能=できない/行えない;一般=其餘 ず/ない/なく。只在極性 否定 的框架上有值">否定形 '+esc(n)+'</span>';
 }
 function anaphoraText(a){
   // 回指:目標字面@區域、玩家、事件主語或主人、只寫在子句裡的數量;灰字是找法

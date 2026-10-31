@@ -41,8 +41,12 @@ Context = namedtuple("Context", "surface word is_noun_like move_actions intransi
 
 # 填充率的狀態欄(報告表的欄序);None 算 空
 FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "其他")
-FILL_RATE_ROWS = []
-REPORT_SECTIONS = []
+FILL_RATE_ROWS = [
+    ("否定形", negation.fill_state),                                   # 票 08
+]
+REPORT_SECTIONS = [
+    ("否定形各值框數", negation.count_section),                          # 票 08
+]
 
 _STEPS = (phrases.structure, regions.structure, agent.mark, manner.mark, negation.mark)
 

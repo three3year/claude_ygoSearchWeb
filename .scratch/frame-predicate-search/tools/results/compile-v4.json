@@ -1509,16 +1509,16 @@
    },
    "needs_negation_field": false,
    "old": 615,
-   "new": 612,
-   "new_rule": 612,
-   "new_fields_only": 612,
+   "new": 609,
+   "new_rule": 609,
+   "new_fields_only": 609,
    "gained": 0,
-   "lost": 3,
+   "lost": 6,
    "reasons_cards": {
-    "其他(預期外)": 3
+    "其他(預期外)": 6
    },
    "reasons_frames": {
-    "其他(預期外)": 3
+    "其他(預期外)": 7
    }
   },
   {
@@ -6752,7 +6752,7 @@
   "預設葉取消": 13286,
   "不再互斥(較具體的同詞元葉先到)": 2710,
   "並收取消(關鍵詞葉命中時來源/目的葉現在不收)": 13,
-  "其他(預期外)": 7,
+  "其他(預期外)": 10,
   "非移動類 から 不當所在": 1187
  },
  "negation_forms_effect_position": {

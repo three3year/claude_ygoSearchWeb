@@ -3,7 +3,7 @@
 Type: task
 Mode: HITL
 Status: open
-Blocked by: 04, 02
+Blocked by: —(04、02 已 resolved;2026-11-01 解鎖)
 Map: ../map.md
 
 ## Question
@@ -17,3 +17,4 @@ to-spec 裡要順手定的細節:具名查詢來源檔形狀(沿用 category_tre
 ## Comments
 
 - 2026-10-31(wayfinder,票 02 交件):編譯規則與三張清單在 [02 的 Answer](02-named-query-compile-dry-run.md#answer);寫規格 2 時要定——「全語料沒有命中的具名查詢不留」算哪些位置(只算效果位時 取り除く@お互いのフィールド 是空的,算三位置就不空);若規格 1 不把 から 搬進所在,非移動類詞元的所在葉要編成「所在=X 或 來源=X」;規格 1 換成片語中心詞後重跑 tools/compile_dry_run.py 確認關鍵詞葉張數。
+- 2026-11-01(frame-args-v4 票 11 交件):規格 1 已交件,本票解鎖。寫規格 2 時讀——鍵名與下游對照(動作對象/回指/類別線/匯出 → phrases/regions/transfer/agent/manner/negation/region_backfill/anaphora.moving)在 [frame-args-v4 票 11 Comments](../../frame-args-v4/issues/11-handoff.md);值域表 `.scratch/effect-tokenize/closed_values.py`;編譯試跑以新中心詞重跑的結果 [tools/results/compile-v4.md](../tools/results/compile-v4.md)(非移動類 から 已在 `regions.place` 以 `transfer`=取自來源 轉進所在,否定形欄已有);六條未決(引用量、戦闘・効果で 加值、全ての/任意の、施事者規則 (3)、段首 その 旗標、其他類中心詞加值)在 `.scratch/effect-tokenize/llm-check/summary.md`「需要你決定的」,規格 2 的 to-spec 要先裁或帶進去。

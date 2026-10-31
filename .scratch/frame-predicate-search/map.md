@@ -24,7 +24,7 @@ Charted: 2026-10-31(/mattpocock-skills:wayfinder)
 
 - [索引體積與評估器速度實測](issues/01-index-size-and-evaluator-timing.md):編碼 C(定序元組+列舉小整數+中心詞對照表)對現在 data.js +946 KB raw / +184 KB gz(再加 5 個封閉類欄約 +337 KB gz,+17%);Node 逐卡逐框掃 1〜5 述詞 3〜4 ms、最差 10 ms;建議不拆檔、字面欄一律對照表、不需倒排索引。
 - [具名查詢編譯試跑](issues/02-named-query-compile-dry-run.md):233 葉全部編得出來;效果位張數相同 105 葉、不同 31 葉(不再互斥 2,710 卡·葉、並收取消 13、非移動類 から 不當所在 1,187)、預設葉取消 97 葉改詞元節點;欄位不夠兩處給規格 1——極性類(耐性/限制)要一個否定形封閉類欄(只用極性+態會讓 受ける(耐性) 197 → 0、対象にする(限制) 144 → 267),非移動類的 から 要定進所在欄或編成「所在或來源」。
-- [寫規格 1:框架線的論元片語與新欄](issues/04-spec-frame-line-phrases-and-fields.md):規格 `.scratch/frame-args-v4/spec.md`(ready-for-agent)與 11 張票;九項細節全裁(否定形封閉類欄、非移動類 から 與 で 接區域進結構化所在標轉欄、預設施事者只補代價/效果位他動帶對象框架、によって、此卡帶對象才是施事者、中心詞是最後一個名詞格、數量類加下限、LLM 一輪分七層);字面欄不動、下游不改,規格 2 在乾淨基準上改讀。
+- [寫規格 1:框架線的論元片語與新欄](issues/04-spec-frame-line-phrases-and-fields.md):規格 `.scratch/frame-args-v4/spec.md`(ready-for-agent)與 11 張票;九項細節全裁(否定形封閉類欄、非移動類 から 與 で 接區域進結構化所在標轉欄、預設施事者只補代價/效果位他動帶對象框架、によって、此卡帶對象才是施事者、中心詞是最後一個名詞格、數量類加下限、LLM 一輪分七層);字面欄不動、下游不改,規格 2 在乾淨基準上改讀。 **2026-11-01 交件**:整合分支 `frame-args-v4`(票 01〜11 全部 resolved);動作框架 46,732 全部是新鍵、剝鍵後與修前凍結檔差異 0、匯出不變;填充率 片語 45,316/結構化區域 32,195/施事者 25,145(預設 21,100)/方式 3,807/否定形 3,088/取自來源 1,410/取自で 36/回指回填 3,475;LLM 抽驗 v4-round1 42 筆 → round2 8 筆;編譯試跑 49 片關鍵詞類葉 44 葉相同、5 葉少 10 張(全是舊式子字串命中);GLOSSARY 五處與 `.scratch/effect-tokenize/closed_values.py` 一致;鍵名與下游對照在 [frame-args-v4 票 11 Comments](../frame-args-v4/issues/11-handoff.md);六條未決在 `.scratch/effect-tokenize/llm-check/summary.md`「需要你決定的」(引用量、戦闘・効果で、全ての/任意の、施事者規則 (3)、段首 その、其他類中心詞加值)。
 
 ## Not yet specified
 

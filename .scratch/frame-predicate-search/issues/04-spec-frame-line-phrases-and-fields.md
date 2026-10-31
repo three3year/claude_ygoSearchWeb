@@ -20,6 +20,7 @@ to-spec 裡要順手定的細節:施事者推導順序(主題、事件主語、�
 - 2026-10-31(wayfinder,走圖 session):05〜07 與 03 全被擋,本票是唯一可動的票,維持 claimed。還沒有子線目錄;to-spec / to-tickets 由站主執行,本 session 只整理輸入——規格 1 的裁定來源是 GLOSSARY「論元片語」「框架述詞」「具名查詢」「動作對象」段與 ADR-0018,加票 02 Answer 的兩處欄位不夠(否定形封閉類、非移動類 から)。子線 slug 建議 `frame-args-v4`(對齊 GLOSSARY 的動作框架第四版論元,延續 frame-args-v2/v3)。
 - 2026-10-31(to-spec):規格初稿寫在 `.scratch/frame-args-v4/spec.md`,鏡像 https://claude.ai/artifact/P5Uedpfhejqz5Lxi6K3ZNt;九個待決事項在頁首(否定形、非移動類 から、預設施事者範圍、によって、此卡當施事者、中心詞邊界、數量類下限、で 接區域、LLM 分層),裁定後補 `決定` 行、再 to-tickets。
 - 2026-10-31(to-spec 收尾):九項全部裁定(全採建議選項;數量類加下限),spec.md 標 ready-for-agent、鏡像第 3 版;等 to-tickets 產出 issues/ 後本票 resolve。
+- 2026-11-01(frame-args-v4 票 11 交件):規格 1 的 11 張票全部 resolved、併在整合分支 `frame-args-v4`;字面欄逐位元組不變(剝鍵差異 0)、匯出不變、LLM 抽驗兩輪、GLOSSARY 五處更新;給規格 2 的鍵名對照與六條未決指標寫在 [11-handoff.md Comments](../../frame-args-v4/issues/11-handoff.md)。票 05(寫規格 2)因此解鎖。
 
 ## Answer
 

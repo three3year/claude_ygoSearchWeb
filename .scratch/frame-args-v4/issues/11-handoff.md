@@ -4,11 +4,24 @@
 
 **Blocked by:** 10
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] GLOSSARY 五處更新,與程式一致
-- [ ] 填充率報告與編譯試跑最終數進報告
-- [ ] 拆解頁、批次檔、檢驗摘要照原網址重新發布
-- [ ] 給規格 2 的對照寫在本票 Comments
-- [ ] 全部測試通過(框架線 unittest、網站 node 測試)、決定性重跑相同、剝鍵比對差異 0
-- [ ] 地圖票「寫規格 1」補交件註記;規格 2 的票解鎖確認
+- [x] GLOSSARY 五處更新,與程式一致
+- [x] 填充率報告與編譯試跑最終數進報告
+- [x] 拆解頁、批次檔、檢驗摘要照原網址重新發布
+- [x] 給規格 2 的對照寫在本票 Comments
+- [x] 全部測試通過(框架線 unittest、網站 node 測試)、決定性重跑相同、剝鍵比對差異 0
+- [x] 地圖票「寫規格 1」補交件註記;規格 2 的票解鎖確認
+
+## Comments
+
+- 2026-11-01 交件(分支 wt/11-handoff,基於 bebf20d=票 01〜10 全部)。**GLOSSARY 五處**(與 `closed_values.py`/各模組 docstring 核對):(a)新詞條「否定形 (Negation Form)」放在 態 之後——四值 受身/不成不受/不可能/一般 的定義與例句、判法(態 受身 優先、取最後一個命中、〜ければならない 不是否定、でなければならない 13 框落 一般)、與類別線極性類的對照(受身+不成不受 → 耐性、不可能 → 限制、一般 無)、字面表已搬到 `negation.py` 的單一來源、全語料四值;(b)論元條「數量」:值域五值(定數/上限 Nまで・N以下/下限 N以上/任意 含 任意の枚数・個数/全部),引用量與 ２～５体 範圍類空,段尾與 取自子句 兩個來源(ランダムに/それぞれ 可夾、ずつ 併字面),不算數量的清單(ヵ所/度 補進),受事者之前的引用量與 全ての/任意の 註明待裁定,全語料 15,185/2,292;(c)論元條「方式」:一框至多一個取最近、字面不含 は/も/のみ/しか、七類依尾詞歸、其他 類的三種來源(なしで/ままで/X以外で、戦闘・効果で 一族約 655 框待裁定)、不是方式的 で(定語並列、定語子句裡、繫詞)、**で 接區域進結構化所在標 取自で**與優先序(字面所在/取自來源/已有結構化所在都不蓋,實作定)、同じ縦列で 仍是方式,全語料 3,807/36;(d)動作框架條第四版論元段:phrases/regions 的形狀與玩家拼法(お互い、推得欄玩家 無、認不出不放),施事者四個來源依序(主語再主題、受身玩家主題不算、並列不一致留空;によって 含態空/自動沒對象、定語裡的不讀;事件主語 0 框與原因;預設只補代價/效果位他動帶對象)與不補的情況(條件位/受身/自動/沒對象、認不出是誰的 111 框),轉欄記號 取自來源/取自で,新鍵全部可選、剝鍵差異 0,全語料各欄框數;(e)回指回填從 scratchpad diff 併進正文——動作框架條回填 bullet 加整段(含 moving 看整條回指鏈、記號是**獨立的 region_backfill** 不寫進既有回填欄、顯示 來源(回指)/所在(回指)、本框已有字面含取自來源、目標區域認不出不填、填 3,475/拒 185),論元條「來源 vs 所在」加回指回填的例子;diff 其餘四項(任一組、條件類別、主語玩家、來源目的並收)沒併;動作類別條沒動。
+- **報告最終數**:`frames.py` 重跑兩次 md5 fd26593ecc2826f46004c88c4c4912e6(與票 10 交件相同),`report.py` 重生後 `report.md` 無差異(票 10 的版本就是最新);填充率表與各小節的數字見 report.md「新欄填充率(frame-args-v4)」。**編譯試跑**(`compile_dry_run.py --heads v4`)以票 10 修完的片語重跑,`results/compile-v4.md`/`.json` 更新:49 片關鍵詞/目的關鍵詞葉裡 44 葉與 `compile.md` 相同(票 02 時 45),5 葉少 10 張——破壊:モンスター 615 → 609(票 02 時 612;多掉的 3 張 24521754 モンスターゾーン 在定語子句的並列裡不再切段、59900655 與 93880808 括號註記（モンスター・魔法・罠）裡的 ・ 不再切,都是票 10 round1 修法 (3)(4) 的結果)、アップ:レベル 111 → 110、にする→族 37 → 35、にする→レベル 33 → 32(與票 02 相同);全部是舊式子字串命中在修飾語/定語/括號註記裡,規格決定 (a) 預期的代價,沒有一葉多。其他 184 葉(來源/目的/所在/預設葉)與票 02 時逐葉相同。
+- **重新發布**(照原網址):拆解頁 https://claude.ai/artifact/SSvzzZPLJcZsVLewfm3Htx Version 67(`prepare_view.py` 重生兩次 view_data.js md5 相同 5f659a965e2c010c0dd045848a908ad3;index 與 view_data + 12 個 view_frames + 4 個 view_cats 全部 18 檔都換,一次 publish 超過 64MB 上限、分兩次到同一網址:Version 66 index+view_data+view_frames_0〜10、Version 67 補 view_frames_11 與 view_cats_0〜3,最終版 18 檔齊;viewer.html 的卡片拆解說明補一段「第四版論元」欄怎麼讀);檢驗摘要 https://claude.ai/artifact/K9v5rfWiXgSdTgPgs83PpK Version 26(review-mirror cli.mjs 從 `llm-check/summary.md` 產生;summary.md 只在票 02 偏離那條加編譯試跑最終數一句);兩個 mirrors.json 網址不變、沒改。批次檔(`llm-check/v4-round1`、`v4-round2`)沒有鏡像,票 10 已入版控。
+- **給規格 2 的對照**(規格「給規格 2 的對照」四段 → 實際鍵名;下游四支與匯出本線沒改,規格 2 在這些鍵上改讀):
+  - 動作對象(`patient.py`):數量字面/選擇類判定 → `phrases.object.segments[i].quantity`(`{text, kind: 定數|上限|下限|任意|全部|null, number, from_clause}`;選擇類=有 quantity 且 kind 非 全部,全部類=沒有 quantity 或 kind=全部;引用量 kind null 另裁);中心詞封閉表 → `segments[i].head`/`head_kind`(卡/屬性/非卡/指示詞/其他;其他類的玩家/牌組位置/表示形式值待裁定要不要加值);區域與玩家 → `regions.source|place`(`[[玩家, 區域七值]…]`,玩家 自分/相手/お互い/相對/無)與 `segments[i].player`/`zones`(片語自己帶的、切區域前的);此卡/並列含此卡 → `segments[-1].head`=カード 且段字面以 このカード 結尾,或任一段 `demonstrative`/此卡(字面規則仍在 patient.py,可改讀段);發動位置與定語比對 → `segments[i].modifiers[]`(`{text, kind: 種族|屬性|字段|卡片子類型|數值|區域|玩家|表示形式|其他, field?, compare?, number?, numbers?}`)。
+  - 回指(`anaphora.py`):候選的限定語與中心詞比對 → `phrases[欄].segments[i].modifiers`(類)與 `head`;數量 → `quantity`;新子鍵 `anaphora.moving`(目標框架或解到底鏈上是否移動類,票 09 由 regions 事後補);回指回填已把目標區域寫進 `regions.source|place`、`region_backfill` 記欄名(source/place),字面欄不動。
+  - 類別線(`categories.py`):`head_nouns`/`keyword_in` → `phrases[對象→主語→主題第一個有值的欄].segments[].head`(比對方式 相等/子字串 規格 3 定;`compile_dry_run.py --heads v4` 已示範讀法),目的關鍵詞 → `phrases.goal.segments[].head`;`polarity_class` → `negation`(受身/不成不受 → 耐性、不可能 → 限制、一般 → 無;對照 `negation.POLARITY_CLASS_OF` 與 `LITERAL_FORMS` 規格 2 刪);來源當所在(`place_literal`)→ `regions.place` 已含 `transfer`=取自來源 的所在(非移動類、來源算得出區域;以下の効果から 這類不是區域的來源沒轉,`compile-v4.md` 的「非移動類 から 不當所在」1,187 卡·葉在讀 `regions.place` 後回來),另有 `transfer`=取自で 36 框;來源玩家/目的玩家欄 → `regions.*` 的玩家(推得的欄 無,不是 null;雙方 → お互い);施事者 → `agent`/`agent_source`/`agent_inferred`;方式 → `manner`/`manner_kind`/`manner_value`。
+  - 匯出(`export_categories.py`):每框的欄位就是上面這些:`phrases`(四欄)、`regions`(三欄)、`transfer`、`agent`+`agent_source`+`agent_inferred`、`manner`+`manner_kind`+`manner_value`、`negation`、`region_backfill`、`anaphora.moving`;全部可選鍵、只在有值時帶;值域表在 `closed_values.py`(`violations()` 建置期擋表外值,「其他」只在中心詞類/修飾語類/方式類);鍵名清單 `baseline_diff.NEW_KEYS`/`NEW_ANAPHORA_KEYS`。
+- **未決**(各票留下、集中在 `llm-check/summary.md`「需要你決定的」第四版論元六條,各附選項與建議):(1)受事者之前的引用量 …の数まで(280 框)與主語位 が+數量(4 框)要不要收(票 04/10);(2)方式 戦闘・効果で 一族(約 655 框)要不要加「手段:戰鬥或效果」(票 06);(3)修飾語 全ての/任意の(276 段)要不要收進數量(票 03/04);(4)施事者規則 (3) 事件主語的解讀(現行 0 框 vs 另一解讀 513 框;票 07);(5)段首 その/対象の 在定語子句裡的指示詞旗標要不要改語意判定(約 520 段;票 10);(6)其他類中心詞要不要加 玩家/牌組位置/表示形式值 三值(約 3,700 段;票 02)。另:離れる 要不要算移動類(規格 Further Notes)、「Xでなければならない」上游極性(票 08)屬框架線上游,不在本線。
+- **驗收**:effect-tokenize 全套 856 條、node 172 條、script/* 五套(card_list/faq_info/tag_card/text_format/web)通過;`baseline_diff.py` 差異 0、底線鍵 0;封閉表表外值 0(frames.py 建置時檢查);`frames.py` 兩次 md5 相同;三步鏈(frames → categories → export)後 `git diff --ignore-all-space data/` 為空;全語料框架 59,314(動作 46,732、約束 12,582)。地圖 `.scratch/frame-predicate-search/map.md` Decisions so far「寫規格 1」補交件註記、票 04 Comments 加交件一條、票 05(寫規格 2)Blocked by 的 04 已 resolved、02 已 resolved → 解鎖,Comments 註明規格 1 已交件與讀哪裡。整合分支 frame-args-v4 在交件時仍是 bebf20d,merge 為 already up to date。只 commit 本地、沒有 push。

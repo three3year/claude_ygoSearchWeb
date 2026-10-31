@@ -3,3 +3,6 @@ __pycache__/
 data/sources/
 .scratch/tag-card/batches/
 .playwright-mcp/
+
+# implement-spec 的子代理工作樹(整合分支 frame-args-v4)
+.worktrees/

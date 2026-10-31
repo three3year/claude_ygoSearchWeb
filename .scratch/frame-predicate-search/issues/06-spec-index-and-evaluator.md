@@ -3,7 +3,7 @@
 Type: task
 Mode: HITL
 Status: open
-Blocked by: 05, 01
+Blocked by: —(05、01 已 resolved;2026-11-01 解鎖)
 Map: ../map.md
 
 ## Question
@@ -13,3 +13,5 @@ Map: ../map.md
 to-spec 裡要順手定的細節:條件位框架的述詞語意(対象とする、存在 當可搜動作?條件框的施事者/受事者怎麼讀、領起句條件複製給 ● 子句與否)、具名查詢編譯在建置期還是前端載入時、評估結果的句層回傳形狀。
 
 答案記 spec.md 與 issues/ 的路徑。
+
+- 2026-11-01(wayfinder,票 05 交件):規格 2 已寫完切票(`.scratch/named-queries/`),本票解鎖。寫規格 3 時讀——匯出檔 `data/action_frames.json` 的框列欄與目錄(張數、卡集合雜湊)、參考評估器與夾具(規格 2 票 05/06/08)、要刪的舊東西清單(規格 2 票 11 Comments);索引編碼數字在票 01 Answer。規格 2 的 implement 還沒做,規格 3 可先寫、票等規格 2 交件後再動。

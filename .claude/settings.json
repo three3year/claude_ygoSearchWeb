@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_links.py\"",
+            "timeout": 20,
+            "statusMessage": "guard_links:檢查連結與工作樹刪除"
+          }
+        ]
+      }
+    ]
+  }
+}

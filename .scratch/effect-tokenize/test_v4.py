@@ -5,8 +5,8 @@
 - 單元:`closed_values.violations(records)`(封閉表外的值)、`baseline_diff.strip/diff/underscore_keys`
   (剝掉新鍵後與基準逐框比對;底線開頭的內部鍵不得出現在輸出)——用手寫的小框架清單,不讀全語料。
 - 全語料:frames.json 剝掉新鍵後與基準檔(修前的全語料框架檔,`baseline/frames.json`,不入版控)
-  差異 0;封閉類沒有表外值;沒有底線鍵。基準檔或 frames.json 不在時 skipTest 並印原因(沿用
-  test_categories.TestEmptyLeaves 的寫法)。
+  差異 0,且剝鍵後的 md5 與入版控的 baseline-digest.json 相同(語料沒變時);封閉類沒有表外值;
+  沒有底線鍵。輸入不在時 skipTest 並印原因(沿用 test_categories.TestEmptyLeaves 的寫法)。
 
 各票的句型回歸例子仍放 test_frames.py(接縫 frames.extract)。
 
@@ -159,18 +159,17 @@ class TestBaselineDiff(unittest.TestCase):
 
 
 class TestCorpus(unittest.TestCase):
-    """票 01 的全語料驗收:剝鍵差異 0、沒有表外值、沒有底線鍵。基準檔或 frames.json 不在時略過。"""
+    """票 01 的全語料驗收:剝鍵差異 0、沒有表外值、沒有底線鍵。frames.json 不在時整類略過;基準檔
+    (不入版控)不在時只略過逐框比對,改由入版控的 baseline-digest.json 守門(retro 2026-11-01):語料
+    沒變時剝鍵後的 md5 要和 digest 相同,語料變了略過並印原因。"""
 
     @classmethod
     def setUpClass(cls):
         cls.reason = None
-        for path, what in ((baseline_diff.BASELINE, "基準檔"), (frames.OUT, "frames.json")):
-            if not os.path.exists(path):
-                cls.reason = "第四版論元的全語料驗收沒有生效:沒有 %s(%s)——基準檔從 session scratchpad " \
-                             "的 v4-baseline/frames.json 複製到 .scratch/effect-tokenize/baseline/," \
-                             "frames.json 先跑分詞鏈(tokenize.py + frames.py)" % (what, path)
-                print(cls.reason, file=sys.stderr)
-                return
+        if not os.path.exists(frames.OUT):
+            cls.reason = "第四版論元的全語料驗收沒有生效:沒有 frames.json(%s)——先跑 frames.py" % frames.OUT
+            print(cls.reason, file=sys.stderr)
+            return
         with open(frames.OUT, encoding="utf-8") as f:
             cls.records = json.load(f)
 
@@ -179,8 +178,20 @@ class TestCorpus(unittest.TestCase):
             self.skipTest(self.reason)
 
     def test_stripping_the_new_keys_gives_back_the_baseline(self):
+        if not os.path.exists(baseline_diff.BASELINE):
+            reason = ("沒有基準檔 %s,逐框比對略過(digest 守門仍在);要逐框看差異時用 "
+                      "script/dev/worktree_bootstrap.py 複製基準檔" % baseline_diff.BASELINE)
+            print(reason, file=sys.stderr)
+            self.skipTest(reason)
         differences = baseline_diff.diff(baseline_diff.BASELINE, frames.OUT)
         self.assertEqual(differences[:20], [], "剝掉新鍵後與基準有 %d 處差異(只列前 20)" % len(differences))
+
+    def test_stripped_digest_matches_the_frozen_one(self):
+        status, message = baseline_diff.check_digest()
+        if status == "skip":
+            print("字面欄守門略過:" + message, file=sys.stderr)
+            self.skipTest(message)
+        self.assertEqual(status, "ok", message)
 
     def test_no_value_outside_the_closed_tables(self):
         self.assertEqual(closed_values.violations(self.records), [])

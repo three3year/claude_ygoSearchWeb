@@ -158,6 +158,10 @@ table.frames tr.con td{background:var(--con-row)}
 table.frames td.content{font-size:.82rem;color:var(--muted)}
 table.frames td.bf{color:var(--muted);opacity:.55;font-style:italic}
 table.frames td.inf{color:var(--muted);opacity:.55;text-decoration:underline dotted}
+table.frames td.v4 span.inf{color:var(--muted);opacity:.55;text-decoration:underline dotted}
+table.frames td.v4 span.bf{color:var(--muted);opacity:.55;font-style:italic}
+table.frames td.v4 details{display:inline-block}
+table.frames td.v4 summary{cursor:pointer}
 table.frames td.cat{font-size:.82rem;min-width:7em}
 table.frames td.cat .path{display:block;white-space:nowrap}
 table.frames td.cat .path b{font-weight:600}
@@ -550,9 +554,9 @@ function cardHtml(c,recs){
       +'<div class="rec-grid"><div class="rec-text">'+recTextHtml(r,null)+'</div><div class="rec-frames">';
     if(!r.f.length){h+='<p class="note">(抽不到框架)</p>';}
     else{
-      h+='<table class="frames"><thead><tr><th>#</th><th>類別</th><th>動作</th><th>動作類別</th><th>極性</th><th>態</th><th>主題</th><th>主語</th><th>對象</th><th>來源</th><th>所在</th><th>目的</th><th>內容</th><th>選項</th><th>回指</th></tr></thead><tbody>';
+      h+='<table class="frames"><thead><tr><th>#</th><th>類別</th><th>動作</th><th>動作類別</th><th>極性</th><th>態</th><th>主題</th><th>主語</th><th>對象</th><th>來源</th><th>所在</th><th>目的</th><th>內容</th><th>選項</th><th>回指</th><th>第四版論元</th></tr></thead><tbody>';
       r.f.forEach(function(f,i){
-        // f[11]=約束框架的 類別·子類(動作框架 null);f[12]=內容(約束框架的專屬欄位;動作框架的次數/窗口/回合條件/連接·群組/回填/推得/列舉);f[13]=回填的欄名(topic/subject/object/source/place,那幾格淡色斜體);f[14]=動作類別(約束框架 null);f[15]〜f[18]=主題、主語、所在、推得的欄名(source/goal,那幾格淡色加點線);f[19]=態(他動/自動/受身,空是沒判);f[20]=回指(受事者位指示詞指的目標,沒有時 null)
+        // f[11]=約束框架的 類別·子類(動作框架 null);f[12]=內容(約束框架的專屬欄位;動作框架的次數/窗口/回合條件/連接·群組/回填/推得/列舉);f[13]=回填的欄名(topic/subject/object/source/place,那幾格淡色斜體);f[14]=動作類別(約束框架 null);f[15]〜f[18]=主題、主語、所在、推得的欄名(source/goal,那幾格淡色加點線);f[19]=態(他動/自動/受身,空是沒判);f[20]=回指(受事者位指示詞指的目標,沒有時 null);f[21]=第四版論元的新鍵 dict(frame-args-v4;片語/結構化區域/轉欄/施事者/方式/否定形/回指回填,沒有時 null)
         var con=!!f[11];
         var bf=f[13]||[],inf=f[18]||[];
         function cell(key,v){
@@ -561,14 +565,22 @@ function cardHtml(c,recs){
           return '<td'+cls+'>'+esc(v||"")+'</td>';
         }
         h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"'+(con?' class="con"':'')+'><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+(con?conChip(f[11]):posChip(f[1]))+'</td><td>'+(con?'':'<b>'+esc(f[2])+'</b>')+'</td>'+(FR.categories?catCell(f[14]):'<td></td>')+'<td>'+(f[3]?polText(f[3]):'')+'</td><td>'+esc(f[19]||'')+'</td>'
-          +cell("topic",f[15])+cell("subject",f[16])+cell("object",f[4])+cell("source",f[5])+cell("place",f[17])+cell("goal",f[6])+'<td class="content">'+esc(f[12]||"")+'</td><td>'+optText(f)+'</td><td>'+anaphoraText(f[20])+'</td></tr>'
-          +'<tr class="clause"><td></td><td colspan="14"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
+          +cell("topic",f[15])+cell("subject",f[16])+cell("object",f[4])+cell("source",f[5])+cell("place",f[17])+cell("goal",f[6])+'<td class="content">'+esc(f[12]||"")+'</td><td>'+optText(f)+'</td><td>'+anaphoraText(f[20])+'</td><td class="v4">'+v4Text(f[21])+'</td></tr>'
+          +'<tr class="clause"><td></td><td colspan="15"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
       });
       h+='</tbody></table>';
     }
     h+='</div></div></div>';
   });
   return h;
+}
+function v4Text(v){
+  // 第四版論元(frame-args-v4):各票各加一個小函式組一格再接進這裡;推得/轉欄/取自子句/回填的格用
+  // .inf/.bf 淡色樣式與 title 說明;片語用 details/summary 展開列段、中心詞、中心詞類、修飾語、數量、玩家、區域、指示詞。
+  // 票 01 只有骨架:沒有值時顯示空。
+  if(!v)return '';
+  var parts=[];
+  return parts.join(' ');
 }
 function anaphoraText(a){
   // 回指:目標字面@區域、玩家、事件主語或主人、只寫在子句裡的數量;灰字是找法

@@ -543,7 +543,13 @@ def argument_cells(f):
         cells.append("%s=%s%s" % (label, f.get(key) or "", mark))
     if f.get("anaphora"):
         cells.append(anaphora_cell(f["anaphora"]))
-    return cells
+    return cells + v4_cells(f)
+
+
+def v4_cells(f):
+    """第四版論元(frame-args-v4)→ ["片語=…", "施事者=…", …];各票填自己的格,推得/轉欄/取自子句
+    標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。票 01 只有骨架:回空清單。"""
+    return []
 
 
 def card_block(cid, cards, recs, frames_by_key):

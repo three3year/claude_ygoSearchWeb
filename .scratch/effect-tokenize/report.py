@@ -25,6 +25,7 @@ import sys
 from collections import Counter, defaultdict
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)
 LEXICON = os.path.join(_HERE, "lexicon.json")
 TOKENS = os.path.join(_HERE, "tokens.json")
 FRAMES = os.path.join(_HERE, "frames.json")
@@ -361,6 +362,43 @@ def frames_section():
     return lines
 
 
+V4_POSITIONS = ("代價", "效果", "條件")
+
+
+def fill_rate_section(frames):
+    """新欄填充率(frame-args-v4 票 01):一張表,列是各新欄×位置,欄是 enrich.FILL_STATES 與 空;
+    列由 enrich.FILL_RATE_ROWS(各票註冊自己的新欄)決定。另附 enrich.REPORT_SECTIONS 的小節
+    (其他類的中心詞/修飾語 top 100、回指回填 填/拒)。enrich 在這裡才 import:constraints 載入時
+    import report,enrich 又 import constraints,模組層級會循環。"""
+    import enrich
+    actions = [fr for r in frames for fr in r["frames"] if fr.get("kind") != "約束"]
+    lines = [
+        "## 新欄填充率(frame-args-v4)",
+        "",
+        "第四版論元(`enrich.py`,全部是新鍵、字面欄不動)各新欄在動作框架 {:,} 框裡的狀態數,分位置:"
+        "有值=規則從字面算得;推得=依動作補的(原文沒寫);轉欄=所在的結構化值取自來源/取自で;"
+        "取自子句=數量取自子句裡的 を+數量;其他=落在封閉表「其他」類;空=沒有值。".format(len(actions)),
+        "",
+        "| 新欄 | 位置 | " + " | ".join(enrich.FILL_STATES) + " | 空 |",
+        "|---|---|" + "---|" * (len(enrich.FILL_STATES) + 1),
+    ]
+    if not enrich.FILL_RATE_ROWS:
+        lines.append("| (尚無列;各票在 enrich.FILL_RATE_ROWS 註冊自己的新欄) | | " + " | " * len(enrich.FILL_STATES) + " |")
+    for name, state_of in enrich.FILL_RATE_ROWS:
+        counts = {pos: Counter() for pos in V4_POSITIONS}
+        for fr in actions:
+            counts[fr["position"]][state_of(fr) or "空"] += 1
+        for pos in V4_POSITIONS:
+            c = counts[pos]
+            lines.append("| %s | %s | %s | %s |" % (
+                name, pos, " | ".join(format(c[state], ",") for state in enrich.FILL_STATES),
+                format(c["空"], ",")))
+    lines.append("")
+    for title, section_of in enrich.REPORT_SECTIONS:
+        lines += ["### " + title, ""] + list(section_of(frames)) + [""]
+    return lines
+
+
 def main():
     lexicon, sentences = load()
     surface_of = {e["id"]: e["surface"] for e in lexicon}
@@ -528,6 +566,9 @@ def main():
         lines.append("")
 
     lines += frames_section()
+    if os.path.exists(FRAMES):
+        with open(FRAMES, encoding="utf-8") as f:
+            lines += fill_rate_section(json.load(f))
 
     with open(OUT_MD, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))

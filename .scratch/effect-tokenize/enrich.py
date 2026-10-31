@@ -1,0 +1,60 @@
+# -*- coding: utf-8 -*-
+"""第四版論元的後處理 pass(frame-args-v4;票 01 建骨架,各票填步驟)。
+
+frames.py 的 frames_of_tokens 在 anaphora.resolve 之後呼叫 enrich(ctx, tokens, frames):所有新欄
+都是新鍵、讀既有欄的**最終**字面(主題延續、回填、推得、正規化、回指都已做完),所以放在框架抽取
+的最後一步;既有鍵一個位元組都不改(baseline_diff.py 剝掉新鍵後與基準比,差異要 0)。
+
+pass 內的順序照規格:片語結構化(phrases)→ 來源/目的/所在結構化與轉欄(regions)→ 施事者(agent)
+→ 方式(manner)→ 否定形(negation)→ 回指回填(regions.backfill_from_anaphora)。前五步逐個動作框架
+呼叫 step(ctx, tokens, frame);回填一次拿整句的框架清單(要找回指的目標框架)。只處理 kind == 動作
+的框架。最後 pop 掉底線開頭的內部鍵(票 02 在切區域時暫存切前字面的 frame["_raw"] 這類),
+它們不得進 frames.json。
+
+循環 import:frames.py import 這裡,這裡與各步驟模組**不**import frames;要用的常數與分詞輔助由
+frames.py 裝進 Context 傳進來(constraints/action_lemmas/places 可直接 import)。
+
+Context 欄位:
+    surface(token) / word(token) / is_noun_like(token)  FrameExtractor 的分詞輔助(字面、詞、是否名詞格)
+    move_actions / intransitive_moves                  移動類動作與其中的自動詞(frames.MOVE_ACTIONS…)
+    patient_coordinators                               受事者並列詞(frames.PATIENT_COORDINATORS;切段判準)
+    pol_neg                                            極性 否定 的值(frames.POL_NEG)
+
+報告的 registry(report.py 讀):
+    FILL_RATE_ROWS   [(新欄名稱, 函式 frame → 狀態字串 | None)];狀態字串是 FILL_STATES 之一(None 是 空)。
+                     各票只加自己的列,不改報告的程式。
+    REPORT_SECTIONS  [(標題, 函式 records → markdown 行清單)];留給「其他類的中心詞 top 100」(票 02)、
+                     「其他類的修飾語 top 100」(票 03)、「回指回填 填/拒(依原因)」(票 09)。
+"""
+from collections import namedtuple
+
+from constraints import KIND_ACTION
+
+import agent
+import manner
+import negation
+import phrases
+import regions
+
+Context = namedtuple("Context", "surface word is_noun_like move_actions intransitive_moves "
+                                "patient_coordinators pol_neg")
+
+# 填充率的狀態欄(報告表的欄序);None 算 空
+FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "其他")
+FILL_RATE_ROWS = []
+REPORT_SECTIONS = []
+
+_STEPS = (phrases.structure, regions.structure, agent.mark, manner.mark, negation.mark)
+
+
+def enrich(ctx, tokens, frames):
+    """就地替每個動作框架加第四版論元的新鍵;回傳同一個清單。"""
+    actions = [fr for fr in frames if fr.get("kind") == KIND_ACTION]
+    for step in _STEPS:
+        for fr in actions:
+            step(ctx, tokens, fr)
+    regions.backfill_from_anaphora(ctx, tokens, actions)
+    for fr in actions:
+        for key in [k for k in fr if k.startswith("_")]:
+            del fr[key]
+    return frames

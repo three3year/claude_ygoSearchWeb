@@ -55,6 +55,11 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
     anaphora  可選(action-patient-anaphora,anaphora.py):受事者位的指示詞(そのモンスター、対象の
               カード、その発動)指的目標——字面 text、區域 place、玩家 player、事件主語或主人 subject、
               只寫在子句裡的數量 count、找法 via(対象/欄位/字面/事件);不是卡、修飾語、找不到時不帶
+    phrases/regions/transfer/agent/agent_source/agent_inferred/manner/manner_kind/manner_value/
+    negation/region_backfill  可選(frame-args-v4,enrich.py 的後處理 pass,全是新鍵、只在有值時帶):
+              論元片語的結構(段/中心詞/中心詞類/修飾語/數量/玩家/區域/指示詞)、來源/目的/所在的
+              結構化值與轉欄記號、施事者與其來源、方式與方式類、否定形、回指回填記號;值域在
+              closed_values.py,鍵的清單在 baseline_diff.NEW_KEYS(剝掉後與修前基準逐框相同)
 
 單位是效果句(一個編號效果的全文,連同它的 ● 選項;tokenize.py 的 assemble 把
 拆開的領起句與子效果句接回一段):選項邊界 token「●」與「。」同樣結束一句,
@@ -79,6 +84,8 @@ sys.path.insert(0, HERE)
 from constraints import KIND_ACTION, KIND_CONSTRAINT, ConstraintFinder  # noqa: E402
 import action_lemmas  # noqa: E402
 import anaphora  # noqa: E402
+import closed_values  # noqa: E402
+import enrich  # noqa: E402
 from places import parse_place  # noqa: E402
 from report import frame_stats, token_kind  # noqa: E402
 
@@ -1559,7 +1566,14 @@ class FrameExtractor:
                                    f["kind"] != KIND_CONSTRAINT))
         # 回指(action-patient-anaphora):讀回填、正規化之後的值,跨句號,所以排在最後
         anaphora.resolve(frames, self._phrases(tokens, sentences, option_of))
+        # 第四版論元(frame-args-v4):新欄全是新鍵、讀既有欄的最終字面,所以是最後一步
+        enrich.enrich(self._context(), tokens, frames)
         return frames
+
+    def _context(self):
+        """enrich 要的常數與分詞輔助(enrich 與各步驟模組不 import frames,免得循環 import)。"""
+        return enrich.Context(self.surface, self.word, self.is_noun_like, MOVE_ACTIONS,
+                              INTRANSITIVE_MOVES, PATIENT_COORDINATORS, POL_NEG)
 
     def _phrases(self, tokens, sentences, option_of):
         """回指的字面備援:一個編號效果裡的名詞片語 → [anaphora.Phrase],依原文順序;沒出框架的子句
@@ -1974,6 +1988,12 @@ def main():
         out.append({"card": s["card"], "section": s["section"],
                     "index": s["index"], "stratum": s["stratum"],
                     "parts": s["parts"], "frames": frames})
+    # 第四版論元的封閉表(closed_values.py):全語料出現表外值就建置失敗,不寫檔
+    outside = closed_values.violations(out)
+    if outside:
+        closed_values.report(outside)
+        print("封閉表外的值 %d 種,frames.json 未更新" % len(outside), file=sys.stderr)
+        return 1
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False, indent=0)
         f.write("\n")

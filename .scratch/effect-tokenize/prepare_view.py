@@ -25,6 +25,7 @@ _spec = importlib.util.spec_from_file_location(
     "effect_tokenize", os.path.join(HERE, "tokenize.py"))
 effect_tokenize = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(effect_tokenize)
+import baseline_diff  # noqa: E402
 import categories  # noqa: E402
 import constraints  # noqa: E402
 import extract_seed  # noqa: E402
@@ -186,12 +187,14 @@ def frame_row(fr, offsets, category):
         return [fr["sentence"], None, None, fr.get("polarity"), None, None, None,
                 fr["clause"], chars, fr.get("option"), fr.get("label"),
                 constraints.label_of(fr), constraints.describe(fr), None, None]
+    # f[21]=第四版論元的新鍵(frame-args-v4;鍵的清單在 baseline_diff.NEW_KEYS),沒有時 null
+    v4 = {k: fr[k] for k in baseline_diff.NEW_KEYS if k in fr}
     return [fr["sentence"], fr["position"], fr["action"], fr["polarity"],
             fr.get("object"), fr.get("source"), fr.get("goal"), fr["clause"],
             chars, fr.get("option"), fr.get("label"), None,
             constraints.describe_action(fr), fr.get("backfill"), category,
             fr.get("topic"), fr.get("subject"), fr.get("place"), fr.get("inferred"),
-            fr.get("voice"), fr.get("anaphora")]
+            fr.get("voice"), fr.get("anaphora"), v4 or None]
 
 
 def load_categories():
@@ -347,6 +350,7 @@ def write_frame_shards(sentences, surface_of):
         # 淡色,沒有時 null)、動作類別 [狀態碼, 葉號…](約束框架 null,見 load_categories)、
         # 主題、主語、所在、推得的欄名清單(source/goal,頁面淡色並與回填區分)(frame-args-v3)、
         # 態(他動/自動/受身,空是 null;frame-lemma-unify 票 01)——約束框架的列沒有這五欄;
+        # 回指(action-patient-anaphora)、第四版論元的新鍵 dict(frame-args-v4,沒有時 null);
         # p=各段(標記句)的 index、效果類型、字元範圍
         rec = {"s": r["section"], "i": r["index"], "k": s["kind"],
                "st": r["stratum"], "t": s["text_ja"],

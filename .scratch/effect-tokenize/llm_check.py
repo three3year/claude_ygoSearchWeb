@@ -28,6 +28,10 @@
 - 回指(action-patient-anaphora 票 04;anaphora-round1 起):依回指來源七層(対象の/一般欄位/字面備援/
   效果類/並列含此卡/修飾語/留空;一張卡依序歸入第一個符合的層,小層在前),約 80 張、切 4 批;
   批次檔的框架列帶回指欄;錯誤類型 指錯/該指未指/不該指。
+- 第四版論元(frame-args-v4 票 10;v4-round1 起):依新欄七層(所在取自來源/否定形/施事者(非推得)/回指回填/
+  方式/數量/片語結構化;一張卡依序歸入第一個符合的層,小層在前、配額大於母體即全取),共 100 張、切 4 批;
+  批次檔的框架列帶全部新欄(片語、結構化區域、施事者、方式、否定形);錯誤類型在既有五類外加
+  中心詞錯/修飾語類錯、數量錯、施事者錯、方式錯、否定形錯、回填錯。推得的施事者是一條規則、靠回歸例子,不抽。
 種子固定,同一種子重抽得到同一批(複檢沿用);不同種子抽新樣本(過擬合抽驗)。
 
     sample   --round R --seed S   全語料抽樣:寫 llm-check/round<R>/sample.json 與 batch-<k>.md
@@ -38,9 +42,10 @@
     variants --round R --seed S   動作詞元變體受影響卡抽樣(寫 llm-check/variant-round<R>/)
     categories --round R --seed S 動作類別依葉分層抽框架(寫 llm-check/category-round<R>/)
     anaphora --round R --seed S   回指依來源分層抽樣(寫 llm-check/anaphora-round<R>/)
+    v4       --round R --seed S   第四版論元依新欄分層抽樣(寫 llm-check/v4-round<R>/)
     report   --round R            讀 llm-check/round<R>/findings-<k>.json 寫 report.md
     recheck  --round R --from R0  用 round R0 的樣本重出批次檔(同批複檢)
-    (report/recheck 加 --line constraints、v2、v3、lemma、variants、categories 或 anaphora 走各自的目錄)
+    (report/recheck 加 --line constraints、v2、v3、lemma、variants、categories、anaphora 或 v4 走各自的目錄)
 
 批次檔一張卡一節、一句效果句一段:整段效果句(含 ● 選項;拆開的領起句與子效果句
 各標 index 與效果類型)與它的框架(含選項欄「●n 標籤」)。
@@ -128,6 +133,14 @@ QUOTA_ANAPHORA = {"並列含此卡": 12, "留空": 12, "修飾語": 10, "字面�
                   "一般欄位": 12}
 BATCHES_ANAPHORA = 4
 ERROR_TYPES_ANAPHORA = ("指錯", "該指未指", "不該指")
+# 第四版論元(frame-args-v4 票 10):依新欄七層,小層在前(母體 2026-11-01:所在取自來源 1,289、否定形 2,291、
+# 施事者(非推得)2,878、回指回填 2,968、方式 3,057、數量 7,042、片語結構化 7,815 張;一張卡依序歸入第一個
+# 符合的層,所以後面的層只收前面都不中的卡);合計 100,配額大於母體時全取
+STRATA_V4 = ("所在取自來源", "否定形", "施事者", "回指回填", "方式", "數量", "片語結構化")
+QUOTA_V4 = {"所在取自來源": 14, "否定形": 14, "施事者": 14, "回指回填": 14, "方式": 14, "數量": 14,
+            "片語結構化": 16}
+BATCHES_V4 = 4
+ERROR_TYPES_V4 = ERROR_TYPES + ("中心詞錯/修飾語類錯", "數量錯", "施事者錯", "方式錯", "否定形錯", "回填錯")
 ANAPHORA_VIA = {anaphora.VIA_TARGET: "対象の", anaphora.VIA_FIELD: "一般欄位",
                 anaphora.VIA_LITERAL: "字面備援", anaphora.VIA_EVENT: "效果類"}
 MATERIAL_LEMMA = re.compile("(%s)素材[にと]する" % "|".join(action_lemmas.MATERIAL_METHODS))
@@ -473,6 +486,43 @@ def sample_anaphora(seed):
     return sample_by_frames(seed, anaphora_stratum, STRATA_ANAPHORA, QUOTA_ANAPHORA)
 
 
+# ── 第四版論元(票 10)──
+
+def v4_labels(f):
+    """一個動作框架命中的第四版論元層(STRATA_V4 的名字)。推得的施事者不算(規格 Out of Scope:
+    一條規則、靠回歸例子);轉欄只數 取自來源(取自で 36 框,抽到算方式層的附帶)。"""
+    labels = set()
+    phrases = f.get("phrases") or {}
+    if phrases:
+        labels.add("片語結構化")
+    if any(seg.get("quantity") for p in phrases.values() for seg in p["segments"]):
+        labels.add("數量")
+    if f.get("agent") and not f.get("agent_inferred"):
+        labels.add("施事者")
+    if f.get("manner"):
+        labels.add("方式")
+    if f.get("negation"):
+        labels.add("否定形")
+    if f.get("region_backfill"):
+        labels.add("回指回填")
+    if f.get("transfer") == "取自來源":
+        labels.add("所在取自來源")
+    return labels
+
+
+def v4_stratum(records):
+    labels = set()
+    for r in records:
+        for f in r["frames"]:
+            if f.get("kind") == constraints.KIND_ACTION:
+                labels |= v4_labels(f)
+    return next((k for k in STRATA_V4 if k in labels), None)
+
+
+def sample_v4(seed):
+    return sample_by_frames(seed, v4_stratum, STRATA_V4, QUOTA_V4)
+
+
 # ── 批次檔 ──
 
 def sentence_label(s):
@@ -685,7 +735,8 @@ def read_meta(round_dir):
 def round_dir_of(line, round_no):
     prefix = {"constraints": "constraint-round", "v2": "v2-round", "v3": "v3-round",
               "lemma": "lemma-round", "variants": "variant-round",
-              "anaphora": "anaphora-round", "categories": "category-round"}.get(line, "round")
+              "anaphora": "anaphora-round", "categories": "category-round",
+              "v4": "v4-round"}.get(line, "round")
     return os.path.join(CHECK_DIR, "%s%d" % (prefix, round_no))
 
 
@@ -988,16 +1039,16 @@ def report_categories(round_dir):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=("sample", "affected", "constraints", "v2", "v3",
-                                        "lemma", "variants", "categories", "anaphora", "report",
-                                        "recheck"))
+                                        "lemma", "variants", "categories", "anaphora", "v4",
+                                        "report", "recheck"))
     ap.add_argument("--round", type=int, required=True)
     ap.add_argument("--seed", type=int, default=20261009)
     ap.add_argument("--from", dest="from_round", type=int)
     ap.add_argument("--line", choices=("frames", "constraints", "v2", "v3", "lemma", "variants",
-                                       "categories", "anaphora"), default="frames")
+                                       "categories", "anaphora", "v4"), default="frames")
     args = ap.parse_args()
     line = (args.command if args.command in ("constraints", "v2", "v3", "lemma", "variants",
-                                             "categories", "anaphora")
+                                             "categories", "anaphora", "v4")
             else args.line)
     round_dir = round_dir_of(line, args.round)
     if args.command == "categories":
@@ -1012,6 +1063,10 @@ def main():
         write_category_batches(round_dir, picked, dict(read_meta(src), recheck_of=args.from_round))
     elif args.command == "report" and line == "categories":
         report_categories(round_dir)
+    elif args.command == "v4":
+        write_batches(round_dir, sample_v4(args.seed),
+                      {"mode": "v4", "seed": args.seed, "batches": BATCHES_V4,
+                       "strata": list(STRATA_V4), "error_types": list(ERROR_TYPES_V4)})
     elif args.command == "anaphora":
         write_batches(round_dir, sample_anaphora(args.seed),
                       {"mode": "anaphora", "seed": args.seed, "batches": BATCHES_ANAPHORA,

@@ -82,7 +82,8 @@ MOD_RACE, MOD_ATTRIBUTE, MOD_ARCHETYPE, MOD_SUBTYPE, MOD_NUMERIC, MOD_ZONE, MOD_
 MODIFIER_BOUNDARIES = {"p:の", "、"}                           # 修飾語段的邊界(規格:依 の 與讀點切)
 ITEM_SEPARATORS = {"・", "／"}                                   # 一段裡並列項的分隔(光・闇属性、融合・S・X)
 CASE_PARTICLES = {"p:を", "p:が", "p:に", "p:へ", "p:から", "p:で", "p:と", "p:は", "p:も", "p:より", "p:として"}
-ADNOMINAL_COMPARE = {"同じ", "異なる", "違う"}                   # 連體的比較詞:後面的名詞還是同一個修飾語(同じ種族)
+ADNOMINAL_COMPARE = {"同じ", "異なる", "違う"}                   # 連體的比較詞:後面的名詞還是同一個修飾語(同じ種族);
+#                                                                 前面有格助詞(数値が同じ|機械族)時是子句的述語、之後是邊界
 NUMERIC_FIELDS = frozenset({"攻撃力", "守備力", "レベル", "ランク", "リンク", "Pスケール", "LP"})
 COMPARATORS = frozenset({"以上", "以下", "未満"})
 NUMERIC_CONNECTORS = {"・", "／", "p:か", "p:や", "p:または", "p:と", "p:が", "p:で", "p:は", "p:も"}
@@ -120,6 +121,8 @@ def structure(ctx, tokens, frame):
         span = frame.get("span")
         found = locate(ctx, tokens, surfaces, raw.get(key) or text, span)
         run = tokens[found[0]:found[1]] if found else ctx.tokenize(raw.get(key) or text)
+        if found and "、" not in (raw.get(key) or text):
+            run = [t for t in run if t != "、"]
         segments = [segment(ctx, chunk) for chunk in split(ctx, run)]
         if key == "object" and found and not any(seg["quantity"] for seg in segments):
             quantity = clause_quantity(ctx, tokens, surfaces, found[1], span,
@@ -142,6 +145,8 @@ def locate(ctx, tokens, surfaces, literal, span):
                 continue
             acc = ""
             for j in range(i, hi):
+                if surfaces[j] == "、" and not literal.startswith(acc + "、"):
+                    continue                  # 上游去掉的讀點(存在する、このカード)跳過(票 10)
                 acc += surfaces[j]
                 if acc == literal:
                     return i, j + 1
@@ -169,6 +174,10 @@ def _is_boundary(ctx, run, k):
     is_dot = run[k] == "・"
     if not (is_dot or ctx.coordinates(run, k)) or k + 1 >= len(run):
         return False
+    if run[:k].count(PAREN_OPEN) > run[:k].count(PAREN_CLOSE):
+        return False                      # 種類（モンスター・魔法・罠）が異なる:括號註記裡的並列(票 10)
+    if not is_dot and _inside_attributive_clause(ctx, run, k):
+        return False                      # 「A」と「B」となるモンスター:並列詞在定語子句裡面(票 10)
     prev = run[k - 1]
     if not is_dot and _is_region_word(ctx, prev) and _is_region_word(ctx, run[k + 1]):
         return False                      # 自分か相手の、手札かフィールドの:區域內部的並列
@@ -184,8 +193,30 @@ def _is_boundary(ctx, run, k):
     elif kind == HEAD_CARD:
         return True                       # このカードと…のモンスター:兩個受事者
     rest = run[k + 1:]
-    stop = next((m for m in range(len(rest)) if rest[m] == "・" or ctx.coordinates(rest, m)), len(rest))
+    # 「・」串(魔法・罠・モンスターの効果)看整串之後有沒有 の/が,不是下一個 ・ 之前(票 10 v4-round1)
+    stop = next((m for m in range(len(rest)) if (rest[m] == "・" and not is_dot) or ctx.coordinates(rest, m)),
+                len(rest))
     return not any(u in LINK_PARTICLES for u in rest[:stop])
+
+
+def _inside_attributive_clause(ctx, run, k):
+    """並列詞 run[k] 在定語子句裡面、不是受事者的並列(票 10 v4-round1):到下一個並列詞為止,
+    (a)並列詞自己是 と 而後面有比較詞(そのモンスターと元々のカード名が異なる|「フォトン」モンスター:と 是比較的對象);
+    (b)後面有一個不是並列的 と(と+は/同じ/なる:「B」と|なる、カードとは種類が異なる、モンスターゾーンと同じ)再接述語、
+    述語後還接名詞。「X」またはそのカード名が記されたカード 這種各自帶定語的替代項沒有這樣的 と,照切。"""
+    rest = run[k + 1:]
+    stop = next((m for m in range(len(rest)) if ctx.coordinates(rest, m)), len(rest))
+    rest = rest[:stop]
+    if run[k] == "p:と" and any(ctx.word(t) in ADNOMINAL_COMPARE for t in rest):
+        return True
+    bound = next((m for m in range(len(rest)) if rest[m] == "p:と" and not ctx.coordinates(rest, m)), None)
+    if bound is None:
+        return False
+    for m in range(bound + 1, len(rest)):
+        if ctx.is_predicate(rest[m]) or ctx.word(rest[m]) in ADNOMINAL_COMPARE:
+            after = next((u for u in rest[m + 1:] if u != "、" and not ctx.is_predicate(u)), None)
+            return after is not None and token_kind(after) != "particle"
+    return False
 
 
 def _is_region_word(ctx, token):
@@ -218,10 +249,10 @@ def segment(ctx, chunk):
         kind = head_kind(head)
         if head and kind == OTHER:
             kind = HEAD_DEMONSTRATIVE if any(token_kind(t) == "counter" for t in tail) else HEAD_NON_CARD
-    player, zones = _place_of(ctx, chunk, text, head)
+    mods = modifiers(ctx, core, head_at, head) if head_at is not None else []
+    player, zones = _place_of(ctx, chunk, text, head, kind, mods, len(core))
     return {"text": text, "head": head, "head_kind": kind, "demonstrative": _demonstrative(ctx, chunk),
-            "player": player, "zones": zones,
-            "modifiers": modifiers(ctx, core, head_at, head) if head_at is not None else [],
+            "player": player, "zones": zones, "modifiers": mods,
             "quantity": _tail_quantity(ctx, chunk, core)}
 
 
@@ -305,12 +336,13 @@ def _demonstrative(ctx, chunk):
     return word == "対象" and len(chunk) > 1 and chunk[1] == "p:の"
 
 
-def _place_of(ctx, chunk, text, head):
+def _place_of(ctx, chunk, text, head, kind, mods, core_len):
     """段的玩家與區域(沿用區域辨識):最後一個定語述語之後的字面;整段認不出時退到它收在 の 前的最長前段
     (自分の墓地の|攻撃力2500の悪魔族・レベル6モンスター:描述裡有 ・ 時區域辨識認不出整段);中心詞是 数/合計
-    時不退(區域修飾的是數);狀態寫法 除外されている… 看整段。"""
+    時不退(區域修飾的是數);狀態寫法 除外されている… 看整段。都認不出時再從玩家/區域類的修飾語補
+    (相手フィールドの特殊召喚されたモンスター:區域在定語述語之前、但子句沒有自己的格,修飾的是中心詞;票 10)。"""
     last_predicate = max((i for i, t in enumerate(chunk) if ctx.is_predicate(t)), default=-1)
-    tail = chunk[last_predicate + 1:]
+    tail = chunk[last_predicate + 1:max(core_len, last_predicate + 1)]   # 數量尾不擋區域辨識(手札1枚;票 10)
     player, zones = places.parse_place("".join(ctx.surface(t) for t in tail))
     if not zones and head not in COUNT_HEADS:
         for i in reversed([i for i, t in enumerate(tail) if t == "p:の"]):
@@ -324,6 +356,13 @@ def _place_of(ctx, chunk, text, head):
             and _base(ctx, chunk[0]) in PLAYER_WORDS \
             and all(token_kind(t) != "particle" or t == "p:の" for t in chunk):
         player = places.BARE_PLAYERS[_base(ctx, chunk[0])]
+    if player is None and not zones and head not in COUNT_HEADS and kind != OTHER:
+        texts = [m["text"] for m in mods if m["kind"] in (MOD_PLAYER, MOD_ZONE)]
+        if texts and texts[0] in text and texts[-1] in text:
+            lo, hi = text.index(texts[0]), text.index(texts[-1]) + len(texts[-1])
+            if lo < hi:
+                player, zones = places.parse_place(text[lo:hi])     # 自分及び相手フィールド:照原文的字面連起來
+    
     return (PLACE_PLAYER[player] if player else None), list(zones)
 
 
@@ -471,13 +510,17 @@ def _modifier_chunks(ctx, pre):
             chunks.append([start, j])
             start = i = j
             continue
+        if ctx.word(pre[i]) in ADNOMINAL_COMPARE and _closes_clause(pre[start:i]):
+            chunks.append([start, i + 1])         # 数値が同じ|機械族:帶格助詞的比較詞是子句的述語(票 10)
+            start = i = i + 1
+            continue
         i += 1
     if start < len(pre):
         chunks.append([start, len(pre)])
     merged, since = [], 0
     for lo, hi in chunks:
         toks = pre[lo:hi]
-        if any(ctx.is_predicate(t) for t in toks):
+        if any(ctx.is_predicate(t) for t in toks) or ctx.word(toks[-1]) in ADNOMINAL_COMPARE:
             if any(t in CASE_PARTICLES for t in toks) and len(merged) > since:
                 lo = merged[since][0]
                 del merged[since:]
@@ -486,6 +529,12 @@ def _modifier_chunks(ctx, pre):
         else:
             merged.append([lo, hi])
     return merged
+
+
+def _closes_clause(before):
+    """比較詞(同じ/異なる)前的格裡有格助詞 → 它是定語子句的述語(数値が同じ|機械族);緊接在它前面的 と 是
+    比較的對象(そのモンスターと同じ種族),不算。"""
+    return any(t in CASE_PARTICLES for t in before[:-1]) or (bool(before) and before[-1] in CASE_PARTICLES - {"p:と"})
 
 
 def _modifier(text, kind):
@@ -604,6 +653,15 @@ def _items(ctx, toks, adjacent):
         if t in ITEM_SEPARATORS or ctx.coordinates(toks, i):
             i += 1
             continue
+        if kind in NUMBER_TOKEN_KINDS or (kind == "lex" and ctx.word(t) in NUMERIC_FIELDS
+                                           and i + 1 < n and token_kind(toks[i + 1]) in NUMBER_TOKEN_KINDS):
+            j = _numeric_run(ctx, toks, i)                     # ドラゴン族・レベル8:並列項裡的數值(票 10)
+            numeric = _numeric_items(ctx, toks[i:j])
+            if numeric is None:
+                return None
+            out.extend(numeric)
+            i = j
+            continue
         if kind == "attr":                                     # 闇属性、光(・闇属性)
             j = i + 1
             if j < n and ctx.word(toks[j]) == "属性":
@@ -642,6 +700,12 @@ def _items(ctx, toks, adjacent):
             else:
                 j = _zone_run(ctx, toks, i)
                 if j is None:
+                    rest = toks[i:]
+                    if all(token_kind(u) == "lex" for u in rest)                             and head_kind("".join(ctx.surface(u) for u in rest)) == HEAD_CARD:
+                        # 「X」モンスターの攻撃力、攻撃表示モンスターの攻撃力:認得的項之後剩所有者名詞(モンスター),
+                        # 落 其他、只留字面(票 10;前面什麼都沒認出時結果和整段落其他相同)
+                        out.append(_modifier("".join(ctx.surface(u) for u in rest), OTHER))
+                        return out
                     return None
                 out.append(_modifier("".join(ctx.surface(u) for u in toks[i:j]), MOD_ZONE))
                 i = j
@@ -663,6 +727,23 @@ def _items(ctx, toks, adjacent):
             return None
         i += 1
     return out
+
+
+def _numeric_run(ctx, toks, i):
+    """從 i 起連續的數值字面(欄位詞/比較詞/數字,連接符只在後面還接得上時算)→ 結尾位置。"""
+    def is_numeric(u):
+        kind = token_kind(u)
+        return kind in NUMBER_TOKEN_KINDS or (kind == "lex" and (ctx.word(u) in NUMERIC_FIELDS
+                                                                 or ctx.word(u) in COMPARATORS))
+    j = i
+    while j < len(toks):
+        if is_numeric(toks[j]):
+            j += 1
+        elif toks[j] in NUMERIC_CONNECTORS and j + 1 < len(toks) and is_numeric(toks[j + 1]):
+            j += 1
+        else:
+            break
+    return j
 
 
 def _zone_run(ctx, toks, i):

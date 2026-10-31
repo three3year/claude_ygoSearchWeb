@@ -3249,5 +3249,91 @@ class TestManner(unittest.TestCase):
         self.assertEqual(found[-1], ("装備", "装備魔法カード扱いで", "視同", None))
 
 
+class TestV4Round1Fixes(unittest.TestCase):
+    """frame-args-v4 票 10:v4-round1 LLM 抽驗抓到的同型錯,各一條回歸例子(先失敗再修)。只斷言輸出框架的
+    phrases 欄(段、中心詞、玩家、區域、修飾語、數量)。"""
+
+    def test_adnominal_compare_after_a_case_particle_closes_the_clause(self):
+        """数値が同じ機械族モンスター:同じ 前有格助詞(が),是定語子句的述語,之後是新的修飾語段;
+        同じ種族 這種連體用法(前面沒有格助詞)仍是同一個修飾語。"""
+        self.assertEqual(modifiers("①：攻撃力と守備力の数値が同じ機械族モンスター１体を特殊召喚する。"),
+                         [[("攻撃力と守備力の数値が同じ", "其他"), ("機械族", "種族")]])
+        self.assertEqual(modifiers("①：見せたモンスターとは種族と属性が異なる儀式モンスター１体を手札に加える。"),
+                         [[("見せた", "其他"), ("モンスターとは種族と属性が異なる", "其他"), ("儀式", "卡片子類型")]])
+        self.assertEqual(modifiers("①：そのモンスターと同じ種族のモンスター１体を破壊する。"),
+                         [[("そのモンスターと同じ種族", "其他")]])
+
+    def test_dot_run_followed_by_no_is_one_segment(self):
+        """魔法・罠・モンスターの効果:整串 ・ 並列修飾 効果,看的是整串之後有沒有 の,不是下一個 ・ 之前;
+        自分の手札・デッキ・墓地・除外状態の「ユベル」 同理一段、四個區域。魔法・罠カード１枚 後面沒有 の,照切兩段。"""
+        self.assertEqual([s[1] for s in segments("①：魔法・罠・モンスターの効果を発動できない。")], ["効果"])
+        self.assertEqual(segments("①：自分の手札・デッキ・墓地・除外状態の「ユベル」１体を選んで特殊召喚する。"),
+                         [("自分の手札・デッキ・墓地・除外状態の「ユベル」1体", "「ユベル」", "卡", False, "自分",
+                           ["手牌", "牌組", "墓地", "除外"])])
+        self.assertEqual([s[1] for s in segments("①：魔法・罠カード１枚を破壊する。")], ["魔法カード", "罠カード"])
+
+    def test_coordinator_inside_an_attributive_clause_does_not_split(self):
+        """「A」と「B」となるモンスター:と 夾在定語子句(カード名が…となる)裡面,不是受事者的並列;
+        及び墓地へ送ったカードとは種類が異なる…カード 同理。このカードと相手フィールドのモンスター１体 照切兩段。"""
+        self.assertEqual([s[1] for s in segments(
+            "①：元々のカード名が「ブラック・マジシャン」と「ブラック・マジシャン・ガール」となるモンスター１体を特殊召喚する。")],
+            ["モンスター"])
+        self.assertEqual([s[1] for s in segments(
+            "①：対象のカード及び墓地へ送ったカードとは種類が異なる「電脳堺媛－瑞々」以外の「電脳堺」カード１枚を手札に加える。")],
+            ["カード"])
+        self.assertEqual([s[1] for s in segments("①：このカードと相手フィールドのモンスター１体を破壊する。")],
+                         ["カード", "モンスター"])
+
+    def test_dot_inside_a_parenthesis_does_not_split(self):
+        """種類（モンスター・魔法・罠）が異なる「電脳堺」カード:括號註記裡的 ・ 不是受事者的並列;一段,「電脳堺」是字段。"""
+        text = "①：そのカードとは種類（モンスター・魔法・罠）が異なる「電脳堺」カード１枚を手札に加える。"
+        self.assertEqual([s[1] for s in segments(text)], ["カード"])
+        self.assertEqual(modifiers(text), [[("そのカードとは種類（モンスター・魔法・罠）が異なる", "其他"), ("「電脳堺」", "字段")]])
+
+    def test_numeric_item_inside_a_mixed_dot_list(self):
+        """ドラゴン族・レベル８モンスター:・ 並列的項各自定類——ドラゴン族 種族、レベル8 數值(欄位 レベル、數字 8)。"""
+        self.assertEqual(modifiers("①：ドラゴン族・レベル８モンスター１体を特殊召喚する。"),
+                         [[("ドラゴン族", "種族"), ("レベル8", "數值", "レベル", None, 8)]])
+
+    def test_archetype_before_an_owner_noun(self):
+        """「X－セイバー」モンスターの攻撃力:の 前的段裡引號段直接接名詞,引號段是字段、後面的所有者名詞落 其他;
+        「青眼の白龍」の攻撃力 的引號段接 の,仍是卡名、落 其他。"""
+        self.assertEqual(modifiers("①：自分フィールドの「X－セイバー」モンスターの攻撃力は５００アップする。", key="topic"),
+                         [[("自分フィールド", "區域"), ("「X－セイバー」", "字段"), ("モンスター", "其他")]])
+        self.assertEqual(modifiers("①：「青眼の白龍」の攻撃力を０にする。"), [[("「青眼の白龍」", "其他")]])
+
+    def test_segment_region_falls_back_to_its_region_modifiers(self):
+        """相手フィールドの特殊召喚されたモンスター:區域在定語述語之前、但定語子句沒有自己的格,區域修飾的是中心詞
+        ——段的玩家/區域從區域/玩家類的修飾語補;このカード以外の自分の獣戦士族モンスター 的玩家 自分 同理。
+        墓地のモンスターを対象とする効果 的 墓地 屬子句裡的 モンスター,段沒有區域。"""
+        self.assertEqual(segments("①：相手フィールドの特殊召喚されたモンスター１体を破壊する。")[0][4:],
+                         ("相手", ["場上"]))
+        self.assertEqual(segments("①：このカード以外の自分の獣戦士族モンスターを特殊召喚する。")[0][4:], ("自分", []))
+        self.assertEqual(segments("①：墓地のモンスターを対象とする効果を無効にする。")[0][4:], (None, []))
+
+    def test_zone_head_with_a_count_keeps_its_zone(self):
+        """手札を１枚相手に見せる:對象 手札1枚 的中心詞就是區域詞,數量尾不擋區域辨識——玩家 無、區域 手牌
+        (和 目的=手札 的段一樣)。"""
+        self.assertEqual(segments("①：手札を１枚相手に見せる。")[0], ("手札1枚", "手札", "卡", False, "無", ["手牌"]))
+
+    def test_literal_with_a_comma_still_takes_the_clause_quantity(self):
+        """…縦列に存在する、このカード以外のカードを全て破壊する:對象字面裡的讀點被上游去掉,片語仍要對回句子的
+        詞序列(不然子句裡的 を全て 取不到)——一段、數量 全て(全部、取自子句)。"""
+        frame = actions("①：移動する前と移動した後のモンスターゾーン及びその間のモンスターゾーンと同じ縦列に存在する、"
+                        "このカード以外のカードを全て破壊する。", )
+        frame = next(f for f in frame if f["action"] == "破壊")
+        segs = frame["phrases"]["object"]["segments"]
+        self.assertEqual([s["head"] for s in segs], ["カード"])
+        self.assertEqual(segs[-1]["quantity"], {"text": "全て", "kind": "全部", "number": None, "from_clause": True})
+
+    def test_closed_value_before_an_owner_noun(self):
+        """攻撃表示モンスターの攻撃力、「No.」Xモンスターの攻撃力:の 前的段裡封閉值/字段/召喚法直接接所有者名詞——
+        各項照類記、所有者名詞落 其他(v4-round2,和 「X」モンスターの攻撃力 同一條)。"""
+        self.assertEqual(modifiers("①：相手フィールドの全ての攻撃表示モンスターの攻撃力は０になる。", key="topic"),
+                         [[("相手フィールド", "區域"), ("全て", "其他"), ("攻撃表示", "表示形式"), ("モンスター", "其他")]])
+        self.assertEqual(modifiers("①：自分フィールドの全ての「No.」Xモンスターの攻撃力は５００アップする。", key="topic"),
+                         [[("自分フィールド", "區域"), ("全て", "其他"), ("「No.」", "字段"), ("X", "卡片子類型"), ("モンスター", "其他")]])
+
+
 if __name__ == "__main__":
     unittest.main()

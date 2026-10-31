@@ -20,6 +20,7 @@
 
 - 接縫只有一個:`frames.extract(原文) → 框架清單`。只斷言輸出框架的欄位,不斷言切段、候選、中間狀態,不斷言封閉表內容。範本:`test_frames.py` 檔頭與 `TestInferredValues`。
 - 一個句型一條例子,class docstring 寫票號與規則;每條規則配反例。修規則的 commit 先有一條會失敗的例子。
+- 多張票平行時,各票的回歸例子開自己的檔 `test_<票名>.py`(同樣只走 `frames.extract`),`test_frames.py` 留給既有例子;檔尾就不會每次合併都撞。
 - 全語料檢查寫成測試、缺輸入時 `skipTest` 並印原因。範本:`test_categories.TestEmptyLeaves.test_real_tree_has_no_empty_leaf_in_corpus`。
 
 ## 報告與顯示

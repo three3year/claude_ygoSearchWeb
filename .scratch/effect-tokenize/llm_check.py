@@ -552,7 +552,8 @@ def v4_cells(f):
     """第四版論元(frame-args-v4)→ ["片語·對象=…", "結構化來源=…", "否定形=…", …];各票填自己的格,
     推得/轉欄/取自子句標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。票 02:片語每欄一格(段、中心詞、
     中心詞類、指示詞、玩家、區域);票 05:結構化來源/目的/所在 (玩家,區域)・…,轉欄來的所在標 (取自來源)/
-    (取自で);回指回填寫進的欄(票 09)標 (回指)。否定形(票 08)只在否定框架上有值。"""
+    (取自で);回指回填寫進的欄(票 09)標 (回指)。施事者(票 07)寫 值(來源),預設補的標 (推得)。否定形(票 08)只在
+    否定框架上有值。"""
     cells = phrase_cells(f)
     regions = f.get("regions") or {}
     for key, label in (("source", "結構化來源"), ("goal", "結構化目的"), ("place", "結構化所在")):
@@ -560,6 +561,8 @@ def v4_cells(f):
             mark = ("(回指)" if f.get("region_backfill") == key
                     else "(%s)" % f["transfer"] if key == "place" and f.get("transfer") else "")
             cells.append("%s=%s%s" % (label, "・".join("(%s,%s)" % tuple(p) for p in regions[key]), mark))
+    if f.get("agent"):
+        cells.append("施事者=%s(%s)%s" % (f["agent"], f["agent_source"], "(推得)" if f.get("agent_inferred") else ""))
     if f.get("negation"):
         cells.append("否定形=%s" % f["negation"])
     return cells

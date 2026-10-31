@@ -21,8 +21,9 @@ INPUTS = ("data/sources", ".scratch/effect-tokenize/tokens.json", ".scratch/effe
 
 
 def main_repo_of(worktree):
+    # 路徑含中文:git 吐 UTF-8,text=True 會用系統碼頁(cp950)解、在 Windows 直接炸,所以指定編碼
     common = subprocess.check_output(["git", "rev-parse", "--git-common-dir"], cwd=worktree,
-                                     text=True).strip()
+                                     encoding="utf-8").strip()
     if not os.path.isabs(common):
         common = os.path.join(worktree, common)
     return os.path.dirname(os.path.abspath(common))

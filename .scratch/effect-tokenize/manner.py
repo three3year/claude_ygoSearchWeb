@@ -24,10 +24,13 @@ mark(ctx, tokens, frame):述語前同一子句內(frame["span"])的 で 片語 �
 不同類(戦闘・効果で)落 其他、只留字面。這裡不 import frames(循環 import);定語述語的判準由
 frames.py 經 ctx.is_predicate 傳進來。
 """
+from collections import Counter
+
 import places
 import regions
 from closed_values import MANNER_KINDS, OTHER
-from report import token_kind
+from extract_seed import CLOSED_VALUES
+from report import count_by_position, position_table, token_kind
 
 MEANS_EFFECT, MEANS_BATTLE, MEANS_METHOD, DISPLAY_FORM, REGARDED, ORDER = MANNER_KINDS[:6]
 
@@ -39,9 +42,10 @@ JOINERS = ALT_JOINERS | {"・"}
 PHRASE_PUNCT = {"・", "／", "～"}
 # 形式名詞/連用形當片語尾的(表側守備表示のままで、装備カード扱いで;frames.py 也不把 扱い 當動作)
 PHRASE_TAIL_WORDS = frozenset(("まま", "扱い"))
-# 表示形式的字面(規格列的九個)
-DISPLAY_FORMS = frozenset(("守備表示", "表側表示", "裏側守備表示", "攻撃表示", "表側", "裏側", "裏側表示",
-                           "表側攻撃表示", "表側守備表示"))
+# 表示形式的字面:分詞封閉值域 表示形式 的七個完整寫法(extract_seed.CLOSED_VALUES,與修飾語類同一來源),
+# 加規格方式段另列的兩個縮略寫法 表側/裏側(表側で特殊召喚する;分詞封閉值域沒有它們,因為 表側(…) 也當省略格)
+DISPLAY_FORM_SHORTHANDS = ("表側", "裏側")
+DISPLAY_FORMS = frozenset(CLOSED_VALUES["表示形式"]) | frozenset(DISPLAY_FORM_SHORTHANDS)
 # 尾詞 → 方式類(表示形式另看整段字面)
 TAIL_KINDS = (("効果", MEANS_EFFECT), ("戦闘", MEANS_BATTLE), ("攻撃", MEANS_BATTLE),
               ("方法", MEANS_METHOD), ("扱い", REGARDED), ("順番", ORDER))
@@ -229,22 +233,10 @@ def fill_state(frame):
 
 def count_section(records):
     """報告小節「方式各類框數」:七類 × 位置(代價/效果/條件)的動作框架數,與 其他 類的字面 top 30。"""
-    from collections import Counter
-    positions = ("代價", "效果", "條件")
-    counts, others = Counter(), Counter()
-    for rec in records:
-        for fr in rec["frames"]:
-            if fr.get("manner_kind"):
-                counts[(fr["manner_kind"], fr["position"])] += 1
-                if fr["manner_kind"] == OTHER:
-                    others[fr["manner"]] += 1
+    others = Counter(fr["manner"] for rec in records for fr in rec["frames"] if fr.get("manner_kind") == OTHER)
     lines = ["方式=述語前同一子句內的 で 片語(字面含 で);方式類依片語尾詞歸類,並列不同類(戦闘・効果で)"
-             "落 其他。定語裡的 で、繫詞 で 不收;で 接區域不是方式,進結構化所在、標 取自で。", "",
-             "| 方式類 | " + " | ".join(positions) + " | 合計 |", "|---|" + "---|" * (len(positions) + 1)]
-    for kind in MANNER_KINDS:
-        row = [counts[(kind, pos)] for pos in positions]
-        lines.append("| %s | %s | %s |" % (kind, " | ".join(format(c, ",") for c in row),
-                                           format(sum(row), ",")))
+             "落 其他。定語裡的 で、繫詞 で 不收;で 接區域不是方式,進結構化所在、標 取自で。", ""]
+    lines += position_table(count_by_position(records, "manner_kind"), MANNER_KINDS, "方式類")
     lines += ["", "其他類的方式字面 top 30:", ""]
     lines += ["- %s %s" % (literal, format(n, ",")) for literal, n in others.most_common(30)]
     return lines

@@ -3149,6 +3149,14 @@ class TestManner(unittest.TestCase):
         self.assertEqual(mannered("①：相手の手札を全て裏側表示で除外する。"),
                          [("除外", "裏側表示で", "表示形式", "裏側表示")])
 
+    def test_shorthand_display_form_is_a_display_form(self):
+        """表側/裏側 是規格方式段列的縮略寫法,分詞封閉值域 表示形式 沒有它們(code review 第 5 條:值域改從
+        extract_seed.CLOSED_VALUES 取,兩個縮略寫法另列),仍是 表示形式、值是字面。"""
+        self.assertEqual(mannered("①：デッキからモンスター１体を表側で特殊召喚する。"),
+                         [("特殊召喚", "表側で", "表示形式", "表側")])
+        self.assertEqual(mannered("①：相手の手札を裏側で除外する。"),
+                         [("除外", "裏側で", "表示形式", "裏側")])
+
     def test_coordinated_display_forms_keep_the_whole_phrase(self):
         self.assertEqual(mannered("①：そのモンスターを表側守備表示または裏側守備表示で特殊召喚する。"),
                          [("特殊召喚", "表側守備表示または裏側守備表示で", "表示形式",

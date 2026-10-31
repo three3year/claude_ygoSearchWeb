@@ -70,6 +70,8 @@ import constraints  # noqa: E402
 import action_lemmas  # noqa: E402
 import anaphora  # noqa: E402
 import categories  # noqa: E402
+from closed_values import OTHER, REGION_KEYS, REGION_PLACE, TRANSFER_FROM_SOURCE  # noqa: E402
+from phrases import MOD_NUMERIC, PHRASE_LABELS  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 CARDS = os.path.join(ROOT, "data", "cards.json")
@@ -505,7 +507,7 @@ def v4_labels(f):
         labels.add("否定形")
     if f.get("region_backfill"):
         labels.add("回指回填")
-    if f.get("transfer") == "取自來源":
+    if f.get("transfer") == TRANSFER_FROM_SOURCE:
         labels.add("所在取自來源")
     return labels
 
@@ -606,23 +608,20 @@ def v4_cells(f):
     (其他))。施事者(票 07)寫 值(來源),預設補的標 (推得)。否定形(票 08)只在否定框架上有值。"""
     cells = phrase_cells(f)
     regions = f.get("regions") or {}
-    for key, label in (("source", "結構化來源"), ("goal", "結構化目的"), ("place", "結構化所在")):
+    for key, label in zip(REGION_KEYS, ("結構化來源", "結構化目的", "結構化所在")):
         if key in regions:
             mark = ("(回指)" if f.get("region_backfill") == key
-                    else "(%s)" % f["transfer"] if key == "place" and f.get("transfer") else "")
+                    else "(%s)" % f["transfer"] if key == REGION_PLACE and f.get("transfer") else "")
             cells.append("%s=%s%s" % (label, "・".join("(%s,%s)" % tuple(p) for p in regions[key]), mark))
     if f.get("agent"):
         cells.append("施事者=%s(%s)%s" % (f["agent"], f["agent_source"], "(推得)" if f.get("agent_inferred") else ""))
     if f.get("manner"):
         kind = f["manner_kind"]
         cells.append("方式=%s %s%s" % (f["manner"], kind + ("=" + f["manner_value"] if f.get("manner_value") else ""),
-                                      "(其他)" if kind == "其他" else ""))
+                                      "(其他)" if kind == OTHER else ""))
     if f.get("negation"):
         cells.append("否定形=%s" % f["negation"])
     return cells
-
-
-PHRASE_LABELS = (("object", "對象"), ("topic", "主題"), ("subject", "主語"), ("goal", "目的"))
 
 
 def phrase_cells(f):
@@ -663,7 +662,7 @@ def quantity_bits(seg):
 
 def modifier_bit(m):
     """票 03:字面(類);數值類列 欄位/比較/數字——レベル4以下(數值:レベル 以下 4)。"""
-    if m["kind"] != "數值":
+    if m["kind"] != MOD_NUMERIC:
         return "%s(%s)" % (m["text"], m["kind"])
     numbers = "・".join(str(n) for n in m["numbers"]) if m.get("numbers") else m["number"]
     detail = " ".join(str(x) for x in (m["field"], m["compare"], numbers) if x is not None)

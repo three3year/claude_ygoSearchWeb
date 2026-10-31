@@ -21,26 +21,27 @@ agent 同進退)、frame["agent_inferred"] = True(只在來源是 預設 時)。
 
 不 import frames(循環 import);分詞輔助走 ctx,片語的段/中心詞類走 phrases.segment。
 """
-import os
-import sys
 from collections import Counter
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import phrases  # noqa: E402
-from closed_values import AGENTS, AGENT_SOURCES, HEAD_CARD  # noqa: E402
+import phrases
+import places
+from action_lemmas import VOICE_ACTIVE, VOICE_PASSIVE
+from anaphora import VIA_EVENT
+from closed_values import AGENTS, AGENT_SOURCES, HEAD_CARD, PLACE_PLAYER
+from constraints import POS_COST, POS_EFFECT
+from report import count_by_position, position_table
 
 AGENT_SELF, AGENT_OPP, AGENT_BOTH, AGENT_THIS_CARD, AGENT_OTHER_CARD = AGENTS
 SRC_TOPIC, SRC_SUBJECT, SRC_EVENT, SRC_NIYOTTE, SRC_DEFAULT = AGENT_SOURCES
-PLAYER_AGENTS = {AGENT_SELF: AGENT_SELF, AGENT_OPP: AGENT_OPP, AGENT_BOTH: AGENT_BOTH}
+# 玩家詞 → 施事者值(自分/相手/お互い;區域辨識的裸玩家詞是單一來源,拼法過 PLACE_PLAYER)
+PLAYER_AGENTS = {word: PLACE_PLAYER[player] for word, player in places.BARE_PLAYERS.items()}
 PLAYER_NOUN_HEADS = {"プレイヤー", "コントローラー", "持ち主"}   # 玩家名詞:段的玩家就是施事者
 THIS_CARD = "このカード"
-VOICE_PASSIVE, VOICE_INTRANSITIVE, VOICE_TRANSITIVE = "受身", "自動", "他動"
-POSITIONS_DEFAULT = ("代價", "效果")
+POSITIONS_DEFAULT = (POS_COST, POS_EFFECT)              # 規則 (4) 預設只補這兩個位置
 NIYOTTE_WORDS = {"よって", "よる", "より"}        # 「に」之後的詞(frames.py 收 によって 論元的同一判準)
 EFFECT_TAIL_WORDS = {"効果"}                      # Xの効果によって:施事者看 X
 EVENT_ACTIONS = {"発動", "攻撃"}                  # 效果類事件的動作(各召喚以尾字比)
 EVENT_ACTION_SUFFIX = "召喚"
-VIA_EVENT = "事件"                                # anaphora.VIA_EVENT(只讀,不 import)
 # 認不出是誰的受事者位字面:留空、不補預設(與「沒有字面」的 None 區別)
 UNRESOLVED = object()
 
@@ -53,7 +54,7 @@ def mark(ctx, tokens, frame):
         found = _from_niyotte(ctx, tokens, frame)
     if found is None and _is_event_action(frame.get("action")):
         found = _from_event_subject(ctx, frame)
-    if found is None and _has_object(frame) and frame.get("voice") in (None, VOICE_TRANSITIVE) \
+    if found is None and _has_object(frame) and frame.get("voice") in (None, VOICE_ACTIVE) \
             and frame.get("position") in POSITIONS_DEFAULT:
         found = (AGENT_SELF, SRC_DEFAULT)
     if found is None:
@@ -71,7 +72,7 @@ def _has_object(frame):
 def _from_patient_slot(frame):
     """主語、再來主題 → (施事者, 來源) | UNRESOLVED(有字面但認不出) | None(兩欄都空)。"""
     passive = frame.get("voice") == VOICE_PASSIVE
-    takes_card = _has_object(frame) and frame.get("voice") in (None, VOICE_TRANSITIVE)
+    takes_card = _has_object(frame) and frame.get("voice") in (None, VOICE_ACTIVE)
     for key, source in (("subject", SRC_SUBJECT), ("topic", SRC_TOPIC)):
         text = frame.get(key)
         if not text:
@@ -194,18 +195,13 @@ def fill_state(frame):
     return "推得" if frame.get("agent_inferred") else "有值"
 
 
-POSITIONS = ("代價", "效果", "條件")
-
-
 def count_section(records):
     """報告小節「施事者各值 × 來源」:動作框架數,值一列、來源一欄;另一張表各來源分位置。"""
     by_source = Counter()
-    by_position = Counter()
     for rec in records:
         for fr in rec["frames"]:
             if fr.get("agent"):
                 by_source[(fr["agent"], fr["agent_source"])] += 1
-                by_position[(fr["agent_source"], fr["position"])] += 1
     lines = ["值 自分/相手/お互い/此卡/其他卡;來源 主題/主語(受事者位的字面)、によって(受身與沒對象的框架)、"
              "事件主語(效果類事件框架的回指主人)、預設(代價/效果位、他動、帶對象、沒寫誰做 → 自分,標推得)。", "",
              "| 施事者 | " + " | ".join(AGENT_SOURCES) + " | 合計 |", "|---|" + "---|" * (len(AGENT_SOURCES) + 1)]
@@ -214,7 +210,5 @@ def count_section(records):
         lines.append("| %s | %s | %s |" % (agent, " | ".join(format(c, ",") for c in row), format(sum(row), ",")))
     total = [sum(by_source[(agent, src)] for agent in AGENTS) for src in AGENT_SOURCES]
     lines.append("| 合計 | %s | %s |" % (" | ".join(format(c, ",") for c in total), format(sum(total), ",")))
-    lines += ["", "| 來源 | " + " | ".join(POSITIONS) + " |", "|---|" + "---|" * len(POSITIONS)]
-    for src in AGENT_SOURCES:
-        lines.append("| %s | %s |" % (src, " | ".join(format(by_position[(src, pos)], ",") for pos in POSITIONS)))
+    lines += [""] + position_table(count_by_position(records, "agent_source"), AGENT_SOURCES, "來源")
     return lines

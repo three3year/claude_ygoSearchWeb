@@ -16,9 +16,7 @@ frames.py 裝進 Context 傳進來(constraints/action_lemmas/places 可直接 im
 
 Context 欄位:
     surface(token) / word(token) / is_noun_like(token)  FrameExtractor 的分詞輔助(字面、詞、是否名詞格)
-    move_actions / intransitive_moves                  移動類動作與其中的自動詞(frames.MOVE_ACTIONS…)
-    patient_coordinators                               受事者並列詞(frames.PATIENT_COORDINATORS;切段判準)
-    pol_neg                                            極性 否定 的值(frames.POL_NEG)
+    move_actions                                       移動類動作(frames.MOVE_ACTIONS;regions 的轉欄/回填判準)
     coordinates(chunk, k)                              FrameExtractor 的並列分隔判準(と同じ 的 と 不算;票 02 切段用)
     is_predicate(token)                                定語述語判準(FrameExtractor._is_predicate:動詞/形容詞/
                                                        する家族/補助/否定/活用尾;票 02 切段、讀區域用,票 06 用來
@@ -27,7 +25,8 @@ Context 欄位:
 
 報告的 registry(report.py 讀):
     FILL_RATE_ROWS   [(新欄名稱, 函式 frame → 狀態字串 | None)];狀態字串是 FILL_STATES 之一(None 是 空)。
-                     各票只加自己的列,不改報告的程式。
+                     各票只加自己的列,不改報告的程式。列名一律「中文名 鍵名」(片語·對象 phrases.object)。
+    報告小節共用的表:report.count_by_position / report.position_table(值 × 位置 的 markdown 表)。
     REPORT_SECTIONS  [(標題, 函式 records → markdown 行清單)];留給「其他類的中心詞 top 100」(票 02)、
                      「其他類的修飾語 top 100」(票 03)、「回指回填 填/拒(依原因)」(票 09)。
 """
@@ -41,8 +40,7 @@ import negation
 import phrases
 import regions
 
-Context = namedtuple("Context", "surface word is_noun_like move_actions intransitive_moves "
-                                "patient_coordinators pol_neg coordinates is_predicate tokenize")
+Context = namedtuple("Context", "surface word is_noun_like move_actions coordinates is_predicate tokenize")
 
 # 填充率的狀態欄(報告表的欄序);None 算 空
 FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "回填", "其他")
@@ -50,8 +48,8 @@ FILL_RATE_ROWS = [*phrases.FILL_RATE_ROWS]      # 票 02:片語·對象/主題/�
 FILL_RATE_ROWS += list(regions.FILL_RATE_ROWS)   # 票 05:結構化來源/目的/所在、取自來源;票 09:回指回填
 FILL_RATE_ROWS += [
     ("施事者 agent", agent.fill_state),                                # 票 07
-    ("方式", manner.fill_state),                                       # 票 06
-    ("否定形", negation.fill_state),                                   # 票 08
+    ("方式 manner", manner.fill_state),                                # 票 06
+    ("否定形 negation", negation.fill_state),                          # 票 08
 ]
 REPORT_SECTIONS = [*phrases.REPORT_SECTIONS]    # 票 02:其他類的中心詞 top 100;票 04:數量各類框數
 REPORT_SECTIONS += [

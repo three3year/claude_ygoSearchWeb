@@ -39,24 +39,22 @@ closed_values.PLACE_PLAYER。
 攻撃力か守備力が2100 共用一個數,レベル4・5 一個、numbers 列兩數,500ダメージ 的裸數欄位空);一項認不出整段落 其他、
 只留字面(定語子句、以外/他/元々/残り、このカード、同じ種族…)。
 """
-import os
-import sys
+import re
 from collections import Counter, defaultdict
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import places  # noqa: E402
-from action_lemmas import MATERIAL_METHODS  # noqa: E402
-from closed_values import (HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_NON_CARD, MODIFIER_KINDS, OTHER,  # noqa: E402
-                           PHRASE_KEYS, PLACE_PLAYER, QUANTITY_KINDS, head_kind)
-from extract_seed import CLOSED_VALUES  # noqa: E402  封閉值域(種族/卡片子類型/表示形式)的單一來源
-from report import token_kind  # noqa: E402
+import places
+from action_lemmas import MATERIAL_METHODS
+from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_NON_CARD, MODIFIER_KINDS, OTHER,
+                           PHRASE_KEYS, PLACE_PLAYER, QUANTITY_KINDS)
+from constraints import POS_COND, POS_COST, POS_EFFECT
+from extract_seed import CLOSED_VALUES  # 封閉值域(種族/卡片子類型/表示形式)的單一來源
+from report import token_kind
 
 PHRASE_LABELS = (("object", "對象"), ("topic", "主題"), ("subject", "主語"), ("goal", "目的"))
 # 數量尾的格(票 04 在這裡接手數量本身)
 QUANTITY_TOKEN_KINDS = {"num", "counter", "range"}
 QUANTITY_WORD_TAIL = {"全て"}                             # 段尾單格的量化詞
-QUANTITY_PHRASE_TAIL = (("任意", "p:の", "数"), ("好きな", "p:の", "数"))
-PLAYER_WORDS = {"自分", "相手", "お互い"}
+PLAYER_WORDS = frozenset(places.BARE_PLAYERS)             # 自分/相手/お互い(區域辨識的裸玩家詞是單一來源)
 DEMONSTRATIVE_WORDS = {"それ", "それら", "その"}         # その 單獨一格:その3枚、その「X」
 # 分詞拆開的複合中心詞:前一格是召喚法前綴(m:)時 召喚/素材 合記(特殊召喚、X素材);カード|名 合記 カード名
 METHOD_JOIN_HEADS = {"召喚", "素材"}
@@ -71,7 +69,7 @@ Q_FIXED, Q_UPPER, Q_LOWER, Q_ANY, Q_ALL = QUANTITY_KINDS
 QUANTITY_COUNTERS = {"枚", "体", "つ", "種類", "個", "組", "回"}      # 規格列的量詞;ヵ所/度 不算
 QUANTITY_COMPARE_KIND = {"以上": Q_LOWER, "以下": Q_UPPER}            # N体以上 下限、N体以下 上限
 QUANTITY_ANY_PHRASES = (("任意", "の", "数"), ("任意", "の", "枚", "数"), ("任意", "の", "個", "数"),
-                        ("好き", "な", "数"))                         # 任意の数/任意の枚数/好きな数(字面比)
+                        ("好き", "な", "数"))                         # 任意の数/任意の枚数/好きな数(字面比;段尾與 を 後共用)
 QUANTITY_TAIL_PARTICLES = {"p:まで", "p:の", "p:ずつ"}                  # 段尾數量裡會出現的助詞
 CLAUSE_QUANTITY_SKIP = (("ランダム", "に"), ("それぞれ",))             # を 與數量之間可夾的副詞(不進字面)
 CLAUSE_QUANTITY_STOP = {"。", "、", "p:を"}                            # 引用量往後找的邊界
@@ -104,6 +102,44 @@ _CLOSED_MODIFIER = {value: kind for kind, values in (
 # 與規格另列的 チューナー/ペンデュラム:分詞裡是單獨一格、直接接中心詞(チューナーモンスター、ペンデュラムモンスター)
 SUBTYPE_PREFIXES = frozenset({v[:-len("モンスター")] for v in CLOSED_VALUES["卡片子類型"] if v.endswith("モンスター")}
                              | {"チューナー", "ペンデュラム"})
+
+# ── 中心詞類(票 02)的判定表(值域在 closed_values.HEAD_KINDS) ──
+# 規格 Implementation Decisions 的中心詞類段;依中心詞字面比,表外落 其他:
+# 卡——モンスター/カード/トークン/チューナー/素材、卡名「…」、卡種+カード 與 子類型+モンスター 這類封閉值域
+# 複合詞(以尾字比)、受事者本身是區域(手札、デッキ、墓地、自分フィールド…,交給 places 認);
+# 屬性——數值與性質欄位,與跟主人走的事件類(効果/発動/攻撃/各召喚);非卡——傷害/LP/指示物/數/擲幣/
+# 戰鬥/ゾーン 與純數值;指示詞——沒有名詞中心的段(それ/それら/いずれか/内/対象/残り,與只剩數量的段
+# 「1枚」「2体以上」:名詞省略了,指的是上文的卡;量詞就是 QUANTITY_COUNTERS 那一張表)
+_HEAD_CARD_WORDS = frozenset({"モンスター", "カード", "トークン", "チューナー", "素材", "魔法", "罠"})
+_HEAD_CARD_SUFFIXES = ("カード", "モンスター", "素材", "トークン", "魔法", "罠")
+_HEAD_ATTRIBUTE_WORDS = frozenset({
+    "攻撃力", "守備力", "レベル", "ランク", "Pスケール", "属性", "種族", "カード名", "表示形式", "コントロール",
+    "位置", "効果", "発動", "攻撃", "召喚"})
+_HEAD_ATTRIBUTE_SUFFIXES = ("召喚", "カード名")
+_HEAD_NON_CARD_WORDS = frozenset({"ダメージ", "LP", "カウンター", "数", "コイントス", "戦闘", "ゾーン"})
+_HEAD_NON_CARD_SUFFIXES = ("ダメージ", "カウンター")
+_HEAD_DEMONSTRATIVE_WORDS = frozenset({"それ", "それら", "いずれか", "内", "対象", "残り", "両方", "どちらか"})
+_NUMERIC = re.compile(r"[0-9]+")
+_QUANTITY_ONLY = re.compile(r"[0-9]+(?:%s)(?:まで|以上|以下|未満)?" % "|".join(sorted(QUANTITY_COUNTERS)))
+
+
+def head_kind(head):
+    """中心詞字面 → 中心詞類(HEAD_KINDS 之一);None 與表外的落 其他。"""
+    if not head:
+        return OTHER
+    if head.startswith("「") and head.endswith("」"):
+        return HEAD_CARD
+    if head in _HEAD_CARD_WORDS or head.endswith(_HEAD_CARD_SUFFIXES):
+        return HEAD_CARD
+    if head in _HEAD_ATTRIBUTE_WORDS or head.endswith(_HEAD_ATTRIBUTE_SUFFIXES):
+        return HEAD_ATTRIBUTE
+    if head in _HEAD_NON_CARD_WORDS or head.endswith(_HEAD_NON_CARD_SUFFIXES) or _NUMERIC.fullmatch(head):
+        return HEAD_NON_CARD
+    if head in _HEAD_DEMONSTRATIVE_WORDS or _QUANTITY_ONLY.fullmatch(head):
+        return HEAD_DEMONSTRATIVE
+    if places.parse_place(head)[1]:
+        return HEAD_CARD
+    return OTHER
 
 
 def structure(ctx, tokens, frame):
@@ -265,11 +301,9 @@ def _is_quantity_tail(ctx, core):
         return 1
     if len(core) > 1 and ctx.word(last) in QUANTITY_WORD_TAIL:
         return 1
-    for pattern in QUANTITY_PHRASE_TAIL:
+    for pattern in QUANTITY_ANY_PHRASES:
         n = len(pattern)
-        if len(core) > n and all(
-                core[-n + i] == p if p.startswith("p:") else ctx.word(core[-n + i]) == p
-                for i, p in enumerate(pattern)):
+        if len(core) > n and all(ctx.surface(core[-n + i]) == p for i, p in enumerate(pattern)):
             return n
     return 0
 
@@ -362,7 +396,6 @@ def _place_of(ctx, chunk, text, head, kind, mods, core_len):
             lo, hi = text.index(texts[0]), text.index(texts[-1]) + len(texts[-1])
             if lo < hi:
                 player, zones = places.parse_place(text[lo:hi])     # 自分及び相手フィールド:照原文的字面連起來
-    
     return (PLACE_PLAYER[player] if player else None), list(zones)
 
 
@@ -701,7 +734,8 @@ def _items(ctx, toks, adjacent):
                 j = _zone_run(ctx, toks, i)
                 if j is None:
                     rest = toks[i:]
-                    if all(token_kind(u) == "lex" for u in rest)                             and head_kind("".join(ctx.surface(u) for u in rest)) == HEAD_CARD:
+                    if all(token_kind(u) == "lex" for u in rest) \
+                            and head_kind("".join(ctx.surface(u) for u in rest)) == HEAD_CARD:
                         # 「X」モンスターの攻撃力、攻撃表示モンスターの攻撃力:認得的項之後剩所有者名詞(モンスター),
                         # 落 其他、只留字面(票 10;前面什麼都沒認出時結果和整段落其他相同)
                         out.append(_modifier("".join(ctx.surface(u) for u in rest), OTHER))
@@ -749,7 +783,8 @@ def _numeric_run(ctx, toks, i):
 def _zone_run(ctx, toks, i):
     """從 i 起的區域字面:一格(墓地)或分詞拆成兩三格的(除外|状態),長的先試,交給區域辨識認得就回結尾位置。"""
     for j in range(min(i + 3, len(toks)), i, -1):
-        if all(token_kind(u) == "lex" for u in toks[i:j])                 and places.parse_place("".join(ctx.surface(u) for u in toks[i:j]))[1]:
+        if all(token_kind(u) == "lex" for u in toks[i:j]) \
+                and places.parse_place("".join(ctx.surface(u) for u in toks[i:j]))[1]:
             return j
     return None
 
@@ -781,8 +816,8 @@ def quantity_fill_state(frame):
     return "取自子句" if any(q["from_clause"] for q in found) else "有值"
 
 
-FILL_RATE_ROWS = [("片語·" + label, _fill_state(key)) for key, label in PHRASE_LABELS]
-FILL_RATE_ROWS.append(("片語·數量", quantity_fill_state))
+FILL_RATE_ROWS = [("片語·%s phrases.%s" % (label, key), _fill_state(key)) for key, label in PHRASE_LABELS]
+FILL_RATE_ROWS.append(("片語·數量 segments.quantity", quantity_fill_state))
 
 QUANTITY_REFERENCE_LABEL = "引用量(類空)"
 
@@ -803,7 +838,7 @@ def quantity_section(records):
     lines = ["帶數量的動作框架 {:,}(代價 {:,}、效果 {:,}、條件 {:,});一框同時帶幾類時各類都計。段尾字面=數量寫在受事者"
              "字面的段尾(モンスター１体、２枚まで、全て);取自子句=受事者字面沒有數量、子句裡緊接受事者的 を+數量"
              "(手札を１枚捨てる、カードを全て破壊する、任意の数);引用量(数まで/同じ数/数の分だけ)只記字面、類空。"
-             .format(total, positions["代價"], positions["效果"], positions["條件"]), "",
+             .format(total, positions[POS_COST], positions[POS_EFFECT], positions[POS_COND]), "",
              "| 數量類 | 段尾字面 | 取自子句 | 合計 |", "|---|---:|---:|---:|"]
     for kind in (*QUANTITY_KINDS, QUANTITY_REFERENCE_LABEL):
         tail, clause = counts[(kind, False)], counts[(kind, True)]
@@ -831,8 +866,8 @@ def _modifiers_state(frame):
     return OTHER if OTHER in kinds else "有值"
 
 
-FILL_RATE_ROWS.append(("修飾語", _modifiers_state))
-FILL_RATE_ROWS += [("修飾語·" + kind, _modifier_state(kind)) for kind in MODIFIER_KINDS]
+FILL_RATE_ROWS.append(("修飾語 segments.modifiers", _modifiers_state))
+FILL_RATE_ROWS += [("修飾語·%s modifiers.kind" % kind, _modifier_state(kind)) for kind in MODIFIER_KINDS]
 
 
 def other_heads_section(records):

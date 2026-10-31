@@ -16,6 +16,7 @@ import re
 from action_lemmas import VOICE_PASSIVE
 from closed_values import NEGATION_FORMS
 from constraints import POL_NEG
+from report import count_by_position, position_table
 
 PASSIVE, NOT_BECOME, CANNOT, GENERAL = NEGATION_FORMS
 
@@ -61,18 +62,6 @@ def fill_state(frame):
 
 def count_section(records):
     """報告小節「否定形各值框數」:四值 × 位置(代價/效果/條件)的動作框架數。"""
-    from collections import Counter
-    positions = ("代價", "效果", "條件")
-    counts = Counter()
-    for rec in records:
-        for fr in rec["frames"]:
-            if fr.get("negation"):
-                counts[(fr["negation"], fr["position"])] += 1
     lines = ["只在極性 否定 的動作框架上有值(受身=態 受身;不成不受=にならない/受けない;不可能=できない/"
-             "行えない;一般=其餘 ず/ない/なく)。", "",
-             "| 否定形 | " + " | ".join(positions) + " | 合計 |", "|---|" + "---|" * (len(positions) + 1)]
-    for form in NEGATION_FORMS:
-        row = [counts[(form, pos)] for pos in positions]
-        lines.append("| %s | %s | %s |" % (form, " | ".join(format(c, ",") for c in row),
-                                           format(sum(row), ",")))
-    return lines
+             "行えない;一般=其餘 ず/ない/なく)。", ""]
+    return lines + position_table(count_by_position(records, "negation"), NEGATION_FORMS, "否定形")

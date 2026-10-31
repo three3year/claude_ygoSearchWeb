@@ -15,6 +15,9 @@ from action_lemmas import spell
 from report import token_kind
 
 KIND_ACTION, KIND_CONSTRAINT = "動作", "約束"
+# 框架的位置(動作框架與約束框架共用;frames.py 與第四版論元各模組都從這裡 import)
+POS_COST, POS_EFFECT, POS_COND = "代價", "效果", "條件"
+POSITIONS = (POS_COST, POS_EFFECT, POS_COND)
 CAT_LIMIT, CAT_TIMING, CAT_MATERIAL = "限制", "時機", "素材"
 SUB_COUNT, SUB_EVENT_TURN, SUB_PLEDGE, SUB_SUMMON = (
     "次數", "事件回合禁用", "誓約", "召喚條件")

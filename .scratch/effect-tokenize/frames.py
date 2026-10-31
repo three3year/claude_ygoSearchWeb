@@ -81,7 +81,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from constraints import KIND_ACTION, KIND_CONSTRAINT, ConstraintFinder  # noqa: E402
+from constraints import KIND_ACTION, KIND_CONSTRAINT, POS_COND, POS_COST, POS_EFFECT, ConstraintFinder  # noqa: E402
 import action_lemmas  # noqa: E402
 import anaphora  # noqa: E402
 import closed_values  # noqa: E402
@@ -197,7 +197,6 @@ PUNCT_IN_PHRASE = set("・／～（）『』")
 _PASSIVE_RE = re.compile(r"[らかまさわたばがな]れ")
 _TE_GODAN_RE = re.compile(r"(って|いて|んで|して)$")
 
-POS_COST, POS_EFFECT, POS_COND = "代價", "效果", "條件"
 POL_AFFIRM, POL_NEG, POL_CAN = "肯定", "否定", "可能"
 OPTION = "●"                  # 選項邊界 token(tokenize.OPTION)
 # ── 第二版論元(frame-args-v2)──
@@ -1573,7 +1572,6 @@ class FrameExtractor:
     def _context(self):
         """enrich 要的常數與分詞輔助(enrich 與各步驟模組不 import frames,免得循環 import)。"""
         return enrich.Context(self.surface, self.word, self.is_noun_like, MOVE_ACTIONS,
-                              INTRANSITIVE_MOVES, PATIENT_COORDINATORS, POL_NEG,
                               self._coordinates, self._is_predicate,
                               lambda text: self.tokenizer.tokenize(text, ""))
 

@@ -15,10 +15,13 @@ frame["region_backfill"] 記欄名,蓋過推得的同欄結構化值;字面欄�
 任一是移動類就 true——鏈上有移動類表示卡已經不在目標的區域(対象として…特殊召喚し…その後そのモンスター
 を破壊 的 破壊);目標是字面備援(沒有框架)時 false。拒絕的框依原因計數進報告(backfill_section)。
 """
-import places
-from closed_values import PLACE_PLAYER, REGION_KEYS, PLAYER_NONE_SPELLING, TRANSFERS
+from collections import Counter
 
-TRANSFER_FROM_SOURCE, TRANSFER_FROM_DE = TRANSFERS
+import places
+from anaphora import VIA_EVENT
+from closed_values import (PLACE_PLAYER, PLAYER_NONE_SPELLING, REGION_KEYS, REGION_PLACE, REGION_SOURCE,
+                           TRANSFER_FROM_DE, TRANSFER_FROM_SOURCE)
+from report import position_table
 
 
 def zones_of(literal, inferred=False):
@@ -39,9 +42,9 @@ def structure(ctx, tokens, frame):
     # 非移動類(破壊、選ぶ、対象とする…)的 から 說的是受事者在哪裡:所在字面空、來源有字面(推得的不算;
     # 非移動類本來也沒有推得的來源)時,所在的結構化值取來源的、標 取自來源(2026-10-31 定案);
     # 來源認不出區域時沒有東西可轉,不標。移動類的來源是移動的起點,不轉;所在已有字面不轉。
-    if (frame["action"] not in ctx.move_actions and not frame.get("place")
-            and frame.get("source") and "source" not in inferred and "source" in regions):
-        regions["place"] = list(regions["source"])
+    if (frame["action"] not in ctx.move_actions and not frame.get(REGION_PLACE)
+            and frame.get(REGION_SOURCE) and REGION_SOURCE not in inferred and REGION_SOURCE in regions):
+        regions[REGION_PLACE] = list(regions[REGION_SOURCE])
         frame["transfer"] = TRANSFER_FROM_SOURCE
     if regions:
         frame["regions"] = regions
@@ -53,7 +56,6 @@ BACKFILL_REJECT_MOVING = "拒:目標移動類"
 BACKFILL_REJECT_OWN = "拒:本框已有字面"
 BACKFILL_REJECT_NO_ZONE = "拒:目標區域認不出"
 BACKFILL_STATUSES = (BACKFILL_FILLED, BACKFILL_REJECT_MOVING, BACKFILL_REJECT_OWN, BACKFILL_REJECT_NO_ZONE)
-_VIA_EVENT = "事件"
 
 
 def _target_moving(ctx, frame):
@@ -62,19 +64,19 @@ def _target_moving(ctx, frame):
 
 
 def _backfill_column(ctx, frame):
-    return "source" if frame["action"] in ctx.move_actions else "place"
+    return REGION_SOURCE if frame["action"] in ctx.move_actions else REGION_PLACE
 
 
 def _has_own_literal(frame, column):
     """本框該欄有自己的字面:推得的不算;非移動類所在轉欄(取自來源/取自で)來的算——那是本框自己的
     から/で 字面。回填來的字面(選んで破壊する)也是字面。"""
-    if column == "place":
-        return bool(frame.get("place")) or bool(frame.get("transfer"))
-    return bool(frame.get("source")) and "source" not in (frame.get("inferred") or ())
+    if column == REGION_PLACE:
+        return bool(frame.get(REGION_PLACE)) or bool(frame.get("transfer"))
+    return bool(frame.get(REGION_SOURCE)) and REGION_SOURCE not in (frame.get("inferred") or ())
 
 
 def _is_candidate(anaphora):
-    return bool(anaphora and anaphora.get("place") and anaphora.get("via") != _VIA_EVENT)
+    return bool(anaphora and anaphora.get("place") and anaphora.get("via") != VIA_EVENT)
 
 
 def place_from_de(frame, literal):
@@ -82,12 +84,12 @@ def place_from_de(frame, literal):
     (2026-10-31 定案;不分移動類)。優先序:字面所在已有值不動(字面優先)、已 取自來源 不蓋、只在
     結構化所在空時寫;認不出區域時沒有東西可寫。字面所在欄維持空。回指回填(票 09)把轉欄的所在當本框
     自己的字面,不會再蓋。"""
-    if frame.get("place") or frame.get("transfer") or "place" in (frame.get("regions") or {}):
+    if frame.get(REGION_PLACE) or frame.get("transfer") or REGION_PLACE in (frame.get("regions") or {}):
         return
     pairs = zones_of(literal)
     if not pairs:
         return
-    frame.setdefault("regions", {})["place"] = pairs
+    frame.setdefault("regions", {})[REGION_PLACE] = pairs
     frame["transfer"] = TRANSFER_FROM_DE
 
 
@@ -127,13 +129,14 @@ def backfill_status(frame):
 
 
 def fill_state(key):
-    """填充率的列(report.py 經 enrich.FILL_RATE_ROWS 讀):結構化的來源/目的/所在 → 有值/推得/轉欄/None。"""
+    """填充率的列(report.py 經 enrich.FILL_RATE_ROWS 讀):結構化的來源/目的/所在 → 回填(回指回填寫進的欄)/
+    轉欄(所在取自來源/取自で)/推得(字面欄是推得的)/有值/None(沒有結構化值)。"""
     def state_of(frame):
         if key not in (frame.get("regions") or {}):
             return None
         if frame.get("region_backfill") == key:
             return "回填"
-        if key == "place" and frame.get("transfer"):
+        if key == REGION_PLACE and frame.get("transfer"):
             return "轉欄"
         if key in (frame.get("inferred") or ()):
             return "推得"
@@ -149,8 +152,6 @@ def backfill_state(frame):
 def backfill_section(records):
     """報告小節「回指回填 填/拒(依原因)」:候選(回指欄有區域、找法不是事件)的動作框架依結果 × 位置
     計數;填的再分寫進來源(移動類本框)/所在(非移動類本框)。"""
-    from collections import Counter
-    positions = ("代價", "效果", "條件")
     counts = Counter()
     columns = Counter()
     for rec in records:
@@ -165,13 +166,8 @@ def backfill_section(records):
              "寫進本框的 regions 來源(移動類本框 {:,} 框)/所在(非移動類本框 {:,} 框),region_backfill 記欄名,"
              "字面欄不動;拒:目標移動類=目標框架(含解到底鏈上的框)是移動類,卡已不在那個區域;拒:本框已有字面="
              "本框該欄自己有字面(推得的不算、取自來源轉欄的算);拒:目標區域認不出=目標的區域字面過不了區域辨識。"
-             .format(total, columns["source"], columns["place"]), "",
-             "| 結果 | " + " | ".join(positions) + " | 合計 |", "|---|" + "---|" * (len(positions) + 1)]
-    for status in BACKFILL_STATUSES:
-        row = [counts[(status, pos)] for pos in positions]
-        lines.append("| %s | %s | %s |" % (status, " | ".join(format(c, ",") for c in row),
-                                           format(sum(row), ",")))
-    return lines
+             .format(total, columns[REGION_SOURCE], columns[REGION_PLACE]), ""]
+    return lines + position_table(counts, BACKFILL_STATUSES, "結果")
 
 
 def transfer_state(which):
@@ -179,9 +175,8 @@ def transfer_state(which):
     return lambda frame: "轉欄" if frame.get("transfer") == which else None
 
 
-FILL_RATE_ROWS = [("結構化來源 regions.source", fill_state("source")),
-                  ("結構化目的 regions.goal", fill_state("goal")),
-                  ("結構化所在 regions.place", fill_state("place")),
-                  ("轉欄 取自來源", transfer_state(TRANSFER_FROM_SOURCE)),
-                  ("轉欄 取自で", transfer_state(TRANSFER_FROM_DE)),
+FILL_RATE_ROWS = [("結構化%s regions.%s" % (label, key), fill_state(key))
+                  for key, label in zip(REGION_KEYS, ("來源", "目的", "所在"))]
+FILL_RATE_ROWS += [("轉欄 取自來源 transfer", transfer_state(TRANSFER_FROM_SOURCE)),
+                  ("轉欄 取自で transfer", transfer_state(TRANSFER_FROM_DE)),
                   ("回指回填 region_backfill", backfill_state)]

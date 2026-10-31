@@ -362,7 +362,26 @@ def frames_section():
     return lines
 
 
-V4_POSITIONS = ("代價", "效果", "條件")
+def count_by_position(records, key):
+    """frames.json 的紀錄 → Counter((框架[key] 的值, 位置)):只數有值的框架。第四版論元各模組的報告
+    小節(否定形/方式/施事者來源)共用。"""
+    counts = Counter()
+    for rec in records:
+        for fr in rec["frames"]:
+            if fr.get(key):
+                counts[(fr[key], fr["position"])] += 1
+    return counts
+
+
+def position_table(counts, rows, label):
+    """Counter((值, 位置)) → markdown 表的行:值一列(依 rows 的順序)、位置一欄(代價/效果/條件)、合計一欄;
+    label 是第一欄的欄名。constraints 在這裡才 import(constraints 載入時 import report,模組層級會循環)。"""
+    from constraints import POSITIONS
+    lines = ["| %s | %s | 合計 |" % (label, " | ".join(POSITIONS)), "|---|" + "---|" * (len(POSITIONS) + 1)]
+    for value in rows:
+        row = [counts[(value, pos)] for pos in POSITIONS]
+        lines.append("| %s | %s | %s |" % (value, " | ".join(format(c, ",") for c in row), format(sum(row), ",")))
+    return lines
 
 
 def fill_rate_section(frames):
@@ -371,6 +390,7 @@ def fill_rate_section(frames):
     (其他類的中心詞/修飾語 top 100、回指回填 填/拒)。enrich 在這裡才 import:constraints 載入時
     import report,enrich 又 import constraints,模組層級會循環。"""
     import enrich
+    from constraints import POSITIONS
     actions = [fr for r in frames for fr in r["frames"] if fr.get("kind") != "約束"]
     lines = [
         "## 新欄填充率(frame-args-v4)",
@@ -386,10 +406,10 @@ def fill_rate_section(frames):
     if not enrich.FILL_RATE_ROWS:
         lines.append("| (尚無列;各票在 enrich.FILL_RATE_ROWS 註冊自己的新欄) | | " + " | " * len(enrich.FILL_STATES) + " |")
     for name, state_of in enrich.FILL_RATE_ROWS:
-        counts = {pos: Counter() for pos in V4_POSITIONS}
+        counts = {pos: Counter() for pos in POSITIONS}
         for fr in actions:
             counts[fr["position"]][state_of(fr) or "空"] += 1
-        for pos in V4_POSITIONS:
+        for pos in POSITIONS:
             c = counts[pos]
             lines.append("| %s | %s | %s | %s |" % (
                 name, pos, " | ".join(format(c[state], ",") for state in enrich.FILL_STATES),

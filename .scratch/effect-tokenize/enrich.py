@@ -6,10 +6,23 @@ frames.py 的 frames_of_tokens 在 anaphora.resolve 之後呼叫 enrich(ctx, tok
 的最後一步;既有鍵一個位元組都不改(baseline_diff.py 剝掉新鍵後與基準比,差異要 0)。
 
 pass 內的順序照規格:片語結構化(phrases)→ 來源/目的/所在結構化與轉欄(regions)→ 施事者(agent)
-→ 方式(manner)→ 否定形(negation)→ 回指回填(regions.backfill_from_anaphora)。前五步逐個動作框架
-呼叫 step(ctx, tokens, frame);回填一次拿整句的框架清單(要找回指的目標框架)。只處理 kind == 動作
-的框架。最後 pop 掉底線開頭的內部鍵(票 02 在切區域時暫存切前字面的 frame["_raw"] 這類),
-它們不得進 frames.json。
+→ 方式(manner)→ 否定形(negation)→ 回指回填(regions.backfill_from_anaphora)。前五步就是 STEPS 這張表,
+逐個動作框架呼叫各模組的 mark(ctx, tokens, frame);回填一次拿整句的框架清單(要找回指的目標框架),
+是 pass 明寫的最後一步。只處理 kind == 動作的框架。最後 pop 掉底線開頭的內部鍵(票 02 在切區域時暫存
+切前字面的 frame["_raw"] 這類),它們不得進 frames.json。
+
+步驟模組自己宣告、收集端只有 STEPS 一張表(retro 第 9 項:多張票平行時合併只碰那一行;新模組在
+STEPS 加一行,其餘都是它自己檔裡的宣告,沒宣告的當空):
+    mark(ctx, tokens, frame)   就地替動作框架加自己的新鍵
+    FILL_RATE_ROWS             [(新欄名稱, 函式 frame → 狀態字串 | None)];狀態是 FILL_STATES 之一(None 是 空);
+                               列名一律「中文名 鍵名」(片語·對象 phrases.object)
+    REPORT_SECTIONS            [(標題, 函式 records → markdown 行清單)];小節共用的表 report.count_by_position /
+                               report.position_table
+    batch_cells(frame)         批次檔的格 ["片語·對象=…", …];推得/轉欄/取自子句標 (推得)/(取自來源)/(取自子句)
+                               讓子代理分得開
+這裡依 STEPS 的順序收成 FILL_RATE_ROWS / REPORT_SECTIONS(report.py 讀)與 batch_cells(llm_check.py 讀);
+拆解頁的格是 viewer.html 的 V4_RENDERERS 清單(每個模組一個 JS 小函式),同一個順序。回指回填的小節是
+pass 最後一步的,排在各模組小節之後。
 
 循環 import:frames.py import 這裡,這裡與各步驟模組**不**import frames;要用的常數與分詞輔助由
 frames.py 裝進 Context 傳進來(constraints/action_lemmas/places 可直接 import)。
@@ -22,13 +35,6 @@ Context 欄位:
                                                        する家族/補助/否定/活用尾;票 02 切段、讀區域用,票 06 用來
                                                        認定語子句裡的 で)
     tokenize(text)                                     分詞器(票 02:字面對不回句子的詞序列時的備援)
-
-報告的 registry(report.py 讀):
-    FILL_RATE_ROWS   [(新欄名稱, 函式 frame → 狀態字串 | None)];狀態字串是 FILL_STATES 之一(None 是 空)。
-                     各票只加自己的列,不改報告的程式。列名一律「中文名 鍵名」(片語·對象 phrases.object)。
-    報告小節共用的表:report.count_by_position / report.position_table(值 × 位置 的 markdown 表)。
-    REPORT_SECTIONS  [(標題, 函式 records → markdown 行清單)];留給「其他類的中心詞 top 100」(票 02)、
-                     「其他類的修飾語 top 100」(票 03)、「回指回填 填/拒(依原因)」(票 09)。
 """
 from collections import namedtuple
 
@@ -42,32 +48,34 @@ import regions
 
 Context = namedtuple("Context", "surface word is_noun_like move_actions coordinates is_predicate tokenize")
 
+# pass 順序就是這張表;新的步驟模組在這裡加一行,其餘(mark / FILL_RATE_ROWS / REPORT_SECTIONS / batch_cells)它自己宣告
+STEPS = (phrases, regions, agent, manner, negation)
+
 # 填充率的狀態欄(報告表的欄序);None 算 空
 FILL_STATES = ("有值", "推得", "轉欄", "取自子句", "回填", "其他")
-FILL_RATE_ROWS = [*phrases.FILL_RATE_ROWS]      # 票 02:片語·對象/主題/主語/目的;票 04:片語·數量
-FILL_RATE_ROWS += list(regions.FILL_RATE_ROWS)   # 票 05:結構化來源/目的/所在、取自來源;票 09:回指回填
-FILL_RATE_ROWS += [
-    ("施事者 agent", agent.fill_state),                                # 票 07
-    ("方式 manner", manner.fill_state),                                # 票 06
-    ("否定形 negation", negation.fill_state),                          # 票 08
-]
-REPORT_SECTIONS = [*phrases.REPORT_SECTIONS]    # 票 02:其他類的中心詞 top 100;票 04:數量各類框數
-REPORT_SECTIONS += [
-    ("施事者各值 × 來源", agent.count_section),                          # 票 07
-    ("方式各類框數", manner.count_section),                              # 票 06
-    ("否定形各值框數", negation.count_section),                          # 票 08
-    ("回指回填 填/拒(依原因)", regions.backfill_section),                # 票 09
-]
 
-_STEPS = (phrases.structure, regions.structure, agent.mark, manner.mark, negation.mark)
+
+def declared(name):
+    """依 STEPS 的順序串起各模組宣告的清單;沒宣告的模組當空。"""
+    return [item for module in STEPS for item in getattr(module, name, ())]
+
+
+FILL_RATE_ROWS = declared("FILL_RATE_ROWS")
+# 回指回填是 pass 明寫的最後一步(整句一次、不逐框),它的小節也排在各模組的小節之後
+REPORT_SECTIONS = declared("REPORT_SECTIONS") + [("回指回填 填/拒(依原因)", regions.backfill_section)]
+
+
+def batch_cells(frame):
+    """批次檔的第四版論元格:依 STEPS 的順序接各模組的 batch_cells。"""
+    return [cell for module in STEPS for cell in module.batch_cells(frame)]
 
 
 def enrich(ctx, tokens, frames):
     """就地替每個動作框架加第四版論元的新鍵;回傳同一個清單。"""
     actions = [fr for fr in frames if fr.get("kind") == KIND_ACTION]
-    for step in _STEPS:
+    for module in STEPS:
         for fr in actions:
-            step(ctx, tokens, fr)
+            module.mark(ctx, tokens, fr)
     regions.backfill_from_anaphora(ctx, tokens, actions)
     for fr in actions:
         for key in [k for k in fr if k.startswith("_")]:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """論元片語(frame-args-v4 票 02 段/中心詞/中心詞類/玩家/區域/指示詞、票 03 修飾語、票 04 數量)。
 
-structure(ctx, tokens, frame):替動作框架加 frame["phrases"] = {"object"|"topic"|"subject"|"goal": Phrase},
+mark(ctx, tokens, frame):替動作框架加 frame["phrases"] = {"object"|"topic"|"subject"|"goal": Phrase},
 只放有字面的欄;推得的目的沒有片語。Phrase/Segment/Modifier/Quantity 的形狀見 enrich.py 與
 `.scratch/frame-args-v4/spec.md`;封閉值域在 closed_values.py。
 
@@ -174,7 +174,7 @@ def head_kind(head):
     return OTHER
 
 
-def structure(ctx, tokens, frame):
+def mark(ctx, tokens, frame):
     """票 02:段、中心詞、中心詞類、指示詞、玩家、區域(修飾語與數量由票 03/04 補進 Segment)。"""
     raw = frame.get("_raw") or {}
     inferred = frame.get("inferred") or ()
@@ -1034,3 +1034,49 @@ def other_modifiers_section(records):
 REPORT_SECTIONS = [("其他類的中心詞 top 100", other_heads_section),
                    ("其他類的修飾語 top 100", other_modifiers_section),
                    ("數量各類框數", quantity_section)]
+
+
+# ── 批次檔的格(llm_check.py 經 enrich.batch_cells 讀) ──
+def batch_cells(frame):
+    """票 02:每欄一格「片語·對象=段 … 中心詞 X(類) 指示詞 玩家 Y 區域 Z | 段 …」;segment_bits 後面接
+    修飾語(票 03:修飾語 字面(類)、…)與數量(票 04)。"""
+    cells = []
+    for key, label in PHRASE_LABELS:
+        phrase = (frame.get("phrases") or {}).get(key)
+        if not phrase:
+            continue
+        cells.append("片語·%s=%s" % (label, " | ".join(
+            " ".join(segment_bits(seg)) for seg in phrase["segments"])))
+    return cells
+
+
+def segment_bits(seg):
+    bits = ["段 %s" % seg["text"],
+            "中心詞 %s(%s)" % (seg["head"] if seg["head"] is not None else "—", seg["head_kind"])]
+    if seg.get("demonstrative"):
+        bits.append("指示詞")
+    if seg.get("player"):
+        bits.append("玩家 %s" % seg["player"])
+    if seg.get("zones"):
+        bits.append("區域 %s" % "・".join(seg["zones"]))
+    if seg.get("modifiers"):
+        bits.append("修飾語 " + "、".join(modifier_bit(m) for m in seg["modifiers"]))
+    return bits + quantity_bits(seg)
+
+
+def quantity_bits(seg):
+    """票 04:「數量 2枚まで(上限 2)」;引用量類空記 (引用量);取自子句的標 (取自子句)。"""
+    q = seg.get("quantity")
+    if not q:
+        return []
+    kind = "引用量" if q["kind"] is None else q["kind"] + ("" if q["number"] is None else " %d" % q["number"])
+    return ["數量 %s(%s)%s" % (q["text"], kind, "(取自子句)" if q["from_clause"] else "")]
+
+
+def modifier_bit(m):
+    """票 03:字面(類);數值類列 欄位/比較/數字——レベル4以下(數值:レベル 以下 4)。"""
+    if m["kind"] != MOD_NUMERIC:
+        return "%s(%s)" % (m["text"], m["kind"])
+    numbers = "・".join(str(n) for n in m["numbers"]) if m.get("numbers") else m["number"]
+    detail = " ".join(str(x) for x in (m["field"], m["compare"], numbers) if x is not None)
+    return "%s(數值:%s)" % (m["text"], detail)

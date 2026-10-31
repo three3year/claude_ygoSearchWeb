@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """來源/目的/所在的結構化(frame-args-v4 票 05 結構化值與取自來源、票 06 取自で 的所在、票 09 回指回填)。
 
-structure(ctx, tokens, frame):frame["regions"] = {"source"|"goal"|"place": [[玩家, 區域七值], …]}(依字面
+mark(ctx, tokens, frame):frame["regions"] = {"source"|"goal"|"place": [[玩家, 區域七值], …]}(依字面
 順序去重;只放算得出區域的欄;推得的欄玩家 無),非移動類所在空而來源有字面時所在取來源的並
 frame["transfer"] = "取自來源";算法就是 places.parse_zones,不另寫(玩家拼法過 closed_values.PLACE_PLAYER:
 雙方 → お互い)。字面欄一個位元組不動。
@@ -31,7 +31,7 @@ def zones_of(literal, inferred=False):
     return [[PLAYER_NONE_SPELLING if inferred else PLACE_PLAYER[player], zone] for player, zone in pairs]
 
 
-def structure(ctx, tokens, frame):
+def mark(ctx, tokens, frame):
     """票 05:三欄的結構化值與取自來源(票 06 再加取自で)。"""
     inferred = frame.get("inferred") or ()
     regions = {}
@@ -175,8 +175,23 @@ def transfer_state(which):
     return lambda frame: "轉欄" if frame.get("transfer") == which else None
 
 
-FILL_RATE_ROWS = [("結構化%s regions.%s" % (label, key), fill_state(key))
-                  for key, label in zip(REGION_KEYS, ("來源", "目的", "所在"))]
+# 鍵 → 中文(報告列名與批次檔格名共用)
+REGION_LABELS = tuple(zip(REGION_KEYS, ("來源", "目的", "所在")))
+
+FILL_RATE_ROWS = [("結構化%s regions.%s" % (label, key), fill_state(key)) for key, label in REGION_LABELS]
 FILL_RATE_ROWS += [("轉欄 取自來源 transfer", transfer_state(TRANSFER_FROM_SOURCE)),
                   ("轉欄 取自で transfer", transfer_state(TRANSFER_FROM_DE)),
                   ("回指回填 region_backfill", backfill_state)]
+
+
+def batch_cells(frame):
+    """批次檔的格(llm_check.py 經 enrich.batch_cells 讀;票 05):結構化來源/目的/所在=(玩家,區域)・…;轉欄來的
+    所在尾綴 (取自來源)/(取自で);回指回填寫進的欄(票 09)尾綴 (回指)。"""
+    structured = frame.get("regions") or {}
+    cells = []
+    for key, label in REGION_LABELS:
+        if key in structured:
+            tag = ("(回指)" if frame.get("region_backfill") == key
+                   else "(%s)" % frame["transfer"] if key == REGION_PLACE and frame.get("transfer") else "")
+            cells.append("結構化%s=%s%s" % (label, "・".join("(%s,%s)" % tuple(p) for p in structured[key]), tag))
+    return cells

@@ -2698,11 +2698,11 @@ class TestV4StructuredRegions(unittest.TestCase):
 
     def test_written_place_is_not_overridden(self):
         """所在已有字面時不轉。框架抽取從不讓非移動類同時帶 から 來源與切出的所在(原文已有 から 時不切),
-        全語料也沒有這種框,所以這條反例直接餵 regions.structure 一個手寫框架。"""
+        全語料也沒有這種框,所以這條反例直接餵 regions.mark 一個手寫框架。"""
         import regions
         fr = {"kind": "動作", "action": "選ぶ", "object": "モンスター1体", "source": "自分の墓地",
               "place": "相手フィールド", "goal": None, "position": "效果", "polarity": "肯定"}
-        regions.structure(frames.default_extractor()._context(), [], fr)
+        regions.mark(frames.default_extractor()._context(), [], fr)
         self.assertEqual((fr["regions"], fr.get("transfer")),
                          ({"source": [["自分", "墓地"]], "place": [["相手", "場上"]]}, None))
 

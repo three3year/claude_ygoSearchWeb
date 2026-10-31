@@ -249,3 +249,16 @@ def count_section(records):
     lines += ["", "其他類的方式字面 top 30:", ""]
     lines += ["- %s %s" % (literal, format(n, ",")) for literal, n in others.most_common(30)]
     return lines
+
+
+FILL_RATE_ROWS = [("方式 manner", fill_state)]
+REPORT_SECTIONS = [("方式各類框數", count_section)]
+
+
+def batch_cells(frame):
+    """批次檔的格(llm_check.py 經 enrich.batch_cells 讀):方式=字面 方式類;表示形式另帶 =值;其他 類尾綴 (其他)。"""
+    if not frame.get("manner"):
+        return []
+    kind = frame["manner_kind"]
+    return ["方式=%s %s%s" % (frame["manner"], kind + ("=" + frame["manner_value"] if frame.get("manner_value") else ""),
+                            "(其他)" if kind == OTHER else "")]

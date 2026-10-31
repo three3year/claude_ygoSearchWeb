@@ -212,3 +212,14 @@ def count_section(records):
     lines.append("| 合計 | %s | %s |" % (" | ".join(format(c, ",") for c in total), format(sum(total), ",")))
     lines += [""] + position_table(count_by_position(records, "agent_source"), AGENT_SOURCES, "來源")
     return lines
+
+
+FILL_RATE_ROWS = [("施事者 agent", fill_state)]
+REPORT_SECTIONS = [("施事者各值 × 來源", count_section)]
+
+
+def batch_cells(frame):
+    """批次檔的格(llm_check.py 經 enrich.batch_cells 讀):施事者=值(來源);預設補的尾綴 (推得)。"""
+    if not frame.get("agent"):
+        return []
+    return ["施事者=%s(%s)%s" % (frame["agent"], frame["agent_source"], "(推得)" if frame.get("agent_inferred") else "")]

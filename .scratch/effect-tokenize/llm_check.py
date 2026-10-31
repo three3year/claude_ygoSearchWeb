@@ -70,8 +70,8 @@ import constraints  # noqa: E402
 import action_lemmas  # noqa: E402
 import anaphora  # noqa: E402
 import categories  # noqa: E402
-from closed_values import OTHER, REGION_KEYS, REGION_PLACE, TRANSFER_FROM_SOURCE  # noqa: E402
-from phrases import MOD_NUMERIC, PHRASE_LABELS  # noqa: E402
+import enrich  # noqa: E402
+from closed_values import TRANSFER_FROM_SOURCE  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 CARDS = os.path.join(ROOT, "data", "cards.json")
@@ -587,7 +587,9 @@ def anaphora_cell(target):
 
 def argument_cells(f):
     """動作框架 → 「欄=值」清單;回填的格標「(回填)」、推得的格標「(推得)」——子代理回報時
-    分「抽錯」「回填錯/延續錯」「推得錯」。主題/主語/所在沒有值時不列;回指欄只在有值時列。"""
+    分「抽錯」「回填錯/延續錯」「推得錯」。主題/主語/所在沒有值時不列;回指欄只在有值時列。
+    第四版論元(frame-args-v4)的格接在後面:各步驟模組自己的 batch_cells,enrich.batch_cells 依 pass 順序串起
+    (片語每欄一格、結構化來源/目的/所在、施事者、方式、否定形;推得/轉欄/取自子句/回指的記號各模組自己標)。"""
     backfill, inferred = f.get("backfill") or [], f.get("inferred") or []
     cells = []
     for key, label in ARGUMENT_CELLS:
@@ -597,76 +599,7 @@ def argument_cells(f):
         cells.append("%s=%s%s" % (label, f.get(key) or "", mark))
     if f.get("anaphora"):
         cells.append(anaphora_cell(f["anaphora"]))
-    return cells + v4_cells(f)
-
-
-def v4_cells(f):
-    """第四版論元(frame-args-v4)→ ["片語·對象=…", "結構化來源=…", "方式=…", "否定形=…", …];各票填自己的格,
-    推得/轉欄/取自子句標 (推得)/(取自來源)/(取自子句) 讓子代理分得開。票 02:片語每欄一格(段、中心詞、
-    中心詞類、指示詞、玩家、區域);票 05:結構化來源/目的/所在 (玩家,區域)・…,轉欄來的所在標 (取自來源)/
-    (取自で);回指回填寫進的欄(票 09)標 (回指)。方式(票 06):方式=字面 方式類(表示形式另帶 =值;其他 類標
-    (其他))。施事者(票 07)寫 值(來源),預設補的標 (推得)。否定形(票 08)只在否定框架上有值。"""
-    cells = phrase_cells(f)
-    regions = f.get("regions") or {}
-    for key, label in zip(REGION_KEYS, ("結構化來源", "結構化目的", "結構化所在")):
-        if key in regions:
-            mark = ("(回指)" if f.get("region_backfill") == key
-                    else "(%s)" % f["transfer"] if key == REGION_PLACE and f.get("transfer") else "")
-            cells.append("%s=%s%s" % (label, "・".join("(%s,%s)" % tuple(p) for p in regions[key]), mark))
-    if f.get("agent"):
-        cells.append("施事者=%s(%s)%s" % (f["agent"], f["agent_source"], "(推得)" if f.get("agent_inferred") else ""))
-    if f.get("manner"):
-        kind = f["manner_kind"]
-        cells.append("方式=%s %s%s" % (f["manner"], kind + ("=" + f["manner_value"] if f.get("manner_value") else ""),
-                                      "(其他)" if kind == OTHER else ""))
-    if f.get("negation"):
-        cells.append("否定形=%s" % f["negation"])
-    return cells
-
-
-def phrase_cells(f):
-    """論元片語(票 02)→ 每欄一格「片語·對象=段 … 中心詞 X(類) 指示詞 玩家 Y 區域 Z | 段 …」;
-    segment_bits 後面接修飾語(票 03:修飾語 字面(類)、…)與數量(票 04)。"""
-    cells = []
-    for key, label in PHRASE_LABELS:
-        phrase = (f.get("phrases") or {}).get(key)
-        if not phrase:
-            continue
-        cells.append("片語·%s=%s" % (label, " | ".join(
-            " ".join(segment_bits(seg)) for seg in phrase["segments"])))
-    return cells
-
-
-def segment_bits(seg):
-    bits = ["段 %s" % seg["text"],
-            "中心詞 %s(%s)" % (seg["head"] if seg["head"] is not None else "—", seg["head_kind"])]
-    if seg.get("demonstrative"):
-        bits.append("指示詞")
-    if seg.get("player"):
-        bits.append("玩家 %s" % seg["player"])
-    if seg.get("zones"):
-        bits.append("區域 %s" % "・".join(seg["zones"]))
-    if seg.get("modifiers"):
-        bits.append("修飾語 " + "、".join(modifier_bit(m) for m in seg["modifiers"]))
-    return bits + quantity_bits(seg)
-
-
-def quantity_bits(seg):
-    """票 04:「數量 2枚まで(上限 2)」;引用量類空記 (引用量);取自子句的標 (取自子句)。"""
-    q = seg.get("quantity")
-    if not q:
-        return []
-    kind = "引用量" if q["kind"] is None else q["kind"] + ("" if q["number"] is None else " %d" % q["number"])
-    return ["數量 %s(%s)%s" % (q["text"], kind, "(取自子句)" if q["from_clause"] else "")]
-
-
-def modifier_bit(m):
-    """票 03:字面(類);數值類列 欄位/比較/數字——レベル4以下(數值:レベル 以下 4)。"""
-    if m["kind"] != MOD_NUMERIC:
-        return "%s(%s)" % (m["text"], m["kind"])
-    numbers = "・".join(str(n) for n in m["numbers"]) if m.get("numbers") else m["number"]
-    detail = " ".join(str(x) for x in (m["field"], m["compare"], numbers) if x is not None)
-    return "%s(數值:%s)" % (m["text"], detail)
+    return cells + enrich.batch_cells(f)
 
 
 def card_block(cid, cards, recs, frames_by_key):

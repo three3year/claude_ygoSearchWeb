@@ -65,3 +65,12 @@ def count_section(records):
     lines = ["只在極性 否定 的動作框架上有值(受身=態 受身;不成不受=にならない/受けない;不可能=できない/"
              "行えない;一般=其餘 ず/ない/なく)。", ""]
     return lines + position_table(count_by_position(records, "negation"), NEGATION_FORMS, "否定形")
+
+
+FILL_RATE_ROWS = [("否定形 negation", fill_state)]
+REPORT_SECTIONS = [("否定形各值框數", count_section)]
+
+
+def batch_cells(frame):
+    """批次檔的格(llm_check.py 經 enrich.batch_cells 讀):否定形=X,只在否定框架上有。"""
+    return ["否定形=%s" % frame["negation"]] if frame.get("negation") else []

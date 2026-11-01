@@ -24,17 +24,20 @@ function setSort(key, dir) {
   paintSort();
 }
 
+const LEAD_HINT = '命中的框在領起句,此 ● 子句繼承';
+
 const MARK_ZH = {
   text: () => '',
   kind: (c, i) => KIND_ZH[(c.k || [])[i]],
   opt: (c, i) => OPT_ZH[(c.o || [])[i]],
   act: () => '',
+  pred: () => '',   // 命中的述詞列在句尾標籤,徽章不重複
 };
 
-function highlight(marks) {
+function highlight({ marks, labels }) {
   if (!marks || !marks.length) return null;
   const text = marks.find(m => m.type === 'text');
-  return { parts: text ? Engine.likeParts(text.value) : [], marks };
+  return { parts: text ? Engine.likeParts(text.value) : [], marks, labels };
 }
 
 function badgeText(marks, c, i) {
@@ -55,7 +58,7 @@ function render(result = lastResult) {
     ? `共 ${total} 張，第 ${page}/${pages} 頁`
     : '沒有符合條件的卡片';
 
-  const hl = highlight(result.marks);
+  const hl = highlight(result);
   const slice = entries.slice((page - 1) * per, page * per);
   $('results').innerHTML = slice.map(e => cardHtml(e, hl)).join('');
   renderPager('pagerTop', pages, page);
@@ -94,7 +97,7 @@ function cardHtml(e, hl) {
       ${banHtml(c)}
       ${printHtml(c)}
       ${metaHtml(c)}
-      <div class="card-text">${cardText(c, e.rows, hl)}</div>
+      <div class="card-text">${cardText(e, hl)}</div>
       ${ogTextHtml(c)}
     </div>
   </article>`;
@@ -209,10 +212,11 @@ function lmGridHtml(c) {
     : `<b>${c.lk == null ? '' : c.lk}</b>`).join('')}</span>`;
 }
 
-function cardText(c, rows, hl) {
+function cardText(e, hl) {
+  const c = e.card;
   const flavor = c.d ? `<p class="eff flavor">${lineHtml(c.d)}</p>` : '';
   const tx = c.tx || [];
-  const line = (t, i) => effHtml(c, t, i, rows, hl);
+  const line = (t, i) => effHtml(e, t, i, hl);
   if (!(c.s || []).includes('pendulum')) return tx.map(line).join('') + flavor;
 
   const pend = new Set(c.pz || []);
@@ -230,43 +234,38 @@ function group(label, lines, divider) {
     <div class="eff-group-label">${label}</div>${lines}`;
 }
 
-function effHtml(c, text, i, rows, hl) {
+function effHtml(e, text, i, hl) {
+  const { card: c, rows, hits } = e;
   const role = (c.ro && c.ro[i]) || '';
   const kind = (c.k && c.k[i]) || '';
   const labels = (role ? [ROLE_ZH[role]]
     : [KIND_ZH[kind] || kind, OPT_ZH[(c.o || [])[i]]]).filter(Boolean);
-  const hit = !!rows && rows.indexOf(i) >= 0;
+  const rowIndex = rows ? rows.indexOf(i) : -1;
+  const hit = rowIndex >= 0;
   const ranges = hit && hl && hl.parts.length
     ? Engine.likeRanges(text, hl.parts) : null;
   const badge = hit ? badgeText(hl.marks, c, i) : '';
   return `<p class="eff${roleClass(c, role)}${hit ? ' hit' : ''}" data-ei="${i}">${
     badge ? `<span class="eff-hit">${esc(badge)}</span>` : ''}${
-    lineHtml(text, ranges)}${leafBadgesHtml(c, i, hit && hl)}${
+    lineHtml(text, ranges)}${hit && hits ? tailHtml(c, i, hits[rowIndex], hl.labels) : ''}${
     labels.length ? `<span class="eff-kinds">${labels.map(t =>
       `<span class="eff-kind">${esc(t)}</span>`).join('')}</span>` : ''}</p>`;
 }
 
-/* [[動作類別]]的葉:每句尾列它全部的葉(效果位在前、代價位在後),葉名照類別樹的
-   日文原名;代價位的葉字面帶「代價：」。命中句裡、本次搜尋包含節點的葉包 <mark>
-   (代價位的葉只在「含代價」時算;選了[[動作對象]]時只算該模式下的葉)。沒有葉的
-   句子什麼都不加。 */
-function leafBadgesHtml(c, i, hl) {
-  const eff = Engine.modeLeaves(c, i, '', false);
-  const cost = Engine.modeLeaves(c, i, '', true);
-  if (!eff.length && !cost.length) return '';
-  const mark = hl ? hl.marks.find(m => m.type === 'act') : null;
-  const modeLeavesOf = isCost => (mark ? Engine.modeLeaves(c, i, mark.mode, isCost) : []);
-  const hitEff = modeLeavesOf(false), hitCost = modeLeavesOf(true);
-  const one = (n, isCost) => {
-    const label = esc((isCost ? '代價：' : '') + (Acat.LEAVES[n] || n));
-    const on = !!mark && (!isCost || mark.cost) && mark.leaves.indexOf(n) >= 0 &&
-      (isCost ? hitCost : hitEff).indexOf(n) >= 0;
-    return `<span class="act${isCost ? ' act-cost' : ''}"${
-      isCost ? ' title="代價位的動作"' : ''}>${
-      on ? `<mark class="act-hit" title="本次搜尋命中">${label}</mark>` : label}</span>`;
-  };
-  return `<span class="eff-acts">${eff.map(n => one(n, false)).join('')}${
-    cost.map(n => one(n, true)).join('')}</span>`;
+/* 句尾標籤(規格 4 句尾標籤段):這一句命中的述詞,每個述詞一個。只有帶 hits 的命中句才有:
+   只因左側條件命中的句沒有 hits,或 hits 是空清單。 */
+function tailHtml(c, i, rowHits, labels) {
+  const seqs = Array.from(new Set(rowHits.map(hit => hit[0])));
+  if (!seqs.length) return '';
+  return `<span class="eff-tail">${seqs.map(seq => {
+    /* 同一述詞在這一句自己與領起句都有框時算這一句的:hits 裡領起句的框排在前,不能只取第一個。 */
+    const mine = rowHits.filter(hit => hit[0] === seq);
+    const [, row, n] = mine.find(hit => hit[1] === i) || mine[0];
+    const prefix = Cond.positionPrefix(Engine.framePosition(c, row, n));
+    return row === i
+      ? `<span class="tail-tag">${esc(prefix + labels[seq])}</span>`
+      : `<span class="tail-tag" title="${esc(LEAD_HINT)}">${esc(prefix + labels[seq] + ' ↑領起句')}</span>`;
+  }).join('')}</span>`;
 }
 
 function roleClass(c, role) {

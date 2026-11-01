@@ -31,13 +31,17 @@ function replaceEntry() {
 }
 
 /* 沒有條件時不跑引擎:結果區顯示提示字,不是列出全部卡。 */
+function search(q) {
+  return { ...Engine.runQuery(DB, q), labels: Cond.hitLabels(q) };
+}
+
 function show() {
   const side = Query.read();
   const n = Query.count(side) + Cond.tags(cond).length;
   Strip.render(cond);
   Query.markUsed(Cond.usedPaths(cond));
   Query.summarize(n);
-  View.render(n ? Engine.runQuery(DB, Cond.toQuery(cond, side)) : null);
+  View.render(n ? search(Cond.toQuery(cond, side)) : null);
 }
 
 function requery(record) {

@@ -1701,33 +1701,6 @@ test('動作類別:不在類別樹的節點路徑安靜忽略(不當條件)', ()
                          acatIds({}));
 });
 
-test('動作類別:節點路徑進網址,往返相等;樹裡找不到的路徑安靜忽略', () => {
-  const box = acatBox;
-  const st = { q: { ...EMPTY_Q, act: { [REVIVE]: 1, '數值›にする': 1, '破壊›破壊': -1 } },
-               sort: DOM_SORT };
-  const h = harness.hash(box, st);
-  assert.deepStrictEqual(harness.parseHash(box, h), st);
-  assert.strictEqual(harness.canonHash(box, h), h);
-  const stale = h + ',' + encodeURIComponent('召喚›蘇生');
-  assert.deepStrictEqual(harness.parseHash(box, stale), st);
-  const onlyStale = harness.parseHash(box, 'act=' + encodeURIComponent('召喚›蘇生'));
-  assert.ok(!('act' in onlyStale.q));
-});
-
-test('動作類別軸:條件數算一條,已選數數節點(排除也算),含代價不單獨算條件', () => {
-  const q = { act: { [REVIVE]: 1, [DESTROY_OPP]: 1, '破壊›破壊': -1 } };
-  assert.strictEqual(harness.critCount(acatBox, q), 1);
-  assert.strictEqual(harness.critCount(acatBox, { actCost: 1 }), 0);
-  assert.strictEqual(harness.axisCounts(acatBox, q).act, 3);
-  assert.strictEqual(harness.treeCounts(acatBox, q).act, 3);
-  assert.strictEqual(harness.axisCounts(acatBox, {}).act, 0);
-});
-
-test('動作類別軸:預設摺疊,有已選節點時還原展開', () => {
-  assert.ok(!harness.expandedAxes(acatBox, {}).includes('act'));
-  assert.ok(harness.expandedAxes(acatBox, { act: { [REVIVE]: 1 } }).includes('act'));
-});
-
 test('動作類別軸不進網址的一般三態軸 schema(其他軸的往返不受影響)', () => {
   for (const st of STATES) {
     assert.deepStrictEqual(harness.parseHash(acatBox, harness.hash(acatBox, st)), st);
@@ -1764,15 +1737,6 @@ test('動作類別:預設只看效果位,勾「含代價」時代價位也算命
 test('動作類別:含代價時排除也看代價位', () => {
   assert.ok(acatIds({ act: { [DISCARD]: -1 } }).includes(3003));
   assert.ok(!acatIds({ act: { [DISCARD]: -1 }, actCost: 1 }).includes(3003));
-});
-
-test('動作類別:「含代價」進網址,往返相等', () => {
-  const st = { q: { ...EMPTY_Q, act: { [DISCARD]: 1, '破壊': -1 }, actCost: 1 },
-               sort: DOM_SORT };
-  const h = harness.hash(acatBox, st);
-  assert.ok(h.includes('actCost=1'));
-  assert.deepStrictEqual(harness.parseHash(acatBox, h), st);
-  assert.strictEqual(harness.canonHash(acatBox, h), h);
 });
 
 test('動作類別過濾框:只留名稱含字面的節點與其祖先,祖先自動展開', () => {
@@ -1886,24 +1850,6 @@ test('動作對象:命中標記帶模式(呈現層照它只強調該模式的葉
   assert.strictEqual(none.mode, '');
 });
 
-test('動作對象:模式進網址,不限時不寫;未知值安靜忽略', () => {
-  const st = { q: { ...EMPTY_Q, act: { [REVIVE_HAND]: 1 }, actPat: 'self' }, sort: DOM_SORT };
-  const h = harness.hash(patBox, st);
-  assert.ok(h.includes('actPat=self'));
-  assert.deepStrictEqual(harness.parseHash(patBox, h), st);
-  assert.strictEqual(harness.canonHash(patBox, h), h);
-  const plain = { q: { ...EMPTY_Q, act: { [REVIVE_HAND]: 1 } }, sort: DOM_SORT };
-  assert.ok(!harness.hash(patBox, plain).includes('actPat'));
-  assert.deepStrictEqual(harness.parseHash(patBox, harness.hash(patBox, plain) + '&actPat=xyz'),
-                         plain);
-});
-
-test('動作對象:不算條件數,也不算類別軸的已選數', () => {
-  assert.strictEqual(harness.critCount(patBox, { actPat: 'self' }), 0);
-  assert.strictEqual(harness.critCount(patBox, { act: { [REVIVE_HAND]: 1 }, actPat: 'self' }), 1);
-  assert.strictEqual(harness.axisCounts(patBox, { act: { [REVIVE_HAND]: 1 }, actPat: 'self' }).act, 1);
-});
-
 test('動作對象「非此卡」:選中的葉只算非此卡葉', () => {
   assert.deepStrictEqual(patIds({ act: { [REVIVE_HAND]: 1 }, actPat: 'nonself' }),
                          [4002, 4003, 4004, 4005]);
@@ -1933,12 +1879,3 @@ test('動作對象「非此卡」:AND 時每個節點都在非此卡模式下成
   assert.deepStrictEqual(patRows({ act: { '召喚': 1 }, actPat: 'nonself' }, 4005), [1]);
 });
 
-test('動作對象:網址往返三個值', () => {
-  for (const actPat of ['self', 'nonself']) {
-    const st = { q: { ...EMPTY_Q, act: { [REVIVE_HAND]: 1 }, actPat }, sort: DOM_SORT };
-    const h = harness.hash(patBox, st);
-    assert.deepStrictEqual(harness.parseHash(patBox, h), st);
-  }
-  const plain = { q: { ...EMPTY_Q, act: { [REVIVE_HAND]: 1 } }, sort: DOM_SORT };
-  assert.deepStrictEqual(harness.parseHash(patBox, harness.hash(patBox, plain)), plain);
-});

@@ -182,6 +182,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/web/frontend_harness.js` | 接縫 3 的沙箱載入器(`node:vm` 依 index.html 的順序載入真實前端程式碼) |
 | `script/web/engine.test.js` | 前端查詢引擎的接縫測試(`node:test`,合成資料集) |
 | `script/web/predicate.test.js` | 述詞評估器的測試:編碼夾具、合成例子、真 data.js 對匯出檔的全語料對照 |
+| `script/web/conditions.test.js` | 條件模型、目錄導覽樹、網址動作標籤的接縫測試(合成目錄) |
 | `script/web/encode_fixture.py` | 參考評估器夾具 → 編碼夾具 `predicate-fixture-encoded.json` |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
 | `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |
@@ -196,7 +197,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `../data_ygoFaqCache/_cache` | 官方 DB 頁面快取:Q&A 頁 `faq_*.html` + 卡片頁 `card_*.html`(repo 外,約 1.1GB) |
 | `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |
 | `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` / `FRAMES` |
-| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`acat`(動作類別樹:節點路徑 → 葉集合)、`sort`(領域序與排序鍵,純函式)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`hash`(條件與排序 ⇄ 網址 `#hash`,純函式)、`render`(卡片呈現、異圖切換、排序與分頁)、`main`(主流程與網址寫入時機) |
+| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`cond`(條件模型:目錄列 → 標籤 → 引擎查詢、短句,純函式)、`acat`(具名查詢目錄導覽樹;舊動作類別樹留到規格 4 票 07)、`sort`(領域序與排序鍵,純函式)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`hash`(條件與排序 ⇄ 網址 `#hash`,純函式)、`render`(卡片呈現、異圖切換、排序與分頁)、`strip`(條件列的標籤 DOM)、`main`(條件一變就重查的流程與歷史) |
 | `index.html` / `.nojekyll` | GitHub Pages 部署形態(根目錄為來源):轉址到 `web/index.html`、擋掉 Jekyll |
 
 ## cards.json 欄位

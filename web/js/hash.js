@@ -5,18 +5,15 @@ const { VOCAB } = Util;
 
 const TEXTS = ['name', 'code', 'text'];
 const LANG = 'nameLang';
-/* [[動作類別]]:節點路徑逐個 encodeURIComponent 再以逗號接(路徑裡的字自己編掉,
-   逗號只當分隔);「含代價」另一個參數。樹裡找不到的路徑(類別樹改名或搬節點後
-   的舊網址)解析時安靜忽略。 */
+/* AND 區的動作標籤(規格 4 網址段):沒改過的標籤寫葉路徑,逐個 encodeURIComponent 再以
+   逗號接,排除在開頭加 `-`。目錄找不到的路徑(目錄改名或搬節點後的舊網址)安靜忽略。
+   舊軸的 actCost、actPat 不再認得,開舊網址時當未知參數。 */
 const ACT = 'act';
-const ACT_COST = 'actCost';
-/* [[動作對象]]:不限時不寫;未知值安靜忽略(Engine.patMode 認得的才收)。 */
-const ACT_PAT = 'actPat';
 
 function schema() {
   const tri = [], range = [];
   Query.FIELDS.forEach(f => {
-    if (f.group || f.act) return;
+    if (f.group) return;
     if (!f.tri) { range.push({ key: f.range, unknown: f.unknown || '' }); return; }
     const dom = VOCAB[f.dom] || {};
     const source = (dom.groups || []).length
@@ -35,7 +32,7 @@ const DEFAULT_LANG = Query.LANGS[0].v;
 const DEFAULT_SORT = Sort.KEYS[0].key;
 
 const PARAM_NAMES = [].concat(
-  TEXTS, ['textMat', LANG, 'sort', 'dir', ACT, ACT_COST, ACT_PAT],
+  TEXTS, ['textMat', LANG, 'sort', 'dir', ACT],
   SCHEMA.tri.map(a => a.key),
   SCHEMA.range.map(f => f.key),
   SCHEMA.range.map(f => f.unknown).filter(Boolean)
@@ -65,6 +62,18 @@ function numText(v) {
   return v == null ? '' : String(v);
 }
 
+/* 目前標籤都從目錄來,一定寫得成路徑;改過的標籤(欄位對)是票 04。 */
+function tagToken(tag) {
+  const path = Cond.leafPath(tag);
+  return path ? (tag.ex ? '-' : '') + encodeURIComponent(path) : '';
+}
+
+/* 目前標籤都從目錄來,一定寫得成路徑;改過的標籤(欄位對)是票 04。 */
+function tagToken(tag) {
+  const path = Cond.leafPath(tag);
+  return path ? (tag.ex ? '-' : '') + encodeURIComponent(path) : '';
+}
+
 function stringify(state) {
   const st = state || {};
   const q = st.q || {};
@@ -82,15 +91,8 @@ function stringify(state) {
       .map(c => (sel[c] < 0 ? '-' : '') + c);
     if (codes.length) parts.push(ax.key + '=' + codes.join(','));
   });
-  const act = q[ACT] || {};
-  const nodes = Acat.sortIds(Object.keys(act).filter(id => act[id]));
-  if (nodes.length) {
-    parts.push(ACT + '=' + nodes.map(id =>
-      (act[id] < 0 ? '-' : '') + encodeURIComponent(id)).join(','));
-  }
-  if (q[ACT_COST]) parts.push(ACT_COST + '=1');
-  const pat = Engine.patMode(q[ACT_PAT]);
-  if (pat) parts.push(ACT_PAT + '=' + pat);
+  const tokens = st.cond ? Cond.tags(st.cond).map(tagToken).filter(Boolean) : [];
+  if (tokens.length) parts.push(ACT + '=' + tokens.join(','));
   SCHEMA.range.forEach(f => {
     const r = q[f.key];
     if (r && (r.min != null || r.max != null)) {
@@ -141,19 +143,19 @@ function toTri(v, ax) {
   return Object.keys(sel).length ? sel : null;
 }
 
-function toAct(raw) {
-  const sel = {};
-  raw.split(',').forEach(token => {
+function toTags(raw, state) {
+  return raw.split(',').reduce((st, token) => {
     const ex = token.charAt(0) === '-';
-    const id = dec(ex ? token.slice(1) : token);
-    if (id && Acat.node(id)) sel[id] = ex ? -1 : 1;
-  });
-  return Object.keys(sel).length ? sel : null;
+    const path = dec(ex ? token.slice(1) : token);
+    const tag = path ? Cond.tagAt(path, ex) : null;
+    return tag ? Cond.add(st, tag) : st;
+  }, state);
 }
 
 function parse(hash) {
   const q = { name: '', nameLang: DEFAULT_LANG, code: '', text: '' };
   const raw = {};
+  let cond = Cond.empty();
   String(hash == null ? '' : hash).replace(/^#/, '')
     .replace(MANGLED_SEP, '&$1=').split('&').forEach(seg => {
     const i = seg.indexOf('=');
@@ -161,16 +163,13 @@ function parse(hash) {
     const key = seg.slice(0, i);
     if (!key) return;
     if (key === ACT) {
-      const sel = toAct(seg.slice(i + 1));
-      if (sel) q[ACT] = sel;
+      cond = toTags(seg.slice(i + 1), cond);
       return;
     }
     const v = dec(seg.slice(i + 1));
     if (v == null) return;
     if (TEXTS.indexOf(key) >= 0) { q[key] = v.trim(); return; }
     if (key === 'textMat') { if (v === '1') q.textMat = 1; return; }
-    if (key === ACT_COST) { if (v === '1') q[ACT_COST] = 1; return; }
-    if (key === ACT_PAT) { if (Engine.patMode(v)) q[ACT_PAT] = v; return; }
     if (key === LANG) { q[LANG] = langOf(v); return; }
     if (key === 'sort' || key === 'dir') { raw[key] = v; return; }
     const ax = SCHEMA.tri.find(a => a.key === key);
@@ -188,7 +187,9 @@ function parse(hash) {
     const unknown = SCHEMA.range.find(f => f.unknown === key);
     if (unknown && (v === '1' || v === '-1')) q[key] = +v;
   });
-  return { q, sort: sortOf({ key: raw.sort, dir: raw.dir }) };
+  const state = { q, sort: sortOf({ key: raw.sort, dir: raw.dir }) };
+  if (Cond.tags(cond).length) state.cond = cond;
+  return state;
 }
 
 function canon(hash) {

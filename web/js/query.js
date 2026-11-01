@@ -1,7 +1,7 @@
 'use strict';
 
 const Query = (() => {
-const { $, VOCAB, DB, META, esc } = Util;
+const { $, VOCAB, esc } = Util;
 
 const LANGS = [
   { v: 'zh', label: '中', title: '比對中文卡名（含 ※ 別名）' },
@@ -13,7 +13,6 @@ const FIELDS = [
   { tri: 'cat', dom: 'cat', states: 2 },
   { tri: 'kind', dom: 'kind' },
   { tri: 'opt', dom: 'optional' },
-  { act: 'act', dom: 'acat' },
   { tri: 'sub', dom: 'sub_m', side: 'm', parent: 'cat', groupBlocks: true,
     groupAfter: { '能力': 'race' } },
   { tri: 'sub', dom: 'sub_s', side: 's', parent: 'cat' },
@@ -34,6 +33,8 @@ const FIELDS = [
   { tri: 'ban_t', dom: 'ban_t', parent: 'ban' },
   { tri: 'ban_m', dom: 'ban_m', parent: 'ban' },
 ];
+
+const CATALOG_AFTER = 'opt';
 
 const STATES = ['', 'in', 'ex'];
 const STATE_TITLE = {
@@ -92,14 +93,10 @@ function triBtn(code, zh, states) {
     data-st="" title="${STATE_TITLE[states || 3]['']}">${esc(zh)}</button>`;
 }
 
-/* 清除鈕與標題鈕並排而不是巢狀:button 不能包 button。note 是標題列上的附註
-   (動作類別軸的涵蓋範圍);modeTag 留一格給[[動作對象]]的模式提示(摺疊時看得出
-   模式在生效)。 */
-function headHtml(zh, note, modeTag) {
+/* 清除鈕與標題鈕並排而不是巢狀:button 不能包 button。 */
+function headHtml(zh) {
   return `<div class="axis-hrow"><button type="button" class="axis-head"
-    aria-expanded="false"><span class="axis-name">${esc(zh)}</span>${
-    note ? `<span class="axis-note">${esc(note)}</span>` : ''}${
-    modeTag ? '<span class="axis-mode" hidden></span>' : ''}
+    aria-expanded="false"><span class="axis-name">${esc(zh)}</span>
     <span class="axis-count"></span></button>
     <button type="button" class="axis-clear" hidden
       title="清除這一組條件">×</button></div>`;
@@ -153,144 +150,96 @@ function groupBoxHtml(f, kids) {
     (kids || []).map(k => k.html).join('')}</div></div>`;
 }
 
-/* [[動作類別]]軸:由 VOCAB.acat 的類別樹生成(Acat),大類 › (中類) › 詞元 › 葉,
-   每個節點一顆三態鈕(data-code 是節點路徑),有子節點的可展開/收合、預設收合。
-   詞元節點的預設葉是最後一個子節點,鈕上標「預設葉」。不標卡數。軸內 AND、選上層
-   節點=底下任一葉,語意在 Engine;這裡只把鈕的狀態讀成 q.act。 */
-function actNodeHtml(id) {
-  const n = Acat.node(id);
+/* 具名查詢目錄導覽(規格 4 目錄導覽段):樹由 Acat.catalog 來,這裡只畫。點具名查詢的列
+   是包含、點 − 是排除;點大類、中類只展開。初始全部收合,寫回條件時也不動展開狀態:
+   上一頁或清除條件時,使用者正在看的那一段樹不該收起來。 */
+function catalogNodeHtml(key) {
+  const n = Acat.catalog.node(key);
   const tog = n.kids.length
-    ? '<button type="button" class="act-tog" aria-expanded="false" aria-label="展開或收合"></button>'
-    : '<span class="act-tog-pad"></span>';
-  return `<li class="act-node" data-id="${esc(id)}"><div class="act-row">${tog}
-    <button type="button" class="tri" data-code="${esc(id)}" data-st=""
-      title="${STATE_TITLE[3]['']}">${esc(n.name)}${
-      n.isDefault ? '<span class="act-default">預設葉</span>' : ''}</button></div>${
-    n.kids.length ? `<ul class="act-kids" hidden>${
-      n.kids.map(actNodeHtml).join('')}</ul>` : ''}</li>`;
+    ? '<button type="button" class="cat-tog" aria-expanded="false" aria-label="展開或收合"></button>'
+    : '<span class="cat-tog-pad"></span>';
+  const count = n.count
+    ? `<span class="cat-n">${esc(n.count.text)}</span>` : '';
+  const cls = (n.path ? '' : ' group') + (n.count && n.count.zero ? ' zero' : '');
+  const pick = n.path ? ` data-path="${esc(n.path)}"` : '';
+  const minus = n.path
+    ? `<button type="button" class="cat-minus" data-path="${esc(n.path)}" title="排除：沒有這個動作">−</button>`
+    : '';
+  return `<li class="cat-node" data-key="${esc(key)}"><div class="cat-row">${tog}
+    <button type="button" class="cat-pick${cls}"${pick}><span>${esc(n.name)}</span>
+      <span class="cat-used" hidden>已用</span>${count}</button>${minus}</div>${
+    n.kids.length ? `<ul class="cat-kids" hidden>${
+      n.kids.map(catalogNodeHtml).join('')}</ul>` : ''}</li>`;
 }
 
-/* [[動作對象]]三選一:值是 Engine 認得的模式('' 是不限)。 */
-const PAT_OPTIONS = [
-  { v: '', zh: '不限', title: '不分動到的是不是此卡' },
-  { v: 'self', zh: '此卡', title: '只算動到此卡本身的動作（此卡特殊召喚、此卡回到手牌、此卡攻擊力上升）' },
-  { v: 'nonself', zh: '非此卡',
-    title: '只算確定不動到此卡的動作（從手牌特殊召喚別隻、破壞對手1張卡）；「此卡和另1隻」、會連此卡一起動到的全場效果不算' },
-];
-
-function patZh(v) {
-  return (PAT_OPTIONS.find(o => o.v === v) || PAT_OPTIONS[0]).zh;
+function catalogHtml() {
+  return `<div class="catalog" id="catalogNav">
+    <div class="cat-title">動作<span class="cat-note">點一列包含、點 − 排除</span></div>
+    <input type="search" class="cat-filter" placeholder="過濾：例 墓地"
+      aria-label="過濾具名查詢目錄（比對日文名稱）">
+    <div class="cat-scroll"><ul class="cat-tree">${
+      Acat.catalog.roots.map(catalogNodeHtml).join('')}</ul></div></div>`;
 }
 
-function patHtml() {
-  return `<div class="act-pat" role="radiogroup" aria-label="動作對象">
-    <span class="act-pat-label">動作對象</span>${PAT_OPTIONS.map(o =>
-    `<button type="button" class="act-pat-btn" role="radio" data-pat="${o.v}"
-      aria-checked="${o.v ? 'false' : 'true'}" title="${esc(o.title)}">${esc(o.zh)}</button>`
-  ).join('')}</div>`;
-}
-
-function actAxisHtml(f) {
-  const total = META.cards || DB.length;
-  const zh = (VOCAB[f.dom] || {}).zh || f.act;
-  return `<div class="axis axis-act" data-axis="${f.act}" data-side=""
-    data-states="3"${Acat.present ? '' : ' hidden'}>
-    ${headHtml(zh, `涵蓋 ${Acat.COVERED} / ${total} 張`, true)}<div class="axis-body" hidden>
-    <div class="act-tools"><label class="act-cost-toggle"
-      title="不勾時只比效果位：「丟一張手牌當費用」的卡不會出現在「丟牌」的搜尋裡；勾了包含與排除都連代價位一起比"><input
-      type="checkbox" class="act-cost-in">含代價</label>${patHtml()}
-      <input type="search" class="act-filter" placeholder="過濾節點：例 墓地"
-        aria-label="過濾動作類別節點(比對日文名稱)"></div>
-    <ul class="act-tree">${Acat.roots.map(actNodeHtml).join('')}</ul></div></div>`;
-}
-
-function actBox() {
-  return axisEl('act', '');
-}
-
-function actTris() {
-  return Array.prototype.slice.call(actBox().querySelectorAll('.tri'));
-}
-
-function readAct(q) {
-  const sel = {};
-  actTris().forEach(btn => {
-    if (btn.dataset.st) sel[btn.dataset.code] = btn.dataset.st === 'ex' ? -1 : 1;
-  });
-  if (Object.keys(sel).length) q.act = sel;
-  if (actBox().querySelector('.act-cost-in').checked) q.actCost = 1;
-  const pat = actPat();
-  if (pat) q.actPat = pat;
-}
-
-function actPat() {
-  const on = actBox().querySelector('.act-pat-btn[aria-checked="true"]');
-  return on ? Engine.patMode(on.dataset.pat) : '';
-}
-
-function setActPat(box, v) {
-  const mode = Engine.patMode(v);
-  box.querySelectorAll('.act-pat-btn').forEach(btn => {
-    btn.setAttribute('aria-checked', btn.dataset.pat === mode ? 'true' : 'false');
-  });
+function catalogNodes() {
+  return Array.prototype.slice.call($('catalogNav').querySelectorAll('.cat-node'));
 }
 
 function setNodeOpen(li, open) {
-  const tog = li.querySelector(':scope > .act-row > .act-tog');
-  const kids = li.querySelector(':scope > .act-kids');
+  const tog = li.querySelector(':scope > .cat-row > .cat-tog');
+  const kids = li.querySelector(':scope > .cat-kids');
   if (!tog || !kids) return;
   tog.setAttribute('aria-expanded', open ? 'true' : 'false');
   kids.hidden = !open;
 }
 
-/* 過濾框(Acat.filter 決定留哪些、展開哪些祖先):開始過濾前記下各節點的展開狀態,
-   每次換字面都從那份狀態重套,清空時還原——過濾只是「找」,不改展開也不改已選條件
-   (被藏起來的已選節點照樣生效,標題的已選數不變)。 */
-let actSaved = null;
-
-function actNodes() {
-  return Array.prototype.slice.call(actBox().querySelectorAll('.act-node'));
-}
-
 function nodeOpen(li) {
-  const tog = li.querySelector(':scope > .act-row > .act-tog');
+  const tog = li.querySelector(':scope > .cat-row > .cat-tog');
   return !!tog && tog.getAttribute('aria-expanded') === 'true';
 }
 
-function applyActFilter(term) {
-  const f = Acat.filter(term);
-  if (f && !actSaved) {
-    actSaved = {};
-    actNodes().forEach(li => { actSaved[li.dataset.id] = nodeOpen(li); });
+/* 過濾框(Acat.catalog.filter 決定留哪些、展開哪些祖先):開始過濾前記下各節點的展開狀態,
+   每次換字面都從那份狀態重套,清空時還原——過濾只是「找」,不改展開也不改條件。 */
+let catalogSaved = null;
+
+function applyCatalogFilter(term) {
+  const f = Acat.catalog.filter(term);
+  const nodes = catalogNodes();
+  if (f && !catalogSaved) {
+    catalogSaved = {};
+    nodes.forEach(li => { catalogSaved[li.dataset.key] = nodeOpen(li); });
   }
-  if (actSaved) actNodes().forEach(li => setNodeOpen(li, actSaved[li.dataset.id]));
-  actNodes().forEach(li => {
-    li.hidden = !!f && !f.visible.has(li.dataset.id);
-    if (f && f.open.has(li.dataset.id)) setNodeOpen(li, true);
+  if (catalogSaved) nodes.forEach(li => setNodeOpen(li, catalogSaved[li.dataset.key]));
+  nodes.forEach(li => {
+    li.hidden = !!f && !f.visible.has(li.dataset.key);
+    if (f && f.open.has(li.dataset.key)) setNodeOpen(li, true);
   });
-  if (!f) actSaved = null;
+  if (!f) catalogSaved = null;
 }
 
-function resetActFilter() {
-  const input = actBox().querySelector('.act-filter');
-  if (!input.value) return;
-  input.value = '';
-  actSaved = null;
-  actNodes().forEach(li => { li.hidden = false; });
+function markUsed(paths) {
+  const used = new Set(paths);
+  $('catalogNav').querySelectorAll('.cat-pick[data-path]').forEach(btn => {
+    const on = used.has(btn.dataset.path);
+    btn.classList.toggle('used', on);
+    btn.querySelector('.cat-used').hidden = !on;
+  });
 }
 
-/* 已選節點的祖先展開:網址開進來的條件看得見,不必一層層點開去找。 */
-function writeAct(q) {
-  resetActFilter();
-  const sel = q.act || {};
-  actBox().querySelector('.act-cost-in').checked = !!q.actCost;
-  setActPat(actBox(), q.actPat);
-  actTris().forEach(btn => {
-    const v = sel[btn.dataset.code];
-    setTri(btn, v > 0 ? 'in' : (v < 0 ? 'ex' : ''));
-    if (!v) return;
-    for (let li = btn.closest('.act-node').parentElement.closest('.act-node'); li;
-         li = li.parentElement.closest('.act-node')) setNodeOpen(li, true);
+function initCatalog(onPick) {
+  const nav = $('catalogNav');
+  nav.addEventListener('click', e => {
+    const minus = e.target.closest('.cat-minus');
+    if (minus) { onPick(minus.dataset.path, true); return; }
+    const pick = e.target.closest('.cat-pick');
+    if (pick && pick.dataset.path) { onPick(pick.dataset.path, false); return; }
+    if (pick || e.target.closest('.cat-tog')) {
+      const li = e.target.closest('.cat-node');
+      setNodeOpen(li, !nodeOpen(li));
+    }
+  });
+  nav.addEventListener('input', e => {
+    if (e.target.closest('.cat-filter')) applyCatalogFilter(e.target.value);
   });
 }
 
@@ -300,12 +249,12 @@ function build() {
   const htmlOf = f => f.tri
     ? axisHtml(axisByKey[f.tri + '/' + (f.side || '')], kidsOf(blockKey(f)))
     : f.group ? groupBoxHtml(f, kidsOf(blockKey(f)))
-    : f.act ? actAxisHtml(f)
     : rangeHtml(f);
   const kidsOf = key => FIELDS.filter(f => f.parent === key)
     .map(f => ({ key: blockKey(f), html: htmlOf(f) }));
-  $('critParams').innerHTML =
-    FIELDS.filter(f => !f.parent).map(htmlOf).join('');
+  /* 目錄接在句層條件(大類、效果類型、必發／選發)後面,不是一條軸,不進 FIELDS。 */
+  $('critParams').innerHTML = FIELDS.filter(f => !f.parent).map(f =>
+    htmlOf(f) + (f.tri === CATALOG_AFTER ? catalogHtml() : '')).join('');
 }
 
 function all(sel) {
@@ -362,7 +311,7 @@ function read() {
   if ($('fTextMat').checked) q.textMat = 1;
   FIELDS.forEach(f => {
     if (f.group) return;
-    (f.tri ? readTri : f.act ? readAct : readRange)(q, f);
+    (f.tri ? readTri : readRange)(q, f);
   });
   return q;
 }
@@ -374,19 +323,18 @@ function count(q) {
     return Object.keys(v).some(k => v[k] != null);
   };
   return Object.keys(q || {})
-    .filter(k => k !== 'nameLang' && k !== 'textMat' && k !== 'actCost' && k !== 'actPat' &&
-            isSet(q[k])).length;
+    .filter(k => k !== 'nameLang' && k !== 'textMat' && isSet(q[k])).length;
 }
 
 function blockKey(f) {
-  return f.tri ? f.dom : (f.range || f.group || f.act);
+  return f.tri ? f.dom : (f.range || f.group);
 }
 
 function blockEl(f) {
   if (f.range) {
     return $('critParams').querySelector(`.range[data-range="${f.range}"]`);
   }
-  return axisEl(f.tri || f.group || f.act, f.side);
+  return axisEl(f.tri || f.group, f.side);
 }
 
 function axisCounts(q) {
@@ -394,11 +342,6 @@ function axisCounts(q) {
   const out = {};
   FIELDS.forEach(f => {
     if (f.group) { out[blockKey(f)] = 0; return; }
-    if (f.act) {
-      const sel = q[f.act] || {};
-      out[blockKey(f)] = Object.keys(sel).filter(k => sel[k]).length;
-      return;
-    }
     if (f.tri) {
       const sel = q[f.tri] || {};
       out[blockKey(f)] = Object.keys(sel).filter(k => sel[k] &&
@@ -471,8 +414,7 @@ function isOpen() {
   return $('btnFilters').getAttribute('aria-expanded') === 'true';
 }
 
-function summarize(q) {
-  const n = count(q);
+function summarize(n) {
   $('btnFilters').textContent = n ? `篩選條件・${n} 項` : '篩選條件';
 }
 
@@ -501,9 +443,6 @@ function updateCounts() {
   };
   const tree = treeCounts(q);
   FIELDS.forEach(f => stamp(blockEl(f), tree[blockKey(f)]));
-  const mode = actBox().querySelector('.axis-mode');
-  mode.textContent = q.actPat ? '動作對象：' + patZh(q.actPat) : '';
-  mode.hidden = !q.actPat;
   const flat = axisCounts(q);
   all('.axis-group').forEach(box => stamp(box, flat[box.dataset.groupKey]));
 }
@@ -584,7 +523,7 @@ function write(q) {
   syncOptional();
   FIELDS.forEach(f => {
     if (f.group) return;
-    (f.tri ? writeTri : f.act ? writeAct : writeRange)(q, f);
+    (f.tri ? writeTri : writeRange)(q, f);
   });
   updateCounts();
   const open = expandedAxes(read());
@@ -604,24 +543,18 @@ function clear() {
   syncSubs();
   syncOptional();
   all('.axis, .range, .axis-group').forEach(box => setAxisOpen(box, false));
-  resetActFilter();
-  all('.act-node').forEach(li => setNodeOpen(li, false));
-  all('.act-cost-in').forEach(box => { box.checked = false; });
-  setActPat(actBox(), '');
   updateCounts();
 }
 
 function clearBlock(box) {
   box.querySelectorAll('.tri').forEach(b => setTri(b, ''));
-  box.querySelectorAll('.act-cost-in').forEach(b => { b.checked = false; });
-  setActPat(box, '');
   box.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
   syncSubs();
   syncOptional();
   updateCounts();
 }
 
-function init() {
+function init({ onPick }) {
   $('btnFilters').addEventListener('click', () => setOpen(!isOpen()));
   const langBtn = $('fNameLang');
   showLang(langBtn, langBtn.dataset.v);
@@ -632,21 +565,11 @@ function init() {
   build();
   syncSubs();
   syncOptional();
+  initCatalog(onPick);
   $('critParams').addEventListener('click', e => {
     const clr = e.target.closest('.axis-clear');
     if (clr) {
       clearBlock(clr.closest('.axis, .range, .axis-group'));
-      return;
-    }
-    const patBtn = e.target.closest('.act-pat-btn');
-    if (patBtn) {
-      setActPat(actBox(), patBtn.dataset.pat);
-      updateCounts();
-      return;
-    }
-    const tog = e.target.closest('.act-tog');
-    if (tog) {
-      setNodeOpen(tog.closest('.act-node'), tog.getAttribute('aria-expanded') !== 'true');
       return;
     }
     const head = e.target.closest('.axis-head');
@@ -665,13 +588,12 @@ function init() {
   });
   $('critParams').addEventListener('input', e => {
     if (e.target.closest('.range-in')) updateCounts();
-    if (e.target.closest('.act-filter')) applyActFilter(e.target.value);
   });
 }
 
   return Object.freeze({ read, write, clear, init, axes,
                          optionalAvailable,
                          nextState, count, axisCounts, treeCounts, expandedAxes,
-                         summarize, collapse: () => setOpen(false),
+                         summarize, markUsed, collapse: () => setOpen(false),
                          LANGS, FIELDS });
 })();

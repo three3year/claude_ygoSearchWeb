@@ -65,7 +65,7 @@ function render(result = lastResult) {
 function renderIdle() {
   $('resultInfo').textContent = '';
   $('results').innerHTML = `<div class="idle">
-    <p class="idle-title">設定條件後按「搜尋」</p>
+    <p class="idle-title">從左邊選條件,結果會立刻出現</p>
   </div>`;
   renderPager('pagerTop', 1, 1);
   renderPager('pagerBottom', 1, 1);

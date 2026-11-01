@@ -313,21 +313,43 @@ function predTables(preds) {
 }
 
 function predOnCard(c, table) {
-  return c.fr.some(ids => ids.some(id => table[id]));
+  for (const ids of c.fr) {
+    for (let n = 0; n < ids.length; n++) {
+      if (table[ids[n]]) return true;
+    }
+  }
+  return false;
 }
 
-/* 包含述詞:每個都要在卡上有命中框(卡層 AND,可跨句);命中句是命中框所在句的聯集。 */
-function predRows(c, tables) {
+/* 卡層的把關:排除看全卡;包含述詞在全卡都沒有框,就不可能在哪一句命中。只查表,所以
+   排在卡面參數與句層條件之前,逐卡成本只花在過得了這關的卡上。 */
+function predGate(c, inc, ex) {
+  if (!c.fr) return false;
+  for (const table of ex) if (predOnCard(c, table)) return false;
+  for (const table of inc) if (!predOnCard(c, table)) return false;
+  return true;
+}
+
+/* 包含述詞在通過句層條件的句上找命中框:句 → [述詞序號, 框所在句, 框序號] 清單,
+   每個述詞都要有框(卡層 AND,可跨句),否則回 null。一句的框是它自己的加上領起句的:
+   領起句的條件常寫在 ● 之前,而 ● 子句的效果類型可以和領起句不同(規格 2026-11-01 裁定)。 */
+function predFrames(c, rows, tables) {
   const met = tables.map(() => false);
-  const rows = [];
-  c.fr.forEach((ids, i) => {
-    let hit = false;
+  const found = new Map();
+  for (const i of rows) {
+    const lead = c.fl ? c.fl[i] : -1;
+    const sources = lead >= 0 ? [lead, i] : [i];
+    const here = [];
     tables.forEach((table, k) => {
-      if (ids.some(id => table[id])) { met[k] = true; hit = true; }
+      for (const source of sources) {
+        c.fr[source].forEach((id, n) => {
+          if (table[id]) { met[k] = true; here.push([k, source, n]); }
+        });
+      }
     });
-    if (hit) rows.push(i);
-  });
-  return met.every(Boolean) ? rows : [];
+    if (here.length) found.set(i, here);
+  }
+  return met.every(Boolean) ? found : null;
 }
 
 function runQuery(db, q) {
@@ -351,24 +373,29 @@ function runQuery(db, q) {
   const predInc = predTables(q.preds && q.preds.inc);
   const predEx = predTables(q.preds && q.preds.ex);
   const hasPreds = predInc.length > 0 || predEx.length > 0;
+  if (predInc.length) marks.push({ type: 'pred' });
   const cards = [];
   for (const c of db) {
+    if (hasPreds && !predGate(c, predInc, predEx)) continue;
     if (name && !nameHit(c, name, q.nameLang)) continue;
     if (code && !(codeOk && idHit(c, code))) continue;
     if (!paramHit(c, q)) continue;
     if (act && (!c.ae || actExcluded(c, act))) continue;
-    if (hasPreds && (!c.fr || predEx.some(table => predOnCard(c, table)))) continue;
     let rows = null;
+    let hits = null;
     if (marks.length) {
-      rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
-      if (actInc) rows = actRows(c, rows, act);
+      const passed = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
+      rows = actInc ? actRows(c, passed, act) : passed;
       if (!rows.length) continue;
+      if (predInc.length) {
+        const found = predFrames(c, passed, predInc);
+        if (!found) continue;
+        const actHit = actInc ? rows : [];
+        rows = passed.filter(i => found.has(i) || actHit.includes(i));
+        hits = rows.map(i => found.get(i) || []);
+      }
     }
-    if (predInc.length) {
-      rows = predRows(c, predInc);
-      if (!rows.length) continue;
-    }
-    cards.push({ card: c, rows });
+    cards.push(hits ? { card: c, rows, hits } : { card: c, rows });
   }
   return { cards, marks };
 }

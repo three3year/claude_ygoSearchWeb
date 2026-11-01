@@ -54,6 +54,7 @@ const DRIVER = `
       return {
         id: e.card.id,
         rows: e.rows ? Array.from(e.rows).sort(function (a, b) { return a - b; }) : null,
+        hits: e.hits,
       };
     }),
     marks: result.marks,
@@ -138,7 +139,8 @@ function realData() {
   return { cards: box.CARD_DATA, vocab: box.VOCAB, meta: box.META, frames: box.FRAMES };
 }
 
-/** 接縫 3:查詢條件 → [{ id, rows }],rows 是該卡命中的效果句索引(沒有句層條件時為 null) */
+/** 接縫 3:查詢條件 → [{ id, rows, hits? }],rows 是該卡命中的效果句索引(沒有句層條件時為 null);
+    有包含述詞時多 hits,hits[k] 是 rows[k] 那句的 [述詞序號, 框所在句, 框序號] 清單 */
 function search(sandbox, query) {
   return JSON.parse(sandbox.__runQuery(JSON.stringify(query))).cards;
 }

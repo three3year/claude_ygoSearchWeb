@@ -15,7 +15,20 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import export_common  # noqa: E402
+from test_05_export_frames import rows as frame_rows  # noqa: E402
 from test_export import DRAGON, SPELL, XYZ, clause, export, modes, wipe  # noqa: E402
+
+TRAP = {"id": 1, "type": 0x4, "race": 0, "attribute": 0, "level": 0,
+        "atk": None, "def": None, "name_ja": "テスト・罠"}
+
+
+def patient_modes(text, face=DRAGON):
+    """一句效果句 → 每個動作框架的 (動作, 位置, 動作對象);接縫是框列匯出(export_frames)的 patient_mode,
+    三個位置都帶,皆非是 None(鍵不帶)。條件位的判定只有這個接縫看得到。"""
+    faces = {1: export_common.card_face(dict(face, id=1))}
+    found = frame_rows({1: [clause("①", text)]}, faces)[(1, "main", "①")]
+    return [(r["action"], r["position"], r.get("patient_mode")) for r in found]
 
 
 def assert_mode(case, found, mode, group="effect"):
@@ -185,6 +198,49 @@ class TestThisCardRulesCompareSegments(unittest.TestCase):
         assert_mode(self, modes("①：このカードのリンク先のモンスターを破壊する。"), "nonself")
         assert_mode(self, modes("①：このカードのX素材を１つ取り除いて発動できる。自分はデッキから１枚"
                                 "ドローする。"), "nonself", group="cost")
+
+
+class TestDecisions20261101(unittest.TestCase):
+    """2026-11-01 站主裁定(summary.md「需要你決定的」具名查詢目錄三題,全採 (a)):態空且對象空時看主語再主題、
+    判法同自動態;全部類任一個比得了的條件(玩家、卡種…)對不上就 非此卡,區域不明只在其餘都對得上時才停在 皆非;
+    以下の効果 是此卡自己接著列的子效果,算此卡。"""
+
+    def test_empty_voice_without_object_reads_the_subject(self):
+        """このカードが特殊召喚した場合:述語沒判態、對象空,主語是此卡 → 此卡(原本 皆非:沒有受事者)。"""
+        self.assertIn(("特殊召喚", "條件", "此卡"),
+                      patient_modes("①：このカードが特殊召喚した場合に発動できる。自分はデッキから１枚ドローする。"))
+
+    def test_empty_voice_subject_of_another_card_is_judged_by_its_segments(self):
+        """主語是別張卡時依主語的片語判:帶數量是選擇類 → 非此卡。"""
+        self.assertIn(("存在", "條件", "非此卡"),
+                      patient_modes("①：自分の墓地にモンスターが３体以上存在する場合に発動できる。"
+                                    "自分はデッキから１枚ドローする。"))
+
+    def test_empty_voice_without_subject_falls_back_to_the_topic(self):
+        self.assertIn(("直接攻撃", "效果", "此卡"), patient_modes("①：このカードは直接攻撃できる。"))
+
+    def test_all_class_player_is_compared_even_without_a_zone(self):
+        """相手モンスターを破壊した:群體沒有區域,但玩家是相手、此卡在我方 → 非此卡(原本 皆非:全部類區域不明)。"""
+        self.assertIn(("破壊", "條件", "非此卡"),
+                      patient_modes("①：このカードの攻撃で相手モンスターを破壊した時に発動できる。"
+                                    "自分はデッキから１枚ドローする。"))
+
+    def test_all_class_player_from_the_goal_of_a_summon(self):
+        """相手フィールドにモンスターが特殊召喚された:被召喚到相手場上的怪獸是相手的 → 非此卡。"""
+        self.assertIn(("特殊召喚", "條件", "非此卡"),
+                      patient_modes("①：相手フィールドにモンスターが特殊召喚された場合に発動できる。"
+                                    "自分はデッキから１枚ドローする。"))
+
+    def test_all_class_card_kind_blocks_before_the_zone_is_asked(self):
+        """此卡是陷阱卡,群體是 モンスター:卡種對不上 → 非此卡,不停在區域不明。"""
+        self.assertIn(("除外", "效果", "非此卡"),
+                      patient_modes("①：この効果で特殊召喚したモンスターはエンドフェイズに除外される。", face=TRAP))
+
+    def test_following_effects_belong_to_this_card(self):
+        """このカードは以下の効果を得る/以下の効果を適用する:以下の効果 是此卡自己的 ● 子效果 → 此卡
+        (原本 非此卡:主人不是此卡的效果)。"""
+        self.assertIn(("得る", "效果", "此卡"), patient_modes("①：このカードは以下の効果を得る。"))
+        self.assertIn(("適用", "效果", "此卡"), patient_modes("①：その後、以下の効果を適用できる。"))
 
 
 if __name__ == "__main__":

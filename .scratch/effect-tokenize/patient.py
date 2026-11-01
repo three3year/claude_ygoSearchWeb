@@ -14,14 +14,16 @@ segment,經 frames.context() 的分詞輔助)得到段;目標的所在字面交�
 那一份;這裡只有卡面參數的日文寫法 → 值域正典的碼(ADR-0008)與判定自己的小表(この効果、此卡的附屬卡、「和此卡」
 的關係名詞、指示代名詞的中心詞、發動位置)。
 
-受事者依態取:他動(與沒判態的)取對象,自動/受身取主語、沒有時取主題;對象空著而主題
-(含句內延續的主題)指名此卡時,主題就是受事者,不分動作。
+受事者依態取:他動(與沒判態的)取對象,自動/受身取主語、沒有時取主題;沒判態而對象空著時同自動——看主語、
+沒有時主題(このカードが特殊召喚した場合、このカードがフィールドに存在する限り;2026-11-01 站主裁定,原本記 沒有受事者);
+他動的對象空著而主題(含句內延續的主題)指名此卡時,主題就是受事者,不分動作。
 
 - 此卡:受事者指名此卡(self_rule,比段):最後一段中心詞是 カード 且字面以 このカード 收尾;屬性段的最後一個
   修飾語是 このカード(元々 不算);並列裡有一段是此卡;修飾語含 このカードを含む;各段都是 この効果/この発動。
 - 非此卡:受事者是卡、不指名此卡,而且是選擇類(任一段有數量且數量類不是 全部,或指示詞)、修飾語含
   このカード以外/他(の)、此卡的附屬卡(第一個修飾語是 このカード 而接著的是 X素材/装備/リンク先),或主人不是
-  此卡的效果、發動、攻擊(事件類中心詞)。屬性(攻撃力、レベル…)跟著它的主人判:主人是中心詞前的字面,再切一次段。
+  此卡的效果、發動、攻擊(事件類中心詞;以下の効果 是此卡自己接著列的 ● 子效果,算此卡——2026-11-01 站主裁定)。
+  屬性(攻撃力、レベル…)跟著它的主人判:主人是中心詞前的字面,再切一次段。
 - 皆非:受事者不是卡(中心詞類 非卡)、表外(玩家/位置/表示形式/其他 類),以及會包含此卡的全部類。
 
 受事者是指示詞(段的旗標)時讀框架的[[回指]],沿用目標的判定:目標含此卡 → 此卡;このカード以外、他の → 非此卡;
@@ -34,10 +36,12 @@ segment,經 frames.context() 的分詞輔助)得到段;目標的所在字面交�
 全部類(沒有數量的群體)依**發動位置**判:一句效果句內依序取 條件/代價寫明的此卡區域、條件位觸發事件裡此卡
 的去處、處理中此卡自己移動的起點,都沒有就是場上(此卡在我方)。此卡在代價或處理中自己移動之後,後面的框架
 改看移動的目的(手札から特殊召喚 之後 手札全部 不含此卡)。群體的區域(結構化所在、沒有時來源;都沒有時
-段自己的玩家/區域)含發動位置,而且玩家、卡種(中心詞字面尾 モンスター/魔法/罠)、種族、屬性、字段、卡片子類型
+段自己的玩家/區域)含發動位置,而且玩家(區域帶的;沒有區域時段自己的,再沒有時召喚/移動到的目的的——
+相手フィールドにモンスターが特殊召喚された)、卡種(中心詞字面尾 モンスター/魔法/罠)、種族、屬性、字段、卡片子類型
 (修飾語類,或中心詞字面裡的 効果モンスター/速攻魔法)、數值(修飾語的欄位/比較/數字)全都對得上此卡的卡面參數,
-才算會包含此卡;比不了的(其他類與表示形式類修飾語、認不出的中心詞、含區域判不出)一律視為對得上,任一條件
-對不上就判非此卡。か/と/・ 並列的段是替代項,任一段全對得上就算包含。
+才算會包含此卡;任一個比得了的條件對不上就判非此卡,全部對得上才是含此卡(皆非);比不了的(其他類與表示形式類
+修飾語、認不出的中心詞)視為對得上,區域判不出只在其餘都對得上時才停在 區域不明(2026-11-01 站主裁定:原本區域不明
+時不比玩家)。か/と/・ 並列的段是替代項,任一段全對得上就算包含。
 """
 from collections import namedtuple
 from functools import lru_cache
@@ -78,6 +82,7 @@ WHY_SELECTED = "選擇類"
 WHY_OTHERS_EFFECT = "主人不是此卡的效果"
 WHY_THIS_EFFECT = "この効果"
 WHY_THIS_NAME = "このカード名の效果"
+WHY_FOLLOWING_EFFECT = "以下の効果"
 WHY_ALL_INCLUDES = "全部類含此卡"
 WHY_ALL_NO_ZONE = "全部類區域不明"
 WHY_ALL_ZONE = "全部類區域對不上"
@@ -118,6 +123,9 @@ OPPONENT = PLACE_PLAYER[places.PLAYER_OPP]
 THIS_EFFECT = ("この効果", "この発動")
 THIS_EFFECT_FIRST = THIS_EFFECT + ("この効果の発動", "この発動の発動")
 THIS_EFFECT_REST = THIS_EFFECT + ("効果", "発動")
+# 以下の効果(を得る/を適用する/2回まで適用する):此卡自己接著列的 ● 子效果,沒有主人字面、主人就是此卡
+# (2026-11-01 站主裁定);修飾語以 以下 收尾(よって以下 也是)
+FOLLOWING = "以下"
 # 此卡的附屬卡:另一張實體卡(このカードのX素材、このカードの装備モンスター、リンク先);指示詞綁的卡的附屬卡
 # (そのモンスターのX素材、装備カード、攻撃対象)不是回指那張卡本身
 ATTACHED_TO_SELF = ("X素材", "装備", "リンク先")
@@ -485,8 +493,19 @@ def _compare_face(segments, face):
     return blockers[0], uncomparable
 
 
-def _all_class(segments, frame_zones, launched, face):
-    """全部類:(群體的段, 框架的結構化所在/來源, 發動位置, 卡面)→ (值, 理由)。"""
+def _group_players(reachable, segments, goal_zones):
+    """群體屬於哪一方:發動位置搆得到的區域帶的玩家;沒有區域時段自己的玩家(相手モンスター);再沒有時召喚/移動到的
+    目的的玩家(相手フィールドにモンスターが特殊召喚された 的怪獸是相手的)。空集合 = 不知道。"""
+    for pairs in (reachable, [(seg["player"], None) for seg in segments], goal_zones):
+        players = {player for player, _ in pairs if player}
+        if players:
+            return players
+    return set()
+
+
+def _all_class(segments, frame_zones, launched, face, goal_zones=()):
+    """全部類:(群體的段, 框架的結構化所在/來源, 發動位置, 卡面, 框架的結構化目的)→ (值, 理由)。
+    任一個比得了的條件(區域、玩家、卡面)對不上就 非此卡;區域不明只在其餘都對得上時才停在 皆非。"""
     zones = frame_zones or _segment_zones(segments)
     possible = launched.zones
     # 靈擺區在場上:群體寫場上時含靈擺區的此卡
@@ -495,7 +514,8 @@ def _all_class(segments, frame_zones, launched, face):
                  or (zone == FIELD and PENDULUM_ZONE in possible)]
     if zones and not reachable:
         return NONSELF, WHY_ALL_ZONE
-    if reachable and all(player == OPPONENT for player, _ in reachable):
+    players = _group_players(reachable, segments, goal_zones)
+    if players and all(player == OPPONENT for player in players):
         return NONSELF, WHY_ALL_PLAYER
     uncomparable = False
     if face is not None:
@@ -509,11 +529,12 @@ def _all_class(segments, frame_zones, launched, face):
 
 # ── 受事者 ──
 def patient(frame):
-    """→ (受事者字面, 受事者的段, 是否由主題規則取得);沒有受事者時字面是空字串、段是空的。"""
-    if frame.get("voice") in INTRANSITIVE:
-        key = "subject" if frame.get("subject") else "topic"
-        return clean(frame.get(key)), _segments(frame, key), False
+    """→ (受事者字面, 受事者的段, 是否由主題規則取得);沒有受事者時字面是空字串、段是空的。
+    自動/受身取主語、沒有時主題;沒判態而對象空著時同自動(2026-11-01 裁定);其餘取對象,對象空著只在主題指名此卡時取主題。"""
     obj = clean(frame.get("object"))
+    if frame.get("voice") in INTRANSITIVE or (not frame.get("voice") and not obj):
+        key = "subject" if frame.get("subject") else "topic"
+        return clean(frame.get(key)), _segments(frame, key), key == "topic" and not frame.get("voice")
     if obj:
         return obj, _segments(frame, "object"), False
     topic = _segments(frame, "topic")
@@ -546,6 +567,12 @@ def _attribute_of_self(segments):
 
 def _this_effect(segments):
     return segments[0]["text"] in THIS_EFFECT_FIRST and all(seg["text"] in THIS_EFFECT_REST for seg in segments[1:])
+
+
+def _following_effect(segments):
+    """以下の効果:效果類中心詞 効果 的主人字面是 以下(此卡接著列的 ● 子效果)。"""
+    mods = segments[-1]["modifiers"]
+    return segments[-1]["head"] == "効果" and bool(mods) and mods[-1]["text"].endswith(FOLLOWING)
 
 
 def _listed_in_modifier(mod):
@@ -807,6 +834,8 @@ def classify(segments, all_class, target=None, target_class=None, counted=False)
     if kind == EFFECT:
         if segments[0]["text"].startswith(THIS_CARD + "名"):
             return None, WHY_THIS_NAME
+        if _following_effect(segments):
+            return SELF, WHY_FOLLOWING_EFFECT
         return NONSELF, WHY_OTHERS_EFFECT
     if kind == VALUE:
         if segments[0]["demonstrative"]:
@@ -875,7 +904,8 @@ def judge(frame, launched, face, counted=False):
     if frame.get("action") in _NOT_CARD_ACTIONS:
         return Verdict(None, WHY_NOT_CARD, text)
     frame_zones = _region_pairs(frame, REGION_PLACE, REGION_SOURCE)
-    mode, why = classify(segments, lambda group: _all_class(group, frame_zones, launched, face),
+    goal_zones = _region_pairs(frame, REGION_GOAL)
+    mode, why = classify(segments, lambda group: _all_class(group, frame_zones, launched, face, goal_zones),
                          frame.get("anaphora"), lambda target, found: _target_class(target, found, launched, face),
                          counted)
     if by_topic and why == WHY_PATIENT:

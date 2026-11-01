@@ -17,6 +17,7 @@
     尾綴            中心詞含關鍵詞(子字串)但不以它結尾(モンスターカード 對 モンスター、数値 對 数)——規格「中心詞尾綴」(a)
     其他            以上都不是(列卡片密碼,要逐卡看)
 預設葉(97)已取消:列舊的預設葉張數與現在詞元節點的張數;詞元節點(100)與試跑的節點述詞相比。
+改寫之後加的節點(對應表種類 裁定新增;2026-11-01 的 対象とする)沒有舊張數可比,另列一節只記現在的張數。
 
 用法(repo 任意位置):PYTHONIOENCODING=utf-8 python .scratch/named-queries/tools/compare_dry_run.py
 輸入都要先有:frames.json、data/action_frames.json(run_chain.py)、compile-v4.json(入版控)。
@@ -141,8 +142,12 @@ def main():
     summary = defaultdict(int)
     reason_totals = defaultdict(int)
     variants = {}
+    added = []
     for q in cat.queries:
         leaf = old_leaves.get(q.name)
+        if leaf is None and q.name not in old_nodes:     # 改寫之後加的節點:沒有舊張數
+            added.append(q)
+            continue
         if leaf is None:                      # 詞元節點:試跑的節點述詞 {lemma, class}
             lemma, cls = old_nodes[q.name]
             leaf = type("Node", (), {"lemma": lemma, "polarity": cls, "source": None, "goal": None, "place": None,
@@ -194,6 +199,15 @@ def main():
         summary["詞元節點" + (":張數相同" if len(v.now) == n["new"] else ":張數不同")] += 1
     lines.append("")
 
+    if added:
+        lines += ["## 改寫之後加的節點(%d 個;沒有舊張數,只記目錄欄三個位置的張數)" % len(added), "",
+                  "| 節點 | 代價 | 效果 | 條件 |", "|---|---:|---:|---:|"]
+        by_name = {row["name"]: row["cards"] for row in doc["目錄"]}
+        for q in added:
+            cards = by_name[q.name]
+            lines.append("| %s | %d | %d | %d |" % (q.name, cards["代價"], cards["效果"], cards["條件"]))
+        lines.append("")
+        summary["改寫之後加的節點"] = len(added)
     head = ["## 摘要", ""] + ["- %s:%d" % (key, summary[key]) for key in sorted(summary)]
     head.append("- 重算 → 現在 的歸因合計(卡·葉):" + "、".join("%s %d" % kv for kv in sorted(reason_totals.items())))
     head.append("")

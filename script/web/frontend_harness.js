@@ -100,7 +100,7 @@ const DRIVER = `
 ;function __cardHtmlHl(json) {
   var a = JSON.parse(json);
   return View.cardHtml(a.entry,
-                       a.marks ? { parts: [], marks: a.marks } : null);
+                       a.marks ? { parts: [], marks: a.marks, labels: a.labels || [] } : null);
 }
 `;
 
@@ -278,9 +278,9 @@ function acatFilter(sandbox, term) {
   return JSON.parse(sandbox.__acatFilter(String(term == null ? '' : term)));
 }
 
-/** 同一條呈現縫,帶生效中的句層條件(marks)——命中行的 badge 字面由此驗。 */
-function cardHtmlHl(sandbox, entry, marks) {
-  return sandbox.__cardHtmlHl(JSON.stringify({ entry, marks }));
+/** 同一條呈現縫,帶生效中的句層條件(marks)與述詞序號 → 短句(labels)——命中行的 badge 與句尾標籤字面由此驗。 */
+function cardHtmlHl(sandbox, entry, marks, labels) {
+  return sandbox.__cardHtmlHl(JSON.stringify({ entry, marks, labels }));
 }
 
 /**

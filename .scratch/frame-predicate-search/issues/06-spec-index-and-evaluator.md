@@ -2,7 +2,7 @@
 
 Type: task
 Mode: HITL
-Status: open
+Status: resolved
 Blocked by: —(05、01 已 resolved;2026-11-01 解鎖;規格 2 同日交件,見 Comments 末條)
 Map: ../map.md
 
@@ -16,3 +16,7 @@ to-spec 裡要順手定的細節:條件位框架的述詞語意(対象とする�
 
 - 2026-11-01(wayfinder,票 05 交件):規格 2 已寫完切票(`.scratch/named-queries/`),本票解鎖。寫規格 3 時讀——匯出檔 `data/action_frames.json` 的框列欄與目錄(張數、卡集合雜湊)、參考評估器與夾具(規格 2 票 05/06/08)、要刪的舊東西清單(規格 2 票 11 Comments);索引編碼數字在票 01 Answer。規格 2 的 implement 還沒做,規格 3 可先寫、票等規格 2 交件後再動。
 - 2026-11-01(named-queries 票 11 交件):規格 2 已交件(整合分支 `named-queries`,票 01〜11 全部 resolved),本票的 Blocked by 全部 resolved、解鎖。寫規格 3 時讀 [named-queries 票 11 Comments「給規格 3 的對照」](../../named-queries/issues/11-handoff.md):匯出檔的欄與值域(`predicate.FIELDS`/`EXPORT_PATH`/`DOMAIN`,框列鍵 `FRAME_KEYS`、版本 1)、目錄 260 列的張數與雜湊(算法含逗號分隔)、夾具 `.scratch/effect-tokenize/predicate-fixture.json`(96 條例子 + 雜湊 + 張數)、中間產物 `frame_queries.json`、要刪的舊東西清單(舊匯出檔、歸葉程式、舊匯出、舊索引欄位 ae/ac/aes/aen/acs/acn、VOCAB.acat 的葉號、舊樹檔、frame_categories/card_categories、test_categories/test_export、engine.js 的 actSel/actRows);未決三題在 `.scratch/effect-tokenize/llm-check/summary.md`「需要你決定的」(対象とする 進目錄、態空看主語、全部類比對順序與 以下の効果),規格 3 to-spec 要先裁或帶進去。
+
+## Answer
+
+2026-11-01 resolved。規格 `.scratch/predicate-index/spec.md`(ready-for-agent;鏡像 https://claude.ai/artifact/NTeWXqMQc4WLHa1Tbf6UWC )與 `.scratch/predicate-index/issues/` 5 張票。八題裁定都在規格「需要你決定的」。與本票原範圍不同的一處:舊欄、`actSel/actRows` 與舊鏈**不在規格 3 退場**,留到規格 4 介面切換同一波刪(站主裁定);本票「to-spec 裡要順手定的細節」都已定——條件位框不特別處理、領起句的框 ● 子句也看、具名查詢述詞已在匯出檔明文、前端查詢時才編成整數碼、結果回傳 `rows` 加 `hits`。索引編碼改選框表 D(真實匯出檔實測,票 01 的 C +270 KB gz、D +79 KB gz)。

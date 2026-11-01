@@ -30,7 +30,6 @@ const MARK_ZH = {
   text: () => '',
   kind: (c, i) => KIND_ZH[(c.k || [])[i]],
   opt: (c, i) => OPT_ZH[(c.o || [])[i]],
-  act: () => '',
   pred: () => '',   // 命中的述詞列在句尾標籤,徽章不重複
 };
 

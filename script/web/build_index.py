@@ -1,4 +1,4 @@
-"""建置前端索引的 CLI 薄殼:讀總表、標記表、動作類別匯出檔與框列匯出檔 → webindex 管線 → 寫 web/data.js。
+"""建置前端索引的 CLI 薄殼:讀總表、標記表與框列匯出檔 → webindex 管線 → 寫 web/data.js。
 
 薄殼只做四件事:讀檔 → 呼叫 → 寫檔 → 印報告,並依 report 的 problems 決定
 exit code。驗收條件全部長在 `build_index` 的 report 裡(與 tag_card 的
@@ -27,7 +27,6 @@ DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_TAGS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_ERRATA = os.path.join(ROOT, "data", "text_errata.json")
 DEFAULT_REWRITES = os.path.join(ROOT, "data", "text_rewrites.json")
-DEFAULT_CATEGORIES = os.path.join(ROOT, "data", "action_categories.json")
 DEFAULT_FRAME_EXPORT = os.path.join(ROOT, "data", "action_frames.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "web", "data.js")
 # 資料更新時間(來源檔下載時間)由 update_cards.py 記錄;不入版控,
@@ -83,9 +82,6 @@ def print_checks(report, p):
         ("errata_not_reversible", "卡文勘誤逆推不回原文或差異標不出來"),
         ("rewrite_desc_mismatch", "文本改寫的新全文與現行卡文不相等"),
         ("rewrite_overlaps_errata", "同卡同時在勘誤表與改寫表"),
-        ("category_stale", "動作類別匯出檔過時(與標記表對不上)"),
-        ("category_unknown_leaves", "動作類別匯出檔的葉不在類別樹"),
-        ("category_face_stale", "動作類別匯出檔的卡面參數過時(與卡片總表對不上)"),
         *FRAME_CHECK_LABELS.items(),
     )
     gaps = report["known_gaps"]
@@ -111,26 +107,6 @@ def print_invariant(report, p):
         p(f"  非怪獸卻有怪獸參數 id={cid}")
 
 
-def print_categories(report, p):
-    """[[動作類別]]的涵蓋與分佈:這次重建類別資料有沒有大變動,看這幾個數。"""
-    cat = report["categories"]
-    if cat is None:
-        p("動作類別: 未讀匯出檔")
-        return
-    p(f"動作類別: 涵蓋 {cat['covered_cards']} 張卡、標記句 {cat['sentences']} 句"
-      f"(帶葉 {cat['sentences_with_leaves']} 句)")
-    p("  各大類句數: " + " ".join(f"{k}={n}" for k, n in cat["by_major"].items()))
-    p("  各葉句數: " + " ".join(f"{k}={n}" for k, n in cat["by_leaf"].items()))
-    pat = cat["patient"]
-    p("  動作對象(句/卡): " + " ".join(
-        f"{k}={pat['sentences'][k]}/{pat['cards'][k]}" for k in pat["sentences"]))
-    stats = pat["stats"] or {}
-    for key, counts in stats.items():
-        cells = (" ".join(f"{k}={n}" for k, n in counts.items())
-                 if isinstance(counts, dict) else counts)
-        p(f"  動作對象{key}: {cells}")
-
-
 def print_frame_stats(report, p):
     """動作框架進索引的規模:涵蓋與唯一框數突然變了,看這一行。"""
     stats = report["frame_stats"]
@@ -145,7 +121,6 @@ def print_report(report, file=None):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p(f"索引: {report['cards']} 張卡、{report['clauses']} 個效果句")
     print_census(report, p)
-    print_categories(report, p)
     print_frame_stats(report, p)
     print_invariant(report, p)
     print_checks(report, p)
@@ -188,9 +163,6 @@ def main(argv=None):
     parser.add_argument("--downloaded-at", default=DEFAULT_DOWNLOADED_AT,
                         help="資料更新時間記錄路徑 "
                              "(預設 data/sources/downloaded_at.json)")
-    parser.add_argument("--categories", default=DEFAULT_CATEGORIES,
-                        help="動作類別匯出檔路徑 "
-                             "(預設 data/action_categories.json;由分詞鏈產生)")
     parser.add_argument("--frame-export", default=DEFAULT_FRAME_EXPORT,
                         help="框列匯出檔路徑 "
                              "(預設 data/action_frames.json;由分詞鏈產生)")
@@ -199,7 +171,7 @@ def main(argv=None):
     parser.add_argument("--no-write", action="store_true",
                         help="只跑檢查與報告,不寫出索引")
     args = parser.parse_args(argv)
-    # 類別的葉名是日文(破壊),cp950 主控台編不出來:跳脫而不是讓建置崩掉
+    # 框列匯出檔的問題清單帶日文(破壊),cp950 主控台編不出來:跳脫而不是讓建置崩掉
     sys.stdout.reconfigure(errors="backslashreplace")
 
     built_at = datetime.datetime.now().astimezone().strftime(
@@ -212,10 +184,9 @@ def main(argv=None):
         _load(args.cards), _load(args.tags), built_at=built_at,
         sources={os.path.basename(args.cards): _digest(args.cards),
                  os.path.basename(args.tags): _digest(args.tags),
-                 os.path.basename(args.categories): _digest(args.categories),
                  os.path.basename(args.frame_export): _digest(args.frame_export)},
         errata=errata, rewrites=rewrites, data_updated_at=data_updated_at,
-        categories=_load(args.categories), frame_export=_load(args.frame_export))
+        frame_export=_load(args.frame_export))
     print_report(report)
     text = serialize_index(index)
     print_size(text, args.output, print)

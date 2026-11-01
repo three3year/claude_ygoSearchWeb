@@ -170,12 +170,8 @@ test('只因沒有包含述詞的分支命中的句:沒有 hits 或 hits 是空�
   assert.deepStrictEqual(clausesAfter(q).get(9), ['①破壞。破壊', '②丙。']);
 });
 
-test('沒有條件:句尾沒有標籤,舊的「每句列出全部葉」也不在了', () => {
-  const entry = { card: { ...CARDS[0], ae: [[0], [], []], ac: [[1], [], []] }, rows: null };
-  const box2 = harness.load({ vocab: { acat: { leaves: ['舊葉甲', '舊葉乙'], tree: [] } } });
-  const out = textOf(harness.cardHtml(box2, entry));
-  assert.ok(!out.includes('舊葉甲'));
-  assert.ok(!out.includes('舊葉乙'));
+test('沒有條件:句尾沒有標籤', () => {
+  const out = textOf(harness.cardHtml(box, { card: CARDS[0], rows: null }));
   assert.ok(out.includes('①破壞。'));
   assert.ok(!out.includes('破壊'));
 });

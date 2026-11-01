@@ -24,18 +24,24 @@
 ### 介面(給票 05、06、07)
 
 - **條件模型 `Cond` 新增**:`drawerGroups()`(常用、進階,不含詞元)、`editor(欄)`(`{kind: 'values', values}`、`{kind: 'region', players, zones}`、`{kind: 'text', candidates}`);`values`、`addValue`、`removeValue`、`toggleValue`、`setEx`(都回新標籤);`editedFrom(標籤)`(改過才回來源名)、`restore`、`note`(滑鼠提示);`soloQuery`(單張張數);`replaceAt(狀態, i, 標籤)`;`toPairs(標籤)`、`fromPairs(欄位對, ex)`。值序與值域檢查只有一關 `orderedValues`,改欄位與讀網址都走它。
-- **`Hash`**:一張標籤的編解碼是 `tagToken(標籤)` 與 `parseTag(token)`,不看哪一區;票 05 的 `actOr` 直接用這兩個,逗號接、`-` 開頭都包在裡面。`Hash.stringify` 對同一區的 token 去重。
-- **`Strip`**:`init({onRemove, onEdit, countOf})`;抽屜開在第幾張記在 `Strip` 裡(`Cond.tags` 的序號)。票 05 把標籤分兩區時,`openAt` 與 `replaceAt` 的序號要跟著定義。`closeDrawer()` 給主流程在網址還原時關抽屜。抽屜 DOM 放在 `strip.js`(規格「條件列:標籤與抽屜的 DOM」)、容器是 `index.html` 的 `#condDrawer`。手機的底部面板(票 06)只差 CSS 與 ⇄。
+- **`Hash`**:欄位對只動票 05 的 `tagToken`、`tokenTag` 這一對,`act`、`actOr` 共用。`encodeTags` 多一個跨兩區的 `seen`:兩張標籤寫出同一段時只寫第一張。
+- **`Strip`**:`init` 多 `onEdit(編號, 新標籤)`、`countOf(標籤)`;抽屜開在第幾張記在 `Strip` 裡,編號是 `Cond.tags` 的編號(AND 再 OR)。刪除與換區前先關抽屜,編號移動時不會開到別張。`closeDrawer()` 給主流程在網址還原時關抽屜。抽屜 DOM 放在 `strip.js`(規格「條件列:標籤與抽屜的 DOM」)、容器是 `index.html` 的 `#condDrawer`。手機的底部面板(票 06)只差 CSS 與 ⇄。
 
 ### 數字
 
-- node:`script/web/` 下全部 `*.test.js` 323 pass / 0 fail / 0 skip;動工前 259,新增 `field-pairs.test.js` 64 條(CODING_STANDARDS 平行票各開自己的檔)。併上 predicate-ui 後的數字見下面「合併」。
+- node:`script/web/` 下全部 `*.test.js`,併上 predicate-ui 前 323 pass / 0 fail / 0 skip(動工前 259,新增 `field-pairs.test.js` 64 條;平行票各開自己的檔)。併後見下面「合併」。
 - 全語料:237 個具名查詢改成代價位,走「標籤 → `Hash.stringify` → `Hash.parse` → `Cond.toQuery` → `runQuery`」,0 張不符:張數等於目錄的代價位張數,來源認回那一列,`canon` 不變。期望值讀 `VOCAB.catalog`,不用條件模型算。
 - 中心詞候選:真 data.js 上 datalist 300 個。
 
-### 真瀏覽器(桌面 1400×900,`python -m http.server` 起 `web/`,Playwright Chrome)
+### 合併
 
-console 只有 favicon 404 一筆,pageerror 0。
+併上 predicate-ui 2203823(票 03、05):`cond.js`、`hash.js`、`main.js`、`strip.js`、`style.css` 都衝突,做法是取整合分支的版本,再把本票重新接上去。接點照票 05 Comments:`replaceAt` 留 `or`、`orSide`,編號照 `Cond.tags`;欄位對只動 `tagToken`、`tokenTag`;編號從外層 `.strip-tag` 讀。`field-pairs.test.js` 多 4 條兩區的例子(共 68 條)。
+
+併後 node 七個檔 **371 pass / 0 fail / 0 skip**;`python -m unittest discover -s script/web` 186 OK;`test_lint` 8 OK。下面的瀏覽器表是併後重走的。
+
+### 真瀏覽器(桌面 1400×900,`python -m http.server` 起 `web/`,Playwright Chrome,isolated context,拖曳是真的 dragTo)
+
+併前走一輪、併後整輪重走。併後 pageerror 0、console error 0;併前 console 只有 favicon 404。
 
 | 操作 | 看到什麼 |
 |---|---|
@@ -51,11 +57,16 @@ console 只有 favicon 404 一筆,pageerror 0。
 | 點抽屜外 | 抽屜關,條件不變 |
 | 破壊 非此卡 + ドロー 此卡 並用 | 同一查詢兩張標籤各自的動作對象,網址兩段欄位對 |
 | 特殊召喚 改條件位 | 「條件位 特殊召喚」,單張 910 張 |
+| 按著標籤裡的字拖兩張到 OR | 147 張,網址 `act`+`actOr`,OR 段是欄位對 |
+| 開 OR 區第二張、切排除、改 施事者 | 改的是那一張:1,035 → 1,145 張;網址 `actOr` 該段多 `-`、多 `施事者:相手` |
+| 抽屜開著拖 AND 那張到 OR | 抽屜關,7,740 張,網址只剩 `actOr` |
+| 抽屜開著點左側條件標籤 | 抽屜關,跳到左邊那一項 |
 | 點標籤裡的字 修飾語類 | 抽屜捲到進階那一欄並框起來;改值後捲動位置不動 |
 | 上一頁 ×2、下一頁 ×2 | 每步抽屜關,條件與結果還原 |
-| 貼網址到新分頁 | 標籤與結果相同;改過的標籤沒有提示、沒有改自與還原;條件位 特殊召喚 認得來源;關掉 動作對象 回 `act=破壊` |
-| 壞網址(不認得的欄、值域外、壞百分比、沒有詞元的標籤) | 只留「破壊 由 相手 極性 不限」,沒有錯誤 |
-| 重開 `詞元:破壊;位置:條件;極性:肯定~可能` | 1,206 張,有「改自 破壊」與還原;刪除這張回空的提示字 |
+| 貼網址到新分頁 | 兩區、標籤與結果相同(7,740 張);OR 區改過的排除標籤開抽屜,沒有提示、沒有改自與還原;× 第一張抽屜關 |
+| 壞網址放 `act` 與 `actOr`(不認得的欄、值域外、壞百分比、沒有詞元的標籤) | 只留「破壊 由 相手 極性 不限」,沒有錯誤 |
+| 併前另走:重開 `詞元:破壊;位置:條件;極性:肯定~可能` | 1,206 張,有「改自 破壊」與還原;刪除這張回空的提示字 |
+| 併前另走:條件位 特殊召喚 開新分頁後關掉 動作對象 | 破壊 那張回葉路徑 |
 
 ### 規格沒定、這張自己決定的
 
@@ -65,13 +76,14 @@ console 只有 favicon 404 一筆,pageerror 0。
 - **上一頁後的來源**:歷史只存網址,所以上一頁等於重新載入,改過的標籤沒有改自與還原。沒另外留一份。
 - **區域項值序**:先照值域的區域順序,同區域不看玩家在前,再照玩家順序。規格的例子 `自分.墓地~除外` 只有這樣排得出來。
 - **中心詞值序**:沒有值域,照字元碼排序。
-- **兩張標籤改到一模一樣**:兩張都留在條件列(中途改到一樣不該吞掉一張),網址只寫一次,重開變一張;不去重 `canon` 就不冪等。
+- **兩張標籤改到一模一樣**(同區或跨區):兩張都留在條件列(中途改到一樣不該吞掉一張),網址只寫第一張,重開變一張;不去重 `canon` 就不冪等,`hashchange` 會把條件重設一次。
+- **標籤裡的字是 `span`,不是原型的 `button`**:票 05 的標籤可拖曳,Firefox 從 `button` 上開始拖不動。代價是鍵盤點不到字;標籤本身也還不能用鍵盤開。
+- **抽屜開著時點左側條件標籤**:算抽屜外,抽屜關。拖曳換區也關。
 - **網址 `位置` 全是值域外的值**:等於沒寫,是效果;不是三個位置都看。
 - **`詞元` 欄**:讀網址一律存清單(單值也是),引擎與比對鍵都當同一回事。
 
 ### 偏離與留給下一票
 
 - 沒有偏離票面。
-- **順手修**:`hash.js` 有兩份一樣的 `tagToken`(票 02 合併留下的),拿掉一份;`style.css` 檔尾多一個 `}`,接在後面的規則會整條失效,拿掉。後面票往檔尾加 CSS 不用再管。
 - 中心詞框沒按 Enter 就直接點另一顆鈕時,失焦先把詞加進去、抽屜重畫,那一下點擊會落空,要再點一次。沒處理,記一下。
-- 標籤游標現在是手指,票 05 拖曳時改 `move`。句尾 `pred` 徽章是票 03 的事,截圖還看得到。
+- 手機寬沒有走(票 06)。

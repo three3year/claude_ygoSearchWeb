@@ -554,6 +554,57 @@ function clearBlock(box) {
   updateCounts();
 }
 
+/* 左側條件標籤對應的控制項(target 見 cond.js)。子軸巢在母軸裡,只動自己這軸的控制項。 */
+function tagBox(target) {
+  if (target.range) return $('critParams').querySelector(`.range[data-range="${target.range}"]`);
+  return target.axis ? axisEl(target.axis, target.side) : null;
+}
+
+function ownControls(box, sel) {
+  return Array.prototype.filter.call(box.querySelectorAll(sel),
+    el => el.closest('.axis, .range') === box);
+}
+
+/* 標籤的 × 走側欄自己的控制項,大類連動收子類型那些規則才一起生效。只清標籤列出的值:
+   大類標籤只寫魔法時,怪獸(由子類型標籤代表)不動。 */
+function clearTag(tag) {
+  const target = tag.target;
+  (target.inputs || []).forEach(id => { $(id).value = ''; });
+  (target.checks || []).forEach(id => { $(id).checked = false; });
+  const box = tagBox(target);
+  if (box) {
+    ownControls(box, '.tri')
+      .filter(btn => !target.codes || target.codes.indexOf(btn.dataset.code) >= 0)
+      .forEach(btn => setTri(btn, ''));
+    ownControls(box, '.range-in').forEach(input => { input.value = ''; });
+  }
+  syncSubs();
+  syncOptional();
+  updateCounts();
+}
+
+const FLASH_MS = 900;
+
+/* 點標籤跳到左邊那一項:連祖先一起展開,選到的值在收起的分組裡時也打開。 */
+function focusTag(tag) {
+  setOpen(true);
+  const box = tagBox(tag.target);
+  const el = box || $(tag.target.inputs[0]);
+  if (box) {
+    for (let at = box; at; at = at.parentElement.closest('.axis, .range, .axis-group')) {
+      setAxisOpen(at, true);
+    }
+    ownControls(box, '.tri').filter(btn => btn.dataset.st).forEach(btn => {
+      const group = btn.closest('.axis-group');
+      if (group) setAxisOpen(group, true);
+    });
+  }
+  el.scrollIntoView({ block: 'center' });
+  if (!box) el.focus();
+  el.classList.add('side-flash');
+  setTimeout(() => el.classList.remove('side-flash'), FLASH_MS);
+}
+
 function init({ onPick }) {
   $('btnFilters').addEventListener('click', () => setOpen(!isOpen()));
   const langBtn = $('fNameLang');
@@ -591,7 +642,7 @@ function init({ onPick }) {
   });
 }
 
-  return Object.freeze({ read, write, clear, init, axes,
+  return Object.freeze({ read, write, clear, clearTag, focusTag, init, axes,
                          optionalAvailable,
                          nextState, count, axisCounts, treeCounts, expandedAxes,
                          summarize, markUsed, collapse: () => setOpen(false),

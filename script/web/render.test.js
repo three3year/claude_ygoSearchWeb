@@ -8,7 +8,8 @@
  * 結構與 CSS class 名稱(實作細節,重構就壞而且壞得沒有意義)。
  *
  * 目前蓋[[禁限狀態]]徽章列(spec banlist,2026-08-22 使用者裁示 render 也要
- * 自動測)與[[卡文勘誤表]]原文視圖的差異標示;其餘呈現仍走人工驗收。
+ * 自動測)與[[卡文勘誤表]]原文視圖的差異標示;句尾標籤在 clause_tail.test.js,
+ * 其餘呈現仍走人工驗收。
  */
 'use strict';
 
@@ -33,12 +34,6 @@ const VOCAB = {
            items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
   ban_m: { zh: 'MD 禁限',
            items: [item('f', '禁止'), item('l', '限制'), item('s', '準限制')] },
-  // [[動作類別]]:葉號 → 葉名(類別樹的日文原名),樹本身呈現縫用不到
-  acat: { zh: '動作類別', covered: 1,
-          leaves: ['特殊召喚←墓地', '破壊@相手フィールド', '捨てる'],
-          tree: [['召喚', -1, [['特殊召喚←墓地', 0, []]]],
-                 ['破壊', -1, [['破壊@相手フィールド', 1, []]]],
-                 ['區域移動', -1, [['捨てる', 2, []]]]] },
 };
 
 const sandbox = harness.load({ cards: [], vocab: VOCAB, meta: {} });
@@ -146,73 +141,4 @@ test('被本站改寫的卡:對照鈕在,原文視圖是舊全文純文字、不
   assert.ok(out.includes('反轉：選擇場上1隻守備表示怪獸破壞。'));
   assert.ok(!out.includes('本站勘誤後刪去'));             // 沒有勘誤的差異標註
   assert.ok(!out.includes('本站勘誤後補上'));
-});
-
-/* ── 動作類別:每句標記句尾列它全部的葉(category-search 票 01/02) ── */
-
-const TWO = ['①：丟1張手牌發動。從墓地特殊召喚。', '②：破壞對手場上1張卡。'];
-const textOf = out => out.replace(/<[^>]+>/g, '');
-
-test('每句尾列出它的葉(日文原名),不論有沒有搜類別', () => {
-  const out = html({ tx: TWO, k: ['i', 'q'], ae: [[0], [1]] });
-  const t = textOf(out);
-  assert.ok(t.includes('特殊召喚←墓地'));
-  assert.ok(t.includes('破壊@相手フィールド'));
-  // 葉跟著它的句子:第一句的葉在第二句的文字之前
-  assert.ok(t.indexOf('特殊召喚←墓地') < t.indexOf('②：'));
-  assert.ok(t.indexOf('破壊@相手フィールド') > t.indexOf('②：'));
-});
-
-test('代價位的葉字面上看得出是代價', () => {
-  const t = textOf(html({ tx: TWO, k: ['i', 'q'], ae: [[0], []], ac: [[2], []] }));
-  assert.ok(t.includes('代價：捨てる'));
-  assert.ok(!t.includes('代價：特殊召喚←墓地'));
-});
-
-test('沒有葉的句子句尾不多出任何東西', () => {
-  const bare = html({ tx: TWO, k: ['i', 'q'] });
-  const empty = html({ tx: TWO, k: ['i', 'q'], ae: [[], []] });
-  assert.strictEqual(empty, bare);
-});
-
-const hl = (kw, rows, act) => harness.cardHtmlHl(
-  sandbox, { card: card(kw), rows }, [Object.assign({ type: 'act' }, act)]);
-const marked = (out, name) => new RegExp('<mark[^>]*>[^<]*' + name + '</mark>').test(out);
-
-test('本次搜尋命中的葉在命中句裡被強調,其他葉照常', () => {
-  const out = hl({ tx: TWO, k: ['i', 'q'], ae: [[0, 1], [1]] }, [0],
-                 { leaves: [0], cost: false });
-  assert.ok(marked(out, '特殊召喚←墓地'));
-  assert.ok(!marked(out, '破壊@相手フィールド'));
-});
-
-test('沒命中的句子即使帶同一個葉也不強調', () => {
-  const out = hl({ tx: TWO, k: ['i', 'q'], ae: [[1], [1]] }, [0],
-                 { leaves: [1], cost: false });
-  assert.strictEqual((out.match(/<mark/g) || []).length, 1);
-});
-
-test('代價位的葉只在「含代價」時算命中、才強調', () => {
-  const kw = { tx: TWO, k: ['i', 'q'], ae: [[0], []], ac: [[2], []] };
-  assert.ok(!marked(hl(kw, [0], { leaves: [2], cost: false }), '捨てる'));
-  assert.ok(marked(hl(kw, [0], { leaves: [2], cost: true }), '捨てる'));
-});
-
-test('動作對象「此卡」:同句兩框架時只強調此卡帶來的葉', () => {
-  // 一句裡「此卡從墓地特召」(此卡葉)與「破壞對手場上1張」(非此卡葉),兩葉都在包含節點裡
-  const kw = { tx: TWO, k: ['i', 'q'], ae: [[0, 1], []], aes: [[0], []], aen: [[1], []] };
-  const self = hl(kw, [0], { leaves: [0, 1], cost: false, mode: 'self' });
-  assert.ok(marked(self, '特殊召喚←墓地'));
-  assert.ok(!marked(self, '破壊@相手フィールド'));
-  const none = hl(kw, [0], { leaves: [0, 1], cost: false, mode: '' });
-  assert.ok(marked(none, '特殊召喚←墓地') && marked(none, '破壊@相手フィールド'));
-  // 句尾仍列該句全部的葉
-  const t = textOf(self);
-  assert.ok(t.includes('破壊@相手フィールド'));
-});
-
-test('動作對象:代價位的葉也只在該模式的代價位葉裡才強調', () => {
-  const kw = { tx: TWO, k: ['i', 'q'], ae: [[0], []], ac: [[2], []], acs: [[2], []] };
-  assert.ok(marked(hl(kw, [0], { leaves: [2], cost: true, mode: 'self' }), '捨てる'));
-  assert.ok(!marked(hl(kw, [0], { leaves: [2], cost: true, mode: 'nonself' }), '捨てる'));
 });

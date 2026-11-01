@@ -1,11 +1,15 @@
 'use strict';
 
-/* 條件模型(predicate-ui 規格 4 票 02 起;純函式,不碰 DOM)。
-   接縫:目錄列 → 標籤;標籤 + 左側條件 → 引擎查詢;標籤 → 具名查詢、葉路徑、短句;
-   抽屜的欄位與值、改欄位(票 04);標籤 ⇄ 欄位對(票 04,分隔與轉義在 Hash,值域在這裡)。
-   標籤 `{ex, pred, origin}`:ex 是排除;pred 是送進引擎的述詞,一定帶位置(引擎沒寫位置就
+/* 條件模型(predicate-ui 規格 4 票 02 起,票 05 加左側條件標籤與 OR 區;純函式,不碰 DOM)。
+   接縫:目錄列 → 標籤;左側條件 → 標籤;兩區 + 左側條件 → 引擎查詢(含 q.or);標籤 → 具名查詢、
+   葉路徑、短句;引擎查詢 → 句尾標籤的短句;抽屜的欄位與值、改欄位(票 04);標籤 ⇄ 欄位對
+   (票 04,分隔與轉義在 Hash,值域在這裡)。
+   動作標籤 `{ex, pred, origin}`:ex 是排除;pred 是送進引擎的述詞,一定帶位置(引擎沒寫位置就
    三個位置都看,見 predicate-index 票 05);origin 是產生它的目錄列名字。
-   狀態 `{and: [標籤…]}` 一律當不可變,改動回傳新狀態;呼叫端用 tags 讀,不直接摸欄。 */
+   左側條件標籤 `{key, label, val, part, target}`:每次從左側條件算出來,不存;key 也是網址 or 的鍵;
+   part 是它在查詢裡佔的片段;target 告訴側欄它對應哪個控制項。
+   狀態 `{and: [標籤…], or: [標籤…], orSide: [鍵…]}` 一律當不可變,改動回傳新狀態;呼叫端用
+   tags、tagsIn、sideZone 讀,不直接摸欄。tags 是 AND 區再 OR 區,removeAt、moveAt 的編號照它。 */
 const Cond = (() => {
 const { VOCAB } = Util;
 
@@ -89,33 +93,165 @@ function leafPath(tag) {
   return pos.length === 1 && pos[0] === defaultPosition(row) ? row.path.join(SEP) : null;
 }
 
-const empty = () => ({ and: [] });
+const empty = () => ({ and: [], or: [], orSide: [] });
 
-const tags = state => state.and;
+const tags = state => state.and.concat(state.or);
 
-/* 一模一樣的標籤(含包含或排除)再加一次沒有意義,不另外生一張;同一列的包含與排除是兩張。 */
-function add(state, tag) {
+const tagsIn = (state, zone) => state[zone];
+
+const isEmpty = state => !tags(state).length && !state.orSide.length;
+
+/* 一模一樣的標籤(含包含或排除)再加一次沒有意義,不另外生一張,在另一區也一樣;同一列的包含與
+   排除是兩張。新標籤預設進 AND(規格 4 條件列段)。 */
+function add(state, tag, zone) {
   const same = t => t.ex === tag.ex && predKey(t.pred, true) === predKey(tag.pred, true);
-  return state.and.some(same) ? state : { and: state.and.concat([tag]) };
+  if (tags(state).some(same)) return state;
+  const into = zone || 'and';
+  return Object.assign({}, state, { [into]: state[into].concat([tag]) });
 }
 
 function removeAt(state, i) {
-  return { and: state.and.filter((_, n) => n !== i) };
+  const n = state.and.length;
+  return Object.assign({}, state, {
+    and: state.and.filter((_, at) => at !== i),
+    or: state.or.filter((_, at) => at + n !== i),
+  });
 }
 
 function replaceAt(state, i, tag) {
-  return { and: state.and.map((t, n) => (n === i ? tag : t)) };
+  const n = state.and.length;
+  return Object.assign({}, state, {
+    and: state.and.map((t, at) => (at === i ? tag : t)),
+    or: state.or.map((t, at) => (at + n === i ? tag : t)),
+  });
+}
+
+function moveAt(state, i, zone) {
+  const tag = tags(state)[i];
+  const from = i < state.and.length ? 'and' : 'or';
+  if (!tag || from === zone) return state;
+  const left = removeAt(state, i);
+  return Object.assign({}, left, { [zone]: left[zone].concat([tag]) });
+}
+
+const sideZone = (state, key) => (state.orSide.indexOf(key) >= 0 ? 'or' : 'and');
+
+function moveSide(state, key, zone) {
+  if (sideZone(state, key) === zone) return state;
+  const orSide = zone === 'or' ? state.orSide.concat([key]) : state.orSide.filter(k => k !== key);
+  return Object.assign({}, state, { orSide });
+}
+
+/* 左側條件清掉(含大類連動收掉子類型)後,它的區也忘掉:再選一次是新標籤,回 AND。 */
+function syncSide(state, side) {
+  const orSide = sideTags(side).map(t => t.key).filter(key => state.orSide.indexOf(key) >= 0);
+  return JSON.stringify(orSide) === JSON.stringify(state.orSide)
+    ? state : Object.assign({}, state, { orSide });
 }
 
 function usedPaths(state) {
-  return state.and.map(named).filter(Boolean).map(row => row.path.join(SEP));
+  return tags(state).map(named).filter(Boolean).map(row => row.path.join(SEP));
 }
 
+function zhOf(dom, code) {
+  const item = ((VOCAB[dom] || {}).items || []).find(it => it.code === code);
+  return item ? item.zh : code;
+}
+
+function textTags(q) {
+  const out = [];
+  const lang = Query.LANGS.find(l => l.v === q.nameLang);
+  if (q.code) {
+    out.push({ key: 'code', label: '密碼', val: q.code, part: { code: q.code },
+               target: { inputs: ['fId'] } });
+  }
+  if (q.name) {
+    const suffix = lang && lang !== Query.LANGS[0] ? `(${lang.label})` : '';
+    out.push({ key: 'name', label: '卡名' + suffix, val: q.name, part: { name: q.name },
+               target: { inputs: ['fName'] } });
+  }
+  if (q.text) {
+    out.push({ key: 'text', label: '效果文', val: q.text + (q.textMat ? '(含素材行)' : ''),
+               part: { text: q.text }, target: { inputs: ['fText'], checks: ['fTextMat'] } });
+  }
+  return out;
+}
+
+function spanText(r) {
+  if (!r || (r.min == null && r.max == null)) return '';
+  if (r.min != null && r.max != null) return r.min === r.max ? `${r.min}` : `${r.min}〜${r.max}`;
+  return r.min != null ? `≥${r.min}` : `≤${r.max}`;
+}
+
+function rangeTag(f, q) {
+  const span = spanText(q[f.range]), unknown = f.unknown && q[f.unknown];
+  if (!span && !unknown) return null;
+  const part = {};
+  if (span) part[f.range] = q[f.range];
+  if (unknown) part[f.unknown] = unknown;
+  const mark = !unknown ? '' : unknown > 0 ? '?' : '−?';
+  return { key: f.range, label: f.zh, val: [span, mark].filter(Boolean).join(' '), part,
+           target: { range: f.range } };
+}
+
+/* 選了子類型就不另列大類:子類型標籤寫明了,也帶著那個大類,換區時一起走(規格 4 條件模型段)。 */
+function triTag(f, q) {
+  const sel = q[f.tri] || {}, prefix = f.side ? f.side + ':' : '';
+  const hasSub = cat => Object.keys(q.sub || {}).some(s => q.sub[s] && s.indexOf(cat + ':') === 0);
+  const codes = Object.keys(sel).filter(code => sel[code] && code.indexOf(prefix) === 0 &&
+    !(f.tri === 'cat' && hasSub(code)));
+  if (!codes.length) return null;
+  const zh = code => zhOf(f.dom, code.slice(prefix.length));
+  const own = {};
+  codes.forEach(code => { own[code] = sel[code]; });
+  const part = { [f.tri]: own };
+  if (f.side && (q.cat || {})[f.side]) part.cat = { [f.side]: q.cat[f.side] };
+  const val = codes.filter(c => sel[c] > 0).map(zh)
+    .concat(codes.filter(c => sel[c] < 0).map(c => '−' + zh(c))).join('、');
+  return { key: f.side ? `${f.tri}:${f.side}` : f.tri,
+           label: f.tri === 'cat' ? '' : (VOCAB[f.dom] || {}).zh || f.dom,
+           val, part,
+           target: { axis: f.tri, side: f.side || '',
+                     codes: codes.map(code => code.slice(prefix.length)) } };
+}
+
+/* 左側條件 → 標籤,同一類併成一張。Query.FIELDS 是側欄的欄位表,一個意思一個地方,不另抄一份;
+   這裡在呼叫時才讀,cond.js 載入得比 query.js 早。 */
+function sideTags(q) {
+  const out = textTags(q);
+  Query.FIELDS.forEach(f => {
+    const tag = f.group ? null : f.tri ? triTag(f, q) : rangeTag(f, q);
+    if (tag) out.push(tag);
+  });
+  return out;
+}
+
+/* 從查詢裡拿走一個片段佔的條件。軸與範圍只拿片段裡有的子鍵:大類 {m, s} 只移走 m 時,s 留著。 */
+function without(q, part) {
+  const out = Object.assign({}, q);
+  Object.keys(part).forEach(key => {
+    if (typeof part[key] !== 'object') { delete out[key]; return; }
+    const rest = Object.assign({}, out[key]);
+    Object.keys(part[key]).forEach(sub => { delete rest[sub]; });
+    if (Object.keys(rest).length) out[key] = rest;
+    else delete out[key];
+  });
+  return out;
+}
+
+function predsOf(list) {
+  const preds = wantEx => list.filter(t => t.ex === wantEx).map(t => t.pred);
+  return { inc: preds(false), ex: preds(true) };
+}
+
+/* AND 區全部成立,再加 OR 區任一成立。textMat、nameLang 是比法,引擎的片段會繼承,所以留在主查詢
+   (票 01 Comments);片段一定有內容,不會送出恆真的空片段。 */
 function toQuery(state, side) {
-  const q = Object.assign({}, side);
-  if (!state.and.length) return q;
-  const preds = wantEx => state.and.filter(t => t.ex === wantEx).map(t => t.pred);
-  q.preds = { inc: preds(false), ex: preds(true) };
+  const orSide = sideTags(side).filter(t => state.orSide.indexOf(t.key) >= 0);
+  const q = orSide.reduce((main, t) => without(main, t.part), Object.assign({}, side));
+  if (state.and.length) q.preds = predsOf(state.and);
+  const fragments = orSide.map(t => t.part).concat(state.or.map(t => ({ preds: predsOf([t]) })));
+  if (fragments.length) q.or = fragments;
   return q;
 }
 
@@ -290,15 +426,31 @@ function sentenceParts(tag) {
   return parts;
 }
 
+/* 句尾標籤的位置前綴:預設位置不寫,同短句省略預設的規則。 */
+function positionPrefix(position) {
+  return position === DEFAULT_POSITION ? '' : position + ':';
+}
+
+function partsText(parts) {
+  return parts.map(p => (p.glue ? p.glue + ' ' : '') + p.text).join(' ');
+}
+
 function sentence(tag) {
-  const words = sentenceParts(tag).map(p => (p.glue ? p.glue + ' ' : '') + p.text);
-  return (tag.ex ? '沒有 ' : '') + words.join(' ');
+  return (tag.ex ? '沒有 ' : '') + partsText(sentenceParts(tag));
+}
+
+/* 述詞序號 → 句尾標籤的短句。讀查詢本身,編號規則同引擎(先主查詢的 inc,再依片段順序接各片段的
+   inc),所以 OR 區怎麼進查詢都對得上。不寫位置:句尾的位置前綴取命中框,標籤自己的位置是搜尋範圍。 */
+function hitLabels(q) {
+  return [q, ...(q.or || [])].flatMap(part => ((part.preds && part.preds.inc) || []).map(pred =>
+    partsText(sentenceParts({ pred }).filter(p => p.field !== '位置'))));
 }
 
   return Object.freeze({
     defaultPosition, tagOf, tagAt, named, leafPath,
-    empty, tags, add, removeAt, replaceAt, usedPaths, toQuery, soloQuery,
-    sentenceParts, sentence, note,
+    empty, tags, tagsIn, isEmpty, add, removeAt, replaceAt, moveAt, usedPaths,
+    sideTags, sideZone, moveSide, syncSide, toQuery,
+    sentenceParts, sentence, hitLabels, positionPrefix, note, soloQuery,
     toPairs, fromPairs,
     drawerGroups, editor, values, addValue, removeValue, toggleValue, setEx, editedFrom, restore,
   });

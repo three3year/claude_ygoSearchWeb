@@ -31,13 +31,18 @@ function replaceEntry() {
 }
 
 /* 沒有條件時不跑引擎:結果區顯示提示字,不是列出全部卡。 */
+function search(q) {
+  return { ...Engine.runQuery(DB, q), labels: Cond.hitLabels(q) };
+}
+
 function show() {
   const side = Query.read();
   const n = Query.count(side) + Cond.tags(cond).length;
-  Strip.render(cond);
+  cond = Cond.syncSide(cond, side);
+  Strip.render(cond, Cond.sideTags(side));
   Query.markUsed(Cond.usedPaths(cond));
   Query.summarize(n);
-  View.render(n ? Engine.runQuery(DB, Cond.toQuery(cond, side)) : null);
+  View.render(n ? search(Cond.toQuery(cond, side)) : null);
 }
 
 function requery(record) {
@@ -55,6 +60,15 @@ function requerySoon() {
 function setCond(next) {
   cond = next;
   requery(pushEntry);
+}
+
+/* 拖回原來那一區不算操作:不重查、不回第 1 頁。 */
+function moveTo(next) {
+  if (next !== cond) setCond(next);
+}
+
+function sideTag(key) {
+  return Cond.sideTags(Query.read()).find(t => t.key === key);
 }
 
 function restore() {
@@ -106,6 +120,17 @@ function init() {
     onRemove: i => setCond(Cond.removeAt(cond, i)),
     onEdit: (i, tag) => setCond(Cond.replaceAt(cond, i, tag)),
     countOf: tag => Engine.runQuery(DB, Cond.soloQuery(tag)).cards.length,
+    onMove: (i, zone) => moveTo(Cond.moveAt(cond, i, zone)),
+    onSideMove: (key, zone) => moveTo(Cond.moveSide(cond, key, zone)),
+    onSideGo: key => Query.focusTag(sideTag(key)),
+    onSideRemove: key => {
+      Query.clearTag(sideTag(key));
+      requery(pushEntry);
+    },
+    onClear: () => {
+      Query.clear();
+      setCond(Cond.empty());
+    },
   });
   View.initAltArt();
   View.initEffKind();
@@ -114,10 +139,6 @@ function init() {
   $('btnSearch').addEventListener('click', () => {
     requery(pushEntry);
     Query.collapse();
-  });
-  $('btnClear').addEventListener('click', () => {
-    Query.clear();
-    setCond(Cond.empty());
   });
   $('perPage').addEventListener('change', e => {
     View.setPerPage(+e.target.value);

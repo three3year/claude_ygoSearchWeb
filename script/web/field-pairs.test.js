@@ -418,6 +418,47 @@ test('重新載入:改自 A 的標籤若等於具名查詢 B,重開後來源是 
   assert.strictEqual(cond('editedFrom', back), null);
 });
 
+/* ── 兩區(票 05 的 OR 區) ── */
+
+const inOr = (...tags) => tags.reduce((st, t) => cond('add', st, t, 'or'), cond('empty'));
+
+test('兩區:replaceAt 的編號是 AND 再 OR,不動另一區,也留著 orSide', () => {
+  const st = cond('add', inOr(tagAt(DESTROY), tagAt(REVIVE)), tagAt('対象とする'));
+  const withSide = cond('moveSide', st, 'atk', 'or');
+  const next = cond('replaceAt', withSide, 2, NON_SELF);
+  assert.deepStrictEqual(cond('tagsIn', next, 'and'), [tagAt('対象とする')]);
+  assert.deepStrictEqual(cond('tagsIn', next, 'or'), [tagAt(DESTROY), NON_SELF]);
+  assert.deepStrictEqual(next.orSide, ['atk']);
+});
+
+test('兩區:OR 區改過的標籤與排除標籤寫進 actOr,往返不變', () => {
+  const ex = cond('setEx', edit(tagAt(REVIVE), '位置', '條件'), true);
+  const hash = harness.hash(box, { cond: inOr(NON_SELF, ex) });
+  assert.ok(hash.startsWith('actOr=' + e('詞元') + ':'), hash);
+  assert.ok(hash.includes(',-' + e('詞元') + ':'), hash);
+  const back = harness.parseHash(box, hash).cond;
+  assert.deepStrictEqual(cond('tagsIn', back, 'and'), []);
+  assert.deepStrictEqual(cond('tagsIn', back, 'or').map(t => cond('sentence', t)),
+    [NON_SELF, ex].map(t => cond('sentence', t)));
+  assert.strictEqual(harness.canonHash(box, hash), hash);
+});
+
+test('兩區:排除、改過的標籤在 OR 區組成引擎片段', () => {
+  const ex = cond('setEx', NON_SELF, true);
+  const q = cond('toQuery', inOr(ex, edit(tagAt(REVIVE), '位置', '條件')), {});
+  assert.deepStrictEqual(q.or[0].preds.ex, [NON_SELF.pred]);
+  assert.deepStrictEqual(q.or[1].preds.inc[0].位置, ['效果', '條件']);
+  assert.doesNotThrow(() => harness.search(box, q));
+});
+
+test('兩區:AND 與 OR 各一張改到一模一樣,網址只寫 AND 那張,canon 不變', () => {
+  const st = cond('replaceAt', cond('add', inOr(NON_SELF), tagAt(DESTROY)), 0, NON_SELF);
+  assert.strictEqual(cond('tags', st).length, 2);
+  const hash = harness.hash(box, { cond: st });
+  assert.ok(hash.startsWith('act=') && !hash.includes('actOr'), hash);
+  assert.strictEqual(harness.canonHash(box, hash), hash);
+});
+
 /* ── 全語料 ── */
 
 test('全語料:237 個具名查詢改到代價位走欄位對往返,張數等於目錄的代價位張數', t => {

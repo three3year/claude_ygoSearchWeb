@@ -5,11 +5,13 @@ const { VOCAB } = Util;
 
 const TEXTS = ['name', 'code', 'text'];
 const LANG = 'nameLang';
-/* AND 區的動作標籤(規格 4 網址段):標籤之間逗號接,排除在開頭加 `-`。沒改過的標籤寫葉路徑,
-   逐個 encodeURIComponent;改過的寫欄位對 `欄:值~值;欄:值`。目錄找不到的路徑(目錄改名或搬
-   節點後的舊網址)安靜忽略。舊軸的 actCost、actPat 不再認得,開舊網址時當未知參數。
-   一張標籤的編解碼在 tagToken、parseTag,哪一區都同一套。 */
+/* 動作標籤(規格 4 網址段):act 是 AND 區、actOr 是 OR 區,兩區同一套編解碼。標籤之間逗號接,
+   排除在開頭加 `-`。沒改過的標籤寫葉路徑,逐個 encodeURIComponent;改過的寫欄位對
+   `欄:值~值;欄:值`。目錄找不到的路徑(目錄改名或搬節點後的舊網址)安靜忽略。or 列出放在 OR 區的左側條件鍵(Cond.sideTags 的 key),對不到
+   標籤的鍵安靜忽略。舊軸的 actCost、actPat 不再認得,開舊網址時當未知參數。 */
 const ACT = 'act';
+const ACT_OR = 'actOr';
+const OR_SIDE = 'or';
 
 function schema() {
   const tri = [], range = [];
@@ -33,7 +35,7 @@ const DEFAULT_LANG = Query.LANGS[0].v;
 const DEFAULT_SORT = Sort.KEYS[0].key;
 
 const PARAM_NAMES = [].concat(
-  TEXTS, ['textMat', LANG, 'sort', 'dir', ACT],
+  TEXTS, ['textMat', LANG, 'sort', 'dir', ACT, ACT_OR, OR_SIDE],
   SCHEMA.tri.map(a => a.key),
   SCHEMA.range.map(f => f.key),
   SCHEMA.range.map(f => f.unknown).filter(Boolean)
@@ -76,6 +78,45 @@ function tagToken(tag) {
   return (tag.ex ? '-' : '') + body;
 }
 
+/* `欄:值~值;欄:值` → 欄位對。解不開的欄名或值只掉它自己;認不認得交給條件模型。 */
+function pairsOf(body) {
+  const pairs = [];
+  body.split(';').forEach(seg => {
+    const i = seg.indexOf(':');
+    const field = i < 0 ? null : dec(seg.slice(0, i));
+    if (field == null) return;
+    pairs.push([field, seg.slice(i + 1).split('~').map(dec).filter(v => v != null)]);
+  });
+  return pairs;
+}
+
+/* 字面的 `:` 只會是欄位對:路徑裡的 `:` 寫出時都編掉了。認不出來回 null。 */
+function tokenTag(token) {
+  const ex = token.charAt(0) === '-';
+  const body = ex ? token.slice(1) : token;
+  if (body.indexOf(':') >= 0) return Cond.fromPairs(pairsOf(body), ex);
+  const path = dec(body);
+  return path ? Cond.tagAt(path, ex) : null;
+}
+
+/* 兩區共用:一區的標籤 ⇄ 參數值。兩張標籤可以改到一模一樣,不論同區或跨區,網址只寫第一張
+   (seen 跨兩區);parse 也只留第一張,否則 canon 不冪等。 */
+function encodeTags(tags, seen) {
+  const tokens = tags.map(tagToken).filter(token => {
+    if (!token || seen.has(token)) return false;
+    seen.add(token);
+    return true;
+  });
+  return tokens.join(',');
+}
+
+function decodeTags(raw, state, zone) {
+  return raw.split(',').reduce((st, token) => {
+    const tag = tokenTag(token);
+    return tag ? Cond.add(st, tag, zone) : st;
+  }, state);
+}
+
 function stringify(state) {
   const st = state || {};
   const q = st.q || {};
@@ -93,9 +134,15 @@ function stringify(state) {
       .map(c => (sel[c] < 0 ? '-' : '') + c);
     if (codes.length) parts.push(ax.key + '=' + codes.join(','));
   });
-  /* 兩張標籤可以改到一模一樣;網址只寫一次,否則 canon 不冪等(parse 會收成一張)。 */
-  const tokens = st.cond ? Array.from(new Set(Cond.tags(st.cond).map(tagToken))) : [];
-  if (tokens.length) parts.push(ACT + '=' + tokens.join(','));
+  if (st.cond) {
+    const seen = new Set();
+    const and = encodeTags(Cond.tagsIn(st.cond, 'and'), seen);
+    const or = encodeTags(Cond.tagsIn(st.cond, 'or'), seen);
+    const orSide = Cond.syncSide(st.cond, q).orSide;
+    if (and) parts.push(ACT + '=' + and);
+    if (or) parts.push(ACT_OR + '=' + or);
+    if (orSide.length) parts.push(OR_SIDE + '=' + orSide.join(','));
+  }
   SCHEMA.range.forEach(f => {
     const r = q[f.key];
     if (r && (r.min != null || r.max != null)) {
@@ -146,50 +193,24 @@ function toTri(v, ax) {
   return Object.keys(sel).length ? sel : null;
 }
 
-/* `欄:值~值;欄:值` → 欄位對。解不開的欄名或值只掉它自己;認不認得交給條件模型。 */
-function pairsOf(body) {
-  const pairs = [];
-  body.split(';').forEach(seg => {
-    const i = seg.indexOf(':');
-    const field = i < 0 ? null : dec(seg.slice(0, i));
-    if (field == null) return;
-    pairs.push([field, seg.slice(i + 1).split('~').map(dec).filter(v => v != null)]);
-  });
-  return pairs;
-}
-
-/* 字面的 `:` 只會是欄位對:路徑裡的 `:` 寫出時都編掉了。認不出來回 null。 */
-function parseTag(token) {
-  const ex = token.charAt(0) === '-';
-  const body = ex ? token.slice(1) : token;
-  if (body.indexOf(':') >= 0) return Cond.fromPairs(pairsOf(body), ex);
-  const path = dec(body);
-  return path ? Cond.tagAt(path, ex) : null;
-}
-
-function toTags(raw, state) {
-  return raw.split(',').reduce((st, token) => {
-    const tag = parseTag(token);
-    return tag ? Cond.add(st, tag) : st;
-  }, state);
-}
-
 function parse(hash) {
   const q = { name: '', nameLang: DEFAULT_LANG, code: '', text: '' };
   const raw = {};
   let cond = Cond.empty();
+  let orSide = [];
   String(hash == null ? '' : hash).replace(/^#/, '')
     .replace(MANGLED_SEP, '&$1=').split('&').forEach(seg => {
     const i = seg.indexOf('=');
     if (i < 0) return;
     const key = seg.slice(0, i);
     if (!key) return;
-    if (key === ACT) {
-      cond = toTags(seg.slice(i + 1), cond);
+    if (key === ACT || key === ACT_OR) {
+      cond = decodeTags(seg.slice(i + 1), cond, key === ACT ? 'and' : 'or');
       return;
     }
     const v = dec(seg.slice(i + 1));
     if (v == null) return;
+    if (key === OR_SIDE) { orSide = orSide.concat(v.split(',')); return; }
     if (TEXTS.indexOf(key) >= 0) { q[key] = v.trim(); return; }
     if (key === 'textMat') { if (v === '1') q.textMat = 1; return; }
     if (key === LANG) { q[LANG] = langOf(v); return; }
@@ -210,7 +231,9 @@ function parse(hash) {
     if (unknown && (v === '1' || v === '-1')) q[key] = +v;
   });
   const state = { q, sort: sortOf({ key: raw.sort, dir: raw.dir }) };
-  if (Cond.tags(cond).length) state.cond = cond;
+  /* 鍵要等左側條件都解析完才知道對不對得到標籤:or 寫在哪一段都一樣。 */
+  cond = Cond.syncSide(orSide.reduce((st, key) => Cond.moveSide(st, key, 'or'), cond), q);
+  if (!Cond.isEmpty(cond)) state.cond = cond;
   return state;
 }
 

@@ -3,12 +3,10 @@
 
 接縫:目錄檔的資料 → 載入後的目錄(catalog.Catalog;違反檢查即 CatalogError、訊息列全部違反處)。只斷言
 節點名(由述詞機械組出)、載入後的述詞(極性補成明文清單)、路徑與大類/中類的聯集,以及檢查的錯誤訊息,
-不斷言樹怎麼存。真目錄 catalog.json 一條:載入過檢查,每個具名查詢名與改寫對應表 catalog-mapping.json
-(舊葉名/舊節點名 → 新節點名,233 葉 + 100 詞元節點;加 2026-11-01 裁定新增的 対象とする 一列)一致。
+不斷言樹怎麼存。真目錄 catalog.json 一條:載入過檢查,237 個具名查詢。
 
 執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize
 """
-import json
 import os
 import sys
 import unittest
@@ -18,7 +16,6 @@ sys.path.insert(0, HERE)
 import catalog  # noqa: E402
 import predicate  # noqa: E402
 
-MAPPING = os.path.join(HERE, "catalog-mapping.json")
 
 
 def query(lemma, children=None, **fields):
@@ -243,25 +240,9 @@ class TestRealCatalog(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.catalog = catalog.load()
-        with open(MAPPING, encoding="utf-8") as f:
-            cls.mapping = json.load(f)["對應"]
 
-    def test_mapping_covers_the_old_tree(self):
-        kinds = {}
-        for _, kind, _ in self.mapping:
-            kinds[kind] = kinds.get(kind, 0) + 1
-        self.assertEqual(kinds, {"葉": 136, "預設葉": 97, "詞元節點": 100, "裁定新增": 1})
+    def test_the_catalog_has_237_named_queries(self):
         self.assertEqual(len(self.catalog.queries), 237)
-
-    def test_every_node_name_matches_the_mapping(self):
-        self.assertEqual(sorted(q.name for q in self.catalog.queries), sorted({new for _, _, new in self.mapping}))
-        for old, kind, new in self.mapping:
-            with self.subTest(new):
-                self.assertIn(new, self.catalog.by_name)
-                if kind == "裁定新增":
-                    self.assertIsNone(old)     # 改寫之後加的節點沒有舊名
-                else:
-                    self.assertEqual(new, old)     # 改寫不改名
 
     def test_every_predicate_is_explicit_and_in_the_vocabulary(self):
         for q in self.catalog.queries:

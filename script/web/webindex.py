@@ -512,8 +512,8 @@ def _content_digest(content):
 FRAME_EXPORT_VERSION = 2
 # 目錄進 VOCAB 的欄(2026-11-01 規格 3 story 7、8):雜湊只有測試要用,高熵字串不佔索引
 _CATALOG_INDEX_KEYS = ("name", "path", "predicate", "cards")
-# ● 子句的 index:領起句的 index 加 -●n(同 export_categories.SUB_INDEX;2026-10 ADR-0015 標記句的鍵,script/web 不 import
-# 分詞鏈才抄這一條)
+# ● 子句的 index:領起句的 index 加 -●n(分詞鏈 export_common.owner 組出;2026-10 ADR-0015 標記句的鍵,script/web 不 import
+# 分詞鏈,test_webindex.EncodedFixtureTest 守兩邊對得上)
 SUB_INDEX = re.compile(r"^(.+)-●(\d+)$")
 # 框列匯出檔的五類建置失敗:檢查鍵 → 報告與問題清單共用的標籤(2026-11-01 規格 3「建置檢查」段)
 FRAME_CHECK_LABELS = {

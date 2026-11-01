@@ -6,7 +6,7 @@
   (剝掉新鍵後與基準逐框比對;底線開頭的內部鍵不得出現在輸出)——用手寫的小框架清單,不讀全語料。
 - 全語料:frames.json 剝掉新鍵後與基準檔(修前的全語料框架檔,`baseline/frames.json`,不入版控)
   差異 0,且剝鍵後的 md5 與入版控的 baseline-digest.json 相同(語料沒變時);封閉類沒有表外值;
-  沒有底線鍵。輸入不在時 skipTest 並印原因(沿用 test_categories.TestEmptyLeaves 的寫法)。
+  沒有底線鍵。輸入不在時 skipTest 並印原因。
 
 各票的句型回歸例子仍放 test_frames.py(接縫 frames.extract)。
 

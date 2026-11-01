@@ -7,9 +7,9 @@ frame_queries.json(gitignore)。「每個具名查詢在全語料三個位置合
 違反時匯出失敗、鏈停在那一步。命中用參考評估器(predicate.matcher)對**匯出的框列**算:框架先經 export_frames.frame_rows
 轉成框列(框架 → 框列只有那一份),評估器讀的就是匯出檔裡的同一個 dict——所以拆解頁、LLM 抽驗看到的命中與索引
 (規格 3 的 JS 評估器)算出的是同一回事。大類/中類的命中是底下具名查詢的聯集(catalog.Catalog.members),由樹推得、
-不另存。它取代舊的框架類別檔 frame_categories.json 的角色(過渡期舊檔照產)。
+不另存。
 
-frame_queries.json(JSON 清單,一框一行;前四鍵是框架身分,同舊框架類別檔、對得回 frames.json):
+frame_queries.json(JSON 清單,一框一行;前四鍵是框架身分,對得回 frames.json):
     card      卡片密碼
     section   段落(main/pendulum)
     index     效果句 index(frames.json 的句,不是標記句)

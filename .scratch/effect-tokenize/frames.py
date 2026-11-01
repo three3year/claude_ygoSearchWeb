@@ -723,7 +723,7 @@ class FrameExtractor:
 
     def splits_complement(self, lemma):
         """「N に/と する」形的詞元,補語會被不併判準拆開(值或屬性:裏側守備表示にする、属性にする)
-        時為真——框架抽取產不出這種詞元(類別樹建置檢查用,category-lemma-followup 票 05)。"""
+        時為真——框架抽取產不出這種詞元(目錄的詞元檢查用,category-lemma-followup 票 05)。"""
         tokens = self.tokenizer.tokenize(lemma)
         if len(tokens) < 3 or self.word(tokens[-1]) != "する":
             return False

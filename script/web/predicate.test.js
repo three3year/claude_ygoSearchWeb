@@ -1,11 +1,11 @@
 /**
- * predicate.test.js — 述詞評估器(`Engine.runQuery` 的 `q.preds`)的測試
- * (predicate-index 票 03、04;規格 Testing Decisions)
+ * predicate.test.js — 述詞評估器(`Engine.runQuery` 的 `q.preds`、`q.or`)的測試
+ * (predicate-index 票 03、04、predicate-ui 票 01;規格 Testing Decisions)
  *
  * 跑法:`node --test script/web/predicate.test.js`
  *
  * 三段:編碼夾具(參考評估器的例子、雜湊、小語料張數,由 encode_fixture.py 產生)、合成資料的 runQuery 例子
- * (卡層、句層條件、領起句、hits、marks、與舊 q.act 並用)、真 data.js 對真匯出檔的全語料對照。都只走 runQuery,
+ * (卡層、句層條件、領起句、hits、marks、與舊 q.act 並用、OR 區)、真 data.js 對真匯出檔的全語料對照。都只走 runQuery,
  * 不斷言編碼內部。
  */
 'use strict';
@@ -285,7 +285,199 @@ test('述詞與舊 q.act 並用:marks 兩種都有', () => {
                          ['act', 'pred']);
 });
 
+/* ── OR 區(predicate-ui 票 01):每個片段與主查詢合併成一個分支,卡命中任一分支就中。 ──
+   述詞序號是整個查詢的編號:先主查詢的 inc,再依片段順序接各片段的 inc。 */
+const exPreds = (...preds) => ({ preds: { ex: preds } });
+const MONSTER_DESTROY_DRAW = 41, MONSTER_DESTROY = 42, SPELL_DRAW = 43, SPELL_DISCARD = 44, OLD_MONSTER = 45,
+      DESTROY_WITH_DISCARD = 46, DESTROY_TWO_KINDS = 47, NO_ACTION_KIND_AB = 48, MATERIAL_TEXT = 49;
+const orBox = harness.load({
+  frames: FRAMES,
+  vocab: { frame: FIXTURE.vocab },
+  cards: [
+    { id: MONSTER_DESTROY_DRAW, c: 'm', at: 'L', atk: 2500, tx: ['一', '二'], k: ['a', 'b'], fr: [[DESTROY], [DRAW]] },
+    { id: MONSTER_DESTROY, c: 'm', at: 'D', atk: 1000, tx: ['一'], k: ['a'], fr: [[DESTROY]] },
+    { id: SPELL_DRAW, c: 's', tx: ['一'], k: ['b'], fr: [[DRAW]] },
+    { id: SPELL_DISCARD, c: 's', tx: ['一', '二'], k: ['a', 'b'], fr: [[DISCARD], []] },
+    { id: OLD_MONSTER, c: 'm', at: 'D', atk: 3000, nj: '和名', tx: ['舊式卡文'] },
+    { id: DESTROY_WITH_DISCARD, c: 's', tx: ['一'], k: ['a'], fr: [[DESTROY, DISCARD]] },
+    { id: DESTROY_TWO_KINDS, c: 's', tx: ['一', '二'], k: ['a', 'b'], fr: [[DESTROY], [DESTROY]] },
+    { id: NO_ACTION_KIND_AB, c: 's', tx: ['甲', '乙'], k: ['a', 'b'], fr: [[], []] },
+    { id: MATERIAL_TEXT, c: 'm', atk: 0, tx: ['素材字', '效果字'], ro: ['mat', ''], fr: [[], []] },
+  ],
+});
+const orSearch = q => harness.search(orBox, q);
+const orIds = q => harness.ids(orBox, q);
+
+test('OR:兩個分支聯集,結果依資料順序;命中句與 hits 併起來,序號接著片段順序', () => {
+  assert.deepStrictEqual(orSearch({ or: [include(HAS_DRAW), include(HAS_DESTROY)] }), [
+    { id: MONSTER_DESTROY_DRAW, rows: [0, 1], hits: [[[1, 0, 0]], [[0, 1, 0]]] },
+    { id: MONSTER_DESTROY, rows: [0], hits: [[[1, 0, 0]]] },
+    { id: SPELL_DRAW, rows: [0], hits: [[[0, 0, 0]]] },
+    { id: DESTROY_WITH_DISCARD, rows: [0], hits: [[[1, 0, 0]]] },
+    { id: DESTROY_TWO_KINDS, rows: [0, 1], hits: [[[1, 0, 0]], [[1, 1, 0]]] },
+  ]);
+});
+
+test('OR:AND 區全部成立,再加 OR 區任一成立', () => {
+  assert.deepStrictEqual(orSearch({ ...include(HAS_DESTROY), or: [include(HAS_DRAW), include(HAS_DISCARD)] }), [
+    { id: MONSTER_DESTROY_DRAW, rows: [0, 1], hits: [[[0, 0, 0]], [[1, 1, 0]]] },
+    { id: DESTROY_WITH_DISCARD, rows: [0], hits: [[[0, 0, 0], [2, 0, 1]]] },
+  ]);
+});
+
+test('OR:述詞序號跨分支,主查詢多個述詞、片段重複同一個述詞各有各的號', () => {
+  const q = { ...include(HAS_DESTROY, HAS_DRAW), or: [include(HAS_DISCARD), include(HAS_DESTROY)] };
+  assert.deepStrictEqual(orSearch(q), [
+    { id: MONSTER_DESTROY_DRAW, rows: [0, 1], hits: [[[0, 0, 0], [3, 0, 0]], [[1, 1, 0]]] },
+  ]);
+});
+
+test('OR:排除標籤是一個分支,要卡上沒有 X;排除不佔述詞序號', () => {
+  const q = { ...include(HAS_DESTROY), or: [exPreds(HAS_DRAW), include(HAS_DISCARD)] };
+  assert.deepStrictEqual(orSearch(q), [
+    { id: MONSTER_DESTROY, rows: [0], hits: [[[0, 0, 0]]] },
+    { id: DESTROY_WITH_DISCARD, rows: [0], hits: [[[0, 0, 0], [1, 0, 1]]] },
+    { id: DESTROY_TWO_KINDS, rows: [0, 1], hits: [[[0, 0, 0]], [[0, 1, 0]]] },
+  ]);
+});
+
+test('OR:全是排除分支時命中句是 null,marks 沒有 pred;同時有兩者的卡與舊式卡文不中', () => {
+  const q = { or: [exPreds(HAS_DESTROY), exPreds(HAS_DRAW)] };
+  assert.deepStrictEqual(orSearch(q), [MONSTER_DESTROY, SPELL_DRAW, SPELL_DISCARD, DESTROY_WITH_DISCARD,
+    DESTROY_TWO_KINDS, NO_ACTION_KIND_AB, MATERIAL_TEXT].map(id => ({ id, rows: null })));
+  assert.deepStrictEqual(harness.marks(orBox, q), []);
+});
+
+test('OR:左側條件在 OR 區,舊式卡文只要過左側條件也中', () => {
+  assert.deepStrictEqual(orSearch({ or: [{ atk: { min: 2000 } }, { attr: { D: 1 } }] }),
+                         [MONSTER_DESTROY_DRAW, MONSTER_DESTROY, OLD_MONSTER].map(id => ({ id, rows: null })));
+  assert.deepStrictEqual(orIds({ cat: { m: 1 }, or: [{ atk: { max: 1000 } }, { attr: { L: 1 } }] }),
+                         [MONSTER_DESTROY_DRAW, MONSTER_DESTROY, MATERIAL_TEXT]);
+});
+
+test('OR:左側條件與述詞各一個分支,只因左側條件中的卡命中句是 null', () => {
+  assert.deepStrictEqual(orSearch({ or: [{ atk: { min: 3000 } }, include(HAS_DRAW)] }), [
+    { id: MONSTER_DESTROY_DRAW, rows: [1], hits: [[[0, 1, 0]]] },
+    { id: SPELL_DRAW, rows: [0], hits: [[[0, 0, 0]]] },
+    { id: OLD_MONSTER, rows: null },
+  ]);
+});
+
+test('OR:片段與主查詢有同一個鍵時兩邊都要成立,片段不蓋掉主查詢', () => {
+  assert.deepStrictEqual(orIds({ cat: { m: 1 }, or: [{ cat: { s: 1 } }] }), []);
+});
+
+test('OR:句層條件在 OR 區,主查詢的述詞也只看過該片段的句', () => {
+  assert.deepStrictEqual(orSearch({ ...include(HAS_DESTROY), or: [{ kind: { b: 1 } }] }),
+                         [{ id: DESTROY_TWO_KINDS, rows: [1], hits: [[[0, 1, 0]]] }]);
+});
+
+test('OR:兩個句層片段,命中句取聯集、排序', () => {
+  const results = orSearch({ or: [{ text: '乙' }, { kind: { a: 1 } }] });
+  assert.deepStrictEqual(results.find(e => e.id === NO_ACTION_KIND_AB), { id: NO_ACTION_KIND_AB, rows: [0, 1] });
+  assert.deepStrictEqual(results.find(e => e.id === SPELL_DISCARD), { id: SPELL_DISCARD, rows: [0] });
+  assert.strictEqual(results.find(e => e.id === SPELL_DRAW), undefined);
+});
+
+test('OR:效果文、卡名放 OR 區時,比法(素材句、語言)照主查詢', () => {
+  assert.deepStrictEqual(orSearch({ or: [{ text: '素材' }] }), []);
+  assert.deepStrictEqual(orSearch({ textMat: 1, or: [{ text: '素材' }] }), [{ id: MATERIAL_TEXT, rows: [0] }]);
+  assert.deepStrictEqual(orIds({ nameLang: 'ja', or: [{ name: '和名' }] }), [OLD_MONSTER]);
+});
+
+test('OR:rows 有 null 的分支時以有句的分支為準,與分支順序無關;全是 null 的卡才是 null', () => {
+  const expected = [
+    { id: MONSTER_DESTROY_DRAW, rows: [0], hits: [[[0, 0, 0]]] },
+    { id: MONSTER_DESTROY, rows: [0], hits: [[[0, 0, 0]]] },
+    { id: SPELL_DISCARD, rows: null },
+    { id: DESTROY_WITH_DISCARD, rows: [0], hits: [[[0, 0, 0]]] },
+    { id: DESTROY_TWO_KINDS, rows: [0, 1], hits: [[[0, 0, 0]], [[0, 1, 0]]] },
+    { id: NO_ACTION_KIND_AB, rows: null },
+    { id: MATERIAL_TEXT, rows: null },
+  ];
+  assert.deepStrictEqual(orSearch({ or: [exPreds(HAS_DRAW), include(HAS_DESTROY)] }), expected);
+  assert.deepStrictEqual(orSearch({ or: [include(HAS_DESTROY), exPreds(HAS_DRAW)] }), expected);
+});
+
+test('OR:兩個分支命中同一框,hits 只留一筆', () => {
+  const q = { ...include(HAS_DESTROY), or: [{ text: '一' }, { kind: { a: 1 } }] };
+  assert.deepStrictEqual(orSearch(q), [MONSTER_DESTROY_DRAW, MONSTER_DESTROY, DESTROY_WITH_DISCARD, DESTROY_TWO_KINDS]
+    .map(id => ({ id, rows: [0], hits: [[[0, 0, 0]]] })));
+});
+
+test('OR:同一句帶主查詢與兩個片段的述詞,hits 依序號排、主查詢的框只留一筆', () => {
+  const sameLine = harness.load({
+    frames: FRAMES,
+    vocab: { frame: FIXTURE.vocab },
+    cards: [{ id: 1, tx: ['一'], fr: [[DESTROY, DRAW, DISCARD]] }],
+  });
+  assert.deepStrictEqual(harness.search(sameLine, { ...include(HAS_DESTROY), or: [include(HAS_DRAW), include(HAS_DISCARD)] }),
+                         [{ id: 1, rows: [0], hits: [[[0, 0, 0], [1, 0, 1], [2, 0, 2]]] }]);
+});
+
+test('OR:只因沒有包含述詞的分支命中的句,hits 是空清單', () => {
+  const results = orSearch({ or: [include(HAS_DESTROY), { text: '二' }] });
+  assert.deepStrictEqual(results.find(e => e.id === MONSTER_DESTROY_DRAW),
+                         { id: MONSTER_DESTROY_DRAW, rows: [0, 1], hits: [[[0, 0, 0]], []] });
+});
+
+test('OR:領起句的框跨分支照常併,hits 內依序號、框所在句排', () => {
+  assert.deepStrictEqual(leadCard({ or: [include(HAS_DISCARD), include(HAS_DRAW)] }, LEAD),
+                         { id: LEAD, rows: [0, 1, 2], hits: [[[0, 0, 0]], [[0, 0, 0], [1, 1, 0]], [[0, 0, 0]]] });
+});
+
+test('OR:marks 同種只留一筆,順序與沒有 OR 時相同', () => {
+  assert.deepStrictEqual(
+    harness.marks(orBox, { or: [{ kind: { a: 1 } }, { kind: { b: 1 } }, { text: '甲' }, { text: '甲' }, include(HAS_DRAW)] }),
+    [{ type: 'text', value: '甲' }, { type: 'kind' }, { type: 'pred' }]);
+});
+
+test('OR:片段的述詞有不認得的欄一樣丟錯', () => {
+  assert.throws(() => orIds({ or: [include({ 顏色: 'x' })] }), /不認得的欄/);
+  assert.throws(() => orIds({ or: [exPreds({ constructor: 'x' })] }), /不認得的欄/);
+});
+
+test('OR:沒有 q.or 或它是空的,結果與 marks 都相同', () => {
+  for (const q of [{}, include(HAS_DESTROY), exPreds(HAS_DESTROY), { kind: KIND_A, ...include(HAS_DRAW) },
+                   { text: '一' }, { cat: { m: 1 } }]) {
+    const withEmpty = { ...q, or: [] };
+    assert.deepStrictEqual(orSearch(withEmpty), orSearch(q), JSON.stringify(q));
+    assert.deepStrictEqual(harness.marks(orBox, withEmpty), harness.marks(orBox, q), JSON.stringify(q));
+  }
+});
+
+test('OR:空片段沒有多的條件,該分支就是主查詢', () => {
+  assert.deepStrictEqual(orIds({ cat: { m: 1 }, or: [{}] }),
+                         [MONSTER_DESTROY_DRAW, MONSTER_DESTROY, OLD_MONSTER, MATERIAL_TEXT]);
+});
+
 /* ── 全語料:真 data.js + 真匯出檔。大類、中類以底下具名查詢的聯集算(catalog.Catalog.members 的語意)。 ── */
+test('全語料 OR:每個具名查詢放在單一片段,效果位張數與雜湊同匯出檔;兩片段的卡等於各自查詢的聯集', t => {
+  const exportFile = path.join(__dirname, '..', '..', 'data', 'action_frames.json');
+  const data = harness.realData();
+  if (!data || !fs.existsSync(exportFile)) {
+    t.skip('缺 web/data.js 或 data/action_frames.json,略過全語料對照');
+    return;
+  }
+  const named = JSON.parse(fs.readFileSync(exportFile, 'utf8')).目錄.filter(row => row.predicate);
+  const real = harness.load(data);
+  const inEffect = row => include({ ...row.predicate, 位置: '效果' });
+  const wrong = [];
+  named.forEach((row, n) => {
+    const got = harness.ids(real, { or: [inEffect(row)] });
+    if (got.length !== row.cards.效果 || cardsHash(got) !== row.hash.效果) {
+      wrong.push(`${row.path.join('/')}:${got.length} 張 ${cardsHash(got)},匯出 ${row.cards.效果} 張 ${row.hash.效果}`);
+    }
+    if (n % 10) return;  // 成對比對抽樣:單片段已逐列比過,這裡只守聯集,每列都跑要多十幾秒
+    const other = named[(n + 1) % named.length];
+    const union = new Set([...harness.ids(real, inEffect(row)), ...harness.ids(real, inEffect(other))]);
+    const both = harness.ids(real, { or: [inEffect(row), inEffect(other)] });
+    if (cardsHash(both) !== cardsHash(union)) wrong.push(`${row.path.join('/')} 或 ${other.path.join('/')}:聯集不同`);
+  });
+  assert.strictEqual(named.length, 237);
+  assert.deepStrictEqual(wrong, []);
+});
+
 test('全語料:目錄每列 × 三個位置,張數與雜湊同匯出檔', t => {
   const exportFile = path.join(__dirname, '..', '..', 'data', 'action_frames.json');
   const data = harness.realData();

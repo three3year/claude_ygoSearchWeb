@@ -2,7 +2,7 @@
 
 Type: task
 Mode: HITL
-Status: open
+Status: claimed
 Blocked by: 06, 03
 Map: ../map.md
 

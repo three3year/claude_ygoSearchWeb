@@ -33,7 +33,7 @@ Charted: 2026-10-31(/mattpocock-skills:wayfinder)
 
 - [述詞卡與樹導覽的靜態原型](issues/03-predicate-card-prototype.md):站主核可 D 版(本地分支 `prototype/predicate-card` 的 `web/prototype-predicate-card.html?variant=D`):結果上方用標籤列出全部條件,分 AND、OR 兩區,查詢由標籤組成、條件一變就重查;標籤一律從左邊產生,動作標籤點開右側抽屜(手機底部面板),抽屜不改詞元;句尾標籤 a、點大類只展開、0 張灰字依核可版面定案。給規格 4:引擎要支援 OR、hash 要寫兩區、GLOSSARY 兩處要改。
 
-- [寫規格 4:介面與網址](issues/07-spec-ui-and-hash.md):規格 `.scratch/predicate-ui/spec.md`(ready-for-agent)與 9 張票;七題全裁(OR 進引擎 `q.or`、網址用可讀的欄位對與 `act`/`actOr`/`or`、離散操作留一筆歷史打字不留、效果位 0 張的查詢帶有張數的位置、舊工具刪掉而 `llm_check.py` 改寫、切換前不另發布 data.js、測試接縫四個加真瀏覽器走一輪);implement 尚未開始。
+- [寫規格 4:介面與網址](issues/07-spec-ui-and-hash.md):規格 `.scratch/predicate-ui/spec.md`(ready-for-agent)與 9 張票;七題全裁(OR 進引擎 `q.or`、網址用可讀的欄位對與 `act`/`actOr`/`or`、離散操作留一筆歷史打字不留、效果位 0 張的查詢帶有張數的位置、舊工具刪掉而 `llm_check.py` 改寫、切換前不另發布 data.js、測試接縫四個加真瀏覽器走一輪)。 **2026-11-02 交件**:整合分支 `predicate-ui`(票 01〜09 全部 resolved,未併 main、未 push);站上只剩述詞一套搜尋:條件列分 AND、OR 兩區、抽屜、欄位對網址,舊欄、舊匯出檔、歸葉程式、舊軸 UI 與只為它們存在的工具都刪了(刪除前最後一個 commit `6dd3fcc`,見 Notes);data.js 8,730,524 / gzip 2,092,991 bytes,同輸入兩次建置逐位元組相同;分詞鏈少兩步,`data/action_frames.json` md5 8e359d78 不變;真瀏覽器桌面與手機寬走完 User Stories 1〜32,OR 5 張加 AND 中位 4.2〜4.6 ms、只有 OR 5 張 14.5〜14.6 ms。分支併不併 main 由站主決定;數字、走過的互動與待裁定在 [predicate-ui 票 09 Comments](../predicate-ui/issues/09-handoff.md)。
 
 ## Not yet specified
 

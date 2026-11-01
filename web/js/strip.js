@@ -151,12 +151,36 @@ function removeAt(i) {
   handlers.onRemove(i);
 }
 
+/* 中心詞框還沒按 Enter 就按別的鈕:失焦會先把字收進標籤、重畫抽屜與條件列,按到的鈕被換掉,那一下
+   點擊落空。所以框裡有字時按下不搶焦點,點擊才收字。下拉選單攔不了(會打不開),仍要再點一次。 */
+function typedInput() {
+  const el = document.activeElement;
+  return el && el.matches('#condDrawer input') && el.value.trim() ? el : null;
+}
+
+function holdFocus(e) {
+  if (!typedInput()) return;
+  const t = e.target;
+  if (t.closest('#condDrawer button') || t.closest('#condStrip .strip-tag') || t.closest('#condStrip .strip-clear')) {
+    e.preventDefault();
+  }
+}
+
+/* blur 同步發 change,字走 onDrawerChange 收進標籤。 */
+function commitTyped() {
+  const el = typedInput();
+  if (el) el.blur();
+}
+
 function onDrawerClick(e) {
   const el = e.target.closest('[data-act]');
   if (!el || el.matches('select, input')) return;
-  const tag = Cond.tags(shown[0])[openAt];
   const box = el.closest('[data-field]');
   const field = box && box.dataset.field;
+  /* × 的編號是點下去時畫面上的清單;字收進來後清單可能重排,所以先取出那個值。 */
+  const dropped = el.dataset.act === 'drop' ? Cond.values(Cond.tags(shown[0])[openAt], field)[+el.dataset.i] : null;
+  commitTyped();
+  const tag = Cond.tags(shown[0])[openAt];
   const edit = next => handlers.onEdit(openAt, next);
   switch (el.dataset.act) {
     case 'close': closeDrawer(); break;
@@ -164,7 +188,7 @@ function onDrawerClick(e) {
     case 'restore': edit(Cond.restore(tag)); break;
     case 'mode': edit(Cond.setEx(tag, el.dataset.ex === '1')); break;
     case 'toggle': edit(Cond.toggleValue(tag, field, el.dataset.v)); break;
-    case 'drop': edit(Cond.removeValue(tag, field, Cond.values(tag, field)[+el.dataset.i])); break;
+    case 'drop': edit(Cond.removeValue(tag, field, dropped)); break;
   }
 }
 
@@ -229,6 +253,7 @@ function init(events) {
   handlers = events;
   const { onMove, onSideRemove, onSideGo, onSideMove, onClear } = events;
   $('condStrip').addEventListener('click', e => {
+    commitTyped();
     if (e.target.closest('.strip-clear')) { onClear(); return; }
     const tag = e.target.closest('.strip-tag');
     if (!tag) return;
@@ -249,6 +274,7 @@ function init(events) {
   });
   $('condDrawer').addEventListener('click', onDrawerClick);
   $('condDrawer').addEventListener('change', onDrawerChange);
+  document.addEventListener('mousedown', holdFocus);
   document.addEventListener('click', onDocumentClick);
   initDrag({ onMove, onSideMove });
 }

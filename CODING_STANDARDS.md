@@ -22,6 +22,8 @@
 - 一個句型一條例子,class docstring 寫票號與規則;每條規則配反例。修規則的 commit 先有一條會失敗的例子。
 - 多張票平行時,各票的回歸例子開自己的檔 `test_<票名>.py`(同樣只走 `frames.extract`),`test_frames.py` 留給既有例子;檔尾就不會每次合併都撞。
 - 全語料檢查寫成測試、缺輸入時 `skipTest` 並印原因。範本:`test_categories.TestEmptyLeaves.test_real_tree_has_no_empty_leaf_in_corpus`。
+- 驗收句寫的是使用者看得到的行為(CLI 的輸出、寫出的檔),測試或實跑要走過那個入口;只測內部函式不算滿足,實跑看到差異就回報不符。範本:`script/web/test_webindex.py` 的 `BuiltAtTest`。
+- 驗收句寫「列全部」時,例子要讓筆數超過任何截斷上限、兩類以上的違反同時出現,並含格式壞掉的值。範本:`script/web/test_webindex.py` 的 `test_report_prints_every_violation`。
 
 ## 報告與顯示
 

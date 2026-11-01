@@ -312,3 +312,26 @@ test('全語料:目錄每列 × 三個位置,張數與雜湊同匯出檔', t => 
   assert.strictEqual(catalog.length, 261);
   assert.deepStrictEqual(wrong, []);
 });
+
+/* 規格 4 票 02:具名查詢走使用者的入口——葉路徑 → Hash.parse → 條件模型 → runQuery。
+   效果位 0 張的兩個查詢帶的位置是規格裁定,寫死在這裡,不用條件模型自己的規則算。 */
+test('全語料:237 個具名查詢經網址與條件模型,張數等於目錄裡該標籤所帶位置的張數', t => {
+  const data = harness.realData();
+  if (!data) {
+    t.skip('缺 web/data.js,略過全語料對照');
+    return;
+  }
+  const NOT_EFFECT = { 対象とする: '條件', '取り除く@お互いのフィールド': '代價' };
+  const real = harness.load(data);
+  const named = data.vocab.catalog.filter(row => row.predicate);
+  const wrong = [];
+  for (const row of named) {
+    const state = harness.parseHash(real, 'act=' + encodeURIComponent(row.path.join('›')));
+    const q = harness.cond(real, 'toQuery', state.cond, state.q);
+    const pos = NOT_EFFECT[row.name] || '效果';
+    const got = harness.ids(real, q).length;
+    if (got !== row.cards[pos]) wrong.push(`${row.name} @${pos}:${got} 張,目錄 ${row.cards[pos]} 張`);
+  }
+  assert.strictEqual(named.length, 237);
+  assert.deepStrictEqual(wrong, []);
+});

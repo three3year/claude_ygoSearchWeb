@@ -86,6 +86,16 @@ const DRIVER = `
   return JSON.stringify(f && { visible: Array.from(f.visible).sort(),
                                 open: Array.from(f.open).sort() });
 }
+;function __cond(fn, json) {
+  return JSON.stringify(Cond[fn].apply(null, JSON.parse(json)));
+}
+;function __catalogRoots() { return JSON.stringify(Acat.catalog.roots); }
+;function __catalogNode(key) { return JSON.stringify(Acat.catalog.node(key)); }
+;function __catalogFilter(term) {
+  var f = Acat.catalog.filter(term);
+  return JSON.stringify(f && { visible: Array.from(f.visible).sort(),
+                                open: Array.from(f.open).sort() });
+}
 ;function __cardHtml(json) { return View.cardHtml(JSON.parse(json), null); }
 ;function __cardHtmlHl(json) {
   var a = JSON.parse(json);
@@ -273,8 +283,29 @@ function cardHtmlHl(sandbox, entry, marks) {
   return sandbox.__cardHtmlHl(JSON.stringify({ entry, marks }));
 }
 
+/**
+ * 條件模型的接縫(predicate-ui 票 02):`Cond.<fn>(...args)`,參數與回傳都走 JSON。
+ * 條件模型是純函式,所以測得到;條件列的 DOM 只照它的答案畫。
+ */
+function cond(sandbox, fn, ...args) {
+  return JSON.parse(sandbox.__cond(fn, JSON.stringify(args)));
+}
+
+/** 目錄導覽樹(`Acat.catalog`):根節點鍵清單、單一節點、過濾答案(同 acatFilter 的形狀)。 */
+function catalogRoots(sandbox) {
+  return JSON.parse(sandbox.__catalogRoots());
+}
+
+function catalogNode(sandbox, key) {
+  return JSON.parse(sandbox.__catalogNode(key));
+}
+
+function catalogFilter(sandbox, term) {
+  return JSON.parse(sandbox.__catalogFilter(String(term == null ? '' : term)));
+}
+
 module.exports = { load, realData, search, ids, marks, axes,
                    optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml,
-                   cardHtmlHl, acatFilter };
+                   cardHtmlHl, acatFilter, cond, catalogRoots, catalogNode, catalogFilter };

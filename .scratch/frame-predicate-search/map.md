@@ -32,13 +32,13 @@ Charted: 2026-10-31(/mattpocock-skills:wayfinder)
 
 - [述詞卡與樹導覽的靜態原型](issues/03-predicate-card-prototype.md):站主核可 D 版(本地分支 `prototype/predicate-card` 的 `web/prototype-predicate-card.html?variant=D`):結果上方用標籤列出全部條件,分 AND、OR 兩區,查詢由標籤組成、條件一變就重查;標籤一律從左邊產生,動作標籤點開右側抽屜(手機底部面板),抽屜不改詞元;句尾標籤 a、點大類只展開、0 張灰字依核可版面定案。給規格 4:引擎要支援 OR、hash 要寫兩區、GLOSSARY 兩處要改。
 
-## Not yet specified
+- [寫規格 4:介面與網址](issues/07-spec-ui-and-hash.md):規格 `.scratch/predicate-ui/spec.md`(ready-for-agent)與 9 張票;七題全裁(OR 進引擎 `q.or`、網址用可讀的欄位對與 `act`/`actOr`/`or`、離散操作留一筆歷史打字不留、效果位 0 張的查詢帶有張數的位置、舊工具刪掉而 `llm_check.py` 改寫、切換前不另發布 data.js、測試接縫四個加真瀏覽器走一輪);implement 尚未開始。
 
-- 拆解頁與檢驗摘要在新模型下的去留規格 2 已定(留;草案退場);網站端怎麼呈現具名查詢、相對/無、只在代價位或條件位命中的具名查詢顯示 0 張,待規格 4。
-- 條件位框架進搜尋後,「觸發事件」這類高頻需求要不要預先放幾個具名查詢進目錄,待規格 4 或目錄上線後(規格 2 把目錄改成述詞字彙,加一列就是了)。
+## Not yet specified
 
 ## Out of scope
 
+- 「觸發事件」這類條件位高頻需求要不要預先放具名查詢進目錄:目錄上線後另議,加一列就是了(規格 4 Out of Scope)。
 - 上午定案的六項(任一組、目的玩家葉、置く・装備來源葉、回指回填、數量欄、條件類別):重做完成後重新檢視;其中回指回填的規則併進規格 1,其餘不在此圖。
 - 約束框架線:不動。
 - 換剖析器(Sudachi/GiNZA)或 LLM 逐卡抽框架凍結成來源檔:另一個量級,不綁在此線(ADR-0018 考慮過的選項)。

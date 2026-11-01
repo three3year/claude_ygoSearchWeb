@@ -66,7 +66,6 @@ const DRIVER = `
   return Query.nextState(a.st, a.states);
 }
 ;function __optAvail(json) { return JSON.stringify(Query.optionalAvailable(JSON.parse(json))); }
-;function __critCount(json) { return Query.count(JSON.parse(json)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
 ;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
@@ -84,10 +83,10 @@ const DRIVER = `
 ;function __cond(fn, json) {
   return JSON.stringify(Cond[fn].apply(null, JSON.parse(json)));
 }
-;function __catalogRoots() { return JSON.stringify(Acat.catalog.roots); }
-;function __catalogNode(key) { return JSON.stringify(Acat.catalog.node(key)); }
+;function __catalogRoots() { return JSON.stringify(Acat.roots); }
+;function __catalogNode(key) { return JSON.stringify(Acat.node(key)); }
 ;function __catalogFilter(term) {
-  var f = Acat.catalog.filter(term);
+  var f = Acat.filter(term);
   return JSON.stringify(f && { visible: Array.from(f.visible).sort(),
                                 open: Array.from(f.open).sort() });
 }
@@ -188,14 +187,6 @@ function nextState(sandbox, st, states) {
 }
 
 /**
- * 生效中的條件數(票09:窄螢幕的側欄摺起來之後,摺疊鈕上寫的就是它)。
- * 與 `optionalAvailable()` 同一個理由:規則是純的,DOM 那一層只是把數字寫上去。
- */
-function critCount(sandbox, q) {
-  return sandbox.__critCount(JSON.stringify(q || {}));
-}
-
-/**
  * 逐軸已選數(票13):`查詢條件 → { 區塊鍵: 點了幾顆 }`。軸摺疊之後標題列寫的
  * 就是它——收起的軸看不見裡面,數字讓條件保持可見。規則是純的,DOM 只照答案寫。
  */
@@ -278,7 +269,7 @@ function cond(sandbox, fn, ...args) {
   return JSON.parse(sandbox.__cond(fn, JSON.stringify(args)));
 }
 
-/** 目錄導覽樹(`Acat.catalog`):根節點鍵清單、單一節點、過濾答案({ visible, open },節點鍵排序過;空字串回 null)。 */
+/** 目錄導覽樹(`Acat`):根節點鍵清單、單一節點、過濾答案({ visible, open },節點鍵排序過;空字串回 null)。 */
 function catalogRoots(sandbox) {
   return JSON.parse(sandbox.__catalogRoots());
 }
@@ -293,6 +284,6 @@ function catalogFilter(sandbox, term) {
 
 module.exports = { load, realData, search, ids, marks, axes,
                    optionalAvailable, nextState,
-                   critCount, axisCounts, treeCounts, expandedAxes,
+                   axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml,
                    cardHtmlHl, cond, catalogRoots, catalogNode, catalogFilter };

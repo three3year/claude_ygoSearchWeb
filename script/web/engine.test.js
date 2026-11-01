@@ -1264,53 +1264,9 @@ test('正規化過的網址認得出是同一個狀態(自寫的 hash 不重跑�
     written);
 });
 
-/* ── 窄螢幕的條件摘要(票09) ───────────────────────────────
-   手機上側欄是**摺起來**的,而摺起來就看不見自己設了什麼——摺疊鈕上因此寫著
-   還有幾條條件在生效。數字算錯不會報錯也不會白屏,只是使用者拿著一批被篩過、
-   卻沒有任何理由的結果,所以這條規則測得到:它是純的,DOM 那一層只是寫上去。
-   版面本身(斷點、摺疊、單欄卡片)不測,走人工驗收(spec 的 Testing Decisions)。 */
-
-const critCount = q => harness.critCount(sandbox, q);
-
-test('條件數:空條件是 0,卡名語言不是一條條件', () => {
-  assert.strictEqual(critCount({}), 0);
-  assert.strictEqual(critCount(EMPTY_Q), 0);
-  // 語言只是「卡名那一格拿哪一種卡名比」,算進去的話清空條件之後鈕面仍寫著 1
-  assert.strictEqual(critCount({ ...EMPTY_Q, nameLang: 'ja' }), 0);
-  assert.strictEqual(critCount({ ...EMPTY_Q, name: '青眼', nameLang: 'ja' }), 1);
-  // 素材行開關同理:它只修飾效果文那一格怎麼比,不是一條會篩掉卡的條件
-  assert.strictEqual(critCount({ ...EMPTY_Q, textMat: 1 }), 0);
-  assert.strictEqual(critCount({ ...EMPTY_Q, text: '融合', textMat: 1 }), 1);
-});
-
-test('條件數算的是軸,不是點亮的按鈕', () => {
-  // 屬性點三顆是一條條件(軸內 OR),寫成 3 會看起來像三道篩子
-  assert.strictEqual(critCount({ ...EMPTY_Q, attr: { dark: 1, light: 1, water: 1 } }), 1);
-  // 排除也是設了條件
-  assert.strictEqual(critCount({ ...EMPTY_Q, attr: { dark: -1 } }), 1);
-  // 一顆都沒點的軸不算(壞掉的網址解出來的空殼同理)
-  assert.strictEqual(critCount({ ...EMPTY_Q, attr: {} }), 0);
-  assert.strictEqual(critCount({ ...EMPTY_Q, name: '青眼', text: '墓地',
-                                 cat: { m: 1 }, race: { dragon: 1 } }), 4);
-});
-
-test('條件數:只給一邊的範圍與攻守 `?` 各自算一條', () => {
-  assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: 2500, max: null } }), 1);
-  assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: null, max: 2500 } }), 1);
-  // 刻度 0 與「攻擊力 0 以上」是真的值,不是「沒設」
-  assert.strictEqual(critCount({ ...EMPTY_Q, sc: { min: 0, max: 0 } }), 1);
-  assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: 0, max: null } }), 1);
-  // 兩邊都空的範圍(壞網址的殘骸)不算
-  assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: null, max: null } }), 0);
-  // `?` 是第三種值、與數值範圍分開的一條
-  assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: 2500, max: null }, atkq: 1 }), 2);
-  assert.strictEqual(critCount({ ...EMPTY_Q, dfq: -1 }), 1);
-});
-
 /* ── 逐軸已選數(票13) ──────────────────────────────────
    參數軸摺疊之後,收起的軸看不見自己設了什麼——標題列因此寫著該軸的已選數。
-   critCount 數的是「幾條條件」(整軸算一條),這裡數的是「這一軸點了幾顆」,
-   兩個數字答的是不同的問題。鍵是**畫面上的區塊**:子類型三段各自一個標題列,
+   這裡數的是「這一軸點了幾顆」。鍵是**畫面上的區塊**:子類型三段各自一個標題列,
    所以共用的 sub 軸物件照大類前綴拆回三份,誰的選擇誰計數。 */
 
 const axisCounts = q => harness.axisCounts(sandbox, q);
@@ -1442,15 +1398,6 @@ test('還原展開:承載的效果類型連動帶出必發/選發', () => {
   assert.deepStrictEqual(expanded({ ...EMPTY_Q, kind: { q: -1 } }), ['kind']);
   // 必發/選發自己有條件當然展開
   assert.deepStrictEqual(expanded({ ...EMPTY_Q, opt: { m: 1 } }), ['optional']);
-});
-
-test('條件數在網址走一趟之後不變(分享的連結在手機上摺著開)', () => {
-  for (const st of STATES) {
-    assert.strictEqual(critCount(parseHash(hashOf(st)).q), critCount(st.q),
-                       JSON.stringify(st.q));
-  }
-  // 加一條條件軸,摺疊鈕自動算得到它——條件數不必跟著 FIELDS 抄第二份
-  assert.strictEqual(critCount(parseHash('attr=dark&lv=4-&sort=atk').q), 2);
 });
 
 /* ── 資料更新時間的顯示格式(footer 票03) ─────────────────── */

@@ -24,7 +24,7 @@
 ### 介面(給票 05、06、07)
 
 - **條件模型 `Cond` 新增**:`drawerGroups()`(常用、進階,不含詞元)、`editor(欄)`(`{kind: 'values', values}`、`{kind: 'region', players, zones}`、`{kind: 'text', candidates}`);`values`、`addValue`、`removeValue`、`toggleValue`、`setEx`(都回新標籤);`editedFrom(標籤)`(改過才回來源名)、`restore`、`note`(滑鼠提示);`soloQuery`(單張張數);`replaceAt(狀態, i, 標籤)`;`toPairs(標籤)`、`fromPairs(欄位對, ex)`。值序與值域檢查只有一關 `orderedValues`,改欄位與讀網址都走它。
-- **`Hash`**:欄位對只動票 05 的 `tagToken`、`tokenTag` 這一對,`act`、`actOr` 共用。`encodeTags` 多一個跨兩區的 `seen`:兩張標籤寫出同一段時只寫第一張。
+- **`Hash`**:欄位對只動票 05 的 `tagToken`、`tokenTag` 這一對,`act`、`actOr` 共用。`encodeTags` 只在同一區內去重:同一區兩張標籤寫出同一段時只寫第一張(2026-11-02 code review 更正:原本 `seen` 跨兩區,違反 Story 28,見票 09 Comments)。
 - **`Strip`**:`init` 多 `onEdit(編號, 新標籤)`、`countOf(標籤)`;抽屜開在第幾張記在 `Strip` 裡,編號是 `Cond.tags` 的編號(AND 再 OR)。刪除與換區前先關抽屜,編號移動時不會開到別張。`closeDrawer()` 給主流程在網址還原時關抽屜。抽屜 DOM 放在 `strip.js`(規格「條件列:標籤與抽屜的 DOM」)、容器是 `index.html` 的 `#condDrawer`。手機的底部面板(票 06)只差 CSS 與 ⇄。
 
 ### 數字
@@ -76,7 +76,7 @@
 - **上一頁後的來源**:歷史只存網址,所以上一頁等於重新載入,改過的標籤沒有改自與還原。沒另外留一份。
 - **區域項值序**:先照值域的區域順序,同區域不看玩家在前,再照玩家順序。規格的例子 `自分.墓地~除外` 只有這樣排得出來。
 - **中心詞值序**:沒有值域,照字元碼排序。
-- **兩張標籤改到一模一樣**(同區或跨區):兩張都留在條件列(中途改到一樣不該吞掉一張),網址只寫第一張,重開變一張;不去重 `canon` 就不冪等,`hashchange` 會把條件重設一次。
+- **兩張標籤改到一模一樣**:兩張都留在條件列(中途改到一樣不該吞掉一張)。同一區:語意不變,網址只寫第一張,重開變一張;不去重 `canon` 就不冪等,`hashchange` 會把條件重設一次。跨區:兩區都寫,重開兩張都在(2026-11-02 code review 更正:原本跨區也只寫第一張,A 且(A 或 B)重開變成 A 且 B,違反 Story 28,見票 09 Comments)。
 - **標籤裡的字是 `span`,不是原型的 `button`**:票 05 的標籤可拖曳,Firefox 從 `button` 上開始拖不動。代價是鍵盤點不到字;標籤本身也還不能用鍵盤開。
 - **抽屜開著時點左側條件標籤**:算抽屜外,抽屜關。拖曳換區也關。
 - **網址 `位置` 全是值域外的值**:等於沒寫,是效果;不是三個位置都看。

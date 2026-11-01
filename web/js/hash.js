@@ -99,21 +99,17 @@ function tokenTag(token) {
   return path ? Cond.tagAt(path, ex) : null;
 }
 
-/* 兩區共用:一區的標籤 ⇄ 參數值。兩張標籤可以改到一模一樣,不論同區或跨區,網址只寫第一張
-   (seen 跨兩區);parse 也只留第一張,否則 canon 不冪等。 */
-function encodeTags(tags, seen) {
-  const tokens = tags.map(tagToken).filter(token => {
-    if (!token || seen.has(token)) return false;
-    seen.add(token);
-    return true;
-  });
-  return tokens.join(',');
+/* 兩區共用:一區的標籤 ⇄ 參數值。同一區兩張改到一模一樣,語意不變,網址只寫第一張;parse 也只留
+   第一張,否則 canon 不冪等。不跨區:兩區都有同一張是另一個查詢(Story 28;2026-11-02 code review
+   裁定),所以 parse 不走目錄點列的 Cond.add。 */
+function encodeTags(tags) {
+  return Array.from(new Set(tags.map(tagToken).filter(Boolean))).join(',');
 }
 
 function decodeTags(raw, state, zone) {
   return raw.split(',').reduce((st, token) => {
     const tag = tokenTag(token);
-    return tag ? Cond.add(st, tag, zone) : st;
+    return tag ? Cond.addInZone(st, tag, zone) : st;
   }, state);
 }
 
@@ -135,9 +131,8 @@ function stringify(state) {
     if (codes.length) parts.push(ax.key + '=' + codes.join(','));
   });
   if (st.cond) {
-    const seen = new Set();
-    const and = encodeTags(Cond.tagsIn(st.cond, 'and'), seen);
-    const or = encodeTags(Cond.tagsIn(st.cond, 'or'), seen);
+    const and = encodeTags(Cond.tagsIn(st.cond, 'and'));
+    const or = encodeTags(Cond.tagsIn(st.cond, 'or'));
     const orSide = Cond.syncSide(st.cond, q).orSide;
     if (and) parts.push(ACT + '=' + and);
     if (or) parts.push(ACT_OR + '=' + or);

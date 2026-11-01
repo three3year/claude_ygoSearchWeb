@@ -30,7 +30,6 @@ function replaceEntry() {
   if (!sameAsAddress(hash)) location.replace('#' + hash);
 }
 
-/* 沒有條件時不跑引擎:結果區顯示提示字,不是列出全部卡。 */
 function search(q) {
   return { ...Engine.runQuery(DB, q), labels: Cond.hitLabels(q) };
 }
@@ -42,6 +41,7 @@ function show() {
   cond = Cond.syncSide(cond, side);
   Strip.render(cond, sideTags);
   Query.markUsed(Cond.usedPaths(cond));
+  /* 沒有條件時不跑引擎:結果區顯示提示字,不是列出全部卡。 */
   const result = n ? search(Cond.toQuery(cond, side)) : null;
   Query.summarize(n, result && result.cards.length);
   View.render(result);

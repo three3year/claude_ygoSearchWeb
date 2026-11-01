@@ -428,7 +428,7 @@ test('兩區:replaceAt 的編號是 AND 再 OR,不動另一區,也留著 orSide'
   const next = cond('replaceAt', withSide, 2, NON_SELF);
   assert.deepStrictEqual(cond('tagsIn', next, 'and'), [tagAt('対象とする')]);
   assert.deepStrictEqual(cond('tagsIn', next, 'or'), [tagAt(DESTROY), NON_SELF]);
-  assert.deepStrictEqual(next.orSide, ['atk']);
+  assert.strictEqual(cond('sideZone', next, 'atk'), 'or');
 });
 
 test('兩區:OR 區改過的標籤與排除標籤寫進 actOr,往返不變', () => {
@@ -451,12 +451,22 @@ test('兩區:排除、改過的標籤在 OR 區組成引擎片段', () => {
   assert.doesNotThrow(() => harness.search(box, q));
 });
 
-test('兩區:AND 與 OR 各一張改到一模一樣,網址只寫 AND 那張,canon 不變', () => {
+test('兩區:AND 與 OR 各一張改到一模一樣,兩區都寫,往返不變(Story 28)', () => {
   const st = cond('replaceAt', cond('add', inOr(NON_SELF), tagAt(DESTROY)), 0, NON_SELF);
   assert.strictEqual(cond('tags', st).length, 2);
   const hash = harness.hash(box, { cond: st });
-  assert.ok(hash.startsWith('act=') && !hash.includes('actOr'), hash);
+  assert.ok(hash.startsWith('act=') && hash.includes('&actOr='), hash);
   assert.strictEqual(harness.canonHash(box, hash), hash);
+  assert.strictEqual(cond('tags', harness.parseHash(box, hash).cond).length, 2);
+});
+
+test('兩區:同一區兩張改到一模一樣,網址只寫一張,canon 不變', () => {
+  const st = cond('replaceAt', inOr(NON_SELF, tagAt(DESTROY)), 1, NON_SELF);
+  assert.strictEqual(cond('tags', st).length, 2);
+  const hash = harness.hash(box, { cond: st });
+  assert.ok(hash.startsWith('actOr=') && !hash.includes(','), hash);
+  assert.strictEqual(harness.canonHash(box, hash), hash);
+  assert.strictEqual(cond('tags', harness.parseHash(box, hash).cond).length, 1);
 });
 
 /* ── 全語料 ── */
@@ -470,7 +480,7 @@ test('全語料:237 個具名查詢改到代價位走欄位對往返,張數等�
   const rcond = (fn, ...args) => harness.cond(real, fn, ...args);
   const wrong = [];
   for (const row of rows) {
-    const tag = rcond('tagOf', row, false);
+    const tag = rcond('tagAt', row.path.join('›'), false);
     tag.pred.位置 = ['代價'];
     const hash = harness.hash(real, { cond: rcond('add', rcond('empty'), tag) });
     const st = harness.parseHash(real, hash);

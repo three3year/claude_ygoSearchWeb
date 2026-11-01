@@ -156,10 +156,10 @@ class TestCorpusSample(unittest.TestCase):
         first = llm_check.sample_categories(20261102)
         self.assertEqual(first, llm_check.sample_categories(20261102))
         strata = Counter(p["stratum"] for p in first)
-        self.assertEqual(strata[llm_check.STRATUM_UNPLACED], llm_check.UNPLACED_QUOTA)
-        self.assertLessEqual(max(n for name, n in strata.items() if name != llm_check.STRATUM_UNPLACED),
+        self.assertEqual(strata[llm_check.STRATUM_NO_HIT], llm_check.NO_HIT_QUOTA)
+        self.assertLessEqual(max(n for name, n in strata.items() if name != llm_check.STRATUM_NO_HIT),
                              llm_check.PER_QUERY)
-        self.assertLessEqual(set(strata) - {llm_check.STRATUM_UNPLACED}, set(catalog.load().by_name))
+        self.assertLessEqual(set(strata) - {llm_check.STRATUM_NO_HIT}, set(catalog.load().by_name))
         self.assertEqual(len({llm_check.frame_key(p) for p in first}), len(first))
 
     def test_category_batches_and_tree_read_the_catalog(self):
@@ -172,7 +172,7 @@ class TestCorpusSample(unittest.TestCase):
             text = "".join(self.read(root, "batch-%d.md" % k) for k in range(8))
             self.assertEqual(text.count("### 樣本 "), len(picked))
             self.assertIn("命中 → ", text)
-            self.assertIn("未命中", text)
+            self.assertIn("沒命中", text)
 
     def test_category_report_shows_the_current_hits(self):
         picked = llm_check.sample_categories(20261102)

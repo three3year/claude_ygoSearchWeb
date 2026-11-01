@@ -147,3 +147,37 @@ data.js 最終 **8,730,524 / gzip 2,092,991**(LF 版,python gzip 9)。與票 07 
 
 - 規格行為無偏離,所以沒有要指到 `llm-check/summary.md` 的偏離項。
 - 「User Stories 1〜32 每條互動一次」:26、27 是手機限定,桌面只驗了看結果鈕不顯示;12、23 是看結構,不是操作。
+
+### code review 修正(2026-11-02,分支 wt/review-fixes)
+
+**實作錯誤:跨區去重改了查詢語意(Story 28)。** `{and:[破壊], or:[破壊, アップ:レベル]}` 查得 1,618 張,網址走一趟 OR 區的 破壊 被丟,剩 14 張;直接開 `act=A&actOr=A,Z` 同樣錯。站主裁定:網址的去重只在同一區內。`stringify` 拿掉跨區的 `seen`;`parse` 改走新的 `Cond.addInZone`,目錄點列的 `Cond.add` 規則不變。先紅 5 條後綠。全語料 237 個具名查詢各放進 AND 與 OR(OR 多一張下一列)往返,標籤、兩區、張數、canon 全部相同。
+
+真瀏覽器(Playwright isolated context,桌面寬):開 `actOr=破壊,アップ:レベル` → 抽屜把 破壊 改成 動到 非此卡(1,281 張)→ 目錄點 破壊 進 AND(1,185 張)→ 抽屜還原 OR 區那張 → `act=破壊&actOr=破壊,數值›レベル›アップ:レベル`、1,618 張;新分頁開同一網址標籤、兩區、1,618 張都相同,canon 不變。手寫網址 1,618 張。破壊 在 OR 區時目錄再點不多一張。⇄、拖曳(動作與左側條件)、點文字標籤跳左邊、× 清效果文連素材行勾選都照舊,console 無錯。
+
+**硬違規,都修了:**
+- `SEP`、`DEFAULT_POSITION` 只留在 `Cond`,`Acat` 讀它,`acat.js` 不再寫死 效果。
+- `acat.js` 檔頭 docstring 補回。
+- `strip.js`、`cond.js` 的封閉表補來源與日期。
+- `llm_check.py` 同一概念統一成「沒命中」(全庫 `catalog_hits`、`report`、`export_frames` 都用這個字):批次檔的 歸組、報告的 現、樣本層 `(沒命中)`,常數改名 `STRATUM_NO_HIT`、`NO_HIT_QUOTA`。樣本層的值存在 `sample.json`、回讀時要比對,所以 `category-round1`、`category-round2` 的 `sample.json` 一起改(只換這個值);舊的 `batch-*.md`、`report.md` 是當時的紀錄,沒重生,裡面仍是舊字。沒有程式解析批次檔的這幾個字,批次檔格式不變。
+
+**判斷題與 smell,修了的:**
+- `cond.js` 抄 `predicate.py`、`catalog.py` 的表:`conditions.test.js` 跑 python 讀來源,從短句與抽屜編輯器比(區域、玩家、區域欄、中心詞欄、預設極性);五張表各改壞一次都會紅。取代原本手抄 JA 表的那條。
+- `field-pairs.test.js` 不再直讀 `orSide`。
+- `main.js` 的註解移到 `show()`。
+- `query.js` 選擇器收成 `rangeEl`(其實三處,`writeRange` 也是),那組呼叫收成 `afterClear`。
+- `cond.js` 純模型不再帶 DOM id:`target.text` 只說是哪一項,對應表 `TEXT_CONTROLS` 在側欄。
+- `strip.js`:`refOf`、`moveRef` 收掉拖曳與 ⇄ 的兩個重複分支與 `k`/`i` 前綴;`shown[0]` 拆成 `shownState`、`shownSide`,加 `openTag()`。
+- `Query.count`、harness 的 `critCount`、engine.test 只測它的 4 條測試刪除(`cond` 算的標籤數取代它,見票 06);`tagOf` 不再匯出,測試改走 `tagAt`。node 測試數因此 346 → 351 仍是淨增。
+- `Acat` 攤平成 `Acat.roots`、`Acat.node`、`Acat.filter`。
+
+**沒修的:**
+- `cond.js` 的 `hitLabels` 與 `engine.js` 的序號規則:合一要讓引擎回傳述詞清單、`hitLabels` 改簽名,動到引擎結果形狀與多個測試檔,不算小。現狀兩邊各寫一次,`filter_tags`、`clause_tail` 的例子守它們對得上。
+- `hit` 三元組:`[述詞序號, 框所在句, 框序號]` 是 predicate-index 規格定的結果形狀(Story 22),`predicate.test.js` 39 處斷言它,改物件會擴散。
+- `strip.js` 點擊的側欄標籤與動作標籤分支(原 `:268`):收掉另外兩個後只剩這一處,不算重複。
+- `query.js` 的 `write`、`clear` 也有 `syncSubs`、`syncOptional`,中間夾著別的步驟,順序有意義,沒收進 `afterClear`。
+
+**沒拿掉 `.axis-clear`**:原型 D 版有,照舊。
+
+**順手看到、不在清單、沒動**:`hash.js` 的 `stringify` 與 `filter_tags.test.js` 幾條仍直讀 `.orSide`,要收得多一個讀取函式,留給之後。
+
+**測試**:`node --test` 全部 `script/web/*.test.js` 351 條全過;`script/web` unittest 167 條全過;`.scratch/effect-tokenize` 全套含 test_lint 895 條全過、沒有略過(建置輸入用 `worktree_bootstrap.py --build`,另跑 `catalog_hits.py`)。`web/data.js` 沒動、不需要重生。

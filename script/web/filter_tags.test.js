@@ -253,6 +253,11 @@ const DOM_SORT = { key: 'dom', dir: '' };
 const hashOf = (st, extra) => harness.hash(box, { q: { ...EMPTY_Q, ...extra }, cond: st, sort: DOM_SORT });
 const parsed = str => harness.parseHash(box, str);
 const enc = encodeURIComponent;
+/* 兩區都有同一張的狀態:目錄點列(Cond.add)做不出來,只有換區、改標籤、開網址會走到。 */
+const inZones = (fn, and, or) => {
+  const put = zone => (st, tag) => fn('addInZone', st, tag, zone);
+  return or.reduce(put('or'), and.reduce(put('and'), fn('empty')));
+};
 
 test('網址:OR 區動作標籤寫 actOr,路徑與排除同 act', () => {
   const st = cond('add', cond('add', cond('add', cond('empty'), tagAt('対象とする')),
@@ -294,14 +299,41 @@ test('網址:or 的順序與寫在哪一段都不影響;canon 冪等', () => {
   assert.deepStrictEqual(parsed(raw).cond, parsed(once).cond);
 });
 
-test('網址:同一張標籤同時寫在 act 與 actOr,照出現順序收成一張;canon 冪等', () => {
+test('網址:同一張標籤同時寫在 act 與 actOr,兩區都留(Story 28);canon 冪等', () => {
   const raw = `actOr=${enc('破壊')}&act=${enc('破壊')}`;
   const back = parsed(raw);
+  assert.deepStrictEqual(cond('tagsIn', back.cond, 'and').map(t => t.origin), ['破壊']);
   assert.deepStrictEqual(cond('tagsIn', back.cond, 'or').map(t => t.origin), ['破壊']);
-  assert.deepStrictEqual(cond('tagsIn', back.cond, 'and'), []);
   const once = harness.canonHash(box, raw);
-  assert.strictEqual(once, `actOr=${enc('破壊')}`);
+  assert.strictEqual(once, `act=${enc('破壊')}&actOr=${enc('破壊')}`);
   assert.strictEqual(harness.canonHash(box, once), once);
+});
+
+test('網址:AND 有 A、OR 有 A 與 B,往返後標籤與兩區不變(Story 28)', () => {
+  const a = tagAt('破壊'), b = tagAt('ドロー');
+  const st = inZones(cond, [a], [a, b]);
+  const h = hashOf(st);
+  assert.strictEqual(h, `act=${enc('破壊')}&actOr=${enc('破壊')},${enc('ドロー')}`);
+  assert.deepStrictEqual(parsed(h).cond, st);
+  assert.deepStrictEqual(cond('toQuery', parsed(h).cond, {}), cond('toQuery', st, {}));
+});
+
+test('網址:同一區內重複收成一張,包含與排除是兩張', () => {
+  const raw = `act=${enc('破壊')},${enc('破壊')},-${enc('破壊')}&actOr=${enc('ドロー')},${enc('ドロー')}`;
+  const once = harness.canonHash(box, raw);
+  assert.strictEqual(once, `act=${enc('破壊')},-${enc('破壊')}&actOr=${enc('ドロー')}`);
+  assert.strictEqual(harness.canonHash(box, once), once);
+  const a = tagAt('破壊');
+  const twice = cond('moveAt', inZones(cond, [a], [a]), 1, 'and');
+  assert.strictEqual(cond('tags', twice).length, 2);
+  assert.strictEqual(hashOf(twice), `act=${enc('破壊')}`);
+});
+
+test('目錄點列的規則不變:標籤已在另一區,再點不多一張,網址的規則不影響它', () => {
+  const st = cond('add', cond('empty'), tagAt('破壊'), 'or');
+  assert.deepStrictEqual(cond('add', st, tagAt('破壊'), 'and'), st);
+  assert.deepStrictEqual(cond('add', cond('add', cond('empty'), tagAt('破壊')), tagAt('破壊'), 'or'),
+                         cond('add', cond('empty'), tagAt('破壊')));
 });
 
 test('網址:actOr 的未知路徑、壞百分比安靜忽略,全部壞掉就沒有 cond', () => {
@@ -361,4 +393,35 @@ test('全語料:ATK 2000 以上或光屬性(Story 19),大類在 AND', t => {
   assert.ok(inter.length > 0);
   assert.strictEqual(both.length, one.length + other.length - inter.length);
   assert.deepStrictEqual(sorted(both), sorted(Array.from(new Set(one.concat(other)))));
+});
+
+test('全語料:AND 有 破壊、OR 有 破壊 與 アップ:レベル,重開網址張數不變(Story 28,審查重現 1618 張)', t => {
+  if (!data) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
+  const rcond = (fn, ...args) => harness.cond(real, fn, ...args);
+  const rows = data.vocab.catalog.filter(row => row.predicate);
+  const pathOf = name => rows.find(row => row.name === name).path.join('›');
+  const a = rcond('tagAt', pathOf('破壊'), false), b = rcond('tagAt', pathOf('アップ:レベル'), false);
+  const st = inZones(rcond, [a], [a, b]);
+  assert.strictEqual(harness.ids(real, rcond('toQuery', st, {})).length, 1618);
+  const h = harness.hash(real, { cond: st });
+  assert.strictEqual(fromUrl(h).length, 1618);
+  assert.strictEqual(fromUrl(`act=${enc(pathOf('破壊'))}&actOr=${enc(pathOf('破壊'))},${enc(pathOf('アップ:レベル'))}`).length, 1618);
+});
+
+test('全語料:每個具名查詢同時在 AND 與 OR 區(OR 區多一張下一列),往返後標籤、兩區、張數相同', t => {
+  if (!data) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
+  const rcond = (fn, ...args) => harness.cond(real, fn, ...args);
+  const rows = data.vocab.catalog.filter(row => row.predicate);
+  const wrong = [];
+  rows.forEach((row, i) => {
+    const a = rcond('tagAt', row.path.join('›'), false);
+    const b = rcond('tagAt', rows[(i + 1) % rows.length].path.join('›'), false);
+    const st = inZones(rcond, [a], [a, b]);
+    const h = harness.hash(real, { cond: st });
+    const back = harness.parseHash(real, h).cond;
+    const same = JSON.stringify(back) === JSON.stringify(st) && harness.canonHash(real, h) === h &&
+      fromUrl(h).length === harness.ids(real, rcond('toQuery', st, {})).length;
+    if (!same) wrong.push(row.name);
+  });
+  assert.deepStrictEqual(wrong, []);
 });

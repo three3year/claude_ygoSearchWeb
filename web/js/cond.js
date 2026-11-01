@@ -13,6 +13,7 @@
 const Cond = (() => {
 const { VOCAB } = Util;
 
+/* 目錄路徑的接字:葉路徑、網址 act 的路徑都用它(規格 4 網址段,2026-11-02);Acat 讀這裡。 */
 const SEP = '›';
 
 /* 16 欄的分組與順序(規格 4 條件模型段,2026-11-02;原型 D 版 COMMON、ADVANCED)。
@@ -26,18 +27,23 @@ const FIELD_ORDER = FIELD_GROUPS.常用.concat(FIELD_GROUPS.進階);
 /* 位置預設:效果;效果位 0 張時依序取第一個有張數的(規格 4 裁定,2026-11-02)。 */
 const DEFAULT_POSITION = '效果';
 const POSITION_FALLBACK = ['代價', '條件'];
+/* 極性的預設,短句不寫它;抄 catalog.py 的 DEFAULT_POLARITY(2026-11-01 規格 2「詞元節點極性」(a)),
+   conditions.test.js 守和來源一致。排序過,比對時不看順序。 */
 const DEFAULT_POLARITY = ['可能', '肯定'];
 
+/* 區域三欄,抄 predicate.py 的 REGION_FIELDS(2026-11-01 規格 3);conditions.test.js 守和來源一致。 */
 const REGION_FIELDS = ['來源', '目的', '所在'];
 
 /* 抽屜與網址的值都讀匯出檔的值域(規格 4 條件模型段);中心詞是尾綴比對,自由輸入,
-   候選只列最常見的(規格 4,2026-11-02)。 */
+   候選只列最常見的(規格 4,2026-11-02)。HEAD_FIELDS 抄 predicate.py(2026-11-01 規格 3),
+   conditions.test.js 守和來源一致。 */
 const FRAME = VOCAB.frame || {};
 const DOMAINS = FRAME.domains || {};
 const HEAD_FIELDS = ['受事者中心詞', '目的中心詞'];
 const HEAD_CANDIDATES = 300;
 
-/* 短句的連接字與區域、玩家的日文(原型 D 版,站主核可 2026-11-01)。測試守區域表涵蓋值域。 */
+/* 短句的連接字與區域、玩家的日文(原型 D 版,站主核可 2026-11-01)。區域、玩家抄 catalog.py 的
+   ZONE_LABEL、PLAYER_LABEL,conditions.test.js 守和來源一致;相對、無沒有命名規則,不在表上。 */
 const GLUE = { 極性: '極性', 來源: '從', 目的: '到', 所在: '在', 動作對象: '動到', 施事者: '由',
                受事者中心詞: '對象是', 目的中心詞: '目的是', 數量類: '數量', 方式類: '方式',
                態: '態', 否定形: '否定形', 中心詞類: '對象類', 修飾語類: '修飾' };
@@ -101,13 +107,19 @@ const tagsIn = (state, zone) => state[zone];
 
 const isEmpty = state => !tags(state).length && !state.orSide.length;
 
-/* 一模一樣的標籤(含包含或排除)再加一次沒有意義,不另外生一張,在另一區也一樣;同一列的包含與
-   排除是兩張。新標籤預設進 AND(規格 4 條件列段)。 */
+const sameTag = (a, b) => a.ex === b.ex && predKey(a.pred, true) === predKey(b.pred, true);
+
+/* 網址的規則:只在同一區內收成一張。A 且(A 或 B)與 A 不同語意,跨區收掉就改了查詢(Story 28;
+   2026-11-02 code review 裁定)。 */
+function addInZone(state, tag, zone) {
+  if (state[zone].some(t => sameTag(t, tag))) return state;
+  return Object.assign({}, state, { [zone]: state[zone].concat([tag]) });
+}
+
+/* 目錄點列的規則:一模一樣的標籤(含包含或排除)再加一次沒有意義,不另外生一張,在另一區也一樣;
+   同一列的包含與排除是兩張。新標籤預設進 AND(規格 4 條件列段)。 */
 function add(state, tag, zone) {
-  const same = t => t.ex === tag.ex && predKey(t.pred, true) === predKey(tag.pred, true);
-  if (tags(state).some(same)) return state;
-  const into = zone || 'and';
-  return Object.assign({}, state, { [into]: state[into].concat([tag]) });
+  return tags(state).some(t => sameTag(t, tag)) ? state : addInZone(state, tag, zone || 'and');
 }
 
 function removeAt(state, i) {
@@ -163,16 +175,16 @@ function textTags(q) {
   const lang = Query.LANGS.find(l => l.v === q.nameLang);
   if (q.code) {
     out.push({ key: 'code', label: '密碼', val: q.code, part: { code: q.code },
-               target: { inputs: ['fId'] } });
+               target: { text: 'code' } });
   }
   if (q.name) {
     const suffix = lang && lang !== Query.LANGS[0] ? `(${lang.label})` : '';
     out.push({ key: 'name', label: '卡名' + suffix, val: q.name, part: { name: q.name },
-               target: { inputs: ['fName'] } });
+               target: { text: 'name' } });
   }
   if (q.text) {
     out.push({ key: 'text', label: '效果文', val: q.text + (q.textMat ? '(含素材行)' : ''),
-               part: { text: q.text }, target: { inputs: ['fText'], checks: ['fTextMat'] } });
+               part: { text: q.text }, target: { text: 'text' } });
   }
   return out;
 }
@@ -447,8 +459,8 @@ function hitLabels(q) {
 }
 
   return Object.freeze({
-    defaultPosition, tagOf, tagAt, named, leafPath,
-    empty, tags, tagsIn, isEmpty, add, removeAt, replaceAt, moveAt, usedPaths,
+    SEP, DEFAULT_POSITION, defaultPosition, tagAt, named, leafPath,
+    empty, tags, tagsIn, isEmpty, add, addInZone, removeAt, replaceAt, moveAt, usedPaths,
     sideTags, sideZone, moveSide, syncSide, toQuery,
     sentenceParts, sentence, hitLabels, positionPrefix, note, soloQuery,
     toPairs, fromPairs,

@@ -11,9 +11,10 @@
 const Strip = (() => {
 const { $, esc } = Util;
 
-/* 提示字(原型 D 版)。 */
+/* 兩區的提示字與標示(原型 D 版,站主核可 2026-11-01)。 */
 const HINTS = { and: '全部都要成立', or: '任一成立即可:把標籤移到這裡' };
 const ZONE_LABEL = { and: 'AND', or: 'OR' };
+/* ⇄ 換到的區:只有 AND、OR 兩區(規格 4 條件列段、Story 23,2026-11-02)。 */
 const OTHER_ZONE = { and: 'or', or: 'and' };
 const SWAP_HTML = '<button type="button" class="strip-swap" title="換到另一區">⇄</button>';
 /* 自訂型別:拖到輸入框不會貼上文字,dragover 也不必另外記「正在拖標籤」。 */
@@ -21,7 +22,8 @@ const DRAG_TYPE = 'application/x-cond-tag';
 const CLOSED = -1;
 
 let handlers = null;
-let shown = null;            // 上次畫的 [狀態, 左側條件標籤]:抽屜的事件要知道改的是哪張標籤
+let shownState = null;       // 上次畫的狀態:抽屜的事件要知道改的是哪張標籤
+let shownSide = null;        // 上次畫的左側條件標籤
 let openAt = CLOSED;
 let focusField = null;       // 開抽屜時要捲到的欄,捲完就清
 
@@ -120,7 +122,8 @@ function renderDrawer(tag) {
 
 /* 同一區裡左側條件在前、動作標籤在後(原型 D 版)。 */
 function render(state, sideTags) {
-  shown = [state, sideTags];
+  shownState = state;
+  shownSide = sideTags;
   if (openAt >= Cond.tags(state).length) openAt = CLOSED;
   const andCount = Cond.tagsIn(state, 'and').length;
   const zone = (name, first) => sideTags.filter(t => Cond.sideZone(state, t.key) === name)
@@ -136,13 +139,13 @@ function render(state, sideTags) {
 function closeDrawer() {
   if (openAt === CLOSED) return;
   openAt = CLOSED;
-  render(shown[0], shown[1]);
+  render(shownState, shownSide);
 }
 
 function openDrawer(i, field) {
   openAt = i;
   focusField = field;
-  render(shown[0], shown[1]);
+  render(shownState, shownSide);
 }
 
 /* 刪除與換區都會讓編號移動,抽屜先關,不會開到別張去。 */
@@ -150,6 +153,17 @@ function removeAt(i) {
   openAt = CLOSED;
   handlers.onRemove(i);
 }
+
+/* 一張標籤怎麼指:左側條件標籤走鍵,動作標籤走編號。拖曳與 ⇄ 共用。 */
+const refOf = el => (el.dataset.key ? { key: el.dataset.key } : { i: +el.dataset.i });
+
+function moveRef(ref, zone) {
+  openAt = CLOSED;
+  if (ref.key) handlers.onSideMove(ref.key, zone);
+  else handlers.onMove(ref.i, zone);
+}
+
+const openTag = () => Cond.tags(shownState)[openAt];
 
 /* 中心詞框還沒按 Enter 就按別的鈕:失焦會先把字收進標籤、重畫抽屜與條件列,按到的鈕被換掉,那一下
    點擊落空。所以框裡有字時按下不搶焦點,點擊才收字。下拉選單攔不了(會打不開),仍要再點一次。 */
@@ -178,9 +192,9 @@ function onDrawerClick(e) {
   const box = el.closest('[data-field]');
   const field = box && box.dataset.field;
   /* × 的編號是點下去時畫面上的清單;字收進來後清單可能重排,所以先取出那個值。 */
-  const dropped = el.dataset.act === 'drop' ? Cond.values(Cond.tags(shown[0])[openAt], field)[+el.dataset.i] : null;
+  const dropped = el.dataset.act === 'drop' ? Cond.values(openTag(), field)[+el.dataset.i] : null;
   commitTyped();
-  const tag = Cond.tags(shown[0])[openAt];
+  const tag = openTag();
   const edit = next => handlers.onEdit(openAt, next);
   switch (el.dataset.act) {
     case 'close': closeDrawer(); break;
@@ -196,7 +210,7 @@ function onDrawerChange(e) {
   const el = e.target;
   const value = el.value.trim();
   if (!value || !el.dataset.act) return;
-  const tag = Cond.tags(shown[0])[openAt];
+  const tag = openTag();
   const box = el.closest('[data-field]');
   const item = el.dataset.act === 'add-region'
     ? [box.querySelector('[data-role="player"]').value || null, value] : value;
@@ -218,13 +232,13 @@ function clearOver(except) {
   });
 }
 
-function initDrag({ onMove, onSideMove }) {
+function initDrag() {
   const strip = $('condStrip');
   strip.addEventListener('dragstart', e => {
     const tag = e.target.closest('.strip-tag');
     if (!tag) return;
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData(DRAG_TYPE, tag.dataset.key ? 'k' + tag.dataset.key : 'i' + tag.dataset.i);
+    e.dataTransfer.setData(DRAG_TYPE, JSON.stringify(refOf(tag)));
   });
   strip.addEventListener('dragover', e => {
     const zone = e.target.closest('.strip-zone');
@@ -243,25 +257,20 @@ function initDrag({ onMove, onSideMove }) {
     if (!zone || !ref) return;
     e.preventDefault();
     clearOver(null);
-    openAt = CLOSED;
-    if (ref.charAt(0) === 'k') onSideMove(ref.slice(1), zone.dataset.zone);
-    else onMove(+ref.slice(1), zone.dataset.zone);
+    moveRef(JSON.parse(ref), zone.dataset.zone);
   });
 }
 
 function init(events) {
   handlers = events;
-  const { onMove, onSideRemove, onSideGo, onSideMove, onClear } = events;
+  const { onSideRemove, onSideGo, onClear } = events;
   $('condStrip').addEventListener('click', e => {
     commitTyped();
     if (e.target.closest('.strip-clear')) { onClear(); return; }
     const tag = e.target.closest('.strip-tag');
     if (!tag) return;
     if (e.target.closest('.strip-swap')) {
-      const zone = OTHER_ZONE[tag.closest('.strip-zone').dataset.zone];
-      openAt = CLOSED;
-      if (tag.dataset.key) onSideMove(tag.dataset.key, zone);
-      else onMove(+tag.dataset.i, zone);
+      moveRef(refOf(tag), OTHER_ZONE[tag.closest('.strip-zone').dataset.zone]);
       return;
     }
     const x = e.target.closest('.strip-x');
@@ -276,7 +285,7 @@ function init(events) {
   $('condDrawer').addEventListener('change', onDrawerChange);
   document.addEventListener('mousedown', holdFocus);
   document.addEventListener('click', onDocumentClick);
-  initDrag({ onMove, onSideMove });
+  initDrag();
 }
 
   return Object.freeze({ init, render, closeDrawer });

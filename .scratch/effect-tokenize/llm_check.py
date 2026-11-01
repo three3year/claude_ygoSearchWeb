@@ -209,8 +209,8 @@ MATERIAL_LEMMA = re.compile("(%s)素材[にと]する" % "|".join(action_lemmas.
 # 動作類別(action-categories 票 07;規格 4 票 08 改讀目錄):依具名查詢分層抽框架——每個具名查詢 5 個(不足全取)、
 # 沒命中的另抽 50 個,切 8 批;錯誤三類,另記成因(規則或目錄/框架抽取的錯連帶收錯)
 PER_QUERY = 5
-UNPLACED_QUOTA = 50
-STRATUM_UNPLACED = "(未歸類)"
+NO_HIT_QUOTA = 50
+STRATUM_NO_HIT = "(沒命中)"
 BATCHES_CATEGORY = 8
 ERROR_TYPES_CATEGORY = ("誤收", "漏收", "述詞語意")
 CATEGORY_CAUSES = ("規則/目錄", "框架抽取")
@@ -898,8 +898,8 @@ def frame_key(row):
 
 def sample_categories(seed):
     """依具名查詢分層抽框架:依目錄序每個具名查詢從命中它、還沒被抽過的框架抽 PER_QUERY 個(不足全取),
-    再從沒命中任何具名查詢的框架抽 UNPLACED_QUOTA 個;同一種子重抽相同。每筆記樣本號、框架鍵與抽自的具名查詢
-    (沒命中記 STRATUM_UNPLACED)。"""
+    再從沒命中任何具名查詢的框架抽 NO_HIT_QUOTA 個;同一種子重抽相同。每筆記樣本號、框架鍵與抽自的具名查詢
+    (沒命中記 STRATUM_NO_HIT)。"""
     cat = catalog.load()
     rows = [row for row, _f in hit_frames().values()]
     rng = random.Random(seed)
@@ -913,13 +913,13 @@ def sample_categories(seed):
 
     for q in cat.queries:
         take([i for i, row in enumerate(rows) if q.name in row["queries"] and i not in taken], PER_QUERY, q.name)
-    take([i for i, row in enumerate(rows) if not row["queries"]], UNPLACED_QUOTA, STRATUM_UNPLACED)
+    take([i for i, row in enumerate(rows) if not row["queries"]], NO_HIT_QUOTA, STRATUM_NO_HIT)
     for n, p in enumerate(picked, 1):
         p["id"] = "c%04d" % n
     print("具名查詢 %d(有樣本 %d)、樣本 %d(命中 %d、沒命中 %d)" % (
-        len(cat.queries), len({p["stratum"] for p in picked} - {STRATUM_UNPLACED}), len(picked),
-        sum(p["stratum"] != STRATUM_UNPLACED for p in picked),
-        sum(p["stratum"] == STRATUM_UNPLACED for p in picked)))
+        len(cat.queries), len({p["stratum"] for p in picked} - {STRATUM_NO_HIT}), len(picked),
+        sum(p["stratum"] != STRATUM_NO_HIT for p in picked),
+        sum(p["stratum"] == STRATUM_NO_HIT for p in picked)))
     return picked
 
 
@@ -944,7 +944,7 @@ def sample_block(p, row, f, s, card, cat):
     if row["queries"]:
         placed = "命中 → %s(大類 %s)" % ("、".join(row["queries"]), cat.by_name[row["queries"][0]].major)
     else:
-        placed = "未命中"
+        placed = "沒命中"
     return ["### 樣本 %s(抽自 %s)" % (p["id"], p["stratum"]),
             "卡 %d %s(%s)· 句 %s · 框架 %d" % (
                 p["card"], card["name_ja"], card["name_zh"], sentence_label(s),
@@ -1021,7 +1021,7 @@ def report_categories(round_dir):
     error_types = tuple(meta["error_types"])
 
     def layer(p):
-        return "沒命中" if p["stratum"] == STRATUM_UNPLACED else "命中"
+        return "沒命中" if p["stratum"] == STRATUM_NO_HIT else "命中"
 
     total = Counter(layer(p) for p in picked.values())
     wrong = {x["sample"] for x in findings}
@@ -1061,7 +1061,7 @@ def report_categories(round_dir):
         for x in sorted(items, key=lambda x: x["sample"]):
             p = picked[x["sample"]]
             row, f = current[frame_key(p)]
-            now = "、".join(row["queries"]) or "未命中"
+            now = "、".join(row["queries"]) or "沒命中"
             expected = "、".join(x.get("expected") or []) or "—"
             lines.append("- %s `%s` %s 框架 %d %s〔抽自 %s;現 %s → 該 %s;%s〕%s" % (
                 x["sample"], p["card"], p["index"], p["order"] + 1, f["action"], p["stratum"],

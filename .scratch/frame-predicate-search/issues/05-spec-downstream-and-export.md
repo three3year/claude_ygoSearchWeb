@@ -27,6 +27,7 @@ to-spec 裡要順手定的細節:具名查詢來源檔形狀(沿用 category_tre
   - **驗收口徑可沿用票 11**:動作對象全語料結果不變或逐卡說明(現行 patient 判定的 WHY_* 理由碼 40 種可當逐卡說明的鍵)、三步鏈後 `git diff --ignore-all-space data/`、effect-tokenize 全套 857 條、node 172、script/* 五套;匯出改格式後 `build_index.py` 的三個 category_* 失敗碼要對應改。
 - 2026-11-01(to-spec):規格初稿寫在 `.scratch/named-queries/spec.md`(Status ready-for-human),鏡像 https://claude.ai/artifact/D5A6HYgwaf35Tr8tNQXRPr。上一條提到的九條未決在 1981da1 已全部落地(站主全採建議),規格 2 不用再裁;本規格頁首另有十二個待決事項(目錄檔形狀、不留的位置口徑、中心詞比法(試算:尾綴與子字串只差 6 張)、回指改讀要不要搬片語結構化、舊匯出檔過渡、格式版本號、開葉門檻、三個鏡像、LLM 一輪、相對/無、詞元節點極性、測試接縫),裁定後補 `決定` 行、改 ready-for-agent、再 to-tickets。
 - 2026-11-01(to-spec 收尾):十二項全部裁定(全採建議),spec.md 標 ready-for-agent、鏡像第 2 版;等 to-tickets 產出 issues/ 後本票 resolve。
+- 2026-11-01(named-queries 票 11 交件):規格 2 的 11 張票全部 resolved,整合分支 `named-queries`。數字摘要:目錄 236 個具名查詢全部編得出、不留清單空;匯出檔 `data/action_frames.json`(版本 1,目錄欄 260 列帶張數與雜湊);逐葉比對 +回指回填 3,076、+取自來源收回 1,769、−尾綴 6;動作對象判定值變 132+27 框、回指欄變 246 框(逐卡說明後重凍);LLM queries-round1 89 → round2 0;拆解頁與檢驗摘要照原網址重發。讀哪裡:給規格 3 的對照與要刪清單在 [named-queries 票 11 Comments](../../named-queries/issues/11-handoff.md),三條未決在 `llm-check/summary.md`「需要你決定的」。
 
 ## Answer
 

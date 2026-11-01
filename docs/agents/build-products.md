@@ -12,6 +12,7 @@
 | `.scratch/effect-tokenize/baseline-digest.json` | `python .scratch/effect-tokenize/baseline_diff.py --freeze`(只在刻意改既有欄之後) |
 | `.scratch/effect-tokenize/patient-digest.json`、`anaphora-digest.json`、`export-digest.json` | `python .scratch/effect-tokenize/downstream_baseline.py <patient|anaphora|export> --freeze`(只在確認差異是要的之後;見下「下游基準」) |
 
+- `run_chain.py` 的順序:分詞 → 框架 → 目錄(`catalog_hits.py`)→ 框列匯出 → 類別 → 類別匯出,任一步失敗停下。具名查詢目錄 `.scratch/effect-tokenize/catalog.json` 與對應表 `catalog-mapping.json` 是手改的來源檔(入版控),不是產物;`category_tree.json` 凍結、只給過渡期的 類別 → 類別匯出 讀,規格 3 一起刪。
 - 換行:這些檔寫 LF,`.gitattributes` 讓工作樹也是 LF;`git status` 顯示它們 M 時先 `git diff`,內容為空就是沒變。
 - 合併:它們宣告 `merge=ours`,合併時取本分支版、合併完**重生**,不手解衝突。每個 clone 要註冊一次驅動:`git config merge.ours.driver true`。
 

@@ -3,7 +3,7 @@
 Type: task
 Mode: HITL
 Status: open
-Blocked by: —(05、01 已 resolved;2026-11-01 解鎖)
+Blocked by: —(05、01 已 resolved;2026-11-01 解鎖;規格 2 同日交件,見 Comments 末條)
 Map: ../map.md
 
 ## Question
@@ -15,3 +15,4 @@ to-spec 裡要順手定的細節:條件位框架的述詞語意(対象とする�
 答案記 spec.md 與 issues/ 的路徑。
 
 - 2026-11-01(wayfinder,票 05 交件):規格 2 已寫完切票(`.scratch/named-queries/`),本票解鎖。寫規格 3 時讀——匯出檔 `data/action_frames.json` 的框列欄與目錄(張數、卡集合雜湊)、參考評估器與夾具(規格 2 票 05/06/08)、要刪的舊東西清單(規格 2 票 11 Comments);索引編碼數字在票 01 Answer。規格 2 的 implement 還沒做,規格 3 可先寫、票等規格 2 交件後再動。
+- 2026-11-01(named-queries 票 11 交件):規格 2 已交件(整合分支 `named-queries`,票 01〜11 全部 resolved),本票的 Blocked by 全部 resolved、解鎖。寫規格 3 時讀 [named-queries 票 11 Comments「給規格 3 的對照」](../../named-queries/issues/11-handoff.md):匯出檔的欄與值域(`predicate.FIELDS`/`EXPORT_PATH`/`DOMAIN`,框列鍵 `FRAME_KEYS`、版本 1)、目錄 260 列的張數與雜湊(算法含逗號分隔)、夾具 `.scratch/effect-tokenize/predicate-fixture.json`(96 條例子 + 雜湊 + 張數)、中間產物 `frame_queries.json`、要刪的舊東西清單(舊匯出檔、歸葉程式、舊匯出、舊索引欄位 ae/ac/aes/aen/acs/acn、VOCAB.acat 的葉號、舊樹檔、frame_categories/card_categories、test_categories/test_export、engine.js 的 actSel/actRows);未決三題在 `.scratch/effect-tokenize/llm-check/summary.md`「需要你決定的」(対象とする 進目錄、態空看主語、全部類比對順序與 以下の効果),規格 3 to-spec 要先裁或帶進去。

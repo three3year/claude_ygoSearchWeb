@@ -3,7 +3,7 @@
  *
  * 跑法:`node --test script/web/conditions.test.js`
  *
- * 接縫:條件模型(目錄列 → 標籤 → 引擎查詢、短句)、`Acat.catalog`(目錄 → 導覽樹)、
+ * 接縫:條件模型(目錄列 → 標籤 → 引擎查詢、短句)、`Acat`(目錄 → 導覽樹)、
  * `Hash`(葉路徑 ⇄ 標籤)。全部經 harness 載入真前端程式;目錄是手寫的小目錄,
  * 只有區域對照用真 data.js 的值域。全語料 237 個具名查詢在 predicate.test.js。
  */
@@ -11,6 +11,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
+const { execFileSync } = require('node:child_process');
+const path = require('node:path');
 const harness = require('./frontend_harness.js');
 
 const POLAR = ['肯定', '可能'];
@@ -202,17 +204,61 @@ test('短句:句子片段給條件列分欄,每段記它的欄名', () => {
   ]);
 });
 
-test('區域對照涵蓋值域每個區域', t => {
-  const data = harness.realData();
-  if (!data) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
-  const JA = { 場上: 'フィールド', 墓地: '墓地', 手牌: '手札', 牌組: 'デッキ',
-               除外: '除外', 靈擺區: 'Pゾーン', 額外牌組: 'EXデッキ' };
-  const zones = data.vocab.frame.domains.區域;
-  assert.ok(zones.length > 0);
-  for (const zone of zones) {
-    const tag = { ex: false, origin: null, pred: { 詞元: '破壊', 所在: [[null, zone]], 位置: ['效果'], 極性: POLAR } };
-    assert.strictEqual(cond('sentence', tag), '破壊 在 ' + JA[zone], zone);
+/* 條件模型抄了述詞與目錄的幾張封閉表(瀏覽器讀不到 Python)。抄本和來源不一致不會報錯,只會短句寫錯字、
+   抽屜少一種編輯器,所以這裡從來源讀值,從條件模型看得到的輸出比。 */
+const EFFECT_TOKENIZE = path.join(__dirname, '..', '..', '.scratch', 'effect-tokenize');
+
+function sourceTables() {
+  const code = 'import json, sys; sys.path.insert(0, sys.argv[1]); import catalog, predicate; print(json.dumps({' +
+    '"regionFields": predicate.REGION_FIELDS, "headFields": predicate.HEAD_FIELDS, ' +
+    '"zones": catalog.ZONE_LABEL, "players": catalog.PLAYER_LABEL, "polarity": catalog.DEFAULT_POLARITY}))';
+  try {
+    return JSON.parse(execFileSync('python', ['-c', code, EFFECT_TOKENIZE], { encoding: 'utf8' }));
+  } catch (e) {
+    return null;
   }
+}
+
+const SOURCE = sourceTables();
+const realData = harness.realData();
+const realBox = realData && harness.load(realData);
+const SKIP_SOURCE = '缺 python 或 web/data.js,比不了抄本與來源';
+const sentenceOf = pred => harness.cond(realBox, 'sentence',
+  { ex: false, origin: null, pred: { 詞元: '破壊', 位置: ['效果'], 極性: POLAR, ...pred } });
+
+test('抄本對來源:區域日文名等於 catalog.ZONE_LABEL,涵蓋值域每個區域', t => {
+  if (!SOURCE || !realBox) { t.skip(SKIP_SOURCE); return; }
+  const zones = realData.vocab.frame.domains.區域;
+  assert.deepStrictEqual(Array.from(zones).sort(), Object.keys(SOURCE.zones).sort());
+  for (const zone of zones) {
+    assert.strictEqual(sentenceOf({ 所在: [[null, zone]] }), '破壊 在 ' + SOURCE.zones[zone], zone);
+  }
+});
+
+test('抄本對來源:玩家前綴等於 catalog.PLAYER_LABEL', t => {
+  if (!SOURCE || !realBox) { t.skip(SKIP_SOURCE); return; }
+  assert.ok(Object.keys(SOURCE.players).length > 0);
+  for (const player of Object.keys(SOURCE.players)) {
+    assert.strictEqual(sentenceOf({ 所在: [[player, '墓地']] }), `破壊 在 ${SOURCE.players[player]}墓地`, player);
+  }
+});
+
+test('抄本對來源:區域欄與中心詞欄等於 predicate 的兩張表,抽屜照它選編輯器', t => {
+  if (!SOURCE || !realBox) { t.skip(SKIP_SOURCE); return; }
+  const groups = harness.cond(realBox, 'drawerGroups');
+  const kinds = {};
+  for (const field of groups.常用.concat(groups.進階)) {
+    kinds[field] = harness.cond(realBox, 'editor', field).kind;
+  }
+  const fieldsOf = kind => Object.keys(kinds).filter(f => kinds[f] === kind).sort();
+  assert.deepStrictEqual(fieldsOf('region'), SOURCE.regionFields.slice().sort());
+  assert.deepStrictEqual(fieldsOf('text'), SOURCE.headFields.slice().sort());
+});
+
+test('抄本對來源:catalog.DEFAULT_POLARITY 是短句不寫的預設極性', t => {
+  if (!SOURCE || !realBox) { t.skip(SKIP_SOURCE); return; }
+  assert.strictEqual(sentenceOf({ 極性: SOURCE.polarity }), '破壊');
+  assert.strictEqual(sentenceOf({ 極性: SOURCE.polarity.slice(0, 1) }).includes('極性'), true);
 });
 
 /* ── 目錄導覽樹 ── */

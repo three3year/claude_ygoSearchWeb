@@ -150,11 +150,11 @@ function groupBoxHtml(f, kids) {
     (kids || []).map(k => k.html).join('')}</div></div>`;
 }
 
-/* 具名查詢目錄導覽(規格 4 目錄導覽段):樹由 Acat.catalog 來,這裡只畫。點具名查詢的列
+/* 具名查詢目錄導覽(規格 4 目錄導覽段):樹由 Acat 來,這裡只畫。點具名查詢的列
    是包含、點 − 是排除;點大類、中類只展開。初始全部收合,寫回條件時也不動展開狀態:
    上一頁或清除條件時,使用者正在看的那一段樹不該收起來。 */
 function catalogNodeHtml(key) {
-  const n = Acat.catalog.node(key);
+  const n = Acat.node(key);
   const tog = n.kids.length
     ? '<button type="button" class="cat-tog" aria-expanded="false" aria-label="展開或收合"></button>'
     : '<span class="cat-tog-pad"></span>';
@@ -178,7 +178,7 @@ function catalogHtml() {
     <input type="search" class="cat-filter" placeholder="過濾：例 墓地"
       aria-label="過濾具名查詢目錄（比對日文名稱）">
     <div class="cat-scroll"><ul class="cat-tree">${
-      Acat.catalog.roots.map(catalogNodeHtml).join('')}</ul></div></div>`;
+      Acat.roots.map(catalogNodeHtml).join('')}</ul></div></div>`;
 }
 
 function catalogNodes() {
@@ -198,12 +198,12 @@ function nodeOpen(li) {
   return !!tog && tog.getAttribute('aria-expanded') === 'true';
 }
 
-/* 過濾框(Acat.catalog.filter 決定留哪些、展開哪些祖先):開始過濾前記下各節點的展開狀態,
+/* 過濾框(Acat.filter 決定留哪些、展開哪些祖先):開始過濾前記下各節點的展開狀態,
    每次換字面都從那份狀態重套,清空時還原——過濾只是「找」,不改展開也不改條件。 */
 let catalogSaved = null;
 
 function applyCatalogFilter(term) {
-  const f = Acat.catalog.filter(term);
+  const f = Acat.filter(term);
   const nodes = catalogNodes();
   if (f && !catalogSaved) {
     catalogSaved = {};
@@ -316,24 +316,16 @@ function read() {
   return q;
 }
 
-function count(q) {
-  const isSet = v => {
-    if (v == null || v === '') return false;
-    if (typeof v !== 'object') return true;
-    return Object.keys(v).some(k => v[k] != null);
-  };
-  return Object.keys(q || {})
-    .filter(k => k !== 'nameLang' && k !== 'textMat' && isSet(q[k])).length;
-}
-
 function blockKey(f) {
   return f.tri ? f.dom : (f.range || f.group);
 }
 
+function rangeEl(range) {
+  return $('critParams').querySelector(`.range[data-range="${range}"]`);
+}
+
 function blockEl(f) {
-  if (f.range) {
-    return $('critParams').querySelector(`.range[data-range="${f.range}"]`);
-  }
+  if (f.range) return rangeEl(f.range);
   return axisEl(f.tri || f.group, f.side);
 }
 
@@ -499,7 +491,7 @@ function writeTri(q, f) {
 }
 
 function writeRange(q, f) {
-  const box = $('critParams').querySelector(`.range[data-range="${f.range}"]`);
+  const box = rangeEl(f.range);
   const r = (box.hidden ? null : q[f.range]) || {};
   const set = (end, v) => {
     box.querySelector(`[data-end="${end}"]`).value = v == null ? '' : v;
@@ -548,17 +540,27 @@ function clear() {
   updateCounts();
 }
 
-function clearBlock(box) {
-  box.querySelectorAll('.tri').forEach(b => setTri(b, ''));
-  box.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
+/* 控制項清掉之後:連動的軸收起、標題列的數字重算。 */
+function afterClear() {
   syncSubs();
   syncOptional();
   updateCounts();
 }
 
+function clearBlock(box) {
+  box.querySelectorAll('.tri').forEach(b => setTri(b, ''));
+  box.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
+  afterClear();
+}
+
+/* 文字類標籤(target.text)→ 側欄的輸入框:條件模型只說是哪一項,DOM id 留在側欄。效果文的素材行
+   勾選是它的比法,清掉時一起清。 */
+const TEXT_CONTROLS = { code: { input: 'fId' }, name: { input: 'fName' },
+                        text: { input: 'fText', check: 'fTextMat' } };
+
 /* 左側條件標籤對應的控制項(target 見 cond.js)。子軸巢在母軸裡,只動自己這軸的控制項。 */
 function tagBox(target) {
-  if (target.range) return $('critParams').querySelector(`.range[data-range="${target.range}"]`);
+  if (target.range) return rangeEl(target.range);
   return target.axis ? axisEl(target.axis, target.side) : null;
 }
 
@@ -571,8 +573,11 @@ function ownControls(box, sel) {
    大類標籤只寫魔法時,怪獸(由子類型標籤代表)不動。 */
 function clearTag(tag) {
   const target = tag.target;
-  (target.inputs || []).forEach(id => { $(id).value = ''; });
-  (target.checks || []).forEach(id => { $(id).checked = false; });
+  const text = TEXT_CONTROLS[target.text];
+  if (text) {
+    $(text.input).value = '';
+    if (text.check) $(text.check).checked = false;
+  }
   const box = tagBox(target);
   if (box) {
     ownControls(box, '.tri')
@@ -580,9 +585,7 @@ function clearTag(tag) {
       .forEach(btn => setTri(btn, ''));
     ownControls(box, '.range-in').forEach(input => { input.value = ''; });
   }
-  syncSubs();
-  syncOptional();
-  updateCounts();
+  afterClear();
 }
 
 const FLASH_MS = 900;
@@ -591,7 +594,7 @@ const FLASH_MS = 900;
 function focusTag(tag) {
   setOpen(true);
   const box = tagBox(tag.target);
-  const el = box || $(tag.target.inputs[0]);
+  const el = box || $(TEXT_CONTROLS[tag.target.text].input);
   if (box) {
     for (let at = box; at; at = at.parentElement.closest('.axis, .range, .axis-group')) {
       setAxisOpen(at, true);
@@ -646,7 +649,7 @@ function init({ onPick }) {
 
   return Object.freeze({ read, write, clear, clearTag, focusTag, init, axes,
                          optionalAvailable,
-                         nextState, count, axisCounts, treeCounts, expandedAxes,
+                         nextState, axisCounts, treeCounts, expandedAxes,
                          summarize, markUsed, collapse: () => setOpen(false),
                          LANGS, FIELDS });
 })();

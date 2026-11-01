@@ -30,6 +30,8 @@ Charted: 2026-10-31(/mattpocock-skills:wayfinder)
 
 - [寫規格 3:索引與述詞評估器](issues/06-spec-index-and-evaluator.md):規格 `.scratch/predicate-index/spec.md`(ready-for-agent)與 5 張票;八題全裁(舊欄與舊鏈留到規格 4 切換才刪、索引用框表、封閉類值域隨匯出檔進來且版本升 2、● 子句評估時也看領起句的框、條件位框不特別處理、結果回傳 rows 加 hits、回指目標移動類不回填不綁本規格、測試接縫三個)。真實匯出檔實測:12,048 種框,框表對現在 +79 KB gz(舊欄並存期 +240 KB),原型全目錄 711 次與匯出檔 0 筆不符;implement 尚未開始。 **2026-11-01 交件**:整合分支 `predicate-index`(票 01〜05 全部 resolved,未併 main、未 push);匯出檔格式版本 2(md5 8e359d78)帶值域;data.js 9,326,221 / 2,258,289 bytes gz(`fr`、`fl`、`window.FRAMES`、`VOCAB.frame`、`VOCAB.catalog`,舊欄並存);`Engine.runQuery` 的 `q.preds` 過夾具 96 例、3 雜湊、小語料,目錄 261 列 × 三個位置 783 格與匯出檔 0 不符;真瀏覽器 1〜5 述詞中位 3〜5 ms。**一處與規格字面不符**:入版控的舊 data.js 比規格 2 舊,重建後動作對象的舊欄 754 張不同,現行「動作對象」篩選在此卡與非此卡下會變,其餘網站行為照舊(全節點比對與數字在 [predicate-index 票 05 Comments](../predicate-index/issues/05-handoff.md))。給規格 4 的對照(查詢與結果形狀、VOCAB 新部分、位置要帶預設、票 04 自定的三件事、核對過的要刪清單)同在票 05 Comments。
 
+- [述詞卡與樹導覽的靜態原型](issues/03-predicate-card-prototype.md):站主核可 D 版(本地分支 `prototype/predicate-card` 的 `web/prototype-predicate-card.html?variant=D`):結果上方用標籤列出全部條件,分 AND、OR 兩區,查詢由標籤組成、條件一變就重查;標籤一律從左邊產生,動作標籤點開右側抽屜(手機底部面板),抽屜不改詞元;句尾標籤 a、點大類只展開、0 張灰字依核可版面定案。給規格 4:引擎要支援 OR、hash 要寫兩區、GLOSSARY 兩處要改。
+
 ## Not yet specified
 
 - 拆解頁與檢驗摘要在新模型下的去留規格 2 已定(留;草案退場);網站端怎麼呈現具名查詢、相對/無、只在代價位或條件位命中的具名查詢顯示 0 張,待規格 4。

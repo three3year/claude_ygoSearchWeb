@@ -187,3 +187,7 @@ GLOSSARY:前端索引條加框架段、值域正典條例外段補封閉類、�
 
 - `part["table"]` 的鍵名:`_content_digest` 連鍵一起雜湊,改名會動 `META.frame_digest`,`web/data.js` 就變了,違反本次守門。留一行註解;刪舊欄那波 data.js 本來就會變,規格 4 可順手改。
 - 歷史紀錄裡的「規格 3 切換」:`.scratch/named-queries/spec.md`、其票、`frame-predicate-search/issues/05` 是當時的裁定,切換點的改動記在本規格第一題,不回頭改。`llm-check/summary.md` 第 302、311、329、912 行也還寫規格 3:它是審核關卡 md,要改得走鏡像重發,留給站主決定。
+
+### 偏離的指向
+
+「網站行為」節的偏離已寫進規格「需要你決定的」的「動作對象篩選在 754 張卡上會變,接受嗎?」,等站主裁定。

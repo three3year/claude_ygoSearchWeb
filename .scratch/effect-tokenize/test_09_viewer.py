@@ -37,9 +37,9 @@ SMALL = {"樹": [major("小目錄", [
 # 合成的命中(frame_queries.json 一框一列的形狀,多帶子句原文):卡 1 兩框、卡 2 兩框(一框沒命中)、卡 3 一框
 HITS = [
     {"card": 1, "section": "main", "index": "①", "order": 0, "position": POS_EFFECT,
-     "text": "モンスター１体を破壊する", "queries": ["破壊", "破壊:モンスター"]},
+     "text": "モンスター１体を破壊する", "queries": ["破壊", "破壊:モンスター"], "patient": "非此卡"},
     {"card": 1, "section": "main", "index": "①", "order": 1, "position": POS_COST,
-     "text": "墓地から特殊召喚する", "queries": ["特殊召喚", "特殊召喚←墓地"]},
+     "text": "墓地から特殊召喚する", "queries": ["特殊召喚", "特殊召喚←墓地"], "patient": "此卡"},
     {"card": 2, "section": "main", "index": "①", "order": 0, "position": POS_EFFECT,
      "text": "フィールドのモンスターを破壊する", "queries": ["破壊", "破壊:モンスター", "破壊@フィールド"]},
     {"card": 2, "section": "main", "index": "②", "order": 0, "position": POS_COND,
@@ -158,6 +158,10 @@ class TestReportSection(unittest.TestCase):
         self.assertIn("| 2 | 1 | 1 | 0 | 2 |", text)
         self.assertIn("| 3+ | 0 | 2 | 0 | 2 |", text)
         self.assertIn("不留(三個位置都沒命中)1 個:破壊(耐性)", text)
+        self.assertIn("### 動作對象(此卡/非此卡/皆非)框數分位置", text)
+        self.assertIn("| 此卡 | 1 | 0 | 0 | 1 |", text)
+        self.assertIn("| 非此卡 | 0 | 1 | 0 | 1 |", text)
+        self.assertIn("| 皆非 | 0 | 2 | 1 | 3 |", text)
 
     def test_section_says_none_when_every_query_hits(self):
         hits = HITS + [{"card": 4, "section": "main", "index": "①", "order": 0, "position": POS_EFFECT,

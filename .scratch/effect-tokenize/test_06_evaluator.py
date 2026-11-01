@@ -77,12 +77,10 @@ class TestFixture(unittest.TestCase):
 
 
 class TestVocabulary(unittest.TestCase):
-    """述詞字彙只有一份:欄名對得到匯出鍵(票 05 的 FRAME_KEYS 不改),值域就是封閉表。"""
+    """述詞字彙只有一份:欄名對得到匯出鍵(票 05 的 FRAME_KEYS 不改),值域就是封閉表——表外的值 problems 報出、
+    表內的通過。"""
 
-    def test_export_imports_its_keys_from_the_vocabulary(self):
-        self.assertIs(export_frames.FRAME_KEYS, predicate.FRAME_KEYS)
-        self.assertIs(export_frames.PHRASE_KEYS, predicate.PHRASE_KEYS)
-        self.assertIs(export_frames.SEGMENT_KEYS, predicate.SEGMENT_KEYS)
+    def test_frame_keys_are_the_export_order(self):
         self.assertEqual(predicate.FRAME_KEYS, ("action", "position", "polarity", "voice", "negation", "regions",
                                                 "agent", "manner_kind", "manner_value", "phrases", "patient_mode"))
 
@@ -97,11 +95,16 @@ class TestVocabulary(unittest.TestCase):
                     self.assertIn(path[1], predicate.PHRASE_KEYS)
                     self.assertIn(path[2], predicate.SEGMENT_KEYS)
 
-    def test_domains_are_the_closed_tables(self):
-        self.assertIs(predicate.DOMAIN["否定形"], closed_values.NEGATION_FORMS)
-        self.assertIs(predicate.DOMAIN["施事者"], closed_values.AGENTS)
-        self.assertIs(predicate.DOMAIN["動作對象"], closed_values.PATIENT_MODES)
-        self.assertEqual(predicate.DOMAIN["位置"], POSITIONS)
+    def test_values_outside_the_closed_tables_are_reported(self):
+        inside = {"否定形": list(closed_values.NEGATION_FORMS), "施事者": list(closed_values.AGENTS),
+                  "動作對象": list(closed_values.PATIENT_MODES), "位置": list(POSITIONS),
+                  "極性": ["肯定", "否定", "可能"], "態": ["他動", "自動", "受身"],
+                  "方式類": list(closed_values.MANNER_KINDS), "中心詞類": list(closed_values.HEAD_KINDS),
+                  "數量類": list(closed_values.QUANTITY_KINDS), "修飾語類": list(closed_values.MODIFIER_KINDS)}
+        self.assertEqual(predicate.problems(inside), [])
+        for field in inside:
+            with self.subTest(field):
+                self.assertEqual(predicate.problems({field: inside[field] + ["表外"]}), ["%s 的值不在值域:表外" % field])
 
     def test_problems_name_unknown_fields_and_values_outside_the_domain(self):
         self.assertEqual(predicate.problems({"關鍵詞": ["モンスター"]}), ["不認得的欄:關鍵詞"])

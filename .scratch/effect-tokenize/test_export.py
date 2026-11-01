@@ -18,6 +18,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import categories  # noqa: E402
 import export_categories  # noqa: E402
+import export_common  # noqa: E402
 import frames  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location(
@@ -204,7 +205,7 @@ SPELL = {"id": 1, "type": 0x2, "race": 0, "attribute": 0, "level": 0,
 def modes(text, card=1, kind="啟動效果", face=DRAGON, section="main"):
     """一句效果句 → {效果位此卡葉、效果位非此卡葉、代價位此卡葉、代價位非此卡葉}
     (空的省略);斷言匯出沒有問題。"""
-    faces = {card: export_categories.card_face(dict(face, id=card))} if face else None
+    faces = {card: export_common.card_face(dict(face, id=card))} if face else None
     doc, problems = export({card: [clause("①", text, kind=kind, section=section)]}, faces)
     assert not problems, problems
     row = doc["句"][0]
@@ -439,15 +440,15 @@ class TestPatientAllClass(unittest.TestCase):
         self.assertEqual(launch.get("寫明"), 1)
 
     def test_card_face_digest_rides_along_and_changes_with_the_face(self):
-        faces = {1: export_categories.card_face(DRAGON)}
+        faces = {1: export_common.card_face(DRAGON)}
         doc, _ = export({1: [clause("①", REVIVE)]}, faces)
         before = dict(doc["卡面"])
-        faces = {1: export_categories.card_face(dict(DRAGON, level=8))}
+        faces = {1: export_common.card_face(dict(DRAGON, level=8))}
         doc, _ = export({1: [clause("①", REVIVE)]}, faces)
         self.assertEqual(set(before), {1})
         self.assertNotEqual(dict(doc["卡面"])[1], before[1])
         self.assertEqual(dict(doc["卡面"])[1],
-                         export_categories.face_hash(dict(DRAGON, level=8)))
+                         export_common.face_hash(dict(DRAGON, level=8)))
 
 
 class TestPatientCountIsNotDuration(unittest.TestCase):
@@ -813,8 +814,8 @@ class TestPatientAllClassConditions(unittest.TestCase):
     def test_stats_count_each_blocker_and_uncomparable_literals(self):
         doc, _ = export({1: [clause("①", "①：自分フィールドの戦士族モンスターを全て破壊する。")],
                          2: [clause("①", "①：自分フィールドの表側表示モンスターを全て破壊する。")]},
-                        {1: export_categories.card_face(DRAGON),
-                         2: export_categories.card_face(DRAGON)})
+                        {1: export_common.card_face(DRAGON),
+                         2: export_common.card_face(DRAGON)})
         stats = doc["統計"]
         self.assertEqual(stats["理由"].get("非此卡:全部類種族對不上"), 1)
         self.assertEqual(stats["理由"].get("皆非:全部類比不了"), 1)

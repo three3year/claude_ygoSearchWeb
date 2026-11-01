@@ -18,7 +18,7 @@ frame["region_backfill"] 記欄名,蓋過推得的同欄結構化值;字面欄�
 from collections import Counter
 
 import places
-from anaphora import VIA_EVENT
+from referent import VIA_EVENT
 from closed_values import (PLACE_PLAYER, PLAYER_NONE_SPELLING, REGION_KEYS, REGION_PLACE, REGION_SOURCE,
                            TRANSFER_FROM_DE, TRANSFER_FROM_SOURCE)
 from report import position_table

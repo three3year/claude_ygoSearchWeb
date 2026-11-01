@@ -45,7 +45,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import catalog as catalog_module  # noqa: E402
+import catalog  # noqa: E402
 import patient  # noqa: E402
 from closed_values import MODIFIER_KINDS, REGION_KEYS  # noqa: E402
 from constraints import KIND_ACTION, POSITIONS  # noqa: E402
@@ -128,7 +128,8 @@ def query_sets(cat, rows):
 
 
 def unmatched(cat, sets):
-    """「每個具名查詢在全語料三個位置合計至少命中一張」(規格「不留位置口徑」(a))→ 違反的名字(目錄序)。"""
+    """「每個具名查詢在全語料三個位置合計至少命中一張」(規格「不留位置口徑」(a))→ 違反的名字(目錄序)。
+    「不留」只在這裡(匯出步驟)檢查;目錄步驟 catalog_hits.py 只算命中。"""
     return [q.name for q in cat.queries if not any(sets[q.name].values())]
 
 
@@ -179,12 +180,12 @@ def export(sentences, faces=None, cat=None):
         out.extend(rows.values())
     covered = sorted({s["card"] for s in sentences} & set(faces))
     face_rows = [[card, face_hash(faces[card])] for card in covered]
-    catalog = []
+    rows_of_catalog = []
     if cat is not None:
         sets = query_sets(cat, out)
         problems.extend("具名查詢在全語料三個位置都沒有命中(不留):%s" % name for name in unmatched(cat, sets))
-        catalog = catalog_rows(cat, sets)
-    return {"說明": DOC, "版本": VERSION, "目錄": catalog, "統計": dict(stats.doc(), 位置=positions),
+        rows_of_catalog = catalog_rows(cat, sets)
+    return {"說明": DOC, "版本": VERSION, "目錄": rows_of_catalog, "統計": dict(stats.doc(), 位置=positions),
             "卡面": face_rows, "句": out}, problems
 
 
@@ -212,8 +213,8 @@ def column_counts(rows):
 
 def main():
     try:
-        cat = catalog_module.load()
-    except catalog_module.CatalogError as e:
+        cat = catalog.load()
+    except catalog.CatalogError as e:
         print(e, file=sys.stderr)
         return 1
     doc, problems = export(load_sentences(), load_faces(), cat)

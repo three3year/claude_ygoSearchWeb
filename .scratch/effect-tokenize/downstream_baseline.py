@@ -34,7 +34,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import patient  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
-from export_categories import card_face  # noqa: E402
+from export_common import card_face  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 FRAMES = os.path.join(HERE, "frames.json")

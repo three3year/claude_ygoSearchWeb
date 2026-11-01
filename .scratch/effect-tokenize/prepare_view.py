@@ -242,7 +242,7 @@ def query_overview(cat, hits):
     (大類與中類是底下具名查詢的聯集,一框多命中只算一次;路徑由目錄推得:宣告的大類取代本家、中類取代
     詞元層,中類列在大類的詞元節點之前、借來的節點排在本家的之後)、節點數、hits 是三個位置的命中框數
     分佈(命中 0/1/2/3+ 個具名查詢的框數,report.hit_distribution 同一把尺;節點數的 majors 是頂層數、
-    lemma_nodes 依 report.is_lemma_node);分片是
+    lemma_nodes 依 catalog 的 Node.lemma_node);分片是
     {"q<查詢號>": [[卡號, 段落, 句序, 框架序, 位置, 子句原文]…]},按需載入,沒有框的具名查詢沒有分片。"""
     number = {q.name: i for i, q in enumerate(cat.queries)}
     query_rows = [[] for _ in cat.queries]
@@ -299,7 +299,7 @@ def query_overview(cat, hits):
         "majors": len(cat.majors),
         "middles": sum(len(m) for m in cat.middles.values()),
         "queries": len(cat.queries),
-        "lemma_nodes": sum(1 for q in cat.queries if report.is_lemma_node(q)),
+        "lemma_nodes": sum(1 for q in cat.queries if q.lemma_node),
         "frames": len(hits),
         "positions": list(POSITIONS),
         "hits": {position: [distribution[position][bucket] for bucket in report.HIT_BUCKETS]

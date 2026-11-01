@@ -9,6 +9,8 @@
   第 9 項:收集端只有 STEPS 一張表;步驟模組一定加了新鍵,新鍵就要有填充率列與批次檔格;REPORT_SECTIONS 可選)。
   步驟模組清單也從 enrich.py 的 STEPS 讀,不另抄。
 - 具名查詢目錄線的模組(predicate、catalog、catalog_hits)不 import 舊歸葉程式(categories、export_categories):規格 3 刪舊的時它們留下。
+- 回指(anaphora)、動作對象(patient)與它們共用的小表(referent)沒有正則式、不呼叫區域辨識解字面(places.parse_zones/
+  parse_place):named-queries 票 03/04 改讀論元片語——封閉表在模組頂、判定讀片語的段,區域交給 regions.zones_of。
 - 宣告 BEFORE_ANAPHORA = True 的步驟模組(片語)要排在 STEPS 前段(named-queries 票 02:enrich 依宣告分回指前後
   兩段跑,STEPS 的順序才仍是執行順序;後段模組夾在前段模組之前就是順序寫錯了)。
 
@@ -43,6 +45,9 @@ STEP_MODULES = ("enrich", *ENRICH_STEPS, "closed_values")
 # 具名查詢目錄線的模組與它們不能 import 的舊歸葉程式(named-queries 票 07;票 08 加命中)
 CATALOG_MODULES = ("predicate", "catalog", "catalog_hits")
 OLD_CLASSIFIER_MODULES = frozenset(("categories", "export_categories"))
+# 改讀論元片語的模組(named-queries 票 03/04)與它們共用的小表:沒有正則式、不自己解區域字面
+PHRASE_READERS = ("anaphora", "patient", "referent")
+LITERAL_ZONE_PARSERS = frozenset(("parse_zones", "parse_place"))
 
 
 def declares_true(tree, name):
@@ -83,6 +88,23 @@ def string_literals(tree):
             yield node.lineno, node.value
 
 
+def imported_names(tree):
+    """`from X import a, b` 的 X.a、X.b 與 `import X` 的 X。"""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                yield alias.name
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            for alias in node.names:
+                yield node.module + "." + alias.name
+
+
+def attribute_uses(tree, owner):
+    """`owner.xxx` 的 xxx(owner 是模組名)。"""
+    return [node.attr for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == owner]
+
+
 class TestStepModules(unittest.TestCase):
     """步驟模組的 import 形狀。"""
 
@@ -116,6 +138,22 @@ class TestStepModules(unittest.TestCase):
                      for name in STEP_MODULES + ("report", "llm_check", "prepare_view")}
         self.assertEqual({k: v for k, v in offenders.items() if v}, {},
                          "位置用 constraints.POS_COST/POS_EFFECT/POS_COND,別抄字面")
+
+
+class TestPhraseReaders(unittest.TestCase):
+    """回指、動作對象與共用小表(named-queries 票 03/04):沒有正則式、不呼叫區域辨識解字面。"""
+
+    def test_phrase_readers_have_no_regex(self):
+        offenders = {name: sorted(set(attribute_uses(parse(name), "re")) | {n for n in imported_names(parse(name))
+                                                                             if n == "re" or n.startswith("re.")})
+                     for name in PHRASE_READERS}
+        self.assertEqual({k: v for k, v in offenders.items() if v}, {}, "封閉表在模組頂,判定讀片語的段,不拆字面")
+
+    def test_phrase_readers_do_not_parse_zone_literals(self):
+        offenders = {name: sorted({n for n in imported_names(parse(name)) if n.split(".")[-1] in LITERAL_ZONE_PARSERS}
+                                  | (set(attribute_uses(parse(name), "places")) & LITERAL_ZONE_PARSERS))
+                     for name in PHRASE_READERS}
+        self.assertEqual({k: v for k, v in offenders.items() if v}, {}, "區域讀段的 zones 或交給 regions.zones_of")
 
 
 class TestCatalogModules(unittest.TestCase):

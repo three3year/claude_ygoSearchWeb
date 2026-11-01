@@ -21,8 +21,9 @@ OTHER = "其他"
 HEAD_KINDS = ("卡", "屬性", "非卡", "指示詞", "玩家", "位置", "表示形式", OTHER)
 HEAD_CARD, HEAD_ATTRIBUTE, HEAD_NON_CARD, HEAD_DEMONSTRATIVE, HEAD_PLAYER, HEAD_POSITION, HEAD_DISPLAY_FORM = HEAD_KINDS[:7]
 # 中心詞字面 → 類 的判定表與 head_kind() 在 phrases.py(這裡只放值域)
-# 修飾語類(票 03)
+# 修飾語類(票 03);具名常數只在這裡拆一次,phrases/anaphora/patient import
 MODIFIER_KINDS = ("種族", "屬性", "字段", "卡片子類型", "數值", "區域", "玩家", "表示形式", OTHER)
+MOD_RACE, MOD_ATTRIBUTE, MOD_ARCHETYPE, MOD_SUBTYPE, MOD_NUMERIC, MOD_ZONE, MOD_PLAYER, MOD_POSITION = MODIFIER_KINDS[:8]
 # 數量類(票 04);引用量(数の分だけ/同じ数)類空,不在表裡
 QUANTITY_KINDS = ("定數", "上限", "下限", "任意", "全部")
 # 方式類(票 06;手段:戰鬥或效果 依 2026-11-01 站主裁定加:戦闘・効果で 一族)
@@ -32,8 +33,8 @@ AGENTS = ("自分", "相手", "お互い", "此卡", "其他卡")
 AGENT_SOURCES = ("主題", "主語", "事件主語", "によって", "預設")
 # 否定形(票 08)
 NEGATION_FORMS = ("受身", "不成不受", "不可能", "一般")
-# 動作對象(GLOSSARY「動作對象」:此卡/非此卡;皆非不帶——patient.py 判定、框列匯出與述詞字彙都讀這裡;
-# named-queries 票 06 從 patient.py 搬來)
+# 動作對象(GLOSSARY「動作對象」2026-10-25 定案:此卡/非此卡;皆非不帶——patient.py 判定、框列匯出與述詞字彙都讀
+# 這裡;2026-11-01 規格 2 裁定「動作對象成為述詞的一個欄位」,named-queries 票 06 從 patient.py 搬來)
 PATIENT_MODES = ("此卡", "非此卡")
 # 轉欄記號(票 05/06)與回指回填記號(票 09)
 TRANSFERS = ("取自來源", "取自で")

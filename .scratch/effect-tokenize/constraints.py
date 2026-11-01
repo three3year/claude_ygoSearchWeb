@@ -69,6 +69,7 @@ SEG_END = ("。", "）", "●")
 ZONE_WORDS = {"EXデッキ", "エクストラデッキ", "手札", "墓地", "デッキ"}
 BOTH = "雙方"
 POL_AFFIRM, POL_NEG, POL_CAN = "肯定", "否定", "可能"
+POLARITIES = (POL_AFFIRM, POL_NEG, POL_CAN)      # 極性的值域(述詞字彙 predicate.py 讀這裡,不另列)
 THIS_EFFECT = "この効果"
 COUNT_UNITS = {"度", "回", "枚"}
 POTENTIAL_ALL = {"できる", "でき", "できない", "できず"}

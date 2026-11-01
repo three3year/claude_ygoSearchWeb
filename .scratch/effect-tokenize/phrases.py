@@ -53,7 +53,8 @@ from collections import Counter, defaultdict
 import places
 from action_lemmas import MATERIAL_METHODS
 from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_DISPLAY_FORM, HEAD_KINDS, HEAD_NON_CARD,
-                           HEAD_PLAYER, HEAD_POSITION, MODIFIER_KINDS, OTHER, PHRASE_KEYS, PLACE_PLAYER, QUANTITY_KINDS)
+                           HEAD_PLAYER, HEAD_POSITION, MOD_ARCHETYPE, MOD_ATTRIBUTE, MOD_NUMERIC, MOD_PLAYER, MOD_POSITION,
+                           MOD_RACE, MOD_SUBTYPE, MOD_ZONE, MODIFIER_KINDS, OTHER, PHRASE_KEYS, PLACE_PLAYER, QUANTITY_KINDS)
 from constraints import POS_COND, POS_COST, POS_EFFECT
 from extract_seed import CLOSED_VALUES  # 封閉值域(種族/卡片子類型/表示形式)的單一來源
 from report import token_kind
@@ -75,6 +76,9 @@ COUNT_HEADS = {"数", "合計"}                                 # 中心詞是�
 # 數量(票 04)
 Q_FIXED, Q_UPPER, Q_LOWER, Q_ANY, Q_ALL = QUANTITY_KINDS
 QUANTITY_COUNTERS = {"枚", "体", "つ", "種類", "個", "組", "回"}      # 規格列的量詞;ヵ所/度 不算
+# 數卡的量詞(回指與動作對象讀:只剩數量的段 その2体/1枚 數的一定是卡;体 數怪獸、枚 數卡)
+MONSTER_COUNTER, CARD_COUNTER = "体", "枚"
+CARD_COUNTERS = (CARD_COUNTER, MONSTER_COUNTER)
 QUANTITY_COMPARE_KIND = {"以上": Q_LOWER, "以下": Q_UPPER}            # N体以上 下限、N体以下 上限
 QUANTITY_ANY_PHRASES = (("任意", "の", "数"), ("任意", "の", "枚", "数"), ("任意", "の", "個", "数"),
                         ("好き", "な", "数"))                         # 任意の数/任意の枚数/好きな数(字面比;段尾與 を 後共用)
@@ -91,8 +95,7 @@ REFERENCE_PHRASE_STOP = {"。", "、", "p:は"}
 SUBJECT_QUANTITY_NOT_BEFORE = {"p:に", "p:を", "p:と", "p:へ"}
 ADNOMINAL_QUANTITY = {"全て": Q_ALL, "任意": Q_ANY}   # 全ての/任意の 連體寫法(2026-11-01 裁定):該段的數量,修飾語不留
 
-# ── 修飾語(票 03)的表 ──
-MOD_RACE, MOD_ATTRIBUTE, MOD_ARCHETYPE, MOD_SUBTYPE, MOD_NUMERIC, MOD_ZONE, MOD_PLAYER, MOD_POSITION = MODIFIER_KINDS[:8]
+# ── 修飾語(票 03)的表(修飾語類的具名常數在 closed_values) ──
 MODIFIER_BOUNDARIES = {"p:の", "、"}                           # 修飾語段的邊界(規格:依 の 與讀點切)
 ITEM_SEPARATORS = {"・", "／"}                                   # 一段裡並列項的分隔(光・闇属性、融合・S・X)
 CASE_PARTICLES = {"p:を", "p:が", "p:に", "p:へ", "p:から", "p:で", "p:と", "p:は", "p:も", "p:より", "p:として"}

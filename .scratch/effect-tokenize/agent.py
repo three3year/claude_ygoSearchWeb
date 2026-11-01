@@ -26,7 +26,7 @@ from collections import Counter
 import phrases
 import places
 from action_lemmas import VOICE_ACTIVE, VOICE_PASSIVE
-from anaphora import VIA_EVENT
+from referent import VIA_EVENT
 from closed_values import AGENTS, AGENT_SOURCES, HEAD_CARD, PLACE_PLAYER
 from constraints import POS_COST, POS_EFFECT
 from report import count_by_position, position_table

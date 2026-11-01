@@ -33,15 +33,15 @@ import hashlib
 import action_lemmas
 from closed_values import (AGENTS, HEAD_KINDS, MANNER_KINDS, MODIFIER_KINDS, NEGATION_FORMS, PATIENT_MODES, PLAYERS,
                            QUANTITY_KINDS, REGION_GOAL, REGION_PLACE, REGION_SOURCE, ZONES)
-from constraints import POL_AFFIRM, POL_CAN, POL_NEG, POSITIONS
+from constraints import POLARITIES, POSITIONS
 
-# ── 匯出框列的鍵名(票 05 定,匯出序;export_frames.py 從這裡 import,拼法不改)──
+# ── 匯出框列的鍵名(2026-11-01 規格 2 票 05 定、票 06 搬來,匯出序;export_frames.py 從這裡 import,拼法不改)──
 FRAME_KEYS = ("action", "position", "polarity", "voice", "negation", "regions", "agent",
               "manner_kind", "manner_value", "phrases", "patient_mode")
 PHRASE_KEYS = ("patient", "goal")
 SEGMENT_KEYS = ("head", "head_kind", "quantity", "modifiers")
 
-# ── 述詞的欄名(GLOSSARY「框架述詞」條;目錄檔與使用者述詞都用這些字)──
+# ── 述詞的欄名(GLOSSARY「框架述詞」條 2026-10-31 定案、2026-11-01 規格 2 裁定動作對象為一欄;目錄檔與使用者述詞都用這些字)──
 FIELD_LEMMA, FIELD_POSITION, FIELD_POLARITY, FIELD_NEGATION, FIELD_VOICE = "詞元", "位置", "極性", "否定形", "態"
 FIELD_SOURCE, FIELD_GOAL, FIELD_PLACE = "來源", "目的", "所在"
 FIELD_PATIENT_HEAD, FIELD_GOAL_HEAD = "受事者中心詞", "目的中心詞"
@@ -51,7 +51,8 @@ FIELDS = (FIELD_LEMMA, FIELD_POSITION, FIELD_POLARITY, FIELD_NEGATION, FIELD_VOI
           FIELD_SOURCE, FIELD_GOAL, FIELD_PLACE, FIELD_PATIENT_HEAD, FIELD_GOAL_HEAD,
           FIELD_HEAD_KIND, FIELD_QUANTITY, FIELD_MODIFIERS, FIELD_AGENT, FIELD_MANNER, FIELD_PATIENT_MODE)
 
-# 述詞欄 ↔ 匯出鍵的路徑(欄讀框列的哪裡;manner_value 表示形式值沒有述詞欄,規格的述詞欄表沒列它)
+# 述詞欄 ↔ 匯出鍵的路徑(2026-11-01 規格 2「參考評估器」段:欄讀框列的哪裡;manner_value 表示形式值沒有述詞欄,
+# 規格的述詞欄表沒列它)
 EXPORT_PATH = {
     FIELD_LEMMA: ("action",), FIELD_POSITION: ("position",), FIELD_POLARITY: ("polarity",),
     FIELD_NEGATION: ("negation",), FIELD_VOICE: ("voice",), FIELD_AGENT: ("agent",),
@@ -64,8 +65,7 @@ EXPORT_PATH = {
 }
 REGION_FIELDS = (FIELD_SOURCE, FIELD_GOAL, FIELD_PLACE)
 HEAD_FIELDS = (FIELD_PATIENT_HEAD, FIELD_GOAL_HEAD)
-# 相等比對的單值欄 → 值域(封閉表就是值域;極性的三值在 constraints)
-POLARITIES = (POL_AFFIRM, POL_NEG, POL_CAN)
+# 相等比對的單值欄 → 值域(封閉表就是值域;極性的三值是 constraints.POLARITIES)
 DOMAIN = {
     FIELD_POSITION: POSITIONS, FIELD_POLARITY: POLARITIES, FIELD_NEGATION: NEGATION_FORMS,
     FIELD_VOICE: action_lemmas.VOICES, FIELD_AGENT: AGENTS, FIELD_MANNER: MANNER_KINDS,

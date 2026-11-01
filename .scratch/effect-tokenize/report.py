@@ -40,7 +40,7 @@ FREQ_TOP = {"effect": 100, "extra": 50}   # 詞頻表列數(prepare_view.py 共�
 # 模板大小分佈的桶(句數下限,遞減檢查)
 BUCKETS = ((100, "≥100 句"), (50, "50–99 句"), (20, "20–49 句"),
            (10, "10–19 句"), (5, "5–9 句"), (2, "2–4 句"), (1, "1 句"))
-# 一框命中幾個具名查詢的桶(named-queries 票 09;拆解頁總覽與報告同一把尺)
+# 一框命中幾個具名查詢的桶(2026-11-01 規格 2 票 09 定:拆解頁總覽與報告同一把尺)
 HIT_BUCKETS = ("0", "1", "2", "3+")
 
 
@@ -436,21 +436,26 @@ def hit_distribution(hits):
     return out
 
 
-def is_lemma_node(query):
-    """詞元節點:述詞只有詞元(極性是預設、否定形是耐性/限制的極性類節點),不帶區域與中心詞條件;其餘是葉。
-    predicate 在這裡才 import(它 import constraints,模組層級會循環)。"""
-    import predicate
-    return set(query.predicate) <= {predicate.FIELD_LEMMA, predicate.FIELD_POLARITY, predicate.FIELD_NEGATION}
+def patient_mode_section(hits):
+    """動作對象(named-queries 票 04/05;code review 修正補的報告列):命中紀錄的 patient 欄(此卡/非此卡;皆非是
+    null)→ 三值 × 位置的框數表。constraints 在這裡才 import(模組層級會循環)。"""
+    from constraints import POSITIONS
+    import patient
+    counts = Counter((hit.get("patient") or patient.NEITHER, hit["position"]) for hit in hits)
+    rows = (patient.SELF, patient.NONSELF, patient.NEITHER)
+    return ["### 動作對象(此卡/非此卡/皆非)框數分位置", "",
+            "每個動作框架動到的是不是此卡本身(`patient.py`,判定讀論元片語;匯出框列的 patient_mode 同一個判定,"
+            "皆非不帶鍵)。", ""] + position_table(counts, rows, "動作對象") + [""]
 
 
 def queries_section(cat, hits):
     """具名查詢目錄(named-queries 票 09):目錄(catalog.Catalog)與命中紀錄 → 小節的行——節點數(大類/中類/
     具名查詢,具名查詢再分詞元節點與葉)、三個位置的命中框數分佈、每框平均命中、不留清單(三個位置都沒命中的
-    具名查詢;目錄步驟會擋下,這裡登的是中間產物的現況)。"""
+    具名查詢;匯出步驟會擋下,這裡登的是中間產物的現況)、動作對象的框數分位置。"""
     from constraints import POSITIONS
     major_nodes = sum(1 for node in cat.roots if node.predicate is None)
     middles = sum(len(m) for m in cat.middles.values())
-    lemma_nodes = sum(1 for q in cat.queries if is_lemma_node(q))
+    lemma_nodes = sum(1 for q in cat.queries if q.lemma_node)
     distribution = hit_distribution(hits)
     hit_names = {name for hit in hits for name in hit["queries"]}
     unmatched = [q.name for q in cat.queries if q.name not in hit_names]
@@ -480,7 +485,7 @@ def queries_section(cat, hits):
               "不留(三個位置都沒命中)%s" % (
                   "%d 個:%s" % (len(unmatched), "、".join(unmatched)) if unmatched else ":無"),
               ""]
-    return lines
+    return lines + patient_mode_section(hits)
 
 
 def main():
@@ -654,7 +659,7 @@ def main():
         with open(FRAMES, encoding="utf-8") as f:
             lines += fill_rate_section(json.load(f))
     if os.path.exists(QUERIES):
-        import catalog
+        import catalog     # catalog → predicate → constraints → report:模組層級會循環,在這裡才 import
         with open(QUERIES, encoding="utf-8") as f:
             lines += queries_section(catalog.load(), json.load(f))
 

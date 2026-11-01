@@ -8,9 +8,11 @@
 **讀什麼**(票 04):判定讀框架線已結構化的值,不再自己拆字面——受事者的片語段(frame["phrases"][欄]
 .segments:中心詞、中心詞類、指示詞旗標、玩家、區域、修飾語類、數量類)、結構化區域(frame["regions"])、
 回指欄(frame["anaphora"])。回指欄的目標字面與事件主語只有字面,交給片語模組同一套切段(phrases.split/
-segment,經 frames.context() 的分詞輔助)得到段;目標的所在字面交給 regions.zones_of。本模組沒有正則式,
-玩家/區域/量詞/中心詞類的表都是框架線那一份;這裡只有卡面參數的日文寫法 → 值域正典的碼(ADR-0008)
-與判定自己的小表(事件類中心詞、此卡的附屬卡、指示代名詞)。
+segment,經 frames.context() 的分詞輔助)得到段;目標的所在字面交給 regions.zones_of。本模組沒有正則式。
+表的來源:中心詞類/修飾語類/動作對象值在 closed_values、量詞(枚/体)與 全部/指示詞格 在 phrases、玩家拼法在 places,
+與回指共用的小表(指示詞起頭、此卡、事件詞、素材、元々、不是回指的名詞、關係詞、via)在 referent.py——這些都只有
+那一份;這裡只有卡面參數的日文寫法 → 值域正典的碼(ADR-0008)與判定自己的小表(この効果、此卡的附屬卡、「和此卡」
+的關係名詞、指示代名詞的中心詞、發動位置)。
 
 受事者依態取:他動(與沒判態的)取對象,自動/受身取主語、沒有時取主題;對象空著而主題
 (含句內延續的主題)指名此卡時,主題就是受事者,不分動作。
@@ -43,15 +45,18 @@ import os
 import sys
 import unicodedata
 
-from anaphora import INTRANSITIVE, THIS_CARD, VIA_EVENT
-from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_NON_CARD, MODIFIER_KINDS, OTHER,
-                           PATIENT_MODES, PLACE_PLAYER, REGION_GOAL, REGION_PLACE, REGION_SOURCE)
+from anaphora import INTRANSITIVE
+from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_NON_CARD, MOD_ARCHETYPE, MOD_ATTRIBUTE,
+                           MOD_NUMERIC, MOD_PLAYER, MOD_RACE, MOD_SUBTYPE, MOD_ZONE, OTHER, PATIENT_MODES, PLACE_PLAYER,
+                           REGION_GOAL, REGION_PLACE, REGION_SOURCE)
 from constraints import KIND_ACTION
 import frames
 from frames import POS_COND, POS_COST, POS_EFFECT
 import phrases
-from phrases import Q_ALL
+from phrases import CARD_COUNTERS, Q_ALL
 import places
+from referent import (CARD_SUFFIX, EVENT_WORDS, MATERIAL, NON_REFERENCE_NOUNS, ORIGINAL, PRONOUNS, RELATIONAL_WORDS,
+                      TARGETED_PREFIXES, THIS_CARD, VIA_EVENT, WITHIN, clean, opener_of)
 import regions
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -107,12 +112,8 @@ _WHY_ALL_CLASS = {WHY_ALL_INCLUDES, WHY_ALL_NO_ZONE, WHY_ALL_ZONE, WHY_ALL_PLAYE
 # 動作本身就沒有卡片受事者:デッキに戻した数＋１枚をドローする 的「１枚」是張數
 _NOT_CARD_ACTIONS = ("ドロー",)
 
-MOD_RACE, MOD_ATTRIBUTE, MOD_ARCHETYPE, MOD_SUBTYPE, MOD_NUMERIC, MOD_ZONE, MOD_PLAYER = MODIFIER_KINDS[:7]
 OPPONENT = PLACE_PLAYER[places.PLAYER_OPP]
-# 判定自己的小表(2026-11-01,票 04 改讀時從正則式收成表):
-# 屬性類中心詞裡跟主人走的事件類(その効果、そのモンスターの発動、融合召喚);元々の 是屬性的一部分
-EVENT_HEADS = ("効果", "発動", "攻撃", "召喚")
-ORIGINAL = "元々"
+# 判定自己的小表(2026-11-01 規格 2 票 04 裁定改讀片語時從正則式收成表;來源 action-patient 的判定規則):
 # この効果、この効果の発動、この発動とこの効果:主人是此卡(この効果で特殊召喚したモンスターの効果 主人是別張)
 THIS_EFFECT = ("この効果", "この発動")
 THIS_EFFECT_FIRST = THIS_EFFECT + ("この効果の発動", "この発動の発動")
@@ -125,16 +126,8 @@ ATTACHED_TO_OTHER = ("X素材", "装備", "攻撃対象")
 # 後一段以這些關係名詞起頭時不是並列含此卡
 WITH_THIS_CARD = ("リンク状態", "相互", "戦闘")
 # 指示代名詞自己就是被指的卡(それ、それら、その内の…);其餘指示詞類中心詞(いずれか、残り)照卡判
-REFERENCE_HEADS = ("それ", "それら", "内")
-# 指示詞綁的是時間/程度/位置名詞(その時の、その中の)、或段裡有關係詞(以外、同名、以上/以下/未満 的數值比較):
-# 指示詞只修飾另一張卡,受事者照自己的段判
-NOT_REFERENCE_NOUNS = ("時", "中", "後", "度", "まま", "差", "同名")
-RELATIONAL_WORDS = ("以外", "同名")
+REFERENCE_HEADS = PRONOUNS + (WITHIN,)
 PAREN_OPEN, PAREN_CLOSE = "（", "）"
-# 段首的指示詞字面(片語模組 _demonstrative 認的那幾個;旗標假而段首仍是這些 = 指示詞只修飾另一張卡)
-DEMONSTRATIVE_OPENERS = tuple(sorted(phrases.DEMONSTRATIVE_WORDS, key=len, reverse=True)) + ("対象の", "この効果の対象")
-# 只剩量詞的段(その２体、１枚):枚/体 數的一定是卡
-CARD_COUNTERS = ("枚", "体")
 # 中心詞類 → 判定用的粗類
 CARD, EFFECT, VALUE, NOT_CARD, UNKNOWN = "card", "effect", "value", "not_card", "unknown"
 # 指示詞在段裡扮演的角色
@@ -175,7 +168,6 @@ def _bits_by_word(words, domain, exhaustive=False):
 
 # 卡種(卡片總表 type 位元):中心詞字面尾
 _KIND_BITS = _bits_by_word({"モンスター": "m", "魔法": "s", "罠": "t"}, vocab.CAT, exhaustive=True)
-CARD_SUFFIX = "カード"
 # 卡面參數:卡文的日文寫法 → 值域正典的碼(位元由正典來)
 _RACE_BITS = _bits_by_word(
     {"戦士族": "warrior", "魔法使い族": "spellcaster", "天使族": "fairy", "悪魔族": "fiend",
@@ -203,11 +195,6 @@ TUNER_BIT = _MONSTER_TYPE_BITS["チューナー"]
 NUMERIC_FIELDS = ("レベル", "ランク", "リンク", "攻撃力", "守備力")
 # 卡面能比的中心詞(卡種詞之外):任何卡種;X素材 這類不是卡面能比的
 ANY_KIND_HEADS = ("カード", "トークン")
-MATERIAL_SUFFIX = "素材"
-
-
-def _clean(text):
-    return "".join((text or "").split())
 
 
 def _nfkc(text):
@@ -236,7 +223,7 @@ def _ctx():
 @lru_cache(maxsize=None)
 def segments_of(text):
     """一段字面(回指欄的目標、事件主語、屬性的主人)→ 片語段:和片語模組切受事者同一套(分詞 → 切段 → 定段)。"""
-    text = _clean(text)
+    text = clean(text)
     if not text:
         return ()
     run = _ctx().tokenize(text)
@@ -254,10 +241,10 @@ def _segments(frame, key):
         # 沒跑過片語步驟的框架(手寫的測試框架):字面自己切段
         return segments_of(frame.get(key)) if frame.get(key) else ()
     segments = tuple(phrase["segments"])
-    field, raw = _clean(phrase["text"]), segments[0]["text"]
+    field, raw = clean(phrase["text"]), segments[0]["text"]
     if raw != field and not field.startswith(raw):
         k = next((k for k in range(1, len(raw)) if field.startswith(raw[k:])), None)
-        if k is not None and (_opener(raw[:k]) or _opener(raw[k:])):
+        if k is not None and (opener_of(raw[:k]) or opener_of(raw[k:])):
             found = segments_of(field)
             last = segments[-1]["quantity"]
             if found and last and last["from_clause"] and not found[-1]["quantity"]:
@@ -268,13 +255,6 @@ def _segments(frame, key):
 
 def _is_this_card(seg):
     return seg["head_kind"] == HEAD_CARD and seg["text"].endswith(THIS_CARD)
-
-
-def _opener(text):
-    for opener in DEMONSTRATIVE_OPENERS:
-        if text.startswith(opener):
-            return opener
-    return None
 
 
 def _is_clause(text):
@@ -387,7 +367,7 @@ def _head_face(head):
     if core == "チューナー":
         return "モンスター", core, True
     comparable = core in ANY_KIND_HEADS or (core.startswith("「") and core.endswith("」")) \
-        or not core.endswith(MATERIAL_SUFFIX)
+        or not core.endswith(MATERIAL)
     return None, "", comparable
 
 
@@ -452,7 +432,7 @@ def _segment_blocker(seg, face):
     mods = seg["modifiers"]
     for i, mod in enumerate(mods):
         text, mkind = _unelide(mod["text"]), mod["kind"]
-        if mkind == MOD_SUBTYPE and i + 1 < len(mods) and mods[i + 1]["text"].startswith(MATERIAL_SUFFIX):
+        if mkind == MOD_SUBTYPE and i + 1 < len(mods) and mods[i + 1]["text"].startswith(MATERIAL):
             uncomparable = True                      # 融合素材モンスター:融合 說的是素材法,不是子類型
         elif mkind == MOD_RACE and text in _RACE_BITS:
             races.append(text)
@@ -532,13 +512,13 @@ def patient(frame):
     """→ (受事者字面, 受事者的段, 是否由主題規則取得);沒有受事者時字面是空字串、段是空的。"""
     if frame.get("voice") in INTRANSITIVE:
         key = "subject" if frame.get("subject") else "topic"
-        return _clean(frame.get(key)), _segments(frame, key), False
-    obj = _clean(frame.get("object"))
+        return clean(frame.get(key)), _segments(frame, key), False
+    obj = clean(frame.get("object"))
     if obj:
         return obj, _segments(frame, "object"), False
     topic = _segments(frame, "topic")
     if self_rule(topic):
-        return _clean(frame.get("topic")), topic, True
+        return clean(frame.get("topic")), topic, True
     return "", (), False
 
 
@@ -640,7 +620,7 @@ def head_class(seg):
         # 合計3枚を対象として:段尾自己的 枚/体 數量說的是卡;数を2体にできる 的 2体 取自子句,是值
         return CARD if _counts_cards(seg) and not seg["quantity"]["from_clause"] else NOT_CARD
     if kind == HEAD_ATTRIBUTE:
-        return EFFECT if head.endswith(EVENT_HEADS) else VALUE
+        return EFFECT if head.endswith(EVENT_WORDS) else VALUE
     if kind == HEAD_CARD:
         return CARD
     if kind == HEAD_DEMONSTRATIVE:
@@ -684,7 +664,8 @@ def _relational(seg):
     for mod in seg["modifiers"]:
         if mod["kind"] == MOD_NUMERIC and mod.get("compare"):
             return True
-        if mod["kind"] == OTHER and mod["text"]                 and any(_ctx().surface(t) in RELATIONAL_WORDS for t in _ctx().tokenize(mod["text"])):
+        if mod["kind"] == OTHER and mod["text"] \
+                and any(_ctx().surface(t) in RELATIONAL_WORDS for t in _ctx().tokenize(mod["text"])):
             return True
     return False
 
@@ -701,7 +682,7 @@ def _demonstrative_role(segments):
     if head_class(segments[-1]) in (NOT_CARD, UNKNOWN):
         return None                       # その攻撃モンスターと対象のモンスターの攻撃力の差分のダメージ:受事者不是卡
     if not seg["demonstrative"]:
-        if not _opener(text):
+        if not opener_of(text):
             return None
         cls = head_class(seg)
         if cls == CARD:
@@ -718,15 +699,15 @@ def _demonstrative_role(segments):
         return None
     if _relational(seg):
         return MODIFIER if head_class(seg) in (CARD, VALUE, EFFECT) else None
-    if _opener(text) in ("対象の", "この効果の対象"):
+    if opener_of(text) in TARGETED_PREFIXES:
         return REFERENCE
-    opener = _opener(mods[0]["text"]) if mods else None
+    opener = opener_of(mods[0]["text"]) if mods else None
     if opener and mods[0]["kind"] == OTHER:
         bound = mods[0]["text"][len(opener):]
         if _is_clause(bound):
             return REFERENCE
         found = segments_of(bound)
-        if bound in NOT_REFERENCE_NOUNS or (found and head_class(found[-1]) in (VALUE, NOT_CARD)):
+        if bound in NON_REFERENCE_NOUNS or (found and head_class(found[-1]) in (VALUE, NOT_CARD)):
             return MODIFIER if head_class(seg) in (CARD, VALUE, EFFECT) else None
         return REFERENCE
     if kind == HEAD_DEMONSTRATIVE:

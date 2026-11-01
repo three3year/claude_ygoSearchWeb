@@ -2702,7 +2702,7 @@ class TestV4StructuredRegions(unittest.TestCase):
         import regions
         fr = {"kind": "動作", "action": "選ぶ", "object": "モンスター1体", "source": "自分の墓地",
               "place": "相手フィールド", "goal": None, "position": "效果", "polarity": "肯定"}
-        regions.mark(frames.default_extractor()._context(), [], fr)
+        regions.mark(frames.context(), [], fr)
         self.assertEqual((fr["regions"], fr.get("transfer")),
                          ({"source": [["自分", "墓地"]], "place": [["相手", "場上"]]}, None))
 

@@ -320,6 +320,16 @@ code review 第 5 條把 `manner.DISPLAY_FORMS` 改從 `extract_seed.CLOSED_VALU
 - (a)全部類改成「任一個比得了的條件對不上就 非此卡,全部對得上才 皆非(含此卡),比不了的才看區域」;以下の効果 當此卡的效果(此卡)(建議):改 `patient.py` 的 `_all_class` 順序與效果主人規則;代價:基準重凍、舊匯出檔的四組葉會變。
 - (b)維持現狀:這些框在 動作對象 兩個模式下都查不到(皆非)或查錯(以下の効果 非此卡)。
 
+### 動作對象改讀後變差的 14 框要接受還是補字面規則?
+
+決定:待裁定(2026-11-01,named-queries code review)。
+
+規格 2「動作對象改讀後逐框比對,差異要麼更對、要麼修規則」;票 04 改讀論元片語後判定值變了 132 框,其中 **14 框變差**(括號夾在兩個數量之間、運算符數量尾、その 綁進定語子句、と 後接定語子句不切段、いずれか 中心詞、から 的來源當段的區域、字段讀音;逐框在[已知未修第 6 項](#具名查詢目錄已知未修與偏離))——票 04 逐卡說明後留下,既沒修規則也沒回正,與規格字面相抵。根因全在片語線拿不到舊正則式撿到的字面(已知未修第 7 項列的縫),不在動作對象的判定規則。
+
+- (a)接受、記已知未修(建議):14 框留在第 6 項,片語線開票補縫(`_tail_quantity` 收 の 後與括號/運算符的數量尾、と 後接定語子句切段、その 綁定語子句的旗標)後動作對象自動回正,不必再動 `patient.py`;代價:規格 3 切換索引前這 14 框在 動作對象 條件下查不到或查錯(皆非 11 框、非此卡 2 框、此卡 → 皆非 1 框)。
+- (b)在 `patient.py` 加字面補丁(正則式或字面比對把這幾型撿回來):代價:違反規格「正則式刪掉、判定讀片語的段」與 test_lint 的機械規則,片語線補縫後補丁變成死碼還要再刪。
+- (c)改字段規則比讀音(教導=ドラグマ 三框):另一條線(字段規則比的是日文卡名字串),與片語無關;代價:要一張讀音對照表。
+
 ## 動作框架的範圍與方法
 
 框架抽取規則見 `frames.py` 檔頭;逐句回歸例子見 `test_frames.py`(75 條)與 `test_assemble.py`(9 條)。錯誤分五類:漏抽動作/論元抽錯/位置判錯/極性判錯/多抽(不是動作)。round1〜4 是全語料抽樣 300 張卡(單效果怪獸 100/多效果怪獸 100/魔陷 70/靈擺 30,切 8 批);round5〜6 是 ● 合併後針對受影響卡的抽樣 100 張(見下)。
@@ -843,6 +853,8 @@ round5 起,分詞與框架抽取的單位是**效果句**:一個編號效果的�
 - 驗收(票 10 交件版):effect-tokenize 全套 1,034 條(1,022 + 本票 12)、node 172、script/* 五套 66/43/469/55/136 通過;`downstream_baseline.py export` digest ok(舊匯出檔 6725c2536bb40c0865538cb4c37273b1 不變);全鏈重跑後 `data/action_frames.json`(019c57ce…)與 `data/action_categories.json` md5 不變、`compare_dry_run.py` 重跑逐葉相同(+取自來源收回 1,769、+回指回填 3,076、−尾綴 6)。
 - 驗收(票 11 交件,整合分支 `named-queries` 8c25748 的狀態全套重跑):`run_chain.py` 全鏈(分詞 → 框架 → 目錄 → 框列匯出 → 類別 → 類別匯出)後 `git diff data/` 空(`data/action_frames.json` 019c57ceea6b7f73e93170f8ada36fd6、`data/action_categories.json` 6725c2536bb40c0865538cb4c37273b1;frames.json 13fd923af331d8d82307a08369b15375、frame_queries.json c05e335fb26d1763162e189ef6554307);新匯出檔與 frame_queries.json 各再跑一次 md5 相同;`report.py` 重生無差異;`baseline_diff.py` 剝鍵差異 0、底線鍵 0、digest ok(e43cc838…);`downstream_baseline.py` anaphora 差異 0(dc03f6b9…)/patient 差異 0(6c65704f…)/export ok(6725c253…);封閉表表外值 0(frames.py 建置時);`catalog_hits.py` exit 0、不留 0;`compare_dry_run.py` 重跑逐葉相同。測試:effect-tokenize 全套 **1,044 條**、node 172、script/* 五套 66/43/469/55/136 全過。
 
+- 驗收(code review 修正,分支 wt/12-review-fixes):`run_chain.py` 全鏈 exit 0、`git diff data/` 空(`data/action_frames.json` 019c57ceea6b7f73e93170f8ada36fd6、`data/action_categories.json` 6725c2536bb40c0865538cb4c37273b1;frames.json 13fd923af331d8d82307a08369b15375、frame_queries.json c05e335fb26d1763162e189ef6554307,都與票 11 相同);`baseline_diff.py` digest ok、剝鍵差異 0、底線鍵 0;`downstream_baseline.py` anaphora 差異 0/patient 差異 0/export ok;`report.py` 重生只多「動作對象(此卡/非此卡/皆非)框數分位置」一表(此卡 8,806/非此卡 23,301/皆非 14,625 框;+10 行);`prepare_view.py` 的 view_data.js 7942979f560fb25a7490d2039e71f857 與 view_queries_0〜3 的 md5 與票 11 相同(本節改動前量的);測試 effect-tokenize 1,046 條(1,044 − 票 03/04 測試檔的 3 條 ast 規則 + test_lint 2 + test_07 名字口徑 3)、node 172、script/* 五套 66/43/469/55/136 全過。
+
 ## 具名查詢目錄的張數與不留(前後比對;儀表板參考,不是通過門檻)
 
 目錄(`catalog.json`,舊樹 1:1 改寫、改寫不改名):具名查詢 236(詞元節點 100、條件葉 136;舊的 97 片預設葉刪掉、對到詞元節點,對應表 `catalog-mapping.json` 333 筆),頂層 13(大類 12 + 自成大類的 破壊)、中類 12;編不出來 0。匯出檔 `data/action_frames.json`(版本 1)目錄欄 260 列(大類 12 + 自成大類 1 + 中類 12 + 具名查詢 236 — 票 08 Comments 寫的「13 大類 + 11 中類」是把 破壊 算成大類、少算一個中類,總數同),每列帶三個位置的張數與卡集合雜湊(`predicate.cards_hash`:密碼依數值排序、逗號連寫、sha1 前 16 碼;空集合 da39a3ee5e6b4b0d)。**不留清單(三個位置合計沒有命中):空**,236/236 都至少命中一張——`取り除く@お互いのフィールド` 代價 10/效果 0/條件 0 靠代價位留下(規格「不留的位置口徑」(a))。命中中間產物 `frame_queries.json`:動作框架 46,732,命中任一具名查詢的 36,558(代價 3,728/3,734、效果 26,384/26,687、條件 6,446/16,311),合計 66,491 框·查詢、每框平均 1.42;命中數分佈 0:6/303/9,865、1:1,447/9,461/5,081、2:1,894/10,435/957、3+:387/6,488/408(代價/效果/條件)。
@@ -890,3 +902,9 @@ round5 起,分詞與框架抽取的單位是**效果句**:一個編號效果的�
   - 「每類先補回歸例子再修」沒有發生:89 筆沒有一筆在目錄/評估器/轉換;`test_10_llm_check.py` 只有分層歸因與抽樣決定性(12 條)。複檢因此是同一份批次檔的再審(確認歸類與誤收),不是修後驗證。
   - `llm_check.load()` 改成一次執行只讀一遍(具名查詢線一次執行要讀三次);`write_batches`/`record_lines`/`frame_line` 多一個可選的「另加的格」回呼,既有各線不傳、輸出不變。
 - **票 11**:GLOSSARY 四處、ADR-0018 兩句、build-products 一條與本節、拆解頁與檢驗摘要照原網址重發;拆解頁的 `view_cats_0〜3.js` 以 null 移除、`view_queries_0〜3.js` 新名(票 09 的接點)。整合分支狀態全鏈重跑與驗收數字見本線「一輪加複檢結果」末條與票 11 Comments。
+- **code review 修正(2026-11-01,分支 wt/12-review-fixes;行為零改變——frames.json、兩份匯出檔、三個基準全部不變)**:
+  - **回指仍讀字面的四處**(規格「候選比對改讀回指字面與候選欄的片語段」;票 03 Comments 有理由):`_player` 讀目標/所在字面開頭的玩家前綴(段的玩家是 places 合併後的值,自分フィールド・相手フィールド 會從 自分 變 雙方,改讀不是零差異、要先裁定)、`COMPARE_MARKS` 看整個字面的 と同名/と同じ、`CLAUSE_MARKS` 看其他類修飾語裡的格助詞(兩者都是片語旗標認不出的定語子句——已知未修第 7 項的縫,併回片語線後可刪)、`_leading_zone` 在字面片語裡定位開頭的區域。能改的兩處改了:中心詞是不是區域詞交給 `regions.zones_of`、「整段只是(玩家)區域」讀段的 zones/修飾語。
+  - **test_categories.py 沒依新語意改寫**(規格「舊測試依新語意改寫」):取過渡期 (a) 保留舊測試(154 條,守舊歸葉程式在規格 3 刪前不壞),新語意的例子在 `test_07_catalog.py`/`test_08_hits.py`;規格 3 刪舊歸葉程式時連 `test_categories.py` 一起刪。
+  - **`rewrite_tree.py` 留著**:票 07 自述改寫後退場、入版控作一次性改寫的紀錄(重跑會重寫 catalog.json,不在鏈裡);規格 3 刪舊樹檔時一併處理。**`llm_check.PATIENT_CHANGED` 留著**:票 10 自述「基準已重凍、算不回來」,那 187 框是票 03/04 Comments 逐卡清單的封閉表,抽樣分層的母體。
+  - **動作對象 14 框變差**:開成「需要你決定的」一題(建議 (a) 接受),票 04 Comments 指到它。
+  - 其餘 Standards 違規與氣味全部修了(一個意思一個地方:PLAYER_LABEL 只在 catalog、anaphora/patient 共用的小表收成 `referent.py`、量詞 枚/体 在 phrases、極性值域 `constraints.POLARITIES`、修飾語類常數只在 closed_values 拆一次;封閉表來源註解;ast 機械規則搬進 test_lint;測試只斷言接縫輸出;報告加動作對象分位置的表;詞元節點判準只在 catalog 的 `Node.lemma_node`;「不留」只在匯出步驟檢查;`frames.context()` 一個名字),細目在票 11 Comments。

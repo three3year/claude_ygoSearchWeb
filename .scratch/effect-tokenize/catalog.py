@@ -10,7 +10,8 @@
     大類      {"大類": 名, "中類"?: [中類名…], "子": [節點…]}——只有頂層大類可列中類
     中類      只在大類的清單宣告(名字),具名查詢以 "中類" 掛上去;路徑 大類 › 中類 › 具名查詢(詞元層省掉)
     具名查詢  {"述詞": {欄: 值…}, "子"?: [具名查詢…], "大類"?: 頂層大類名, "中類"?: 中類名}
-              帶子的具名查詢就是詞元節點;頂層的具名查詢自成大類(破壊)
+              述詞只有 詞元/極性/否定形 的具名查詢是詞元節點(Node.lemma_node;帶不帶子無關——召喚 這類詞元節點沒有子,
+              真目錄 236 個具名查詢裡詞元節點 100、帶子的 35);頂層的具名查詢自成大類(破壊)
 述詞的欄用 predicate.FIELDS 的字;本規格目錄只開 詞元(單值,必填)、極性、否定形、來源/目的/所在
 ([玩家或 null, 區域七值] 的清單,null 不看玩家)、受事者中心詞、目的中心詞(字串清單,尾綴比對)。
 極性省略是目錄的預設(評估器對沒寫的欄一律不看,票 06 假設 2):載入時補成明文清單——沒寫否定形 → [肯定, 可能]
@@ -21,8 +22,10 @@ ZONE_LABEL;玩家前綴連寫 自分/相手/お互いの);:受事者中心詞(�
 耐性集合 {受身, 不成不受} 寫 (耐性)、等於 {不可能} 寫 (限制);詞元節點就是詞元名。組不出名字的述詞——用了本規格
 沒給命名規則的欄(NAMED_FIELDS 以外)、區域欄多值、玩家 相對/無、其他否定形集合、極性不是預設——建置失敗。
 
-檢查(違反即 CatalogError,訊息列全部違反處):每個值在值域(predicate.problems,含詞元是正規詞元)、名字全目錄
-唯一(具名查詢之間;大類之間)、宣告的大類存在(頂層大類)、宣告的中類在所掛大類的清單裡、清單裡的中類都有具名
+檢查(違反即 CatalogError,訊息列全部違反處):每個值在值域(predicate.problems,含詞元是正規詞元)、名字唯一的
+口徑(2026-11-01 code review 修正時寫明,不改行為):具名查詢之間唯一、頂層節點(大類與自成大類的具名查詢)之間唯一;
+大類與它底下的同名具名查詢合法(大類 召喚 底下的詞元節點 召喚——路徑 召喚 › 召喚 收合成 召喚,網址與總覽都收合;
+test_07_catalog 守)、宣告的大類存在(頂層大類)、宣告的中類在所掛大類的清單裡、清單裡的中類都有具名
 查詢、中類不與同大類的具名查詢或大類同名、每個大類至少一個具名查詢(掛在它底下或宣告到它的)、節點名不含網址
 路徑分隔符 PATH_SEP、不認得的鍵。「每個具名查詢在全語料至少命中一張」在票 08。
 
@@ -35,8 +38,9 @@ import json
 import os
 
 import predicate
-from closed_values import NEGATION_FORMS, PLAYERS
+from closed_values import PLAYERS
 from constraints import POL_AFFIRM, POL_CAN, POL_NEG
+from negation import CANNOT, NOT_BECOME, PASSIVE
 from predicate import (FIELD_GOAL, FIELD_GOAL_HEAD, FIELD_LEMMA, FIELD_NEGATION, FIELD_PATIENT_HEAD, FIELD_PLACE,
                        FIELD_POLARITY, FIELD_SOURCE)
 
@@ -50,21 +54,25 @@ PATH_SEP = "›"
 KEY_MAJOR, KEY_MIDDLE, KEY_CHILDREN, KEY_PREDICATE = "大類", "中類", "子", "述詞"
 KIND_MAJOR, KIND_QUERY = "大類", "具名查詢"
 
-# 區域七值 → 節點名裡的日文卡文區域名(第二版葉名的寫法;舊歸葉 categories.py 從這裡 import)
+# 區域七值 → 節點名裡的日文卡文區域名(第二版葉名的寫法,2026-10-16 定案;2026-11-01 規格 2 裁定命名沿用第二版;
+# 舊歸葉 categories.py 從這裡 import)
 ZONE_LABEL = {"手牌": "手札", "牌組": "デッキ", "額外牌組": "EXデッキ", "墓地": "墓地",
               "除外": "除外", "場上": "フィールド", "靈擺區": "Pゾーン"}
-# 節點名裡可寫的玩家與它的前綴(規格「玩家相對與無」(a):相對/無 留在值域、目錄不宣告——沒有命名規則)
+# 節點名裡可寫的玩家與它的前綴(2026-10-19 類別線裁定「無」不切;2026-11-01 規格 2「玩家相對與無」(a):相對/無 留在
+# 值域、目錄不宣告——沒有命名規則;舊歸葉 categories.py 從這裡推它的 places 拼法對照)
 PLAYER_LABEL = {PLAYERS[0]: "自分", PLAYERS[1]: "相手", PLAYERS[2]: "お互いの"}
-# 否定形集合 → 名字的尾綴(規格裁定:耐性 = {受身, 不成不受}、限制 = {不可能});其他集合沒有命名規則
-PASSIVE, NOT_BECOME, CANNOT, _GENERAL = NEGATION_FORMS
+# 否定形集合 → 名字的尾綴(2026-11-01 規格 2 裁定:耐性 = {受身, 不成不受}、限制 = {不可能});其他集合沒有命名規則
 NEGATION_LABEL = ((frozenset((PASSIVE, NOT_BECOME)), "耐性"), (frozenset((CANNOT,)), "限制"))
-# 極性的預設(省略時補上);寫了否定形的述詞極性只能是 否定
+# 極性的預設(2026-11-01 規格 2「詞元節點極性」(a):省略時補 肯定與可能);寫了否定形的述詞極性只能是 否定
 DEFAULT_POLARITY = [POL_AFFIRM, POL_CAN]
 NEGATIVE_POLARITY = [POL_NEG]
-# 本規格給了命名規則的欄;其餘欄要進目錄時先補命名規則
+# 本規格給了命名規則的欄(2026-11-01 規格 2 命名規則段);其餘欄要進目錄時先補命名規則
 REGION_ARROWS = ((FIELD_SOURCE, "←"), (FIELD_GOAL, "→"), (FIELD_PLACE, "@"))
 NAMED_FIELDS = (FIELD_LEMMA, FIELD_POLARITY, FIELD_NEGATION, FIELD_SOURCE, FIELD_GOAL, FIELD_PLACE,
                 FIELD_PATIENT_HEAD, FIELD_GOAL_HEAD)
+# 詞元節點的判準(2026-11-01 票 09 裁定、GLOSSARY 第三版段):述詞只有這三欄(極性是預設、否定形是耐性/限制的極性類
+# 節點);report.py 與 prepare_view.py 的節點數讀 Node.lemma_node
+LEMMA_NODE_FIELDS = frozenset((FIELD_LEMMA, FIELD_POLARITY, FIELD_NEGATION))
 
 
 class CatalogError(ValueError):
@@ -137,12 +145,13 @@ class Node:
     """目錄的一個節點:大類(predicate 是 None)或具名查詢(predicate 是明文述詞)。ancestors 是樹位置上
     從頂層到父節點的名字;home 是本家(頂層節點名,頂層節點自己就是本家);declared/middle 是宣告的大類/中類;
     major 是宣告的大類或本家;path 是 大類 › 中類或詞元節點 › 名(宣告的大類取代本家、中類取代詞元層;相鄰
-    同名只留一個)。"""
+    同名只留一個);lemma_node 是「述詞只有詞元/極性/否定形」的詞元節點(大類節點 False)。"""
 
     def __init__(self, kind, name, ancestors, pred=None, declared=None, middle=None):
         self.kind = kind
         self.name = name
         self.predicate = pred
+        self.lemma_node = pred is not None and set(pred) <= LEMMA_NODE_FIELDS
         self.children = []
         self.declared = declared
         self.middle = middle

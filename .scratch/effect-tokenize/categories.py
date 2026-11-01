@@ -112,7 +112,9 @@ POLARITY_CLASS_OF = {negation.PASSIVE: POL_RESIST, negation.NOT_BECOME: POL_RESI
                      negation.CANNOT: POL_RESTRICT, negation.GENERAL: None}
 
 # 區域七值 → 葉名裡的日文區域名:與具名查詢目錄的命名同一張表(named-queries 票 07,catalog.py),這裡 import
+import catalog  # noqa: E402
 from catalog import ZONE_LABEL  # noqa: E402
+from closed_values import PLACE_PLAYER  # noqa: E402
 
 # 樹來源檔的鍵
 KEY_MAJOR = "大類"
@@ -120,9 +122,10 @@ KEY_MIDDLE = "中類"
 KEY_LEMMA = "詞元"
 KEY_POLARITY_CLASS = "極性類"
 KEY_CHILDREN = "子"
-# 可宣告的玩家條件值與它在葉名裡的日文前綴。「無」不能宣告(2026-10-19 站主裁定):
-# 它與沒宣告玩家的葉葉名同形,沒寫玩家的框架由沒宣告玩家的葉收
-PLAYER_LABEL = {PLAYER_SELF: "自分", PLAYER_OPP: "相手", PLAYER_BOTH: "お互いの"}
+# 可宣告的玩家條件值與它在葉名裡的日文前綴:與具名查詢目錄的命名同一張表(catalog.PLAYER_LABEL),鍵換成舊樹檔的
+# places 拼法(雙方)。「無」不能宣告(2026-10-19 站主裁定):它與沒宣告玩家的葉葉名同形,沒寫玩家的框架由沒宣告
+# 玩家的葉收
+PLAYER_LABEL = {player: catalog.PLAYER_LABEL[PLACE_PLAYER[player]] for player in (PLAYER_SELF, PLAYER_OPP, PLAYER_BOTH)}
 
 # 樹來源檔的葉條件鍵 → 內部欄名;玩家條件欄是「區域欄名_player」,綁在該區域條件上
 LEAF_KEYS = {"來源": "source", "目的": "goal", "所在": "place", "關鍵詞": "keywords",

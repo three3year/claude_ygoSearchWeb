@@ -1571,7 +1571,7 @@ class FrameExtractor:
         frames.sort(key=lambda f: (f["sentence"], f["span"][0],
                                    f["kind"] != KIND_CONSTRAINT))
         # 以下三步的順序(named-queries 票 02;見檔頭「處理順序」):片語結構化 → 回指 → 其餘第四版論元
-        ctx = self._context()
+        ctx = self.context()
         # 片語結構化(frame-args-v4 phrases):只讀既有欄的最終字面與切區域前的 _raw,不讀回指;回指改讀片語段
         enrich.before_anaphora(ctx, tokens, frames)
         # 回指(action-patient-anaphora;named-queries 票 03 改讀片語段):讀回填、正規化之後的值與片語,跨句號
@@ -1580,7 +1580,7 @@ class FrameExtractor:
         enrich.after_anaphora(ctx, tokens, frames)
         return frames
 
-    def _context(self):
+    def context(self):
         """enrich 要的常數與分詞輔助(enrich 與各步驟模組不 import frames,免得循環 import)。"""
         return enrich.Context(self.surface, self.word, self.is_noun_like, MOVE_ACTIONS,
                               self._coordinates, self._is_predicate,
@@ -1988,7 +1988,7 @@ def default_extractor():
 def context():
     """enrich 的 Context(詞面、詞典、並列、述語與分詞輔助):步驟模組之外要把一段字面切成片語段時用
     (動作對象把回指欄的目標字面交給 phrases.split/segment,不自己拆字面;named-queries 票 04)。"""
-    return default_extractor()._context()
+    return default_extractor().context()
 
 
 def extract(text, context="", extra=None, card_type=None):

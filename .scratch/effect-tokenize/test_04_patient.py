@@ -5,11 +5,10 @@
 此卡/非此卡葉(effect_self/effect_nonself/cost_self/cost_nonself)。判定規則不變、只換讀取來源,
 所以這些例子改讀前後都要過;每條例子挑的是改讀後從片語結構拿值的句型(段數量、取自子句的數量、
 回指目標的數量、結構化區域、段的玩家/區域、中心詞字面尾的卡種、修飾語類、替代項段、指示詞旗標、
-此卡四條字面規則改成比段)。機械規則一條:patient.py 沒有正則式、不呼叫區域辨識去解字面。
+此卡四條字面規則改成比段)。機械規則(patient.py 沒有正則式、不呼叫區域辨識去解字面)在 test_lint.py。
 
 執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize -p "test_*.py"
 """
-import ast
 import os
 import sys
 import unittest
@@ -28,30 +27,6 @@ def assert_mode(case, found, mode, group="effect"):
         return
     case.assertTrue(found.get(group + "_" + mode), found)
     case.assertNotIn(group + "_" + other, found)
-
-
-class TestPatientModuleShape(unittest.TestCase):
-    """票 04 的機械規則:動作對象模組不再自己拆字面——沒有正則式,也不呼叫區域辨識解字面。"""
-
-    def setUp(self):
-        with open(os.path.join(HERE, "patient.py"), encoding="utf-8") as f:
-            self.tree = ast.parse(f.read(), "patient.py")
-
-    def imported(self):
-        for node in ast.walk(self.tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    yield alias.name
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                for alias in node.names:
-                    yield node.module + "." + alias.name
-
-    def test_no_regular_expressions(self):
-        self.assertNotIn("re", set(self.imported()))
-
-    def test_no_literal_zone_parsing(self):
-        names = set(self.imported())
-        self.assertFalse({"places.parse_zones", "places.parse_place"} & names, names)
 
 
 class TestSelectionReadsQuantity(unittest.TestCase):
@@ -145,7 +120,7 @@ class TestAllClassReadsStructure(unittest.TestCase):
 
     def test_uncomparable_literal_is_reported(self):
         doc, _ = export({1: [clause("①", "①：自分フィールドの表側表示モンスターを全て破壊する。")]},
-                        {1: __import__("export_categories").card_face(DRAGON)})
+                        {1: __import__("export_common").card_face(DRAGON)})
         self.assertEqual(doc["統計"]["比不了字面"], {"表側表示モンスター": 1})
 
 

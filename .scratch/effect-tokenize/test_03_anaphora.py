@@ -4,11 +4,11 @@
 唯一接縫:一句效果文原文 → 動作框架清單(frames.extract);只斷言輸出框架的 anaphora 欄,不斷言段、候選、
 封閉表。每個句型一條例子、配一條反例:限定語相符/不符(修飾語依類與字面比、中心詞自帶的卡種)、單複數、
 數量在子句(片語段的 取自子句 數量)、玩家與區域、指示詞是修飾語不回指(綁屬性詞/區域/同名/以外 的指示詞)、
-並列含此卡。既有的回指例子仍在 test_frames.py(TestAnaphora*)。機械規則一條:anaphora.py 沒有正則式(只讀原始碼)。
+並列含此卡。既有的回指例子仍在 test_frames.py(TestAnaphora*)。機械規則(anaphora.py 沒有正則式、不解區域字面)在
+test_lint.py。
 
 執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize
 """
-import ast
 import os
 import sys
 import unittest
@@ -139,21 +139,6 @@ class TestListedWithThisCard(unittest.TestCase):
     def test_reference_listed_with_this_card_resolves_its_own_segment(self):
         found = anaphora_of("①：相手モンスター１体を対象として発動できる。そのモンスターとこのカードを破壊する。", "破壊")
         self.assertEqual((found["text"], found["via"]), ("相手モンスター1体", "欄位"))
-
-
-class TestNoRegex(unittest.TestCase):
-    """票 03:回指模組不再自己拆字面——沒有 import re、沒有 re.xxx(封閉表在模組頂,判定讀片語的段)。"""
-
-    def test_anaphora_module_has_no_regex(self):
-        with open(os.path.join(HERE, "anaphora.py"), encoding="utf-8") as f:
-            tree = ast.parse(f.read(), "anaphora.py")
-        imported = [alias.name for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))
-                    for alias in node.names]
-        self.assertNotIn("re", imported)
-        self.assertNotIn("re", [node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)])
-        self.assertEqual([node.attr for node in ast.walk(tree)
-                          if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "re"],
-                         [])
 
 
 if __name__ == "__main__":

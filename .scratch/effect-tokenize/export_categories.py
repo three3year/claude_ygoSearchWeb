@@ -36,8 +36,7 @@ import categories  # noqa: E402
 import patient  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
 # 原文雜湊、卡面、框架對標記句、統計、讀效果句:兩份匯出共用(export_common.py,票 05 抽出)
-from export_common import (CARDS, FACE_FIELDS, ROOT, TOKENS, Stats, card_face, face_hash,  # noqa: E402,F401
-                           load_faces, load_sentences, owner, print_stats, text_hash)
+from export_common import ROOT, Stats, face_hash, load_faces, load_sentences, owner, print_stats, text_hash  # noqa: E402
 from frames import POS_COST, POS_EFFECT  # noqa: E402
 
 OUT = os.path.join(ROOT, "data", "action_categories.json")

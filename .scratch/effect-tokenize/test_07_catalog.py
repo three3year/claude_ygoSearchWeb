@@ -120,6 +120,23 @@ class TestLoadedPredicate(unittest.TestCase):
             self.assertEqual(predicate.problems(q.predicate), [])
 
 
+class TestNameScope(unittest.TestCase):
+    """名字唯一的口徑(2026-11-01 code review 修正寫明):具名查詢之間唯一、頂層節點之間唯一;大類與它底下的同名
+    具名查詢合法(召喚 › 召喚 收合成一段路徑)。"""
+
+    def test_a_major_may_contain_a_named_query_of_the_same_name(self):
+        cat = load(major("召喚", [query("召喚", children=[query("召喚", 來源=[[None, "手牌"]])])]))
+        self.assertEqual([q.name for q in cat.queries], ["召喚", "召喚←手札"])
+        self.assertEqual([list(q.path) for q in cat.queries], [["召喚"], ["召喚", "召喚←手札"]])
+        self.assertEqual(cat.members("召喚"), ["召喚", "召喚←手札"])
+
+    def test_a_top_level_named_query_may_not_share_a_name_with_a_major(self):
+        self.assertIn("大類名重複:召喚", failure(major("召喚", [query("通常召喚")]), query("召喚")))
+
+    def test_two_named_queries_may_not_share_a_name_even_under_different_majors(self):
+        self.assertIn("名字重複:召喚", failure(major("召喚", [query("召喚")]), major("處理程序", [query("召喚")])))
+
+
 class TestChecks(unittest.TestCase):
     """違反即載入失敗,訊息列全部違反處。"""
 

@@ -5,9 +5,9 @@ const { VOCAB } = Util;
 
 const TEXTS = ['name', 'code', 'text'];
 const LANG = 'nameLang';
-/* 動作標籤(規格 4 網址段):act 是 AND 區、actOr 是 OR 區,兩區同一套編解碼。沒改過的標籤寫
-   葉路徑,逐個 encodeURIComponent 再以逗號接,排除在開頭加 `-`。目錄找不到的路徑(目錄改名或
-   搬節點後的舊網址)安靜忽略。or 列出放在 OR 區的左側條件鍵(Cond.sideTags 的 key),對不到
+/* 動作標籤(規格 4 網址段):act 是 AND 區、actOr 是 OR 區,兩區同一套編解碼。標籤之間逗號接,
+   排除在開頭加 `-`。沒改過的標籤寫葉路徑,逐個 encodeURIComponent;改過的寫欄位對
+   `欄:值~值;欄:值`。目錄找不到的路徑(目錄改名或搬節點後的舊網址)安靜忽略。or 列出放在 OR 區的左側條件鍵(Cond.sideTags 的 key),對不到
    標籤的鍵安靜忽略。舊軸的 actCost、actPat 不再認得,開舊網址時當未知參數。 */
 const ACT = 'act';
 const ACT_OR = 'actOr';
@@ -65,21 +65,49 @@ function numText(v) {
   return v == null ? '' : String(v);
 }
 
-/* 目前標籤都從目錄來,一定寫得成路徑;改過的標籤(欄位對)是票 04。 */
-function tagToken(tag) {
-  const path = Cond.leafPath(tag);
-  return path ? (tag.ex ? '-' : '') + encodeURIComponent(path) : '';
+/* encodeURIComponent 不編 `~`,要補編,否則值裡的 `~` 會和值的分隔符撞。分隔符不選 `|`:
+   它不是合法網址字元,聊天軟體會改編(規格 4 網址段)。 */
+function encPiece(s) {
+  return encodeURIComponent(s).replace(/~/g, '%7E');
 }
 
+function tagToken(tag) {
+  const path = Cond.leafPath(tag);
+  const body = path ? encodeURIComponent(path)
+    : Cond.toPairs(tag).map(p => encPiece(p[0]) + ':' + p[1].map(encPiece).join('~')).join(';');
+  return (tag.ex ? '-' : '') + body;
+}
+
+/* `欄:值~值;欄:值` → 欄位對。解不開的欄名或值只掉它自己;認不認得交給條件模型。 */
+function pairsOf(body) {
+  const pairs = [];
+  body.split(';').forEach(seg => {
+    const i = seg.indexOf(':');
+    const field = i < 0 ? null : dec(seg.slice(0, i));
+    if (field == null) return;
+    pairs.push([field, seg.slice(i + 1).split('~').map(dec).filter(v => v != null)]);
+  });
+  return pairs;
+}
+
+/* 字面的 `:` 只會是欄位對:路徑裡的 `:` 寫出時都編掉了。認不出來回 null。 */
 function tokenTag(token) {
   const ex = token.charAt(0) === '-';
-  const path = dec(ex ? token.slice(1) : token);
+  const body = ex ? token.slice(1) : token;
+  if (body.indexOf(':') >= 0) return Cond.fromPairs(pairsOf(body), ex);
+  const path = dec(body);
   return path ? Cond.tagAt(path, ex) : null;
 }
 
-/* 兩區共用:一區的標籤 ⇄ 參數值。 */
-function encodeTags(tags) {
-  return tags.map(tagToken).filter(Boolean).join(',');
+/* 兩區共用:一區的標籤 ⇄ 參數值。兩張標籤可以改到一模一樣,不論同區或跨區,網址只寫第一張
+   (seen 跨兩區);parse 也只留第一張,否則 canon 不冪等。 */
+function encodeTags(tags, seen) {
+  const tokens = tags.map(tagToken).filter(token => {
+    if (!token || seen.has(token)) return false;
+    seen.add(token);
+    return true;
+  });
+  return tokens.join(',');
 }
 
 function decodeTags(raw, state, zone) {
@@ -107,8 +135,9 @@ function stringify(state) {
     if (codes.length) parts.push(ax.key + '=' + codes.join(','));
   });
   if (st.cond) {
-    const and = encodeTags(Cond.tagsIn(st.cond, 'and'));
-    const or = encodeTags(Cond.tagsIn(st.cond, 'or'));
+    const seen = new Set();
+    const and = encodeTags(Cond.tagsIn(st.cond, 'and'), seen);
+    const or = encodeTags(Cond.tagsIn(st.cond, 'or'), seen);
     const orSide = Cond.syncSide(st.cond, q).orSide;
     if (and) parts.push(ACT + '=' + and);
     if (or) parts.push(ACT_OR + '=' + or);

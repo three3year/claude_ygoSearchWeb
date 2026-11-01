@@ -246,12 +246,6 @@ test('狀態:isEmpty 看兩區與 OR 區的左側條件', () => {
   assert.strictEqual(cond('isEmpty', cond('moveSide', cond('empty'), 'atk', 'or')), false);
 });
 
-test('述詞序號:incTags 依引擎的編號列出包含標籤(AND 再 OR,跳過排除)', () => {
-  const st = [[tagAt('破壊', true), 'and'], [tagAt('対象とする'), 'and'], [tagAt('ドロー'), 'or'],
-              [tagAt('破壊'), 'or']].reduce((s, [t, z]) => cond('add', s, t, z), cond('empty'));
-  assert.deepStrictEqual(cond('incTags', st).map(t => t.origin), ['対象とする', 'ドロー', '破壊']);
-});
-
 /* ── 網址 ── */
 
 const EMPTY_Q = { name: '', nameLang: 'zh', code: '', text: '' };
@@ -329,6 +323,13 @@ test('網址:OR 區往返後引擎查詢相同', () => {
   const back = parsed(hashOf(st, extra));
   assert.deepStrictEqual(cond('toQuery', back.cond, back.q).or,
                          cond('toQuery', st, { ...EMPTY_Q, ...extra }).or);
+});
+
+test('句尾短句:OR 區的動作標籤接在 AND 區後面,序號跨片段對得上', () => {
+  const st = cond('add', cond('add', cond('add', cond('empty'), tagAt('破壊', true)),
+                              tagAt('対象とする')), tagAt('ドロー'), 'or');
+  const q = cond('toQuery', cond('moveSide', st, 'text', 'or'), { text: '墓地' });
+  assert.deepStrictEqual(cond('hitLabels', q), ['対象とする', 'ドロー']);
 });
 
 /* ── 全語料:使用者貼網址走的路 ── */

@@ -22,16 +22,20 @@
 ### 介面(給票 03、04、06、07)
 
 - **`Cond`**:狀態變 `{and, or, orSide}`。`tags` 是 AND 再 OR,`removeAt`、`moveAt(編號, 區)` 的編號照它;`tagsIn(狀態, 區)`;`add(狀態, 標籤, 區)` 區預設 and。`sideTags(左側條件)` → `[{key, label, val, part, target}]`,每次算、不存;`sideZone`、`moveSide`、`syncSide`、`isEmpty`。新增改標籤的函式(票 04)要保留 `or`、`orSide`:用 `Object.assign({}, state, …)`,不要回傳只有 `and` 的物件。
-- **述詞序號**:`Cond.incTags(狀態)` 依引擎的編號列包含標籤(AND 再 OR);左側條件的片段沒有述詞,不佔序號。票 03 的序號 → 短句對照用它,不要只讀 AND 區。
+- **述詞序號**:票 03 的 `Cond.hitLabels(查詢)` 直接讀查詢的 `preds.inc` 與 `q.or`,兩區不必另外接;左側條件的片段沒有述詞,不佔序號。
 - **`Hash`**:`tagToken`(標籤 → 一段)與 `tokenTag`(一段 → 標籤)是一對,`encodeTags`、`decodeTags` 兩區共用;票 04 的欄位對只要改這一對。
 - **`Strip`**:`render(狀態, 左側條件標籤)`;`init` 多 `onMove`、`onSideRemove`、`onSideGo`、`onSideMove`、`onClear`。動作標籤點了還沒有動作,票 04 接;`.strip-x` 不再帶 `data-i`,編號在外層 `.strip-tag`。
 - **`Query`**:`clearTag(標籤)`、`focusTag(標籤)`。
 
 ### 數字
 
-- node(`script/web/*.test.js` 全部):**296 pass / 0 fail / 0 skip**,動工前 259;新增 37 條在 `script/web/filter_tags.test.js`(平行票各開自己的檔)。併上最新 tip 後的數字見下面「合併」。`test_lint` 8 OK。
+- node(`script/web/*.test.js` 全部):**296 pass / 0 fail / 0 skip**,動工前 259;新增 37 條在 `script/web/filter_tags.test.js`(平行票各開自己的檔)。數字是併上票 03 之前;併後見「合併」。`test_lint` 8 OK。
 - 全語料,走「網址 → `Hash.parse` → `Cond.toQuery` → `runQuery`」:Story 18 墓地 1,228、除外 195、交集 82,OR 區 1,341;Story 19 等於兩邊聯集。
 - 變異驗證:條件模型與 `Hash` 改壞 13 種(`or` 不進 `PARAM_NAMES`、`actOr` 當 AND、片段順序、主查詢不拿走片段、大類不跟著走、跨區編號等),每種至少 1 條失敗。
+
+### 合併
+
+併上 predicate-ui 390b682(票 03)。`cond.js` 的檔頭與匯出清單衝突,兩邊都留。原本給票 03 預留的述詞序號函式沒人用,拿掉;票 03 的 `hitLabels` 讀查詢本身,OR 區不必另接,補一條跨片段的例子。併後 node 六個檔 **303 pass / 0 fail / 0 skip**。真瀏覽器再開 OR 區網址:1,341 張,句尾有「特殊召喚 從 墓地」「特殊召喚 從 除外」,也有一句兩張都標;拖回 AND 82 張;console 只有 favicon 404。
 
 ### 真瀏覽器(桌面 1400×900,`python -m http.server` 起 `web/`,Playwright Chrome,拖曳是真的 dragTo)
 

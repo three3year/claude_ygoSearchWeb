@@ -2,7 +2,7 @@
 
 /* 條件模型(predicate-ui 規格 4 票 02 起,票 05 加左側條件標籤與 OR 區;純函式,不碰 DOM)。
    接縫:目錄列 → 標籤;左側條件 → 標籤;兩區 + 左側條件 → 引擎查詢(含 q.or);標籤 → 具名查詢、
-   葉路徑、短句。
+   葉路徑、短句;引擎查詢 → 句尾標籤的短句。
    動作標籤 `{ex, pred, origin}`:ex 是排除;pred 是送進引擎的述詞,一定帶位置(引擎沒寫位置就
    三個位置都看,見 predicate-index 票 05);origin 是產生它的目錄列名字。
    左側條件標籤 `{key, label, val, part, target}`:每次從左側條件算出來,不存;key 也是網址 or 的鍵;
@@ -134,12 +134,6 @@ function syncSide(state, side) {
 
 function usedPaths(state) {
   return tags(state).map(named).filter(Boolean).map(row => row.path.join(SEP));
-}
-
-/* 引擎的述詞序號是整個查詢的編號:主查詢的 inc,再依片段順序接各片段的 inc。左側條件的片段沒有
-   述詞,所以序號 → 標籤就是這張清單。 */
-function incTags(state) {
-  return tags(state).filter(t => !t.ex);
 }
 
 function zhOf(dom, code) {
@@ -284,15 +278,30 @@ function sentenceParts(tag) {
   return parts;
 }
 
+/* 句尾標籤的位置前綴:預設位置不寫,同短句省略預設的規則。 */
+function positionPrefix(position) {
+  return position === DEFAULT_POSITION ? '' : position + ':';
+}
+
+function partsText(parts) {
+  return parts.map(p => (p.glue ? p.glue + ' ' : '') + p.text).join(' ');
+}
+
 function sentence(tag) {
-  const words = sentenceParts(tag).map(p => (p.glue ? p.glue + ' ' : '') + p.text);
-  return (tag.ex ? '沒有 ' : '') + words.join(' ');
+  return (tag.ex ? '沒有 ' : '') + partsText(sentenceParts(tag));
+}
+
+/* 述詞序號 → 句尾標籤的短句。讀查詢本身,編號規則同引擎(先主查詢的 inc,再依片段順序接各片段的
+   inc),所以 OR 區怎麼進查詢都對得上。不寫位置:句尾的位置前綴取命中框,標籤自己的位置是搜尋範圍。 */
+function hitLabels(q) {
+  return [q, ...(q.or || [])].flatMap(part => ((part.preds && part.preds.inc) || []).map(pred =>
+    partsText(sentenceParts({ pred }).filter(p => p.field !== '位置'))));
 }
 
   return Object.freeze({
     defaultPosition, tagOf, tagAt, named, leafPath,
-    empty, tags, tagsIn, isEmpty, add, removeAt, moveAt, usedPaths, incTags,
+    empty, tags, tagsIn, isEmpty, add, removeAt, moveAt, usedPaths,
     sideTags, sideZone, moveSide, syncSide, toQuery,
-    sentenceParts, sentence,
+    sentenceParts, sentence, hitLabels, positionPrefix,
   });
 })();

@@ -19,6 +19,7 @@ import json
 import re
 
 import vocab
+from frameindex import encode_frame, frame_problems, frame_tables, predicate_problems
 
 TYPE_MONSTER = 0x1
 TYPE_PENDULUM = 0x1000000
@@ -495,7 +496,7 @@ def _leaf_majors(tree):
     return majors, of
 
 
-def _category_stale(rows, clauses_by_id):
+def _export_stale(rows, clauses_by_id):
     """匯出檔與標記表對不上的標記句 [{id, section, index}]:雜湊不符、匯出有標記表
     沒有的句、涵蓋的段落裡標記表多了一句(重拆、新增效果)。"""
     tagged = {(cid, cl.get("section"), cl.get("index")): cl
@@ -525,14 +526,14 @@ def _attach_categories(entries, clauses_by_id, categories, checks, cards_by_id):
 
     `ae` 的有無就是涵蓋與否:涵蓋的卡一定帶 `ae`(沒有葉的句是空陣列,整張都沒有
     葉也照帶),`ac` 與[[動作對象]]的 `aes`/`aen`/`acs`/`acn` 全空時省略。匯出檔與標記表對不上記進 `category_stale`
-    (`_category_stale`),葉不在類別樹記進 `category_unknown_leaves`,卡面參數雜湊對不上
+    (`_export_stale`),葉不在類別樹記進 `category_unknown_leaves`,卡面參數雜湊對不上
     卡片總表(或匯出檔沒帶)記進 `category_face_stale`——三者都讓建置失敗(ADR-0017、
     ADR-0008)。
     """
     leaves = categories["葉"]
     number = {name: i for i, name in enumerate(leaves)}
     rows = {(r["card"], r["section"], r["index"]): r for r in categories["句"]}
-    checks["category_stale"].extend(_category_stale(rows, clauses_by_id))
+    checks["category_stale"].extend(_export_stale(rows, clauses_by_id))
     for (cid, _, index), row in rows.items():
         for name in [n for group in _CATEGORY_GROUPS for n in row.get(group, ())]:
             if name not in number:
@@ -578,10 +579,88 @@ def _attach_categories(entries, clauses_by_id, categories, checks, cards_by_id):
     return vocab_part, report
 
 
-def _acat_digest(acat):
-    """類別樹的雜湊:樹改了(改名、搬節點、加葉),META 看得出來(同 vocab_digest)。"""
-    payload = json.dumps(acat, ensure_ascii=False, sort_keys=True)
+def _content_digest(content):
+    """類別樹、框架部分的雜湊:內容改了(改名、搬節點、加葉、框變了),META 看得出來(同 vocab_digest)。"""
+    payload = json.dumps(content, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
+# 索引建置預期的框列匯出檔格式版本(export_frames.VERSION;script/web 不 import 分詞鏈,不符就是建置失敗)
+FRAME_EXPORT_VERSION = 2
+# 目錄進 VOCAB 的欄:雜湊只有測試要用,高熵字串不佔索引(規格 3 story 8)
+_CATALOG_INDEX_KEYS = ("name", "path", "predicate", "cards")
+BULLET_MARK = "-●"
+
+
+def _lead_sentences(clauses):
+    """涵蓋卡的效果句 → (`fl`,找不到領起句的 ● 子句)。領起句是同段落、index 去掉最後一段 -●n 的句;
+    沒有 ● 子句時 `fl` 是 None(不帶)。"""
+    position = {(cl.get("section"), cl.get("index")): n for n, cl in enumerate(clauses)}
+    fl, orphans, has_bullet = [], [], False
+    for cl in clauses:
+        index = str(cl.get("index"))
+        lead = -1
+        if BULLET_MARK in index:
+            has_bullet = True
+            lead = position.get((cl.get("section"), index.rsplit(BULLET_MARK, 1)[0]), -1)
+            if lead < 0:
+                orphans.append(cl)
+        fl.append(lead)
+    return (fl if has_bullet else None), orphans
+
+
+def _frame_value_problems(doc):
+    """框列與目錄述詞裡值域外的值、目錄述詞不認得的欄:全部列,指得到是哪一句或哪個查詢。"""
+    domains = doc["值域"]
+    found = [dict(problem, id=row["card"], index=row["index"])
+             for row in doc["句"] for frame in row["frames"] for problem in frame_problems(frame, domains)]
+    found += [dict(problem, query=row["name"])
+              for row in doc["目錄"] for problem in predicate_problems(row.get("predicate") or {}, domains)]
+    return found
+
+
+def _attach_frames(entries, clauses_by_id, doc, checks, cards_by_id):
+    """分詞鏈的框列匯出檔(ADR-0018)→ 每張涵蓋卡的 `fr` / `fl`,回傳 (框架部分, 報告);編不了時是 (None, None)。
+
+    `fr` 的有無就是涵蓋與否(沒有框的句與卡帶空清單);框表依卡片密碼序、句序、框序第一次出現編號,同內容的框
+    共用一號,所以與匯出列的順序無關。五類過時或不合的輸入記進 checks、讓建置失敗:版本不符就不往下讀(舊版沒有
+    值域,讀到的是空值);值域外的值編不出來,所以不編;其餘照常往下,好把全部違反處列完。
+    """
+    if doc.get("版本") != FRAME_EXPORT_VERSION:
+        checks["frame_version"].append({"expected": FRAME_EXPORT_VERSION, "found": doc.get("版本")})
+        return None, None
+    rows = {(r["card"], r["section"], r["index"]): r for r in doc["句"]}
+    checks["frame_stale"].extend(_export_stale(rows, clauses_by_id))
+    in_export = sorted({cid for cid, _, _ in rows})
+    checks["frame_face_stale"].extend(_face_stale(doc.get("卡面", ()), in_export, cards_by_id))
+    checks["frame_unknown_values"].extend(_frame_value_problems(doc))
+    if checks["frame_unknown_values"]:
+        return None, None
+    tables = frame_tables((frame for r in doc["句"] for frame in r["frames"]), doc["值域"])
+    numbers = {}
+    covered = [cid for cid in in_export if cid in entries]
+    for cid in covered:
+        clauses = clauses_by_id.get(cid) or ()
+        fr = []
+        for cl in clauses:
+            row = rows.get((cid, cl.get("section"), cl.get("index")))
+            encoded = (json.dumps(encode_frame(frame, tables), separators=(",", ":"))
+                       for frame in (row["frames"] if row else ()))
+            fr.append([numbers.setdefault(text, len(numbers)) for text in encoded])
+        entries[cid]["fr"] = fr
+        fl, orphans = _lead_sentences(clauses)
+        if fl is not None:
+            entries[cid]["fl"] = fl
+        checks["frame_orphan_bullets"].extend(
+            {"id": cid, "section": cl.get("section"), "index": cl.get("index")} for cl in orphans)
+    part = {"table": [json.loads(text) for text in numbers],
+            "frame": {"lemmas": tables.lemmas, "heads": tables.heads, "domains": doc["值域"],
+                      "covered": len(covered)},
+            "catalog": [{key: row[key] for key in _CATALOG_INDEX_KEYS} for row in doc["目錄"]]}
+    report = {"covered_cards": len(covered), "sentences": len(rows),
+              "frames": sum(len(row["frames"]) for row in rows.values()),
+              "unique_frames": len(part["table"]), "heads": len(tables.heads)}
+    return part, report
 
 
 def _summarise_problems(report):
@@ -609,6 +688,11 @@ def _summarise_problems(report):
         ("動作類別匯出檔的葉不在類別樹", checks["category_unknown_leaves"]),
         ("動作類別匯出檔的卡面參數過時(與卡片總表對不上,請重跑分詞鏈)",
          checks["category_face_stale"]),
+        ("框列匯出檔的格式版本與索引建置預期不符", checks["frame_version"]),
+        ("框列匯出檔的原文雜湊過時(與標記表對不上,請重跑分詞鏈)", checks["frame_stale"]),
+        ("框列匯出檔的卡面參數過時(與卡片總表對不上,請重跑分詞鏈)", checks["frame_face_stale"]),
+        ("框列或目錄述詞含值域外的值或不認得的欄", checks["frame_unknown_values"]),
+        ("涵蓋卡的 ● 子句找不到領起句", checks["frame_orphan_bullets"]),
         ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
         ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
     )
@@ -619,7 +703,7 @@ def _summarise_problems(report):
 
 
 def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
-                rewrites=None, data_updated_at=None, categories=None):
+                rewrites=None, data_updated_at=None, categories=None, frames=None):
     """[[卡片總表]]條目 + [[效果標記表]]條目 → (index, report)。
 
     `built_at`、`sources`(來源檔雜湊)與 `data_updated_at`([[資料更新時間]],
@@ -643,6 +727,10 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     `categories` 是分詞鏈匯出的[[動作類別]]檔(ADR-0017,`_attach_categories`):
     涵蓋的卡多帶 `ae` / `ac`,VOCAB 多一個 `acat`(類別樹與涵蓋卡數)。為 None
     時索引不帶類別。
+
+    `frames` 是分詞鏈匯出的框列檔(ADR-0018,`_attach_frames`,規格 3 票 02):涵蓋的卡多帶 `fr`(與 `tx` 對齊的
+    框號清單)與 `fl`(● 子句指到領起句的句序號,沒有 ● 子句的卡不帶),索引多帶框表 `frames`,VOCAB 多帶
+    `frame`(詞元表、中心詞表、值域、涵蓋卡數)與 `catalog`(目錄),META 多帶 `frame_digest`。為 None 時索引不帶框架部分。
     """
     clauses_by_id = {t["id"]: t.get("clauses") or [] for t in tag_cards}
     errata_by_id = {}
@@ -656,7 +744,9 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
               "alias_gap_not_extracted": [], "optional_on_non_carrier": [],
               "errata_not_reversible": [], "rewrite_desc_mismatch": [],
               "rewrite_overlaps_errata": [], "category_stale": [],
-              "category_unknown_leaves": [], "category_face_stale": []}
+              "category_unknown_leaves": [], "category_face_stale": [],
+              "frame_version": [], "frame_stale": [], "frame_face_stale": [],
+              "frame_unknown_values": [], "frame_orphan_bullets": []}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
     carriers = set(vocab.carriers(vocab.OPTIONAL))
     entries = {}
@@ -724,6 +814,10 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     if categories is not None:
         acat, category_report = _attach_categories(
             entries, clauses_by_id, categories, checks, {c["id"]: c for c in cards})
+    frame_part, frame_report = None, None
+    if frames is not None:
+        frame_part, frame_report = _attach_frames(
+            entries, clauses_by_id, frames, checks, {c["id"]: c for c in cards})
     index_cards = [entries[cid] for cid in sorted(entries)]
     exported = vocab.export()
     cross = _cross_type_counts(cards, clauses_by_id)
@@ -732,6 +826,9 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     checks["unknown_values"].extend(_unexported_codes(index_cards, exported))
     if acat is not None:
         exported["acat"] = acat
+    if frame_part is not None:
+        exported["frame"] = frame_part["frame"]
+        exported["catalog"] = frame_part["catalog"]
     index = {
         "cards": index_cards,
         "vocab": exported,
@@ -741,10 +838,13 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
             "cards": len(index_cards),
             "clauses": clause_total,
             "vocab_digest": vocab.digest(),
-            **({"acat_digest": _acat_digest(acat)} if acat is not None else {}),
+            **({"acat_digest": _content_digest(acat)} if acat is not None else {}),
+            **({"frame_digest": _content_digest(frame_part)} if frame_part is not None else {}),
             "sources": dict(sources or {}),
         },
     }
+    if frame_part is not None:
+        index["frames"] = frame_part["table"]
     report = {
         "cards": len(index_cards),
         "clauses": clause_total,
@@ -757,6 +857,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
         "checks": checks,
         "monster_invariant": _monster_invariant(cards),
         "categories": category_report,
+        "frames": frame_report,
     }
     report["problems"] = _summarise_problems(report)
     return index, report
@@ -778,6 +879,10 @@ def serialize_index(index):
                              for k, v in sorted(index["vocab"].items()))
     meta_lines = ",\n".join(f"{json.dumps(k)}:{dump(v)}"
                             for k, v in sorted(index["meta"].items()))
+    # 框表一框一行、放最後:舊三段的切法(兩個工具以 window.VOCAB、window.META 切段)不受影響
+    frames = ("window.FRAMES=[\n" + ",\n".join(
+        json.dumps(frame, separators=(",", ":")) for frame in index["frames"]) + "\n];\n"
+        if "frames" in index else "")
     return ("window.CARD_DATA=[\n" + cards + "\n];\n"
             "window.VOCAB={\n" + vocab_lines + "\n};\n"
-            "window.META={\n" + meta_lines + "\n};\n")
+            "window.META={\n" + meta_lines + "\n};\n" + frames)

@@ -12,6 +12,7 @@ import json
 import unittest
 
 import vocab
+from frameindex import encode_frame, frame_tables
 from webindex import build_index, serialize_index
 
 MONSTER = 0x21          # 怪獸 + 效果
@@ -1063,6 +1064,367 @@ class CategoryTest(unittest.TestCase):
         first = serialize_index(self.build()[0])
         self.assertEqual(first, serialize_index(self.build()[0]))
         self.assertIn('"ae":[[0],[]]', first)
+
+
+# 匯出檔「值域」的形狀(票 01):每個封閉類欄 → 值清單,另有玩家與區域兩張,宣告序
+DOMAINS = {"位置": ["代價", "效果", "條件"], "極性": ["肯定", "否定", "可能"],
+           "否定形": ["受身", "不成不受", "不可能", "一般"], "態": ["他動", "自動", "受身"],
+           "施事者": ["自分", "相手", "お互い", "此卡", "其他卡"],
+           "方式類": ["手段:效果", "手段:戰鬥", "其他"], "動作對象": ["此卡", "非此卡"],
+           "中心詞類": ["卡", "屬性", "其他"], "數量類": ["定數", "上限", "全部"],
+           "修飾語類": ["種族", "屬性", "字段", "卡片子類型", "數值", "區域"],
+           "玩家": ["自分", "相手", "お互い", "相對", "無"],
+           "區域": ["場上", "墓地", "手牌", "牌組", "除外", "靈擺區", "額外牌組"]}
+
+FULL_FRAME = {"action": "破壊", "position": "效果", "polarity": "肯定", "voice": "他動",
+              "agent": "自分", "manner_kind": "手段:效果", "manner_value": "攻撃表示",
+              "regions": {"source": [["相手", "場上"]], "place": [["自分", "墓地"], ["無", "手牌"]]},
+              "phrases": {"patient": [{"head": "モンスター", "head_kind": "卡", "quantity": "定數",
+                                       "modifiers": ["種族", "區域"]}],
+                          "goal": [{"head": "効果"}]},
+              "patient_mode": "非此卡"}
+
+
+class FrameEncodingTest(unittest.TestCase):
+    """框的編碼(predicate-index 票 02;規格「索引形狀」段)。JS 評估器讀這個形狀,所以形狀本身是
+    契約:期望值是照規格手算的字面,不是用同一套算法重算。"""
+
+    def tables(self, *more):
+        return frame_tables([FULL_FRAME, {"action": "除外", "position": "條件"},
+                             {"action": "破壊", "phrases": {"patient": [{"head": "モンスター"}]}},
+                             *more], DOMAINS)
+
+    def test_lemma_table_is_sorted_and_head_table_is_by_descending_count(self):
+        tables = self.tables({"action": "破壊", "phrases": {"goal": [{"head": "ア"}]}})
+        self.assertEqual(tables.lemmas, ["破壊", "除外"])
+        # モンスター 2 次;効果、ア 各 1 次,同次數字典序
+        self.assertEqual(tables.heads, ["モンスター", "ア", "効果"])
+
+    def test_full_tuple_in_field_order(self):
+        """[詞元, 位置, 極性, 態, 否定形, 施事者, 方式類, 動作對象, 來源, 目的, 所在, 受事者段, 目的段]:
+        列舉碼是值域序號加一、0 是沒有值;區域對 = 玩家序號 × 區域數 + 區域序號;
+        段是 [中心詞碼, 中心詞類, 數量類, 修飾語位元];manner_value 不進。"""
+        self.assertEqual(encode_frame(FULL_FRAME, self.tables()),
+                         [0, 2, 1, 1, 0, 1, 1, 2, [7], [], [1, 30], [[0, 1, 1, 33]], [[1]]])
+
+    def test_trailing_empty_values_are_cut(self):
+        tables = self.tables()
+        self.assertEqual(encode_frame({"action": "除外", "position": "條件"}, tables), [1, 3])
+        self.assertEqual(encode_frame({"action": "破壊"}, tables), [0])
+
+    def test_trailing_empty_segment_values_are_cut(self):
+        tables = self.tables()
+        frame = {"action": "除外", "phrases": {"patient": [
+            {"head": "効果", "quantity": "全部"}, {"head": "モンスター"}]}}
+        self.assertEqual(encode_frame(frame, tables),
+                         [1, 0, 0, 0, 0, 0, 0, 0, [], [], [], [[1, 0, 3], [0]]])
+
+    def test_value_outside_the_domain_raises_instead_of_encoding_as_no_value(self):
+        """夾具與索引共用這一支:值域外的值靜靜變成 0(沒有值)會讓述詞默默查不到。"""
+        for frame in ({"action": "破壊", "position": "手札"},
+                      {"action": "破壊", "regions": {"goal": [["自分", "天上"]]}},
+                      {"action": "破壊", "phrases": {"patient": [{"head": "モンスター", "modifiers": ["顏色"]}]}}):
+            with self.assertRaises(KeyError):
+                encode_frame(frame, self.tables())
+
+
+class FramesInIndexTest(unittest.TestCase):
+    """動作框架進索引(predicate-index 票 02;規格「索引形狀」「建置檢查」段)。
+
+    涵蓋卡多帶與 `tx` 對齊的 `fr`(框號清單)、帶 ● 子句的多帶 `fl`;框表進 `index["frames"]`
+    (`window.FRAMES`),詞元表、中心詞表、值域、涵蓋卡數進 VOCAB.frame,目錄進 VOCAB.catalog。
+    只看接縫輸出;框的內容用 VOCAB 解回來比,不斷言框號以外的存法。
+    """
+
+    JA1 = "①:手札を1枚捨てて発動できる。"
+    JA2 = "②:このカードが墓地へ送られた場合に発動できる。"
+    JA3 = "①:別のカード。"
+    JA_LEAD = "①:以下の効果から1つを選択して発動できる。"
+    JA_B1, JA_B2 = "●:破壊する。", "●:除外する。"
+    DESTROY = {"action": "破壊", "position": "效果", "polarity": "肯定"}
+    DISCARD = {"action": "捨てる", "position": "代價", "polarity": "肯定",
+               "regions": {"source": [["自分", "手牌"]]},
+               "phrases": {"patient": [{"head": "カード", "quantity": "定數"}]}}
+    SENT = {"action": "送る", "position": "條件", "voice": "受身",
+            "regions": {"goal": [["無", "墓地"]]}}
+    CATALOG = [{"name": "破壊", "path": ["破壊"], "predicate": None,
+                "cards": {"代價": 0, "效果": 2, "條件": 0},
+                "hash": {"代價": "aaaa", "效果": "bbbb", "條件": "cccc"}},
+               {"name": "破壊@場上", "path": ["破壊", "破壊@場上"],
+                "predicate": {"詞元": "破壊", "所在": [[None, "場上"], ["自分", "墓地"]], "極性": ["肯定", "可能"],
+                              "受事者中心詞": "モンスター"},
+                "cards": {"代價": 0, "效果": 1, "條件": 0},
+                "hash": {"代價": "dddd", "效果": "eeee", "條件": "ffff"}}]
+
+    def cards(self):
+        return [card(1, desc="①:這樣。②:那樣。"), card(2, desc="①:別張。"), card(3, desc="①:舊式。"),
+                card(4, desc="①:選一。●:破壞。●:除外。")]
+
+    def tags(self):
+        return [tagged(1, dict(clause("①:這樣。"), text_ja=self.JA1),
+                       dict(clause("②:那樣。", index="②", kind="誘發效果(1速)"), text_ja=self.JA2)),
+                tagged(2, dict(clause("①:別張。"), text_ja=self.JA3)),
+                tagged(3, clause("①:舊式。")),
+                tagged(4, dict(clause("①:選一。"), text_ja=self.JA_LEAD),
+                       dict(clause("●:破壞。", index="①-●1"), text_ja=self.JA_B1),
+                       dict(clause("●:除外。", index="①-●2"), text_ja=self.JA_B2))]
+
+    def rows(self):
+        return [{"card": 1, "section": "main", "index": "①", "hash": sha(self.JA1),
+                 "frames": [self.DISCARD, self.DESTROY]},
+                {"card": 1, "section": "main", "index": "②", "hash": sha(self.JA2), "frames": [self.SENT]},
+                {"card": 2, "section": "main", "index": "①", "hash": sha(self.JA3), "frames": []},
+                {"card": 4, "section": "main", "index": "①", "hash": sha(self.JA_LEAD), "frames": [self.SENT]},
+                {"card": 4, "section": "main", "index": "①-●1", "hash": sha(self.JA_B1),
+                 "frames": [self.DESTROY]},
+                {"card": 4, "section": "main", "index": "①-●2", "hash": sha(self.JA_B2),
+                 "frames": [{"action": "除外", "position": "效果"}]}]
+
+    def doc(self, rows=None, **over):
+        cards = self.cards()
+        rows = self.rows() if rows is None else rows
+        return {"說明": "", "版本": 2, "值域": DOMAINS, "目錄": self.CATALOG, "統計": {"框架": {"此卡": 9}},
+                "卡面": [[c["id"], face_digest(c)] for c in cards if c["id"] != 3],
+                "句": rows, **over}
+
+    def build(self, rows=None, **over):
+        return build_index(self.cards(), self.tags(), frames=self.doc(rows, **over))
+
+    def entry(self, index, cid):
+        return next(e for e in index["cards"] if e["id"] == cid)
+
+    def lemmas_of(self, index, numbers):
+        return [index["vocab"]["frame"]["lemmas"][index["frames"][n][0]] for n in numbers]
+
+    def test_fr_aligns_with_tx_and_sentence_without_frames_is_empty(self):
+        index, report = self.build()
+        self.assertEqual(report["problems"], [])
+        entry = self.entry(index, 1)
+        self.assertEqual(len(entry["fr"]), len(entry["tx"]))
+        self.assertEqual(self.lemmas_of(index, entry["fr"][0]), ["捨てる", "破壊"])
+        self.assertEqual(self.lemmas_of(index, entry["fr"][1]), ["送る"])
+
+    def test_covered_card_without_any_frame_still_carries_fr(self):
+        """`fr` 的有無就是涵蓋與否:只用排除述詞時涵蓋而沒有框的卡要算涵蓋。"""
+        self.assertEqual(self.entry(self.build()[0], 2)["fr"], [[]])
+
+    def test_legacy_card_has_no_frame_fields(self):
+        entry = self.entry(self.build()[0], 3)
+        self.assertNotIn("fr", entry)
+        self.assertNotIn("fl", entry)
+
+    def test_sentence_missing_from_the_export_in_an_uncovered_section_is_empty(self):
+        """同卡另一段(靈擺段)匯出檔沒有:那句是空清單,`fr` 仍對齊 `tx`。"""
+        tags = self.tags()
+        tags[0]["clauses"].append(clause("靈擺。", index="①", section="pendulum"))
+        cards = self.cards()
+        cards[0]["desc"] = "①:這樣。②:那樣。靈擺。"
+        index, report = build_index(cards, tags, frames=self.doc())
+        self.assertEqual(report["problems"], [])
+        self.assertEqual(self.entry(index, 1)["fr"][2], [])
+
+    def test_all_three_positions_enter_the_index(self):
+        index, _ = self.build()
+        positions = index["vocab"]["frame"]["domains"]["位置"]
+        self.assertEqual({positions[frame[1] - 1] for frame in index["frames"]}, {"代價", "效果", "條件"})
+
+    def test_frames_with_the_same_content_share_one_number(self):
+        index, _ = self.build()
+        destroy = self.entry(index, 1)["fr"][0][1]
+        self.assertEqual(self.entry(index, 4)["fr"][1], [destroy])
+        sent = self.entry(index, 1)["fr"][1]
+        self.assertEqual(self.entry(index, 4)["fr"][0], sent)
+        self.assertEqual(len(index["frames"]), 4)
+
+    def test_frame_table_is_numbered_by_first_appearance(self):
+        """依卡片密碼序、句序、框序,不依匯出列的順序。"""
+        index, _ = self.build(rows=list(reversed(self.rows())))
+        self.assertEqual(self.entry(index, 1)["fr"], [[0, 1], [2]])
+        self.assertEqual(self.entry(index, 4)["fr"], [[2], [1], [3]])
+
+    def test_frame_tuples_use_the_shared_encoding(self):
+        index, _ = self.build()
+        tables = frame_tables([f for r in self.rows() for f in r["frames"]], DOMAINS)
+        self.assertEqual(index["frames"][0], encode_frame(self.DISCARD, tables))
+
+    def test_vocab_frame_carries_tables_domains_and_coverage(self):
+        frame = self.build()[0]["vocab"]["frame"]
+        self.assertEqual(frame["lemmas"], ["捨てる", "破壊", "送る", "除外"])
+        self.assertEqual(frame["heads"], ["カード"])
+        self.assertEqual(frame["domains"], DOMAINS)
+        self.assertEqual(frame["covered"], 3)
+
+    def test_vocab_catalog_has_no_hash(self):
+        catalog = self.build()[0]["vocab"]["catalog"]
+        self.assertEqual(catalog, [{k: row[k] for k in ("name", "path", "predicate", "cards")}
+                                   for row in self.CATALOG])
+
+    def test_manner_value_and_stats_stay_out_of_the_index(self):
+        rows = self.rows()
+        rows[0]["frames"] = [dict(self.DISCARD, manner_kind="其他", manner_value="攻撃表示の値")]
+        text = serialize_index(self.build(rows)[0])
+        self.assertNotIn("攻撃表示の値", text)
+        self.assertNotIn("統計", text)
+
+    def test_meta_digest_changes_with_the_frame_part(self):
+        before = self.build()[0]["meta"]["frame_digest"]
+        rows = self.rows()
+        rows[1]["frames"] = [dict(self.SENT, polarity="否定")]
+        self.assertNotEqual(self.build(rows)[0]["meta"]["frame_digest"], before)
+        catalog = [dict(self.CATALOG[0], name="破壊(改名)"), self.CATALOG[1]]
+        self.assertNotEqual(self.build(**{"目錄": catalog})[0]["meta"]["frame_digest"], before)
+
+    def test_report_counts_the_frame_part(self):
+        self.assertEqual(self.build()[1]["frames"], {
+            "covered_cards": 3, "sentences": 6, "frames": 6, "unique_frames": 4, "heads": 1})
+
+    def test_serialized_frame_table_is_one_frame_per_line_after_the_old_blocks(self):
+        index, _ = self.build()
+        text = serialize_index(index)
+        head, block = text.split("window.FRAMES=[\n")
+        self.assertIn("\nwindow.META={\n", head)
+        self.assertEqual(block.count("\n"), len(index["frames"]) + 1)
+        self.assertTrue(block.endswith("\n];\n"))
+
+    def test_same_input_serializes_byte_for_byte(self):
+        self.assertEqual(serialize_index(self.build()[0]), serialize_index(self.build()[0]))
+
+    def test_without_an_export_the_index_has_no_frame_part(self):
+        index, report = build_index(self.cards(), self.tags())
+        self.assertEqual(report["problems"], [])
+        self.assertIsNone(report["frames"])
+        self.assertNotIn("frames", index)
+        self.assertNotIn("frame", index["vocab"])
+        self.assertNotIn("catalog", index["vocab"])
+        self.assertNotIn("frame_digest", index["meta"])
+        self.assertNotIn("fr", self.entry(index, 1))
+        self.assertNotIn("window.FRAMES", serialize_index(index))
+
+    def test_fl_points_bullet_clauses_at_their_lead_sentence(self):
+        entry = self.entry(self.build()[0], 4)
+        self.assertEqual(entry["fl"], [-1, 0, 0])
+
+    def test_card_without_bullet_clauses_has_no_fl(self):
+        self.assertNotIn("fl", self.entry(self.build()[0], 1))
+
+    def test_lead_sentence_is_found_in_the_same_section_by_cutting_the_last_bullet_segment(self):
+        """領起句是同段落、index 去掉最後一段 -●n 的句:別段落同 index 的句不算,靈擺段的 ● 指靈擺段的 ①。"""
+        cards = [card(1, desc="①:主。①:靈。●:一。")]
+        tags = [tagged(1, dict(clause("①:主。"), text_ja="主"),
+                       dict(clause("①:靈。", section="pendulum"), text_ja="靈"),
+                       dict(clause("●:一。", section="pendulum", index="①-●1"), text_ja="一"))]
+        rows = [{"card": 1, "section": "main", "index": "①", "hash": sha("主"), "frames": []},
+                {"card": 1, "section": "pendulum", "index": "①", "hash": sha("靈"), "frames": []},
+                {"card": 1, "section": "pendulum", "index": "①-●1", "hash": sha("一"), "frames": []}]
+        doc = dict(self.doc(rows), **{"卡面": [[1, face_digest(cards[0])]]})
+        index, report = build_index(cards, tags, frames=doc)
+        self.assertEqual(report["problems"], [])
+        self.assertEqual(index["cards"][0]["fl"], [-1, -1, 1])
+
+    def test_bullet_clause_without_a_lead_sentence_fails_the_build_and_lists_all(self):
+        tags = self.tags()
+        del tags[3]["clauses"][0]
+        cards = self.cards()
+        cards[3]["desc"] = "●:破壞。●:除外。"
+        rows = [r for r in self.rows() if not (r["card"] == 4 and r["index"] == "①")]
+        _, report = build_index(cards, tags, frames=self.doc(rows))
+        self.assertEqual(report["checks"]["frame_orphan_bullets"],
+                         [{"id": 4, "section": "main", "index": "①-●1"},
+                          {"id": 4, "section": "main", "index": "①-●2"}])
+        self.assertTrue(any("領起句" in p for p in report["problems"]))
+
+    def test_bullet_clause_on_an_uncovered_card_is_not_checked(self):
+        """舊式卡文不帶 `fr`,沒有領起句的從屬要算。"""
+        cards = [card(1, desc="●:舊。")]
+        tags = [tagged(1, clause("●:舊。", index="①-●1"))]
+        doc = dict(self.doc([]), **{"卡面": []})
+        index, report = build_index(cards, tags, frames=doc)
+        self.assertEqual(report["checks"]["frame_orphan_bullets"], [])
+        self.assertNotIn("fl", index["cards"][0])
+
+    def test_wrong_export_version_fails_the_build_instead_of_reading_empty_values(self):
+        """舊版匯出檔沒有「值域」:版本不符就停,不往下讀到空值或丟例外。"""
+        doc = {"說明": "", "版本": 1, "目錄": [], "統計": {}, "卡面": [], "句": []}
+        index, report = build_index(self.cards(), self.tags(), frames=doc)
+        self.assertEqual(report["checks"]["frame_version"], [{"expected": 2, "found": 1}])
+        self.assertTrue(any("版本" in p for p in report["problems"]))
+        self.assertNotIn("fr", self.entry(index, 1))
+
+    def test_export_without_a_version_fails_the_build(self):
+        _, report = build_index(self.cards(), self.tags(), frames={"句": []})
+        self.assertEqual(report["checks"]["frame_version"], [{"expected": 2, "found": None}])
+
+    def test_stale_text_hash_fails_the_build_and_lists_all(self):
+        rows = self.rows()
+        rows[0]["hash"] = sha("舊的原文")
+        rows[4]["hash"] = sha("舊的原文")
+        rows.append({"card": 1, "section": "main", "index": "③", "hash": "x", "frames": []})
+        _, report = self.build(rows)
+        self.assertEqual(sorted(map(str, report["checks"]["frame_stale"])), sorted(map(str, [
+            {"id": 1, "section": "main", "index": "①"}, {"id": 4, "section": "main", "index": "①-●1"},
+            {"id": 1, "section": "main", "index": "③"}])))
+        self.assertTrue(any("原文" in p for p in report["problems"]))
+
+    def test_tag_sentence_missing_from_a_covered_section_fails_the_build(self):
+        rows = [r for r in self.rows() if not (r["card"] == 1 and r["index"] == "②")]
+        _, report = self.build(rows)
+        self.assertEqual(report["checks"]["frame_stale"], [{"id": 1, "section": "main", "index": "②"}])
+
+    def test_stale_card_face_fails_the_build_and_lists_all(self):
+        faces = [[1, "0000000000000000"], [2, "0000000000000000"]]
+        _, report = self.build(**{"卡面": faces})
+        self.assertEqual(report["checks"]["frame_face_stale"], [{"id": 1}, {"id": 2}, {"id": 4}])
+        self.assertTrue(any("卡面" in p for p in report["problems"]))
+
+    def test_frame_value_outside_the_domain_fails_the_build_and_lists_all(self):
+        """單值欄、區域的玩家與區域、段的三欄,全部違反處都列,建置不因編不出來而崩。"""
+        rows = self.rows()
+        rows[0]["frames"] = [dict(self.DESTROY, position="手札", agent="路人")]
+        rows[1]["frames"] = [dict(self.SENT, regions={"goal": [["路人", "墓地"], ["自分", "天上"]]})]
+        rows[4]["frames"] = [dict(self.DESTROY, phrases={"goal": [{"head": "カード", "head_kind": "顏色"}],
+                                                         "patient": [{"head": "カード", "quantity": "幾個",
+                                                                      "modifiers": ["種族", "味道"]}]})]
+        _, report = self.build(rows)
+        self.assertEqual(report["checks"]["frame_unknown_values"], [
+            {"id": 1, "index": "①", "field": "位置", "value": "手札"},
+            {"id": 1, "index": "①", "field": "施事者", "value": "路人"},
+            {"id": 1, "index": "②", "field": "目的", "value": ["路人", "墓地"]},
+            {"id": 1, "index": "②", "field": "目的", "value": ["自分", "天上"]},
+            {"id": 4, "index": "①-●1", "field": "數量類", "value": "幾個"},
+            {"id": 4, "index": "①-●1", "field": "修飾語類", "value": "味道"},
+            {"id": 4, "index": "①-●1", "field": "中心詞類", "value": "顏色"}])
+        self.assertTrue(any("值域" in p for p in report["problems"]))
+
+    def test_frame_without_lemma_or_head_fails_the_build_instead_of_crashing(self):
+        """匯出的鍵全部可選,但這兩個編不出元組。"""
+        rows = self.rows()
+        rows[1]["frames"] = [{"position": "條件"}, {"action": "送る", "phrases": {"goal": [{"quantity": "全部"}]}}]
+        _, report = self.build(rows)
+        self.assertEqual(report["checks"]["frame_unknown_values"], [
+            {"id": 1, "index": "②", "field": "詞元", "value": None},
+            {"id": 1, "index": "②", "field": "目的中心詞", "value": None}])
+
+    def test_catalog_value_outside_the_domain_or_unknown_field_fails_the_build_and_lists_all(self):
+        catalog = [{"name": "壞述詞", "path": ["壞述詞"], "cards": {}, "hash": {},
+                    "predicate": {"詞元": "不在語料的詞元", "極性": ["肯定", "大概"], "顏色": "紅",
+                                  "來源": [["路人", "墓地"], [None, "天上"], "場上"], "受事者中心詞": "任意字串",
+                                  "玩家": "自分"}},
+                   self.CATALOG[0]]
+        _, report = self.build(**{"目錄": catalog})
+        self.assertEqual(report["checks"]["frame_unknown_values"], [
+            {"query": "壞述詞", "field": "極性", "value": "大概"},
+            {"query": "壞述詞", "field": "顏色"},
+            {"query": "壞述詞", "field": "來源", "value": ["路人", "墓地"]},
+            {"query": "壞述詞", "field": "來源", "value": [None, "天上"]},
+            {"query": "壞述詞", "field": "來源", "value": "場上"},
+            {"query": "壞述詞", "field": "玩家"}])
+        self.assertTrue(report["problems"])
+
+    def test_old_fields_are_untouched_by_the_frame_part(self):
+        without, _ = build_index(self.cards(), self.tags())
+        with_frames, _ = self.build()
+        stripped = [{k: v for k, v in e.items() if k not in ("fr", "fl")} for e in with_frames["cards"]]
+        self.assertEqual(stripped, without["cards"])
 
 
 if __name__ == "__main__":

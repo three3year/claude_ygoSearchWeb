@@ -1,4 +1,4 @@
-"""建置前端索引的 CLI 薄殼:讀總表、標記表與動作類別匯出檔 → webindex 管線 → 寫 web/data.js。
+"""建置前端索引的 CLI 薄殼:讀總表、標記表、動作類別匯出檔與框列匯出檔 → webindex 管線 → 寫 web/data.js。
 
 薄殼只做四件事:讀檔 → 呼叫 → 寫檔 → 印報告,並依 report 的 problems 決定
 exit code。驗收條件全部長在 `build_index` 的 report 裡(與 tag_card 的
@@ -25,6 +25,7 @@ DEFAULT_TAGS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_ERRATA = os.path.join(ROOT, "data", "text_errata.json")
 DEFAULT_REWRITES = os.path.join(ROOT, "data", "text_rewrites.json")
 DEFAULT_CATEGORIES = os.path.join(ROOT, "data", "action_categories.json")
+DEFAULT_FRAMES = os.path.join(ROOT, "data", "action_frames.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "web", "data.js")
 # 資料更新時間(來源檔下載時間)由 update_cards.py 記錄;不入版控,
 # clean checkout 沒有這個檔 → META 不帶欄位,前端整行省略
@@ -82,6 +83,11 @@ def print_checks(report, p, limit=20):
         ("category_stale", "動作類別匯出檔過時(與標記表對不上)"),
         ("category_unknown_leaves", "動作類別匯出檔的葉不在類別樹"),
         ("category_face_stale", "動作類別匯出檔的卡面參數過時(與卡片總表對不上)"),
+        ("frame_version", "框列匯出檔的格式版本與索引建置預期不符"),
+        ("frame_stale", "框列匯出檔的原文雜湊過時(與標記表對不上)"),
+        ("frame_face_stale", "框列匯出檔的卡面參數過時(與卡片總表對不上)"),
+        ("frame_unknown_values", "框列或目錄述詞含值域外的值或不認得的欄"),
+        ("frame_orphan_bullets", "涵蓋卡的 ● 子句找不到領起句"),
     )
     gaps = report["known_gaps"]
     p(f"已知缺口: 段落標頭 {gaps['header']} 處、※ 別名 {gaps['alias']} 處")
@@ -128,11 +134,22 @@ def print_categories(report, p):
         p(f"  動作對象{key}: {cells}")
 
 
+def print_frames(report, p):
+    """動作框架進索引的規模:涵蓋與唯一框數突然變了,看這一行。"""
+    frames = report["frames"]
+    if frames is None:
+        p("動作框架: 未編入索引(未讀匯出檔,或匯出檔版本、值域不合)")
+        return
+    p(f"動作框架: 涵蓋 {frames['covered_cards']} 張卡、{frames['sentences']} 句、{frames['frames']} 框、"
+      f"唯一框 {frames['unique_frames']}、中心詞 {frames['heads']}")
+
+
 def print_report(report, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p(f"索引: {report['cards']} 張卡、{report['clauses']} 個效果句")
     print_census(report, p)
     print_categories(report, p)
+    print_frames(report, p)
     print_invariant(report, p)
     print_checks(report, p)
     problems = report["problems"]
@@ -177,6 +194,9 @@ def main(argv=None):
     parser.add_argument("--categories", default=DEFAULT_CATEGORIES,
                         help="動作類別匯出檔路徑 "
                              "(預設 data/action_categories.json;由分詞鏈產生)")
+    parser.add_argument("--frames", default=DEFAULT_FRAMES,
+                        help="框列匯出檔路徑 "
+                             "(預設 data/action_frames.json;由分詞鏈產生)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
                         help="輸出路徑 (預設 web/data.js)")
     parser.add_argument("--no-write", action="store_true",
@@ -195,9 +215,10 @@ def main(argv=None):
         _load(args.cards), _load(args.tags), built_at=built_at,
         sources={os.path.basename(args.cards): _digest(args.cards),
                  os.path.basename(args.tags): _digest(args.tags),
-                 os.path.basename(args.categories): _digest(args.categories)},
+                 os.path.basename(args.categories): _digest(args.categories),
+                 os.path.basename(args.frames): _digest(args.frames)},
         errata=errata, rewrites=rewrites, data_updated_at=data_updated_at,
-        categories=_load(args.categories))
+        categories=_load(args.categories), frames=_load(args.frames))
     print_report(report)
     print_size(serialize_index(index), args.output, print)
     if report["problems"]:

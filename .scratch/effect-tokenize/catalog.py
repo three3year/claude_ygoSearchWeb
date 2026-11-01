@@ -3,8 +3,7 @@
 
 動作類別第三版:類別樹退成一本具名查詢的目錄,每個節點直接是一個框架述詞(predicate.py 的字彙),框架可同時
 命中好幾個、不互斥、沒有預設葉。本模組只做載入、檢查、命名與樹的推得(路徑、大類/中類的聯集);命中與張數
-在票 08(predicate.matcher/card_sets)。不 import 舊歸葉程式 categories.py——舊樹檔 category_tree.json 凍結、
-只給過渡期的舊歸葉用,規格 4 一起刪。
+在票 08(predicate.matcher/card_sets)。
 
 目錄檔(catalog.json,頂層 {"說明", "樹"})的節點三種:
     大類      {"大類": 名, "中類"?: [中類名…], "子": [節點…]}——只有頂層大類可列中類
@@ -47,19 +46,18 @@ from predicate import (FIELD_GOAL, FIELD_GOAL_HEAD, FIELD_LEMMA, FIELD_NEGATION,
 HERE = os.path.dirname(os.path.abspath(__file__))
 CATALOG = os.path.join(HERE, "catalog.json")
 
-# 網址以 › 連寫節點路徑(category-search spec「網址 hash」),節點名不能含它;舊匯出 export_categories 從這裡 import
+# 網址以 › 連寫節點路徑(category-search spec「網址 hash」),節點名不能含它
 PATH_SEP = "›"
 
 # 目錄檔的鍵
 KEY_MAJOR, KEY_MIDDLE, KEY_CHILDREN, KEY_PREDICATE = "大類", "中類", "子", "述詞"
 KIND_MAJOR, KIND_QUERY = "大類", "具名查詢"
 
-# 區域七值 → 節點名裡的日文卡文區域名(第二版葉名的寫法,2026-10-16 定案;2026-11-01 規格 2 裁定命名沿用第二版;
-# 舊歸葉 categories.py 從這裡 import)
+# 區域七值 → 節點名裡的日文卡文區域名(第二版葉名的寫法,2026-10-16 定案;2026-11-01 規格 2 裁定命名沿用第二版)
 ZONE_LABEL = {"手牌": "手札", "牌組": "デッキ", "額外牌組": "EXデッキ", "墓地": "墓地",
               "除外": "除外", "場上": "フィールド", "靈擺區": "Pゾーン"}
 # 節點名裡可寫的玩家與它的前綴(2026-10-19 類別線裁定「無」不切;2026-11-01 規格 2「玩家相對與無」(a):相對/無 留在
-# 值域、目錄不宣告——沒有命名規則;舊歸葉 categories.py 從這裡推它的 places 拼法對照)
+# 值域、目錄不宣告——沒有命名規則)
 PLAYER_LABEL = {PLAYERS[0]: "自分", PLAYERS[1]: "相手", PLAYERS[2]: "お互いの"}
 # 否定形集合 → 名字的尾綴(2026-11-01 規格 2 裁定:耐性 = {受身, 不成不受}、限制 = {不可能});其他集合沒有命名規則
 NEGATION_LABEL = ((frozenset((PASSIVE, NOT_BECOME)), "耐性"), (frozenset((CANNOT,)), "限制"))

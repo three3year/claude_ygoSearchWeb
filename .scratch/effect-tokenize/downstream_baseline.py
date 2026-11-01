@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """下游基準(named-queries 票 01):動作對象與回指改讀論元片語之前,先把全語料每個動作框架的
-現值凍結成基準,改讀之後逐框比對、列出差異的卡與前後值;舊匯出檔在過渡期逐位元組不變。
+現值凍結成基準,改讀之後逐框比對、列出差異的卡與前後值。
 
-三把尺(RULERS,CLI 的子命令名):
+兩把尺(RULERS,CLI 的子命令名):
 - patient   動作對象:每個動作框架的 {"mode": 此卡|非此卡|None, "why": 理由}(patient.judge_sentence
             逐句判,帶 data/cards.json 的卡面參數;條件位的框架也判,約束框架不在基準裡)。
 - anaphora  回指欄:每個動作框架的整個 anaphora dict(含新子鍵 moving),沒有就是 None。
-- export    舊匯出檔 data/action_categories.json 的 md5(沒有逐框的值,只有 digest)。
 
 接縫:
 - snapshot(ruler, records, faces=None) → {(卡號, 段落, 句序, 框序): 值}(frames.json 的紀錄清單)。
@@ -14,10 +13,10 @@
   一邊沒有的框記 MISSING(回指欄的 None 是正常值,要分得開)。動作對象的理由碼改名時填 WHY_ALIASES
   (舊 → 新),基準值比對前先換,基準不必重凍。
 - freeze(ruler, loc) 寫 baseline/<尺>.json(gitignore,逐框的值一列一框)與 <尺>-digest.json(入版控:
-  tokens.json 與 cards.json 的 md5、值的 md5——export 尺記匯出檔本身的 md5);check_digest(ruler, loc)
+  tokens.json 與 cards.json 的 md5、值的 md5);check_digest(ruler, loc)
   → (ok|mismatch|skip, 說明):語料或卡面變了就 skip 並要求重新凍結,沒變時 md5 要相同——基準檔
   不在的工作樹也有這道守門。load_baseline(ruler, loc) 讀回凍結時的 snapshot。
-- Locations(frames, tokens, cards, export, baseline_dir, digest_dir):檔案位置,預設 DEFAULT;測試換暫存目錄。
+- Locations(frames, tokens, cards, baseline_dir, digest_dir):檔案位置,預設 DEFAULT;測試換暫存目錄。
 
 CLI:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/downstream_baseline.py <尺> [--freeze] [--limit N]
   不帶 --freeze:印 digest 守門結果,有基準檔時再逐框比對、列差異(前 N 筆);差異非 0 或 mismatch 時 exit 1。
@@ -40,14 +39,13 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 FRAMES = os.path.join(HERE, "frames.json")
 TOKENS = os.path.join(HERE, "tokens.json")
 CARDS = os.path.join(ROOT, "data", "cards.json")
-EXPORT = os.path.join(ROOT, "data", "action_categories.json")
 BASELINE_DIR = os.path.join(HERE, "baseline")
 
-Locations = namedtuple("Locations", "frames tokens cards export baseline_dir digest_dir")
-DEFAULT = Locations(FRAMES, TOKENS, CARDS, EXPORT, BASELINE_DIR, HERE)
+Locations = namedtuple("Locations", "frames tokens cards baseline_dir digest_dir")
+DEFAULT = Locations(FRAMES, TOKENS, CARDS, BASELINE_DIR, HERE)
 
-PATIENT, ANAPHORA, EXPORT_RULER = "patient", "anaphora", "export"
-RULERS = (PATIENT, ANAPHORA, EXPORT_RULER)
+PATIENT, ANAPHORA = "patient", "anaphora"
+RULERS = (PATIENT, ANAPHORA)
 # 動作對象理由碼的對照表(舊 → 新):改讀後理由名跟著讀法變時填這裡,基準不必重凍(票 02 填)
 WHY_ALIASES = {}
 MISSING = "(沒有這個框)"
@@ -167,22 +165,19 @@ def load_baseline(ruler, loc=DEFAULT):
 
 
 def _inputs(ruler, loc):
-    """這把尺的 digest 要記哪些輸入檔的 md5:語料一定記,動作對象與匯出還看卡面。"""
+    """這把尺的 digest 要記哪些輸入檔的 md5:語料一定記,動作對象還看卡面。"""
     inputs = [("tokens_md5", loc.tokens)]
-    if ruler in (PATIENT, EXPORT_RULER):
+    if ruler == PATIENT:
         inputs.append(("cards_md5", loc.cards))
     return inputs
 
 
 def freeze(ruler, loc=DEFAULT):
-    """現值凍結成基準:逐框的值寫 baseline/<尺>.json(export 尺沒有),輸入檔與值的 md5 寫 <尺>-digest.json。"""
+    """現值凍結成基準:逐框的值寫 baseline/<尺>.json,輸入檔與值的 md5 寫 <尺>-digest.json。"""
     digest = {name: file_md5(path) for name, path in _inputs(ruler, loc)}
-    if ruler == EXPORT_RULER:
-        digest["file_md5"] = file_md5(loc.export)
-    else:
-        snap = current_snapshot(ruler, loc)
-        write_baseline(ruler, snap, loc)
-        digest["values_md5"] = values_md5(snap)
+    snap = current_snapshot(ruler, loc)
+    write_baseline(ruler, snap, loc)
+    digest["values_md5"] = values_md5(snap)
     with open(digest_path(ruler, loc), "w", encoding="utf-8", newline="\n") as f:
         json.dump(digest, f, indent=2)
         f.write("\n")
@@ -191,10 +186,10 @@ def freeze(ruler, loc=DEFAULT):
 
 def check_digest(ruler, loc=DEFAULT, records=None):
     """→ (ok|mismatch|skip, 說明)。skip:沒有 digest 或輸入檔,或語料/卡面變了(要重新凍結);
-    mismatch:輸入沒變而值變了——改讀動到了判定(或回指欄、舊匯出檔)。"""
+    mismatch:輸入沒變而值變了——改讀動到了判定(或回指欄)。"""
     needed = [(digest_path(ruler, loc), ruler + "-digest.json")]
     needed += [(path, os.path.basename(path)) for _, path in _inputs(ruler, loc)]
-    needed.append((loc.export, "匯出檔") if ruler == EXPORT_RULER else (loc.frames, "frames.json"))
+    needed.append((loc.frames, "frames.json"))
     for path, what in needed:
         if not os.path.exists(path):
             return "skip", "沒有 %s(%s)" % (what, path)
@@ -205,18 +200,14 @@ def check_digest(ruler, loc=DEFAULT, records=None):
             return "skip", ("%s 變了(%s md5 %s,digest 記 %s):%s 尺這次略過;確認變化是輸入造成的之後 "
                             "python downstream_baseline.py %s --freeze 重新凍結"
                             % (os.path.basename(path), name, actual, digest.get(name), ruler, ruler))
-    if ruler == EXPORT_RULER:
-        actual, expected, what = file_md5(loc.export), digest["file_md5"], "舊匯出檔 md5"
-    else:
-        actual = values_md5(current_snapshot(ruler, loc, records))
-        expected, what = digest["values_md5"], "逐框值的 md5"
+    actual, expected = values_md5(current_snapshot(ruler, loc, records)), digest["values_md5"]
     if actual != expected:
-        return "mismatch", "%s %s ≠ digest 記的 %s:%s 尺的值被改了" % (what, actual, expected, ruler)
-    return "ok", "%s 與 digest 相同(%s)" % (what, actual)
+        return "mismatch", "逐框值的 md5 %s ≠ digest 記的 %s:%s 尺的值被改了" % (actual, expected, ruler)
+    return "ok", "逐框值的 md5 與 digest 相同(%s)" % actual
 
 
 def main(argv=None, loc=DEFAULT):
-    parser = argparse.ArgumentParser(description="下游基準:動作對象判定 / 回指欄 / 舊匯出檔的凍結與比對")
+    parser = argparse.ArgumentParser(description="下游基準:動作對象判定 / 回指欄的凍結與比對")
     parser.add_argument("ruler", choices=RULERS)
     parser.add_argument("--freeze", action="store_true", help="把現值凍結成基準(確認差異是要的之後)")
     parser.add_argument("--limit", type=int, default=30, help="最多列幾處差異")
@@ -226,10 +217,10 @@ def main(argv=None, loc=DEFAULT):
         print("已凍結 %s:%s → %s" % (args.ruler, "、".join("%s %s" % kv for kv in digest.items()),
                                       digest_path(args.ruler, loc)))
         return 0
-    records = load_records(loc) if args.ruler != EXPORT_RULER and os.path.exists(loc.frames) else None
+    records = load_records(loc) if os.path.exists(loc.frames) else None
     status, message = check_digest(args.ruler, loc, records)
     print("digest 守門(%s):%s——%s" % (args.ruler, status, message))
-    if args.ruler == EXPORT_RULER or records is None:
+    if records is None:
         return 1 if status == "mismatch" else 0
     if not os.path.exists(baseline_path(args.ruler, loc)):
         print("沒有基準檔:%s(只有 digest 守門;worktree_bootstrap.py 會從主 repo 複製)"

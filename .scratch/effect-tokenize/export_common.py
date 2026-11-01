@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
-"""兩份匯出共用的部分(named-queries 票 05 從 export_categories.py 抽出;ADR-0017/0018)。
+"""框列匯出的共用部分(named-queries 票 05 抽出;ADR-0017/0018)。
 
-舊匯出(export_categories.py → data/action_categories.json,過渡期照產)與框列匯出(export_frames.py →
-data/action_frames.json)同一套:標記句日文原文的雜湊、此卡卡面參數與它的雜湊、框架對標記句的規則、
-動作對象的統計,以及讀 frames.json + tokens.json 成「效果句列(帶原文)」。兩邊 import 這裡,算法只有一份——
-索引建置(script/web/webindex.py)以同一算法重算比對,改這裡就是改契約。
+框列匯出(export_frames.py → data/action_frames.json)、下游基準與 LLM 抽驗讀的同一套:標記句日文原文的雜湊、
+此卡卡面參數與它的雜湊、框架對標記句的規則、動作對象的統計,以及讀 frames.json + tokens.json 成「效果句列
+(帶原文)」。算法只有一份——索引建置(script/web/webindex.py)以同一算法重算比對,改這裡就是改契約。
 
 - text_hash(原文) → sha1 前 16 碼(同效果標記表 text_hash)。
 - card_face(卡片總表的一列) → 此卡卡面參數;face_hash(卡面) → sha1 前 16 碼(webindex._face_hash 同算法)。
 - owner(效果句, 框架) → 框架所屬標記句的 index:效果句只有一段時框架全屬那一句;拆開的效果句(領起句+
   子效果句)框架帶選項 n 時屬 index-●n、沒有選項時屬領起句;對不到回 None(匯出失敗)。
-- Stats:動作對象判定的計數(值/理由/發動位置/比不了),兩份匯出的「統計」區塊同一形狀。
+- Stats:動作對象判定的計數(值/理由/發動位置/比不了),匯出的「統計」區塊。
 - load_sentences() → frames.json 的效果句,補上 tokens.json 的效果句原文 text_ja(兩檔同序同鍵)。
 """
 from collections import Counter
@@ -58,8 +57,7 @@ def owner(sentence, frame):
 
 
 class Stats:
-    """動作對象判定的計數:加進來的框架依值與理由分(舊匯出只加帶葉的效果位/代價位框架,
-    框列匯出加全部匯出的動作框架)。"""
+    """動作對象判定的計數:加進來的框架依值與理由分(框列匯出加全部匯出的動作框架)。"""
 
     SAMPLES = 20
 
@@ -104,7 +102,7 @@ class Stats:
 
 
 def print_stats(stats, label="動作對象"):
-    """建置報告的動作對象段(兩份匯出同一格式);stats 是 Stats.doc() 的結果。"""
+    """建置報告的動作對象段;stats 是 Stats.doc() 的結果。"""
     print(label + ":" + "、".join(
         "%s %d 框 %d 張" % (k, n, stats["卡"][k]) for k, n in stats["框架"].items()))
     for why, n in stats["理由"].items():

@@ -14,9 +14,10 @@ Charted: 2026-10-31(/mattpocock-skills:wayfinder)
 - 順序照資料流:規格 1 → 2 → 3 → 4,不先動搜尋端;介面原型等規格 3 寫完再做。
 - 約束:純 Python 零依賴、同輸入逐位元組決定性、字面欄逐位元組不變是框架線驗收條件、每個新封閉類進值域正典、新欄各做一輪 LLM 抽驗(慣例:100 卡 4 批加複檢,存 `llm-check/`)、舊 act 網址不保證。
 - 寫規格票的做法:`/mattpocock-skills:to-spec` 再 `/mattpocock-skills:to-tickets`;spec.md 是審核關卡 md,寫或改之前先用 `review-mirror` skill。
-- 相關程式:`.scratch/effect-tokenize/`(frames.py、anaphora.py、patient.py、places.py、categories.py、export_categories.py、category_tree.json;是網站資料上游,不可隨手改)、`script/web/build_index.py`、`web/js/{engine,hash,query,acat,render}.js`。重跑:`python .scratch/effect-tokenize/run_chain.py` 再 `python script/web/build_index.py`;測試:`node --test script/web/`、effect-tokenize 的 unittest。
+- 相關程式:`.scratch/effect-tokenize/`(frames.py、anaphora.py、patient.py、places.py、catalog.py、export_frames.py、catalog.json;是網站資料上游,不可隨手改)、`script/web/build_index.py`、`web/js/{engine,hash,query,acat,render}.js`。重跑:`python .scratch/effect-tokenize/run_chain.py` 再 `python script/web/build_index.py`;測試:`node --test script/web/`、effect-tokenize 的 unittest。
 - 上午六項定案的 GLOSSARY diff 留在 session scratchpad `glossary-2026-10-31-six-directions.diff`,其中回指回填的規則併進規格 1。
 - 只 commit 本地,永遠不要 git push;站主說 commit 才 commit。
+- **刪除前最後一個 commit:`6dd3fcc`**(predicate-ui 票 08 開工時的 `predicate-ui` tip,2026-11-02)。票 08 刪了歸葉程式、舊匯出檔、舊樹檔與 `compile_dry_run.py`、`project.py`、`evaluate.js`、`compare_dry_run.py`、`rewrite_tree.py`、兩個 `tools/results`;舊票、舊規格與 `llm-check/summary.md` 提到的這些路徑不回頭改,要看用 `git show 6dd3fcc:<路徑>`。
 
 ## Decisions so far
 

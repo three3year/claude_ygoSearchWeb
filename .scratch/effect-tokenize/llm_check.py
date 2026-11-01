@@ -20,11 +20,11 @@
 - 動作詞元變體(frame-lemma-variants 票 06;variant-round1):受 行う:召喚/召喚の素材 展開/攻撃対象に選択/
   補語夾 も/効果 補語不併/素材として扱う 六型影響的卡——依框架資料分層(一張卡依序歸入第一個符合的層,
   小型在前、全取),共約 60 張、切 3 批;錯誤類型在詞元統一那輪之外加 展開錯;素材詞元的態補值不算受影響卡。
-- 動作類別(action-categories 票 07;category-round1 起):單位是動作框架、不是卡——依類別樹的
-  樹序每葉從帶該葉、還沒被抽過的已歸框架抽 5 個(不足全取),未歸框架另抽 50 個;樣本依框架的
-  詞元節點分組(節點的葉清單列一次)連續切 8 批,沒有節點的未歸框架輪流分到各批末尾,另寫
-  tree.md(整棵樹)。批次檔的歸組讀當下的框架類別檔(先跑 categories.py;複檢時是修後的歸組)。
-  錯誤三類 歸錯葉/該歸未歸/葉定義有問題,另記成因 規則/樹 或 框架抽取。
+- 動作類別(action-categories 票 07;category-round1 起;2026-11-02 規格 4 票 08 起讀目錄與命中,舊歸葉程式已刪):單位是
+  動作框架、不是卡——依目錄序每個具名查詢從命中它、還沒被抽過的框架抽 5 個(不足全取),沒命中任何具名查詢的框架另抽 50 個;
+  樣本依框架命中的第一個詞元節點分組(節點與底下具名查詢的清單列一次)連續切 8 批,沒有詞元節點的框架輪流分到各批末尾,
+  另寫 tree.md(整本目錄)。批次檔的歸組讀當下的 frame_queries.json(先跑 catalog_hits.py;複檢時是修後的命中)。
+  錯誤三類 誤收/漏收/述詞語意,另記成因 規則/目錄 或 框架抽取。
 - 回指(action-patient-anaphora 票 04;anaphora-round1 起):依回指來源七層(対象の/一般欄位/字面備援/
   效果類/並列含此卡/修飾語/留空;一張卡依序歸入第一個符合的層,小層在前),約 80 張、切 4 批;
   批次檔的框架列帶回指欄;錯誤類型 指錯/該指未指/不該指。
@@ -32,20 +32,15 @@
   方式/數量/片語結構化;一張卡依序歸入第一個符合的層,小層在前、配額大於母體即全取),共 100 張、切 4 批;
   批次檔的框架列帶全部新欄(片語、結構化區域、施事者、方式、否定形);錯誤類型在既有五類外加
   中心詞錯/修飾語類錯、數量錯、施事者錯、方式錯、否定形錯、回填錯。推得的施事者是一條規則、靠回歸例子,不抽。
-- 具名查詢命中(named-queries 票 10;queries-round1 起):類別線改讀命中中間產物 frame_queries.json(catalog_hits.py
-  產,一框一行的命中具名查詢名清單),對照舊歸葉 frame_categories.json(過渡期 categories.py 照產)逐框比
-  「命中集合與舊歸葉」,差異逐名歸因(query_diff):多收 +名——詞元節點成了具名查詢 → 預設葉取消(舊預設葉只在
-  沒有別的葉時貼、舊沒預設葉的節點是未歸;現在詞元節點對全部框架都中)、具名查詢有所在而框架 取自來源 →
-  取自來源收回、具名查詢有來源/所在而框架的該欄是回指回填寫進的 → 回指回填、其餘 → 不再互斥(舊樹序 first-match
-  與並收只貼一部分);少收 −名——具名查詢有受事者/目的中心詞 → 尾綴(舊子字串比平假名邊界中心詞,現在尾綴比
-  片語中心詞)、其餘 → 其他(全語料 0 框;舊的並收取消在現在的語意下 0 框,不成一層)。條件位的框架舊的不歸葉、
-  現在三個位置都算,不當差異。另一層「動作對象變動」:票 03/04 改讀論元片語後判定值變了、逐卡說明過的框
-  (PATIENT_CHANGED,抄自兩票 Comments 的清單;基準已重凍,算不回來)。六層依卡母體小層在前(2026-11-01:
-  尾綴 16、動作對象變動 164、取自來源收回 438、回指回填 2,342、不再互斥 2,448、預設葉取消 7,238 張;一張卡依序
-  歸入第一個符合的層),尾綴 全取、其餘各 17/16,合計 100 張、切 4 批(與第四版論元同種子 20261101);批次檔
-  每框列既有欄與第四版格之後多三格:命中=具名查詢名清單、較舊歸葉=+名(原因)、−名(原因)(效果位與代價位才列)、
-  動作對象=值(理由),判定值變過的框尾綴【改讀後判定值變】;另寫 catalog.md(整本目錄:名、路徑、述詞明文)。
-  錯誤類型 漏收/誤收/位置/述詞語意(類別線的三類改名,加「述詞語意」:目錄裡這條述詞本身寫錯)與 動作對象錯。
+- 具名查詢命中(named-queries 票 10;queries-round1 起;2026-11-02 規格 4 票 08 起不再對照舊歸葉,round1/2 的「命中集合與
+  舊歸葉」差異分層與「較舊歸葉」格要看切換前的 commit):讀命中中間產物 frame_queries.json(catalog_hits.py 產,一框一行的
+  命中具名查詢名清單),逐名標命中來由(hit_reasons):詞元節點——述詞只有詞元/極性/否定形;取自來源——具名查詢有所在而
+  框架 取自來源;回指回填——具名查詢有來源/所在而框架的該欄是回指回填寫進的;中心詞——比受事者/目的中心詞的尾綴;區域——
+  其餘只比區域欄的。另一層「動作對象變動」:票 03/04 改讀論元片語後判定值變了、逐卡說明過的框(PATIENT_CHANGED,抄自兩票
+  Comments 的清單;基準已重凍,算不回來)。一張卡依序歸入第一個符合的層,詞元節點幾乎每張卡都有所以放最後(2026-11-02
+  母體:動作對象變動 164、取自來源 774、回指回填 2,135、中心詞 2,546、區域 1,924、詞元節點 273 張),各層配額見 QUOTA_QUERIES,
+  合計 100 張、切 4 批;批次檔每框列既有欄與第四版格之後多兩格:命中=具名查詢名清單、動作對象=值(理由),判定值變過的框尾綴
+  【改讀後判定值變】;另寫 catalog.md(整本目錄:名、路徑、述詞明文)。錯誤類型 漏收/誤收/位置/述詞語意 與 動作對象錯。
 種子固定,同一種子重抽得到同一批(複檢沿用);不同種子抽新樣本(過擬合抽驗)。
 
     sample   --round R --seed S   全語料抽樣:寫 llm-check/round<R>/sample.json 與 batch-<k>.md
@@ -54,11 +49,10 @@
     v3       --round R --seed S   第三版論元受影響卡抽樣(寫 llm-check/v3-round<R>/)
     lemma    --round R --seed S   動作詞元統一受影響卡抽樣(寫 llm-check/lemma-round<R>/)
     variants --round R --seed S   動作詞元變體受影響卡抽樣(寫 llm-check/variant-round<R>/)
-    categories --round R --seed S 動作類別依葉分層抽框架(寫 llm-check/category-round<R>/)
+    categories --round R --seed S 動作類別依具名查詢分層抽框架(寫 llm-check/category-round<R>/;先跑 catalog_hits.py)
     anaphora --round R --seed S   回指依來源分層抽樣(寫 llm-check/anaphora-round<R>/)
     v4       --round R --seed S   第四版論元依新欄分層抽樣(寫 llm-check/v4-round<R>/)
-    queries  --round R --seed S   具名查詢命中依「命中集合與舊歸葉」差異分層抽樣(寫 llm-check/queries-round<R>/;
-                                  先跑 categories.py 與 catalog_hits.py)
+    queries  --round R --seed S   具名查詢命中依命中來由分層抽樣(寫 llm-check/queries-round<R>/;先跑 catalog_hits.py)
     report   --round R            讀 llm-check/round<R>/findings-<k>.json 寫 report.md
     recheck  --round R --from R0  用 round R0 的樣本重出批次檔(同批複檢)
     (report/recheck 加 --line constraints、v2、v3、lemma、variants、categories、anaphora、v4 或 queries 走各自的目錄)
@@ -70,7 +64,7 @@
 "type": 錯誤類型, "reason": 理由, "merge_related": true/false}];錯誤類型固定五種:
 漏抽動作/論元抽錯/位置判錯/極性判錯/多抽(不是動作);merge_related 標這筆是否和
 ● 合併有關(round5 起)。動作類別的回報一筆指一個樣本:{"sample": 樣本號, "type": 錯誤類型,
-"expected": [該歸的葉], "cause": 成因, "reason": 理由}。
+"expected": [該命中的具名查詢], "cause": 成因, "reason": 理由}。
 """
 import argparse
 import json
@@ -86,7 +80,6 @@ import constraints  # noqa: E402
 import action_lemmas  # noqa: E402
 import anaphora  # noqa: E402
 import catalog  # noqa: E402
-import categories  # noqa: E402
 import enrich  # noqa: E402
 import frames  # noqa: E402
 import patient  # noqa: E402
@@ -98,7 +91,6 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 CARDS = os.path.join(ROOT, "data", "cards.json")
 TOKENS = os.path.join(HERE, "tokens.json")
 FRAMES = os.path.join(HERE, "frames.json")
-FRAME_CATEGORIES = os.path.join(HERE, "frame_categories.json")
 FRAME_QUERIES = os.path.join(HERE, "frame_queries.json")
 CHECK_DIR = os.path.join(HERE, "llm-check")
 
@@ -165,17 +157,14 @@ QUOTA_V4 = {"所在取自來源": 14, "否定形": 14, "施事者": 14, "回指�
             "片語結構化": 16}
 BATCHES_V4 = 4
 ERROR_TYPES_V4 = ERROR_TYPES + ("中心詞錯/修飾語類錯", "數量錯", "施事者錯", "方式錯", "否定形錯", "回填錯")
-# 具名查詢命中(named-queries 票 10):命中集合與舊歸葉的差異原因(query_diff 的歸因;DIFF_OTHER 不成一層),
-# 加 動作對象變動;依卡母體小層在前(見 docstring),尾綴 全取(母體 16)、其餘 17/16,合計 100
-DIFF_DEFAULT, DIFF_KARA, DIFF_BACKFILL, DIFF_EXCLUSIVE, DIFF_SUFFIX, DIFF_OTHER = (
-    "預設葉取消", "取自來源收回", "回指回填", "不再互斥", "尾綴", "其他")
+# 具名查詢命中(named-queries 票 10;規格 4 票 08 改讀命中來由):命中來由(hit_reasons)加 動作對象變動;配額合計 100
+HIT_NODE, HIT_KARA, HIT_BACKFILL, HIT_HEAD, HIT_REGION = "詞元節點", "取自來源", "回指回填", "中心詞", "區域"
 STRATUM_PATIENT = "動作對象變動"
-STRATA_QUERIES = (DIFF_SUFFIX, STRATUM_PATIENT, DIFF_KARA, DIFF_BACKFILL, DIFF_EXCLUSIVE, DIFF_DEFAULT)
-QUOTA_QUERIES = {DIFF_SUFFIX: 16, STRATUM_PATIENT: 17, DIFF_KARA: 17, DIFF_BACKFILL: 17, DIFF_EXCLUSIVE: 17,
-                 DIFF_DEFAULT: 16}
+STRATA_QUERIES = (STRATUM_PATIENT, HIT_KARA, HIT_BACKFILL, HIT_HEAD, HIT_REGION, HIT_NODE)
+QUOTA_QUERIES = {STRATUM_PATIENT: 17, HIT_KARA: 17, HIT_BACKFILL: 17, HIT_HEAD: 17, HIT_REGION: 16, HIT_NODE: 16}
 BATCHES_QUERIES = 4
 ERROR_TYPES_QUERIES = ("漏收", "誤收", "位置", "述詞語意", "動作對象錯")
-# 述詞的區域欄 ↔ 框架結構化區域的鍵(回指回填/取自來源 寫進哪一欄,歸因時對照)
+# 述詞的區域欄 ↔ 框架結構化區域的鍵(回指回填/取自來源 寫進哪一欄,標來由時對照)
 REGION_FIELD_KEY = {predicate.FIELD_SOURCE: REGION_SOURCE, predicate.FIELD_PLACE: REGION_PLACE}
 # 票 03/04 改讀論元片語後動作對象判定值變了的框(卡號[/pendulum]句框序;抄自兩票 Comments 的逐卡清單:
 # 票 04 的 132 框與變差 14 框、票 03 的 皆非 → 非此卡 11 框 + 6374519①框2、票 03「有 → 無」48 框(16 框判定值
@@ -217,14 +206,14 @@ PATIENT_REF = re.compile(r"^(\d+)(?:/(pendulum))?(\S)框(\d+)$")
 ANAPHORA_VIA = {anaphora.VIA_TARGET: "対象の", anaphora.VIA_FIELD: "一般欄位",
                 anaphora.VIA_LITERAL: "字面備援", anaphora.VIA_EVENT: "效果類"}
 MATERIAL_LEMMA = re.compile("(%s)素材[にと]する" % "|".join(action_lemmas.MATERIAL_METHODS))
-# 動作類別(action-categories 票 07):依葉分層抽框架——每葉 5 個(不足全取)、未歸另抽 50 個,
-# 切 8 批;錯誤三類,另記成因(歸組規則或樹/框架抽取的錯連帶歸錯)
-PER_LEAF = 5
+# 動作類別(action-categories 票 07;規格 4 票 08 改讀目錄):依具名查詢分層抽框架——每個具名查詢 5 個(不足全取)、
+# 沒命中的另抽 50 個,切 8 批;錯誤三類,另記成因(規則或目錄/框架抽取的錯連帶收錯)
+PER_QUERY = 5
 UNPLACED_QUOTA = 50
 STRATUM_UNPLACED = "(未歸類)"
 BATCHES_CATEGORY = 8
-ERROR_TYPES_CATEGORY = ("歸錯葉", "該歸未歸", "葉定義有問題")
-CATEGORY_CAUSES = ("規則/樹", "框架抽取")
+ERROR_TYPES_CATEGORY = ("誤收", "漏收", "述詞語意")
+CATEGORY_CAUSES = ("規則/目錄", "框架抽取")
 TYPE_PENDULUM, TYPE_SPELL, TYPE_TRAP = 0x1000000, 0x2, 0x4
 OPTION = "●"
 
@@ -620,58 +609,47 @@ def patient_changed_keys():
     return keys
 
 
-def query_diff(cat, old_leaves, queries, frame):
-    """一框的 命中集合 vs 舊歸葉 → [(+/−, 具名查詢名, 原因)…](目錄序;空清單 = 相同)。原因見 docstring:
-    + 預設葉取消/取自來源收回/回指回填/不再互斥,− 尾綴/其他。舊名與新名同(改寫不改名)。"""
-    old, new = set(old_leaves), set(queries)
+def hit_frames():
+    """命中中間產物的每列與它在 frames.json 的動作框架,依命中檔的順序:{框架鍵: (命中列, 框架)}。"""
+    with open(FRAME_QUERIES, encoding="utf-8") as f:
+        hits = json.load(f)
+    _cards, _tokens, records = load()
+    by_key = {(r["card"], r["section"], r["index"], fr["order"]): fr for r in records for fr in r["frames"]}
+    return {frame_key(row): (row, by_key[frame_key(row)]) for row in hits}
+
+
+def hit_reasons(cat, queries, frame):
+    """一框命中的具名查詢 → [(名, 來由)…](命中序);來由見 docstring,前面的優先。"""
     out = []
     for name in queries:
-        if name in old:
-            continue
         node = cat.by_name[name]
         pred = node.predicate
-        if node.children:
-            why = DIFF_DEFAULT
+        if node.lemma_node:
+            why = HIT_NODE
         elif predicate.FIELD_PLACE in pred and frame.get("transfer") == TRANSFER_FROM_SOURCE:
-            why = DIFF_KARA
+            why = HIT_KARA
         elif frame.get("region_backfill") and any(
                 REGION_FIELD_KEY.get(field) == frame["region_backfill"] for field in pred):
-            why = DIFF_BACKFILL
+            why = HIT_BACKFILL
+        elif any(field in pred for field in predicate.HEAD_FIELDS):
+            why = HIT_HEAD
         else:
-            why = DIFF_EXCLUSIVE
-        out.append(("+", name, why))
-    for name in old_leaves:
-        if name not in new:
-            pred = cat.by_name[name].predicate if name in cat.by_name else {}
-            out.append(("−", name, DIFF_SUFFIX if any(f in pred for f in predicate.HEAD_FIELDS) else DIFF_OTHER))
+            why = HIT_REGION
+        out.append((name, why))
     return out
 
 
-def query_frames():
-    """命中中間產物的每列、同框的舊歸葉與 frames.json 的框架:{框架鍵: (命中列, 舊葉列, 框架)}。
-    舊的只歸效果位與代價位(條件位是 不適用、葉空),比對時條件位的框不算差異。"""
-    with open(FRAME_QUERIES, encoding="utf-8") as f:
-        hits = json.load(f)
-    with open(FRAME_CATEGORIES, encoding="utf-8") as f:
-        old = {frame_key(row): row for row in json.load(f)}
-    _cards, _tokens, records = load()
-    by_key = {(r["card"], r["section"], r["index"], fr["order"]): fr for r in records for fr in r["frames"]}
-    return {frame_key(row): (row, old[frame_key(row)], by_key[frame_key(row)]) for row in hits}
-
-
-def queries_labels(cat, row, old_row, frame, changed):
-    """一框命中的層(STRATA_QUERIES 的名字):差異原因各一層(條件位不比),判定值變過的框加 動作對象變動。"""
-    labels = set()
-    if frame["position"] != constraints.POS_COND:
-        labels |= {why for _sign, _name, why in query_diff(cat, old_row["leaves"], row["queries"], frame)}
+def queries_labels(cat, row, frame, changed):
+    """一框命中的層(STRATA_QUERIES 的名字):命中來由各一層,判定值變過的框加 動作對象變動。"""
+    labels = {why for _name, why in hit_reasons(cat, row["queries"], frame)}
     if frame_key(row) in changed:
         labels.add(STRATUM_PATIENT)
-    return labels & set(STRATA_QUERIES)
+    return labels
 
 
 def sample_queries(seed):
     cat = catalog.load()
-    current = query_frames()
+    current = hit_frames()
     changed = patient_changed_keys()
 
     def stratum(records):
@@ -679,8 +657,8 @@ def sample_queries(seed):
         for r in records:
             for fr in r["frames"]:
                 if fr.get("kind") == constraints.KIND_ACTION:
-                    row, old_row, frame = current[(r["card"], r["section"], r["index"], fr["order"])]
-                    labels |= queries_labels(cat, row, old_row, frame, changed)
+                    row, frame = current[(r["card"], r["section"], r["index"], fr["order"])]
+                    labels |= queries_labels(cat, row, frame, changed)
         return next((k for k in STRATA_QUERIES if k in labels), None)
 
     return sample_by_frames(seed, stratum, STRATA_QUERIES, QUOTA_QUERIES)
@@ -909,31 +887,21 @@ def report(round_dir):
 
 # ── 動作類別(action-categories 票 07)──
 
-def category_frames():
-    """框架類別檔的每列與它在 frames.json 的動作框架,依框架類別檔的順序:[(列, 框架)]。"""
-    with open(FRAME_CATEGORIES, encoding="utf-8") as f:
-        rows = json.load(f)
-    _cards, _tokens, frames = load()
-    by_key = {(r["card"], r["section"], r["index"], fr["order"]): fr
-              for r in frames for fr in r["frames"]}
-    return [(row, by_key[frame_key(row)]) for row in rows]
-
-
-# 框架在框架類別檔與 frames.json 裡的鍵(卡號、段落、句序、框架序);樣本每筆也帶這四欄
+# 框架在命中中間產物與 frames.json 裡的鍵(卡號、段落、句序、框架序);樣本每筆也帶這四欄
 FRAME_KEY_FIELDS = ("card", "section", "index", "order")
 
 
 def frame_key(row):
-    """框架類別檔的一列(或樣本的一筆)→ 對齊 frames.json 的鍵。"""
+    """命中中間產物的一列(或樣本的一筆)→ 對齊 frames.json 的鍵。"""
     return tuple(row[k] for k in FRAME_KEY_FIELDS)
 
 
 def sample_categories(seed):
-    """依葉分層抽框架:依樹序每葉從帶該葉、還沒被抽過的已歸框架抽 PER_LEAF 個(不足全取),
-    再從未歸框架抽 UNPLACED_QUOTA 個;同一種子重抽相同。每筆記樣本號、框架鍵與抽自的葉
-    (未歸記 STRATUM_UNPLACED)。"""
-    tree = categories.load_tree()
-    rows = [row for row, _f in category_frames()]
+    """依具名查詢分層抽框架:依目錄序每個具名查詢從命中它、還沒被抽過的框架抽 PER_QUERY 個(不足全取),
+    再從沒命中任何具名查詢的框架抽 UNPLACED_QUOTA 個;同一種子重抽相同。每筆記樣本號、框架鍵與抽自的具名查詢
+    (沒命中記 STRATUM_UNPLACED)。"""
+    cat = catalog.load()
+    rows = [row for row, _f in hit_frames().values()]
     rng = random.Random(seed)
     picked, taken = [], set()
 
@@ -943,120 +911,91 @@ def sample_categories(seed):
             taken.add(i)
             picked.append(dict(zip(FRAME_KEY_FIELDS, frame_key(rows[i])), stratum=stratum))
 
-    for leaf in tree.leaves:
-        take([i for i, row in enumerate(rows) if leaf.name in row["leaves"] and i not in taken],
-             PER_LEAF, leaf.name)
-    take([i for i, row in enumerate(rows) if row["status"] == categories.STATUS_UNPLACED],
-         UNPLACED_QUOTA, STRATUM_UNPLACED)
+    for q in cat.queries:
+        take([i for i, row in enumerate(rows) if q.name in row["queries"] and i not in taken], PER_QUERY, q.name)
+    take([i for i, row in enumerate(rows) if not row["queries"]], UNPLACED_QUOTA, STRATUM_UNPLACED)
     for n, p in enumerate(picked, 1):
         p["id"] = "c%04d" % n
-    print("葉 %d(有框架 %d)、樣本 %d(已歸 %d、未歸 %d)" % (
-        len(tree.leaves), len({p["stratum"] for p in picked} - {STRATUM_UNPLACED}), len(picked),
+    print("具名查詢 %d(有樣本 %d)、樣本 %d(命中 %d、沒命中 %d)" % (
+        len(cat.queries), len({p["stratum"] for p in picked} - {STRATUM_UNPLACED}), len(picked),
         sum(p["stratum"] != STRATUM_UNPLACED for p in picked),
         sum(p["stratum"] == STRATUM_UNPLACED for p in picked)))
     return picked
 
 
-def leaf_conditions(leaf):
-    """葉的條件欄(詞元與極性類之外)→ 一行描述;沒有條件的是預設葉。"""
-    parts = []
-    for field in categories.ZONE_FIELDS:
-        zone = getattr(leaf, field)
-        if zone:
-            player = leaf.players.get(field)
-            parts.append("%s=%s%s" % (categories.LEAF_LABELS[field], zone,
-                                      "(玩家 %s)" % player if player else ""))
-    if leaf.keywords:
-        parts.append("關鍵詞=" + "|".join(leaf.keywords))
-    if leaf.goal_keywords:
-        parts.append("目的關鍵詞=" + "|".join(leaf.goal_keywords))
-    return "・".join(parts) or "(預設葉:不看論元)"
+def lemma_node_of(cat, queries):
+    """命中清單裡第一個詞元節點(批次檔分組用);沒有回 None。"""
+    return next((cat.by_name[name] for name in queries if cat.by_name[name].lemma_node), None)
 
 
-def node_lines(tree, key):
-    """詞元節點(詞元, 極性類)→ 它的葉清單(樹序;條件與路徑),批次檔與樹檔共用。"""
-    lines = []
-    for n, leaf in enumerate(tree.by_key[key], 1):
-        lines.append("%d. **%s** — %s — 路徑 %s" % (
-            n, leaf.name, leaf_conditions(leaf), " › ".join(leaf.path)))
-    return lines
+def node_lines(node):
+    """詞元節點 → 它與底下全部具名查詢的清單(目錄序;述詞與路徑),批次檔的節點開頭列一次。"""
+    def members(n):
+        yield n
+        for child in n.children:
+            yield from members(child)
+
+    return ["%d. **%s** — %s — 路徑 %s" % (k, q.name, predicate_text(q.predicate), " › ".join(q.path))
+            for k, q in enumerate(members(node), 1)]
 
 
-def node_title(key):
-    """(詞元, 極性類)→ 批次檔與樹檔裡的節點標題。"""
-    lemma, polarity = key
-    return "%s(極性類 %s)" % (lemma, polarity)
-
-
-def tree_lines(tree):
-    """整棵樹的詞元節點與葉(樹序),給子代理查「該歸哪一葉」。"""
-    lines = ["# 類別樹(詞元節點與葉,樹序)", "",
-             "每個詞元節點列它的葉;同一節點內寫在前面的先比(見說明的比對規則)。", ""]
-    for key in tree.by_key:
-        lines += ["## " + node_title(key)] + node_lines(tree, key) + [""]
-    return lines
-
-
-def sample_block(p, row, f, s, card):
-    """一個樣本 → 批次檔的一節:卡、句、原文、框架與它現在的歸組。"""
-    if row["status"] == categories.STATUS_PLACED:
-        placed = "已歸 → %s(大類 %s)" % ("、".join(row["leaves"]), row["major"])
+def sample_block(p, row, f, s, card, cat):
+    """一個樣本 → 批次檔的一節:卡、句、原文、框架與它現在的命中。"""
+    if row["queries"]:
+        placed = "命中 → %s(大類 %s)" % ("、".join(row["queries"]), cat.by_name[row["queries"][0]].major)
     else:
-        placed = row["status"]
-    players = "、".join("%s=%s" % (label, row[field]) for field, label in (
-        ("source_player", "來源玩家"), ("goal_player", "目的玩家")) if row[field])
+        placed = "未命中"
     return ["### 樣本 %s(抽自 %s)" % (p["id"], p["stratum"]),
             "卡 %d %s(%s)· 句 %s · 框架 %d" % (
                 p["card"], card["name_ja"], card["name_zh"], sentence_label(s),
                 f["order"] + 1)] + sentence_lines(s) + [
             frame_line(f["order"] + 1, f),
-            "歸組:%s%s" % (placed, "(%s)" % players if players else ""), ""]
+            "歸組:%s" % placed, ""]
 
 
 def write_category_batches(round_dir, picked, meta):
-    """樣本依框架的詞元節點分組(樹序;同一節點的樣本同批、節點的葉清單列一次),連續切成
-    meta["batches"] 批;沒有節點的(未歸類)樣本輪流分到各批末尾。另寫 tree.md(整棵樹)。
-    歸組讀現在的框架類別檔(複檢時是修後的歸組)。"""
-    tree = categories.load_tree()
+    """樣本依框架命中的第一個詞元節點分組(目錄序;同一節點的樣本同批、節點的清單列一次),連續切成 meta["batches"]
+    批;沒有詞元節點的樣本輪流分到各批末尾。另寫 tree.md(整本目錄)。歸組讀現在的命中中間產物(複檢時是修後的命中)。"""
+    cat = catalog.load()
     cards, tokens, _frames = load()
     sentences = {(s["card"], s["section"], s["index"]): s for s in tokens}
-    current = {frame_key(row): (row, f) for row, f in category_frames()}
-    groups = {key: [] for key in tree.by_key}
+    current = hit_frames()
+    groups = {q.name: [] for q in cat.queries if q.lemma_node}
     loose = []
     for p in picked:
         row, f = current[frame_key(p)]
-        key = (f["action"], categories.polarity_class(f))
-        (groups[key] if key in groups else loose).append((p, row, f))
-    groups = [(key, items) for key, items in groups.items() if items]
+        node = lemma_node_of(cat, row["queries"])
+        (groups[node.name] if node else loose).append((p, row, f))
+    groups = [(name, items) for name, items in groups.items() if items]
     batches = meta["batches"]
     target = sum(len(items) for _k, items in groups) / batches
     chunks, size = [[]], 0
-    for key, items in groups:
+    for name, items in groups:
         if size >= target * len(chunks) and len(chunks) < batches:
             chunks.append([])
-        chunks[-1].append((key, items))
+        chunks[-1].append((name, items))
         size += len(items)
     write_sample_meta(round_dir, picked, meta)
 
     def block(p, row, f):
         return sample_block(p, row, f, sentences[(p["card"], p["section"], p["index"])],
-                            cards[p["card"]])
+                            cards[p["card"]], cat)
 
     with open(os.path.join(round_dir, "tree.md"), "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(tree_lines(tree)) + "\n")
+        f.write("\n".join(catalog_lines(cat)) + "\n")
     for k in range(batches):
         chunk = chunks[k] if k < len(chunks) else []
         extra = loose[k::batches]
-        count = sum(len(items) for _key, items in chunk) + len(extra)
+        count = sum(len(items) for _name, items in chunk) + len(extra)
         lines = ["# 批次 %d(%d 個框架)" % (k, count), ""]
-        for key, items in chunk:
-            lines += ["## 詞元節點 " + node_title(key), "", "本節點的葉(樹序):"]
-            lines += node_lines(tree, key) + [""]
+        for name, items in chunk:
+            lines += ["## 詞元節點 " + name, "", "本節點與底下的具名查詢(目錄序):"]
+            lines += node_lines(cat.by_name[name]) + [""]
             for p, row, f in items:
                 lines += block(p, row, f)
         if extra:
-            lines += ["## 沒有詞元節點的框架(未歸類)", "",
-                      "這些框架的(詞元, 極性類)在樹上沒有節點;對照 tree.md 看有沒有該歸的葉。", ""]
+            lines += ["## 沒有命中詞元節點的框架", "",
+                      "這些框架沒有命中任何詞元節點;對照 tree.md 看有沒有該命中的具名查詢。", ""]
             for p, row, f in extra:
                 lines += block(p, row, f)
         with open(os.path.join(round_dir, "batch-%d.md" % k), "w", encoding="utf-8",
@@ -1066,13 +1005,14 @@ def write_category_batches(round_dir, picked, meta):
 
 
 def report_categories(round_dir):
-    """讀 findings-<k>.json(每筆指一個樣本)→ report.md:依錯誤類型、成因、樣本層(已歸/
-    未歸)與詞元節點計數,逐筆列卡號、句、框架、現在的歸組、該歸的葉與理由。「現在的歸組」讀
-    當下的框架類別檔,所以報告要在修規則前跑(round1 的報告記的是修前的落點)。"""
+    """讀 findings-<k>.json(每筆指一個樣本)→ report.md:依錯誤類型、成因、樣本層(命中/
+    沒命中)與詞元節點計數,逐筆列卡號、句、框架、現在的命中、該命中的具名查詢與理由。「現在的命中」讀
+    當下的命中中間產物,所以報告要在修規則前跑(round1 的報告記的是修前的落點)。"""
     meta = read_meta(round_dir)
     with open(os.path.join(round_dir, "sample.json"), encoding="utf-8") as f:
         picked = {p["id"]: p for p in json.load(f)}
-    current = {frame_key(row): (row, f) for row, f in category_frames()}
+    cat = catalog.load()
+    current = hit_frames()
     findings = load_findings(round_dir, meta["batches"])
     unknown = [x for x in findings if x.get("sample") not in picked]
     if unknown:
@@ -1081,7 +1021,7 @@ def report_categories(round_dir):
     error_types = tuple(meta["error_types"])
 
     def layer(p):
-        return "未歸" if p["stratum"] == STRATUM_UNPLACED else "已歸"
+        return "沒命中" if p["stratum"] == STRATUM_UNPLACED else "命中"
 
     total = Counter(layer(p) for p in picked.values())
     wrong = {x["sample"] for x in findings}
@@ -1090,14 +1030,14 @@ def report_categories(round_dir):
     by_cause = Counter(x.get("cause", "?") for x in findings)
     lines = [
         "# LLM 檢驗報告:%s" % os.path.basename(round_dir), "",
-        "樣本 %d 個框架(已歸 %d:依樹序每葉抽 %d、不足全取;未歸 %d;種子 %s);回報 %d 筆,涉及 "
-        "%d 個框架(%.1f%%):已歸樣本 %d/%d(%.1f%%)、未歸樣本 %d/%d(%.1f%%)。" % (
-            len(picked), total["已歸"], PER_LEAF, total["未歸"], meta.get("seed"), len(findings),
+        "樣本 %d 個框架(命中 %d:依目錄序每個具名查詢抽 %d、不足全取;沒命中 %d;種子 %s);回報 %d 筆,涉及 "
+        "%d 個框架(%.1f%%):命中樣本 %d/%d(%.1f%%)、沒命中樣本 %d/%d(%.1f%%)。" % (
+            len(picked), total["命中"], PER_QUERY, total["沒命中"], meta.get("seed"), len(findings),
             len(wrong), 100.0 * len(wrong) / max(1, len(picked)),
-            wrong_by_layer["已歸"], total["已歸"],
-            100.0 * wrong_by_layer["已歸"] / max(1, total["已歸"]),
-            wrong_by_layer["未歸"], total["未歸"],
-            100.0 * wrong_by_layer["未歸"] / max(1, total["未歸"])), "",
+            wrong_by_layer["命中"], total["命中"],
+            100.0 * wrong_by_layer["命中"] / max(1, total["命中"]),
+            wrong_by_layer["沒命中"], total["沒命中"],
+            100.0 * wrong_by_layer["沒命中"] / max(1, total["沒命中"])), "",
         "| 錯誤類型 | 筆數 | " + " | ".join(CATEGORY_CAUSES) + " |",
         "|---|---|" + "---|" * len(CATEGORY_CAUSES)]
     for t in error_types + tuple(sorted(set(by_type) - set(error_types))):
@@ -1108,11 +1048,11 @@ def report_categories(round_dir):
         str(by_cause[c]) for c in CATEGORY_CAUSES)), ""]
     by_node = Counter()
     for x in findings:
-        _row, f = current[frame_key(picked[x["sample"]])]
-        by_node[(f["action"], categories.polarity_class(f) or "一般否定")] += 1
+        row, _f = current[frame_key(picked[x["sample"]])]
+        node = lemma_node_of(cat, row["queries"])
+        by_node[node.name if node else "(沒有詞元節點)"] += 1
     lines += ["## 依詞元節點(筆數)", "", "、".join(
-        "%s(%s) %d" % (lemma, cls, n) for (lemma, cls), n in sorted(
-            by_node.items(), key=lambda kv: (-kv[1], kv[0]))), ""]
+        "%s %d" % kv for kv in sorted(by_node.items(), key=lambda kv: (-kv[1], kv[0]))), ""]
     for t in error_types + tuple(sorted(set(by_type) - set(error_types))):
         items = [x for x in findings if x["type"] == t]
         if not items:
@@ -1121,7 +1061,7 @@ def report_categories(round_dir):
         for x in sorted(items, key=lambda x: x["sample"]):
             p = picked[x["sample"]]
             row, f = current[frame_key(p)]
-            now = "、".join(row["leaves"]) or row["status"]
+            now = "、".join(row["queries"]) or "未命中"
             expected = "、".join(x.get("expected") or []) or "—"
             lines.append("- %s `%s` %s 框架 %d %s〔抽自 %s;現 %s → 該 %s;%s〕%s" % (
                 x["sample"], p["card"], p["index"], p["order"] + 1, f["action"], p["stratum"],
@@ -1168,10 +1108,10 @@ def catalog_lines(cat):
 
 
 def write_query_batches(round_dir, picked, meta):
-    """具名查詢線的批次檔:每框列多三格 命中/較舊歸葉/動作對象(讀當下的命中中間產物與舊歸葉檔;複檢時是
-    修後的命中),另寫 catalog.md。"""
+    """具名查詢線的批次檔:每框列多兩格 命中/動作對象(讀當下的命中中間產物;複檢時是修後的命中),
+    另寫 catalog.md。"""
     cat = catalog.load()
-    current = query_frames()
+    current = hit_frames()
     changed = patient_changed_keys()
     faces = load_faces()
     _cards, _tokens, records = load()
@@ -1185,11 +1125,8 @@ def write_query_batches(round_dir, picked, meta):
         if sentence_key not in verdicts:
             verdicts[sentence_key] = patient.judge_sentence(frames_of[sentence_key], faces.get(s["card"]),
                                                             s["section"])
-        row, old_row, frame = current[sentence_key + (f["order"],)]
+        row, _frame = current[sentence_key + (f["order"],)]
         cells = ["命中=%s" % ("、".join(row["queries"]) or "(無)")]
-        if frame["position"] != constraints.POS_COND:
-            diff = query_diff(cat, old_row["leaves"], row["queries"], frame)
-            cells.append("較舊歸葉=%s" % ("、".join("%s%s(%s)" % item for item in diff) if diff else "同"))
         verdict = verdicts[sentence_key][k]
         cells.append("動作對象=%s(%s)%s" % (verdict.mode or patient.NEITHER, verdict.why,
                                         "【改讀後判定值變】" if frame_key(row) in changed else ""))

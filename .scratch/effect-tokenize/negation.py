@@ -7,9 +7,8 @@ mark(ctx, tokens, frame):極性 否定 的動作框架加 frame["negation"](clos
 ならない 不是否定述語(受身優先於字面;定語裡的 受けない/できない 不改被動否定)。極性 肯定/可能 的框架
 不帶此欄。
 
-字面表原在 categories.polarity_class(類別線分耐性/限制),搬到這裡當單一來源:categories.py 改成
-import form_of 並以 POLARITY_CLASS_OF 對照(受身/不成不受 → 耐性、不可能 → 限制、一般 → 無類),
-逐框結果不變;規格 2 類別線改讀時再刪對照。這裡不 import frames(循環 import)。
+目錄的耐性/限制(catalog.NEGATION_LABEL)讀這一欄:受身/不成不受 → 耐性、不可能 → 限制。
+這裡不 import frames(循環 import)。
 """
 import re
 

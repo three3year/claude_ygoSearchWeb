@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""下游基準(named-queries 票 01)的驗收測試:動作對象判定、回指欄、舊匯出檔三把尺。
+"""下游基準(named-queries 票 01)的驗收測試:動作對象判定、回指欄兩把尺。
 
 接縫:
 - 單元:`downstream_baseline.snapshot(尺, 紀錄, 卡面)`(每個動作框架一個值)、`diff(基準, 現在)`(差異清單)、
   `freeze/check_digest`(入版控的 digest 守門)——手寫的小框架清單與暫存目錄,不讀全語料。
 - 全語料:動作對象 (判定值, 理由) 逐框與 `baseline/patient.json` 差異 0、回指欄逐框與 `baseline/anaphora.json`
-  差異 0、`data/action_categories.json` 的 md5 與 digest 相同;輸入不在時 skipTest 並印原因。
+  差異 0;輸入不在時 skipTest 並印原因。
 
 執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize
 """
@@ -95,6 +95,15 @@ def write_json(path, obj):
         json.dump(obj, f, ensure_ascii=False)
 
 
+class TestRulers(unittest.TestCase):
+    """舊匯出檔隨規格 4 票 08 刪除,只剩兩把尺。"""
+
+    def test_only_patient_and_anaphora_remain(self):
+        self.assertEqual(db.RULERS, ("patient", "anaphora"))
+        with self.assertRaises(SystemExit):
+            db.main(["export"])
+
+
 class TestFreezeAndDigest(unittest.TestCase):
     """票 01:凍結寫 baseline/<尺>.json 與入版控的 <尺>-digest.json;digest 守門在語料沒變時比值的 md5,
     語料(tokens.json、cards.json)變了就 skip 並要求重新凍結;基準檔讀回來就是凍結時的 snapshot。"""
@@ -103,21 +112,19 @@ class TestFreezeAndDigest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         root = self.tmp.name
         self.loc = db.Locations(frames=os.path.join(root, "frames.json"), tokens=os.path.join(root, "tokens.json"),
-                                cards=os.path.join(root, "cards.json"), export=os.path.join(root, "export.json"),
+                                cards=os.path.join(root, "cards.json"),
                                 baseline_dir=os.path.join(root, "baseline"), digest_dir=root)
         self.records = [record("10000000", {"action": "破壊", "object": "このカード"},
                                {"action": "破壊", "object": "相手フィールドのモンスター１体"})]
         write_json(self.loc.frames, self.records)
         write_json(self.loc.tokens, [{"card": "10000000", "text_ja": "x"}])
         write_json(self.loc.cards, [])
-        with open(self.loc.export, "w", encoding="utf-8", newline="\n") as f:
-            f.write('{"句":[]}\n')
 
     def tearDown(self):
         self.tmp.cleanup()
 
     def test_freeze_then_check_is_ok_and_the_baseline_reads_back_as_the_snapshot(self):
-        for ruler in (db.PATIENT, db.ANAPHORA, db.EXPORT_RULER):
+        for ruler in db.RULERS:
             db.freeze(ruler, self.loc)
             self.assertEqual(db.check_digest(ruler, self.loc)[0], "ok", ruler)
             self.assertTrue(os.path.exists(os.path.join(self.loc.digest_dir, ruler + "-digest.json")))
@@ -126,13 +133,9 @@ class TestFreezeAndDigest(unittest.TestCase):
 
     def test_a_changed_value_is_a_mismatch(self):
         db.freeze(db.PATIENT, self.loc)
-        db.freeze(db.EXPORT_RULER, self.loc)
         self.records[0]["frames"][0]["object"] = "相手フィールドのモンスター１体"
         write_json(self.loc.frames, self.records)
-        with open(self.loc.export, "a", encoding="utf-8") as f:
-            f.write("\n")
         self.assertEqual(db.check_digest(db.PATIENT, self.loc)[0], "mismatch")
-        self.assertEqual(db.check_digest(db.EXPORT_RULER, self.loc)[0], "mismatch")
 
     def test_a_changed_corpus_skips_and_asks_for_a_refreeze(self):
         db.freeze(db.ANAPHORA, self.loc)
@@ -153,7 +156,7 @@ class TestCli(unittest.TestCase):
     def test_exit_code_follows_the_frame_diff(self):
         with tempfile.TemporaryDirectory() as root:
             loc = db.Locations(frames=os.path.join(root, "frames.json"), tokens=os.path.join(root, "tokens.json"),
-                               cards=os.path.join(root, "cards.json"), export=os.path.join(root, "export.json"),
+                               cards=os.path.join(root, "cards.json"),
                                baseline_dir=os.path.join(root, "baseline"), digest_dir=root)
             records = [record("10000000", {"action": "破壊", "object": "このカード"})]
             write_json(loc.frames, records)
@@ -167,7 +170,7 @@ class TestCli(unittest.TestCase):
 
 
 class TestCorpus(unittest.TestCase):
-    """票 01 的全語料驗收:動作對象 (判定值, 理由) 與回指欄逐框與基準差異 0、舊匯出檔 md5 與 digest 相同。
+    """票 01 的全語料驗收:動作對象 (判定值, 理由) 與回指欄逐框與基準差異 0。
     frames.json 不在時整類略過;基準檔(不入版控)不在時只略過逐框比對、改由入版控的 <尺>-digest.json
     守門;語料或卡面變了時 digest 守門略過並印原因(要重新凍結)。"""
 
@@ -213,12 +216,6 @@ class TestCorpus(unittest.TestCase):
 
     def test_anaphora_digest_matches_the_frozen_one(self):
         self._digest(db.ANAPHORA)
-
-    def test_old_export_file_is_byte_for_byte_unchanged(self):
-        """過渡期(規格 4 介面切換前)data/action_categories.json 不變:比入版控的 export-digest.json 記的 md5,
-        不比 git HEAD 的 blob——HEAD 在工作樹是本票分支、合併後是合併點,誰不小心把改了的檔 commit 進去,
-        HEAD 比對就跟著過;digest 要有人刻意 --freeze 才會動,語料或卡面變了(新卡)時略過並要求重新凍結。"""
-        self._digest(db.EXPORT_RULER)
 
 
 if __name__ == "__main__":

@@ -4,4 +4,3 @@
 *.json                                        text eol=lf
 .scratch/effect-tokenize/report.md            text eol=lf merge=ours
 script/web/predicate-fixture-encoded.json     text eol=lf merge=ours
-.scratch/frame-predicate-search/tools/results/*  text eol=lf merge=ours

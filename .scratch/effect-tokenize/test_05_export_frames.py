@@ -78,7 +78,7 @@ REVIVE_ROW = {"action": "特殊召喚", "position": "效果", "polarity": "肯�
 
 
 class TestSentenceRows(unittest.TestCase):
-    """每句標記句一列:鍵、原文雜湊、框列(依原文順序);框架對標記句的規則同舊匯出。"""
+    """每句標記句一列:鍵、原文雜湊、框列(依原文順序);框架對標記句的規則在 export_common.owner。"""
 
     def test_single_sentence_row_carries_every_column_of_its_frame(self):
         """一句一框:詞元、位置、極性、結構化區域(含推得的目的,玩家 無)、施事者、受事者片語的段

@@ -1415,16 +1415,23 @@ class EncodedFixtureTest(unittest.TestCase):
 
     def test_copies_of_chain_tables_stay_equal(self):
         """script/web 留不掉的對照表(匯出檔不帶、程式又不 import 分詞鏈)每一張都守:述詞欄 → 框列路徑整張、值域裡玩家與
-        區域的鍵、匯出格式版本、● 子句的 index 句型。其餘鍵對照都由 EXPORT_PATH 推得。"""
+        區域的鍵、匯出格式版本。其餘鍵對照都由 EXPORT_PATH 推得;● 子句的 index 句型在下一條。"""
         sys.path.append(encode_fixture.CHAIN_DIR)   # 接在後面:分詞鏈有 tokenize.py,不能蓋掉標準庫
-        import export_categories
         import export_frames
         import predicate
         self.assertEqual(frameindex.EXPORT_PATH, predicate.EXPORT_PATH)
         self.assertEqual((frameindex.DOMAIN_PLAYER, frameindex.DOMAIN_ZONE),
                          (predicate.DOMAIN_PLAYER, predicate.DOMAIN_ZONE))
         self.assertEqual(webindex.FRAME_EXPORT_VERSION, export_frames.VERSION)
-        self.assertEqual(webindex.SUB_INDEX.pattern, export_categories.SUB_INDEX.pattern)
+
+    def test_sub_index_reads_the_index_the_chain_writes(self):
+        """● 子句的 index 由分詞鏈 export_common.owner 組出、索引建置以 SUB_INDEX 拆:拆得回領起句與選項。"""
+        sys.path.append(encode_fixture.CHAIN_DIR)
+        import export_common
+        sentence = {"parts": [{"index": "①"}, {"index": "①-●2"}]}
+        written = export_common.owner(sentence, {"option": 2})
+        self.assertEqual(webindex.SUB_INDEX.match(written).groups(), ("①", "2"))
+        self.assertIsNone(webindex.SUB_INDEX.match(export_common.owner(sentence, {"option": None})))
 
     def test_every_closed_field_is_one_the_index_can_encode(self):
         """匯出檔值域的每個封閉類欄都有元組位置或段位置,新增封閉類沒接進編碼時這裡先紅。"""

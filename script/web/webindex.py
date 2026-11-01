@@ -17,6 +17,7 @@
 import hashlib
 import json
 import re
+from collections import namedtuple
 
 import vocab
 from frameindex import encode_frame, frame_problems, frame_tables, predicate_problems
@@ -520,7 +521,11 @@ _PATIENT_MODES = (("此卡", ("effect_self", "cost_self")),
 _CATEGORY_GROUPS = ("effect",) + tuple(group for _, group in _SPARSE_CATEGORY_FIELDS)
 
 
-def _attach_categories(entries, clauses_by_id, categories, checks, cards_by_id):
+# 動作類別與動作框架兩支附掛共讀的建置狀態:entries 會被寫上新欄,checks 收違反處
+_BuildState = namedtuple("_BuildState", "entries clauses_by_id cards_by_id checks")
+
+
+def _attach_categories(state, categories):
     """[[動作類別]]匯出檔 → 每張涵蓋卡的 `ae` / `ac`(與 `tx` 對齊的葉號陣列),
     回傳 (VOCAB 的類別部分, 報告)。
 
@@ -530,6 +535,7 @@ def _attach_categories(entries, clauses_by_id, categories, checks, cards_by_id):
     卡片總表(或匯出檔沒帶)記進 `category_face_stale`——三者都讓建置失敗(ADR-0017、
     ADR-0008)。
     """
+    entries, clauses_by_id, cards_by_id, checks = state
     leaves = categories["葉"]
     number = {name: i for i, name in enumerate(leaves)}
     rows = {(r["card"], r["section"], r["index"]): r for r in categories["句"]}
@@ -585,28 +591,39 @@ def _content_digest(content):
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
-# 索引建置預期的框列匯出檔格式版本(export_frames.VERSION;script/web 不 import 分詞鏈,不符就是建置失敗)
+# 索引建置預期的框列匯出檔格式版本(export_frames.VERSION,2026-11-01 規格 3「封閉類的值域放哪?」(a) 升 2;script/web
+# 不 import 分詞鏈,不符就是建置失敗;test_webindex.EncodedFixtureTest 守兩邊相同)
 FRAME_EXPORT_VERSION = 2
-# 目錄進 VOCAB 的欄:雜湊只有測試要用,高熵字串不佔索引(規格 3 story 8)
+# 目錄進 VOCAB 的欄(2026-11-01 規格 3 story 7、8):雜湊只有測試要用,高熵字串不佔索引
 _CATALOG_INDEX_KEYS = ("name", "path", "predicate", "cards")
-BULLET_MARK = "-●"
+# ● 子句的 index:領起句的 index 加 -●n(同 export_categories.SUB_INDEX;2026-10 ADR-0015 標記句的鍵,script/web 不 import
+# 分詞鏈才抄這一條)
+SUB_INDEX = re.compile(r"^(.+)-●(\d+)$")
+# 框列匯出檔的五類建置失敗:檢查鍵 → 報告與問題清單共用的標籤(2026-11-01 規格 3「建置檢查」段)
+FRAME_CHECK_LABELS = {
+    "frame_version": "框列匯出檔的格式版本與索引建置預期不符",
+    "frame_stale": "框列匯出檔的原文雜湊過時(與標記表對不上,請重跑分詞鏈)",
+    "frame_face_stale": "框列匯出檔的卡面參數過時(與卡片總表對不上,請重跑分詞鏈)",
+    "frame_unknown_values": "框列或目錄述詞含值域外的值或不認得的欄",
+    "frame_orphan_options": "涵蓋卡的 ● 子句找不到領起句",
+}
 
 
 def _lead_sentences(clauses):
     """涵蓋卡的效果句 → (`fl`,找不到領起句的 ● 子句)。領起句是同段落、index 去掉最後一段 -●n 的句;
     沒有 ● 子句時 `fl` 是 None(不帶)。"""
     position = {(cl.get("section"), cl.get("index")): n for n, cl in enumerate(clauses)}
-    fl, orphans, has_bullet = [], [], False
+    fl, orphans, has_option = [], [], False
     for cl in clauses:
-        index = str(cl.get("index"))
+        option = SUB_INDEX.match(str(cl.get("index")))
         lead = -1
-        if BULLET_MARK in index:
-            has_bullet = True
-            lead = position.get((cl.get("section"), index.rsplit(BULLET_MARK, 1)[0]), -1)
+        if option:
+            has_option = True
+            lead = position.get((cl.get("section"), option.group(1)), -1)
             if lead < 0:
                 orphans.append(cl)
         fl.append(lead)
-    return (fl if has_bullet else None), orphans
+    return (fl if has_option else None), orphans
 
 
 def _frame_value_problems(doc):
@@ -619,13 +636,14 @@ def _frame_value_problems(doc):
     return found
 
 
-def _attach_frames(entries, clauses_by_id, doc, checks, cards_by_id):
+def _attach_frames(state, doc):
     """分詞鏈的框列匯出檔(ADR-0018)→ 每張涵蓋卡的 `fr` / `fl`,回傳 (框架部分, 報告);編不了時是 (None, None)。
 
     `fr` 的有無就是涵蓋與否(沒有框的句與卡帶空清單);框表依卡片密碼序、句序、框序第一次出現編號,同內容的框
     共用一號,所以與匯出列的順序無關。五類過時或不合的輸入記進 checks、讓建置失敗:版本不符就不往下讀(舊版沒有
     值域,讀到的是空值);值域外的值編不出來,所以不編;其餘照常往下,好把全部違反處列完。
     """
+    entries, clauses_by_id, cards_by_id, checks = state
     if doc.get("版本") != FRAME_EXPORT_VERSION:
         checks["frame_version"].append({"expected": FRAME_EXPORT_VERSION, "found": doc.get("版本")})
         return None, None
@@ -634,11 +652,15 @@ def _attach_frames(entries, clauses_by_id, doc, checks, cards_by_id):
     in_export = sorted({cid for cid, _, _ in rows})
     checks["frame_face_stale"].extend(_face_stale(doc.get("卡面", ()), in_export, cards_by_id))
     checks["frame_unknown_values"].extend(_frame_value_problems(doc))
+    covered = [cid for cid in in_export if cid in entries]
+    leads = {cid: _lead_sentences(clauses_by_id.get(cid) or ()) for cid in covered}
+    checks["frame_orphan_options"].extend(
+        {"id": cid, "section": cl.get("section"), "index": cl.get("index")}
+        for cid in covered for cl in leads[cid][1])
     if checks["frame_unknown_values"]:
         return None, None
     tables = frame_tables((frame for r in doc["句"] for frame in r["frames"]), doc["值域"])
     numbers = {}
-    covered = [cid for cid in in_export if cid in entries]
     for cid in covered:
         clauses = clauses_by_id.get(cid) or ()
         fr = []
@@ -648,19 +670,17 @@ def _attach_frames(entries, clauses_by_id, doc, checks, cards_by_id):
                        for frame in (row["frames"] if row else ()))
             fr.append([numbers.setdefault(text, len(numbers)) for text in encoded])
         entries[cid]["fr"] = fr
-        fl, orphans = _lead_sentences(clauses)
-        if fl is not None:
-            entries[cid]["fl"] = fl
-        checks["frame_orphan_bullets"].extend(
-            {"id": cid, "section": cl.get("section"), "index": cl.get("index")} for cl in orphans)
+        if leads[cid][0] is not None:
+            entries[cid]["fl"] = leads[cid][0]
+    # 鍵名 table 算進 META.frame_digest(_content_digest 連鍵一起雜湊),改名會讓 data.js 無故變動
     part = {"table": [json.loads(text) for text in numbers],
             "frame": {"lemmas": tables.lemmas, "heads": tables.heads, "domains": doc["值域"],
                       "covered": len(covered)},
             "catalog": [{key: row[key] for key in _CATALOG_INDEX_KEYS} for row in doc["目錄"]]}
-    report = {"covered_cards": len(covered), "sentences": len(rows),
+    stats = {"covered_cards": len(covered), "sentences": len(rows),
               "frames": sum(len(row["frames"]) for row in rows.values()),
               "unique_frames": len(part["table"]), "heads": len(tables.heads)}
-    return part, report
+    return part, stats
 
 
 def _summarise_problems(report):
@@ -688,11 +708,7 @@ def _summarise_problems(report):
         ("動作類別匯出檔的葉不在類別樹", checks["category_unknown_leaves"]),
         ("動作類別匯出檔的卡面參數過時(與卡片總表對不上,請重跑分詞鏈)",
          checks["category_face_stale"]),
-        ("框列匯出檔的格式版本與索引建置預期不符", checks["frame_version"]),
-        ("框列匯出檔的原文雜湊過時(與標記表對不上,請重跑分詞鏈)", checks["frame_stale"]),
-        ("框列匯出檔的卡面參數過時(與卡片總表對不上,請重跑分詞鏈)", checks["frame_face_stale"]),
-        ("框列或目錄述詞含值域外的值或不認得的欄", checks["frame_unknown_values"]),
-        ("涵蓋卡的 ● 子句找不到領起句", checks["frame_orphan_bullets"]),
+        *((label, checks[key]) for key, label in FRAME_CHECK_LABELS.items()),
         ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
         ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
     )
@@ -703,7 +719,7 @@ def _summarise_problems(report):
 
 
 def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
-                rewrites=None, data_updated_at=None, categories=None, frames=None):
+                rewrites=None, data_updated_at=None, categories=None, frame_export=None):
     """[[卡片總表]]條目 + [[效果標記表]]條目 → (index, report)。
 
     `built_at`、`sources`(來源檔雜湊)與 `data_updated_at`([[資料更新時間]],
@@ -728,7 +744,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     涵蓋的卡多帶 `ae` / `ac`,VOCAB 多一個 `acat`(類別樹與涵蓋卡數)。為 None
     時索引不帶類別。
 
-    `frames` 是分詞鏈匯出的框列檔(ADR-0018,`_attach_frames`,規格 3 票 02):涵蓋的卡多帶 `fr`(與 `tx` 對齊的
+    `frame_export` 是分詞鏈匯出的框列檔(ADR-0018,`_attach_frames`,規格 3 票 02):涵蓋的卡多帶 `fr`(與 `tx` 對齊的
     框號清單)與 `fl`(● 子句指到領起句的句序號,沒有 ● 子句的卡不帶),索引多帶框表 `frames`,VOCAB 多帶
     `frame`(詞元表、中心詞表、值域、涵蓋卡數)與 `catalog`(目錄),META 多帶 `frame_digest`。為 None 時索引不帶框架部分。
     """
@@ -745,8 +761,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
               "errata_not_reversible": [], "rewrite_desc_mismatch": [],
               "rewrite_overlaps_errata": [], "category_stale": [],
               "category_unknown_leaves": [], "category_face_stale": [],
-              "frame_version": [], "frame_stale": [], "frame_face_stale": [],
-              "frame_unknown_values": [], "frame_orphan_bullets": []}
+              **{key: [] for key in FRAME_CHECK_LABELS}}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
     carriers = set(vocab.carriers(vocab.OPTIONAL))
     entries = {}
@@ -811,13 +826,12 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
                                                     "bits": f"{bits:#x}"})
     category_report = None
     acat = None
+    state = _BuildState(entries, clauses_by_id, {c["id"]: c for c in cards}, checks)
     if categories is not None:
-        acat, category_report = _attach_categories(
-            entries, clauses_by_id, categories, checks, {c["id"]: c for c in cards})
-    frame_part, frame_report = None, None
-    if frames is not None:
-        frame_part, frame_report = _attach_frames(
-            entries, clauses_by_id, frames, checks, {c["id"]: c for c in cards})
+        acat, category_report = _attach_categories(state, categories)
+    frame_part, frame_stats = None, None
+    if frame_export is not None:
+        frame_part, frame_stats = _attach_frames(state, frame_export)
     index_cards = [entries[cid] for cid in sorted(entries)]
     exported = vocab.export()
     cross = _cross_type_counts(cards, clauses_by_id)
@@ -857,7 +871,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
         "checks": checks,
         "monster_invariant": _monster_invariant(cards),
         "categories": category_report,
-        "frames": frame_report,
+        "frame_stats": frame_stats,
     }
     report["problems"] = _summarise_problems(report)
     return index, report
@@ -886,3 +900,15 @@ def serialize_index(index):
     return ("window.CARD_DATA=[\n" + cards + "\n];\n"
             "window.VOCAB={\n" + vocab_lines + "\n};\n"
             "window.META={\n" + meta_lines + "\n};\n" + frames)
+
+
+# META 的 built_at 那一行:卡片行以 { 開頭、VOCAB 沒有這個鍵,所以整行比對只會中這裡
+_BUILT_AT_LINE = re.compile(r'^"built_at":.*$', re.M)
+
+
+def keep_built_at(text, previous):
+    """序列化好的索引 + 既有 data.js 的文字(沒有是 None)→ 該寫的內容。除 built_at 外相同就回既有的文字:建置時間是
+    內容變動的時刻,同輸入重跑不該動檔(規格「同輸入建置兩次逐位元組相同」,2026-11-01 code review 裁定)。"""
+    if previous is not None and _BUILT_AT_LINE.sub("", previous) == _BUILT_AT_LINE.sub("", text):
+        return previous
+    return text

@@ -21,7 +21,7 @@ index)。框架對標記句:效果句只有一段時框架全屬那一句;拆開
 (「卡面」),索引建置以總表重算比對。判定的框架數與理由記在「統計」,建置報告照登。
 
 原文雜湊、卡面雜湊、框架對標記句、統計與讀效果句都在 export_common.py(named-queries 票 05 抽出,
-與框列匯出 export_frames.py 共用);本檔過渡期照產,規格 3 切換索引後刪。
+與框列匯出 export_frames.py 共用);本檔過渡期照產,規格 4 介面切換後刪。
 
 用法:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/export_categories.py
 """

@@ -18,9 +18,9 @@ from frameindex import encode_frame, frame_tables
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 CHAIN_DIR = os.path.join(ROOT, ".scratch", "effect-tokenize")
-DEFAULT_SOURCE = os.path.join(CHAIN_DIR, "predicate-fixture.json")
-DEFAULT_EXPORT = os.path.join(ROOT, "data", "action_frames.json")
-DEFAULT_OUT = os.path.join(HERE, "predicate-fixture-encoded.json")
+REFERENCE_FIXTURE = os.path.join(CHAIN_DIR, "predicate-fixture.json")
+FRAME_EXPORT = os.path.join(ROOT, "data", "action_frames.json")
+ENCODED_FIXTURE = os.path.join(HERE, "predicate-fixture-encoded.json")
 
 
 def encoded_fixture(fixture, domains):
@@ -40,14 +40,14 @@ def encoded_fixture(fixture, domains):
 
 
 def main():
-    with open(DEFAULT_SOURCE, encoding="utf-8") as f:
+    with open(REFERENCE_FIXTURE, encoding="utf-8") as f:
         fixture = json.load(f)
-    with open(DEFAULT_EXPORT, encoding="utf-8") as f:
+    with open(FRAME_EXPORT, encoding="utf-8") as f:
         domains = json.load(f)["值域"]
-    with open(DEFAULT_OUT, "w", encoding="utf-8", newline="\n") as f:
+    with open(ENCODED_FIXTURE, "w", encoding="utf-8", newline="\n") as f:
         json.dump(encoded_fixture(fixture, domains), f, ensure_ascii=False, indent=1)
         f.write("\n")
-    print("已寫出", DEFAULT_OUT)
+    print("已寫出", ENCODED_FIXTURE)
 
 
 if __name__ == "__main__":

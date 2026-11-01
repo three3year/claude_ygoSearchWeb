@@ -8,7 +8,7 @@
 
 目錄(catalog_hits.py:載入檢查具名查詢目錄、每個動作框架的命中寫 frame_queries.json、「至少命中一張」檢查)與
 框列匯出(export_frames.py → data/action_frames.json,目錄欄的張數與雜湊;ADR-0018)緊接框架之後、在舊的
-類別 → 類別匯出 之前(規格 2 總則的順序 框架 → 目錄 → 匯出);舊的兩步過渡期照跑、規格 3 切換索引後刪。
+類別 → 類別匯出 之前(規格 2 總則的順序 框架 → 目錄 → 匯出);舊的兩步過渡期照跑、規格 4 介面切換後刪。
 
 用法(repo 任意位置皆可):python .scratch/effect-tokenize/run_chain.py
 """

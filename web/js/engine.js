@@ -213,14 +213,24 @@ function actRows(c, rows, act) {
 
 /* [[框架述詞]]的評估(語意同參考評估器 predicate.py):一個述詞編成一組欄檢查,掃框表得一張
    命中表(框號 → 中不中),逐卡只查表。框元組的欄序與碼的定義見 frameindex.py。 */
-const FRAMES = window.FRAMES || [];
-const FRAME_VOCAB = VOCAB.frame || { lemmas: [], heads: [], domains: {} };
+const FRAMES = window.FRAMES;
+const FRAME_VOCAB = VOCAB.frame;
 
-const SLOT_PATIENT = 11, SLOT_GOAL = 12;
+/* 框元組與段的欄序(2026-11-01 規格 3「索引形狀」段;frameindex.py 依同一順序編) */
+const SLOT_LEMMA = 0, SLOT_POSITION = 1, SLOT_POLARITY = 2, SLOT_VOICE = 3, SLOT_NEGATION = 4,
+      SLOT_AGENT = 5, SLOT_MANNER = 6, SLOT_PATIENT_MODE = 7,
+      SLOT_SOURCE = 8, SLOT_GOAL_REGION = 9, SLOT_PLACE = 10,
+      SLOT_PATIENT_PHRASE = 11, SLOT_GOAL_PHRASE = 12;
 const SEG_HEAD = 0, SEG_HEAD_KIND = 1, SEG_QUANTITY = 2, SEG_MODIFIERS = 3;
 
+/* 尾端空值截掉,所以清單欄可能不在元組裡。 */
+function someInSlot(f, slot, test) {
+  const items = f[slot];
+  return items !== undefined && items.some(test);
+}
+
 function enumCodes(field, values) {
-  const domain = FRAME_VOCAB.domains[field] || [];
+  const domain = FRAME_VOCAB.domains[field];
   return new Set(values.map(v => domain.indexOf(v) + 1).filter(Boolean));
 }
 
@@ -234,13 +244,13 @@ function scalarCheck(slot, field) {
 function lemmaCheck(values) {
   const codes = new Set(values.map(v => FRAME_VOCAB.lemmas.indexOf(v)));
   codes.delete(-1);
-  return f => codes.has(f[0]);
+  return f => codes.has(f[SLOT_LEMMA]);
 }
 
 /* 區域項沒寫玩家就是不看玩家:展開成該區域的每個玩家的區域對。 */
 function regionCheck(slot) {
   return items => {
-    const players = FRAME_VOCAB.domains.玩家 || [], zones = FRAME_VOCAB.domains.區域 || [];
+    const players = FRAME_VOCAB.domains.玩家, zones = FRAME_VOCAB.domains.區域;
     const codes = new Set();
     for (const [player, zone] of items) {
       const z = zones.indexOf(zone);
@@ -249,7 +259,7 @@ function regionCheck(slot) {
         if (player == null || player === p) codes.add(n * zones.length + z);
       });
     }
-    return f => (f[slot] || []).some(pair => codes.has(pair));
+    return f => someInSlot(f, slot, pair => codes.has(pair));
   };
 }
 
@@ -260,37 +270,38 @@ function headCheck(slot) {
     FRAME_VOCAB.heads.forEach((head, n) => {
       if (values.some(v => head.endsWith(v))) codes.add(n);
     });
-    return f => (f[slot] || []).some(seg => codes.has(seg[SEG_HEAD]));
+    return f => someInSlot(f, slot, seg => codes.has(seg[SEG_HEAD]));
   };
 }
 
 function segmentCheck(segSlot, field) {
   return values => {
     const codes = enumCodes(field, values);
-    return f => (f[SLOT_PATIENT] || []).some(seg => codes.has(seg[segSlot]));
+    return f => someInSlot(f, SLOT_PATIENT_PHRASE, seg => codes.has(seg[segSlot]));
   };
 }
 
 function modifierCheck(values) {
   let mask = 0;
   enumCodes('修飾語類', values).forEach(code => { mask |= 1 << (code - 1); });
-  return f => (f[SLOT_PATIENT] || []).some(seg => (seg[SEG_MODIFIERS] & mask) !== 0);
+  return f => someInSlot(f, SLOT_PATIENT_PHRASE, seg => (seg[SEG_MODIFIERS] & mask) !== 0);
 }
 
+/* 述詞欄 → 檢查(16 欄是參考評估器的 FIELDS,2026-10-31 GLOSSARY「框架述詞」條;不認得的欄丟錯) */
 const FRAME_CHECKS = new Map([
   ['詞元', lemmaCheck],
-  ['位置', scalarCheck(1, '位置')],
-  ['極性', scalarCheck(2, '極性')],
-  ['態', scalarCheck(3, '態')],
-  ['否定形', scalarCheck(4, '否定形')],
-  ['施事者', scalarCheck(5, '施事者')],
-  ['方式類', scalarCheck(6, '方式類')],
-  ['動作對象', scalarCheck(7, '動作對象')],
-  ['來源', regionCheck(8)],
-  ['目的', regionCheck(9)],
-  ['所在', regionCheck(10)],
-  ['受事者中心詞', headCheck(SLOT_PATIENT)],
-  ['目的中心詞', headCheck(SLOT_GOAL)],
+  ['位置', scalarCheck(SLOT_POSITION, '位置')],
+  ['極性', scalarCheck(SLOT_POLARITY, '極性')],
+  ['態', scalarCheck(SLOT_VOICE, '態')],
+  ['否定形', scalarCheck(SLOT_NEGATION, '否定形')],
+  ['施事者', scalarCheck(SLOT_AGENT, '施事者')],
+  ['方式類', scalarCheck(SLOT_MANNER, '方式類')],
+  ['動作對象', scalarCheck(SLOT_PATIENT_MODE, '動作對象')],
+  ['來源', regionCheck(SLOT_SOURCE)],
+  ['目的', regionCheck(SLOT_GOAL_REGION)],
+  ['所在', regionCheck(SLOT_PLACE)],
+  ['受事者中心詞', headCheck(SLOT_PATIENT_PHRASE)],
+  ['目的中心詞', headCheck(SLOT_GOAL_PHRASE)],
   ['中心詞類', segmentCheck(SEG_HEAD_KIND, '中心詞類')],
   ['數量類', segmentCheck(SEG_QUANTITY, '數量類')],
   ['修飾語類', modifierCheck],

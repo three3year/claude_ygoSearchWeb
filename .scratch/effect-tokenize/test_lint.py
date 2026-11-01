@@ -8,7 +8,7 @@
 - enrich.STEPS 裡的每個步驟模組自己宣告 mark(ctx, tokens, frame)、batch_cells(frame) 與 FILL_RATE_ROWS(retro
   第 9 項:收集端只有 STEPS 一張表;步驟模組一定加了新鍵,新鍵就要有填充率列與批次檔格;REPORT_SECTIONS 可選)。
   步驟模組清單也從 enrich.py 的 STEPS 讀,不另抄。
-- 具名查詢目錄線的模組(predicate、catalog、catalog_hits)不 import 舊歸葉程式(categories、export_categories):規格 3 刪舊的時它們留下。
+- 具名查詢目錄線的模組(predicate、catalog、catalog_hits)不 import 舊歸葉程式(categories、export_categories):規格 4 刪舊的時它們留下。
 - 回指(anaphora)、動作對象(patient)與它們共用的小表(referent)沒有正則式、不呼叫區域辨識解字面(places.parse_zones/
   parse_place):named-queries 票 03/04 改讀論元片語——封閉表在模組頂、判定讀片語的段,區域交給 regions.zones_of。
 - 宣告 BEFORE_ANAPHORA = True 的步驟模組(片語)要排在 STEPS 前段(named-queries 票 02:enrich 依宣告分回指前後
@@ -158,7 +158,7 @@ class TestPhraseReaders(unittest.TestCase):
 
 class TestCatalogModules(unittest.TestCase):
     """具名查詢目錄與述詞字彙(named-queries 票 06/07)不 import 舊歸葉程式:類別線退場後它們留下,
-    舊的 categories/export_categories 在規格 3 刪。"""
+    舊的 categories/export_categories 在規格 4 刪。"""
 
     def test_catalog_modules_do_not_import_the_old_classifier(self):
         offenders = {name: sorted(set(imported_modules(parse(name))) & OLD_CLASSIFIER_MODULES)

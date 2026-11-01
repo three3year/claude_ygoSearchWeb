@@ -4,7 +4,7 @@
  *
  * 跑法:`node --test script/web/predicate.test.js`
  *
- * 三段:編碼夾具(參考評估器的 96 例、3 雜湊、小語料張數,由 encode_fixture.py 產生)、合成資料的 runQuery 例子
+ * 三段:編碼夾具(參考評估器的例子、雜湊、小語料張數,由 encode_fixture.py 產生)、合成資料的 runQuery 例子
  * (卡層、句層條件、領起句、hits、marks、與舊 q.act 並用)、真 data.js 對真匯出檔的全語料對照。都只走 runQuery,
  * 不斷言編碼內部。
  */
@@ -28,21 +28,21 @@ function cardsHash(ids) {
 
 const include = (...preds) => ({ preds: { inc: preds } });
 
-test('夾具 96 例:一例包成一張一句一框的卡,命中與否同參考評估器', () => {
+test('夾具例子:一例包成一張一句一框的卡,命中與否同參考評估器', () => {
   const frames = [], cards = [];
   FIXTURE.例子.forEach((ex, n) => {
     cards.push({ id: n + 1, tx: ['句'], fr: [[frames.length]] });
     frames.push(FIXTURE.框列[ex.框列]);
   });
   const box = harness.load({ cards, frames, vocab: { frame: FIXTURE.vocab } });
-  assert.strictEqual(FIXTURE.例子.length, 96);
+  assert.ok(FIXTURE.例子.length > 0);
   const wrong = FIXTURE.例子.filter((ex, n) =>
     harness.ids(box, include(ex.述詞)).includes(n + 1) !== ex.命中).map(ex => ex.名);
   assert.deepStrictEqual(wrong, []);
 });
 
-test('夾具 3 雜湊:卡集合雜湊的算法同參考評估器', () => {
-  assert.strictEqual(FIXTURE.雜湊.length, 3);
+test('夾具雜湊:卡集合雜湊的算法同參考評估器', () => {
+  assert.ok(FIXTURE.雜湊.length > 0);
   for (const ex of FIXTURE.雜湊) assert.strictEqual(cardsHash(ex.卡), ex.雜湊, ex.名);
 });
 

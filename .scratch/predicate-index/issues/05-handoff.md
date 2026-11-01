@@ -138,7 +138,7 @@
 - 網站建置:`build_index.py` 的 `DEFAULT_CATEGORIES`、`--categories`、三個 `category_*` 報告列;`webindex.py` 的 `_attach_categories`、`_SPARSE_CATEGORY_FIELDS`、`_CATEGORY_GROUPS`、`category_*` 檢查、`VOCAB.acat`、`META.acat_digest`、`META.sources["action_categories.json"]`;`test_webindex.py` 動作類別段。舊欄 `ae/ac/aes/aen/acs/acn`。
 - 前端:`web/js/acat.js` 與 `index.html` 第 116 行;`engine.js` 的 `PAT_FIELDS`、`patMode`、`modeLeaves`、`actSel`、`actLeaves`、`anyIn`、`actExcluded`、`actRows`、`runQuery` 的舊軸分支與 `act` mark,及匯出的 `modeLeaves`、`patMode`;`query.js` 的 `{act, dom: 'acat'}` 與 `actNodeHtml`、`patHtml`、`actAxisHtml` 等舊軸 UI(含代價、動作對象 radiogroup、過濾框);`hash.js` 的 `ACT`、`ACT_COST`、`ACT_PAT`;`render.js` 的舊 `act` 句尾標籤(第 31、257〜266 行,規格 4 改寫不是直接刪);`style.css` 的 `.act*`。
 - 測試與 harness:`frontend_harness.js` 的 `__acatFilter`、`acatFilter`;`engine.test.js`、`render.test.js` 的動作類別段(搜尋關鍵字命中 156 / 13 行,部分是述詞線以外的合成資料,要逐條看)。
-- 文件:`build-products.md` 的 action_categories 列與 export digest、`GLOSSARY` 前端索引條的舊段與動作類別第三版段的舊樹檔、README(第 115、119、135〜141、180、188、199 行)、舊註解還寫「規格 3 切換」的 `run_chain.py`、`export_categories.py`、`catalog.py`、`test_lint.py`、`test_downstream_baseline.py`(本票只改文件,沒動這些程式檔)。
+- 文件:`build-products.md` 的 action_categories 列與 export digest、`GLOSSARY` 前端索引條的舊段與動作類別第三版段的舊樹檔、README(第 115、119、135〜141、180、188、199 行)、`test_webindex.EncodedFixtureTest.test_copies_of_chain_tables_stay_equal` 比對 `export_categories.SUB_INDEX` 那一行(刪檔時比對對象搬到留下的模組或拿掉)。「規格 3 切換」的舊註解已在下面 Code review 修正改成規格 4。
 
 與票 11 清單的出入,**先看這幾條**:
 
@@ -160,3 +160,30 @@ GLOSSARY:前端索引條加框架段、值域正典條例外段補封閉類、�
 - 全節點比對只比動作類別軸;其他軸只抽無條件與卡名(見上)。
 - `.gitattributes` 沒給 `web/data.js` 加 `eol=lf merge=ours`:票面只要文件核對,照現況記進文件。
 - 一次性腳本與截圖在 session scratchpad,沒入版控。規格 Further Notes 的 `measure.txt` 是原型工具的輸出,本票沒重跑;本票實測走真引擎。
+
+### Code review 修正
+
+2026-11-01,review 基準 ee10d32..a50079d。行為問題先補失敗測試(紅)再修。
+
+**守門**:改完重跑 `run_chain.py`(exit 0)、`build_index.py`、`encode_fixture.py`:`data/action_frames.json` 8e359d78…、`data/action_categories.json` 443390e2… 都不變,`web/data.js` 內容相同(建置印「內容沒變,不動」,md5 前後相同、`git diff` 空),編碼夾具 `git diff` 空。effect-tokenize **1,056 OK、skip 0**;node(engine、render、predicate)**205 pass / 0 fail / 0 skip**,含全語料 783 格;script/web **186 OK**(+11);card_list 66、faq_info 43、tag_card 469、text_format 55。
+
+**行為**
+
+- S1:`print_checks` 去掉 `limit`,全部違反處都印;`print_invariant` 同型的 `[:20]` 一併拿掉。
+- S2:`predicate_problems` 遇到 null、數字、物件值,或項不是字串、殘缺區域對,列違反處;`frame_problems` 遇到殘缺區域對或整欄不是清單同樣列。詞元與中心詞沒有值域,但項非字串也擋(JS 的 `endsWith` 不該吃到)。
+- S3:`_attach_frames` 先算領起句再判值域問題,兩類都列;`fl` 仍只在編得出框時才掛。
+- S4:`webindex.keep_built_at`:既有檔除 `built_at` 那一行外相同就不動檔。比對走文字模式,CRLF 的 checkout 也算相同(這時連檔都不重寫,`git status` 乾淨)。內容有變才寫新時間。測試在 CLI 接縫(`BuiltAtTest`),`build_index.py` 檔頭原寫「不納入自動測試」跟著改。`print_report` 的 `file=sys.stdout` 預設值綁死匯入時的 stdout,改成 `None`。
+- S5:ADR-0018 改成值域隨匯出檔;`build-products.md` 的 data.js 列、GLOSSARY 的建置時間定義跟著 S4 改。
+
+**標準**
+
+- H1:`frameindex` 六個對照常數收成一張 `EXPORT_PATH`(排列即元組序),`SCALAR_KEYS` 等全由它推得。**留不掉的**:`EXPORT_PATH` 本身與 `DOMAIN_PLAYER/ZONE`、`FIELD_LEMMA`、`FIELD_MODIFIERS`——匯出檔的值域只帶值、不帶框列鍵對照,而且版本與匯出檔逐位元組不動是本次守門;玩家與區域是讀值域的入口鍵。同步測試整張比 `predicate.EXPORT_PATH`,另守 `DOMAIN_*`、`FRAME_EXPORT_VERSION`、`SUB_INDEX`;再一條守值域每個封閉類都編得進元組。
+- H2:`EXPORT_PATH`、`DOMAIN_*`、`FRAME_EXPORT_VERSION`、`_CATALOG_INDEX_KEYS`、`SUB_INDEX`、`FRAME_CHECK_LABELS`、`engine.js` 的槽位表與 `FRAME_CHECKS` 補來源與日期。`SUB_INDEX` 的來源只寫到 ADR-0015 與 2026-10,沒查到確切裁定日。
+- H3:`run_chain.py`、`export_categories.py`、`catalog.py`、`test_downstream_baseline.py`、`test_lint.py`、`rewrite_tree.py` 的註解改規格 4;`build-products.md` 那三處票 05 已改。
+
+**判斷題,修了的**:`SUB_INDEX` 正則取代 `BULLET_MARK` 與 `rsplit`,`-●甲` 這種尾巴不再算 ● 子句(真資料無此例);`_BuildState` 收參數團,兩支附掛共用一個 `cards_by_id`;`FRAME_CHECK_LABELS` 一份給檢查鍵、問題清單、報告,報告的標籤因此多了「請重跑分詞鏈」;`orphan_bullets` → `frame_orphan_options`;`_cut` 去參數;`engine.js` 槽位具名、`someInSlot`、拿掉 `|| []` 與 `FRAMES`、`FRAME_VOCAB` 的預設值;`encode_fixture` 常數改 `REFERENCE_FIXTURE`、`FRAME_EXPORT`、`ENCODED_FIXTURE`;96、3 改讀夾具自身,`test_webindex` 整段比對 `例子`。用詞:`frames` 只留給框表(`index["frames"]`、`window.FRAMES`、harness),整份匯出檔是 `frame_export`(`build_index` 參數、CLI `--frame-export`),報告節是 `frame_stats`。
+
+**沒修的**
+
+- `part["table"]` 的鍵名:`_content_digest` 連鍵一起雜湊,改名會動 `META.frame_digest`,`web/data.js` 就變了,違反本次守門。留一行註解;刪舊欄那波 data.js 本來就會變,規格 4 可順手改。
+- 歷史紀錄裡的「規格 3 切換」:`.scratch/named-queries/spec.md`、其票、`frame-predicate-search/issues/05` 是當時的裁定,切換點的改動記在本規格第一題,不回頭改。`llm-check/summary.md` 第 302、311、329、912 行也還寫規格 3:它是審核關卡 md,要改得走鏡像重發,留給站主決定。

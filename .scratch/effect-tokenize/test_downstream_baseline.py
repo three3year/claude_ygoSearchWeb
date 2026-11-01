@@ -215,7 +215,7 @@ class TestCorpus(unittest.TestCase):
         self._digest(db.ANAPHORA)
 
     def test_old_export_file_is_byte_for_byte_unchanged(self):
-        """過渡期(規格 3 切換索引前)data/action_categories.json 不變:比入版控的 export-digest.json 記的 md5,
+        """過渡期(規格 4 介面切換前)data/action_categories.json 不變:比入版控的 export-digest.json 記的 md5,
         不比 git HEAD 的 blob——HEAD 在工作樹是本票分支、合併後是合併點,誰不小心把改了的檔 commit 進去,
         HEAD 比對就跟著過;digest 要有人刻意 --freeze 才會動,語料或卡面變了(新卡)時略過並要求重新凍結。"""
         self._digest(db.EXPORT_RULER)

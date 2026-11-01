@@ -2,7 +2,10 @@
 
 薄殼只做四件事:讀檔 → 呼叫 → 寫檔 → 印報告,並依 report 的 problems 決定
 exit code。驗收條件全部長在 `build_index` 的 report 裡(與 tag_card 的
-`seal_report.py` 同一個結構),所以這支不納入自動測試。
+`seal_report.py` 同一個結構)。自動測試只蓋「報告印全部違反處」與「同輸入重跑不動檔」,都在 test_webindex。
+
+`built_at` 是內容變動的時刻:既有輸出檔除這一行外內容相同就不重寫(`webindex.keep_built_at`),所以預設指令重跑逐位元組
+相同,比對換行前先轉過,CRLF 的 checkout 也算相同。內容有變才取時鐘。
 
 用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
     python script/web/build_index.py
@@ -16,7 +19,7 @@ import json
 import os
 import sys
 
-from webindex import build_index, serialize_index
+from webindex import FRAME_CHECK_LABELS, build_index, keep_built_at, serialize_index
 
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,7 +28,7 @@ DEFAULT_TAGS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_ERRATA = os.path.join(ROOT, "data", "text_errata.json")
 DEFAULT_REWRITES = os.path.join(ROOT, "data", "text_rewrites.json")
 DEFAULT_CATEGORIES = os.path.join(ROOT, "data", "action_categories.json")
-DEFAULT_FRAMES = os.path.join(ROOT, "data", "action_frames.json")
+DEFAULT_FRAME_EXPORT = os.path.join(ROOT, "data", "action_frames.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "web", "data.js")
 # 資料更新時間(來源檔下載時間)由 update_cards.py 記錄;不入版控,
 # clean checkout 沒有這個檔 → META 不帶欄位,前端整行省略
@@ -63,8 +66,8 @@ def print_census(report, p):
     p(f"  跨類型魔陷卡數: {cells} {dropped}")
 
 
-def print_checks(report, p, limit=20):
-    """四道一致性檢查加兩道同族的。逐筆列出前 limit 筆,夠找到現場就好。"""
+def print_checks(report, p):
+    """四道一致性檢查加兩道同族的,違反處全部逐筆列出(規格 3 story 12):修一輪就要看到全部,不是下一輪才看到下一批。"""
     checks = report["checks"]
     labels = (
         ("missing_cards", "卡片總表有卡而索引沒有"),
@@ -83,21 +86,15 @@ def print_checks(report, p, limit=20):
         ("category_stale", "動作類別匯出檔過時(與標記表對不上)"),
         ("category_unknown_leaves", "動作類別匯出檔的葉不在類別樹"),
         ("category_face_stale", "動作類別匯出檔的卡面參數過時(與卡片總表對不上)"),
-        ("frame_version", "框列匯出檔的格式版本與索引建置預期不符"),
-        ("frame_stale", "框列匯出檔的原文雜湊過時(與標記表對不上)"),
-        ("frame_face_stale", "框列匯出檔的卡面參數過時(與卡片總表對不上)"),
-        ("frame_unknown_values", "框列或目錄述詞含值域外的值或不認得的欄"),
-        ("frame_orphan_bullets", "涵蓋卡的 ● 子句找不到領起句"),
+        *FRAME_CHECK_LABELS.items(),
     )
     gaps = report["known_gaps"]
     p(f"已知缺口: 段落標頭 {gaps['header']} 處、※ 別名 {gaps['alias']} 處")
     for key, label in labels:
         items = checks[key]
         p(f"{label}: {len(items)} 筆" + ("" if items else " ✓"))
-        for item in items[:limit]:
+        for item in items:
             p(f"  {item}")
-        if len(items) > limit:
-            p(f"  …其餘 {len(items) - limit} 筆略")
 
 
 def print_invariant(report, p):
@@ -108,9 +105,9 @@ def print_invariant(report, p):
     p(f"不變式「大類是怪獸 ⟺ 有種族與屬性」: {status}"
       f"(怪獸 {inv['monsters']} 張、缺種族或屬性 {len(missing)} 張、"
       f"非怪獸殘留參數 {len(extra)} 張)")
-    for cid in missing[:20]:
+    for cid in missing:
         p(f"  怪獸卻缺種族或屬性 id={cid}")
-    for cid in extra[:20]:
+    for cid in extra:
         p(f"  非怪獸卻有怪獸參數 id={cid}")
 
 
@@ -134,22 +131,22 @@ def print_categories(report, p):
         p(f"  動作對象{key}: {cells}")
 
 
-def print_frames(report, p):
+def print_frame_stats(report, p):
     """動作框架進索引的規模:涵蓋與唯一框數突然變了,看這一行。"""
-    frames = report["frames"]
-    if frames is None:
+    stats = report["frame_stats"]
+    if stats is None:
         p("動作框架: 未編入索引(未讀匯出檔,或匯出檔版本、值域不合)")
         return
-    p(f"動作框架: 涵蓋 {frames['covered_cards']} 張卡、{frames['sentences']} 句、{frames['frames']} 框、"
-      f"唯一框 {frames['unique_frames']}、中心詞 {frames['heads']}")
+    p(f"動作框架: 涵蓋 {stats['covered_cards']} 張卡、{stats['sentences']} 句、{stats['frames']} 框、"
+      f"唯一框 {stats['unique_frames']}、中心詞 {stats['heads']}")
 
 
-def print_report(report, file=sys.stdout):
+def print_report(report, file=None):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p(f"索引: {report['cards']} 張卡、{report['clauses']} 個效果句")
     print_census(report, p)
     print_categories(report, p)
-    print_frames(report, p)
+    print_frame_stats(report, p)
     print_invariant(report, p)
     print_checks(report, p)
     problems = report["problems"]
@@ -194,7 +191,7 @@ def main(argv=None):
     parser.add_argument("--categories", default=DEFAULT_CATEGORIES,
                         help="動作類別匯出檔路徑 "
                              "(預設 data/action_categories.json;由分詞鏈產生)")
-    parser.add_argument("--frames", default=DEFAULT_FRAMES,
+    parser.add_argument("--frame-export", default=DEFAULT_FRAME_EXPORT,
                         help="框列匯出檔路徑 "
                              "(預設 data/action_frames.json;由分詞鏈產生)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
@@ -216,17 +213,25 @@ def main(argv=None):
         sources={os.path.basename(args.cards): _digest(args.cards),
                  os.path.basename(args.tags): _digest(args.tags),
                  os.path.basename(args.categories): _digest(args.categories),
-                 os.path.basename(args.frames): _digest(args.frames)},
+                 os.path.basename(args.frame_export): _digest(args.frame_export)},
         errata=errata, rewrites=rewrites, data_updated_at=data_updated_at,
-        categories=_load(args.categories), frames=_load(args.frames))
+        categories=_load(args.categories), frame_export=_load(args.frame_export))
     print_report(report)
-    print_size(serialize_index(index), args.output, print)
+    text = serialize_index(index)
+    print_size(text, args.output, print)
     if report["problems"]:
         return 1
     if not args.no_write:
-        with open(args.output, "w", encoding="utf-8", newline="\n") as f:
-            f.write(serialize_index(index))
-        print(f"已寫出 {args.output}")
+        previous = None
+        if os.path.exists(args.output):
+            with open(args.output, encoding="utf-8") as f:
+                previous = f.read()
+        if keep_built_at(text, previous) is previous:
+            print(f"內容沒變,不動 {args.output}")
+        else:
+            with open(args.output, "w", encoding="utf-8", newline="\n") as f:
+                f.write(text)
+            print(f"已寫出 {args.output}")
     return 0
 
 

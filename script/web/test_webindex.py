@@ -7,14 +7,21 @@ fixture 於測試內程式化建立,不碰網路也不碰真實資料檔(先例:
 四道一致性檢查的測試重點是**該擋的擋得住**,不是「現行資料跑得過」:每一道都餵
 一份壞掉的輸入進去,斷言 report 的 problems 非空。
 """
+import contextlib
 import hashlib
+import io
 import json
+import os
+import re
 import sys
+import tempfile
 import unittest
 
+import build_index as build_cli
 import encode_fixture
 import frameindex
 import vocab
+import webindex
 from frameindex import encode_frame, frame_tables
 from webindex import build_index, serialize_index
 
@@ -1191,7 +1198,7 @@ class FramesInIndexTest(unittest.TestCase):
                 "句": rows, **over}
 
     def build(self, rows=None, **over):
-        return build_index(self.cards(), self.tags(), frames=self.doc(rows, **over))
+        return build_index(self.cards(), self.tags(), frame_export=self.doc(rows, **over))
 
     def entry(self, index, cid):
         return next(e for e in index["cards"] if e["id"] == cid)
@@ -1222,7 +1229,7 @@ class FramesInIndexTest(unittest.TestCase):
         tags[0]["clauses"].append(clause("靈擺。", index="①", section="pendulum"))
         cards = self.cards()
         cards[0]["desc"] = "①:這樣。②:那樣。靈擺。"
-        index, report = build_index(cards, tags, frames=self.doc())
+        index, report = build_index(cards, tags, frame_export=self.doc())
         self.assertEqual(report["problems"], [])
         self.assertEqual(self.entry(index, 1)["fr"][2], [])
 
@@ -1278,7 +1285,7 @@ class FramesInIndexTest(unittest.TestCase):
         self.assertNotEqual(self.build(**{"目錄": catalog})[0]["meta"]["frame_digest"], before)
 
     def test_report_counts_the_frame_part(self):
-        self.assertEqual(self.build()[1]["frames"], {
+        self.assertEqual(self.build()[1]["frame_stats"], {
             "covered_cards": 3, "sentences": 6, "frames": 6, "unique_frames": 4, "heads": 1})
 
     def test_serialized_frame_table_is_one_frame_per_line_after_the_old_blocks(self):
@@ -1295,7 +1302,7 @@ class FramesInIndexTest(unittest.TestCase):
     def test_without_an_export_the_index_has_no_frame_part(self):
         index, report = build_index(self.cards(), self.tags())
         self.assertEqual(report["problems"], [])
-        self.assertIsNone(report["frames"])
+        self.assertIsNone(report["frame_stats"])
         self.assertNotIn("frames", index)
         self.assertNotIn("frame", index["vocab"])
         self.assertNotIn("catalog", index["vocab"])
@@ -1303,14 +1310,14 @@ class FramesInIndexTest(unittest.TestCase):
         self.assertNotIn("fr", self.entry(index, 1))
         self.assertNotIn("window.FRAMES", serialize_index(index))
 
-    def test_fl_points_bullet_clauses_at_their_lead_sentence(self):
+    def test_fl_points_option_clauses_at_their_lead_sentence(self):
         entry = self.entry(self.build()[0], 4)
         self.assertEqual(entry["fl"], [-1, 0, 0])
 
-    def test_card_without_bullet_clauses_has_no_fl(self):
+    def test_card_without_option_clauses_has_no_fl(self):
         self.assertNotIn("fl", self.entry(self.build()[0], 1))
 
-    def test_lead_sentence_is_found_in_the_same_section_by_cutting_the_last_bullet_segment(self):
+    def test_lead_sentence_is_found_in_the_same_section_by_cutting_the_last_option_segment(self):
         """領起句是同段落、index 去掉最後一段 -●n 的句:別段落同 index 的句不算,靈擺段的 ● 指靈擺段的 ①。"""
         cards = [card(1, desc="①:主。①:靈。●:一。")]
         tags = [tagged(1, dict(clause("①:主。"), text_ja="主"),
@@ -1320,41 +1327,41 @@ class FramesInIndexTest(unittest.TestCase):
                 {"card": 1, "section": "pendulum", "index": "①", "hash": sha("靈"), "frames": []},
                 {"card": 1, "section": "pendulum", "index": "①-●1", "hash": sha("一"), "frames": []}]
         doc = dict(self.doc(rows), **{"卡面": [[1, face_digest(cards[0])]]})
-        index, report = build_index(cards, tags, frames=doc)
+        index, report = build_index(cards, tags, frame_export=doc)
         self.assertEqual(report["problems"], [])
         self.assertEqual(index["cards"][0]["fl"], [-1, -1, 1])
 
-    def test_bullet_clause_without_a_lead_sentence_fails_the_build_and_lists_all(self):
+    def test_option_clause_without_a_lead_sentence_fails_the_build_and_lists_all(self):
         tags = self.tags()
         del tags[3]["clauses"][0]
         cards = self.cards()
         cards[3]["desc"] = "●:破壞。●:除外。"
         rows = [r for r in self.rows() if not (r["card"] == 4 and r["index"] == "①")]
-        _, report = build_index(cards, tags, frames=self.doc(rows))
-        self.assertEqual(report["checks"]["frame_orphan_bullets"],
+        _, report = build_index(cards, tags, frame_export=self.doc(rows))
+        self.assertEqual(report["checks"]["frame_orphan_options"],
                          [{"id": 4, "section": "main", "index": "①-●1"},
                           {"id": 4, "section": "main", "index": "①-●2"}])
         self.assertTrue(any("領起句" in p for p in report["problems"]))
 
-    def test_bullet_clause_on_an_uncovered_card_is_not_checked(self):
+    def test_option_clause_on_an_uncovered_card_is_not_checked(self):
         """舊式卡文不帶 `fr`,沒有領起句的從屬要算。"""
         cards = [card(1, desc="●:舊。")]
         tags = [tagged(1, clause("●:舊。", index="①-●1"))]
         doc = dict(self.doc([]), **{"卡面": []})
-        index, report = build_index(cards, tags, frames=doc)
-        self.assertEqual(report["checks"]["frame_orphan_bullets"], [])
+        index, report = build_index(cards, tags, frame_export=doc)
+        self.assertEqual(report["checks"]["frame_orphan_options"], [])
         self.assertNotIn("fl", index["cards"][0])
 
     def test_wrong_export_version_fails_the_build_instead_of_reading_empty_values(self):
         """舊版匯出檔沒有「值域」:版本不符就停,不往下讀到空值或丟例外。"""
         doc = {"說明": "", "版本": 1, "目錄": [], "統計": {}, "卡面": [], "句": []}
-        index, report = build_index(self.cards(), self.tags(), frames=doc)
+        index, report = build_index(self.cards(), self.tags(), frame_export=doc)
         self.assertEqual(report["checks"]["frame_version"], [{"expected": 2, "found": 1}])
         self.assertTrue(any("版本" in p for p in report["problems"]))
         self.assertNotIn("fr", self.entry(index, 1))
 
     def test_export_without_a_version_fails_the_build(self):
-        _, report = build_index(self.cards(), self.tags(), frames={"句": []})
+        _, report = build_index(self.cards(), self.tags(), frame_export={"句": []})
         self.assertEqual(report["checks"]["frame_version"], [{"expected": 2, "found": None}])
 
     def test_stale_text_hash_fails_the_build_and_lists_all(self):
@@ -1423,11 +1430,153 @@ class FramesInIndexTest(unittest.TestCase):
             {"query": "壞述詞", "field": "玩家"}])
         self.assertTrue(report["problems"])
 
+    def test_catalog_value_of_the_wrong_shape_fails_the_build_instead_of_crashing(self):
+        """述詞值只能是字串或清單:null、數字、物件編不出來,項不是字串或殘缺的區域對也一樣。"""
+        catalog = [{"name": "壞形狀", "path": ["壞形狀"], "cards": {}, "hash": {},
+                    "predicate": {"位置": None, "極性": 3, "詞元": None, "所在": None, "態": {"受身": 1},
+                                  "受事者中心詞": ["モンスター", 7], "來源": [["自分"], 5, [None, "場上"]]}}]
+        _, report = self.build(**{"目錄": catalog})
+        self.assertEqual(report["checks"]["frame_unknown_values"], [
+            {"query": "壞形狀", "field": "位置", "value": None},
+            {"query": "壞形狀", "field": "極性", "value": 3},
+            {"query": "壞形狀", "field": "詞元", "value": None},
+            {"query": "壞形狀", "field": "所在", "value": None},
+            {"query": "壞形狀", "field": "態", "value": {"受身": 1}},
+            {"query": "壞形狀", "field": "受事者中心詞", "value": 7},
+            {"query": "壞形狀", "field": "來源", "value": ["自分"]},
+            {"query": "壞形狀", "field": "來源", "value": 5}])
+        self.assertTrue(report["problems"])
+
+    def test_frame_with_a_broken_region_pair_fails_the_build_instead_of_crashing(self):
+        rows = self.rows()
+        rows[1]["frames"] = [dict(self.SENT, regions={"source": 5, "goal": [["無"], "墓地", None, ["無", "墓地", "多"]]})]
+        _, report = self.build(rows)
+        self.assertEqual(report["checks"]["frame_unknown_values"], [
+            {"id": 1, "index": "②", "field": "來源", "value": 5},
+            {"id": 1, "index": "②", "field": "目的", "value": ["無"]},
+            {"id": 1, "index": "②", "field": "目的", "value": "墓地"},
+            {"id": 1, "index": "②", "field": "目的", "value": None},
+            {"id": 1, "index": "②", "field": "目的", "value": ["無", "墓地", "多"]}])
+
+    def test_value_problems_do_not_hide_orphan_option_clauses(self):
+        """story 12 要全部違反處:值域外的值編不出框,● 子句找不到領起句照樣要列。"""
+        tags = self.tags()
+        del tags[3]["clauses"][0]
+        cards = self.cards()
+        cards[3]["desc"] = "●:破壞。●:除外。"
+        rows = [r for r in self.rows() if not (r["card"] == 4 and r["index"] == "①")]
+        rows[0]["frames"] = [dict(self.DESTROY, position="手札")]
+        _, report = build_index(cards, tags, frame_export=self.doc(rows))
+        self.assertEqual(report["checks"]["frame_unknown_values"],
+                         [{"id": 1, "index": "①", "field": "位置", "value": "手札"}])
+        self.assertEqual(len(report["checks"]["frame_orphan_options"]), 2)
+
+    def test_index_with_a_non_numeric_tail_is_not_an_option_clause(self):
+        """分詞鏈的 SUB_INDEX 只認 -●n:別的尾巴不是 ● 子句,不帶 `fl`、也不算找不到領起句。"""
+        cards = [card(1, desc="①:主。")]
+        tags = [tagged(1, dict(clause("①:主。", index="①-●甲"), text_ja="主"))]
+        rows = [{"card": 1, "section": "main", "index": "①-●甲", "hash": sha("主"), "frames": []}]
+        doc = dict(self.doc(rows), **{"卡面": [[1, face_digest(cards[0])]]})
+        index, report = build_index(cards, tags, frame_export=doc)
+        self.assertEqual(report["checks"]["frame_orphan_options"], [])
+        self.assertNotIn("fl", index["cards"][0])
+
+    def test_report_prints_every_violation(self):
+        """story 12:問題全部印出,不留「其餘略」。"""
+        catalog = [{"name": f"壞述詞{n}號", "path": [], "cards": {}, "hash": {}, "predicate": {"極性": "大概"}}
+                   for n in range(25)]
+        _, report = self.build(**{"目錄": catalog})
+        out = io.StringIO()
+        build_cli.print_report(report, file=out)
+        for n in range(25):
+            self.assertIn(f"壞述詞{n}號", out.getvalue())
+        self.assertNotIn("略", out.getvalue())
+
+    def test_report_prints_every_monster_invariant_violation(self):
+        cards = [card(n, type=TRAP, race=0x2000) for n in range(1, 26)]
+        _, report = build_index(cards, [tagged(n) for n in range(1, 26)])
+        out = io.StringIO()
+        build_cli.print_report(report, file=out)
+        self.assertEqual(out.getvalue().count("非怪獸卻有怪獸參數 id="), 25)
+
     def test_old_fields_are_untouched_by_the_frame_part(self):
         without, _ = build_index(self.cards(), self.tags())
         with_frames, _ = self.build()
         stripped = [{k: v for k, v in e.items() if k not in ("fr", "fl")} for e in with_frames["cards"]]
         self.assertEqual(stripped, without["cards"])
+
+
+class BuiltAtTest(unittest.TestCase):
+    """同輸入建置兩次 data.js 逐位元組相同(規格驗收;2026-11-01 code review 裁定的作法):既有 data.js 除
+    `built_at` 外內容相同就沿用舊時間,內容有變才取時鐘。接縫是 CLI:輸入檔 → 輸出檔的位元組。"""
+
+    OLD_LINE = '"built_at":"2000-01-01T00:00:00+0000",'
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        source = FramesInIndexTest()
+        self.paths = {"cards": source.cards(), "tags": source.tags(), "frame-export": source.doc(),
+                      "categories": {"說明": "", "葉": [], "樹": [], "句": [], "卡面": []},
+                      "errata": [], "rewrites": []}
+        for name, content in self.paths.items():
+            self.write_input(name, content)
+        self.output = os.path.join(self.dir.name, "data.js")
+
+    def input_path(self, name):
+        return os.path.join(self.dir.name, name + ".json")
+
+    def write_input(self, name, content):
+        with open(self.input_path(name), "w", encoding="utf-8") as f:
+            json.dump(content, f, ensure_ascii=False)
+
+    def run_cli(self):
+        argv = [arg for name in self.paths for arg in (f"--{name}", self.input_path(name))]
+        argv += ["--downloaded-at", os.path.join(self.dir.name, "沒有這個檔.json"), "-o", self.output]
+        with contextlib.redirect_stdout(io.TextIOWrapper(io.BytesIO(), encoding="utf-8")):
+            self.assertEqual(build_cli.main(argv), 0)
+
+    def read_bytes(self):
+        with open(self.output, "rb") as f:
+            return f.read()
+
+    def seed_old_time(self):
+        """先建一次,把時間改成一個時鐘不可能給的值:之後還看得到它就是沿用,看不到就是取了時鐘。"""
+        self.run_cli()
+        text = self.read_bytes().decode("utf-8")
+        seeded = re.sub(r'^"built_at":.*$', self.OLD_LINE, text, flags=re.M)
+        self.assertIn(self.OLD_LINE, seeded)
+        with open(self.output, "wb") as f:
+            f.write(seeded.encode("utf-8"))
+        return seeded.encode("utf-8")
+
+    def test_first_build_takes_the_clock(self):
+        self.run_cli()
+        self.assertRegex(self.read_bytes().decode("utf-8"), r'(?m)^"built_at":"20\d\d-')
+
+    def test_same_input_keeps_the_old_time_byte_for_byte(self):
+        seeded = self.seed_old_time()
+        self.run_cli()
+        self.assertEqual(self.read_bytes(), seeded)
+
+    def test_checkout_with_crlf_is_the_same_content(self):
+        """`web/data.js` 不在 .gitattributes,工作樹依 core.autocrlf 走:換行不同不算內容變了。"""
+        seeded = self.seed_old_time().replace(b"\n", b"\r\n")
+        with open(self.output, "wb") as f:
+            f.write(seeded)
+        self.run_cli()
+        self.assertEqual(self.read_bytes(), seeded)
+
+    def test_changed_content_takes_the_clock(self):
+        self.seed_old_time()
+        cards = self.paths["cards"]
+        cards[2]["name_zh"] = "改了名"
+        self.write_input("cards", cards)
+        self.run_cli()
+        text = self.read_bytes().decode("utf-8")
+        self.assertIn("改了名", text)
+        self.assertNotIn(self.OLD_LINE, text)
+        self.assertRegex(text, r'(?m)^"built_at":"20\d\d-')
 
 
 class EncodedFixtureTest(unittest.TestCase):
@@ -1440,29 +1589,29 @@ class EncodedFixtureTest(unittest.TestCase):
 
     @staticmethod
     def _source_fixture():
-        with open(encode_fixture.DEFAULT_SOURCE, encoding="utf-8") as f:
+        with open(encode_fixture.REFERENCE_FIXTURE, encoding="utf-8") as f:
             return json.load(f)
 
     @staticmethod
     def _domains():
-        with open(encode_fixture.DEFAULT_EXPORT, encoding="utf-8") as f:
+        with open(encode_fixture.FRAME_EXPORT, encoding="utf-8") as f:
             return json.load(f)["值域"]
 
     def test_committed_fixture_matches_the_reference_fixture(self):
-        with open(encode_fixture.DEFAULT_OUT, encoding="utf-8") as f:
+        with open(encode_fixture.ENCODED_FIXTURE, encoding="utf-8") as f:
             committed = json.load(f)
         self.assertEqual(committed, encode_fixture.encoded_fixture(self._source_fixture(), self._domains()),
                          "編碼夾具過時,重生:python script/web/encode_fixture.py")
 
     def test_fixture_keeps_every_reference_case(self):
-        """規格的三段都要到得了 JS:96 例、3 雜湊、小語料張數,期望值原樣帶過去。"""
+        """規格的三段都要到得了 JS:例子、雜湊、小語料張數,期望值原樣帶過去。"""
         source = self._source_fixture()
         encoded = encode_fixture.encoded_fixture(source, self._domains())
-        self.assertEqual(len(encoded["例子"]), 96)
+        self.assertTrue(source["例子"])
+        self.assertEqual(encoded["例子"], source["例子"])
         self.assertEqual(encoded["雜湊"], source["雜湊"])
         self.assertEqual(encoded["張數"]["例子"], source["張數"]["例子"])
         self.assertEqual(set(encoded["框列"]), set(source["框列"]))
-        self.assertEqual([ex["命中"] for ex in encoded["例子"]], [ex["命中"] for ex in source["例子"]])
 
     def test_encoded_rows_use_the_tables_the_fixture_carries(self):
         """編碼夾具自帶 VOCAB.frame 形狀的表:元組裡的詞元碼解得回原框列。"""
@@ -1472,18 +1621,24 @@ class EncodedFixtureTest(unittest.TestCase):
             self.assertEqual(encoded["vocab"]["lemmas"][encoded["框列"][name][0]], row["action"])
         self.assertEqual(encoded["vocab"]["domains"], self._domains())
 
-    def test_frame_keys_copy_stays_equal_to_the_reference_evaluator(self):
-        """frameindex 的框列鍵 ↔ 述詞欄是 predicate.EXPORT_PATH 的第二份,兩邊要相同。"""
+    def test_copies_of_chain_tables_stay_equal(self):
+        """script/web 留不掉的對照表(匯出檔不帶、程式又不 import 分詞鏈)每一張都守:述詞欄 → 框列路徑整張、值域裡玩家與
+        區域的鍵、匯出格式版本、● 子句的 index 句型。其餘鍵對照都由 EXPORT_PATH 推得。"""
         sys.path.append(encode_fixture.CHAIN_DIR)   # 接在後面:分詞鏈有 tokenize.py,不能蓋掉標準庫
+        import export_categories
+        import export_frames
         import predicate
-        paths = predicate.EXPORT_PATH
-        self.assertEqual({field: (key,) for key, field in frameindex.SCALAR_KEYS},
-                         {field: path for field, path in paths.items()
-                          if len(path) == 1 and field != frameindex.FIELD_LEMMA})
-        self.assertEqual({field: ("regions", key) for key, field in frameindex.REGION_KEYS},
-                         {field: path for field, path in paths.items() if path[0] == "regions"})
-        self.assertEqual({field: ("phrases", key, "head") for key, field in frameindex.PHRASE_KEYS},
-                         {field: path for field, path in paths.items() if path[-1] == "head"})
+        self.assertEqual(frameindex.EXPORT_PATH, predicate.EXPORT_PATH)
+        self.assertEqual((frameindex.DOMAIN_PLAYER, frameindex.DOMAIN_ZONE),
+                         (predicate.DOMAIN_PLAYER, predicate.DOMAIN_ZONE))
+        self.assertEqual(webindex.FRAME_EXPORT_VERSION, export_frames.VERSION)
+        self.assertEqual(webindex.SUB_INDEX.pattern, export_categories.SUB_INDEX.pattern)
+
+    def test_every_closed_field_is_one_the_index_can_encode(self):
+        """匯出檔值域的每個封閉類欄都有元組位置或段位置,新增封閉類沒接進編碼時這裡先紅。"""
+        encodable = {field for _, field in frameindex.SCALAR_KEYS} | {field for _, field in frameindex.SEGMENT_ENUM_KEYS}
+        encodable |= {frameindex.FIELD_MODIFIERS, frameindex.DOMAIN_PLAYER, frameindex.DOMAIN_ZONE}
+        self.assertEqual(encodable, set(self._domains()))
 
 
 if __name__ == "__main__":

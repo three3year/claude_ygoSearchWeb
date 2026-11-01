@@ -5,7 +5,7 @@
 | 檔 | 重生指令 |
 |---|---|
 | `data/action_frames.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → catalog_hits.py → export_frames.py 三步;框列匯出與具名查詢目錄欄,ADR-0018,索引建置 `--frame-export` 讀它;catalog_hits.py 另寫 gitignore 的 `frame_queries.json`——每框命中的具名查詢,拆解頁與 LLM 抽驗讀) |
-| `web/data.js` | `python script/web/build_index.py`(在 `run_chain.py` 之後跑;讀標記表、卡片總表、兩份匯出檔。既有檔除 META 的 `built_at` 外內容相同就不動檔,所以同輸入重跑逐位元組相同;內容有變才取時鐘寫新時間) |
+| `web/data.js` | `python script/web/build_index.py`(在 `run_chain.py` 之後跑;讀標記表、卡片總表、框列匯出檔。既有檔除 META 的 `built_at` 外內容相同就不動檔,所以同輸入重跑逐位元組相同;內容有變才取時鐘寫新時間) |
 | `script/web/predicate-fixture-encoded.json` | `python script/web/encode_fixture.py`(參考評估器夾具 `predicate-fixture.json` 的編碼形狀,用建置的同一支編碼函式,值域讀 `data/action_frames.json`;node 測試 `predicate.test.js` 讀它。夾具、編碼或值域改了沒重生,`test_webindex.EncodedFixtureTest` 會失敗) |
 | `.scratch/effect-tokenize/report.md` | `python .scratch/effect-tokenize/report.py` |
 | `.scratch/effect-tokenize/baseline-digest.json` | `python .scratch/effect-tokenize/baseline_diff.py --freeze`(只在刻意改既有欄之後) |

@@ -18,6 +18,10 @@ Issues live as local markdown files under `.scratch/<feature>/` in this repo. Se
 
 Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
 
+### 派子代理的模型
+
+實作票、審查、合併各用哪個 `model`,見 `docs/agents/subagent-models.md`。
+
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.`CONTEXT.md` 為舊名(v1.3.0 前的 skill),現僅轉址到 `GLOSSARY.md`。

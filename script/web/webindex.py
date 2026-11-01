@@ -461,12 +461,12 @@ def _drop_buttonless_kinds(exported, cross):
 
 
 def _text_hash(text):
-    """標記句日文原文的雜湊;算法同分詞鏈匯出(export_categories.text_hash)與
+    """標記句日文原文的雜湊;算法同分詞鏈匯出(export_common.text_hash)與
     效果標記表的 text_hash。"""
     return hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
 
 
-# [[動作對象]]全部類比對用的卡面參數;算法同分詞鏈匯出(export_categories.face_hash)
+# [[動作對象]]全部類比對用的卡面參數;算法同分詞鏈匯出(export_common.face_hash)
 _FACE_FIELDS = ("type", "race", "attribute", "level", "atk", "def", "name_ja")
 
 
@@ -480,21 +480,6 @@ def _face_stale(faces, covered, cards_by_id):
     known = {cid: digest for cid, digest in faces}
     return [{"id": cid} for cid in covered
             if cid in cards_by_id and known.get(cid) != _face_hash(cards_by_id[cid])]
-
-
-def _leaf_majors(tree):
-    """巢狀節點 [名, 葉號或 -1, 子節點] → (大類名清單, 葉號 → 大類名)。"""
-    majors, of = [], {}
-
-    def walk(node, major):
-        if node[1] >= 0:
-            of[node[1]] = major
-        for child in node[2]:
-            walk(child, major)
-    for node in tree:
-        majors.append(node[0])
-        walk(node, node[0])
-    return majors, of
 
 
 def _export_stale(rows, clauses_by_id):
@@ -512,81 +497,12 @@ def _export_stale(rows, clauses_by_id):
             for cid, section, index in stale]
 
 
-# 索引欄位 ← 匯出檔的組:`ae` 必帶(有無=涵蓋),其餘全空時省略;此卡/非此卡葉是
-# [[動作對象]]的四組(效果位/代價位 × 此卡/非此卡)
-_SPARSE_CATEGORY_FIELDS = (("ac", "cost"), ("aes", "effect_self"), ("aen", "effect_nonself"),
-                           ("acs", "cost_self"), ("acn", "cost_nonself"))
-_PATIENT_MODES = (("此卡", ("effect_self", "cost_self")),
-                  ("非此卡", ("effect_nonself", "cost_nonself")))
-_CATEGORY_GROUPS = ("effect",) + tuple(group for _, group in _SPARSE_CATEGORY_FIELDS)
-
-
-# 動作類別與動作框架兩支附掛共讀的建置狀態:entries 會被寫上新欄,checks 收違反處
+# 動作框架附掛讀的建置狀態:entries 會被寫上新欄,checks 收違反處
 _BuildState = namedtuple("_BuildState", "entries clauses_by_id cards_by_id checks")
 
 
-def _attach_categories(state, categories):
-    """[[動作類別]]匯出檔 → 每張涵蓋卡的 `ae` / `ac`(與 `tx` 對齊的葉號陣列),
-    回傳 (VOCAB 的類別部分, 報告)。
-
-    `ae` 的有無就是涵蓋與否:涵蓋的卡一定帶 `ae`(沒有葉的句是空陣列,整張都沒有
-    葉也照帶),`ac` 與[[動作對象]]的 `aes`/`aen`/`acs`/`acn` 全空時省略。匯出檔與標記表對不上記進 `category_stale`
-    (`_export_stale`),葉不在類別樹記進 `category_unknown_leaves`,卡面參數雜湊對不上
-    卡片總表(或匯出檔沒帶)記進 `category_face_stale`——三者都讓建置失敗(ADR-0017、
-    ADR-0008)。
-    """
-    entries, clauses_by_id, cards_by_id, checks = state
-    leaves = categories["葉"]
-    number = {name: i for i, name in enumerate(leaves)}
-    rows = {(r["card"], r["section"], r["index"]): r for r in categories["句"]}
-    checks["category_stale"].extend(_export_stale(rows, clauses_by_id))
-    for (cid, _, index), row in rows.items():
-        for name in [n for group in _CATEGORY_GROUPS for n in row.get(group, ())]:
-            if name not in number:
-                checks["category_unknown_leaves"].append(
-                    {"id": cid, "index": index, "leaf": name})
-    covered = sorted({cid for cid, _, _ in rows})
-    checks["category_face_stale"].extend(
-        _face_stale(categories.get("卡面", ()), covered, cards_by_id))
-    for cid in covered:
-        entry = entries.get(cid)
-        if entry is None:
-            continue
-        found = [rows.get((cid, cl.get("section"), cl.get("index"))) or {}
-                 for cl in clauses_by_id.get(cid) or ()]
-        codes = lambda group: [[number[n] for n in row.get(group, ())  # noqa: E731
-                                if n in number] for row in found]
-        entry["ae"] = codes("effect")
-        for field, group in _SPARSE_CATEGORY_FIELDS:
-            found_codes = codes(group)
-            if any(found_codes):
-                entry[field] = found_codes
-    majors, major_of = _leaf_majors(categories["樹"])
-    by_major = dict.fromkeys(majors, 0)
-    by_leaf = dict.fromkeys(leaves, 0)
-    with_leaves = 0
-    for row in rows.values():
-        names = set(row.get("effect", ())) | set(row.get("cost", ()))
-        with_leaves += bool(names)
-        for name in names & set(by_leaf):
-            by_leaf[name] += 1
-        for major in {major_of.get(number.get(n)) for n in names} - {None}:
-            by_major[major] += 1
-    patient = {"stats": categories.get("統計"), "sentences": {}, "cards": {}}
-    for label, groups in _PATIENT_MODES:
-        hit = [key for key, row in rows.items() if any(row.get(g) for g in groups)]
-        patient["sentences"][label] = len(hit)
-        patient["cards"][label] = len({cid for cid, _, _ in hit})
-    vocab_part = {"zh": "動作類別", "covered": len(covered), "leaves": list(leaves),
-                  "tree": categories["樹"]}
-    report = {"covered_cards": len(covered), "sentences": len(rows),
-              "sentences_with_leaves": with_leaves, "by_major": by_major,
-              "by_leaf": by_leaf, "patient": patient}
-    return vocab_part, report
-
-
 def _content_digest(content):
-    """類別樹、框架部分的雜湊:內容改了(改名、搬節點、加葉、框變了),META 看得出來(同 vocab_digest)。"""
+    """框架部分的雜湊:內容改了(框、詞元表、目錄變了),META 看得出來(同 vocab_digest)。"""
     payload = json.dumps(content, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
@@ -672,14 +588,13 @@ def _attach_frames(state, doc):
         entries[cid]["fr"] = fr
         if leads[cid][0] is not None:
             entries[cid]["fl"] = leads[cid][0]
-    # 鍵名 table 算進 META.frame_digest(_content_digest 連鍵一起雜湊),改名會讓 data.js 無故變動
-    part = {"table": [json.loads(text) for text in numbers],
+    part = {"frames": [json.loads(text) for text in numbers],
             "frame": {"lemmas": tables.lemmas, "heads": tables.heads, "domains": doc["值域"],
                       "covered": len(covered)},
             "catalog": [{key: row[key] for key in _CATALOG_INDEX_KEYS} for row in doc["目錄"]]}
     stats = {"covered_cards": len(covered), "sentences": len(rows),
               "frames": sum(len(row["frames"]) for row in rows.values()),
-              "unique_frames": len(part["table"]), "heads": len(tables.heads)}
+              "unique_frames": len(part["frames"]), "heads": len(tables.heads)}
     return part, stats
 
 
@@ -703,11 +618,6 @@ def _summarise_problems(report):
         ("卡文勘誤逆推不回原文或差異標不出來", checks["errata_not_reversible"]),
         ("文本改寫的新全文與現行卡文不相等", checks["rewrite_desc_mismatch"]),
         ("同卡同時在勘誤表與改寫表", checks["rewrite_overlaps_errata"]),
-        ("動作類別匯出檔過時(與標記表對不上,請重跑分詞鏈)",
-         checks["category_stale"]),
-        ("動作類別匯出檔的葉不在類別樹", checks["category_unknown_leaves"]),
-        ("動作類別匯出檔的卡面參數過時(與卡片總表對不上,請重跑分詞鏈)",
-         checks["category_face_stale"]),
         *((label, checks[key]) for key, label in FRAME_CHECK_LABELS.items()),
         ("怪獸卻缺種族或屬性", inv["monster_missing_race_or_attribute"]),
         ("非怪獸卻帶怪獸參數", inv["non_monster_with_monster_params"]),
@@ -719,7 +629,7 @@ def _summarise_problems(report):
 
 
 def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
-                rewrites=None, data_updated_at=None, categories=None, frame_export=None):
+                rewrites=None, data_updated_at=None, frame_export=None):
     """[[卡片總表]]條目 + [[效果標記表]]條目 → (index, report)。
 
     `built_at`、`sources`(來源檔雜湊)與 `data_updated_at`([[資料更新時間]],
@@ -740,10 +650,6 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     不相等、或同卡同時在勘誤表與改寫表,都進 problems 讓建置失敗——
     上游對不上就吵,不默默帶一份過時的原文。
 
-    `categories` 是分詞鏈匯出的[[動作類別]]檔(ADR-0017,`_attach_categories`):
-    涵蓋的卡多帶 `ae` / `ac`,VOCAB 多一個 `acat`(類別樹與涵蓋卡數)。為 None
-    時索引不帶類別。
-
     `frame_export` 是分詞鏈匯出的框列檔(ADR-0018,`_attach_frames`,規格 3 票 02):涵蓋的卡多帶 `fr`(與 `tx` 對齊的
     框號清單)與 `fl`(● 子句指到領起句的句序號,沒有 ● 子句的卡不帶),索引多帶框表 `frames`,VOCAB 多帶
     `frame`(詞元表、中心詞表、值域、涵蓋卡數)與 `catalog`(目錄),META 多帶 `frame_digest`。為 None 時索引不帶框架部分。
@@ -759,8 +665,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
               "clauses_not_in_desc": [], "unexplained_type_bits": [],
               "alias_gap_not_extracted": [], "optional_on_non_carrier": [],
               "errata_not_reversible": [], "rewrite_desc_mismatch": [],
-              "rewrite_overlaps_errata": [], "category_stale": [],
-              "category_unknown_leaves": [], "category_face_stale": [],
+              "rewrite_overlaps_errata": [],
               **{key: [] for key in FRAME_CHECK_LABELS}}
     known_gaps = {GAP_HEADER: 0, GAP_ALIAS: 0}
     carriers = set(vocab.carriers(vocab.OPTIONAL))
@@ -824,11 +729,7 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
         if bits:
             checks["unexplained_type_bits"].append({"id": cid,
                                                     "bits": f"{bits:#x}"})
-    category_report = None
-    acat = None
     state = _BuildState(entries, clauses_by_id, {c["id"]: c for c in cards}, checks)
-    if categories is not None:
-        acat, category_report = _attach_categories(state, categories)
     frame_part, frame_stats = None, None
     if frame_export is not None:
         frame_part, frame_stats = _attach_frames(state, frame_export)
@@ -838,8 +739,6 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
     dropped = _drop_buttonless_kinds(exported, cross)
     checks["missing_cards"] = sorted({c["id"] for c in cards} - set(entries))
     checks["unknown_values"].extend(_unexported_codes(index_cards, exported))
-    if acat is not None:
-        exported["acat"] = acat
     if frame_part is not None:
         exported["frame"] = frame_part["frame"]
         exported["catalog"] = frame_part["catalog"]
@@ -852,13 +751,12 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
             "cards": len(index_cards),
             "clauses": clause_total,
             "vocab_digest": vocab.digest(),
-            **({"acat_digest": _content_digest(acat)} if acat is not None else {}),
             **({"frame_digest": _content_digest(frame_part)} if frame_part is not None else {}),
             "sources": dict(sources or {}),
         },
     }
     if frame_part is not None:
-        index["frames"] = frame_part["table"]
+        index["frames"] = frame_part["frames"]
     report = {
         "cards": len(index_cards),
         "clauses": clause_total,
@@ -870,7 +768,6 @@ def build_index(cards, tag_cards, built_at="", sources=None, errata=None,
         "known_gaps": known_gaps,
         "checks": checks,
         "monster_invariant": _monster_invariant(cards),
-        "categories": category_report,
         "frame_stats": frame_stats,
     }
     report["problems"] = _summarise_problems(report)

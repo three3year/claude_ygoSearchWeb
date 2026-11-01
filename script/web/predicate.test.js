@@ -5,7 +5,7 @@
  * 跑法:`node --test script/web/predicate.test.js`
  *
  * 三段:編碼夾具(參考評估器的例子、雜湊、小語料張數,由 encode_fixture.py 產生)、合成資料的 runQuery 例子
- * (卡層、句層條件、領起句、hits、marks、與舊 q.act 並用、OR 區)、真 data.js 對真匯出檔的全語料對照。都只走 runQuery,
+ * (卡層、句層條件、領起句、hits、marks、OR 區)、真 data.js 對真匯出檔的全語料對照。都只走 runQuery,
  * 不斷言編碼內部。
  */
 'use strict';
@@ -248,41 +248,22 @@ test('marks:有包含述詞才有 pred,排在其他條件之後', () => {
   assert.deepStrictEqual(harness.marks(leadBox, {}), []);
 });
 
-/* ── 舊 q.act 系列過渡期照舊(票 04):與述詞並用時兩者都要過,各自只看通過句層條件的句。 ── */
-const ACT_NODE = '破壊';
-const ACT_ON_FIRST = 31, ACT_ONLY = 32, PRED_ONLY = 33, ACT_ON_OTHER_KIND = 34;
-const actBox = harness.load({
+/* ── 舊軸已刪(predicate-ui 票 07):引擎只剩述詞一套。資料還帶舊欄、VOCAB 還帶舊樹,查詢還帶 q.act,都不是條件。 ── */
+const staleBox = harness.load({
   frames: FRAMES,
-  vocab: { frame: FIXTURE.vocab, acat: { leaves: ['破壊'], covered: 4, tree: [[ACT_NODE, 0, []]] } },
+  vocab: { frame: FIXTURE.vocab, acat: { leaves: ['破壊'], covered: 2, tree: [['破壊', 0, []]] } },
   cards: [
-    { id: ACT_ON_FIRST, tx: ['一', '二'], k: ['a', 'a'], ae: [[0], []], fr: [[], [DRAW]] },
-    { id: ACT_ONLY, tx: ['一'], k: ['a'], ae: [[0]], fr: [[DESTROY]] },
-    { id: PRED_ONLY, tx: ['一'], k: ['a'], ae: [[]], fr: [[DRAW]] },
-    { id: ACT_ON_OTHER_KIND, tx: ['一', '二'], k: ['a', 'b'], ae: [[], [0]], fr: [[DRAW], []] },
+    { id: 31, tx: ['一'], k: ['a'], ae: [[0]], fr: [[DESTROY]] },
+    { id: 32, tx: ['一'], k: ['a'], ae: [[]], fr: [[DRAW]] },
   ],
 });
 
-test('述詞與舊 q.act 並用時兩者都要過', () => {
-  assert.deepStrictEqual(harness.ids(actBox, { act: { [ACT_NODE]: 1 } }),
-                         [ACT_ON_FIRST, ACT_ONLY, ACT_ON_OTHER_KIND]);
-  assert.deepStrictEqual(harness.ids(actBox, include(HAS_DRAW)), [ACT_ON_FIRST, PRED_ONLY, ACT_ON_OTHER_KIND]);
-  assert.deepStrictEqual(harness.ids(actBox, { act: { [ACT_NODE]: 1 }, ...include(HAS_DRAW) }),
-                         [ACT_ON_FIRST, ACT_ON_OTHER_KIND]);
-});
-
-test('述詞與舊 q.act 並用:命中句是兩者的聯集,只因舊軸命中的句 hits 是空清單', () => {
-  const [hit] = harness.search(actBox, { act: { [ACT_NODE]: 1 }, ...include(HAS_DRAW) });
-  assert.deepStrictEqual(hit, { id: ACT_ON_FIRST, rows: [0, 1], hits: [[], [[0, 1, 0]]] });
-});
-
-test('述詞與舊 q.act 並用:句層條件對兩者都生效', () => {
-  assert.deepStrictEqual(harness.ids(actBox, { kind: KIND_A, act: { [ACT_NODE]: 1 }, ...include(HAS_DRAW) }),
-                         [ACT_ON_FIRST]);
-});
-
-test('述詞與舊 q.act 並用:marks 兩種都有', () => {
-  assert.deepStrictEqual(harness.marks(actBox, { act: { [ACT_NODE]: 1 }, ...include(HAS_DRAW) }).map(m => m.type),
-                         ['act', 'pred']);
+test('舊的 q.act、actCost、actPat 不是條件:結果與 marks 同沒有條件', () => {
+  for (const act of [1, -1]) {
+    const q = { act: { 破壊: act }, actCost: 1, actPat: 'self' };
+    assert.deepStrictEqual(harness.search(staleBox, q), harness.search(staleBox, {}));
+    assert.deepStrictEqual(harness.marks(staleBox, q), []);
+  }
 });
 
 /* ── OR 區(predicate-ui 票 01):每個片段與主查詢合併成一個分支,卡命中任一分支就中。 ──
@@ -507,6 +488,19 @@ test('全語料:目錄每列 × 三個位置,張數與雜湊同匯出檔', t => 
 
 /* 規格 4 票 02:具名查詢走使用者的入口——葉路徑 → Hash.parse → 條件模型 → runQuery。
    效果位 0 張的兩個查詢帶的位置是規格裁定,寫死在這裡,不用條件模型自己的規則算。 */
+test('真 data.js:舊欄、VOCAB.acat、META.acat_digest 都不在,舊匯出檔不是來源', t => {
+  const data = harness.realData();
+  if (!data) {
+    t.skip('缺 web/data.js,略過全語料對照');
+    return;
+  }
+  const OLD = ['ae', 'ac', 'aes', 'aen', 'acs', 'acn'];
+  assert.deepStrictEqual(Array.from(data.cards).filter(c => OLD.some(field => field in c)).map(c => c.id), []);
+  assert.ok(!('acat' in data.vocab));
+  assert.ok(!('acat_digest' in data.meta));
+  assert.deepStrictEqual(Object.keys(data.meta.sources).sort(), ['action_frames.json', 'cards.json', 'tag_cards.json']);
+});
+
 test('全語料:237 個具名查詢經網址與條件模型,張數等於目錄裡該標籤所帶位置的張數', t => {
   const data = harness.realData();
   if (!data) {

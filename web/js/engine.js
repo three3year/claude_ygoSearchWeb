@@ -154,68 +154,6 @@ function clauseRows(c, condsList) {
   return rows;
 }
 
-/* [[動作對象]]:模式 → 每句取哪兩個欄位(效果位、代價位)。不限讀原本的葉;此卡/非此卡
-   改讀該模式的葉,欄位全空時建置期省略。未知的模式當不限。 */
-const PAT_FIELDS = {
-  '': ['ae', 'ac'],
-  self: ['aes', 'acs'],
-  nonself: ['aen', 'acn'],
-};
-
-function patMode(v) {
-  return Object.prototype.hasOwnProperty.call(PAT_FIELDS, v) ? v : '';
-}
-
-/* 一句在該模式下的葉:效果位或代價位(呈現層照它決定強調哪些葉)。 */
-function modeLeaves(c, i, mode, isCost) {
-  const field = PAT_FIELDS[patMode(mode)][isCost ? 1 : 0];
-  return (c[field] && c[field][i]) || [];
-}
-
-/* [[動作類別]]的條件:節點路徑 → 葉集合(Acat 展開;樹裡找不到的路徑不當條件)。
-   包含是 AND(每個節點一組),排除合成一組;`cost` 時代價位的葉也算有效葉;`mode` 是
-   [[動作對象]],包含與排除都改讀該模式的葉。 */
-function actSel(q) {
-  const inc = [], ex = new Set(), union = new Set();
-  for (const id in q.act || {}) {
-    const leaves = Acat.leavesOf(id);
-    if (!leaves || !q.act[id]) continue;
-    if (q.act[id] > 0) {
-      inc.push(new Set(leaves));
-      leaves.forEach(n => union.add(n));
-    } else {
-      leaves.forEach(n => ex.add(n));
-    }
-  }
-  if (!inc.length && !ex.size) return null;
-  return { inc, ex, union, cost: !!q.actCost, mode: patMode(q.actPat) };
-}
-
-function actLeaves(c, i, act) {
-  const eff = modeLeaves(c, i, act.mode, false);
-  return act.cost ? eff.concat(modeLeaves(c, i, act.mode, true)) : eff;
-}
-
-function anyIn(leaves, set) {
-  return leaves.some(n => set.has(n));
-}
-
-function actExcluded(c, act) {
-  if (!act.ex.size) return false;
-  for (let i = 0; i < c.ae.length; i++) {
-    if (anyIn(actLeaves(c, i, act), act.ex)) return true;
-  }
-  return false;
-}
-
-/* 包含:每個節點都要有一句可用的句(已過句層條件的 rows)帶它,不同節點可以是
-   不同句;命中句縮成帶任一包含節點的葉的那幾句。 */
-function actRows(c, rows, act) {
-  const has = rows.map(i => actLeaves(c, i, act));
-  if (!act.inc.every(set => has.some(leaves => anyIn(leaves, set)))) return [];
-  return rows.filter((i, k) => anyIn(has[k], act.union));
-}
-
 /* [[框架述詞]]的評估(語意同參考評估器 predicate.py):一個述詞編成一組欄檢查,掃框表得一張
    命中表(框號 → 中不中),逐卡只查表。框元組的欄序與碼的定義見 frameindex.py。 */
 const FRAMES = window.FRAMES;
@@ -418,29 +356,26 @@ function hasClauseConds(conds) {
 
 /* 一個分支:主查詢加上至多一個片段,兩組條件都要成立(同一個鍵兩邊都有時也是都要成立,
    不是片段蓋掉主查詢)。 */
-function makeBranch(main, fragment, actInc) {
+function makeBranch(main, fragment) {
   const condsList = fragment ? [main, fragment] : [main];
   return {
     fragment,
     condsList,
     predInc: condsList.flatMap(conds => conds.predInc),
-    tracksRows: actInc || condsList.some(hasClauseConds),
+    tracksRows: condsList.some(hasClauseConds),
   };
 }
 
 /* 卡在分支上的命中句:{rows, hits?};分支沒有句層條件時 rows 是 null,卡不中回 null。 */
-function branchRows(c, branch, act) {
+function branchRows(c, branch) {
   if (!branch.tracksRows) return { rows: null };
-  const actInc = !!act && act.inc.length > 0;
   const passed = clauseRows(c, branch.condsList);
-  const rows = actInc ? actRows(c, passed, act) : passed;
-  if (!rows.length) return null;
-  if (!branch.predInc.length) return { rows };
+  if (!passed.length) return null;
+  if (!branch.predInc.length) return { rows: passed };
   const found = predFrames(c, passed, branch.predInc);
   if (!found) return null;
-  const actHit = actInc ? rows : [];
-  const hitRows = passed.filter(i => found.has(i) || actHit.includes(i));
-  return { rows: hitRows, hits: hitRows.map(i => found.get(i) || []) };
+  const hitRows = passed.filter(i => found.has(i));
+  return { rows: hitRows, hits: hitRows.map(i => found.get(i)) };
 }
 
 function compareHits(a, b) {
@@ -467,42 +402,36 @@ function mergeBranchResults(a, b) {
 }
 
 /* 全部分支的 marks:同種只留一筆(效果文依字面),順序固定,不隨條件在哪一區變動。 */
-function queryMarks(condsList, act) {
+function queryMarks(condsList) {
   const marks = [];
   const texts = condsList.filter(conds => conds.textParts.length).map(conds => conds.text);
   new Set(texts).forEach(value => marks.push({ type: 'text', value }));
   if (condsList.some(conds => conds.kindSel)) marks.push({ type: 'kind' });
   if (condsList.some(conds => conds.optSel)) marks.push({ type: 'opt' });
-  if (act && act.inc.length) {
-    marks.push({ type: 'act', leaves: Array.from(act.union), cost: act.cost, mode: act.mode });
-  }
   if (condsList.some(conds => conds.predInc.length)) marks.push({ type: 'pred' });
   return marks;
 }
 
 function runQuery(db, q) {
   q = q || {};
-  const act = actSel(q);
-  const actInc = !!act && act.inc.length > 0;
   const main = compileConds(q, 0);
   const fragments = compileFragments(q, main);
   const branches = fragments.length
-    ? fragments.map(fragment => makeBranch(main, fragment, actInc))
-    : [makeBranch(main, null, actInc)];
+    ? fragments.map(fragment => makeBranch(main, fragment))
+    : [makeBranch(main, null)];
   const cards = [];
   for (const c of db) {
     if (!cardHit(c, main)) continue;
-    if (act && (!c.ae || actExcluded(c, act))) continue;
     let result = null;
     for (const branch of branches) {
       if (branch.fragment && !cardHit(c, branch.fragment)) continue;
-      const got = branchRows(c, branch, act);
+      const got = branchRows(c, branch);
       if (got) result = result ? mergeBranchResults(result, got) : got;
     }
     if (result) cards.push({ card: c, ...result });
   }
-  return { cards, marks: queryMarks([main, ...fragments], act) };
+  return { cards, marks: queryMarks([main, ...fragments]) };
 }
 
-  return Object.freeze({ runQuery, framePosition, likeParts, likeRanges, modeLeaves, patMode });
+  return Object.freeze({ runQuery, framePosition, likeParts, likeRanges });
 })();

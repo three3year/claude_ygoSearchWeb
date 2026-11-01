@@ -37,12 +37,14 @@ function search(q) {
 
 function show() {
   const side = Query.read();
-  const n = Query.count(side) + Cond.tags(cond).length;
+  const sideTags = Cond.sideTags(side);
+  const n = sideTags.length + Cond.tags(cond).length;   // 篩選鈕的數字等於條件列的標籤數
   cond = Cond.syncSide(cond, side);
-  Strip.render(cond, Cond.sideTags(side));
+  Strip.render(cond, sideTags);
   Query.markUsed(Cond.usedPaths(cond));
-  Query.summarize(n);
-  View.render(n ? search(Cond.toQuery(cond, side)) : null);
+  const result = n ? search(Cond.toQuery(cond, side)) : null;
+  Query.summarize(n, result && result.cards.length);
+  View.render(result);
 }
 
 function requery(record) {
@@ -55,6 +57,15 @@ function requery(record) {
 function requerySoon() {
   clearTimeout(typingTimer);
   typingTimer = setTimeout(() => requery(replaceEntry), TYPING_DELAY_MS);
+}
+
+/* 手機收起側欄回到結果。側欄收起來頁面變短,原本捲在側欄深處的話會落到結果中段,所以拉回結果開頭;
+   桌面側欄收不起來(摺疊鈕不顯示),重查不捲動。 */
+function backToResults() {
+  const narrow = $('btnFilters').offsetHeight > 0;
+  Query.collapse();
+  const area = document.querySelector('.results-area');
+  if (narrow && area.getBoundingClientRect().top < 0) area.scrollIntoView();
 }
 
 function setCond(next) {
@@ -103,7 +114,7 @@ function initSidebarEvents() {
   sidebar.addEventListener('keydown', e => {
     if (e.key !== 'Enter' || !e.target.matches('#fName, #fId, #fText, .range-in')) return;
     requery(replaceEntry);
-    Query.collapse();
+    backToResults();
   });
 }
 
@@ -136,9 +147,9 @@ function init() {
   View.initEffKind();
   View.initOgToggle();
   View.initSort(pushEntry);
-  $('btnSearch').addEventListener('click', () => {
-    requery(pushEntry);
-    Query.collapse();
+  $('btnResults').addEventListener('click', () => {
+    if (currentHash() !== applied) requery(replaceEntry);   // 還在等延遲的打字先算完;條件沒變不回第 1 頁
+    backToResults();
   });
   $('perPage').addEventListener('change', e => {
     View.setPerPage(+e.target.value);

@@ -59,14 +59,14 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   max-height: calc(100vh - 28px); overflow-y: auto;
 }
 /* 摺疊的對象是內層而不是側欄本身(窄螢幕才收得起來,見檔尾)。留白**在寬螢幕仍然
-   留在 .sidebar 上**:「搜尋」是 sticky 的,而 sticky 貼齊的是捲動容器的 padding
+   留在 .sidebar 上**:動作鈕是 sticky 的,而 sticky 貼齊的是捲動容器的 padding
    邊——把 padding 搬進內層會讓那一條往上跑 12px,那就是動到桌機版面了。 */
 .sidebar-body { padding: 0; }
 
 /* 摺疊鈕:**桌機不存在**。側欄在寬螢幕是常駐的,多一顆收合鈕只是多一個狀態。
    窄螢幕的樣式在檔尾的 media query 裡一起講。 */
 .sidebar-toggle { display: none; }
-/* 條件一變就重查,桌面沒有搜尋鈕(規格 4);手機要它收起側欄回到結果(下面的 720 段)。 */
+/* 條件一變就重查,桌面沒有這顆鈕(規格 4);手機的「看結果」收起側欄回到結果(下面的 720 段)。 */
 /* 條件變多之後側欄自己會捲(卡片參數一長串),動作鈕因此釘在側欄頂端。
    負 margin 是為了蓋掉側欄的 padding:不蓋的話捲動的內容會從兩側露出來。 */
 .sidebar-actions {
@@ -536,6 +536,7 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   header { flex-direction: column; gap: 2px; padding: 12px 12px 8px; }
   .layout {
     grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0 12px 40px;
+    align-content: start;   /* .layout 被 flex 撐高時,兩列不均分多的高度(摺疊鈕下方會空一段) */
   }
 
   /* 側欄變成結果區上方的一段,**預設收起**:手機一屏只有 600 多點高,常駐的
@@ -562,7 +563,7 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   .sidebar-toggle::after { content: '▾'; margin-left: auto; color: var(--muted); }
   .sidebar-toggle[aria-expanded="true"]::after { content: '▴'; }
   .sidebar:not(.open) .sidebar-body { display: none; }
-  /* 條件一長串,「搜尋」跟著釘在摺疊鈕下面——桌機版釘的是側欄自己的捲動頂端,
+  /* 條件一長串,「看結果」跟著釘在摺疊鈕下面——桌機版釘的是側欄自己的捲動頂端,
      手機版沒有那個捲動容器,所以改釘在頁面上、讓開摺疊鈕的高度 */
   .sidebar-actions { display: flex; top: var(--bar-h); }
 
@@ -770,3 +771,33 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text);
 }
 .drawer-add input { width: 130px; }
+
+/* ─── 手機(規格 4,版面同原型 D 版):條件列列內捲動、⇄ 換區、抽屜是底部面板 ─── */
+.strip-swap {
+  display: none; background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 0 3px;
+}
+.strip-swap:hover { color: var(--text); }
+@media (max-width: 720px) {
+  /* 手機拖不了:上限是一屏的五分之一左右,再多在列內捲,結果才看得到。 */
+  #condStrip { max-height: 132px; overflow-y: auto; }
+  .strip-tag { cursor: pointer; -webkit-user-drag: none; }
+  .strip-swap { display: inline; }
+  /* 觸控目標 */
+  .strip-tag { padding: 2px 3px 2px 9px; font-size: 13px; }
+  .strip-swap, .strip-tag .strip-x { font-size: 16px; padding: 2px 6px; }
+  .strip-clear { padding: 2px 10px; font-size: 13px; }
+
+  #condDrawer {
+    top: auto; left: 0; width: auto; max-height: 72vh; padding-bottom: 20px;
+    border-left: none; border-top: 1px solid var(--accent-dim); border-radius: 14px 14px 0 0;
+    overscroll-behavior: contain;
+  }
+  .drawer-seg button { font-size: 13px; padding: 4px 10px; }
+  .drawer-chip { font-size: 14px; padding: 4px 9px; }
+  .drawer-btn { padding: 3px 8px; }
+  .drawer-item .strip-x { padding: 3px 6px; }
+  .drawer-head .strip-x { font-size: 18px; padding: 4px 6px; }
+  /* 16px 同上面的 iOS 自動放大 */
+  .drawer-add select, .drawer-add input { font-size: 16px; padding: 4px 6px; }
+}

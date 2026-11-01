@@ -7,13 +7,15 @@
    在主流程、文字與改法在條件模型、張數由主流程算;這裡只記抽屜開在哪一張。
    事件:onRemove(編號)、onEdit(編號, 新標籤)、onMove(編號, 區)、onSideRemove(鍵)、onSideGo(鍵)、
    onSideMove(鍵, 區)、onClear();countOf(標籤) 回單張張數。編號是 Cond.tags 的編號。
-   手機的 ⇄ 與底部面板是票 06。 */
+   桌面拖曳換區;手機拖不了,標籤上才看得到 ⇄(票 06)。底部面板只差 CSS。 */
 const Strip = (() => {
 const { $, esc } = Util;
 
 /* 提示字(原型 D 版)。 */
 const HINTS = { and: '全部都要成立', or: '任一成立即可:把標籤移到這裡' };
 const ZONE_LABEL = { and: 'AND', or: 'OR' };
+const OTHER_ZONE = { and: 'or', or: 'and' };
+const SWAP_HTML = '<button type="button" class="strip-swap" title="換到另一區">⇄</button>';
 /* 自訂型別:拖到輸入框不會貼上文字,dragover 也不必另外記「正在拖標籤」。 */
 const DRAG_TYPE = 'application/x-cond-tag';
 const CLOSED = -1;
@@ -35,14 +37,14 @@ function tagHtml(tag, i) {
   return `<span class="strip-tag${cls}" draggable="true" data-i="${i}"
     title="${esc(Cond.note(tag))}">
     <span>${lead}${Cond.sentenceParts(tag).map(partHtml).join(' ')}</span>
-    <button type="button" class="strip-x" title="刪除">×</button></span>`;
+    ${SWAP_HTML}<button type="button" class="strip-x" title="刪除">×</button></span>`;
 }
 
 function sideHtml(tag) {
   const label = tag.label ? `<span class="strip-glue">${esc(tag.label)}</span> ` : '';
   return `<span class="strip-tag side" draggable="true" data-key="${esc(tag.key)}" title="到左邊改">
     <span>${label}<span class="strip-val">${esc(tag.val)}</span></span>
-    <button type="button" class="strip-x" title="清掉這項">×</button></span>`;
+    ${SWAP_HTML}<button type="button" class="strip-x" title="清掉這項">×</button></span>`;
 }
 
 function zoneHtml(zone, html) {
@@ -230,6 +232,13 @@ function init(events) {
     if (e.target.closest('.strip-clear')) { onClear(); return; }
     const tag = e.target.closest('.strip-tag');
     if (!tag) return;
+    if (e.target.closest('.strip-swap')) {
+      const zone = OTHER_ZONE[tag.closest('.strip-zone').dataset.zone];
+      openAt = CLOSED;
+      if (tag.dataset.key) onSideMove(tag.dataset.key, zone);
+      else onMove(+tag.dataset.i, zone);
+      return;
+    }
     const x = e.target.closest('.strip-x');
     if (tag.dataset.key) (x ? onSideRemove : onSideGo)(tag.dataset.key);
     else if (x) removeAt(+tag.dataset.i);

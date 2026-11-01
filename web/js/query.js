@@ -414,8 +414,10 @@ function isOpen() {
   return $('btnFilters').getAttribute('aria-expanded') === 'true';
 }
 
-function summarize(n) {
+/* n 是條件數(沒有條件時 total 沒有意義),total 是結果張數。 */
+function summarize(n, total) {
   $('btnFilters').textContent = n ? `篩選條件・${n} 項` : '篩選條件';
+  $('btnResults').textContent = n ? `看結果(${total.toLocaleString()} 張)` : '看結果';
 }
 
 function statesOf(btn) {

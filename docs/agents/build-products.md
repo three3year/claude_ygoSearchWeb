@@ -4,18 +4,19 @@
 
 | 檔 | 重生指令 |
 |---|---|
-| `data/action_frames.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → catalog_hits.py → export_frames.py 三步;框列匯出與具名查詢目錄欄,ADR-0018,規格 3 的索引建置讀它;catalog_hits.py 另寫 gitignore 的 `frame_queries.json`——每框命中的具名查詢,拆解頁與 LLM 抽驗讀) |
+| `data/action_frames.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → catalog_hits.py → export_frames.py 三步;框列匯出與具名查詢目錄欄,ADR-0018,索引建置 `--frames` 讀它;catalog_hits.py 另寫 gitignore 的 `frame_queries.json`——每框命中的具名查詢,拆解頁與 LLM 抽驗讀) |
+| `web/data.js` | `python script/web/build_index.py`(在 `run_chain.py` 之後跑;讀標記表、卡片總表、兩份匯出檔。同輸入只差 META 的 `built_at`,只差這一行就不必 commit) |
 | `script/web/predicate-fixture-encoded.json` | `python script/web/encode_fixture.py`(參考評估器夾具 `predicate-fixture.json` 的編碼形狀,用建置的同一支編碼函式,值域讀 `data/action_frames.json`;node 測試 `predicate.test.js` 讀它。夾具、編碼或值域改了沒重生,`test_webindex.EncodedFixtureTest` 會失敗) |
 | `.scratch/named-queries/tools/results/compare-v4.md` | `python .scratch/named-queries/tools/compare_dry_run.py`(目錄張數對照編譯試跑,逐葉歸因;要先有 frames.json 與 data/action_frames.json) |
-| `data/action_categories.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → categories.py → export_categories.py 三步;過渡期照產,規格 3 切換後刪) |
+| `data/action_categories.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → categories.py → export_categories.py 三步;過渡期照產,規格 4 切換後刪) |
 | `.scratch/effect-tokenize/report.md` | `python .scratch/effect-tokenize/report.py` |
 | `.scratch/frame-predicate-search/tools/results/*` | `python .scratch/frame-predicate-search/tools/compile_dry_run.py --heads v4` |
 | `.scratch/effect-tokenize/baseline-digest.json` | `python .scratch/effect-tokenize/baseline_diff.py --freeze`(只在刻意改既有欄之後) |
 | `.scratch/effect-tokenize/patient-digest.json`、`anaphora-digest.json`、`export-digest.json` | `python .scratch/effect-tokenize/downstream_baseline.py <patient|anaphora|export> --freeze`(只在確認差異是要的之後;見下「下游基準」) |
 
-- `run_chain.py` 的順序:分詞 → 框架 → 目錄(`catalog_hits.py`)→ 框列匯出 → 類別 → 類別匯出,任一步失敗停下。具名查詢目錄 `.scratch/effect-tokenize/catalog.json` 與對應表 `catalog-mapping.json` 是手改的來源檔(入版控),不是產物;`category_tree.json` 凍結、只給過渡期的 類別 → 類別匯出 讀,規格 3 一起刪。
-- 換行:這些檔寫 LF,`.gitattributes` 讓工作樹也是 LF;`git status` 顯示它們 M 時先 `git diff`,內容為空就是沒變。
-- 合併:它們宣告 `merge=ours`,合併時取本分支版、合併完**重生**,不手解衝突。每個 clone 要註冊一次驅動:`git config merge.ours.driver true`。
+- `run_chain.py` 的順序:分詞 → 框架 → 目錄(`catalog_hits.py`)→ 框列匯出 → 類別 → 類別匯出,任一步失敗停下。具名查詢目錄 `.scratch/effect-tokenize/catalog.json` 與對應表 `catalog-mapping.json` 是手改的來源檔(入版控),不是產物;`category_tree.json` 凍結、只給過渡期的 類別 → 類別匯出 讀,規格 4 一起刪。
+- 換行:這些檔寫 LF,`.gitattributes` 讓工作樹也是 LF;`git status` 顯示它們 M 時先 `git diff`,內容為空就是沒變。例外:`web/data.js` 不在 `.gitattributes`,工作樹依 `core.autocrlf` 走。
+- 合併:它們宣告 `merge=ours`,合併時取本分支版、合併完**重生**,不手解衝突。每個 clone 要註冊一次驅動:`git config merge.ours.driver true`。例外:`web/data.js` 沒宣告 `merge=ours`,有衝突時同樣取一邊、合併完重生。
 
 ## 不入版控的建置輸入
 

@@ -112,11 +112,11 @@ python script/tag_card/run_masked_test.py score
 ### 查卡網站
 
 ```bash
-# 重跑分詞鏈(分詞 → 框架 → 類別 → 匯出)→ data/action_categories.json
+# 重跑分詞鏈(分詞 → 框架 → 目錄 → 框列匯出 → 類別 → 類別匯出)→ data/action_frames.json、data/action_categories.json
 # 差值更新時:效果標記表更新之後、建置前端索引之前必跑(ADR-0017)
 python .scratch/effect-tokenize/run_chain.py
 
-# 建置前端索引:卡片總表 + 效果標記表 + 動作類別匯出檔 → web/data.js + 報告
+# 建置前端索引:卡片總表 + 效果標記表 + 兩份匯出檔 → web/data.js + 報告
 python script/web/build_index.py
 
 # 只跑檢查與報告,不動 data.js
@@ -195,7 +195,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `docs/adr/` | 最難反轉的決定 |
 | `../data_ygoFaqCache/_cache` | 官方 DB 頁面快取:Q&A 頁 `faq_*.html` + 卡片頁 `card_*.html`(repo 外,約 1.1GB) |
 | `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |
-| `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` |
+| `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` / `FRAMES` |
 | `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`acat`(動作類別樹:節點路徑 → 葉集合)、`sort`(領域序與排序鍵,純函式)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`hash`(條件與排序 ⇄ 網址 `#hash`,純函式)、`render`(卡片呈現、異圖切換、排序與分頁)、`main`(主流程與網址寫入時機) |
 | `index.html` / `.nojekyll` | GitHub Pages 部署形態(根目錄為來源):轉址到 `web/index.html`、擋掉 Jekyll |
 

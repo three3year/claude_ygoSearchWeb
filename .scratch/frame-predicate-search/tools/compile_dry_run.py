@@ -289,7 +289,9 @@ def report(result):
         out.append("| %s | %d | %d | %+d | %s |" % (l["leaf"], l["old"], l["new"],
                                                  l["new"] - l["old"], notes(l)))
     out.append("")
-    out.append("## 詞元節點(詞元=X(極性類=Y) 的述詞;現在 = 底下各葉聯集)")
+    nodes = result["lemma_nodes"]
+    out.append("## 詞元節點(詞元=X(極性類=Y) 的述詞;現在 = 底下各葉聯集;%d 個,極性類節點 %d)"
+               % (len(nodes), sum(1 for n in nodes if n["needs_negation_field"])))
     out.append("")
     out.append("| 節點 | 葉數 | 有預設葉 | 現在 | 述詞 | 差 | 只用極性+態 |")
     out.append("|---|---:|:-:|---:|---:|---:|---:|")
@@ -342,6 +344,8 @@ def summary(result):
              "所在葉受 から 規則影響 %d 葉;否定節點的葉 %d 片需要否定形欄" % (kara, neg),
              "差異歸因(卡·葉):%s" % "、".join("%s %d" % kv for kv in
                                              sorted(result["reason_card_totals"].items())),
+             "詞元節點 %d(極性類節點 %d)" % (len(result["lemma_nodes"]),
+                                      sum(1 for n in result["lemma_nodes"] if n["needs_negation_field"])),
              "效果位動作框架 %d、卡 %d" % (result["effect_frames"], result["cards_covered"])]
     return "\n".join(lines)
 

@@ -134,17 +134,22 @@ function sel(o) {
   return o && Object.keys(o).length ? o : null;
 }
 
-function clauseRows(c, parts, kindSel, optSel, matOn) {
+function clauseHit(c, i, conds) {
+  if (conds.kindSel && !triHit(kindAt(c, i), conds.kindSel)) return false;
+  if (conds.optSel && !triHit(optAt(c, i), conds.optSel)) return false;
+  if (conds.textParts.length) {
+    if (!conds.textMat && c.ro && c.ro[i] === ROLE_MAT) return false;
+    if (!likeMatch(c.tx[i], conds.textParts)) return false;
+  }
+  return true;
+}
+
+/* 通過分支裡每組條件的句。 */
+function clauseRows(c, condsList) {
   const tx = c.tx || [];
   const rows = [];
   for (let i = 0; i < tx.length; i++) {
-    if (kindSel && !triHit(kindAt(c, i), kindSel)) continue;
-    if (optSel && !triHit(optAt(c, i), optSel)) continue;
-    if (parts.length) {
-      if (!matOn && c.ro && c.ro[i] === ROLE_MAT) continue;
-      if (!likeMatch(tx[i], parts)) continue;
-    }
-    rows.push(i);
+    if (condsList.every(conds => clauseHit(c, i, conds))) rows.push(i);
   }
   return rows;
 }
@@ -337,24 +342,24 @@ function predOnCard(c, table) {
 function predGate(c, inc, ex) {
   if (!c.fr) return false;
   for (const table of ex) if (predOnCard(c, table)) return false;
-  for (const table of inc) if (!predOnCard(c, table)) return false;
+  for (const { table } of inc) if (!predOnCard(c, table)) return false;
   return true;
 }
 
 /* 包含述詞在通過句層條件的句上找命中框:句 → [述詞序號, 框所在句, 框序號] 清單,
    每個述詞都要有框(卡層 AND,可跨句),否則回 null。一句的框是它自己的加上領起句的:
    領起句的條件常寫在 ● 之前,而 ● 子句的效果類型可以和領起句不同(規格 2026-11-01 裁定)。 */
-function predFrames(c, rows, tables) {
-  const met = tables.map(() => false);
+function predFrames(c, rows, inc) {
+  const met = inc.map(() => false);
   const found = new Map();
   for (const i of rows) {
     const lead = c.fl ? c.fl[i] : -1;
     const sources = lead >= 0 ? [lead, i] : [i];
     const here = [];
-    tables.forEach((table, k) => {
+    inc.forEach(({ seq, table }, k) => {
       for (const source of sources) {
         c.fr[source].forEach((id, n) => {
-          if (table[id]) { met[k] = true; here.push([k, source, n]); }
+          if (table[id]) { met[k] = true; here.push([seq, source, n]); }
         });
       }
     });
@@ -363,52 +368,135 @@ function predFrames(c, rows, tables) {
   return met.every(Boolean) ? found : null;
 }
 
-function runQuery(db, q) {
-  q = q || {};
-  const name = term(q.name);
-  const code = term(q.code);
-  const codeOk = DIGITS.test(code);
+/* 一組條件:主查詢或一個 OR 片段編好的樣子。firstSeq 是這組第一個包含述詞的序號:序號是整個
+   查詢的編號(主查詢的 inc,再依片段順序接各片段的 inc),介面用它對回標籤。 */
+function compileConds(q, firstSeq) {
   const text = term(q.text);
-  const textParts = likeParts(text);
-  const kindSel = sel(q.kind);
-  const optSel = sel(q.opt);
-  const act = actSel(q);
+  const code = term(q.code);
+  return {
+    q,
+    name: term(q.name),
+    code,
+    codeOk: DIGITS.test(code),
+    text,
+    textParts: likeParts(text),
+    textMat: !!q.textMat,
+    kindSel: sel(q.kind),
+    optSel: sel(q.opt),
+    predInc: predTables(q.preds && q.preds.inc).map((table, n) => ({ seq: firstSeq + n, table })),
+    predEx: predTables(q.preds && q.preds.ex),
+  };
+}
+
+/* 片段裡的 textMat、nameLang 是效果文、卡名怎麼比,不是條件;片段沒寫就照主查詢,所以效果文或
+   卡名放到 OR 區時比法不變。 */
+function compileFragments(q, main) {
+  let nextSeq = main.predInc.length;
+  return (q.or || []).map(fragment => {
+    const conds = compileConds({ textMat: q.textMat, nameLang: q.nameLang, ...fragment }, nextSeq);
+    nextSeq += conds.predInc.length;
+    return conds;
+  });
+}
+
+function cardHit(c, conds) {
+  const { q, name, code, predInc, predEx } = conds;
+  if ((predInc.length || predEx.length) && !predGate(c, predInc, predEx)) return false;
+  if (name && !nameHit(c, name, q.nameLang)) return false;
+  if (code && !(conds.codeOk && idHit(c, code))) return false;
+  return paramHit(c, q);
+}
+
+function hasClauseConds(conds) {
+  return conds.textParts.length > 0 || !!conds.kindSel || !!conds.optSel || conds.predInc.length > 0;
+}
+
+/* 一個分支:主查詢加上至多一個片段,兩組條件都要成立(同一個鍵兩邊都有時也是都要成立,
+   不是片段蓋掉主查詢)。 */
+function makeBranch(main, fragment, actInc) {
+  const condsList = fragment ? [main, fragment] : [main];
+  return {
+    fragment,
+    condsList,
+    predInc: condsList.flatMap(conds => conds.predInc),
+    tracksRows: actInc || condsList.some(hasClauseConds),
+  };
+}
+
+/* 卡在分支上的命中句:{rows, hits?};分支沒有句層條件時 rows 是 null,卡不中回 null。 */
+function branchRows(c, branch, act) {
+  if (!branch.tracksRows) return { rows: null };
   const actInc = !!act && act.inc.length > 0;
+  const passed = clauseRows(c, branch.condsList);
+  const rows = actInc ? actRows(c, passed, act) : passed;
+  if (!rows.length) return null;
+  if (!branch.predInc.length) return { rows };
+  const found = predFrames(c, passed, branch.predInc);
+  if (!found) return null;
+  const actHit = actInc ? rows : [];
+  const hitRows = passed.filter(i => found.has(i) || actHit.includes(i));
+  return { rows: hitRows, hits: hitRows.map(i => found.get(i) || []) };
+}
+
+function compareHits(a, b) {
+  return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+}
+
+function mergeHits(a, b) {
+  const sorted = a.concat(b).sort(compareHits);
+  return sorted.filter((hit, n) => n === 0 || compareHits(sorted[n - 1], hit) !== 0);
+}
+
+function hitsAtRow(result, row) {
+  return result.hits ? result.hits[result.rows.indexOf(row)] || [] : [];
+}
+
+/* 同一張卡命中兩個分支:rows 是 null 的分支讓給有句的分支;只因沒有包含述詞的分支命中的句,
+   hits[k] 是空清單。 */
+function mergeBranchResults(a, b) {
+  if (!a.rows) return b;
+  if (!b.rows) return a;
+  const rows = Array.from(new Set(a.rows.concat(b.rows))).sort((x, y) => x - y);
+  if (!a.hits && !b.hits) return { rows };
+  return { rows, hits: rows.map(row => mergeHits(hitsAtRow(a, row), hitsAtRow(b, row))) };
+}
+
+/* 全部分支的 marks:同種只留一筆(效果文依字面),順序固定,不隨條件在哪一區變動。 */
+function queryMarks(condsList, act) {
   const marks = [];
-  if (textParts.length) marks.push({ type: 'text', value: text });
-  if (kindSel) marks.push({ type: 'kind' });
-  if (optSel) marks.push({ type: 'opt' });
-  if (actInc) {
+  const texts = condsList.filter(conds => conds.textParts.length).map(conds => conds.text);
+  new Set(texts).forEach(value => marks.push({ type: 'text', value }));
+  if (condsList.some(conds => conds.kindSel)) marks.push({ type: 'kind' });
+  if (condsList.some(conds => conds.optSel)) marks.push({ type: 'opt' });
+  if (act && act.inc.length) {
     marks.push({ type: 'act', leaves: Array.from(act.union), cost: act.cost, mode: act.mode });
   }
-  const predInc = predTables(q.preds && q.preds.inc);
-  const predEx = predTables(q.preds && q.preds.ex);
-  const hasPreds = predInc.length > 0 || predEx.length > 0;
-  if (predInc.length) marks.push({ type: 'pred' });
+  if (condsList.some(conds => conds.predInc.length)) marks.push({ type: 'pred' });
+  return marks;
+}
+
+function runQuery(db, q) {
+  q = q || {};
+  const act = actSel(q);
+  const actInc = !!act && act.inc.length > 0;
+  const main = compileConds(q, 0);
+  const fragments = compileFragments(q, main);
+  const branches = fragments.length
+    ? fragments.map(fragment => makeBranch(main, fragment, actInc))
+    : [makeBranch(main, null, actInc)];
   const cards = [];
   for (const c of db) {
-    if (hasPreds && !predGate(c, predInc, predEx)) continue;
-    if (name && !nameHit(c, name, q.nameLang)) continue;
-    if (code && !(codeOk && idHit(c, code))) continue;
-    if (!paramHit(c, q)) continue;
+    if (!cardHit(c, main)) continue;
     if (act && (!c.ae || actExcluded(c, act))) continue;
-    let rows = null;
-    let hits = null;
-    if (marks.length) {
-      const passed = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
-      rows = actInc ? actRows(c, passed, act) : passed;
-      if (!rows.length) continue;
-      if (predInc.length) {
-        const found = predFrames(c, passed, predInc);
-        if (!found) continue;
-        const actHit = actInc ? rows : [];
-        rows = passed.filter(i => found.has(i) || actHit.includes(i));
-        hits = rows.map(i => found.get(i) || []);
-      }
+    let result = null;
+    for (const branch of branches) {
+      if (branch.fragment && !cardHit(c, branch.fragment)) continue;
+      const got = branchRows(c, branch, act);
+      if (got) result = result ? mergeBranchResults(result, got) : got;
     }
-    cards.push(hits ? { card: c, rows, hits } : { card: c, rows });
+    if (result) cards.push({ card: c, ...result });
   }
-  return { cards, marks };
+  return { cards, marks: queryMarks([main, ...fragments], act) };
 }
 
   return Object.freeze({ runQuery, likeParts, likeRanges, modeLeaves, patMode });

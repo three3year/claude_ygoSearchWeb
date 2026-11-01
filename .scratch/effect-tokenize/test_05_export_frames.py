@@ -17,9 +17,11 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import closed_values  # noqa: E402
 import export_common  # noqa: E402
 import export_frames  # noqa: E402
 import frames  # noqa: E402
+import predicate  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("effect_tokenize", os.path.join(HERE, "tokenize.py"))
 effect_tokenize = importlib.util.module_from_spec(_spec)
@@ -213,15 +215,15 @@ class TestFrameColumns(unittest.TestCase):
 
 
 class TestDocument(unittest.TestCase):
-    """頂層:說明、版本、目錄(本票空)、統計、卡面、句;序列化一句一行;決定性。"""
+    """頂層:說明、版本、值域(規格 3 票 01)、目錄(本票空)、統計、卡面、句;序列化一句一行;決定性。"""
 
     def test_top_level_keys_version_empty_catalog_faces_and_stats(self):
         faces = {1: export_common.card_face(DRAGON)}
         doc, problems = export({1: [clause("①", REVIVE)], 2: [clause("①", "①：このカードを墓地へ送る。")]},
                                faces)
         self.assertEqual(problems, [])
-        self.assertEqual(list(doc), ["說明", "版本", "目錄", "統計", "卡面", "句"])
-        self.assertEqual(doc["版本"], 1)
+        self.assertEqual(list(doc), ["說明", "版本", "值域", "目錄", "統計", "卡面", "句"])
+        self.assertEqual(doc["版本"], 2)
         self.assertEqual(doc["目錄"], [])
         self.assertEqual(doc["卡面"], [[1, export_common.face_hash(DRAGON)]])
         self.assertEqual(doc["統計"]["框架"], {"此卡": 1, "非此卡": 1, "皆非": 0})
@@ -233,7 +235,23 @@ class TestDocument(unittest.TestCase):
         self.assertEqual(json.loads(text), doc)
         self.assertEqual(sum(line.startswith('{"card"') for line in text.splitlines()), 2)
         self.assertIn('\n"目錄":[],\n', text)
-        self.assertIn('\n"版本":1,\n', text)
+        self.assertIn('\n"版本":2,\n', text)
+
+    def test_domains_follow_the_reference_evaluator_in_declared_order(self):
+        """規格 3 票 01:值域是參考評估器每個封閉類欄的值域,另加玩家與區域兩張;欄序與值序都是宣告序,
+        序列化後(索引建置讀到的)也一樣。比清單不比集合:索引的整數碼是值域序號,順序就是內容。"""
+        doc, problems = export({1: [clause("①", REVIVE)]})
+        self.assertEqual(problems, [])
+        expected = [(field, list(values)) for field, values in predicate.DOMAIN.items()]
+        expected += [("玩家", list(closed_values.PLAYERS)), ("區域", list(closed_values.ZONES))]
+        self.assertEqual(list(doc["值域"].items()), expected)
+        self.assertEqual(list(json.loads(export_frames.serialize(doc))["值域"].items()), expected)
+
+    def test_domains_are_there_without_a_catalog_or_sentences(self):
+        """值域不看語料:沒有句、沒有目錄也帶,且一樣完整(索引建置靠它擋值域外的值)。"""
+        doc, problems = export_frames.export([])
+        self.assertEqual(problems, [])
+        self.assertEqual(doc["值域"], export({1: [clause("①", REVIVE)]})[0]["值域"])
 
     def test_same_input_exports_byte_identical(self):
         cards = {1: [clause("①", REVIVE)],

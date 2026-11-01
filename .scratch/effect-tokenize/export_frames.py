@@ -9,6 +9,8 @@
 頂層:
     說明    本檔怎麼來的(字串)。
     版本    格式版本(整數,VERSION;欄位語意變就加一,讀的人不符即失敗)。
+    值域    規格 3 票 01:每個封閉類述詞欄 → 值清單,另有玩家與區域兩張,全部宣告序(predicate.export_domains;
+            索引建置原樣放進 VOCAB、不 import 分詞鏈)。
     目錄    具名查詢目錄(票 08;每個節點一列、目錄序,欄在 CATALOG_KEYS):name 節點名、path 路徑(大類 › 中類或
             詞元節點 › 名)、predicate 明文述詞(大類/中類列是 null)、cards 三個位置各命中幾張卡、hash 三個位置
             各自的卡集合雜湊(predicate.cards_hash;規格 3 的 JS 評估器重算要相同);大類/中類列是底下具名
@@ -51,12 +53,12 @@ from closed_values import MODIFIER_KINDS, REGION_KEYS  # noqa: E402
 from constraints import KIND_ACTION, POSITIONS  # noqa: E402
 from export_common import (ROOT, Stats, face_hash, load_faces, load_sentences, owner,  # noqa: E402
                            print_stats, text_hash)
-from predicate import FRAME_KEYS, PHRASE_KEYS, SEGMENT_KEYS, card_sets, cards_hash  # noqa: E402
+from predicate import FRAME_KEYS, PHRASE_KEYS, SEGMENT_KEYS, card_sets, cards_hash, export_domains  # noqa: E402
 
 OUT = os.path.join(ROOT, "data", "action_frames.json")
 
 # 格式版本:欄位語意變就加一(規格「匯出檔要不要格式版本號」(a));索引建置與參考評估器比對不符即失敗
-VERSION = 1
+VERSION = 2
 # 框列的鍵(匯出順序)、片語鍵、段的鍵:拼法定在述詞字彙模組 predicate.py(票 06),這裡只 import
 # 框架上照抄的單值鍵(有值才帶)
 _COPIED_KEYS = ("action", "position", "polarity", "voice", "negation", "agent", "manner_kind", "manner_value")
@@ -185,8 +187,8 @@ def export(sentences, faces=None, cat=None):
         sets = query_sets(cat, out)
         problems.extend("具名查詢在全語料三個位置都沒有命中(不留):%s" % name for name in unmatched(cat, sets))
         rows_of_catalog = catalog_rows(cat, sets)
-    return {"說明": DOC, "版本": VERSION, "目錄": rows_of_catalog, "統計": dict(stats.doc(), 位置=positions),
-            "卡面": face_rows, "句": out}, problems
+    return {"說明": DOC, "版本": VERSION, "值域": export_domains(), "目錄": rows_of_catalog,
+            "統計": dict(stats.doc(), 位置=positions), "卡面": face_rows, "句": out}, problems
 
 
 def serialize(doc):
@@ -195,6 +197,7 @@ def serialize(doc):
     lines = lambda rows: "[]" if not rows else "[\n" + ",\n".join(dump(r) for r in rows) + "\n]"  # noqa: E731
     return ("{\n" + '"說明":' + dump(doc["說明"]) + ",\n"
             + '"版本":' + dump(doc["版本"]) + ",\n"
+            + '"值域":' + dump(doc["值域"]) + ",\n"
             + '"目錄":' + lines(doc["目錄"]) + ",\n"
             + '"統計":' + dump(doc["統計"]) + ",\n"
             + '"卡面":' + lines(doc["卡面"]) + ",\n"

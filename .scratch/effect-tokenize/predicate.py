@@ -73,6 +73,15 @@ DOMAIN = {
     FIELD_MODIFIERS: MODIFIER_KINDS,
 }
 SEGMENT_FIELDS = (FIELD_HEAD_KIND, FIELD_QUANTITY, FIELD_MODIFIERS)
+# 匯出檔「值域」欄的玩家與區域兩張(2026-11-01 規格 3「封閉類的值域放哪?」(a));區域三欄共用,不是一個述詞欄
+DOMAIN_PLAYER, DOMAIN_ZONE = "玩家", "區域"
+
+
+def export_domains():
+    """匯出檔的「值域」欄:每個封閉類欄 → 值清單,另有玩家與區域兩張,全部宣告序。索引建置不 import 分詞鏈,
+    值域隨匯出檔進去;整數碼是這裡的序號,所以順序是內容的一部分。"""
+    return {**{field: list(values) for field, values in DOMAIN.items()},
+            DOMAIN_PLAYER: list(PLAYERS), DOMAIN_ZONE: list(ZONES)}
 
 
 def values_of(predicate, field):

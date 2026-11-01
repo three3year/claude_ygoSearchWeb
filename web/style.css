@@ -704,4 +704,70 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   font-size: 15px; line-height: 1; padding: 0 3px;
 }
 .strip-x:hover { color: var(--text); }
+.strip-tag { cursor: pointer; }
+.strip-tag.active { box-shadow: 0 0 0 1px var(--accent); }
+.strip-tok {
+  background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: inherit;
 }
+.strip-lemma.strip-tok { color: var(--gold); font-weight: 600; }
+.strip-val.strip-tok { color: var(--accent); }
+.strip-tag.ex .strip-tok { color: #f0a3ac; }
+.strip-tok:hover { text-decoration: underline; }
+
+/* ─── 抽屜(規格 4,版面同原型 D 版):點標籤開在右側,改欄位結果立刻更新 ─── */
+#condDrawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 40;
+  width: 380px; max-width: 100%; padding: 14px 14px 80px; overflow-y: auto;
+  background: var(--surface); border-left: 1px solid var(--border);
+  box-shadow: -8px 0 24px #0008;
+}
+.drawer-head {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; gap: 8px; align-items: center;
+  padding: 6px 0; margin-bottom: 6px; background: var(--surface);
+}
+.drawer-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; word-break: break-all; }
+.drawer-name.named { color: var(--gold); }
+.drawer-seg { display: inline-flex; flex: none; }
+.drawer-seg button {
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  font: inherit; font-size: 11px; padding: 1px 7px; cursor: pointer;
+}
+.drawer-seg button + button { border-left: none; }
+.drawer-seg button:first-child { border-radius: 5px 0 0 5px; }
+.drawer-seg button:last-child { border-radius: 0 5px 5px 0; }
+.drawer-seg button.on { background: var(--accent-dim); color: var(--text); font-weight: bold; }
+.drawer-seg button.on.ex { background: #7c2d36; }
+.drawer-note {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  color: var(--muted); font-size: 11px;
+}
+.drawer-btn {
+  background: var(--surface2); border: 1px dashed var(--border); border-radius: 6px;
+  color: var(--text); padding: 0 6px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.drawer-btn:hover { border-color: var(--accent); }
+.drawer-remove { margin-left: auto; }
+.drawer-group {
+  margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--border);
+  color: var(--muted); font-size: 11px;
+}
+.drawer-field { margin-top: 7px; }
+.drawer-field.focus { outline: 1px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.drawer-label { font-size: 12px; color: #b3bac9; margin-bottom: 2px; }
+.drawer-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.drawer-chip {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+  color: var(--muted); padding: 1px 9px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.drawer-chip.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+.drawer-item {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 0 3px 0 9px; font-size: 12px; background: var(--accent-dim); border-radius: 12px;
+}
+.drawer-add { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 3px; }
+.drawer-add select, .drawer-add input {
+  min-width: 0; padding: 2px 4px; font: inherit; font-size: 12px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text);
+}
+.drawer-add input { width: 130px; }

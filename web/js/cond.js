@@ -1,7 +1,8 @@
 'use strict';
 
 /* 條件模型(predicate-ui 規格 4 票 02 起;純函式,不碰 DOM)。
-   接縫:目錄列 → 標籤;標籤 + 左側條件 → 引擎查詢;標籤 → 具名查詢、葉路徑、短句。
+   接縫:目錄列 → 標籤;標籤 + 左側條件 → 引擎查詢;標籤 → 具名查詢、葉路徑、短句;
+   抽屜的欄位與值、改欄位(票 04);標籤 ⇄ 欄位對(票 04,分隔與轉義在 Hash,值域在這裡)。
    標籤 `{ex, pred, origin}`:ex 是排除;pred 是送進引擎的述詞,一定帶位置(引擎沒寫位置就
    三個位置都看,見 predicate-index 票 05);origin 是產生它的目錄列名字。
    狀態 `{and: [標籤…]}` 一律當不可變,改動回傳新狀態;呼叫端用 tags 讀,不直接摸欄。 */
@@ -24,6 +25,13 @@ const POSITION_FALLBACK = ['代價', '條件'];
 const DEFAULT_POLARITY = ['可能', '肯定'];
 
 const REGION_FIELDS = ['來源', '目的', '所在'];
+
+/* 抽屜與網址的值都讀匯出檔的值域(規格 4 條件模型段);中心詞是尾綴比對,自由輸入,
+   候選只列最常見的(規格 4,2026-11-02)。 */
+const FRAME = VOCAB.frame || {};
+const DOMAINS = FRAME.domains || {};
+const HEAD_FIELDS = ['受事者中心詞', '目的中心詞'];
+const HEAD_CANDIDATES = 300;
 
 /* 短句的連接字與區域、玩家的日文(原型 D 版,站主核可 2026-11-01)。測試守區域表涵蓋值域。 */
 const GLUE = { 極性: '極性', 來源: '從', 目的: '到', 所在: '在', 動作對象: '動到', 施事者: '由',
@@ -50,6 +58,7 @@ function predKey(pred, withPosition) {
 const ROWS = (VOCAB.catalog || []).filter(row => row.predicate);
 const BY_PATH = new Map(ROWS.map(row => [row.path.join(SEP), row]));
 const BY_KEY = new Map(ROWS.map(row => [predKey(row.predicate, false), row]));
+const BY_NAME = new Map(ROWS.map(row => [row.name, row]));
 
 function defaultPosition(row) {
   if (row.cards[DEFAULT_POSITION]) return DEFAULT_POSITION;
@@ -94,6 +103,10 @@ function removeAt(state, i) {
   return { and: state.and.filter((_, n) => n !== i) };
 }
 
+function replaceAt(state, i, tag) {
+  return { and: state.and.map((t, n) => (n === i ? tag : t)) };
+}
+
 function usedPaths(state) {
   return state.and.map(named).filter(Boolean).map(row => row.path.join(SEP));
 }
@@ -104,6 +117,137 @@ function toQuery(state, side) {
   const preds = wantEx => state.and.filter(t => t.ex === wantEx).map(t => t.pred);
   q.preds = { inc: preds(false), ex: preds(true) };
   return q;
+}
+
+/* 這張標籤單獨的張數,抽屜顯示用。排除標籤也算有 X 的卡(原型 D 版):數字是這個述詞的大小,
+   包含、排除切換時不跟著跳。 */
+function soloQuery(tag) {
+  return { preds: { inc: [tag.pred], ex: [] } };
+}
+
+function drawerGroups() {
+  return { 常用: FIELD_GROUPS.常用.filter(f => f !== '詞元'), 進階: FIELD_GROUPS.進階 };
+}
+
+/* 這一欄在抽屜怎麼選:封閉值、玩家+區域、或自由輸入加候選。 */
+function editor(field) {
+  if (REGION_FIELDS.indexOf(field) >= 0) {
+    return { kind: 'region', players: [null].concat(DOMAINS.玩家 || []), zones: DOMAINS.區域 || [] };
+  }
+  if (HEAD_FIELDS.indexOf(field) >= 0) {
+    return { kind: 'text', candidates: (FRAME.heads || []).slice(0, HEAD_CANDIDATES) };
+  }
+  return { kind: 'values', values: DOMAINS[field] || [] };
+}
+
+const sameItem = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+/* 區域項先排區域、同區域不看玩家在前:網址的值序因此固定,`自分.墓地~除外`(規格 4 網址段)。 */
+function orderedRegions(items) {
+  const zones = DOMAINS.區域 || [], players = DOMAINS.玩家 || [];
+  const valid = it => Array.isArray(it) && zones.indexOf(it[1]) >= 0 &&
+    (it[0] === null || players.indexOf(it[0]) >= 0);
+  const rank = it => zones.indexOf(it[1]) * (players.length + 1) + players.indexOf(it[0]) + 1;
+  const unique = items.filter(valid)
+    .filter((it, n, all) => all.findIndex(other => sameItem(other, it)) === n);
+  return unique.sort((a, b) => rank(a) - rank(b));
+}
+
+/* 一欄的值整理成固定順序,值域外的值在這裡掉:改欄位與讀網址走同一關,引擎只看得到值域內的值。 */
+function orderedValues(field, items) {
+  if (REGION_FIELDS.indexOf(field) >= 0) return orderedRegions(items);
+  if (HEAD_FIELDS.indexOf(field) >= 0) {
+    const words = items.map(v => String(v).trim()).filter(Boolean);
+    return Array.from(new Set(words)).sort();
+  }
+  const domain = field === '詞元' ? FRAME.lemmas || [] : DOMAINS[field] || [];
+  return domain.filter(v => items.indexOf(v) >= 0);
+}
+
+const values = (tag, field) => asList(tag.pred[field]);
+
+/* 空欄等於沒寫,不留空清單;只有位置例外,全關是三個位置都看,要明寫(規格 4 條件模型段)。 */
+function withValues(tag, field, items) {
+  const pred = Object.assign({}, tag.pred);
+  const list = orderedValues(field, items);
+  if (list.length) pred[field] = list;
+  else if (field === '位置') pred[field] = DOMAINS.位置.slice();
+  else delete pred[field];
+  return Object.assign({}, tag, { pred });
+}
+
+function addValue(tag, field, item) {
+  return withValues(tag, field, values(tag, field).concat([item]));
+}
+
+function removeValue(tag, field, item) {
+  return withValues(tag, field, values(tag, field).filter(v => !sameItem(v, item)));
+}
+
+function toggleValue(tag, field, item) {
+  const on = values(tag, field).some(v => sameItem(v, item));
+  return on ? removeValue(tag, field, item) : addValue(tag, field, item);
+}
+
+function setEx(tag, ex) {
+  return Object.assign({}, tag, { ex: !!ex });
+}
+
+/* 改過才有來源可回:欄位(含位置)和產生它的那一列的預設不同。不看 ex,切換包含、排除不算改。 */
+function editedFrom(tag) {
+  const row = BY_NAME.get(tag.origin);
+  if (!row) return null;
+  return predKey(tagOf(row, tag.ex).pred, true) === predKey(tag.pred, true) ? null : row.name;
+}
+
+function restore(tag) {
+  const row = BY_NAME.get(tag.origin);
+  return row ? tagOf(row, tag.ex) : tag;
+}
+
+function note(tag) {
+  const row = named(tag);
+  if (row) return row.name;
+  return tag.origin ? '改自 ' + tag.origin : '';
+}
+
+/* 區域項在欄位對裡寫 `玩家.區域`,不看玩家只寫區域(規格 4 網址段)。玩家與區域都不含 `.`,
+   多一個點或點前面是空字串,在 orderedRegions 會因為不在值域而掉。 */
+function regionText(item) {
+  return item[0] ? item[0] + '.' + item[1] : item[1];
+}
+
+function regionItem(text) {
+  const i = text.indexOf('.');
+  return i < 0 ? [null, text] : [text.slice(0, i), text.slice(i + 1)];
+}
+
+/* 標籤 → 欄位對 `[[欄, [值文字…]]…]`:欄序、值序固定,所以同樣的標籤寫出同樣的網址。
+   位置只有一個效果時不寫,極性沒寫就是不限(規格 4 網址段)。 */
+function toPairs(tag) {
+  const pairs = [];
+  FIELD_ORDER.forEach(field => {
+    const list = orderedValues(field, values(tag, field));
+    if (!list.length || (field === '位置' && isDefaultPosition(list))) return;
+    pairs.push([field, REGION_FIELDS.indexOf(field) >= 0 ? list.map(regionText) : list]);
+  });
+  return pairs;
+}
+
+/* 欄位對 → 標籤。只照欄位清單取,不認得的欄與值域外的值在這裡消失,引擎看不到;沒有詞元不成
+   標籤。網址不寫來源,所以欄位等於某個具名查詢才有來源(規格 4 網址段)。 */
+function fromPairs(pairs, ex) {
+  const pred = {};
+  FIELD_ORDER.forEach(field => {
+    const texts = pairs.filter(p => p[0] === field).reduce((all, p) => all.concat(p[1]), []);
+    const items = REGION_FIELDS.indexOf(field) >= 0 ? texts.map(regionItem) : texts;
+    const list = orderedValues(field, items);
+    if (list.length) pred[field] = list;
+  });
+  if (!pred.詞元) return null;
+  if (!pred.位置) pred.位置 = [DEFAULT_POSITION];
+  const row = named({ pred });
+  return { ex: !!ex, pred, origin: row ? row.name : null };
 }
 
 function zoneText(item) {
@@ -153,7 +297,9 @@ function sentence(tag) {
 
   return Object.freeze({
     defaultPosition, tagOf, tagAt, named, leafPath,
-    empty, tags, add, removeAt, usedPaths, toQuery,
-    sentenceParts, sentence,
+    empty, tags, add, removeAt, replaceAt, usedPaths, toQuery, soloQuery,
+    sentenceParts, sentence, note,
+    toPairs, fromPairs,
+    drawerGroups, editor, values, addValue, removeValue, toggleValue, setEx, editedFrom, restore,
   });
 })();

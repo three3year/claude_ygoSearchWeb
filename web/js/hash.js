@@ -5,9 +5,10 @@ const { VOCAB } = Util;
 
 const TEXTS = ['name', 'code', 'text'];
 const LANG = 'nameLang';
-/* AND 區的動作標籤(規格 4 網址段):沒改過的標籤寫葉路徑,逐個 encodeURIComponent 再以
-   逗號接,排除在開頭加 `-`。目錄找不到的路徑(目錄改名或搬節點後的舊網址)安靜忽略。
-   舊軸的 actCost、actPat 不再認得,開舊網址時當未知參數。 */
+/* AND 區的動作標籤(規格 4 網址段):標籤之間逗號接,排除在開頭加 `-`。沒改過的標籤寫葉路徑,
+   逐個 encodeURIComponent;改過的寫欄位對 `欄:值~值;欄:值`。目錄找不到的路徑(目錄改名或搬
+   節點後的舊網址)安靜忽略。舊軸的 actCost、actPat 不再認得,開舊網址時當未知參數。
+   一張標籤的編解碼在 tagToken、parseTag,哪一區都同一套。 */
 const ACT = 'act';
 
 function schema() {
@@ -62,16 +63,17 @@ function numText(v) {
   return v == null ? '' : String(v);
 }
 
-/* 目前標籤都從目錄來,一定寫得成路徑;改過的標籤(欄位對)是票 04。 */
-function tagToken(tag) {
-  const path = Cond.leafPath(tag);
-  return path ? (tag.ex ? '-' : '') + encodeURIComponent(path) : '';
+/* encodeURIComponent 不編 `~`,要補編,否則值裡的 `~` 會和值的分隔符撞。分隔符不選 `|`:
+   它不是合法網址字元,聊天軟體會改編(規格 4 網址段)。 */
+function encPiece(s) {
+  return encodeURIComponent(s).replace(/~/g, '%7E');
 }
 
-/* 目前標籤都從目錄來,一定寫得成路徑;改過的標籤(欄位對)是票 04。 */
 function tagToken(tag) {
   const path = Cond.leafPath(tag);
-  return path ? (tag.ex ? '-' : '') + encodeURIComponent(path) : '';
+  const body = path ? encodeURIComponent(path)
+    : Cond.toPairs(tag).map(p => encPiece(p[0]) + ':' + p[1].map(encPiece).join('~')).join(';');
+  return (tag.ex ? '-' : '') + body;
 }
 
 function stringify(state) {
@@ -91,7 +93,8 @@ function stringify(state) {
       .map(c => (sel[c] < 0 ? '-' : '') + c);
     if (codes.length) parts.push(ax.key + '=' + codes.join(','));
   });
-  const tokens = st.cond ? Cond.tags(st.cond).map(tagToken).filter(Boolean) : [];
+  /* 兩張標籤可以改到一模一樣;網址只寫一次,否則 canon 不冪等(parse 會收成一張)。 */
+  const tokens = st.cond ? Array.from(new Set(Cond.tags(st.cond).map(tagToken))) : [];
   if (tokens.length) parts.push(ACT + '=' + tokens.join(','));
   SCHEMA.range.forEach(f => {
     const r = q[f.key];
@@ -143,11 +146,30 @@ function toTri(v, ax) {
   return Object.keys(sel).length ? sel : null;
 }
 
+/* `欄:值~值;欄:值` → 欄位對。解不開的欄名或值只掉它自己;認不認得交給條件模型。 */
+function pairsOf(body) {
+  const pairs = [];
+  body.split(';').forEach(seg => {
+    const i = seg.indexOf(':');
+    const field = i < 0 ? null : dec(seg.slice(0, i));
+    if (field == null) return;
+    pairs.push([field, seg.slice(i + 1).split('~').map(dec).filter(v => v != null)]);
+  });
+  return pairs;
+}
+
+/* 字面的 `:` 只會是欄位對:路徑裡的 `:` 寫出時都編掉了。認不出來回 null。 */
+function parseTag(token) {
+  const ex = token.charAt(0) === '-';
+  const body = ex ? token.slice(1) : token;
+  if (body.indexOf(':') >= 0) return Cond.fromPairs(pairsOf(body), ex);
+  const path = dec(body);
+  return path ? Cond.tagAt(path, ex) : null;
+}
+
 function toTags(raw, state) {
   return raw.split(',').reduce((st, token) => {
-    const ex = token.charAt(0) === '-';
-    const path = dec(ex ? token.slice(1) : token);
-    const tag = path ? Cond.tagAt(path, ex) : null;
+    const tag = parseTag(token);
     return tag ? Cond.add(st, tag) : st;
   }, state);
 }

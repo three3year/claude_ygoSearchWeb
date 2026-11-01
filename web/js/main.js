@@ -61,6 +61,7 @@ function restore() {
   clearTimeout(typingTimer);
   const state = Hash.parse(location.hash);
   cond = state.cond || Cond.empty();
+  Strip.closeDrawer();
   Query.write(state.q);
   View.setSort(state.sort.key, state.sort.dir);
   View.setPage(1);
@@ -101,7 +102,11 @@ function init() {
     updated.hidden = false;
   }
   Query.init({ onPick: (path, ex) => setCond(Cond.add(cond, Cond.tagAt(path, ex))) });
-  Strip.init({ onRemove: i => setCond(Cond.removeAt(cond, i)) });
+  Strip.init({
+    onRemove: i => setCond(Cond.removeAt(cond, i)),
+    onEdit: (i, tag) => setCond(Cond.replaceAt(cond, i, tag)),
+    countOf: tag => Engine.runQuery(DB, Cond.soloQuery(tag)).cards.length,
+  });
   View.initAltArt();
   View.initEffKind();
   View.initOgToggle();

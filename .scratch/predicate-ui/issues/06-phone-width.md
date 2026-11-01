@@ -28,7 +28,7 @@
 
 ### 數字
 
-- node:`script/web/` 下全部 `*.test.js`,**376 pass / 0 fail / 0 skip**(動工前 371,新增 `phone.test.js` 5 條,先紅後綠)。合併後見下面。
+- node:`script/web/` 下全部 `*.test.js`,**376 pass / 0 fail / 0 skip**(動工前 371,新增 `phone.test.js` 5 條,先紅後綠)。交件時 predicate-ui 的 tip 還是 d848ade,合併沒有變動。
 - 接縫只有兩個字面可驗的:`Query.summarize` 的字、`Strip.render` 的 ⇄ 數。其餘是 CSS 與 DOM,在真瀏覽器走。
 
 ### 真瀏覽器(手機 390×844,isMobile + hasTouch,`python -m http.server` 起 `web/`,Playwright Chrome,isolated context)
@@ -41,7 +41,8 @@ pageerror 0,console error 0(favicon 404 不計)。
 | 開側欄、點目錄 破壊 | 網址 `act=破壊`;篩選條件・1 項;看結果(1,618 張) |
 | 看結果 | 側欄收起,結果 1,618 張 |
 | 捲到 3000 | 條件列 top 0,黏在頂端 |
-| 點標籤的字 | 底部面板 top 236、貼齊左右下;該欄捲到 |
+| 點標籤的字 | 底部面板 top 236、貼齊左右下;點 破壊(詞元)不捲,詞元不在抽屜 |
+| 點 受事者中心詞 的字(捲在 2000) | 面板內捲 283,該欄框起來在面板可見範圍(501–581),頁面 y 不動 |
 | 動作對象 非此卡 | 立刻 1,182 張,短句與「改自」更新,條件列在面板上方看得到 |
 | 手指點面板外 | 面板關,條件不變 |
 | 抽屜開著按 ⇄ | 抽屜關,網址 `actOr=…`,AND 0、OR 1;再按回 AND;上一頁回 OR |

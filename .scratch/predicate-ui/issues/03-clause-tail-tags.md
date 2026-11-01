@@ -16,7 +16,7 @@
 
 ## Comments
 
-2026-11-02 交件(基準 predicate-ui 1baecf4,交件前併上最新 tip;用工作樹內既有的 data.js,沒跑 bootstrap)。
+2026-11-02 交件(基準 predicate-ui 1baecf4,交件時 tip 沒動,不必合併;用工作樹內既有的 data.js,沒跑 bootstrap)。
 
 ### 介面(給票 04、05、07)
 
@@ -27,7 +27,7 @@
 
 ### 數字
 
-- node:`script/web/` 五個測試檔併入前 **266 pass / 0 fail / 0 skip**;動工前四個檔 259。`clause_tail.test.js` 新增 15 條(本票的檔,依 CODING_STANDARDS 平行票各開自己的檔),`render.test.js` 刪舊句尾標籤 8 條,`engine.test.js`、`conditions.test.js`、`predicate.test.js` 沒動。併上 predicate-ui 後的數字見下面「合併」。
+- node:`script/web/` 五個測試檔 **266 pass / 0 fail / 0 skip**;動工前四個檔 259。`clause_tail.test.js` 新增 15 條(本票的檔,依 CODING_STANDARDS 平行票各開自己的檔),`render.test.js` 刪舊句尾標籤 8 條,`engine.test.js`、`conditions.test.js`、`predicate.test.js` 沒動。
 - 全語料條(真 data.js):`対象とする` 3,396 張每張都有 `條件:対象とする`、`取り除く@お互いのフィールド` 10 張每張都有 `代價:`;`対象とする` 有框只在領起句的命中句的卡,每張都有 `↑領起句`。
 - 變異驗證:把程式改壞 9 種(只取第一個命中不優先本句、`pred` 出徽章、領起句不標、不看是否命中句、短句不去位置、不接 `q.or`、效果也寫前綴、位置碼不減一、拿掉說明提示),每種至少 1 條測試失敗。
 

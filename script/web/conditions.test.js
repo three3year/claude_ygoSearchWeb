@@ -42,6 +42,12 @@ const CATALOG = [
   { name: '取り除く@お互いのフィールド', path: ['取り除く', '取り除く@お互いのフィールド'],
     cards: counts(10, 0, 0),
     predicate: pred({ 詞元: '取り除く', 所在: [['お互い', '場上']] }) },
+  /* 真目錄 LP・ダメージ、表示形式、規則改寫也是這樣:子節點排在父節點前面。 */
+  { name: '倍にする', path: ['LP', 'ダメージ', '倍にする'], cards: counts(0, 33, 0),
+    predicate: pred({ 詞元: '倍にする' }) },
+  { name: 'ダメージ', path: ['LP', 'ダメージ'], cards: counts(1, 70, 6),
+    predicate: pred({ 詞元: 'ダメージ' }) },
+  { name: 'LP', path: ['LP'], predicate: null, cards: counts(1, 90, 6) },
 ];
 
 const box = harness.load({ vocab: { catalog: CATALOG } });
@@ -214,7 +220,7 @@ test('區域對照涵蓋值域每個區域', t => {
 const nodeOf = key => harness.catalogNode(box, key);
 
 test('目錄樹:根是路徑只有一段的節點,依目錄順序', () => {
-  assert.deepStrictEqual(harness.catalogRoots(box), ['召喚', '規則改寫', '破壊', '対象とする', '取り除く']);
+  assert.deepStrictEqual(harness.catalogRoots(box), ['召喚', '規則改寫', '破壊', '対象とする', '取り除く', 'LP']);
 });
 
 test('目錄樹:缺的路徑補純導覽節點,沒有張數也不成標籤', () => {
@@ -234,6 +240,36 @@ test('目錄樹:詞元節點 召喚 掛在同路徑的大類 召喚 底下,葉�
   assert.strictEqual(lemma.name, '召喚');
   assert.strictEqual(lemma.path, '召喚');
   assert.deepStrictEqual(lemma.kids, []);
+});
+
+test('目錄樹:父節點的列排在子節點後面時,補好的節點接回那一列,不多一個同名子節點', () => {
+  assert.deepStrictEqual(nodeOf('LP'), { key: 'LP', name: 'LP', parent: '', kids: ['LP›ダメージ'],
+                                         path: '', count: { text: '90', zero: false } });
+  const lemma = nodeOf('LP›ダメージ');
+  assert.strictEqual(lemma.path, 'LP›ダメージ');
+  assert.deepStrictEqual(lemma.count, { text: '70', zero: false });
+  assert.deepStrictEqual(lemma.kids, ['LP›ダメージ›倍にする']);
+});
+
+test('目錄樹全語料:每列一個節點,只多兩個純導覽節點,同路徑的只有詞元節點 召喚', t => {
+  const data = harness.realData();
+  if (!data) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
+  const real = harness.load(data);
+  const all = [];
+  const walk = key => {
+    const n = harness.catalogNode(real, key);
+    all.push(n);
+    n.kids.forEach(walk);
+  };
+  harness.catalogRoots(real).forEach(walk);
+  assert.strictEqual(data.vocab.catalog.length, 261);
+  assert.strictEqual(all.length, 263);
+  assert.deepStrictEqual(all.filter(n => !n.count).map(n => n.key).sort(),
+                         ['表示形式›にする', '規則改寫›にする'].sort());
+  assert.deepStrictEqual(all.filter(n => n.key.includes('#')).map(n => n.path), ['召喚']);
+  assert.strictEqual(all.filter(n => n.path).length, 237);
+  assert.deepStrictEqual(all.filter(n => n.count && n.count.zero).map(n => n.count.text).sort(),
+                         ['代價 10', '條件 3396'].sort());
 });
 
 test('目錄樹:每列顯示效果位張數,大類沿用目錄列', () => {

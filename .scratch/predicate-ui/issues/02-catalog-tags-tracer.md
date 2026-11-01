@@ -32,9 +32,17 @@
 
 ### 數字
 
-- node:conditions + engine + render + predicate **236 pass / 0 fail / 0 skip**;動工前 205,engine.test.js 刪 7 條舊軸 UI 與舊網址參數的測試(含 `Query.summarize` 改收數字),新增 conditions.test.js 37 條、predicate.test.js 1 條。併上 predicate-ui 後的數字見下面「合併」。
+- node:conditions + engine + render + predicate 併入前 **238 pass / 0 fail / 0 skip**;動工前 205,engine.test.js 刪 7 條舊軸 UI 與舊網址參數的測試(含 `Query.summarize` 改收數字),新增 conditions.test.js 39 條、predicate.test.js 1 條。併上 predicate-ui 後的數字見下面「合併」。
 - `python -m unittest discover -s script/web`:186 OK;`test_lint`:8 OK。
 - 全語料:237 個具名查詢走「葉路徑 → `Hash.parse` → `Cond.toQuery` → `runQuery`」,0 張不符:235 個效果位,`対象とする` 條件 3,396、`取り除く@お互いのフィールド` 代價 10。位置是測試裡寫死的,不用條件模型的規則算。變異驗證:位置一律帶效果時,只有這兩個失敗。
+
+### 合併
+
+併上 predicate-ui 2be9f79(票 01 的 `q.or`)無衝突,條件模型還沒送 `q.or`。併後 node 四個檔 **259 pass / 0 fail / 0 skip**,script/web 186 OK;併後與修下面的樹之後,真瀏覽器再走一次點列、−、×、上一頁、貼網址到新分頁,console 只有 favicon 404、pageerror 0。
+
+### 原型沒處理、這張修掉的
+
+目錄列的順序不是父先子後:LP・ダメージ、表示形式、規則改寫的列排在部分子節點後面。照原型的建樹法,補好的節點沒有張數,那一列又多掛成自己的同名子節點。第一輪瀏覽器看到這三個大類沒數字才發現。現在補好的節點等到那一列出現時接回去;`conditions.test.js` 有合成例子(先紅後綠)與全語料守門:261 列加 2 個純導覽節點共 263 個,`#` 鍵只有詞元節點 召喚,具名查詢 237,灰字只有那兩個。併後瀏覽器:LP・ダメージ 859、規則改寫 1274、表示形式 265,展開 規則改寫 只有 にする 沒有數字。
 
 ### 真瀏覽器(桌面 1400×900,`python -m http.server` 起 `web/`,Playwright Chrome)
 
@@ -43,7 +51,7 @@ console 只有 `favicon.ico` 404 一筆,pageerror 0。
 | 操作 | 看到什麼 |
 |---|---|
 | 開頁 | 13 個大類全收合;條件列 AND 區提示「從左邊選條件」,結果區「從左邊選條件,結果會立刻出現」;沒有搜尋鈕、含代價、動作對象 |
-| 點大類 召喚 | 只展開,網址與結果不變;子節點含詞元節點 召喚 178,表示形式、規則改寫沒有張數(純導覽補的節點在其下) |
+| 點大類 召喚 | 只展開,網址與結果不變;子節點含詞元節點 召喚 178 |
 | 點 特殊召喚←墓地 | 標籤「特殊召喚 從 墓地」,共 1,228 張(目錄同),列標「已用」,網址是葉路徑 |
 | 點 破壊 的 − | 標籤「沒有 破壊」,共 1,024 張,網址 `,-破壊`;再點一次已有的列不多一張 |
 | × | 回 1,228 張 |

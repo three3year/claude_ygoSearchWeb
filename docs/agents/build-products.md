@@ -5,6 +5,7 @@
 | 檔 | 重生指令 |
 |---|---|
 | `data/action_frames.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → catalog_hits.py → export_frames.py 三步;框列匯出與具名查詢目錄欄,ADR-0018,規格 3 的索引建置讀它;catalog_hits.py 另寫 gitignore 的 `frame_queries.json`——每框命中的具名查詢,拆解頁與 LLM 抽驗讀) |
+| `script/web/predicate-fixture-encoded.json` | `python script/web/encode_fixture.py`(參考評估器夾具 `predicate-fixture.json` 的編碼形狀,用建置的同一支編碼函式,值域讀 `data/action_frames.json`;node 測試 `predicate.test.js` 讀它。夾具、編碼或值域改了沒重生,`test_webindex.EncodedFixtureTest` 會失敗) |
 | `.scratch/named-queries/tools/results/compare-v4.md` | `python .scratch/named-queries/tools/compare_dry_run.py`(目錄張數對照編譯試跑,逐葉歸因;要先有 frames.json 與 data/action_frames.json) |
 | `data/action_categories.json` | `python .scratch/effect-tokenize/run_chain.py`(或 frames.py → categories.py → export_categories.py 三步;過渡期照產,規格 3 切換後刪) |
 | `.scratch/effect-tokenize/report.md` | `python .scratch/effect-tokenize/report.py` |

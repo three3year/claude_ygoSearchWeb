@@ -211,6 +211,125 @@ function actRows(c, rows, act) {
   return rows.filter((i, k) => anyIn(has[k], act.union));
 }
 
+/* [[框架述詞]]的評估(語意同參考評估器 predicate.py):一個述詞編成一組欄檢查,掃框表得一張
+   命中表(框號 → 中不中),逐卡只查表。框元組的欄序與碼的定義見 frameindex.py。 */
+const FRAMES = window.FRAMES || [];
+const FRAME_VOCAB = VOCAB.frame || { lemmas: [], heads: [], domains: {} };
+
+const SLOT_PATIENT = 11, SLOT_GOAL = 12;
+const SEG_HEAD = 0, SEG_HEAD_KIND = 1, SEG_QUANTITY = 2, SEG_MODIFIERS = 3;
+
+function enumCodes(field, values) {
+  const domain = FRAME_VOCAB.domains[field] || [];
+  return new Set(values.map(v => domain.indexOf(v) + 1).filter(Boolean));
+}
+
+function scalarCheck(slot, field) {
+  return values => {
+    const codes = enumCodes(field, values);
+    return f => codes.has(f[slot]);
+  };
+}
+
+function lemmaCheck(values) {
+  const codes = new Set(values.map(v => FRAME_VOCAB.lemmas.indexOf(v)));
+  codes.delete(-1);
+  return f => codes.has(f[0]);
+}
+
+/* 區域項沒寫玩家就是不看玩家:展開成該區域的每個玩家的區域對。 */
+function regionCheck(slot) {
+  return items => {
+    const players = FRAME_VOCAB.domains.玩家 || [], zones = FRAME_VOCAB.domains.區域 || [];
+    const codes = new Set();
+    for (const [player, zone] of items) {
+      const z = zones.indexOf(zone);
+      if (z < 0) continue;
+      players.forEach((p, n) => {
+        if (player == null || player === p) codes.add(n * zones.length + z);
+      });
+    }
+    return f => (f[slot] || []).some(pair => codes.has(pair));
+  };
+}
+
+/* 中心詞比尾綴:モンスター 中 効果モンスター、不中 モンスターカード。 */
+function headCheck(slot) {
+  return values => {
+    const codes = new Set();
+    FRAME_VOCAB.heads.forEach((head, n) => {
+      if (values.some(v => head.endsWith(v))) codes.add(n);
+    });
+    return f => (f[slot] || []).some(seg => codes.has(seg[SEG_HEAD]));
+  };
+}
+
+function segmentCheck(segSlot, field) {
+  return values => {
+    const codes = enumCodes(field, values);
+    return f => (f[SLOT_PATIENT] || []).some(seg => codes.has(seg[segSlot]));
+  };
+}
+
+function modifierCheck(values) {
+  let mask = 0;
+  enumCodes('修飾語類', values).forEach(code => { mask |= 1 << (code - 1); });
+  return f => (f[SLOT_PATIENT] || []).some(seg => (seg[SEG_MODIFIERS] & mask) !== 0);
+}
+
+const FRAME_CHECKS = new Map([
+  ['詞元', lemmaCheck],
+  ['位置', scalarCheck(1, '位置')],
+  ['極性', scalarCheck(2, '極性')],
+  ['態', scalarCheck(3, '態')],
+  ['否定形', scalarCheck(4, '否定形')],
+  ['施事者', scalarCheck(5, '施事者')],
+  ['方式類', scalarCheck(6, '方式類')],
+  ['動作對象', scalarCheck(7, '動作對象')],
+  ['來源', regionCheck(8)],
+  ['目的', regionCheck(9)],
+  ['所在', regionCheck(10)],
+  ['受事者中心詞', headCheck(SLOT_PATIENT)],
+  ['目的中心詞', headCheck(SLOT_GOAL)],
+  ['中心詞類', segmentCheck(SEG_HEAD_KIND, '中心詞類')],
+  ['數量類', segmentCheck(SEG_QUANTITY, '數量類')],
+  ['修飾語類', modifierCheck],
+]);
+
+/* 述詞 → 命中表。欄間 AND、同欄多值 OR,都在同一框上;值不在表內編不出碼,自然不中。 */
+function predHitTable(pred) {
+  const checks = Object.keys(pred).map(field => {
+    if (!FRAME_CHECKS.has(field)) throw new Error('不認得的欄:' + field);
+    const value = pred[field];
+    return FRAME_CHECKS.get(field)(typeof value === 'string' ? [value] : value);
+  });
+  const table = new Uint8Array(FRAMES.length);
+  FRAMES.forEach((f, n) => { if (checks.every(check => check(f))) table[n] = 1; });
+  return table;
+}
+
+function predTables(preds) {
+  return (preds || []).map(predHitTable);
+}
+
+function predOnCard(c, table) {
+  return c.fr.some(ids => ids.some(id => table[id]));
+}
+
+/* 包含述詞:每個都要在卡上有命中框(卡層 AND,可跨句);命中句是命中框所在句的聯集。 */
+function predRows(c, tables) {
+  const met = tables.map(() => false);
+  const rows = [];
+  c.fr.forEach((ids, i) => {
+    let hit = false;
+    tables.forEach((table, k) => {
+      if (ids.some(id => table[id])) { met[k] = true; hit = true; }
+    });
+    if (hit) rows.push(i);
+  });
+  return met.every(Boolean) ? rows : [];
+}
+
 function runQuery(db, q) {
   q = q || {};
   const name = term(q.name);
@@ -229,16 +348,24 @@ function runQuery(db, q) {
   if (actInc) {
     marks.push({ type: 'act', leaves: Array.from(act.union), cost: act.cost, mode: act.mode });
   }
+  const predInc = predTables(q.preds && q.preds.inc);
+  const predEx = predTables(q.preds && q.preds.ex);
+  const hasPreds = predInc.length > 0 || predEx.length > 0;
   const cards = [];
   for (const c of db) {
     if (name && !nameHit(c, name, q.nameLang)) continue;
     if (code && !(codeOk && idHit(c, code))) continue;
     if (!paramHit(c, q)) continue;
     if (act && (!c.ae || actExcluded(c, act))) continue;
+    if (hasPreds && (!c.fr || predEx.some(table => predOnCard(c, table)))) continue;
     let rows = null;
     if (marks.length) {
       rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
       if (actInc) rows = actRows(c, rows, act);
+      if (!rows.length) continue;
+    }
+    if (predInc.length) {
+      rows = predRows(c, predInc);
       if (!rows.length) continue;
     }
     cards.push({ card: c, rows });

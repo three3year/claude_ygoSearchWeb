@@ -9,8 +9,11 @@ fixture 於測試內程式化建立,不碰網路也不碰真實資料檔(先例:
 """
 import hashlib
 import json
+import sys
 import unittest
 
+import encode_fixture
+import frameindex
 import vocab
 from frameindex import encode_frame, frame_tables
 from webindex import build_index, serialize_index
@@ -1425,6 +1428,62 @@ class FramesInIndexTest(unittest.TestCase):
         with_frames, _ = self.build()
         stripped = [{k: v for k, v in e.items() if k not in ("fr", "fl")} for e in with_frames["cards"]]
         self.assertEqual(stripped, without["cards"])
+
+
+class EncodedFixtureTest(unittest.TestCase):
+    """編碼夾具與參考評估器的夾具同步(predicate-index 票 03;規格 Testing Decisions「夾具」)。
+
+    參考評估器的夾具是匯出形狀,JS 評估器讀編碼形狀;編碼夾具由建置的同一支編碼函式產生、入版控。
+    這裡重新產生一次比對,所以夾具或編碼任一邊改了沒重生,這裡先紅。分詞鏈的 `predicate` 只有測試 import:
+    `script/web` 的程式不 import 分詞鏈,框列鍵的對照才抄了一份,由這裡守它不走樣。
+    """
+
+    @staticmethod
+    def _source_fixture():
+        with open(encode_fixture.DEFAULT_SOURCE, encoding="utf-8") as f:
+            return json.load(f)
+
+    @staticmethod
+    def _domains():
+        with open(encode_fixture.DEFAULT_EXPORT, encoding="utf-8") as f:
+            return json.load(f)["值域"]
+
+    def test_committed_fixture_matches_the_reference_fixture(self):
+        with open(encode_fixture.DEFAULT_OUT, encoding="utf-8") as f:
+            committed = json.load(f)
+        self.assertEqual(committed, encode_fixture.encoded_fixture(self._source_fixture(), self._domains()),
+                         "編碼夾具過時,重生:python script/web/encode_fixture.py")
+
+    def test_fixture_keeps_every_reference_case(self):
+        """規格的三段都要到得了 JS:96 例、3 雜湊、小語料張數,期望值原樣帶過去。"""
+        source = self._source_fixture()
+        encoded = encode_fixture.encoded_fixture(source, self._domains())
+        self.assertEqual(len(encoded["例子"]), 96)
+        self.assertEqual(encoded["雜湊"], source["雜湊"])
+        self.assertEqual(encoded["張數"]["例子"], source["張數"]["例子"])
+        self.assertEqual(set(encoded["框列"]), set(source["框列"]))
+        self.assertEqual([ex["命中"] for ex in encoded["例子"]], [ex["命中"] for ex in source["例子"]])
+
+    def test_encoded_rows_use_the_tables_the_fixture_carries(self):
+        """編碼夾具自帶 VOCAB.frame 形狀的表:元組裡的詞元碼解得回原框列。"""
+        source = self._source_fixture()
+        encoded = encode_fixture.encoded_fixture(source, self._domains())
+        for name, row in source["框列"].items():
+            self.assertEqual(encoded["vocab"]["lemmas"][encoded["框列"][name][0]], row["action"])
+        self.assertEqual(encoded["vocab"]["domains"], self._domains())
+
+    def test_frame_keys_copy_stays_equal_to_the_reference_evaluator(self):
+        """frameindex 的框列鍵 ↔ 述詞欄是 predicate.EXPORT_PATH 的第二份,兩邊要相同。"""
+        sys.path.append(encode_fixture.CHAIN_DIR)   # 接在後面:分詞鏈有 tokenize.py,不能蓋掉標準庫
+        import predicate
+        paths = predicate.EXPORT_PATH
+        self.assertEqual({field: (key,) for key, field in frameindex.SCALAR_KEYS},
+                         {field: path for field, path in paths.items()
+                          if len(path) == 1 and field != frameindex.FIELD_LEMMA})
+        self.assertEqual({field: ("regions", key) for key, field in frameindex.REGION_KEYS},
+                         {field: path for field, path in paths.items() if path[0] == "regions"})
+        self.assertEqual({field: ("phrases", key, "head") for key, field in frameindex.PHRASE_KEYS},
+                         {field: path for field, path in paths.items() if path[-1] == "head"})
 
 
 if __name__ == "__main__":

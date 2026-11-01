@@ -181,6 +181,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `.scratch/effect-tokenize/patient.py` | 動作對象判定:動作框架 → 此卡/非此卡/皆非(類別匯出呼叫) |
 | `script/web/frontend_harness.js` | 接縫 3 的沙箱載入器(`node:vm` 依 index.html 的順序載入真實前端程式碼) |
 | `script/web/engine.test.js` | 前端查詢引擎的接縫測試(`node:test`,合成資料集) |
+| `script/web/predicate.test.js` | 述詞評估器的測試:編碼夾具、合成例子、真 data.js 對匯出檔的全語料對照 |
+| `script/web/encode_fixture.py` | 參考評估器夾具 → 編碼夾具 `predicate-fixture-encoded.json` |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
 | `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |
 | `data/action_categories.json` | 動作類別匯出檔(分詞鏈產生、入版控;一句一行) |

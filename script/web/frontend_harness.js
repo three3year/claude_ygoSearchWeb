@@ -95,9 +95,9 @@ const DRIVER = `
 
 /**
  * 載入前端程式碼,回傳沙箱。
- * fixture:{ cards, vocab, meta } —— 合成的 window.CARD_DATA / VOCAB / META。
+ * fixture:{ cards, vocab, meta, frames } —— 合成的 window.CARD_DATA / VOCAB / META / FRAMES。
  */
-function load({ cards = [], vocab = {}, meta = {} } = {}) {
+function load({ cards = [], vocab = {}, meta = {}, frames = [] } = {}) {
   const sandbox = {
     console, setTimeout, clearTimeout,
     document: {
@@ -116,6 +116,7 @@ function load({ cards = [], vocab = {}, meta = {} } = {}) {
   sandbox.CARD_DATA = cards;
   sandbox.VOCAB = vocab;
   sandbox.META = meta;
+  sandbox.FRAMES = frames;
   vm.createContext(sandbox);
   for (const src of scriptSrcs()) {
     if (src === DATA) continue;
@@ -124,6 +125,17 @@ function load({ cards = [], vocab = {}, meta = {} } = {}) {
   }
   vm.runInContext(DRIVER, sandbox, { filename: '__driver__' });
   return sandbox;
+}
+
+/** 真 data.js 的內容 → load 吃的 fixture(全語料對照用;檔案不在回 null,測試自己略過並印原因) */
+function realData() {
+  const file = path.join(WEB, DATA);
+  if (!fs.existsSync(file)) return null;
+  const box = {};
+  box.window = box;
+  vm.createContext(box);
+  vm.runInContext(fs.readFileSync(file, 'utf8'), box, { filename: DATA });
+  return { cards: box.CARD_DATA, vocab: box.VOCAB, meta: box.META, frames: box.FRAMES };
 }
 
 /** 接縫 3:查詢條件 → [{ id, rows }],rows 是該卡命中的效果句索引(沒有句層條件時為 null) */
@@ -259,7 +271,7 @@ function cardHtmlHl(sandbox, entry, marks) {
   return sandbox.__cardHtmlHl(JSON.stringify({ entry, marks }));
 }
 
-module.exports = { load, search, ids, marks, axes,
+module.exports = { load, realData, search, ids, marks, axes,
                    optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml,

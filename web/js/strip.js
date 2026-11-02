@@ -55,52 +55,67 @@ function zoneHtml(zone, html) {
     html || `<span class="strip-hint">${esc(HINTS[zone])}</span>`}</div></div>`;
 }
 
-/* 鎖住的那顆亮著但不能按(drawer-values 規格條件列與抽屜段)。 */
-const chipHtml = (value, on, locked) =>
-  `<button type="button" class="drawer-chip${on ? ' on' : ''}" data-act="toggle" data-v="${esc(value)}"${
-    locked ? ' disabled title="至少要留一個"' : ''}>${esc(value)}</button>`;
+/* 選值鈕的狀態 → 樣式與提示(drawer-values 規格條件列與抽屜段):鎖住亮著但不能按,灰不能按;
+   有提示的就是不能按的。 */
+const CHIP_CLASS = { 亮: ' on', 鎖住: ' on', 可按: '', 灰: '' };
+const CHIP_HINT = { 鎖住: '至少要留一個', 灰: '目前條件下沒有結果' };
+
+function chipHtml({ value, state }) {
+  const hint = CHIP_HINT[state];
+  return `<button type="button" class="drawer-chip${CHIP_CLASS[state]}" data-act="toggle" data-v="${esc(value)}"${
+    hint ? ` disabled title="${esc(hint)}"` : ''}>${esc(value)}</button>`;
+}
+
+function chipsHtml(tag, option) {
+  return `<div class="drawer-chips">${option.values.map(chipHtml).join('')}</div>`;
+}
 
 function itemsHtml(tag, field, text) {
   return `<div class="drawer-chips">${Cond.values(tag, field).map((item, i) =>
     `<span class="drawer-item">${esc(text(item))}<button type="button" class="strip-x" data-act="drop" data-i="${i}" title="刪除">×</button></span>`).join('')}</div>`;
 }
 
-function regionHtml(tag, field, editor) {
+function regionHtml(tag, option) {
   const player = p => `<option value="${esc(p || '')}">${esc(p || '不限玩家')}</option>`;
-  return `${itemsHtml(tag, field, item => (item[0] || '不限') + '・' + item[1])}
-    <div class="drawer-add"><select data-role="player">${editor.players.map(player).join('')}</select>
+  return `${itemsHtml(tag, option.field, item => (item[0] || '不限') + '・' + item[1])}
+    <div class="drawer-add"><select data-role="player">${option.players.map(player).join('')}</select>
     <select data-act="add-region"><option value="">+ 區域</option>${
-      editor.zones.map(z => `<option>${esc(z)}</option>`).join('')}</select></div>`;
+      option.zones.map(z => `<option>${esc(z)}</option>`).join('')}</select></div>`;
 }
 
-function textHtml(tag, field, editor) {
-  const id = 'drawerList' + field;
-  return `${itemsHtml(tag, field, String)}
+function textHtml(tag, option) {
+  const id = 'drawerList' + option.field;
+  return `${itemsHtml(tag, option.field, String)}
     <div class="drawer-add"><input list="${esc(id)}" data-act="add-text" placeholder="中心詞(尾綴比對)"></div>
-    <datalist id="${esc(id)}">${editor.candidates.map(w => `<option value="${esc(w)}">`).join('')}</datalist>`;
+    <datalist id="${esc(id)}">${option.candidates.map(w => `<option value="${esc(w)}">`).join('')}</datalist>`;
 }
 
-function fieldHtml(tag, field) {
-  const editor = Cond.editor(field);
-  const body = editor.kind === 'region' ? regionHtml(tag, field, editor)
-    : editor.kind === 'text' ? textHtml(tag, field, editor)
-    : `<div class="drawer-chips">${editor.values.map(v =>
-        chipHtml(v, Cond.values(tag, field).indexOf(v) >= 0, Cond.locked(tag, field, v))).join('')}</div>`;
-  return `<div class="drawer-field" data-field="${esc(field)}"><div class="drawer-label">${esc(field)}</div>${body}</div>`;
+/* 抽屜選項一欄的種類 → 那一欄的畫法。 */
+const FIELD_BODY = { values: chipsHtml, region: regionHtml, text: textHtml };
+
+function fieldHtml(tag, option) {
+  return `<div class="drawer-field" data-field="${esc(option.field)}"><div class="drawer-label">${
+    esc(option.field)}</div>${FIELD_BODY[option.kind](tag, option)}</div>`;
+}
+
+/* 常用欄在抽屜頭下面直接接,不畫小標;其他組畫小標。組沒有欄時抽屜選項不列它,小標也不畫。 */
+const PLAIN_GROUP = '常用';
+
+function groupHtml(tag, { group, fields }) {
+  const head = group === PLAIN_GROUP ? '' : `<div class="drawer-group">${esc(group)}</div>`;
+  return head + fields.map(option => fieldHtml(tag, option)).join('');
 }
 
 function drawerHtml(tag) {
   const from = Cond.editedFrom(tag);
   const seg = (label, ex) => `<button type="button" class="${tag.ex === ex ? 'on' + (ex ? ' ex' : '') : ''}" data-act="mode" data-ex="${ex ? 1 : 0}">${label}</button>`;
-  const groups = Cond.drawerGroups();
-  const fields = list => list.map(f => fieldHtml(tag, f)).join('');
   return `<div class="drawer-head"><span class="drawer-name${Cond.named(tag) ? ' named' : ''}">${esc(Cond.sentence(tag))}</span>
       <span class="drawer-seg">${seg('包含', false)}${seg('排除', true)}</span>
       <button type="button" class="strip-x" data-act="close" title="關閉">✕</button></div>
     <div class="drawer-note"><span>${handlers.countOf(tag).toLocaleString()} 張</span>${from ? `<span>改自 ${esc(from)}</span>
       <button type="button" class="drawer-btn" data-act="restore">還原</button>` : ''}
       <button type="button" class="drawer-btn drawer-remove" data-act="remove">刪除這張</button></div>
-    ${fields(groups.常用)}<div class="drawer-group">進階</div>${fields(groups.進階)}`;
+    ${Cond.drawerOptions(tag).map(group => groupHtml(tag, group)).join('')}`;
 }
 
 /* 整個重畫:捲動位置與正在打字的中心詞框要留著,加完一個詞可以接著打下一個。 */

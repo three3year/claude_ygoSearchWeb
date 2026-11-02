@@ -763,6 +763,8 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
 .drawer-chip.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
 /* 鎖住:亮著但按不掉(位置、極性最後一顆)。 */
 .drawer-chip.on:disabled { cursor: not-allowed; border-style: dashed; }
+/* 灰:目前條件下沒有結果,按不下去(drawer-values 規格)。 */
+.drawer-chip:disabled:not(.on) { cursor: not-allowed; opacity: .35; }
 .drawer-item {
   display: inline-flex; align-items: center; gap: 3px;
   padding: 0 3px 0 9px; font-size: 12px; background: var(--accent-dim); border-radius: 12px;

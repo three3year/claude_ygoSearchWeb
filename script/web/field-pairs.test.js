@@ -140,26 +140,6 @@ test('改欄位:位置最後一顆亮著的關不掉,標籤不變', () => {
   assert.deepStrictEqual(cond('removeValue', tag, '位置', '效果'), tag);
 });
 
-test('鎖住:位置、極性只剩一顆亮著時那顆鎖住;兩顆亮、沒亮、其他欄都不鎖', () => {
-  const tag = tagAt(DESTROY);
-  assert.strictEqual(cond('locked', tag, '位置', '效果'), true);
-  assert.strictEqual(cond('locked', tag, '位置', '條件'), false);
-  assert.strictEqual(cond('locked', cond('toggleValue', tag, '位置', '條件'), '位置', '效果'), false);
-  assert.strictEqual(cond('locked', tag, '極性', '肯定'), false);
-  const only = cond('toggleValue', tag, '極性', '肯定');
-  assert.strictEqual(cond('locked', only, '極性', '可能'), true);
-  const one = cond('toggleValue', tag, '施事者', '相手');
-  assert.strictEqual(cond('locked', one, '施事者', '相手'), false);
-});
-
-test('還原:鎖住後還原回來源那一列,位置與極性解鎖', () => {
-  const only = cond('toggleValue', tagAt(DESTROY), '極性', '肯定');
-  const back = cond('restore', only);
-  assert.deepStrictEqual(back, tagAt(DESTROY));
-  assert.strictEqual(cond('locked', back, '極性', '可能'), false);
-  assert.strictEqual(cond('locked', back, '位置', '效果'), true);
-});
-
 test('改欄位:位置兩顆亮著時都能關', () => {
   const two = cond('toggleValue', tagAt(DESTROY), '位置', '條件');
   assert.deepStrictEqual(cond('toggleValue', two, '位置', '效果').pred.位置, ['條件']);

@@ -2,7 +2,8 @@
 
 /* 條件模型(predicate-ui 規格 4 票 02 起,票 05 加左側條件標籤與 OR 區;純函式,不碰 DOM)。
    接縫:目錄列 → 標籤;左側條件 → 標籤;兩區 + 左側條件 → 引擎查詢(含 q.or);標籤 → 具名查詢、
-   葉路徑、短句;引擎查詢 → 句尾標籤的短句;抽屜的欄位與值、改欄位(票 04);標籤 ⇄ 欄位對
+   葉路徑、短句;引擎查詢 → 句尾標籤的短句;抽屜的欄位與值、改欄位(票 04);標籤 → 抽屜選項
+   (drawer-values 票 02:每欄列哪些值、各是亮、鎖住、可按或灰);標籤 ⇄ 欄位對
    (票 04,分隔與轉義在 Hash,值域在這裡)。
    動作標籤 `{ex, pred, origin}`:ex 是排除;pred 是送進引擎的述詞,一定帶位置(引擎沒寫位置就
    三個位置都看,見 predicate-index 票 05);origin 是產生它的目錄列名字。
@@ -279,15 +280,17 @@ function drawerGroups() {
   return { 常用: FIELD_GROUPS.常用.filter(f => f !== '詞元'), 進階: FIELD_GROUPS.進階 };
 }
 
+const kindOf = field => (REGION_FIELDS.indexOf(field) >= 0 ? 'region'
+  : HEAD_FIELDS.indexOf(field) >= 0 ? 'text' : 'values');
+
 /* 這一欄在抽屜怎麼選:封閉值、玩家+區域、或自由輸入加候選。 */
 function editor(field) {
-  if (REGION_FIELDS.indexOf(field) >= 0) {
-    return { kind: 'region', players: [null].concat(DOMAINS.玩家 || []), zones: DOMAINS.區域 || [] };
+  const kind = kindOf(field);
+  if (kind === 'region') {
+    return { kind, players: [null].concat(DOMAINS.玩家 || []), zones: DOMAINS.區域 || [] };
   }
-  if (HEAD_FIELDS.indexOf(field) >= 0) {
-    return { kind: 'text', candidates: (FRAME.heads || []).slice(0, HEAD_CANDIDATES) };
-  }
-  return { kind: 'values', values: DOMAINS[field] || [] };
+  if (kind === 'text') return { kind, candidates: (FRAME.heads || []).slice(0, HEAD_CANDIDATES) };
+  return { kind, values: DOMAINS[field] || [] };
 }
 
 const sameItem = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -348,6 +351,48 @@ function toggleValue(tag, field, item) {
 function locked(tag, field, item) {
   const list = values(tag, field);
   return LOCKED_FIELDS.indexOf(field) >= 0 && list.length === 1 && sameItem(list[0], item);
+}
+
+/* 抽屜選項裡值的狀態(drawer-values 規格條件模型的介面段):亮、亮且鎖住、可按、灰;隱藏的值不列。 */
+const ON = '亮', LOCKED = '鎖住', OPEN = '可按', GRAY = '灰';
+
+/* 點選鈕的欄(drawer-values 規格判定段)。亮著的一律列出,含詞元沒有的(網址帶進來);其餘的
+   隱藏只看詞元的框(三個位置、三種極性都算),灰看其他欄成立的框。判定看述詞,不看包含、排除。
+   引擎在呼叫時才讀,cond.js 載入得比 engine.js 早。 */
+function chipOptions(tag, field) {
+  const on = values(tag, field);
+  const seen = Engine.fieldValues({ 詞元: tag.pred.詞元 }, field);
+  const hits = Engine.fieldValues(tag.pred, field);
+  const state = value => (on.indexOf(value) < 0 ? (hits.indexOf(value) >= 0 ? OPEN : GRAY)
+    : locked(tag, field, value) ? LOCKED : ON);
+  const list = (DOMAINS[field] || []).filter(v => on.indexOf(v) >= 0 || seen.indexOf(v) >= 0)
+    .map(value => ({ value, state: state(value) }));
+  return list.length ? { field, kind: 'values', values: list } : null;
+}
+
+/* 區域三欄:玩家與區域照值域全列(票 03 改成依詞元與其他欄)。 */
+function regionOptions(tag, field) {
+  return Object.assign({ field }, editor(field));
+}
+
+/* 中心詞兩欄:候選照中心詞表最常見的(票 04 改成其他欄成立的框上出現過的全部);沒有候選、
+   也沒有已加入的詞時不列。 */
+function textOptions(tag, field) {
+  const option = Object.assign({ field }, editor(field));
+  return option.candidates.length || values(tag, field).length ? option : null;
+}
+
+/* 欄的種類 → 抽屜選項的那一欄;回 null 是這一欄沒有值可列,不列。 */
+const FIELD_OPTIONS = { values: chipOptions, region: regionOptions, text: textOptions };
+
+/* 抽屜選項:[{group, fields: [{field, kind, …}]}];沒有欄的組不列。點選鈕的欄帶 values:
+   [{value, state}];區域欄帶 players、zones;中心詞欄帶 candidates。 */
+function drawerOptions(tag) {
+  const groups = drawerGroups();
+  return Object.keys(groups).map(group => ({
+    group,
+    fields: groups[group].map(field => FIELD_OPTIONS[kindOf(field)](tag, field)).filter(Boolean),
+  })).filter(g => g.fields.length);
 }
 
 function setEx(tag, ex) {
@@ -483,7 +528,7 @@ function hitLabels(q) {
     sideTags, sideZone, moveSide, syncSide, toQuery,
     sentenceParts, sentence, hitLabels, positionPrefix, note, soloQuery,
     toPairs, fromPairs,
-    drawerGroups, editor, values, addValue, removeValue, toggleValue, locked, setEx, editedFrom,
+    drawerGroups, editor, drawerOptions, values, addValue, removeValue, toggleValue, setEx, editedFrom,
     restore,
   });
 })();

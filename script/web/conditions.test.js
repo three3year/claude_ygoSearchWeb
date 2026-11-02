@@ -245,10 +245,10 @@ test('抄本對來源:玩家前綴等於 catalog.PLAYER_LABEL', t => {
 
 test('抄本對來源:區域欄與中心詞欄等於 predicate 的兩張表,抽屜照它選編輯器', t => {
   if (!SOURCE || !realBox) { t.skip(SKIP_SOURCE); return; }
-  const groups = harness.cond(realBox, 'drawerGroups');
   const kinds = {};
-  for (const field of groups.常用.concat(groups.進階)) {
-    kinds[field] = harness.cond(realBox, 'editor', field).kind;
+  for (const row of realData.vocab.catalog.filter(r => r.predicate)) {
+    const tag = harness.cond(realBox, 'tagAt', row.path.join('›'), false);
+    harness.cond(realBox, 'drawerOptions', tag).forEach(g => g.fields.forEach(f => { kinds[f.field] = f.kind; }));
   }
   const fieldsOf = kind => Object.keys(kinds).filter(f => kinds[f] === kind).sort();
   assert.deepStrictEqual(fieldsOf('region'), SOURCE.regionFields.slice().sort());

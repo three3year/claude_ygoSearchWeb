@@ -1,7 +1,7 @@
 'use strict';
 
 const Engine = (() => {
-const { VOCAB } = Util;
+const { VOCAB, asList } = Util;
 
 const DIGITS = /^\d+$/;
 
@@ -182,6 +182,8 @@ function enumCodes(field, values) {
   return new Set(values.map(v => domain.indexOf(v) + 1).filter(Boolean));
 }
 
+const domainValue = field => code => FRAME_VOCAB.domains[field][code - 1];
+
 const segsOf = f => f[SLOT_PATIENT_PHRASE] || [];
 
 function scalarField(slot, field) {
@@ -191,7 +193,7 @@ function scalarField(slot, field) {
       return f => codes.has(f[slot]);
     },
     codes: f => (f[slot] ? [f[slot]] : []),
-    value: code => FRAME_VOCAB.domains[field][code - 1],
+    value: domainValue(field),
   };
 }
 
@@ -221,7 +223,6 @@ function regionField(slot) {
     },
     codes: f => f[slot] || [],
     value: code => [players()[Math.floor(code / zones().length)], zones()[code % zones().length]],
-    rank: code => (code % zones().length) * players().length + Math.floor(code / zones().length),
   };
 }
 
@@ -246,19 +247,21 @@ function segmentField(segSlot, field) {
       return f => someInSlot(f, SLOT_PATIENT_PHRASE, seg => codes.has(seg[segSlot]));
     },
     codes: f => segsOf(f).map(seg => seg[segSlot]).filter(Boolean),
-    value: code => FRAME_VOCAB.domains[field][code - 1],
+    value: domainValue(field),
   };
 }
+
+const modifierBit = code => 1 << (code - 1);
 
 const MODIFIER_FIELD = {
   check: values => {
     let mask = 0;
-    enumCodes('修飾語類', values).forEach(code => { mask |= 1 << (code - 1); });
+    enumCodes('修飾語類', values).forEach(code => { mask |= modifierBit(code); });
     return f => someInSlot(f, SLOT_PATIENT_PHRASE, seg => (seg[SEG_MODIFIERS] & mask) !== 0);
   },
   codes: f => segsOf(f).flatMap(seg => FRAME_VOCAB.domains.修飾語類
-    .map((_, n) => n + 1).filter(code => (seg[SEG_MODIFIERS] & (1 << (code - 1))) !== 0)),
-  value: code => FRAME_VOCAB.domains.修飾語類[code - 1],
+    .map((_, n) => n + 1).filter(code => (seg[SEG_MODIFIERS] & modifierBit(code)) !== 0)),
+  value: domainValue('修飾語類'),
 };
 
 /* 述詞欄 → 欄的讀法(16 欄是參考評估器的 FIELDS,2026-10-31 GLOSSARY「框架述詞」條;不認得的欄丟錯) */
@@ -286,8 +289,6 @@ function frameField(field) {
   return FRAME_FIELDS.get(field);
 }
 
-const asList = value => (typeof value === 'string' ? [value] : value);
-
 function frameChecks(pred, skip) {
   return Object.keys(pred).filter(field => field !== skip)
     .map(field => frameField(field).check(asList(pred[field])));
@@ -300,22 +301,30 @@ function predHitTable(pred) {
   return table;
 }
 
-let framesByLemma = null;
+function indexFramesByLemma(frames) {
+  const index = new Map();
+  frames.forEach((f, n) => {
+    const list = index.get(f[SLOT_LEMMA]);
+    if (list) list.push(n);
+    else index.set(f[SLOT_LEMMA], [n]);
+  });
+  return index;
+}
+
+function onFirstUse(build) {
+  let value = null;
+  return () => value || (value = build());
+}
+
+const framesByLemma = onFirstUse(() => indexFramesByLemma(FRAMES));
 
 function lemmaFrames(lemmas) {
-  if (!framesByLemma) {
-    framesByLemma = new Map();
-    FRAMES.forEach((f, n) => {
-      const list = framesByLemma.get(f[SLOT_LEMMA]);
-      if (list) list.push(n);
-      else framesByLemma.set(f[SLOT_LEMMA], [n]);
-    });
-  }
-  return asList(lemmas).flatMap(lemma => framesByLemma.get(FRAME_VOCAB.lemmas.indexOf(lemma)) || []);
+  return asList(lemmas).flatMap(lemma => framesByLemma().get(FRAME_VOCAB.lemmas.indexOf(lemma)) || []);
 }
 
 /* 述詞其他欄都成立的框上,這一欄出現過的值(drawer-values 規格判定段:抽屜的隱藏與灰色)。
-   只掃述詞詞元自己的框;值依值域順序,中心詞依中心詞表順序。沒有框表或述詞沒有詞元時回空。 */
+   只掃述詞詞元自己的框;值依碼序:封閉值依值域、中心詞依中心詞表、區域項先玩家後區域。
+   沒有框表或述詞沒有詞元時回空。 */
 function fieldValues(pred, field) {
   if (!FRAME_VOCAB || pred.詞元 == null) return [];
   const spec = frameField(field);
@@ -325,8 +334,7 @@ function fieldValues(pred, field) {
     const f = FRAMES[n];
     if (checks.every(check => check(f))) spec.codes(f).forEach(code => seen.add(code));
   }
-  const rank = spec.rank || (code => code);
-  return Array.from(seen).sort((a, b) => rank(a) - rank(b)).map(spec.value);
+  return Array.from(seen).sort((a, b) => a - b).map(spec.value);
 }
 
 function predTables(preds) {

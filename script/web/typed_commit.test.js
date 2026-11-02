@@ -19,7 +19,7 @@ const POLAR = ['肯定', '可能'];
 const VOCAB = {
   frame: {
     lemmas: ['破壊', '除外'],
-    heads: ['モンスター', '甲', '丁', '罠'],
+    heads: ['モンスター', '甲', '丁', '罠', '丙'],
     domains: {
       位置: ['代價', '效果', '條件'], 極性: ['肯定', '否定', '可能'], 動作對象: ['此卡', '非此卡'],
       數量類: ['定數'], 中心詞類: ['卡'], 修飾語類: ['種族'],
@@ -31,10 +31,11 @@ const VOCAB = {
   ],
 };
 const FIELD = '受事者中心詞';
-const seg = word => [VOCAB.frame.heads.indexOf(word), 0, 0, 0];
 const FRAMES = [
-  [0, 2, 1, 0, 0, 0, 0, 2, [], [], [], ['モンスター', '甲', '丁'].map(seg)],
-  [1, 2, 1, 0, 0, 0, 0, 0, [], [], [], [seg('罠')]],
+  harness.frame(VOCAB.frame, { 詞元: '破壊', 位置: '效果', 極性: '肯定', 動作對象: '非此卡',
+    受事者中心詞: ['モンスター', '甲', '丁'] }),
+  harness.frame(VOCAB.frame, { 詞元: '破壊', 位置: '效果', 極性: '肯定', 動作對象: '此卡', 受事者中心詞: ['丙'] }),
+  harness.frame(VOCAB.frame, { 詞元: '除外', 位置: '效果', 極性: '肯定', 受事者中心詞: ['罠'] }),
 ];
 
 /* 只帶選擇器比對的假節點:closest 走 parent,matches 看建立時給的選擇器。 */
@@ -186,5 +187,14 @@ test('框裡是清單外的字時點抽屜的鈕:字被清掉,鈕照樣生效', 
   assert.strictEqual(input.value, '');
   assert.strictEqual(sentences()[0].includes('乙'), false);
   assert.strictEqual(sentences()[0].includes('非此卡'), true);
+  assert.strictEqual(box.__edits.length, 1);
+});
+
+test('框裡的字收進來讓鈕變灰:鈕的動作不做,只收字', () => {
+  const { box, fire, ev, typing, chip, sentences } = page();
+  typing('丙');
+  fire('condDrawer.click', ev(chip()));
+  assert.strictEqual(sentences()[0].includes('丙'), true);
+  assert.strictEqual(sentences()[0].includes('非此卡'), false);
   assert.strictEqual(box.__edits.length, 1);
 });

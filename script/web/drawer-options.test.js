@@ -33,9 +33,7 @@ const FRAME_VOCAB = {
   },
 };
 
-const SCALARS = ['位置', '極性', '態', '否定形', '施事者', '方式類', '動作對象'];
-const frame = (lemma, fields) => [FRAME_VOCAB.lemmas.indexOf(lemma)].concat(SCALARS.map(field =>
-  FRAME_VOCAB.domains[field].indexOf(fields[field]) + 1));
+const frame = (詞元, fields) => harness.frame(FRAME_VOCAB, { 詞元, ...fields });
 
 const FRAMES = [
   frame('破壊', { 位置: '效果', 極性: '肯定', 施事者: '自分', 動作對象: '非此卡', 態: '他動' }),

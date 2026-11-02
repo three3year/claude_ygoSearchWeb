@@ -56,16 +56,25 @@ function zoneHtml(zone, html) {
     html || `<span class="strip-hint">${esc(HINTS[zone])}</span>`}</div></div>`;
 }
 
-const CHIP_CLASS = { 亮: ' on', 鎖住: ' on', 可按: '', 灰: '' };
-const CHIP_HINT = { 鎖住: '至少要留一個', 灰: '目前條件下沒有結果' };
+/* 抽屜選項四種狀態的畫法(drawer-values 規格 Implementation Decisions「抽屜照抽屜選項畫」,2026-11-02)。 */
+const CHIP_LOOK = Object.freeze({
+  [Cond.CHIP.ON]: { class: 'on', hint: '', disabled: false },
+  [Cond.CHIP.LOCKED]: { class: 'on locked', hint: '至少要留一個', disabled: true },
+  [Cond.CHIP.OPEN]: { class: '', hint: '', disabled: false },
+  [Cond.CHIP.GRAY]: { class: 'gray', hint: '目前條件下沒有結果', disabled: true },
+});
 
-function chipHtml({ value, state }) {
-  const hint = CHIP_HINT[state];
-  return `<button type="button" class="drawer-chip${CHIP_CLASS[state]}" data-act="toggle" data-v="${esc(value)}"${
-    hint ? ` disabled title="${esc(hint)}"` : ''}>${esc(value)}</button>`;
+function disabledAttr(state) {
+  const look = CHIP_LOOK[state];
+  return look.disabled ? ` disabled title="${esc(look.hint)}"` : '';
 }
 
-function chipsHtml(tag, option) {
+function chipHtml({ value, state }) {
+  return `<button type="button" class="drawer-chip ${CHIP_LOOK[state].class}" data-act="toggle" data-v="${esc(value)}"${
+    disabledAttr(state)}>${esc(value)}</button>`;
+}
+
+function chipsHtml(option) {
   return `<div class="drawer-chips">${option.values.map(chipHtml).join('')}</div>`;
 }
 
@@ -75,20 +84,20 @@ function itemsHtml(tag, field, text) {
 }
 
 function menuOption(value, label, state, selected) {
-  const gray = state === '灰' ? ` disabled title="${esc(CHIP_HINT.灰)}"` : '';
-  return `<option value="${esc(value)}"${gray}${selected ? ' selected' : ''}>${esc(label)}</option>`;
+  return `<option value="${esc(value)}"${disabledAttr(state)}${selected ? ' selected' : ''}>${esc(label)}</option>`;
 }
 
-function regionHtml(tag, option) {
-  const picked = option.players.find(p => p.value === (pickedPlayers[option.field] || null)) || option.players[0];
+function regionHtml(option, tag) {
+  const playerOf = value => option.players.find(p => p.value === value);
+  const picked = playerOf(pickedPlayers[option.field] || null) || playerOf(null);
   const players = option.players.map(p => menuOption(p.value || '', p.value || '不限玩家', p.state, p === picked));
   const zones = picked.zones.map(z => menuOption(z.value, z.value, z.state, false));
-  return `${itemsHtml(tag, option.field, item => (item[0] || '不限') + '・' + item[1])}
+  return `${itemsHtml(tag, option.field, ([player, zone]) => (player || '不限') + '・' + zone)}
     <div class="drawer-add"><select data-role="player" data-act="pick-player">${players.join('')}</select>
     <select data-act="add-region"><option value="">+ 區域</option>${zones.join('')}</select></div>`;
 }
 
-function textHtml(tag, option) {
+function textHtml(option, tag) {
   const id = 'drawerList' + option.field;
   return `${itemsHtml(tag, option.field, String)}
     <div class="drawer-add"><input list="${esc(id)}" data-act="add-text" placeholder="中心詞(尾綴比對)"></div>
@@ -99,13 +108,11 @@ const FIELD_BODY = { values: chipsHtml, region: regionHtml, text: textHtml };
 
 function fieldHtml(tag, option) {
   return `<div class="drawer-field" data-field="${esc(option.field)}"><div class="drawer-label">${
-    esc(option.field)}</div>${FIELD_BODY[option.kind](tag, option)}</div>`;
+    esc(option.field)}</div>${FIELD_BODY[option.kind](option, tag)}</div>`;
 }
 
-const PLAIN_GROUP = '常用';
-
 function groupHtml(tag, { group, fields }) {
-  const head = group === PLAIN_GROUP ? '' : `<div class="drawer-group">${esc(group)}</div>`;
+  const head = group === Cond.COMMON_GROUP ? '' : `<div class="drawer-group">${esc(group)}</div>`;
   return head + fields.map(option => fieldHtml(tag, option)).join('');
 }
 
@@ -207,6 +214,13 @@ function commitTyped() {
   if (el) el.blur();
 }
 
+/* 框裡的字收進來後抽屜已照新標籤重畫,點下去的鈕要照新的狀態判。 */
+function pressable(tag, field, value) {
+  const option = Cond.fieldOptions(tag, field);
+  const chip = option && option.values.find(v => v.value === value);
+  return !!chip && !CHIP_LOOK[chip.state].disabled;
+}
+
 function onDrawerClick(e) {
   const el = e.target.closest('[data-act]');
   if (!el || el.matches('select, input')) return;
@@ -222,13 +236,13 @@ function onDrawerClick(e) {
     case 'remove': removeAt(openAt); break;
     case 'restore': edit(Cond.restore(tag)); break;
     case 'mode': edit(Cond.setEx(tag, el.dataset.ex === '1')); break;
-    case 'toggle': edit(Cond.toggleValue(tag, field, el.dataset.v)); break;
+    case 'toggle': if (pressable(tag, field, el.dataset.v)) edit(Cond.toggleValue(tag, field, el.dataset.v)); break;
     case 'drop': edit(Cond.removeValue(tag, field, dropped)); break;
   }
 }
 
 function candidatesOf(tag, field) {
-  const option = Cond.drawerOptions(tag).flatMap(g => g.fields).find(f => f.field === field);
+  const option = Cond.fieldOptions(tag, field);
   return option ? option.candidates : [];
 }
 

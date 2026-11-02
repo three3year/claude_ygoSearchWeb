@@ -12,18 +12,19 @@
    狀態 `{and: [標籤…], or: [標籤…], orSide: [鍵…]}` 一律當不可變,改動回傳新狀態;呼叫端用
    tags、tagsIn、sideZone 讀,不直接摸欄。tags 是 AND 區再 OR 區,removeAt、moveAt 的編號照它。 */
 const Cond = (() => {
-const { VOCAB } = Util;
+const { VOCAB, asList } = Util;
 
 /* 目錄路徑的接字:葉路徑、網址 act 的路徑都用它(規格 4 網址段,2026-11-02);Acat 讀這裡。 */
 const SEP = '›';
 
 /* 16 欄的分組與順序(規格 4 條件模型段,2026-11-02;原型 D 版 COMMON、ADVANCED)。
    短句的欄序、之後抽屜與網址的欄序都讀這張。 */
+const COMMON_GROUP = '常用';
 const FIELD_GROUPS = Object.freeze({
-  常用: ['詞元', '位置', '極性', '來源', '目的', '所在', '動作對象', '施事者', '受事者中心詞'],
+  [COMMON_GROUP]: ['詞元', '位置', '極性', '來源', '目的', '所在', '動作對象', '施事者', '受事者中心詞'],
   進階: ['目的中心詞', '數量類', '方式類', '態', '否定形', '中心詞類', '修飾語類'],
 });
-const FIELD_ORDER = FIELD_GROUPS.常用.concat(FIELD_GROUPS.進階);
+const FIELD_ORDER = Object.values(FIELD_GROUPS).flat();
 
 /* 位置預設:效果;效果位 0 張時依序取第一個有張數的(規格 4 裁定,2026-11-02)。 */
 const DEFAULT_POSITION = '效果';
@@ -51,8 +52,6 @@ const GLUE = { 極性: '極性', 來源: '從', 目的: '到', 所在: '在', �
 const ZONE_JA = { 手牌: '手札', 牌組: 'デッキ', 額外牌組: 'EXデッキ', 墓地: '墓地',
                   除外: '除外', 場上: 'フィールド', 靈擺區: 'Pゾーン' };
 const PLAYER_JA = { 自分: '自分', 相手: '相手', お互い: 'お互いの' };
-
-const asList = v => (v == null ? [] : Array.isArray(v) ? v : [v]);
 
 /* 述詞的比對鍵:單值與單元素清單相同、同欄多值不看順序、空欄等於沒寫。
    認具名查詢不看位置,所以改位置還是同一個具名查詢;判「同一張標籤」要連位置一起比。 */
@@ -275,21 +274,12 @@ function soloQuery(tag) {
 }
 
 function drawerGroups() {
-  return { 常用: FIELD_GROUPS.常用.filter(f => f !== '詞元'), 進階: FIELD_GROUPS.進階 };
+  return Object.fromEntries(Object.entries(FIELD_GROUPS)
+    .map(([group, fields]) => [group, fields.filter(f => f !== '詞元')]));
 }
 
 const kindOf = field => (REGION_FIELDS.indexOf(field) >= 0 ? 'region'
   : HEAD_FIELDS.indexOf(field) >= 0 ? 'text' : 'values');
-
-/* 這一欄在抽屜怎麼選與它的值域:封閉值、玩家+區域、或中心詞表裡挑。 */
-function editor(field) {
-  const kind = kindOf(field);
-  if (kind === 'region') {
-    return { kind, players: [null].concat(DOMAINS.玩家 || []), zones: DOMAINS.區域 || [] };
-  }
-  if (kind === 'text') return { kind, candidates: FRAME.heads || [] };
-  return { kind, values: DOMAINS[field] || [] };
-}
 
 const sameItem = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -298,7 +288,7 @@ function orderedRegions(items) {
   const zones = DOMAINS.區域 || [], players = DOMAINS.玩家 || [];
   const valid = it => Array.isArray(it) && zones.indexOf(it[1]) >= 0 &&
     (it[0] === null || players.indexOf(it[0]) >= 0);
-  const rank = it => zones.indexOf(it[1]) * (players.length + 1) + players.indexOf(it[0]) + 1;
+  const rank = ([player, zone]) => zones.indexOf(zone) * (players.length + 1) + players.indexOf(player) + 1;
   const unique = items.filter(valid)
     .filter((it, n, all) => all.findIndex(other => sameItem(other, it)) === n);
   return unique.sort((a, b) => rank(a) - rank(b));
@@ -316,10 +306,12 @@ function orderedValues(field, items) {
 }
 
 /* 極性沒寫是不限,等於三種全亮(drawer-values 規格條件模型段):抽屜畫成全亮,關一顆剩另外兩顆。 */
-function values(tag, field) {
-  if (field === '極性' && !asList(tag.pred.極性).length) return (DOMAINS.極性 || []).slice();
-  return asList(tag.pred[field]);
+function predValues(pred, field) {
+  if (field === '極性' && !asList(pred.極性).length) return (DOMAINS.極性 || []).slice();
+  return asList(pred[field]);
 }
+
+const values = (tag, field) => predValues(tag.pred, field);
 
 function withValues(tag, field, items) {
   const pred = Object.assign({}, tag.pred);
@@ -348,12 +340,18 @@ function locked(tag, field, item) {
   return LOCKED_FIELDS.indexOf(field) >= 0 && list.length === 1 && sameItem(list[0], item);
 }
 
-const ON = '亮', LOCKED = '鎖住', OPEN = '可按', GRAY = '灰';
+/* 抽屜選項的值狀態(drawer-values 規格 Implementation Decisions「抽屜選項」,2026-11-02);Strip 照它畫。 */
+const CHIP = Object.freeze({ ON: '亮', LOCKED: '鎖住', OPEN: '可按', GRAY: '灰' });
+const { ON, LOCKED, OPEN, GRAY } = CHIP;
+
+/* seen 定隱藏,只看詞元;hits 定灰色,看述詞其他欄(drawer-values 規格判定段)。 */
+function fieldHits(tag, field) {
+  return { seen: Engine.fieldValues({ 詞元: tag.pred.詞元 }, field), hits: Engine.fieldValues(tag.pred, field) };
+}
 
 function chipOptions(tag, field) {
   const on = values(tag, field);
-  const seen = Engine.fieldValues({ 詞元: tag.pred.詞元 }, field);
-  const hits = Engine.fieldValues(tag.pred, field);
+  const { seen, hits } = fieldHits(tag, field);
   const state = value => (on.indexOf(value) < 0 ? (hits.indexOf(value) >= 0 ? OPEN : GRAY)
     : locked(tag, field, value) ? LOCKED : ON);
   const list = (DOMAINS[field] || []).filter(v => on.indexOf(v) >= 0 || seen.indexOf(v) >= 0)
@@ -362,13 +360,12 @@ function chipOptions(tag, field) {
 }
 
 function regionOptions(tag, field) {
-  const seen = Engine.fieldValues({ 詞元: tag.pred.詞元 }, field);
-  const hits = Engine.fieldValues(tag.pred, field);
+  const { seen, hits } = fieldHits(tag, field);
   const items = values(tag, field);
-  const zones = (DOMAINS.區域 || []).filter(zone => seen.some(it => it[1] === zone));
-  const players = [null].concat((DOMAINS.玩家 || []).filter(p => seen.some(it => it[0] === p)));
+  const zones = (DOMAINS.區域 || []).filter(zone => seen.some(([, z]) => z === zone));
+  const players = [null].concat((DOMAINS.玩家 || []).filter(player => seen.some(([p]) => p === player)));
   if (!zones.length && !items.length) return null;
-  const hit = (player, zone) => hits.some(it => it[1] === zone && (player === null || it[0] === player));
+  const hit = (player, zone) => hits.some(([p, z]) => z === zone && (player === null || p === player));
   return {
     field, kind: 'region', items,
     players: players.map(player => {
@@ -380,11 +377,17 @@ function regionOptions(tag, field) {
 
 function textOptions(tag, field) {
   const on = values(tag, field);
-  const candidates = Engine.fieldValues(tag.pred, field).filter(w => on.indexOf(w) < 0);
-  return candidates.length || on.length ? { field, kind: 'text', candidates } : null;
+  const { seen, hits } = fieldHits(tag, field);
+  const candidates = hits.filter(w => on.indexOf(w) < 0);
+  return seen.length || on.length ? { field, kind: 'text', candidates } : null;
 }
 
 const FIELD_OPTIONS = { values: chipOptions, region: regionOptions, text: textOptions };
+
+/* 一欄的抽屜選項;這一欄不列時回 null。 */
+function fieldOptions(tag, field) {
+  return FIELD_OPTIONS[kindOf(field)](tag, field);
+}
 
 /* 抽屜選項:[{group, fields: [{field, kind, …}]}];沒有欄的組不列。點選鈕的欄帶 values:
    [{value, state}];區域欄帶 players: [{value, state, zones: [{value, state}]}]
@@ -393,7 +396,7 @@ function drawerOptions(tag) {
   const groups = drawerGroups();
   return Object.keys(groups).map(group => ({
     group,
-    fields: groups[group].map(field => FIELD_OPTIONS[kindOf(field)](tag, field)).filter(Boolean),
+    fields: groups[group].map(field => fieldOptions(tag, field)).filter(Boolean),
   })).filter(g => g.fields.length);
 }
 
@@ -421,8 +424,8 @@ function note(tag) {
 
 /* 區域項在欄位對裡寫 `玩家.區域`,不看玩家只寫區域(規格 4 網址段)。玩家與區域都不含 `.`,
    多一個點或點前面是空字串,在 orderedRegions 會因為不在值域而掉。 */
-function regionText(item) {
-  return item[0] ? item[0] + '.' + item[1] : item[1];
+function regionText([player, zone]) {
+  return player ? player + '.' + zone : zone;
 }
 
 function regionItem(text) {
@@ -456,13 +459,12 @@ function fromPairs(pairs, ex) {
   });
   if (!pred.詞元) return null;
   if (!pred.位置) pred.位置 = [DEFAULT_POSITION];
-  if (!pred.極性) pred.極性 = values({ pred }, '極性');
+  if (!pred.極性) pred.極性 = predValues(pred, '極性');
   const row = named({ pred });
   return { ex: !!ex, pred, origin: row ? row.name : null };
 }
 
-function zoneText(item) {
-  const player = item[0], zone = item[1];
+function zoneText([player, zone]) {
   const who = !player ? '' : PLAYER_JA[player] || player + ':';
   return who + (ZONE_JA[zone] || zone);
 }
@@ -525,12 +527,12 @@ function hitLabels(q) {
 }
 
   return Object.freeze({
-    SEP, DEFAULT_POSITION, defaultPosition, tagAt, named, leafPath,
+    SEP, DEFAULT_POSITION, COMMON_GROUP, CHIP, defaultPosition, tagAt, named, leafPath,
     empty, tags, tagsIn, isEmpty, add, addInZone, removeAt, replaceAt, moveAt, usedPaths,
     sideTags, sideZone, moveSide, syncSide, toQuery,
     sentenceParts, sentence, hitLabels, positionPrefix, note, soloQuery,
     toPairs, fromPairs,
-    drawerGroups, editor, drawerOptions, values, addValue, removeValue, toggleValue, setEx, editedFrom,
+    drawerGroups, drawerOptions, fieldOptions, values, addValue, removeValue, toggleValue, setEx, editedFrom,
     restore,
   });
 })();

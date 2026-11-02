@@ -33,7 +33,6 @@ const FRAME_VOCAB = {
   },
 };
 
-/* 框元組:[詞元, 位置, 極性, 態, 否定形, 施事者, 方式類, 動作對象](欄序見 frameindex.py;列舉欄 +1,0 是沒有值) */
 const SCALARS = ['位置', '極性', '態', '否定形', '施事者', '方式類', '動作對象'];
 const frame = (lemma, fields) => [FRAME_VOCAB.lemmas.indexOf(lemma)].concat(SCALARS.map(field =>
   FRAME_VOCAB.domains[field].indexOf(fields[field]) + 1));
@@ -57,7 +56,6 @@ const box = harness.load({ cards: CARDS, frames: FRAMES, vocab: { frame: FRAME_V
 const cond = (fn, ...args) => harness.cond(box, fn, ...args);
 const tagAt = name => cond('tagAt', name, false);
 
-/* 抽屜選項壓成 {組: {欄: {值: 狀態}}},只看點選鈕的欄;區域與中心詞欄只記欄名。 */
 function chips(tag) {
   const out = {};
   for (const { group, fields } of cond('drawerOptions', tag)) {
@@ -149,8 +147,6 @@ test('包含與排除得到同一份選項', () => {
   assert.deepStrictEqual(cond('drawerOptions', cond('setEx', tag, true)), cond('drawerOptions', tag));
 });
 
-/* 全語料:三種判定和引擎的張數一致(規格 Testing Decisions 全語料段)。單詞標籤 = 述詞只有詞元與極性的
-   具名查詢。灰鈕看「這一欄只留這個值」(同灰色的定義;空欄時就是加上去);隱藏的值連位置與極性都放開。 */
 test('全語料:75 張單詞標籤,可按的鈕加上去有卡、灰鈕只留它沒卡、隱藏的值放開位置與極性仍沒卡', t => {
   const data = harness.realData();
   if (!data) {

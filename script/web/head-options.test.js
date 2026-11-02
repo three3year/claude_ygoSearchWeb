@@ -29,8 +29,6 @@ const DOMAINS = {
   修飾語類: ['種族'],
 };
 
-/* 框元組:[詞元, 位置, 極性, 態, 否定形, 施事者, 方式類, 動作對象, 來源, 目的, 所在, [受事者段…], [目的段…]]
-   (欄序見 frameindex.py;列舉欄 +1,0 是沒有值;段是 [中心詞碼, 中心詞類, 數量類, 修飾語位元])。 */
 function frameOf(vocab, lemma, { 位置, 極性, 施事者, 受事者 = [], 目的 = [] }) {
   const code = (field, v) => vocab.domains[field].indexOf(v) + 1;
   const segs = words => words.map(w => [vocab.heads.indexOf(w), 0, 0, 0]);
@@ -58,7 +56,6 @@ const box = load(HEADS, vocab => [
 const cond = (fn, ...args) => harness.cond(box, fn, ...args);
 const tagAt = (name, ex) => cond('tagAt', name, !!ex);
 
-/* 抽屜選項裡中心詞欄 → {欄: 候選};不列的欄不在裡面。 */
 function heads(tag, on = box) {
   const out = {};
   for (const { fields } of harness.cond(on, 'drawerOptions', tag)) {

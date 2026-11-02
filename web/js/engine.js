@@ -184,8 +184,6 @@ function enumCodes(field, values) {
 
 const segsOf = f => f[SLOT_PATIENT_PHRASE] || [];
 
-/* 每欄三件事:check 把述詞的值編成框檢查;codes 讀出框上這一欄的碼;value 把碼解回值。
-   codes 與 value 給抽屜選項用(fieldValues)。 */
 function scalarField(slot, field) {
   return {
     check: values => {
@@ -207,8 +205,6 @@ const LEMMA_FIELD = {
   value: code => FRAME_VOCAB.lemmas[code],
 };
 
-/* 區域項沒寫玩家就是不看玩家:展開成該區域的每個玩家的區域對。解回的項一定帶玩家,
-   先排區域、同區域依玩家序(同條件模型的值序)。 */
 function regionField(slot) {
   const players = () => FRAME_VOCAB.domains.玩家, zones = () => FRAME_VOCAB.domains.區域;
   return {
@@ -229,8 +225,6 @@ function regionField(slot) {
   };
 }
 
-/* 中心詞比尾綴:モンスター 中 効果モンスター、不中 モンスターカード。解回的是框上的中心詞本身,
-   依中心詞表的順序(次數遞減)。 */
 function headField(slot) {
   return {
     check: values => {
@@ -256,7 +250,6 @@ function segmentField(segSlot, field) {
   };
 }
 
-/* 修飾語位元第 n 位是值域第 n 個;碼用 n + 1,和其他列舉欄同一套解法。 */
 const MODIFIER_FIELD = {
   check: values => {
     let mask = 0;
@@ -295,14 +288,11 @@ function frameField(field) {
 
 const asList = value => (typeof value === 'string' ? [value] : value);
 
-/* 述詞除了 skip 那一欄以外的欄 → 框檢查。欄間 AND、同欄多值 OR,都在同一框上;值不在表內
-   編不出碼,自然不中。 */
 function frameChecks(pred, skip) {
   return Object.keys(pred).filter(field => field !== skip)
     .map(field => frameField(field).check(asList(pred[field])));
 }
 
-/* 述詞 → 命中表。 */
 function predHitTable(pred) {
   const checks = frameChecks(pred, null);
   const table = new Uint8Array(FRAMES.length);
@@ -310,7 +300,6 @@ function predHitTable(pred) {
   return table;
 }
 
-/* 詞元碼 → 它的框號。第一次用到才建:有些頁面與測試載入時沒有框表。 */
 let framesByLemma = null;
 
 function lemmaFrames(lemmas) {

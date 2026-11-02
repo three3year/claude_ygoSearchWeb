@@ -32,8 +32,6 @@ const FRAME_VOCAB = {
   },
 };
 
-/* 框元組:[詞元, 位置, 極性, 態, 否定形, 施事者, 方式類, 動作對象, [來源對], [目的對], [所在對]]
-   (欄序見 frameindex.py;列舉欄 +1,0 是沒有值;區域對 = 玩家序號 × 區域數 + 區域序號) */
 const SCALARS = ['位置', '極性', '態', '否定形', '施事者', '方式類', '動作對象'];
 const REGIONS = ['來源', '目的', '所在'];
 const { 玩家: PLAYERS, 區域: ZONES } = FRAME_VOCAB.domains;
@@ -64,7 +62,6 @@ const cond = (fn, ...args) => harness.cond(box, fn, ...args);
 const tagAt = name => cond('tagAt', name, false);
 const toggle = (tag, field, value) => cond('toggleValue', tag, field, value);
 
-/* 區域欄壓成 {欄: {玩家(不限寫成 *): [狀態, {區域: 狀態}]}};沒列的欄不出現。 */
 function regions(tag) {
   const out = {};
   for (const { fields } of cond('drawerOptions', tag)) {
@@ -113,7 +110,6 @@ test('同欄已加入的項不擋自己這一欄:加了 自分・墓地,相手�
   assert.deepStrictEqual(regions(tag).來源.相手, ['可按', { 墓地: '可按', 場上: '灰' }]);
 });
 
-/* 已加入的項:抽屜選項的 items,和 Cond.values 同序。 */
 const itemsOf = (tag, field) => cond('drawerOptions', tag).flatMap(g => g.fields)
   .filter(f => f.field === field).map(f => f.items)[0];
 

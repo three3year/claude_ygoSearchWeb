@@ -31,7 +31,6 @@ const POSITION_FALLBACK = ['代價', '條件'];
 /* 極性的預設,短句不寫它;抄 catalog.py 的 DEFAULT_POLARITY(2026-11-01 規格 2「詞元節點極性」(a)),
    conditions.test.js 守和來源一致。排序過,比對時不看順序。 */
 const DEFAULT_POLARITY = ['可能', '肯定'];
-/* 至少要留一個值的欄:最後一顆亮著的按不掉,要全部就全按亮(drawer-values 規格,2026-11-02)。 */
 const LOCKED_FIELDS = ['位置', '極性'];
 
 /* 區域三欄,抄 predicate.py 的 REGION_FIELDS(2026-11-01 規格 3);conditions.test.js 守和來源一致。 */
@@ -322,8 +321,6 @@ function values(tag, field) {
   return asList(tag.pred[field]);
 }
 
-/* 空欄等於沒寫,不留空清單;位置、極性不能關到空,最後一顆關掉不改標籤(drawer-values 規格
-   「位置能不能全部關掉?」「極性能不能全部關掉?」,2026-11-02)。 */
 function withValues(tag, field, items) {
   const pred = Object.assign({}, tag.pred);
   const list = orderedValues(field, items);
@@ -346,18 +343,13 @@ function toggleValue(tag, field, item) {
   return on ? removeValue(tag, field, item) : addValue(tag, field, item);
 }
 
-/* 抽屜裡亮著但按不掉的那一顆:位置、極性只剩它亮著。 */
 function locked(tag, field, item) {
   const list = values(tag, field);
   return LOCKED_FIELDS.indexOf(field) >= 0 && list.length === 1 && sameItem(list[0], item);
 }
 
-/* 抽屜選項裡值的狀態(drawer-values 規格條件模型的介面段):亮、亮且鎖住、可按、灰;隱藏的值不列。 */
 const ON = '亮', LOCKED = '鎖住', OPEN = '可按', GRAY = '灰';
 
-/* 點選鈕的欄(drawer-values 規格判定段)。亮著的一律列出,含詞元沒有的(網址帶進來);其餘的
-   隱藏只看詞元的框(三個位置、三種極性都算),灰看其他欄成立的框。判定看述詞,不看包含、排除。
-   引擎在呼叫時才讀,cond.js 載入得比 engine.js 早。 */
 function chipOptions(tag, field) {
   const on = values(tag, field);
   const seen = Engine.fieldValues({ 詞元: tag.pred.詞元 }, field);
@@ -369,9 +361,6 @@ function chipOptions(tag, field) {
   return list.length ? { field, kind: 'values', values: list } : null;
 }
 
-/* 區域三欄(drawer-values 規格判定段區域一條):玩家清單與每個玩家的區域清單,各帶狀態可按或灰。
-   隱藏只看詞元的框:區域看任何玩家、玩家看任何區域,不限玩家一律列;灰看(玩家或不限, 區域)在
-   其他欄成立的框上有沒有,玩家底下沒有一個區域命中時玩家也灰。已加入的項(items)一律列、可刪。 */
 function regionOptions(tag, field) {
   const seen = Engine.fieldValues({ 詞元: tag.pred.詞元 }, field);
   const hits = Engine.fieldValues(tag.pred, field);
@@ -389,16 +378,12 @@ function regionOptions(tag, field) {
   };
 }
 
-/* 中心詞兩欄:候選是其他欄成立的框上這一欄出現過的全部中心詞,依中心詞表順序,已加入的不列
-   (drawer-values 規格判定段)。抽屜只能從候選挑;網址帶進來的清單外的詞照列為已加入的項。
-   沒有候選、也沒有已加入的詞時不列。 */
 function textOptions(tag, field) {
   const on = values(tag, field);
   const candidates = Engine.fieldValues(tag.pred, field).filter(w => on.indexOf(w) < 0);
   return candidates.length || on.length ? { field, kind: 'text', candidates } : null;
 }
 
-/* 欄的種類 → 抽屜選項的那一欄;回 null 是這一欄沒有值可列,不列。 */
 const FIELD_OPTIONS = { values: chipOptions, region: regionOptions, text: textOptions };
 
 /* 抽屜選項:[{group, fields: [{field, kind, …}]}];沒有欄的組不列。點選鈕的欄帶 values:

@@ -26,7 +26,6 @@ let shownState = null;       // 上次畫的狀態:抽屜的事件要知道改�
 let shownSide = null;        // 上次畫的左側條件標籤
 let openAt = CLOSED;
 let focusField = null;       // 開抽屜時要捲到的欄,捲完就清
-/* 區域欄 → 玩家選單上選的玩家(null 是不限)。抽屜每次整個重畫,選單的選擇記在這裡;開抽屜時清。 */
 let pickedPlayers = {};
 
 function partHtml(part) {
@@ -57,8 +56,6 @@ function zoneHtml(zone, html) {
     html || `<span class="strip-hint">${esc(HINTS[zone])}</span>`}</div></div>`;
 }
 
-/* 選值鈕的狀態 → 樣式與提示(drawer-values 規格條件列與抽屜段):鎖住亮著但不能按,灰不能按;
-   有提示的就是不能按的。 */
 const CHIP_CLASS = { 亮: ' on', 鎖住: ' on', 可按: '', 灰: '' };
 const CHIP_HINT = { 鎖住: '至少要留一個', 灰: '目前條件下沒有結果' };
 
@@ -77,13 +74,11 @@ function itemsHtml(tag, field, text) {
     `<span class="drawer-item">${esc(text(item))}<button type="button" class="strip-x" data-act="drop" data-i="${i}" title="刪除">×</button></span>`).join('')}</div>`;
 }
 
-/* 玩家或區域選單的一項:灰的不能選,提示同灰鈕。 */
 function menuOption(value, label, state, selected) {
   const gray = state === '灰' ? ` disabled title="${esc(CHIP_HINT.灰)}"` : '';
   return `<option value="${esc(value)}"${gray}${selected ? ' selected' : ''}>${esc(label)}</option>`;
 }
 
-/* 區域選單列選單上目前選的玩家底下的區域;記住的玩家不在清單裡就回到不限。 */
 function regionHtml(tag, option) {
   const picked = option.players.find(p => p.value === (pickedPlayers[option.field] || null)) || option.players[0];
   const players = option.players.map(p => menuOption(p.value || '', p.value || '不限玩家', p.state, p === picked));
@@ -100,7 +95,6 @@ function textHtml(tag, option) {
     <datalist id="${esc(id)}">${option.candidates.map(w => `<option value="${esc(w)}">`).join('')}</datalist>`;
 }
 
-/* 抽屜選項一欄的種類 → 那一欄的畫法。 */
 const FIELD_BODY = { values: chipsHtml, region: regionHtml, text: textHtml };
 
 function fieldHtml(tag, option) {
@@ -108,7 +102,6 @@ function fieldHtml(tag, option) {
     esc(option.field)}</div>${FIELD_BODY[option.kind](tag, option)}</div>`;
 }
 
-/* 常用欄在抽屜頭下面直接接,不畫小標;其他組畫小標。組沒有欄時抽屜選項不列它,小標也不畫。 */
 const PLAIN_GROUP = '常用';
 
 function groupHtml(tag, { group, fields }) {
@@ -234,7 +227,6 @@ function onDrawerClick(e) {
   }
 }
 
-/* 中心詞框只能挑清單:字等於這一欄候選的某一項才收(drawer-values 規格條件列與抽屜段)。 */
 function candidatesOf(tag, field) {
   const option = Cond.drawerOptions(tag).flatMap(g => g.fields).find(f => f.field === field);
   return option ? option.candidates : [];
@@ -244,7 +236,6 @@ function onDrawerChange(e) {
   const el = e.target;
   const value = el.value.trim();
   const box = el.closest('[data-field]');
-  /* 換玩家不改標籤,只換區域選單。 */
   if (el.dataset.act === 'pick-player') {
     pickedPlayers[box.dataset.field] = value || null;
     renderDrawer(openTag());

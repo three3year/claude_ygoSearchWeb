@@ -1,9 +1,7 @@
 // 真 Chrome(CDP,零 npm 依賴)走抽屜:依畫面逐顆點可按的鈕,斷言每顆都有結果、灰與鎖住的按了標籤不變(票 05)。
 // 用法:node .scratch/drawer-values/tools/drawer_browser.js [desktop|phone|both,預設 both] [具名查詢名…]
 // 結果寫進 tools/results/drawer_browser.txt(也印到 stdout);有違規時 exit 1。需要本機 Chrome(路徑寫在 CHROME)。
-// 頁面是這支工具所在的 repo(或工作樹)的 web/index.html。
 // 點擊走 CDP 的真輸入:桌面滑鼠、手機觸控 tap;選單(玩家、區域)原生彈窗開不了,改設 value 再發 change;
-// 中心詞框真 tap、Input.insertText 打字、真 Enter。每次改完按抽屜的「還原」回到具名查詢原樣。
 'use strict';
 const { spawn } = require('child_process');
 const http = require('http');
@@ -19,9 +17,7 @@ const WIDTHS = {
   desktop: { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false },
   phone: { width: 390, height: 844, deviceScaleFactor: 3, mobile: true },
 };
-/* 單詞標籤兩張、否定的具名查詢一張、帶區域的具名查詢一張(票 05)。 */
 const DEFAULT_TAGS = ['破壊', '特殊召喚', '破壊(耐性)', '特殊召喚←墓地'];
-/* 中心詞框打的清單外的字:任何詞元的中心詞表都不會有。 */
 const OUTSIDE_WORD = '存在しない語';
 
 const which = process.argv[2] || 'both';
@@ -78,7 +74,6 @@ async function connect() {
 }
 
 function page({ send, ev }, phone) {
-  /* 讀畫面:網址、結果區張數、抽屜頭的短句與張數、抽屜開著沒。 */
   const snap = async () => JSON.parse(await ev(`JSON.stringify({hash:location.hash,
     res:document.getElementById('resultInfo').textContent,
     note:(document.querySelector('.drawer-note span')||{}).textContent||'',
@@ -86,7 +81,6 @@ function page({ send, ev }, phone) {
     open:!document.getElementById('condDrawer').hidden})`));
   const count = s => { const m = /共 ([\d,]+) 張/.exec(s.res); return m ? +m[1].replace(/,/g, '') : 0; };
 
-  /* 真點擊:捲到畫面中央,點中心;點到的不是它(被蓋住)就記下來。 */
   const tap = async sel => {
     const at = JSON.parse(await ev(`(()=>{const el=document.querySelector(${q(sel)});if(!el)return 'null';
       el.scrollIntoView({block:'center'});const r=el.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;
@@ -102,7 +96,6 @@ function page({ send, ev }, phone) {
       await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at.x, y: at.y, button: 'left', clickCount: 1 });
     }
   };
-  /* 等網址變(可按的鈕);不該變的固定等一下再看。 */
   const settle = async (before, expectChange) => {
     for (let i = 0; i < (expectChange ? 40 : 1); i++) {
       await sleep(expectChange ? 15 : (phone ? 150 : 40));
@@ -133,7 +126,6 @@ async function openTag(ctx, p, name) {
   return p.snap();
 }
 
-/* 改過就按還原;還原後網址要回到開抽屜時的樣子。 */
 async function restore(ctx, p, base, label) {
   let s = await p.snap();
   if (s.hash === base.hash) return;
@@ -234,7 +226,6 @@ async function sweepHeads(ctx, p, base) {
       await restore(ctx, p, base, `${f}=${w}`);
     }
     log(`  ${f} 候選 ${cands.length} 個逐一挑:0 張 ${zero} 個,最少 ${min === Infinity ? '-' : min} 張`);
-    /* 清單外的字:Enter 與離開框都清掉、不改標籤。 */
     for (const how of ['Enter', '離開框']) {
       tally.清單外++;
       const before = await p.snap();
@@ -251,7 +242,6 @@ async function sweepHeads(ctx, p, base) {
   return tally;
 }
 
-/* 破壊:預設極性下否定形是灰的,按極性否定後變可按、按了有結果。 */
 async function negationScenario(ctx, p, base) {
   const { ev } = ctx;
   const neg = () => ev(`JSON.stringify([...document.querySelectorAll('#condDrawer [data-field="否定形"] .drawer-chip')].map(c=>(c.disabled?'~':'')+c.dataset.v))`);
@@ -272,7 +262,6 @@ async function negationScenario(ctx, p, base) {
   await restore(ctx, p, base, '否定形');
 }
 
-/* 打清單內的字後直接按別的鈕(票 09 的修正):字與鈕兩個改動都落在標籤上。 */
 async function typedThenChip(ctx, p, base) {
   const { ev } = ctx;
   const pick = JSON.parse(await ev(`(()=>{const i=document.querySelector('#condDrawer [data-act=add-text]');
@@ -293,7 +282,6 @@ async function typedThenChip(ctx, p, base) {
   void s;
 }
 
-/* 改幾欄後把網址貼到新頁開:短句、張數、網址都相同。 */
 async function reopenScenario(ctx, p, base) {
   const { ev, send } = ctx;
   const c = await ev(`(()=>{const c=document.querySelector('#condDrawer .drawer-chip:not(.on):not(:disabled)');return c&&JSON.stringify({f:c.closest('[data-field]').dataset.field,v:c.dataset.v});})()`);
@@ -319,7 +307,6 @@ async function reopenScenario(ctx, p, base) {
   }
 }
 
-/* 抽屜重畫耗時:點一顆可按的鈕到條件列、抽屜、結果都畫完(同步),來回各一次算兩筆;另量抽屜選項本身。 */
 async function timing(ctx, name) {
   return JSON.parse(await ctx.ev(`(()=>{const sel=c=>'#condDrawer [data-field="'+c.f+'"] .drawer-chip[data-v="'+c.v+'"]';
     const c0=document.querySelector('#condDrawer .drawer-chip:not(.on):not(:disabled)');

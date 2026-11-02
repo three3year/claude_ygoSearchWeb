@@ -37,13 +37,12 @@ const LOCKED_FIELDS = ['位置', '極性'];
 /* 區域三欄,抄 predicate.py 的 REGION_FIELDS(2026-11-01 規格 3);conditions.test.js 守和來源一致。 */
 const REGION_FIELDS = ['來源', '目的', '所在'];
 
-/* 抽屜與網址的值都讀匯出檔的值域(規格 4 條件模型段);中心詞是尾綴比對,自由輸入,
-   候選只列最常見的(規格 4,2026-11-02)。HEAD_FIELDS 抄 predicate.py(2026-11-01 規格 3),
+/* 抽屜與網址的值都讀匯出檔的值域(規格 4 條件模型段);中心詞是尾綴比對,抽屜只能從候選挑
+   (drawer-values 規格,2026-11-02)。HEAD_FIELDS 抄 predicate.py(2026-11-01 規格 3),
    conditions.test.js 守和來源一致。 */
 const FRAME = VOCAB.frame || {};
 const DOMAINS = FRAME.domains || {};
 const HEAD_FIELDS = ['受事者中心詞', '目的中心詞'];
-const HEAD_CANDIDATES = 300;
 
 /* 短句的連接字與區域、玩家的日文(原型 D 版,站主核可 2026-11-01)。區域、玩家抄 catalog.py 的
    ZONE_LABEL、PLAYER_LABEL,conditions.test.js 守和來源一致;相對、無沒有命名規則,不在表上。 */
@@ -283,13 +282,13 @@ function drawerGroups() {
 const kindOf = field => (REGION_FIELDS.indexOf(field) >= 0 ? 'region'
   : HEAD_FIELDS.indexOf(field) >= 0 ? 'text' : 'values');
 
-/* 這一欄在抽屜怎麼選:封閉值、玩家+區域、或自由輸入加候選。 */
+/* 這一欄在抽屜怎麼選與它的值域:封閉值、玩家+區域、或中心詞表裡挑。 */
 function editor(field) {
   const kind = kindOf(field);
   if (kind === 'region') {
     return { kind, players: [null].concat(DOMAINS.玩家 || []), zones: DOMAINS.區域 || [] };
   }
-  if (kind === 'text') return { kind, candidates: (FRAME.heads || []).slice(0, HEAD_CANDIDATES) };
+  if (kind === 'text') return { kind, candidates: FRAME.heads || [] };
   return { kind, values: DOMAINS[field] || [] };
 }
 
@@ -375,11 +374,13 @@ function regionOptions(tag, field) {
   return Object.assign({ field }, editor(field));
 }
 
-/* 中心詞兩欄:候選照中心詞表最常見的(票 04 改成其他欄成立的框上出現過的全部);沒有候選、
-   也沒有已加入的詞時不列。 */
+/* 中心詞兩欄:候選是其他欄成立的框上這一欄出現過的全部中心詞,依中心詞表順序,已加入的不列
+   (drawer-values 規格判定段)。抽屜只能從候選挑;網址帶進來的清單外的詞照列為已加入的項。
+   沒有候選、也沒有已加入的詞時不列。 */
 function textOptions(tag, field) {
-  const option = Object.assign({ field }, editor(field));
-  return option.candidates.length || values(tag, field).length ? option : null;
+  const on = values(tag, field);
+  const candidates = Engine.fieldValues(tag.pred, field).filter(w => on.indexOf(w) < 0);
+  return candidates.length || on.length ? { field, kind: 'text', candidates } : null;
 }
 
 /* 欄的種類 → 抽屜選項的那一欄;回 null 是這一欄沒有值可列,不列。 */

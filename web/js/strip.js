@@ -26,6 +26,8 @@ let shownState = null;       // 上次畫的狀態:抽屜的事件要知道改�
 let shownSide = null;        // 上次畫的左側條件標籤
 let openAt = CLOSED;
 let focusField = null;       // 開抽屜時要捲到的欄,捲完就清
+/* 區域欄 → 玩家選單上選的玩家(null 是不限)。抽屜每次整個重畫,選單的選擇記在這裡;開抽屜時清。 */
+let pickedPlayers = {};
 
 function partHtml(part) {
   const glue = part.glue ? `<span class="strip-glue">${esc(part.glue)}</span> ` : '';
@@ -75,12 +77,20 @@ function itemsHtml(tag, field, text) {
     `<span class="drawer-item">${esc(text(item))}<button type="button" class="strip-x" data-act="drop" data-i="${i}" title="刪除">×</button></span>`).join('')}</div>`;
 }
 
+/* 玩家或區域選單的一項:灰的不能選,提示同灰鈕。 */
+function menuOption(value, label, state, selected) {
+  const gray = state === '灰' ? ` disabled title="${esc(CHIP_HINT.灰)}"` : '';
+  return `<option value="${esc(value)}"${gray}${selected ? ' selected' : ''}>${esc(label)}</option>`;
+}
+
+/* 區域選單列選單上目前選的玩家底下的區域;記住的玩家不在清單裡就回到不限。 */
 function regionHtml(tag, option) {
-  const player = p => `<option value="${esc(p || '')}">${esc(p || '不限玩家')}</option>`;
+  const picked = option.players.find(p => p.value === (pickedPlayers[option.field] || null)) || option.players[0];
+  const players = option.players.map(p => menuOption(p.value || '', p.value || '不限玩家', p.state, p === picked));
+  const zones = picked.zones.map(z => menuOption(z.value, z.value, z.state, false));
   return `${itemsHtml(tag, option.field, item => (item[0] || '不限') + '・' + item[1])}
-    <div class="drawer-add"><select data-role="player">${option.players.map(player).join('')}</select>
-    <select data-act="add-region"><option value="">+ 區域</option>${
-      option.zones.map(z => `<option>${esc(z)}</option>`).join('')}</select></div>`;
+    <div class="drawer-add"><select data-role="player" data-act="pick-player">${players.join('')}</select>
+    <select data-act="add-region"><option value="">+ 區域</option>${zones.join('')}</select></div>`;
 }
 
 function textHtml(tag, option) {
@@ -162,6 +172,7 @@ function closeDrawer() {
 function openDrawer(i, field) {
   openAt = i;
   focusField = field;
+  pickedPlayers = {};
   render(shownState, shownSide);
 }
 
@@ -226,9 +237,15 @@ function onDrawerClick(e) {
 function onDrawerChange(e) {
   const el = e.target;
   const value = el.value.trim();
+  const box = el.closest('[data-field]');
+  /* 換玩家不改標籤,只換區域選單。 */
+  if (el.dataset.act === 'pick-player') {
+    pickedPlayers[box.dataset.field] = value || null;
+    renderDrawer(openTag());
+    return;
+  }
   if (!value || !el.dataset.act) return;
   const tag = openTag();
-  const box = el.closest('[data-field]');
   const item = el.dataset.act === 'add-region'
     ? [box.querySelector('[data-role="player"]').value || null, value] : value;
   handlers.onEdit(openAt, Cond.addValue(tag, box.dataset.field, item));

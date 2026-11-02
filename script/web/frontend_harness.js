@@ -132,6 +132,29 @@ function load({ cards = [], vocab = {}, meta = {}, frames = [] } = {}) {
   return sandbox;
 }
 
+/* 框元組的欄序(2026-11-01 規格 3「索引形狀」段;同 frameindex.py 與引擎的 SLOT_*) */
+const FRAME_SCALARS = ['位置', '極性', '態', '否定形', '施事者', '方式類', '動作對象'];
+const FRAME_REGIONS = ['來源', '目的', '所在'];
+const FRAME_HEADS = ['受事者中心詞', '目的中心詞'];
+
+/**
+ * 手寫框表用的框元組:`frame(框詞彙, { 詞元, 位置, 極性, …, 來源: ['自分.墓地'], 受事者中心詞: ['カード'] })`。
+ * 封閉值寫值域的字(沒寫是 0,值域碼從 1 起);區域項寫 `玩家.區域`;中心詞寫中心詞表裡的字。
+ */
+function frame(vocab, fields) {
+  const { 玩家: players = [], 區域: zones = [] } = vocab.domains;
+  const scalar = field => (fields[field] == null ? 0 : vocab.domains[field].indexOf(fields[field]) + 1);
+  const region = text => {
+    const [player, zone] = text.split('.');
+    return players.indexOf(player) * zones.length + zones.indexOf(zone);
+  };
+  const segment = word => [vocab.heads.indexOf(word), 0, 0, 0];
+  return [vocab.lemmas.indexOf(fields.詞元)]
+    .concat(FRAME_SCALARS.map(scalar))
+    .concat(FRAME_REGIONS.map(field => (fields[field] || []).map(region)))
+    .concat(FRAME_HEADS.map(field => (fields[field] || []).map(segment)));
+}
+
 /** 真 data.js 的內容 → load 吃的 fixture(全語料對照用;檔案不在回 null,測試自己略過並印原因) */
 function realData() {
   const file = path.join(WEB, DATA);
@@ -282,7 +305,7 @@ function catalogFilter(sandbox, term) {
   return JSON.parse(sandbox.__catalogFilter(String(term == null ? '' : term)));
 }
 
-module.exports = { load, realData, search, ids, marks, axes,
+module.exports = { load, frame, realData, search, ids, marks, axes,
                    optionalAvailable, nextState,
                    axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml,

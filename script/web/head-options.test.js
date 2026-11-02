@@ -29,12 +29,7 @@ const DOMAINS = {
   修飾語類: ['種族'],
 };
 
-function frameOf(vocab, lemma, { 位置, 極性, 施事者, 受事者 = [], 目的 = [] }) {
-  const code = (field, v) => vocab.domains[field].indexOf(v) + 1;
-  const segs = words => words.map(w => [vocab.heads.indexOf(w), 0, 0, 0]);
-  return [vocab.lemmas.indexOf(lemma), code('位置', 位置), code('極性', 極性), 0, 0,
-    施事者 ? code('施事者', 施事者) : 0, 0, 0, [], [], [], segs(受事者), segs(目的)];
-}
+const frameOf = (vocab, 詞元, fields) => harness.frame(vocab, { 詞元, ...fields });
 
 const row = (name, cards) => ({ name, path: [name], predicate: { 詞元: name, 極性: POLAR }, cards });
 
@@ -47,10 +42,10 @@ function load(heads, frames) {
 }
 
 const box = load(HEADS, vocab => [
-  frameOf(vocab, '破壊', { 位置: '效果', 極性: '肯定', 施事者: '自分', 受事者: ['カード', '魔法'] }),
-  frameOf(vocab, '破壊', { 位置: '效果', 極性: '肯定', 施事者: '相手', 受事者: ['モンスター'], 目的: ['手札'] }),
-  frameOf(vocab, '破壊', { 位置: '代價', 極性: '肯定', 受事者: ['罠'] }),
-  frameOf(vocab, '破壊', { 位置: '效果', 極性: '否定', 受事者: ['効果モンスター'] }),
+  frameOf(vocab, '破壊', { 位置: '效果', 極性: '肯定', 施事者: '自分', 受事者中心詞: ['カード', '魔法'] }),
+  frameOf(vocab, '破壊', { 位置: '效果', 極性: '肯定', 施事者: '相手', 受事者中心詞: ['モンスター'], 目的中心詞: ['手札'] }),
+  frameOf(vocab, '破壊', { 位置: '代價', 極性: '肯定', 受事者中心詞: ['罠'] }),
+  frameOf(vocab, '破壊', { 位置: '效果', 極性: '否定', 受事者中心詞: ['効果モンスター'] }),
   frameOf(vocab, 'ドロー', { 位置: '效果', 極性: '肯定' }),
 ]);
 const cond = (fn, ...args) => harness.cond(box, fn, ...args);
@@ -86,6 +81,14 @@ test('已加入的詞不重複列;它自己這一欄不擋其他候選', () => {
   assert.deepStrictEqual(heads(tag).受事者中心詞, ['モンスター', '魔法']);
 });
 
+test('整欄列不列只看詞元:改其他欄、位置、極性後候選清空,這一欄仍在', () => {
+  const mine = cond('addValue', tagAt('破壊'), '施事者', '自分');
+  const atCost = cond('toggleValue', cond('toggleValue', tagAt('破壊'), '位置', '代價'), '位置', '效果');
+  const denied = cond('toggleValue', cond('toggleValue', cond('toggleValue', tagAt('破壊'),
+    '極性', '否定'), '極性', '肯定'), '極性', '可能');
+  for (const tag of [mine, atCost, denied]) assert.deepStrictEqual(heads(tag).目的中心詞, []);
+});
+
 test('詞元在這一欄沒有中心詞、也沒有已加入的詞:整欄不列', () => {
   assert.deepStrictEqual(heads(tagAt('ドロー')), {});
 });
@@ -103,6 +106,6 @@ test('包含與排除同一份候選', () => {
 
 test('沒有 300 個上限:一個詞元 320 個中心詞全列', () => {
   const many = Array.from({ length: 320 }, (_, i) => '中心詞' + i);
-  const big = load(many, vocab => [frameOf(vocab, '破壊', { 位置: '效果', 極性: '肯定', 受事者: many })]);
+  const big = load(many, vocab => [frameOf(vocab, '破壊', { 位置: '效果', 極性: '肯定', 受事者中心詞: many })]);
   assert.deepStrictEqual(heads(harness.cond(big, 'tagAt', '破壊', false), big).受事者中心詞, many);
 });

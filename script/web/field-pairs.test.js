@@ -15,12 +15,11 @@ const harness = require('./frontend_harness.js');
 
 const POLAR = ['肯定', '可能'];
 const counts = (代價, 效果, 條件) => ({ 代價, 效果, 條件 });
-const HEADS = Array.from({ length: 320 }, (_, i) => '中心詞' + i);
 
 const VOCAB = {
   frame: {
     lemmas: ['ドロー', '対象とする', '特殊召喚', '破壊'],
-    heads: HEADS,
+    heads: [],
     domains: {
       位置: ['代價', '效果', '條件'],
       極性: ['肯定', '否定', '可能'],
@@ -63,38 +62,17 @@ test('抽屜欄位:分常用與進階,涵蓋 詞元 以外的 15 欄', () => {
   });
 });
 
-test('抽屜的值:封閉欄的值就是值域', () => {
-  assert.deepStrictEqual(cond('editor', '動作對象'), { kind: 'values', values: ['此卡', '非此卡'] });
-  assert.deepStrictEqual(cond('editor', '位置'), { kind: 'values', values: ['代價', '效果', '條件'] });
-});
-
-test('抽屜的值:區域欄的玩家選單列出 相對、無,不限玩家是 null 排在最前面', () => {
-  assert.deepStrictEqual(cond('editor', '來源'), {
-    kind: 'region',
-    players: [null, '自分', '相手', 'お互い', '相對', '無'],
-    zones: VOCAB.frame.domains.區域,
-  });
-});
-
-test('抽屜的值:中心詞的值域是整個中心詞表,沒有 300 個上限', () => {
-  const editor = cond('editor', '受事者中心詞');
-  assert.strictEqual(editor.kind, 'text');
-  assert.strictEqual(editor.candidates.length, 320);
-  assert.strictEqual(editor.candidates[319], '中心詞319');
-});
-
-test('抽屜的值:全語料每一欄都有值可選,值域不是空的', t => {
+test('抽屜的值:全語料每一欄都在某張具名查詢的抽屜裡列得出來', t => {
   const data = harness.realData();
   if (!data) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
-  const real = harness.load({ vocab: data.vocab });
+  const real = harness.load(data);
   const groups = harness.cond(real, 'drawerGroups');
-  const fields = groups.常用.concat(groups.進階);
-  assert.strictEqual(fields.length, 15);
-  for (const field of fields) {
-    const e = harness.cond(real, 'editor', field);
-    const size = (e.values || e.zones || e.candidates).length;
-    assert.ok(size > 0, field);
+  const listed = new Set();
+  for (const row of data.vocab.catalog.filter(r => r.predicate)) {
+    const tag = harness.cond(real, 'tagAt', row.path.join('›'), false);
+    harness.cond(real, 'drawerOptions', tag).forEach(g => g.fields.forEach(f => listed.add(f.field)));
   }
+  assert.deepStrictEqual(Array.from(listed).sort(), groups.常用.concat(groups.進階).sort());
 });
 
 /* ── 改欄位 ── */

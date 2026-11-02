@@ -272,14 +272,15 @@ async function typedThenChip(ctx, p, base) {
   await p.tap(`#condDrawer [data-field=${q(pick.f)}] input`);
   await p.type(pick.w);
   await p.tap(`#condDrawer [data-field=${q(pick.cf)}] .drawer-chip[data-v=${q(pick.cv)}]`);
-  const s = await p.settle(base.hash, true);
+  await p.settle(base.hash, true);
   await sleep(100);
   const s2 = await p.snap();
-  const both = s2.name.indexOf(pick.w) >= 0 && s2.name.indexOf(pick.cv.split(':').pop()) >= 0;
-  log(`  框裡打 ${pick.w} 直接按 ${pick.cf}=${pick.cv} → ${p.count(s2).toLocaleString()} 張 | ${s2.name}`);
-  if (!both) bad(`框裡有字直接按鈕:兩個改動沒有都落在標籤上(${s2.name})`);
+  const grayNow = await ev(`(()=>{const c=document.querySelector(${q(`#condDrawer [data-field=${q(pick.cf)}] .drawer-chip[data-v=${q(pick.cv)}]`)});return !!c&&c.disabled&&!c.classList.contains('on');})()`);
+  const hasWord = s2.name.indexOf(pick.w) >= 0;
+  const hasChip = s2.name.indexOf(pick.cv.split(':').pop()) >= 0;
+  log(`  框裡打 ${pick.w} 直接按 ${pick.cf}=${pick.cv}${grayNow ? '(收字後變灰)' : ''} → ${p.count(s2).toLocaleString()} 張 | ${s2.name}`);
+  if (!hasWord || hasChip === grayNow) bad(`框裡有字直接按鈕:字要收進來,鈕照收字後的狀態生效(${s2.name})`);
   await restore(ctx, p, base, '打字後按鈕');
-  void s;
 }
 
 async function reopenScenario(ctx, p, base) {

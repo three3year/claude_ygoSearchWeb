@@ -16,7 +16,7 @@ vm.runInContext(`
 globalThis.__stats = function () {
   const count = t => Engine.runQuery(window.CARD_DATA, Cond.soloQuery(t)).cards.length;
   const groups = Cond.drawerGroups();
-  const chipFields = groups.常用.concat(groups.進階).filter(f => Cond.editor(f).kind === 'values');
+  const chipFields = groups.常用.concat(groups.進階).filter(f => VOCAB.frame.domains[f]);
   const rows = VOCAB.catalog.filter(r => r.predicate);
   const tagOf = row => Cond.tagAt(row.path.join(Cond.SEP), false);
   const ALL_POS = VOCAB.frame.domains.位置, ALL_POL = VOCAB.frame.domains.極性;
@@ -25,7 +25,7 @@ globalThis.__stats = function () {
   const one = { rows: single.length, presses: 0, hit: 0, polarity: 0, position: 0, both: 0, never: 0, byField: {} };
   single.forEach(row => {
     const tag = tagOf(row);
-    chipFields.filter(f => f !== '位置' && f !== '極性').forEach(f => Cond.editor(f).values.forEach(v => {
+    chipFields.filter(f => f !== '位置' && f !== '極性').forEach(f => VOCAB.frame.domains[f].forEach(v => {
       const t = Cond.addValue(tag, f, v);
       const relax = (pol, pos) => Object.assign({}, t, { pred: Object.assign({}, t.pred,
         pol ? { 極性: ALL_POL } : {}, pos ? { 位置: ALL_POS } : {}) });
@@ -40,7 +40,7 @@ globalThis.__stats = function () {
   const perValue = {};
   rows.forEach(row => {
     const tag = tagOf(row), base = count(tag);
-    chipFields.forEach(f => Cond.editor(f).values.forEach(v => {
+    chipFields.forEach(f => VOCAB.frame.domains[f].forEach(v => {
       const n = count(Cond.toggleValue(tag, f, v));
       const k = n === 0 ? 'zero' : n === base ? 'same' : 'changed';
       all.presses++; all[k]++;
@@ -59,16 +59,16 @@ globalThis.__stats = function () {
     const tag = tagOf(row);
     Cond.drawerOptions(tag).forEach(g => g.fields.forEach(o => {
       if (o.kind === 'values') o.values.forEach(({ value, state }) => {
-        if (state === '可按') press(row, 'values', o.field + '=' + value, Cond.toggleValue(tag, o.field, value));
-        if (state === '鎖住') {
+        if (state === Cond.CHIP.OPEN) press(row, 'values', o.field + '=' + value, Cond.toggleValue(tag, o.field, value));
+        if (state === Cond.CHIP.LOCKED) {
           open.locked++;
           if (JSON.stringify(Cond.toggleValue(tag, o.field, value)) !== JSON.stringify(tag)) {
             open.lockedChanged.push(row.name + ' ' + o.field + '=' + value);
           }
         }
       });
-      if (o.kind === 'region') o.players.filter(p => p.state === '可按').forEach(p =>
-        p.zones.filter(z => z.state === '可按').forEach(z =>
+      if (o.kind === 'region') o.players.filter(p => p.state === Cond.CHIP.OPEN).forEach(p =>
+        p.zones.filter(z => z.state === Cond.CHIP.OPEN).forEach(z =>
           press(row, 'region', o.field + '=' + (p.value || '不限') + '・' + z.value,
             Cond.addValue(tag, o.field, [p.value, z.value]))));
       if (o.kind === 'text') o.candidates.forEach(w =>

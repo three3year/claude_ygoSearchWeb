@@ -76,11 +76,11 @@ test('抽屜的值:區域欄的玩家選單列出 相對、無,不限玩家是 n
   });
 });
 
-test('抽屜的值:中心詞自由輸入,候選是中心詞表前 300 個', () => {
+test('抽屜的值:中心詞的值域是整個中心詞表,沒有 300 個上限', () => {
   const editor = cond('editor', '受事者中心詞');
   assert.strictEqual(editor.kind, 'text');
-  assert.strictEqual(editor.candidates.length, 300);
-  assert.strictEqual(editor.candidates[299], '中心詞299');
+  assert.strictEqual(editor.candidates.length, 320);
+  assert.strictEqual(editor.candidates[319], '中心詞319');
 });
 
 test('抽屜的值:全語料每一欄都有值可選,值域不是空的', t => {

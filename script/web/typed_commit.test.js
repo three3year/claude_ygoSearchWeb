@@ -5,6 +5,7 @@
  *
  * 真瀏覽器的症狀:框裡有字時按下按鈕,先失焦、框裡的字收進標籤、抽屜與條件列重畫,按到的鈕被換掉,
  * 那一下點擊落空。修法是框裡有字時按下不搶焦點,點擊再先收字才做事。
+ * drawer-values 票 04 起框只能挑清單:清單外的字不收、框被清空(夾具的 FRAMES 給出 破壊 的清單)。
  * 接縫:`Strip.init` 註冊的事件與 `onEdit`。經 harness 載入真前端程式,事件物件是假的,只有用到的幾個
  * 方法;事件順序照瀏覽器(按下 → 點擊;blur 同步發 change)。真實點擊在真瀏覽器走過(票 09 Comments)。
  */
@@ -19,8 +20,11 @@ const POLAR = ['肯定', '可能'];
 const VOCAB = {
   frame: {
     lemmas: ['破壊', '除外'],
-    heads: ['モンスター'],
-    domains: { 位置: ['代價', '效果', '條件'], 極性: ['肯定', '否定', '可能'], 動作對象: ['此卡', '非此卡'] },
+    heads: ['モンスター', '甲', '丁', '罠'],
+    domains: {
+      位置: ['代價', '效果', '條件'], 極性: ['肯定', '否定', '可能'], 動作對象: ['此卡', '非此卡'],
+      數量類: ['定數'], 中心詞類: ['卡'], 修飾語類: ['種族'],
+    },
   },
   catalog: [
     { name: '破壊', path: ['破壊'], cards: { 代價: 0, 效果: 3, 條件: 0 }, predicate: { 極性: POLAR, 詞元: '破壊' } },
@@ -28,6 +32,13 @@ const VOCAB = {
   ],
 };
 const FIELD = '受事者中心詞';
+/* 框元組:[詞元, 位置, 極性, 態, 否定形, 施事者, 方式類, 動作對象, 來源, 目的, 所在, [受事者段…]]
+   (欄序見 frameindex.py)。破壊 的候選是 モンスター、甲、丁;罠 只在 除外 的框上,不在 破壊 的清單裡。 */
+const seg = word => [VOCAB.frame.heads.indexOf(word), 0, 0, 0];
+const FRAMES = [
+  [0, 2, 1, 0, 0, 0, 0, 2, [], [], [], ['モンスター', '甲', '丁'].map(seg)],
+  [1, 2, 1, 0, 0, 0, 0, 0, [], [], [], [seg('罠')]],
+];
 
 /* 只帶選擇器比對的假節點:closest 走 parent,matches 看建立時給的選擇器。 */
 function fakeEl(selectors, props = {}, parent = null) {
@@ -40,7 +51,7 @@ function fakeEl(selectors, props = {}, parent = null) {
 }
 
 function page() {
-  const box = harness.load({ vocab: VOCAB });
+  const box = harness.load({ vocab: VOCAB, frames: FRAMES });
   const els = {};
   const on = {};
   const listen = name => (type, fn) => { (on[`${name}.${type}`] = on[`${name}.${type}`] || []).push(fn); };
@@ -153,4 +164,30 @@ test('刪框旁已有的詞:照點下去時看到的那一個,不因新字排進
   fire('condDrawer.click', ev(drop));
   assert.strictEqual(sentences()[0].includes('丁'), true);
   assert.strictEqual(sentences()[0].includes('甲'), false);
+});
+
+test('打了清單外的字按 Enter 或離開框:不送 onEdit,框被清空', () => {
+  const { box, typing } = page();
+  const input = typing('乙');
+  input.blur();
+  assert.strictEqual(box.__edits.length, 0);
+  assert.strictEqual(input.value, '');
+});
+
+test('中心詞表裡有、但不在這張標籤清單上的字:一樣不收', () => {
+  const { box, typing } = page();
+  const input = typing('罠');
+  input.blur();
+  assert.strictEqual(box.__edits.length, 0);
+  assert.strictEqual(input.value, '');
+});
+
+test('框裡是清單外的字時點抽屜的鈕:字被清掉,鈕照樣生效', () => {
+  const { box, fire, ev, typing, chip, sentences } = page();
+  const input = typing('乙');
+  fire('condDrawer.click', ev(chip()));
+  assert.strictEqual(input.value, '');
+  assert.strictEqual(sentences()[0].includes('乙'), false);
+  assert.strictEqual(sentences()[0].includes('非此卡'), true);
+  assert.strictEqual(box.__edits.length, 1);
 });

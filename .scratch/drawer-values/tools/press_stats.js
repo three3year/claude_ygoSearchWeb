@@ -3,6 +3,8 @@
    一、單詞標籤(述詞只有詞元與極性的目錄列):位置、極性以外的選值鈕各按一次(加值),0 張時分原因——
        放開極性有命中、放開位置有命中、兩者都放開才有命中、都放開仍沒有(這個詞元沒有這個值)。
    二、全部具名查詢:每顆選值鈕(含位置、極性)按一次(切換),結果 0 張、張數不變、張數改變各幾次。
+   三、全部具名查詢:只按抽屜選項(Cond.drawerOptions)裡可按的——可按的選值鈕、可按玩家底下可按的區域、
+       中心詞候選——各加一次,0 張的次數應為 0;鎖住的鈕按了標籤應不變(票 05)。
    張數都是標籤單獨的張數(Cond.soloQuery),走真前端程式與真 data.js。 */
 'use strict';
 const path = require('path');
@@ -47,10 +49,36 @@ globalThis.__stats = function () {
     }));
   });
   all.deadEverywhere = Object.keys(perValue).filter(k => perValue[k] === rows.length);
-  return JSON.stringify({ one, all });
+
+  const open = { rows: rows.length, presses: { values: 0, region: 0, text: 0 }, zero: [], locked: 0, lockedChanged: [] };
+  const press = (row, kind, label, next) => {
+    open.presses[kind]++;
+    if (!count(next)) open.zero.push(row.name + ' ' + label);
+  };
+  rows.forEach(row => {
+    const tag = tagOf(row);
+    Cond.drawerOptions(tag).forEach(g => g.fields.forEach(o => {
+      if (o.kind === 'values') o.values.forEach(({ value, state }) => {
+        if (state === '可按') press(row, 'values', o.field + '=' + value, Cond.toggleValue(tag, o.field, value));
+        if (state === '鎖住') {
+          open.locked++;
+          if (JSON.stringify(Cond.toggleValue(tag, o.field, value)) !== JSON.stringify(tag)) {
+            open.lockedChanged.push(row.name + ' ' + o.field + '=' + value);
+          }
+        }
+      });
+      if (o.kind === 'region') o.players.filter(p => p.state === '可按').forEach(p =>
+        p.zones.filter(z => z.state === '可按').forEach(z =>
+          press(row, 'region', o.field + '=' + (p.value || '不限') + '・' + z.value,
+            Cond.addValue(tag, o.field, [p.value, z.value]))));
+      if (o.kind === 'text') o.candidates.forEach(w =>
+        press(row, 'text', o.field + '=' + w, Cond.addValue(tag, o.field, w)));
+    }));
+  });
+  return JSON.stringify({ one, all, open });
 };`, box);
 
-const { one, all } = JSON.parse(vm.runInContext('__stats()', box));
+const { one, all, open } = JSON.parse(vm.runInContext('__stats()', box));
 const pct = (n, d) => (100 * n / d).toFixed(1) + '%';
 console.log('== 一、單詞標籤:位置與極性以外的選值鈕各加一次 ==');
 console.log(`標籤 ${one.rows} 張,按 ${one.presses} 次`);
@@ -67,3 +95,11 @@ console.log(`標籤 ${all.rows} 張,按 ${all.presses} 次`);
 console.log(`0 張 ${all.zero}(${pct(all.zero, all.presses)})、張數不變 ${all.same}(${pct(all.same, all.presses)})、`
   + `張數改變 ${all.changed}(${pct(all.changed, all.presses)})`);
 console.log(`在全部 ${all.rows} 張標籤上按了都是 0 張的值:${all.deadEverywhere.join('、') || '無'}`);
+console.log('');
+console.log('== 三、全部具名查詢:只按抽屜選項裡可按的各加一次 ==');
+const opened = open.presses.values + open.presses.region + open.presses.text;
+console.log(`標籤 ${open.rows} 張,按 ${opened} 次(選值鈕 ${open.presses.values}、區域 ${open.presses.region}、`
+  + `中心詞候選 ${open.presses.text})`);
+console.log(`0 張 ${open.zero.length} 次${open.zero.length ? ':' + open.zero.join('、') : ''}`);
+console.log(`鎖住的鈕 ${open.locked} 顆,按了標籤有變 ${open.lockedChanged.length} 顆`
+  + `${open.lockedChanged.length ? ':' + open.lockedChanged.join('、') : ''}`);

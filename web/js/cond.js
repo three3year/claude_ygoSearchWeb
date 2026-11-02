@@ -369,9 +369,24 @@ function chipOptions(tag, field) {
   return list.length ? { field, kind: 'values', values: list } : null;
 }
 
-/* 區域三欄:玩家與區域照值域全列(票 03 改成依詞元與其他欄)。 */
+/* 區域三欄(drawer-values 規格判定段區域一條):玩家清單與每個玩家的區域清單,各帶狀態可按或灰。
+   隱藏只看詞元的框:區域看任何玩家、玩家看任何區域,不限玩家一律列;灰看(玩家或不限, 區域)在
+   其他欄成立的框上有沒有,玩家底下沒有一個區域命中時玩家也灰。已加入的項(items)一律列、可刪。 */
 function regionOptions(tag, field) {
-  return Object.assign({ field }, editor(field));
+  const seen = Engine.fieldValues({ 詞元: tag.pred.詞元 }, field);
+  const hits = Engine.fieldValues(tag.pred, field);
+  const items = values(tag, field);
+  const zones = (DOMAINS.區域 || []).filter(zone => seen.some(it => it[1] === zone));
+  const players = [null].concat((DOMAINS.玩家 || []).filter(p => seen.some(it => it[0] === p)));
+  if (!zones.length && !items.length) return null;
+  const hit = (player, zone) => hits.some(it => it[1] === zone && (player === null || it[0] === player));
+  return {
+    field, kind: 'region', items,
+    players: players.map(player => {
+      const list = zones.map(value => ({ value, state: hit(player, value) ? OPEN : GRAY }));
+      return { value: player, state: list.some(z => z.state === OPEN) ? OPEN : GRAY, zones: list };
+    }),
+  };
 }
 
 /* 中心詞兩欄:候選是其他欄成立的框上這一欄出現過的全部中心詞,依中心詞表順序,已加入的不列
@@ -387,7 +402,8 @@ function textOptions(tag, field) {
 const FIELD_OPTIONS = { values: chipOptions, region: regionOptions, text: textOptions };
 
 /* 抽屜選項:[{group, fields: [{field, kind, …}]}];沒有欄的組不列。點選鈕的欄帶 values:
-   [{value, state}];區域欄帶 players、zones;中心詞欄帶 candidates。 */
+   [{value, state}];區域欄帶 players: [{value, state, zones: [{value, state}]}]
+   與已加入的 items;中心詞欄帶 candidates。 */
 function drawerOptions(tag) {
   const groups = drawerGroups();
   return Object.keys(groups).map(group => ({

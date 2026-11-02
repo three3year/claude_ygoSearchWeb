@@ -223,12 +223,22 @@ function onDrawerClick(e) {
   }
 }
 
+/* 中心詞框只能挑清單:字等於這一欄候選的某一項才收(drawer-values 規格條件列與抽屜段)。 */
+function candidatesOf(tag, field) {
+  const option = Cond.drawerOptions(tag).flatMap(g => g.fields).find(f => f.field === field);
+  return option ? option.candidates : [];
+}
+
 function onDrawerChange(e) {
   const el = e.target;
   const value = el.value.trim();
   if (!value || !el.dataset.act) return;
   const tag = openTag();
   const box = el.closest('[data-field]');
+  if (el.dataset.act === 'add-text' && candidatesOf(tag, box.dataset.field).indexOf(value) < 0) {
+    el.value = '';
+    return;
+  }
   const item = el.dataset.act === 'add-region'
     ? [box.querySelector('[data-role="player"]').value || null, value] : value;
   handlers.onEdit(openAt, Cond.addValue(tag, box.dataset.field, item));

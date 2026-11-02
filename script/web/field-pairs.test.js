@@ -113,16 +113,63 @@ test('改欄位:全部關掉就是沒寫,不留空清單', () => {
   assert.ok(!('施事者' in cond('toggleValue', on, '施事者', '相手').pred));
 });
 
-test('改欄位:極性全關是不限,短句寫出來', () => {
-  const none = cond('toggleValue', cond('toggleValue', tagAt(DESTROY), '極性', '肯定'), '極性', '可能');
-  assert.ok(!('極性' in none.pred));
-  assert.strictEqual(cond('sentence', none), '破壊 極性 不限');
+test('改欄位:極性最後一顆亮著的關不掉,兩顆亮著時都能關', () => {
+  const one = cond('toggleValue', tagAt(DESTROY), '極性', '肯定');
+  assert.deepStrictEqual(one.pred.極性, ['可能']);
+  assert.deepStrictEqual(cond('toggleValue', one, '極性', '可能'), one);
+  assert.deepStrictEqual(cond('toggleValue', tagAt(DESTROY), '極性', '可能').pred.極性, ['肯定']);
 });
 
-test('改欄位:位置全關視同三個位置都看,明寫三個值', () => {
-  const none = cond('toggleValue', tagAt(DESTROY), '位置', '效果');
-  assert.deepStrictEqual(none.pred.位置, ['代價', '效果', '條件']);
-  assert.strictEqual(cond('sentence', none), '代價或效果或條件位 破壊');
+test('改欄位:極性三種全亮是不限,短句寫出來;肯定+可能照舊不寫', () => {
+  const all = cond('toggleValue', tagAt(DESTROY), '極性', '否定');
+  assert.deepStrictEqual(all.pred.極性, ['肯定', '否定', '可能']);
+  assert.strictEqual(cond('sentence', all), '破壊 極性 不限');
+  assert.strictEqual(cond('sentence', tagAt(DESTROY)), '破壊');
+});
+
+test('改欄位:述詞沒寫極性視同三種全亮,關一顆剩另外兩顆', () => {
+  const bare = { ex: false, origin: null, pred: { 詞元: '破壊', 位置: ['效果'] } };
+  assert.deepStrictEqual(cond('values', bare, '極性'), ['肯定', '否定', '可能']);
+  assert.deepStrictEqual(cond('toggleValue', bare, '極性', '否定').pred.極性, ['肯定', '可能']);
+  assert.strictEqual(cond('sentence', bare), '破壊 極性 不限');
+});
+
+test('改欄位:位置最後一顆亮著的關不掉,標籤不變', () => {
+  const tag = tagAt(DESTROY);
+  assert.deepStrictEqual(cond('toggleValue', tag, '位置', '效果'), tag);
+  assert.deepStrictEqual(cond('removeValue', tag, '位置', '效果'), tag);
+});
+
+test('鎖住:位置、極性只剩一顆亮著時那顆鎖住;兩顆亮、沒亮、其他欄都不鎖', () => {
+  const tag = tagAt(DESTROY);
+  assert.strictEqual(cond('locked', tag, '位置', '效果'), true);
+  assert.strictEqual(cond('locked', tag, '位置', '條件'), false);
+  assert.strictEqual(cond('locked', cond('toggleValue', tag, '位置', '條件'), '位置', '效果'), false);
+  assert.strictEqual(cond('locked', tag, '極性', '肯定'), false);
+  const only = cond('toggleValue', tag, '極性', '肯定');
+  assert.strictEqual(cond('locked', only, '極性', '可能'), true);
+  const one = cond('toggleValue', tag, '施事者', '相手');
+  assert.strictEqual(cond('locked', one, '施事者', '相手'), false);
+});
+
+test('還原:鎖住後還原回來源那一列,位置與極性解鎖', () => {
+  const only = cond('toggleValue', tagAt(DESTROY), '極性', '肯定');
+  const back = cond('restore', only);
+  assert.deepStrictEqual(back, tagAt(DESTROY));
+  assert.strictEqual(cond('locked', back, '極性', '可能'), false);
+  assert.strictEqual(cond('locked', back, '位置', '效果'), true);
+});
+
+test('改欄位:位置兩顆亮著時都能關', () => {
+  const two = cond('toggleValue', tagAt(DESTROY), '位置', '條件');
+  assert.deepStrictEqual(cond('toggleValue', two, '位置', '效果').pred.位置, ['條件']);
+  assert.deepStrictEqual(cond('toggleValue', two, '位置', '條件').pred.位置, ['效果']);
+});
+
+test('改欄位:三個位置都看要三顆都按亮', () => {
+  const all = cond('toggleValue', cond('toggleValue', tagAt(DESTROY), '位置', '代價'), '位置', '條件');
+  assert.deepStrictEqual(all.pred.位置, ['代價', '效果', '條件']);
+  assert.strictEqual(cond('sentence', all), '代價或效果或條件位 破壊');
 });
 
 test('改欄位:位置可以改成條件,標籤短句跟著變', () => {
@@ -235,9 +282,16 @@ test('欄位對:規格的例子,欄序固定、值用 ~ 接、逐個編碼', () 
   ].join(';'));
 });
 
-test('欄位對:效果位不寫位置,不限極性不寫極性', () => {
-  const tag = edit(edit(NON_SELF, '極性', '肯定'), '極性', '可能');
+test('欄位對:效果位不寫位置,三種極性全亮不寫極性', () => {
+  const tag = edit(NON_SELF, '極性', '否定');
   assert.strictEqual(hashOf(tag), 'act=' + pair('詞元', '破壊') + ';' + pair('動作對象', '非此卡'));
+});
+
+test('欄位對:肯定+可能、否定的極性寫法不變', () => {
+  const neg = edit(edit(edit(NON_SELF, '極性', '否定'), '極性', '肯定'), '極性', '可能');
+  assert.deepStrictEqual(neg.pred.極性, ['否定']);
+  assert.ok(hashOf(neg).includes(';' + pair('極性', '否定') + ';'), hashOf(neg));
+  assert.ok(hashOf(NON_SELF).includes(';' + pair('極性', '肯定', '可能') + ';'), hashOf(NON_SELF));
 });
 
 test('欄位對:排除在開頭加 -', () => {
@@ -296,15 +350,25 @@ test('往返:述詞、排除都不變,canon 冪等', () => {
   assert.strictEqual(harness.canonHash(box, hash), hash);
 });
 
-test('往返:沒寫位置是效果,沒寫極性是不限', () => {
-  const [tag] = parsedTags('act=' + pair('詞元', '破壊') + ';' + pair('施事者', '相手'));
+test('往返:沒寫位置是效果,沒寫極性讀成三種全亮', () => {
+  const hash = 'act=' + pair('詞元', '破壊') + ';' + pair('施事者', '相手');
+  const [tag] = parsedTags(hash);
   assert.deepStrictEqual(tag.pred.位置, ['效果']);
-  assert.ok(!('極性' in tag.pred));
+  assert.deepStrictEqual(tag.pred.極性, ['肯定', '否定', '可能']);
   assert.strictEqual(cond('sentence', tag), '破壊 由 相手 極性 不限');
+  assert.strictEqual(harness.canonHash(box, hash), hash);
+});
+
+test('往返:三種極性全亮寫出時不寫極性,canon 冪等', () => {
+  const hash = hashOf(edit(NON_SELF, '極性', '否定'));
+  assert.ok(!hash.includes(e('極性')), hash);
+  assert.deepStrictEqual(parsedTags(hash)[0].pred.極性, ['肯定', '否定', '可能']);
+  assert.strictEqual(harness.canonHash(box, hash), hash);
+  assert.strictEqual(harness.canonHash(box, harness.canonHash(box, hash)), hash);
 });
 
 test('往返:三個位置都看要明寫,讀回來還是三個', () => {
-  const hash = hashOf(edit(tagAt(DESTROY), '位置', '效果'));
+  const hash = hashOf(edit(edit(tagAt(DESTROY), '位置', '代價'), '位置', '條件'));
   assert.ok(hash.includes(pair('位置', '代價', '效果', '條件')), hash);
   assert.deepStrictEqual(parsedTags(hash)[0].pred.位置, ['代價', '效果', '條件']);
 });
@@ -346,7 +410,7 @@ test('解析:不認得的欄忽略,不會送進引擎', () => {
   for (const field of ['亂寫', '__proto__', 'constructor']) {
     const hash = 'act=' + DESTROY_PAIR + ';' + pair(field, 'x') + ';' + pair('施事者', '相手');
     const st = harness.parseHash(box, hash);
-    assert.deepStrictEqual(Object.keys(cond('tags', st.cond)[0].pred).sort(), ['位置', '施事者', '詞元'].sort());
+    assert.deepStrictEqual(Object.keys(cond('tags', st.cond)[0].pred).sort(), ['位置', '施事者', '極性', '詞元'].sort());
     assert.doesNotThrow(() => harness.search(box, cond('toQuery', st.cond, st.q)));
   }
 });
@@ -382,7 +446,7 @@ test('解析:壞掉的段沒有冒號、整段空白都不崩', () => {
 
 test('解析:壞百分比編碼不崩,值壞掉掉那個值,欄名壞掉掉那一欄,詞元壞掉掉整張', () => {
   assert.deepStrictEqual(parsedTags('act=' + DESTROY_PAIR + ';' + e('受事者中心詞') + ':%E3%81~ok')[0].pred.受事者中心詞, ['ok']);
-  assert.deepStrictEqual(Object.keys(parsedTags('act=' + DESTROY_PAIR + ';%E3%81:x')[0].pred).sort(), ['位置', '詞元'].sort());
+  assert.deepStrictEqual(Object.keys(parsedTags('act=' + DESTROY_PAIR + ';%E3%81:x')[0].pred).sort(), ['位置', '極性', '詞元'].sort());
   assert.deepStrictEqual(parsedTags('act=' + e('詞元') + ':%E3%81'), []);
 });
 
@@ -470,6 +534,26 @@ test('兩區:同一區兩張改到一模一樣,網址只寫一張,canon 不變',
 });
 
 /* ── 全語料 ── */
+
+test('全語料:沒寫極性的網址讀成三種全亮,每個詞元每個位置查到的卡和沒寫極性相同', t => {
+  const data = harness.realData();
+  if (!data) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
+  const real = harness.load(data);
+  const rcond = (fn, ...args) => harness.cond(real, fn, ...args);
+  const wrong = [];
+  for (const lemma of data.vocab.frame.lemmas) {
+    for (const pos of data.vocab.frame.domains.位置) {
+      const st = harness.parseHash(real, 'act=' + pair('詞元', lemma) + ';' + pair('位置', pos));
+      const [tag] = rcond('tags', st.cond);
+      const bare = { preds: { inc: [{ 詞元: [lemma], 位置: [pos] }], ex: [] } };
+      const got = harness.ids(real, rcond('toQuery', st.cond, {}));
+      if (tag.pred.極性.length !== 3 || JSON.stringify(got) !== JSON.stringify(harness.ids(real, bare))) {
+        wrong.push([lemma, pos]);
+      }
+    }
+  }
+  assert.deepStrictEqual(wrong, []);
+});
 
 test('全語料:237 個具名查詢改到代價位走欄位對往返,張數等於目錄的代價位張數', t => {
   const data = harness.realData();

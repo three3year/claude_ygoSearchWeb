@@ -30,6 +30,8 @@ const POSITION_FALLBACK = ['代價', '條件'];
 /* 極性的預設,短句不寫它;抄 catalog.py 的 DEFAULT_POLARITY(2026-11-01 規格 2「詞元節點極性」(a)),
    conditions.test.js 守和來源一致。排序過,比對時不看順序。 */
 const DEFAULT_POLARITY = ['可能', '肯定'];
+/* 至少要留一個值的欄:最後一顆亮著的按不掉,要全部就全按亮(drawer-values 規格,2026-11-02)。 */
+const LOCKED_FIELDS = ['位置', '極性'];
 
 /* 區域三欄,抄 predicate.py 的 REGION_FIELDS(2026-11-01 規格 3);conditions.test.js 守和來源一致。 */
 const REGION_FIELDS = ['來源', '目的', '所在'];
@@ -312,14 +314,19 @@ function orderedValues(field, items) {
   return domain.filter(v => items.indexOf(v) >= 0);
 }
 
-const values = (tag, field) => asList(tag.pred[field]);
+/* 極性沒寫是不限,等於三種全亮(drawer-values 規格條件模型段):抽屜畫成全亮,關一顆剩另外兩顆。 */
+function values(tag, field) {
+  if (field === '極性' && !asList(tag.pred.極性).length) return (DOMAINS.極性 || []).slice();
+  return asList(tag.pred[field]);
+}
 
-/* 空欄等於沒寫,不留空清單;只有位置例外,全關是三個位置都看,要明寫(規格 4 條件模型段)。 */
+/* 空欄等於沒寫,不留空清單;位置、極性不能關到空,最後一顆關掉不改標籤(drawer-values 規格
+   「位置能不能全部關掉?」「極性能不能全部關掉?」,2026-11-02)。 */
 function withValues(tag, field, items) {
   const pred = Object.assign({}, tag.pred);
   const list = orderedValues(field, items);
   if (list.length) pred[field] = list;
-  else if (field === '位置') pred[field] = DOMAINS.位置.slice();
+  else if (LOCKED_FIELDS.indexOf(field) >= 0) return tag;
   else delete pred[field];
   return Object.assign({}, tag, { pred });
 }
@@ -335,6 +342,12 @@ function removeValue(tag, field, item) {
 function toggleValue(tag, field, item) {
   const on = values(tag, field).some(v => sameItem(v, item));
   return on ? removeValue(tag, field, item) : addValue(tag, field, item);
+}
+
+/* 抽屜裡亮著但按不掉的那一顆:位置、極性只剩它亮著。 */
+function locked(tag, field, item) {
+  const list = values(tag, field);
+  return LOCKED_FIELDS.indexOf(field) >= 0 && list.length === 1 && sameItem(list[0], item);
 }
 
 function setEx(tag, ex) {
@@ -371,19 +384,21 @@ function regionItem(text) {
 }
 
 /* 標籤 → 欄位對 `[[欄, [值文字…]]…]`:欄序、值序固定,所以同樣的標籤寫出同樣的網址。
-   位置只有一個效果時不寫,極性沒寫就是不限(規格 4 網址段)。 */
+   位置只有一個效果時不寫;三種極性全亮不寫,和舊網址的沒寫同義(drawer-values 規格)。 */
 function toPairs(tag) {
   const pairs = [];
   FIELD_ORDER.forEach(field => {
     const list = orderedValues(field, values(tag, field));
-    if (!list.length || (field === '位置' && isDefaultPosition(list))) return;
+    if (!list.length || (field === '位置' && isDefaultPosition(list)) ||
+        (field === '極性' && isAnyPolarity(tag))) return;
     pairs.push([field, REGION_FIELDS.indexOf(field) >= 0 ? list.map(regionText) : list]);
   });
   return pairs;
 }
 
 /* 欄位對 → 標籤。只照欄位清單取,不認得的欄與值域外的值在這裡消失,引擎看不到;沒有詞元不成
-   標籤。網址不寫來源,所以欄位等於某個具名查詢才有來源(規格 4 網址段)。 */
+   標籤。網址不寫來源,所以欄位等於某個具名查詢才有來源(規格 4 網址段)。沒寫極性明寫成三種
+   全亮,抽屜畫出來就是實際條件(drawer-values 規格)。 */
 function fromPairs(pairs, ex) {
   const pred = {};
   FIELD_ORDER.forEach(field => {
@@ -394,6 +409,7 @@ function fromPairs(pairs, ex) {
   });
   if (!pred.詞元) return null;
   if (!pred.位置) pred.位置 = [DEFAULT_POSITION];
+  if (!pred.極性) pred.極性 = values({ pred }, '極性');
   const row = named({ pred });
   return { ex: !!ex, pred, origin: row ? row.name : null };
 }
@@ -419,8 +435,10 @@ function isDefaultPosition(value) {
   return !list.length || (list.length === 1 && list[0] === DEFAULT_POSITION);
 }
 
+const isAnyPolarity = tag => values(tag, '極性').length === (DOMAINS.極性 || []).length;
+
 /* 短句的片段,條件列一段一段畫;field 留給抽屜「點字捲到那一欄」。極性放最後(原型如此),
-   極性沒寫是不限,不是預設,要寫出來。 */
+   三種全亮(含沒寫)是不限,不是預設,要寫出來。 */
 function sentenceParts(tag) {
   const pred = tag.pred, parts = [];
   if (!isDefaultPosition(pred.位置)) {
@@ -433,7 +451,8 @@ function sentenceParts(tag) {
     parts.push({ field, glue: GLUE[field], text: fieldText(field, pred[field]) });
   });
   if (!isDefaultPolarity(pred.極性)) {
-    parts.push({ field: '極性', glue: GLUE.極性, text: fieldText('極性', pred.極性) || '不限' });
+    parts.push({ field: '極性', glue: GLUE.極性,
+                 text: isAnyPolarity(tag) ? '不限' : fieldText('極性', pred.極性) });
   }
   return parts;
 }
@@ -464,6 +483,7 @@ function hitLabels(q) {
     sideTags, sideZone, moveSide, syncSide, toQuery,
     sentenceParts, sentence, hitLabels, positionPrefix, note, soloQuery,
     toPairs, fromPairs,
-    drawerGroups, editor, values, addValue, removeValue, toggleValue, setEx, editedFrom, restore,
+    drawerGroups, editor, values, addValue, removeValue, toggleValue, locked, setEx, editedFrom,
+    restore,
   });
 })();

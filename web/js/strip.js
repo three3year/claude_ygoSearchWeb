@@ -55,8 +55,10 @@ function zoneHtml(zone, html) {
     html || `<span class="strip-hint">${esc(HINTS[zone])}</span>`}</div></div>`;
 }
 
-const chipHtml = (value, on) =>
-  `<button type="button" class="drawer-chip${on ? ' on' : ''}" data-act="toggle" data-v="${esc(value)}">${esc(value)}</button>`;
+/* 鎖住的那顆亮著但不能按(drawer-values 規格條件列與抽屜段)。 */
+const chipHtml = (value, on, locked) =>
+  `<button type="button" class="drawer-chip${on ? ' on' : ''}" data-act="toggle" data-v="${esc(value)}"${
+    locked ? ' disabled title="至少要留一個"' : ''}>${esc(value)}</button>`;
 
 function itemsHtml(tag, field, text) {
   return `<div class="drawer-chips">${Cond.values(tag, field).map((item, i) =>
@@ -83,7 +85,7 @@ function fieldHtml(tag, field) {
   const body = editor.kind === 'region' ? regionHtml(tag, field, editor)
     : editor.kind === 'text' ? textHtml(tag, field, editor)
     : `<div class="drawer-chips">${editor.values.map(v =>
-        chipHtml(v, Cond.values(tag, field).indexOf(v) >= 0)).join('')}</div>`;
+        chipHtml(v, Cond.values(tag, field).indexOf(v) >= 0, Cond.locked(tag, field, v))).join('')}</div>`;
   return `<div class="drawer-field" data-field="${esc(field)}"><div class="drawer-label">${esc(field)}</div>${body}</div>`;
 }
 

@@ -11,6 +11,7 @@
   --chip-c-bg:#E7ECF1; --chip-c-ink:#4A5E70;
   --chip-oov-bg:#F8E4E6; --chip-oov-ink:#A63B44;
   --chip-dem-bg:#E3EDF6; --chip-dem-ink:#35608C;
+  --chip-proc-bg:#F4E6F0; --chip-proc-ink:#93406F;
   --bar:#BFD2D6; --con-row:#F6F3FB;
 }
 @media (prefers-color-scheme: dark){:root{
@@ -23,6 +24,7 @@
   --chip-c-bg:#26303A; --chip-c-ink:#9FB2C2;
   --chip-oov-bg:#402428; --chip-oov-ink:#E39099;
   --chip-dem-bg:#223240; --chip-dem-ink:#9CC0DE;
+  --chip-proc-bg:#3A2433; --chip-proc-ink:#E2A0C8;
   --bar:#33505A; --con-row:#221E30;
 }}
 :root[data-theme="light"]{
@@ -35,6 +37,7 @@
   --chip-c-bg:#E7ECF1; --chip-c-ink:#4A5E70;
   --chip-oov-bg:#F8E4E6; --chip-oov-ink:#A63B44;
   --chip-dem-bg:#E3EDF6; --chip-dem-ink:#35608C;
+  --chip-proc-bg:#F4E6F0; --chip-proc-ink:#93406F;
   --bar:#BFD2D6; --con-row:#F6F3FB;
 }
 :root[data-theme="dark"]{
@@ -47,6 +50,7 @@
   --chip-c-bg:#26303A; --chip-c-ink:#9FB2C2;
   --chip-oov-bg:#402428; --chip-oov-ink:#E39099;
   --chip-dem-bg:#223240; --chip-dem-ink:#9CC0DE;
+  --chip-proc-bg:#3A2433; --chip-proc-ink:#E2A0C8;
   --bar:#33505A; --con-row:#221E30;
 }
 *{box-sizing:border-box}
@@ -153,6 +157,7 @@ table.frames .sent{display:block;font-size:.7rem}
 .f-cost{background:var(--chip-num-bg);color:var(--chip-num-ink)}
 .f-eff{background:var(--chip-name-bg);color:var(--chip-name-ink)}
 .f-cond{background:var(--chip-dem-bg);color:var(--chip-dem-ink)}
+.f-proc{background:var(--chip-proc-bg);color:var(--chip-proc-ink)}
 .f-con{background:var(--chip-p-bg);color:var(--chip-p-ink)}
 table.frames tr.con td{background:var(--con-row)}
 table.frames td.content{font-size:.82rem;color:var(--muted)}
@@ -178,7 +183,7 @@ table.frames td.cat .cat-na{color:var(--muted);opacity:.5}
 .ctree{display:flex;flex-direction:column;gap:2px}
 .ctree details{background:var(--panel);border:1px solid var(--line);border-radius:6px}
 .ctree details details{margin:2px 6px 2px 18px;border-color:transparent;border-left:2px solid var(--line);border-radius:0}
-.ctree summary,.ctree .chead{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 92px 92px 92px 100px 90px;gap:8px;
+.ctree summary,.ctree .chead{position:relative;display:grid;grid-template-columns:minmax(0,1fr) repeat(var(--npos,3),92px) 100px 90px;gap:8px;
   align-items:center;padding:5px 10px 5px 24px;cursor:pointer;list-style:none}
 .ctree .chead{cursor:default;color:var(--muted);font-size:.8rem;padding-top:0;padding-bottom:2px}
 .ctree .chead span:not(:first-child){text-align:right}
@@ -214,7 +219,7 @@ table.frames tbody tr[title]{cursor:pointer}
 <header>
   <h1>效果文分詞檢視</h1>
   <p class="sub">新格式新卡層・分詞詞典 <span id="lexcount">—</span> 詞・粒度原則最小可拆(ADR-0014,2026-10-08)。
-  「卡片拆解」分頁(票 04/05〜08、13/14;約束框架票 01〜06):每張卡的效果句(一個編號效果的全文,連同它的 ● 選項;ADR-0015)拆成兩種框架、依原文順序混排——動作框架:動作(詞元)、對象/來源/目的、位置(代價/效果/條件)、極性(肯定/否定/可能);約束框架:限制(次數/事件回合禁用/誓約/召喚條件)、時機、素材,專屬欄位併在「內容」欄;兩種都記選項(出自第幾個 ● 與標籤)。本頁供質性驗收:翻卡讀框架,判斷「讀不讀得出這張卡在做什麼、能怎麼用、什麼時候用、怎麼出場」。</p>
+  「卡片拆解」分頁(票 04/05〜08、13/14;約束框架票 01〜06):每張卡的效果句(一個編號效果的全文,連同它的 ● 選項;ADR-0015)拆成兩種框架、依原文順序混排——動作框架:動作(詞元)、對象/來源/目的、位置(代價/效果/條件/召喚手續;召喚手續=召喚條件句裡出場要做的事,例 除外して特殊召喚)、極性(肯定/否定/可能);約束框架:限制(次數/事件回合禁用/誓約/召喚條件)、時機、素材,專屬欄位併在「內容」欄;兩種都記選項(出自第幾個 ● 與標籤)。本頁供質性驗收:翻卡讀框架,判斷「讀不讀得出這張卡在做什麼、能怎麼用、什麼時候用、怎麼出場」。</p>
 </header>
 
 <div class="stats" id="stats"></div>
@@ -225,6 +230,7 @@ table.frames tbody tr[title]{cursor:pointer}
   <span class="chip f-cost">代價</span>
   <span class="chip f-eff">效果</span>
   <span class="chip f-cond">條件</span>
+  <span class="chip f-proc">召喚手續</span>
   <span class="chip f-con">約束(限制·次數 等)</span>
   <span class="chip t-lex">詞典詞</span>
   <span class="chip t-dem">指示綁定(この/その+詞)</span>
@@ -499,8 +505,10 @@ function shardLoader(global,prefix){
   };
 }
 var loadShard=shardLoader("VIEW_FRAMES","view_frames_");
+// 位置 → chip 樣式;每個位置各自一種(召喚手續不落到效果的樣式)
+var POS_CHIP={"代價":"f-cost","效果":"f-eff","條件":"f-cond","召喚手續":"f-proc"};
 function posChip(p){
-  var cls=p==="代價"?"f-cost":p==="條件"?"f-cond":"f-eff";
+  var cls=POS_CHIP[p]||"f-eff";
   return '<span class="chip '+cls+'">'+esc(p)+'</span>';
 }
 function conChip(label){return '<span class="chip f-con">'+esc(label)+'</span>'}
@@ -535,7 +543,7 @@ function queryPath(i){
   return esc(p.slice(0,-1).concat([""]).join(" › "))+'<b>'+esc(queryName(i))+'</b>';
 }
 function queryCell(c){
-  // f[14]=命中的具名查詢號清單(目錄序;不互斥、三個位置都算):列路徑、多個並列;空清單是沒命中任何具名查詢
+  // f[14]=命中的具名查詢號清單(目錄序;不互斥、每個位置都算):列路徑、多個並列;空清單是沒命中任何具名查詢
   if(!c) return '<td class="cat"></td>';
   if(!c.length) return '<td class="cat"><span class="cat-na" title="沒命中任何具名查詢:目錄還沒開這個述詞(第三版沒有「未歸」)">—</span></td>';
   return '<td class="cat">'+c.map(function(i){return '<span class="path">'+queryPath(i)+'</span>'}).join("")+'</td>';
@@ -684,7 +692,7 @@ function cardsSection(){
   var box=document.createElement("section");
   if(!FR){box.innerHTML='<p class="note">view_data.js 未含框架資料(先跑 frames.py 與 prepare_view.py)。</p>';return box}
   box.innerHTML='<div class="search-row"><input type="search" placeholder="卡號或卡名(日文/繁中,子字串)"><button class="btn" id="rnd">隨機一張</button></div>'
-    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。一句效果句一塊:左原文(領起部分接各 ● 行,每段標效果類型)、右框架表,兩種框架依原文順序混排——動作框架(類別欄=位置 代價/效果/條件;動作=正規化的動作詞元(同一動作的他動/自動/受身是同一個詞元、以他動形為名,縮寫與全名歸一到縮寫;原文寫法看子句);具名查詢=這個框命中目錄裡的哪些具名查詢(動作類別第三版:每個節點是一個框架述詞,對匯出框列算、不互斥、沒有預設葉、三個位置都算),顯示 大類 › 詞元節點 › 名 的路徑(宣告了中類時是 大類 › 中類 › 名,例 數值 › 攻撃力 › アップ:攻撃力),一框常同時命中詞元節點與幾片葉(破壊、破壊:モンスター、破壊@相手フィールド、破壊@フィールド 並列),「—」是沒命中任何具名查詢(目錄還沒開那個述詞;第三版沒有「未歸」「不適用」);動作對象=此卡/非此卡(皆非淡色),與匯出框列同一個判定,滑過看理由;主題=は 前的片語(說的是誰;同一句內沒有自己主題的子句沿用前一個主題)、主語=が 前的片語(說的是什麼在變),態=他動/自動/受身——受身是被動句,他動/自動只在態歸一合併的詞元上記(戻る→戻す 自動、になる→にする 自動、アップ 看受事者的助詞),空是沒判;自動與受身的受事者留在主題/主語;對象/來源/目的=を/から/に・へ 前的詞;受事者片語裡的區域切出來——區域移動與召喚類動作記來源、其餘記所在(卡在那裡、沒有被移走);淡色斜體的格是規則從前面的述語回填的(か 並列、選ぶ鏈、主題延續),淡色加點線的格是推得——目的(與 捨てる、ドロー 的來源)由動作本身決定、原文沒寫,規則補上的;內容=效果內容的次數/窗口/回合條件、か 並列的「或①」(同號二選一)、回填與推得了哪幾欄、純列舉項的列舉清單)與約束框架(底色列;類別欄=限制·次數/限制·事件回合禁用/限制·誓約/限制·召喚條件/時機/素材;內容=專屬欄位,時機的窗口只記階段、「〜したターン/そのターン/次のターン」記在回合條件);選項=出自第幾個 ● 與標籤;回指=受事者是指示詞(そのモンスター、対象のカード、その発動)時它指的目標:目標字面@區域與玩家,事件的主語或效果類的主人記在「主語」,灰字是找法(対象=該效果的 対象とする、欄位=往前的對象/主語/主題、字面=欄位找不到才從原文片語找、事件=最近的發動/攻擊事件);空的是不帶回指(修飾語、不是卡)或找不到;第四版論元(frame-args-v4,2026-11-01)=全部是新鍵、字面欄不動:對象/主題/主語/目的各一個可展開的論元片語(摘要列各段 中心詞(中心詞類),展開列段字面、指示詞、玩家、區域、修飾語(類)、數量(類 數字)),結構化的來源/目的/所在 (玩家,區域)——所在淡色加點線是轉欄(取自來源/取自で)、來源(回指)/所在(回指)淡色斜體是回指回填,施事者 值(來源)(推得的淡色加點線),方式 字面 類(=表示形式值),否定形;滑過各格有說明。滑過一列在原文標出對應字段,點一下釘住。</p>'
+    +'<p class="note">共 '+fmt(CARDS.length)+' 張卡。一句效果句一塊:左原文(領起部分接各 ● 行,每段標效果類型)、右框架表,兩種框架依原文順序混排——動作框架(類別欄=位置 代價/效果/條件/召喚手續;動作=正規化的動作詞元(同一動作的他動/自動/受身是同一個詞元、以他動形為名,縮寫與全名歸一到縮寫;原文寫法看子句);具名查詢=這個框命中目錄裡的哪些具名查詢(動作類別第三版:每個節點是一個框架述詞,對匯出框列算、不互斥、沒有預設葉、每個位置都算),顯示 大類 › 詞元節點 › 名 的路徑(宣告了中類時是 大類 › 中類 › 名,例 數值 › 攻撃力 › アップ:攻撃力),一框常同時命中詞元節點與幾片葉(破壊、破壊:モンスター、破壊@相手フィールド、破壊@フィールド 並列),「—」是沒命中任何具名查詢(目錄還沒開那個述詞;第三版沒有「未歸」「不適用」);動作對象=此卡/非此卡(皆非淡色),與匯出框列同一個判定,滑過看理由;主題=は 前的片語(說的是誰;同一句內沒有自己主題的子句沿用前一個主題)、主語=が 前的片語(說的是什麼在變),態=他動/自動/受身——受身是被動句,他動/自動只在態歸一合併的詞元上記(戻る→戻す 自動、になる→にする 自動、アップ 看受事者的助詞),空是沒判;自動與受身的受事者留在主題/主語;對象/來源/目的=を/から/に・へ 前的詞;受事者片語裡的區域切出來——區域移動與召喚類動作記來源、其餘記所在(卡在那裡、沒有被移走);淡色斜體的格是規則從前面的述語回填的(か 並列、選ぶ鏈、主題延續),淡色加點線的格是推得——目的(與 捨てる、ドロー 的來源)由動作本身決定、原文沒寫,規則補上的;內容=效果內容的次數/窗口/回合條件、か 並列的「或①」(同號二選一)、回填與推得了哪幾欄、純列舉項的列舉清單)與約束框架(底色列;類別欄=限制·次數/限制·事件回合禁用/限制·誓約/限制·召喚條件/時機/素材;內容=專屬欄位,時機的窗口只記階段、「〜したターン/そのターン/次のターン」記在回合條件);選項=出自第幾個 ● 與標籤;回指=受事者是指示詞(そのモンスター、対象のカード、その発動)時它指的目標:目標字面@區域與玩家,事件的主語或效果類的主人記在「主語」,灰字是找法(対象=該效果的 対象とする、欄位=往前的對象/主語/主題、字面=欄位找不到才從原文片語找、事件=最近的發動/攻擊事件);空的是不帶回指(修飾語、不是卡)或找不到;第四版論元(frame-args-v4,2026-11-01)=全部是新鍵、字面欄不動:對象/主題/主語/目的各一個可展開的論元片語(摘要列各段 中心詞(中心詞類),展開列段字面、指示詞、玩家、區域、修飾語(類)、數量(類 數字)),結構化的來源/目的/所在 (玩家,區域)——所在淡色加點線是轉欄(取自來源/取自で)、來源(回指)/所在(回指)淡色斜體是回指回填,施事者 值(來源)(推得的淡色加點線),方式 字面 類(=表示形式值),否定形;滑過各格有說明。滑過一列在原文標出對應字段,點一下釘住。</p>'
     +'<p class="note">卡名下一行是卡層彙總:這張卡效果位與代價位的框命中的具名查詢(各自去重、目錄序)。</p>'
     +'<div class="results"></div><div class="card-view"></div>';
   var input=box.querySelector("input"), results=box.querySelector(".results"), view=box.querySelector(".card-view");
@@ -805,15 +813,15 @@ function querySection(){
   if(!Q||!Q.nodes){box.innerHTML='<p class="note">view_data.js 未含具名查詢總覽(先跑 catalog_hits.py 與 prepare_view.py)。</p>';return box}
   var POS=Q.positions;
   function tile(k,v,small){return '<div class="tile"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+small+'</small></div></div>'}
-  var max=1;
-  (function walk(ns){ns.forEach(function(n){max=Math.max(max,n[2][3]);walk(n[4])})})(Q.nodes);
+  var TOT=POS.length, max=1;
+  (function walk(ns){ns.forEach(function(n){max=Math.max(max,n[2][TOT]);walk(n[4])})})(Q.nodes);
   function count(f,c,cls){return '<span class="cf'+(cls?' '+cls:'')+'">'+fmt(f)+' <small>'+fmt(c)+' 張</small></span>'}
   function row(n,depth){
-    // 節點列 [名, 查詢號或 -1, [代價, 效果, 條件, 合計 框數], [同 卡數], 子]:大類/中類(查詢號 -1)是底下具名查詢的聯集
+    // 節點列 [名, 查詢號或 -1, [各位置(照 POS)…, 合計 框數], [同 卡數], 子]:大類/中類(查詢號 -1)是底下具名查詢的聯集
     var f=n[2], c=n[3], tag=n[1]<0?(depth?'中類':'大類'):'';
     return '<summary><span class="cn">'+esc(n[0])+(tag?'<span class="tag">'+tag+'(聯集)</span>':'')+'</span>'
-      +POS.map(function(_,i){return count(f[i],c[i],'cp')}).join('')+count(f[3],c[3])
-      +'<span class="cbarw"><span class="cbar" style="width:'+Math.max(2,Math.round(100*f[3]/max))+'%"></span></span></summary>';
+      +POS.map(function(_,i){return count(f[i],c[i],'cp')}).join('')+count(f[TOT],c[TOT])
+      +'<span class="cbarw"><span class="cbar" style="width:'+Math.max(2,Math.round(100*f[TOT]/max))+'%"></span></span></summary>';
   }
   function nodeHtml(n,depth){
     var kids=n[4], qid=n[1];
@@ -827,15 +835,15 @@ function querySection(){
   var h='<div class="stats">'
     +tile('具名查詢',fmt(Q.queries),'詞元節點 '+fmt(Q.lemma_nodes)+'・葉 '+fmt(Q.queries-Q.lemma_nodes))
     +tile('頂層',fmt(Q.majors),'中類 '+fmt(Q.middles))
-    +tile('動作框架',fmt(Q.frames),'三個位置都算')
+    +tile('動作框架',fmt(Q.frames),'每個位置都算')
     +POS.map(function(p,i){return tile(p+'・命中任一',fmt(hitAny[i]),'/ '+fmt(perPos[i])+' 框('+(100*hitAny[i]/Math.max(1,perPos[i])).toFixed(1)+'%)')}).join('')
     +'</div>'
-    +'<p class="note">動作類別第三版(named-queries,2026-11-01):類別樹退成具名查詢的目錄,每個節點是一個框架述詞;動作框架可同時命中幾個具名查詢、不互斥、沒有預設葉,三個位置(代價/效果/條件)都算,命中對匯出框列算(與網站索引同一回事)。框=命中該具名查詢的框架數、張=有這些框架的卡數,分位置再合計(合計是三個位置的聯集,不是相加);大類與中類是底下具名查詢的聯集(一框多命中只算一次),詞元節點自己就是一個具名查詢(帶子的具名查詢);宣告了大類的節點掛到宣告的大類底下、宣告了中類的掛到中類底下(中類列在詞元節點之前,借來的節點排在本家的之後)。沒有「未歸」「不適用」:沒命中任何具名查詢的框只是目錄還沒開那個述詞,數字在下面的分佈。點節點展開、點具名查詢列出它的框架(卡號、卡名、位置、子句原文),點卡號跳到該卡的拆解並釘住那個框架。</p>'
+    +'<p class="note">動作類別第三版(named-queries,2026-11-01):類別樹退成具名查詢的目錄,每個節點是一個框架述詞;動作框架可同時命中幾個具名查詢、不互斥、沒有預設葉,每個位置('+POS.join('/')+')都算,命中對匯出框列算(與網站索引同一回事)。框=命中該具名查詢的框架數、張=有這些框架的卡數,分位置再合計(合計是各位置的聯集,不是相加);大類與中類是底下具名查詢的聯集(一框多命中只算一次),詞元節點自己就是一個具名查詢(帶子的具名查詢);宣告了大類的節點掛到宣告的大類底下、宣告了中類的掛到中類底下(中類列在詞元節點之前,借來的節點排在本家的之後)。沒有「未歸」「不適用」:沒命中任何具名查詢的框只是目錄還沒開那個述詞,數字在下面的分佈。點節點展開、點具名查詢列出它的框架(卡號、卡名、位置、子句原文),點卡號跳到該卡的拆解並釘住那個框架。</p>'
     +'<h2>一框命中幾個具名查詢</h2><div class="scroll"><table><thead><tr><th>命中數</th>'+POS.map(function(p){return '<th>'+posChip(p)+'</th>'}).join('')+'<th>合計</th></tr></thead><tbody>'
     +["0","1","2","3+"].map(function(b,i){var cells=POS.map(function(p){return Q.hits[p][i]});return '<tr><td>'+b+'</td>'+cells.map(function(v){return '<td class="n">'+fmt(v)+'</td>'}).join('')+'<td class="n">'+fmt(cells.reduce(function(a,c){return a+c},0))+'</td></tr>'}).join('')
     +'</tbody></table></div>'
     +'<div class="search-row"><button class="btn" data-act="open">展開所有節點</button><button class="btn" data-act="close">全部收合</button></div>'
-    +'<h2>目錄</h2><div class="ctree"><div class="chead"><span>節點</span>'+POS.map(function(p){return '<span class="cp">'+esc(p)+'</span>'}).join('')+'<span>合計</span><span class="cbarw"></span></div>'
+    +'<h2>目錄</h2><div class="ctree" style="--npos:'+TOT+'"><div class="chead"><span>節點</span>'+POS.map(function(p){return '<span class="cp">'+esc(p)+'</span>'}).join('')+'<span>合計</span><span class="cbarw"></span></div>'
     +Q.nodes.map(function(n){return nodeHtml(n,0)}).join("")+'</div>';
   box.innerHTML=h;
   function renderList(el,rows){

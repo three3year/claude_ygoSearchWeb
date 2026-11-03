@@ -240,7 +240,7 @@ def fill_state(frame):
 
 
 def count_section(records):
-    """報告小節「方式各類框數」:七類 × 位置(代價/效果/條件)的動作框架數,與 其他 類的字面 top 30。"""
+    """報告小節「方式各類框數」:七類 × 位置(照位置清單)的動作框架數,與 其他 類的字面 top 30。"""
     others = Counter(fr["manner"] for rec in records for fr in rec["frames"] if fr.get("manner_kind") == OTHER)
     lines = ["方式=述語前同一子句內的 で 片語(字面含 で);方式類依片語尾詞歸類,戰鬥與效果的並列(戦闘・効果で)"
              "記 手段:戰鬥或效果,其他並列不同類落 其他。定語裡的 で、繫詞 で 不收;で 接區域不是方式,"

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """拆解頁總覽與報告小節的行為測試(named-queries 票 09)。
 
-接縫兩個:prepare_view.query_overview(目錄, 每框的命中) → (總覽表, 分片)——每個具名查詢三個位置的框數/卡數、
+接縫兩個:prepare_view.query_overview(目錄, 每框的命中) → (總覽表, 分片)——每個具名查詢各位置的框數/卡數、
 大類/中類是底下具名查詢的聯集(由樹推得)、展開看框架的分片列;report.queries_section(目錄, 命中紀錄) → 報告
-小節的行(節點數、三個位置的命中框數分佈、不留清單)。另:拆解頁每框的列帶命中的具名查詢號與動作對象。
+小節的行(節點數、各位置的命中框數分佈、不留清單)。另:拆解頁每框的列帶命中的具名查詢號與動作對象。
 只斷言總覽列、分片列、報告的行,不斷言樹怎麼存、分片怎麼分。小目錄與幾個框的命中都是合成的,不讀全語料。
 
 執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize
@@ -158,7 +158,7 @@ class TestReportSection(unittest.TestCase):
         self.assertIn("| 0 | 0 | 0 | 1 | 0 | 1 |", text)
         self.assertIn("| 2 | 1 | 1 | 0 | 0 | 2 |", text)
         self.assertIn("| 3+ | 0 | 2 | 0 | 0 | 2 |", text)
-        self.assertIn("不留(三個位置都沒命中)1 個:破壊(耐性)", text)
+        self.assertIn("不留(每個位置都沒命中)1 個:破壊(耐性)", text)
         self.assertIn("### 動作對象(此卡/非此卡/皆非)框數分位置", text)
         self.assertIn("| 此卡 | 1 | 0 | 0 | 0 | 1 |", text)
         self.assertIn("| 非此卡 | 0 | 1 | 0 | 0 | 1 |", text)
@@ -167,7 +167,7 @@ class TestReportSection(unittest.TestCase):
     def test_section_says_none_when_every_query_hits(self):
         hits = HITS + [{"card": 4, "section": "main", "index": "①", "order": 0, "position": POS_EFFECT,
                         "text": "破壊されない", "queries": ["破壊(耐性)"]}]
-        self.assertIn("不留(三個位置都沒命中):無", "\n".join(report.queries_section(small(), hits)))
+        self.assertIn("不留(每個位置都沒命中):無", "\n".join(report.queries_section(small(), hits)))
 
 
 if __name__ == "__main__":

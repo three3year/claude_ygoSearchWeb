@@ -1,0 +1,11 @@
+頁面 file:///F:/AiProject/claude_ygoSearchWeb/.claude/worktrees/agent-a17ddef55c930bfdf/.scratch/effect-tokenize/viewer.html
+卡 59400890:框架表 4 張,帶召喚手續 chip 的 1 張
+  召喚手續列:5句2召喚手續除外區域移動 › 除外區域移動 › ←フィールド › 除外←フィールド非此卡肯定レベル6以上の魔法使い族・闇属性モンスター1体自分フィールド除外推
+chip 底色:f-cost rgb(245, 237, 220)、f-eff rgb(226, 240, 236)、f-cond rgb(227, 237, 246)、f-proc rgb(244, 230, 240)
+截圖 F:\AiProject\claude_ygoSearchWeb\.claude\worktrees\agent-a17ddef55c930bfdf\.scratch\summon-procedure\tools\results\viewer_59400890_procedure.png
+圖例:圖例: 代價 效果 條件 召喚手續 約束(限制·次數 等) 詞典詞 指示綁定(この/その+詞) 助詞 卡名/計數器名(〈
+總覽表頭:節點 | 代價 | 效果 | 條件 | 召喚手續 | 合計 | 
+目錄第一列 7 格、同一行 true:召喚 | 0 0 張 | 5,367 4,441 張 | 1,930 1,406 張 | 0 0 張 | 7,297 4,999 張 | 
+截圖 F:\AiProject\claude_ygoSearchWeb\.claude\worktrees\agent-a17ddef55c930bfdf\.scratch\summon-procedure\tools\results\viewer_overview_tree.png
+console 錯誤 0
+違規 0

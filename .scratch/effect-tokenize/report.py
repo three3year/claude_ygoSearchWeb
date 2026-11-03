@@ -9,7 +9,7 @@
 4. 動作框架覆蓋率(frames.json 存在時;票 05):有抽到框架的句比例、位置/極性
    分佈、動作詞元 top 50——儀表板參考,不是通過門檻
 5. 新欄填充率(frame-args-v4)與具名查詢目錄(named-queries 票 09;frame_queries.json
-   存在時):節點數、三個位置的命中框數分佈(命中 0/1/2/3+ 個具名查詢的框數)、不留清單
+   存在時):節點數、各位置的命中框數分佈(命中 0/1/2/3+ 個具名查詢的框數)、不留清單
 
 統計單位是效果句(ADR-0015:一個編號效果的全文,連同它的 ● 選項;tokens.json
 一筆就是一句,拆開的領起句與子效果句已由 tokenize.py 接回一段)。效果外文本
@@ -346,7 +346,7 @@ def frames_section():
                                                stats["extra"]["constraints"]),
         "",
         "位置分佈(動作框架):" + "、".join("%s %s" % (k, format(v, ","))
-                                        for k, v in sorted(position.items())),
+                                        for k, v in position_items(position)),
         "",
         "極性分佈(動作框架):" + "、".join("%s %s" % (k, format(v, ","))
                                         for k, v in sorted(polarity.items())),
@@ -378,8 +378,15 @@ def count_by_position(records, key):
     return counts
 
 
+def position_items(position):
+    """位置 Counter → [(位置, 框數)],照位置清單排(召喚手續最後;字串排序會把它排第二),沒有框的位置記 0。
+    分詞報表的「位置分佈」與拆解頁覆蓋分頁共用。"""
+    from constraints import POSITIONS
+    return [(pos, position[pos]) for pos in POSITIONS]
+
+
 def position_table(counts, rows, label):
-    """Counter((值, 位置)) → markdown 表的行:值一列(依 rows 的順序)、位置一欄(代價/效果/條件)、合計一欄;
+    """Counter((值, 位置)) → markdown 表的行:值一列(依 rows 的順序)、位置照位置清單各一欄、合計一欄;
     label 是第一欄的欄名。constraints 在這裡才 import(constraints 載入時 import report,模組層級會循環)。"""
     from constraints import POSITIONS
     lines = ["| %s | %s | 合計 |" % (label, " | ".join(POSITIONS)), "|---|" + "---|" * (len(POSITIONS) + 1)]
@@ -450,7 +457,7 @@ def patient_mode_section(hits):
 
 def queries_section(cat, hits):
     """具名查詢目錄(named-queries 票 09):目錄(catalog.Catalog)與命中紀錄 → 小節的行——節點數(大類/中類/
-    具名查詢,具名查詢再分詞元節點與葉)、三個位置的命中框數分佈、每框平均命中、不留清單(三個位置都沒命中的
+    具名查詢,具名查詢再分詞元節點與葉)、各位置的命中框數分佈、每框平均命中、不留清單(每個位置都沒命中的
     具名查詢;匯出步驟會擋下,這裡登的是中間產物的現況)、動作對象的框數分位置。"""
     from constraints import POSITIONS
     major_nodes = sum(1 for node in cat.roots if node.predicate is None)
@@ -464,9 +471,9 @@ def queries_section(cat, hits):
         "## 具名查詢目錄(named-queries)",
         "",
         "動作類別第三版:類別樹退成具名查詢的目錄(`catalog.json`),每個節點是一個框架述詞,動作框架可同時命中"
-        "幾個、不互斥、沒有預設葉;三個位置都算。命中由 `catalog_hits.py` 對匯出框列用參考評估器算"
+        "幾個、不互斥、沒有預設葉;每個位置(%s)都算。命中由 `catalog_hits.py` 對匯出框列用參考評估器算"
         "(`frame_queries.json`);大類/中類是底下具名查詢的聯集。沒有「未歸」——沒命中任何具名查詢的框"
-        "只是目錄還沒開那個述詞。",
+        "只是目錄還沒開那個述詞。" % "、".join(POSITIONS),
         "",
         "節點數:頂層 %d(大類 %d、自成大類的具名查詢 %d)、中類 %d、具名查詢 %d(詞元節點 %d、葉 %d)。" % (
             len(cat.roots), major_nodes, len(cat.roots) - major_nodes, middles, len(cat.queries), lemma_nodes,
@@ -482,7 +489,7 @@ def queries_section(cat, hits):
         row = [distribution[position][bucket] for position in POSITIONS]
         lines.append("| %s | %s | %s |" % (bucket, " | ".join(format(c, ",") for c in row), format(sum(row), ",")))
     lines += ["",
-              "不留(三個位置都沒命中)%s" % (
+              "不留(每個位置都沒命中)%s" % (
                   "%d 個:%s" % (len(unmatched), "、".join(unmatched)) if unmatched else ":無"),
               ""]
     return lines + patient_mode_section(hits)

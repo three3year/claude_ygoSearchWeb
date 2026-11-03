@@ -1,10 +1,10 @@
 /**
- * drawer-lock.test.js — 鎖住的欄:區域欄(drawer-lock 票 02)
+ * drawer-lock.test.js — 鎖住的欄:區域欄(drawer-lock 票 02)、中心詞欄與否定形(票 03)
  *
  * 跑法:`node --test script/web/drawer-lock.test.js`
  *
  * 接縫:條件模型 `Cond.drawerOptions(標籤)`、`addValue`/`removeValue`/`toggleValue`、`tagAt`、`fromPairs`。
- * 經 harness 載入真前端程式,框表是手寫的小表。
+ * 經 harness 載入真前端程式,框表是手寫的小表;全語料核對用真 data.js 與 `Engine.runQuery` 的張數。
  */
 'use strict';
 
@@ -166,4 +166,118 @@ test('網址往返:條件葉標籤只寫路徑,讀回來仍鎖;舊網址的欄�
 test('包含與排除同一份選項', () => {
   const tag = cond('toggleValue', leafTag(), '施事者', '自分');
   assert.deepStrictEqual(cond('drawerOptions', cond('setEx', tag, true)), cond('drawerOptions', tag));
+});
+
+/* 票 03:中心詞欄與否定形。另一張小框表,中心詞表有字。 */
+const HEAD_VOCAB = { ...FRAME_VOCAB, lemmas: ['破壊'], heads: ['モンスター', 'カード', '手札', '墓地'] };
+const headFrame = fields => harness.frame(HEAD_VOCAB, { 詞元: '破壊', ...fields });
+const HEAD_FRAMES = [
+  headFrame({ 位置: '效果', 極性: '肯定', 施事者: '自分', 受事者中心詞: ['モンスター'], 目的中心詞: ['墓地'] }),
+  headFrame({ 位置: '效果', 極性: '肯定', 施事者: '相手', 受事者中心詞: ['カード'], 目的中心詞: ['手札'] }),
+  headFrame({ 位置: '代價', 極性: '肯定', 施事者: '相手', 受事者中心詞: ['モンスター'] }),
+  headFrame({ 位置: '效果', 極性: '否定', 施事者: '自分', 態: '受身', 否定形: '受身' }),
+  headFrame({ 位置: '效果', 極性: '肯定', 態: '他動' }),
+];
+const HEAD_LEAF = '破壊:モンスター';
+const RESIST = '破壊(耐性)';
+const HEAD_CATALOG = [
+  row('破壊', ['破壊'], { 詞元: '破壊' }, { 代價: 1, 效果: 4, 條件: 0 }),
+  row(HEAD_LEAF, ['破壊', HEAD_LEAF], { 詞元: '破壊', 受事者中心詞: ['モンスター'] }, { 代價: 1, 效果: 1, 條件: 0 }),
+  row(RESIST, [RESIST], { 詞元: '破壊', 極性: ['否定'], 否定形: ['受身', '不可能'] }, { 代價: 0, 效果: 1, 條件: 0 }),
+];
+const headBox = harness.load({
+  cards: HEAD_FRAMES.map((_, n) => ({ id: n + 1, n: '卡' + n, c: 'm', tx: ['①。'], fr: [[n]] })),
+  frames: HEAD_FRAMES, vocab: { frame: HEAD_VOCAB, catalog: HEAD_CATALOG },
+});
+const headCond = (fn, ...args) => harness.cond(headBox, fn, ...args);
+const headTag = (path, ex) => headCond('tagAt', path, !!ex);
+const headField = (tag, field) => headCond('drawerOptions', tag).flatMap(g => g.fields).find(f => f.field === field);
+
+test('條件葉標籤:鎖住的中心詞欄只帶鎖住的詞與來源名字,不帶候選', () => {
+  assert.deepStrictEqual(headField(headTag('破壊›' + HEAD_LEAF), '受事者中心詞'),
+    { field: '受事者中心詞', kind: 'text', lock: HEAD_LEAF, items: ['モンスター'] });
+});
+
+test('中心詞鎖住後其他欄只列 詞元+鎖住的詞 出現過的值:目的中心詞只剩 墓地;施事者 相手 只在代價位,仍灰', () => {
+  const tag = headTag('破壊›' + HEAD_LEAF);
+  assert.deepStrictEqual(headField(tag, '目的中心詞').candidates, ['墓地']);
+  assert.deepStrictEqual(headField(tag, '施事者').values,
+    [{ value: '自分', state: '可按' }, { value: '相手', state: '灰' }]);
+  assert.strictEqual(headField(tag, '否定形'), undefined);
+  assert.deepStrictEqual(headCond('addValue', tag, '受事者中心詞', 'カード'), tag);
+  assert.deepStrictEqual(headCond('removeValue', tag, '受事者中心詞', 'モンスター'), tag);
+});
+
+test('耐性詞元節點:否定形鎖住,每個值狀態為鎖住,帶來源名字', () => {
+  assert.deepStrictEqual(headField(headTag(RESIST), '否定形'), {
+    field: '否定形', kind: 'values', lock: RESIST,
+    values: [{ value: '受身', state: '鎖住' }, { value: '不可能', state: '鎖住' }],
+  });
+});
+
+test('耐性詞元節點:極性欄只列 否定,是按不掉的那一顆;只在肯定框出現的值不列', () => {
+  const tag = headTag(RESIST);
+  assert.deepStrictEqual(headField(tag, '極性').values, [{ value: '否定', state: '鎖住' }]);
+  assert.deepStrictEqual(headField(tag, '態').values, [{ value: '受身', state: '可按' }]);
+  assert.deepStrictEqual(headField(tag, '施事者').values, [{ value: '自分', state: '可按' }]);
+  assert.strictEqual(headField(tag, '受事者中心詞'), undefined);
+});
+
+test('不寫否定形、中心詞的詞元節點標籤不鎖:否定形與中心詞欄照常列', () => {
+  const tag = headTag('破壊');
+  assert.deepStrictEqual(headField(tag, '否定形'), { field: '否定形', kind: 'values', values: [{ value: '受身', state: '灰' }] });
+  assert.deepStrictEqual(headField(tag, '受事者中心詞'),
+    { field: '受事者中心詞', kind: 'text', candidates: ['モンスター', 'カード'] });
+});
+
+test('中心詞欄與否定形:包含與排除同一份選項', () => {
+  for (const path of ['破壊›' + HEAD_LEAF, RESIST]) {
+    assert.deepStrictEqual(headCond('drawerOptions', headTag(path, true)), headCond('drawerOptions', headTag(path)));
+  }
+});
+
+test('全語料:162 張會鎖的標籤,可按的鈕加上去有卡、鎖住的值按了標籤不變;其餘 75 張不鎖', t => {
+  const data = harness.realData();
+  if (!data) {
+    t.skip('缺 web/data.js,略過全語料對照');
+    return;
+  }
+  const real = harness.load(data);
+  const on = (fn, ...args) => harness.cond(real, fn, ...args);
+  const countOf = tag => harness.ids(real, on('soloQuery', tag)).length;
+  const rows = data.vocab.catalog.filter(r => r.predicate);
+  const lockedFieldsOf = r => Object.keys(r.predicate).filter(f => f !== '詞元' && f !== '極性');
+  const wrong = [];
+  const seen = { 會鎖: 0, 不鎖: 0, 可按: 0, 鎖住: 0 };
+  const open = (row, tag, field, item) => {
+    seen.可按++;
+    if (countOf(on('addValue', tag, field, item)) === 0) wrong.push(`${row.name} ${field}=${JSON.stringify(item)} 可按但 0 張`);
+  };
+  for (const row of rows) {
+    const tag = on('tagAt', row.path.join('›'), false);
+    const fields = on('drawerOptions', tag).flatMap(g => g.fields);
+    const lockedNow = fields.filter(f => f.lock).map(f => f.field).sort();
+    const expected = lockedFieldsOf(row).sort();
+    seen[expected.length ? '會鎖' : '不鎖']++;
+    if (JSON.stringify(lockedNow) !== JSON.stringify(expected)) wrong.push(`${row.name} 鎖住 ${lockedNow} 應為 ${expected}`);
+    for (const f of fields) {
+      if (f.lock) {
+        if (f.lock !== row.name) wrong.push(`${row.name} ${f.field} 由 ${f.lock} 決定`);
+        for (const item of f.values ? f.values.map(v => v.value) : f.items) {
+          seen.鎖住++;
+          for (const fn of ['toggleValue', 'addValue', 'removeValue']) {
+            if (JSON.stringify(on(fn, tag, f.field, item)) !== JSON.stringify(tag)) wrong.push(`${row.name} ${fn} ${f.field} 改了標籤`);
+          }
+        }
+      } else if (f.kind === 'values') {
+        f.values.filter(v => v.state === '可按').forEach(v => open(row, tag, f.field, v.value));
+      } else if (f.kind === 'region') {
+        f.players.forEach(p => p.zones.filter(z => z.state === '可按').forEach(z => open(row, tag, f.field, [p.value, z.value])));
+      } else f.candidates.forEach(word => open(row, tag, f.field, word));
+    }
+  }
+  t.diagnostic(`會鎖 ${seen.會鎖}、不鎖 ${seen.不鎖}、可按 ${seen.可按}、鎖住的值 ${seen.鎖住}`);
+  assert.deepStrictEqual(wrong, []);
+  assert.strictEqual(seen.會鎖, 162);
+  assert.strictEqual(seen.不鎖, 75);
 });

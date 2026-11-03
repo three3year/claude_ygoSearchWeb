@@ -20,6 +20,10 @@ sys.path.insert(0, HERE)
 import llm_check  # noqa: E402
 
 
+# 效果文被認成召喚條件的卡:手續只有一步 選ぶ,被白名單擋掉,也算進母體
+MISREAD_SUMMON_CONDITION_CARD = 38082437
+
+
 def read(root, name):
     with open(os.path.join(root, name), encoding="utf-8") as f:
         return f.read()
@@ -43,7 +47,7 @@ class TestCorpusProcedure(unittest.TestCase):
         self.assertEqual(picked, llm_check.sample_procedure())
         self.assertEqual(len(picked), 304)
         self.assertEqual(len({p["card"] for p in picked}), 304)
-        self.assertIn(38082437, {p["card"] for p in picked})
+        self.assertIn(MISREAD_SUMMON_CONDITION_CARD, {p["card"] for p in picked})
         self.assertEqual(Counter(p["stratum"] for p in picked),
                          {llm_check.STRATUM_HAS_PROCEDURE: 271, llm_check.STRATUM_ALL_BLOCKED: 33})
 
@@ -68,7 +72,7 @@ class TestCorpusProcedure(unittest.TestCase):
         sections = self.card_sections(llm_check.sample_procedure())
         self.assertIn("被白名單擋掉的步驟:第 1 步 存在", sections[263926])
         self.assertNotIn("[召喚手續]", sections[263926])
-        self.assertIn("被白名單擋掉的步驟:第 1 步 選ぶ", sections[38082437])
+        self.assertIn("被白名單擋掉的步驟:第 1 步 選ぶ", sections[MISREAD_SUMMON_CONDITION_CARD])
         self.assertNotIn("被白名單擋掉的步驟", sections[59400890])
 
     def test_recheck_rewrites_the_same_sample_with_the_same_cells(self):
@@ -112,9 +116,23 @@ def write_round(root, name, findings, **meta):
     return round_dir
 
 
+def cells(line):
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
 def table_row(report, name):
-    line = next(line for line in report.splitlines() if line.startswith("| %s |" % name))
-    return [cell.strip() for cell in line.strip("|").split("|")][1:]
+    """報告表格裡第一欄是 name 的那一列 → {欄名: 值}(欄名取自那張表的表頭)。"""
+    header = None
+    for line in report.splitlines():
+        if line.startswith("| 錯誤類型 |"):
+            header = cells(line)
+        elif line.startswith("| %s |" % name):
+            return dict(zip(header[1:], cells(line)[1:]))
+    raise AssertionError("報告沒有 %s 這一列" % name)
+
+
+def counts(row):
+    return {k: row[k] for k in ("筆數", "框數", "卡數")}
 
 
 class TestProcedureReport(unittest.TestCase):
@@ -129,13 +147,13 @@ class TestProcedureReport(unittest.TestCase):
             round_dir = write_round(root, "procedure-round1", self.FINDINGS)
             llm_check.report_procedure(round_dir)
             report = read(round_dir, "report.md")
-        self.assertEqual(table_row(report, "中心詞錯"), ["3", "2", "1", "1", "2"])
-        self.assertEqual(table_row(report, "漏出"), ["2", "2", "1", "0", "2"])
-        self.assertEqual(table_row(report, "數量錯"), ["1", "1", "1", "0", "1"])
-        self.assertEqual(table_row(report, "多出"), ["0", "0", "0", "0", "0"])
-        self.assertEqual(table_row(report, "(其他)")[:3], ["1", "1", "1"])
+        self.assertEqual(table_row(report, "中心詞錯"), {"筆數": "3", "框數": "2", "卡數": "1", "規則": "1", "抽取": "2"})
+        self.assertEqual(table_row(report, "漏出"), {"筆數": "2", "框數": "2", "卡數": "1", "規則": "0", "抽取": "2"})
+        self.assertEqual(table_row(report, "數量錯"), {"筆數": "1", "框數": "1", "卡數": "1", "規則": "0", "抽取": "1"})
+        self.assertEqual(table_row(report, "多出"), {"筆數": "0", "框數": "0", "卡數": "0", "規則": "0", "抽取": "0"})
+        self.assertEqual(counts(table_row(report, "(其他)")), {"筆數": "1", "框數": "1", "卡數": "1"})
         self.assertIn("不知道", report)
-        self.assertEqual(table_row(report, "合計")[:3], ["8", "6", "3"])
+        self.assertEqual(counts(table_row(report, "合計")), {"筆數": "8", "框數": "6", "卡數": "3"})
         self.assertIn("測試 3", report)
         self.assertNotIn("對照", report)
 
@@ -147,9 +165,9 @@ class TestProcedureReport(unittest.TestCase):
             llm_check.report_procedure(round_dir)
             report = read(round_dir, "report.md")
         self.assertIn("與 procedure-round1 對照", report)
-        self.assertEqual(table_row(report, "中心詞錯 前 → 後"), ["3 → 1", "2 → 1", "1 → 1"])
-        self.assertEqual(table_row(report, "漏出 前 → 後"), ["2 → 0", "2 → 0", "1 → 0"])
-        self.assertEqual(table_row(report, "多出 前 → 後"), ["0 → 1", "0 → 1", "0 → 1"])
+        self.assertEqual(table_row(report, "中心詞錯 前 → 後"), {"筆數": "3 → 1", "框數": "2 → 1", "卡數": "1 → 1"})
+        self.assertEqual(table_row(report, "漏出 前 → 後"), {"筆數": "2 → 0", "框數": "2 → 0", "卡數": "1 → 0"})
+        self.assertEqual(table_row(report, "多出 前 → 後"), {"筆數": "0 → 1", "框數": "0 → 1", "卡數": "0 → 1"})
 
 
 if __name__ == "__main__":

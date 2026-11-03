@@ -27,7 +27,8 @@ const FIELD_GROUPS = Object.freeze({
 const FIELD_ORDER = Object.values(FIELD_GROUPS).flat();
 
 /* 位置預設:效果;效果位 0 張時依序取第一個有張數的(規格 4 裁定,2026-11-02;召喚手續排最後,
-   summon-procedure 規格「效果位 0 張時的後備位置要不要排進召喚手續?」(a),2026-11-03)。 */
+   summon-procedure 規格「效果位 0 張時的後備位置要不要排進召喚手續?」(a),2026-11-03)。後備是位置值域
+   去掉效果、照值域序;conditions.test.js 守和值域一致。 */
 const DEFAULT_POSITION = '效果';
 const POSITION_FALLBACK = ['代價', '條件', '召喚手續'];
 /* 極性的預設,短句不寫它;抄 catalog.py 的 DEFAULT_POLARITY(2026-11-01 規格 2「詞元節點極性」(a)),

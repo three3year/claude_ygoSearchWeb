@@ -89,8 +89,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from constraints import (KIND_ACTION, KIND_CONSTRAINT, POS_COND, POS_COST, POS_EFFECT,  # noqa: E402
-                         POS_PROCEDURE, ConstraintFinder)
+from constraints import (ANCHOR_PROCEDURE, KIND_ACTION, KIND_CONSTRAINT, POS_COND, POS_COST,  # noqa: E402
+                         POS_EFFECT, POS_PROCEDURE, ConstraintFinder)
 import action_lemmas  # noqa: E402
 import anaphora  # noqa: E402
 import closed_values  # noqa: E402
@@ -241,6 +241,9 @@ PLAYER_WORDS = {"自分", "相手", "お互い", "自身", "持ち主"}
 # 受事者片語裡並列段的分隔(各段切自己的區域);區域字面內部的並列(自分か相手の、手札・墓地)
 PATIENT_COORDINATORS = {"p:と", "p:か", "p:や", "p:及び", "p:または"}
 PLACE_JOINERS = {"・", "p:か", "p:または", "p:及び", "p:や"}
+# 讀點後接的並列連接詞(、または/、及び):名詞片語裡的讀點不切段(票 10 第二段 2026-10-09);召喚後接時「召喚、」是
+# 省略 する 的連用中止述語(summon-procedure 票 05 procedure-round1,2026-11-04)
+COMMA_CONJUNCTIONS = ("p:または", "p:及び")
 DECK_POSITIONS = {"一番上", "一番下", "上", "下"}
 # 推得值(票 05):動作 → 由動作唯一決定的 來源/目的 區域字面;原文沒寫時補上並標推得。
 # 装備(目的是被裝備的怪獸)、リリース、破壊(去處會被改寫)不補(規格決定 2026-10-17)
@@ -434,7 +437,7 @@ class FrameExtractor:
                 return None
             elif after == "時":
                 action, j, form = "・".join(parts) + "召喚", k + 1, "noun"
-            elif k + 2 < n and tokens[k + 1] == "、" and tokens[k + 2] in ("p:または", "p:及び"):
+            elif k + 2 < n and tokens[k + 1] == "、" and tokens[k + 2] in COMMA_CONJUNCTIONS:
                 # 「…に召喚、または…をリリース」:省略 する 的連用中止,是述語不是並列名詞(summon-procedure 票 05
                 # procedure-round1);不成錨點時後面那步的論元會從這裡起算,吃進召喚去處與「召喚または」
                 action, j, form = "・".join(parts) + "召喚", k + 1, "stem"
@@ -903,7 +906,7 @@ class FrameExtractor:
                     if (cur and token_kind(cur[-1]) == "name" and k + 1 < stop
                             and token_kind(tokens[k + 1]) == "name"):
                         continue
-                    if k + 1 < stop and tokens[k + 1] in ("p:または", "p:及び"):
+                    if k + 1 < stop and tokens[k + 1] in COMMA_CONJUNCTIONS:
                         continue
                     if cur and cur[-1] == "p:の":
                         continue          # そのモンスター以外の、…
@@ -1008,19 +1011,20 @@ class FrameExtractor:
                 is_complement = complement is not None and idx == len(parts) - 1
                 while merged and merged[-1][0] not in NON_ABSORB_ROLES:
                     r, c, h = merged.pop()
+                    copula_subject = copula and r == "が"
                     complement_stop = is_complement and bool(c) and (
                         (r == "まで" and self._is_time(c))
                         or (complement == "する" and r == "を"
                             and all(m[0] != "を" for m in merged)))
                     if (scope is not None and (r not in scope or r in taken)) or (
-                            verb_rel and r == "が" and c and not copula
+                            verb_rel and r == "が" and c and not copula_subject
                             and self.word(c[-1]) in ATTR_NOUNS) or complement_stop:
                         merged.append([r, c, h])
                         break
                     taken.add(r)
                     absorbed.insert(0, c + (["p:" + r] if r else []))
                     front_hard = h
-                    if h or rel == "が" or (copula and r == "が"):
+                    if h or rel == "が" or copula_subject:
                         break
                 chunk = [t for c in absorbed for t in c] + chunk
             # 定語動詞停在屬性 が 前時(攻撃力か守備力が|２０００の通常召喚できないモンスター、
@@ -1466,7 +1470,7 @@ class FrameExtractor:
             pending_subject = None        # 附加子句(〜を素材として/〜するために)的主語,給下一個述語
             for k, a in enumerate(anchors):
                 # 召喚條件的白名單手續步驟在吃掉範圍內仍出框(召喚手續,ADR-0019)
-                if not a.get("procedure") and any(lo <= a["verb_at"] < hi for lo, hi in consumed):
+                if not a.get(ANCHOR_PROCEDURE) and any(lo <= a["verb_at"] < hi for lo, hi in consumed):
                     continue
                 is_marker = in_activation and k == marker_idx
                 before_marker = in_activation and k < marker_idx \
@@ -1517,7 +1521,7 @@ class FrameExtractor:
                         or a["nominalizer"] is None
                         and (args.get("object") or "").endswith("効果")):
                     continue
-                if a.get("procedure"):
+                if a.get(ANCHOR_PROCEDURE):
                     position = POS_PROCEDURE
                 elif a["conditional"] or a["action"] == "対象とする":
                     position = POS_COND

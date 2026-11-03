@@ -26,7 +26,6 @@ CLI:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/downstream_baseline.p
 """
 import argparse
 from collections import namedtuple
-import hashlib
 import json
 import os
 import sys
@@ -34,8 +33,9 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import patient  # noqa: E402
-from baseline_diff import strip_procedure  # noqa: E402
+from baseline_diff import renumbered_without_procedure, strip_procedure  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
+from digest_common import changed_input, file_md5, json_md5, write_digest  # noqa: E402
 from export_common import card_face  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -62,11 +62,11 @@ def _patient_values(records, faces):
     faces = faces or {}
     out = {}
     for rec in records:
-        verdicts = patient.judge_sentence(rec["frames"], faces.get(rec["card"]), rec["section"])
-        judged = dict(rec, frames=[dict(fr, _verdict=verdict) for fr, verdict in zip(rec["frames"], verdicts)])
-        for fr in strip_procedure(judged)["frames"]:
+        whole_sentence_verdicts = patient.judge_sentence(rec["frames"], faces.get(rec["card"]), rec["section"])
+        for before_strip, fr in renumbered_without_procedure(rec):
             if fr.get("kind") == KIND_ACTION:
-                out[frame_key(rec, fr)] = {"mode": fr["_verdict"].mode, "why": fr["_verdict"].why}
+                verdict = whole_sentence_verdicts[before_strip]
+                out[frame_key(rec, fr)] = {"mode": verdict.mode, "why": verdict.why}
     return out
 
 
@@ -136,16 +136,7 @@ def _rows(snap):
 
 def values_md5(snap):
     """snapshot 的 md5(鍵排序、緊湊 JSON,和檔案排版無關)。"""
-    payload = json.dumps(_rows(snap), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.md5(payload.encode("utf-8")).hexdigest()
-
-
-def file_md5(path):
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return json_md5(_rows(snap))
 
 
 def baseline_path(ruler, loc=DEFAULT):
@@ -183,9 +174,7 @@ def freeze(ruler, loc=DEFAULT):
     snap = current_snapshot(ruler, loc)
     write_baseline(ruler, snap, loc)
     digest["values_md5"] = values_md5(snap)
-    with open(digest_path(ruler, loc), "w", encoding="utf-8", newline="\n") as f:
-        json.dump(digest, f, indent=2)
-        f.write("\n")
+    write_digest(digest_path(ruler, loc), digest)
     return digest
 
 
@@ -199,12 +188,12 @@ def check_digest(ruler, loc=DEFAULT, records=None):
         if not os.path.exists(path):
             return "skip", "沒有 %s(%s)" % (what, path)
     digest = _load(digest_path(ruler, loc))
-    for name, path in _inputs(ruler, loc):
-        actual = file_md5(path)
-        if actual != digest.get(name):
-            return "skip", ("%s 變了(%s md5 %s,digest 記 %s):%s 尺這次略過;確認變化是輸入造成的之後 "
-                            "python downstream_baseline.py %s --freeze 重新凍結"
-                            % (os.path.basename(path), name, actual, digest.get(name), ruler, ruler))
+    changed = changed_input(_inputs(ruler, loc), digest)
+    if changed:
+        name, path, actual, frozen = changed
+        return "skip", ("%s 變了(%s md5 %s,digest 記 %s):%s 尺這次略過;確認變化是輸入造成的之後 "
+                        "python downstream_baseline.py %s --freeze 重新凍結"
+                        % (os.path.basename(path), name, actual, frozen, ruler, ruler))
     actual, expected = values_md5(current_snapshot(ruler, loc, records)), digest["values_md5"]
     if actual != expected:
         return "mismatch", "逐框值的 md5 %s ≠ digest 記的 %s:%s 尺的值被改了" % (actual, expected, ruler)

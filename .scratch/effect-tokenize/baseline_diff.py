@@ -6,7 +6,8 @@
   NEW_ANAPHORA_KEYS:回指欄的新子鍵(票 09 的 moving)。
 - strip(frame):剝掉新鍵的框架副本。
 - strip_procedure(record):剝框重編(summon-procedure 票 01)——剝掉位置是召喚手續的框、框序照剩下的重編;
-  diff 與 stripped_md5 比之前先過它,下游基準(downstream_baseline)也經它。
+  diff 與 stripped_md5 比之前先過它,下游基準(downstream_baseline)也經它。renumbered_without_procedure(record)
+  是同一件事的逐框對照 [(剝之前的序, 重編後的框架)]。
 - diff(baseline_path, current_path):差異清單 [(卡號, 段落, 句序, 框序, 鍵, 基準值, 現值)];
   框數不同時框序 None、鍵 "frames";紀錄缺少時鍵 "record"。
 - underscore_keys(records):底線開頭的內部鍵(票 02 暫存切前字面用,enrich 用完要 pop 掉),
@@ -20,7 +21,6 @@ CLI:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/baseline_diff.py [--b
 語料變了(新卡、勘誤)則略過並要求重新凍結。沒有基準檔時 CLI 也只走這條。
 """
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -28,6 +28,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from constraints import POS_PROCEDURE  # noqa: E402
+from digest_common import changed_input, file_md5, json_md5, write_digest  # noqa: E402
 
 BASELINE = os.environ.get("FRAMES_BASELINE") or os.path.join(HERE, "baseline", "frames.json")
 CURRENT = os.path.join(HERE, "frames.json")
@@ -52,8 +53,14 @@ def strip_procedure(record):
     """剝框重編(summon-procedure 票 01):剝掉位置是召喚手續的框、框序照剩下的重編後的紀錄副本(原紀錄不動)。
     召喚手續框依原文順序和既有框混排,會把後面的框序往後推;剝掉再重編,既有框才能和沒有召喚手續框時的
     基準逐鍵比。剝鍵比對、下游基準(動作對象、回指)比之前都經這裡。"""
-    kept = [f for f in record["frames"] if f.get("position") != POS_PROCEDURE]
-    return dict(record, frames=[dict(f, order=k) for k, f in enumerate(kept)])
+    return dict(record, frames=[f for _, f in renumbered_without_procedure(record)])
+
+
+def renumbered_without_procedure(record):
+    """剝框重編的逐框對照:[(剝之前在框架清單裡的序, 重編後的框架副本)]。整句算好、和原框架清單對齊的值
+    (動作對象判定)用剝之前的序取回。"""
+    kept = [(k, f) for k, f in enumerate(record["frames"]) if f.get("position") != POS_PROCEDURE]
+    return [(k, dict(f, order=n)) for n, (k, f) in enumerate(kept)]
 
 
 def _key(rec):
@@ -95,27 +102,15 @@ def underscore_keys(records):
             for key in sorted(fr) if key.startswith("_")]
 
 
-def file_md5(path):
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def stripped_md5(records):
     """剝框重編、剝掉新鍵後全部紀錄的 md5(鍵排序、緊湊 JSON,和檔案排版無關)。"""
-    stripped = [dict(r, frames=[strip(f) for f in strip_procedure(r)["frames"]]) for r in records]
-    return hashlib.md5(json.dumps(stripped, ensure_ascii=False, sort_keys=True,
-                                  separators=(",", ":")).encode("utf-8")).hexdigest()
+    return json_md5([dict(r, frames=[strip(f) for f in strip_procedure(r)["frames"]]) for r in records])
 
 
 def freeze(current_path=CURRENT, tokens_path=TOKENS, digest_path=DIGEST):
     """把現在的語料 md5 與剝鍵後 md5 寫進入版控的 digest(只在刻意改既有欄、確認差異是要的之後)。"""
     digest = {"tokens_md5": file_md5(tokens_path), "stripped_frames_md5": stripped_md5(_load(current_path))}
-    with open(digest_path, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(digest, f, indent=2)
-        f.write("\n")
+    write_digest(digest_path, digest)
     return digest
 
 
@@ -126,11 +121,12 @@ def check_digest(current_path=CURRENT, tokens_path=TOKENS, digest_path=DIGEST):
         if not os.path.exists(path):
             return "skip", "沒有 %s(%s)" % (what, path)
     digest = _load(digest_path)
-    tokens_md5 = file_md5(tokens_path)
-    if tokens_md5 != digest["tokens_md5"]:
+    changed = changed_input([("tokens_md5", tokens_path)], digest)
+    if changed:
+        _name, _path, tokens_md5, frozen = changed
         return "skip", ("語料變了(tokens.json md5 %s,digest 記 %s):字面欄守門這次略過;確認 frames 的變化"
                         "是語料造成的之後 python baseline_diff.py --freeze 重新凍結"
-                        % (tokens_md5, digest["tokens_md5"]))
+                        % (tokens_md5, frozen))
     actual = stripped_md5(_load(current_path))
     if actual != digest["stripped_frames_md5"]:
         return "mismatch", "剝鍵後 frames.json 的 md5 %s ≠ digest 記的 %s:既有欄被改了" % (

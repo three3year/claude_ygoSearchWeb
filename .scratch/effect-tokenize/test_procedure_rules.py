@@ -23,8 +23,7 @@ from test_05_export_frames import rows as frame_rows  # noqa: E402
 
 
 def procedure_frames(text):
-    return [f for f in frames.extract(text, extra=True)
-            if f["kind"] == constraints.KIND_ACTION and f["position"] == constraints.POS_PROCEDURE]
+    return [f for f in frames.extract(text, extra=True) if constraints.is_procedure_frame(f)]
 
 
 def agents(text):
@@ -33,7 +32,8 @@ def agents(text):
 
 
 class TestProcedureAgent(unittest.TestCase):
-    """票 03:召喚手續框的施事者一律 自分(來源 預設、推得),主題 このカード 不是施事者。"""
+    """票 03:召喚手續框的施事者一律 自分(來源 預設、推得),主題 このカード 不是施事者;
+    反例:效果位的框主題是 このカード 時照舊由主題判 此卡。"""
 
     def test_topic_this_card_is_not_the_agent(self):
         self.assertEqual(agents("このカードはモンスター１体をリリースしてアドバンス召喚できる。"),
@@ -43,6 +43,13 @@ class TestProcedureAgent(unittest.TestCase):
         self.assertEqual(agents("このカードは自分フィールドのランク８の「ギャラクシーアイズ」Xモンスターの上に"
                                 "重ねてX召喚する事もできる。"),
                          [("重ねる", "自分", "預設", True)])
+
+    def test_topic_this_card_in_an_effect_is_still_the_agent(self):
+        found = frames.extract("①：１ターンに１度、自分メインフェイズに発動できる。"
+                               "このカードは自分フィールドのモンスター１体をリリースする。")
+        self.assertEqual([(f["action"], f["position"], f.get("agent"), f.get("agent_source"), bool(f.get("agent_inferred")))
+                          for f in found if f["kind"] == constraints.KIND_ACTION],
+                         [("リリース", constraints.POS_EFFECT, "此卡", "主題", False)])
 
 
 def procedure_modes(text, face=DRAGON):

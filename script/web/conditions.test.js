@@ -507,6 +507,17 @@ test('召喚手續:新標籤預設效果;效果位 0 張時依序取 代價、�
   assert.deepStrictEqual(positionOf('リリース'), ['召喚手續']);
 });
 
+test('抄本對來源:效果位 0 張時的後備位置照值域序走遍值域裡效果以外的每個位置', t => {
+  if (!realData) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
+  const domain = realData.vocab.frame.domains.位置;
+  const others = domain.filter(pos => pos !== '效果');
+  const only = cards => Object.fromEntries(domain.map(pos => [pos, cards.includes(pos) ? 1 : 0]));
+  const rows = others.map((pos, i) => ({ name: 'r' + i, path: ['r' + i], cards: only(others.slice(i)),
+    predicate: pred({ 詞元: '除外' }) }));
+  const box = harness.load({ vocab: { catalog: rows, frame: realData.vocab.frame } });
+  assert.deepStrictEqual(rows.map(row => harness.cond(box, 'tagAt', row.name, false).pred.位置[0]), others);
+});
+
 test('召喚手續:只在召喚手續有張數的列,目錄樹灰字標「召喚手續 N」', () => {
   assert.deepStrictEqual(harness.catalogNode(procBox, 'リリース').count, { text: '召喚手續 7', zero: true });
   assert.deepStrictEqual(harness.catalogNode(procBox, '除外').count, { text: '5', zero: false });

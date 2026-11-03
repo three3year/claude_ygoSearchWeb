@@ -50,15 +50,17 @@ class TestQuantitySection(unittest.TestCase):
         self.assertTrue(line.startswith("帶數量的動作框架 4(代價 1、效果 1、條件 0、召喚手續 2);"), line)
 
 
-PROCEDURE_HIT = {"card": 4, "section": "main", "index": "0-2", "order": 2, "position": POS_PROCEDURE,
-                 "text": "モンスター１体を破壊した場合", "queries": ["破壊", "破壊:モンスター"], "patient": "非此卡"}
+# 合成的命中紀錄:借 test_09_viewer 小目錄的 破壊 兩個具名查詢,擺在召喚手續位(真語料的召喚手續沒有 破壊)
+SYNTHETIC_PROCEDURE_HIT = {"card": 4, "section": "main", "index": "0-2", "order": 2, "position": POS_PROCEDURE,
+                           "text": "モンスター１体を破壊した場合", "queries": ["破壊", "破壊:モンスター"],
+                           "patient": "非此卡"}
 
 
 class TestQueriesSection(unittest.TestCase):
     """分詞報表「具名查詢目錄」小節:命中分佈與動作對象表多一欄召喚手續;說明不寫死位置個數。"""
 
     def section(self):
-        return "\n".join(report.queries_section(test_09_viewer.small(), test_09_viewer.HITS + [PROCEDURE_HIT]))
+        return "\n".join(report.queries_section(test_09_viewer.small(), test_09_viewer.HITS + [SYNTHETIC_PROCEDURE_HIT]))
 
     def test_distribution_has_a_procedure_column_before_the_total(self):
         text = self.section()
@@ -83,7 +85,7 @@ class TestViewerData(unittest.TestCase):
         self.assertEqual(prepare_view.frame_row(fr, None, [], ["非此卡", "受事者是卡片群體"])[1], POS_PROCEDURE)
 
     def test_overview_has_a_procedure_column_and_the_total_last(self):
-        table, shards = prepare_view.query_overview(test_09_viewer.small(), test_09_viewer.HITS + [PROCEDURE_HIT])
+        table, shards = prepare_view.query_overview(test_09_viewer.small(), test_09_viewer.HITS + [SYNTHETIC_PROCEDURE_HIT])
         self.assertEqual(table["positions"], list(POSITIONS))
         self.assertEqual(table["positions"][-1], POS_PROCEDURE)
         self.assertEqual(test_09_viewer.node(table["nodes"], "小目錄", "破壊", "破壊:モンスター")[1:4],

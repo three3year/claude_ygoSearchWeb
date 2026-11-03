@@ -541,6 +541,7 @@ function queryPath(i){
   var p=FR.queries.paths[i];
   return esc(p.slice(0,-1).concat([""]).join(" › "))+'<b>'+esc(queryName(i))+'</b>';
 }
+var ROW_QUERIES=14;   // 框列裡命中的具名查詢號清單那一欄(prepare_view.frame_row)
 function queryCell(c){
   if(!c) return '<td class="cat"></td>';
   if(!c.length) return '<td class="cat"><span class="cat-na" title="沒命中任何具名查詢:目錄還沒開這個述詞(第三版沒有「未歸」)">—</span></td>';
@@ -581,7 +582,7 @@ function cardHtml(c,recs){
             :inf.indexOf(key)>=0?' class="inf" title="推得:規則依動作補上的去處/來處,原文沒寫"':'';
           return '<td'+cls+'>'+esc(v||"")+'</td>';
         }
-        h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"'+(con?' class="con"':'')+'><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+(con?conChip(f[11]):posChip(f[1]))+'</td><td>'+(con?'':'<b>'+esc(f[2])+'</b>')+'</td>'+(FR.queries?queryCell(f[14]):'<td></td>')+(con?'<td></td>':patientCell(f[22]))+'<td>'+(f[3]?polText(f[3]):'')+'</td><td>'+esc(f[19]||'')+'</td>'
+        h+='<tr title="'+esc(f[7])+'" data-fi="'+i+'"'+(con?' class="con"':'')+'><td class="muted">'+(i+1)+'<span class="sent">句'+(f[0]+1)+'</span></td><td>'+(con?conChip(f[11]):posChip(f[1]))+'</td><td>'+(con?'':'<b>'+esc(f[2])+'</b>')+'</td>'+(FR.queries?queryCell(f[ROW_QUERIES]):'<td></td>')+(con?'<td></td>':patientCell(f[22]))+'<td>'+(f[3]?polText(f[3]):'')+'</td><td>'+esc(f[19]||'')+'</td>'
           +cell("topic",f[15])+cell("subject",f[16])+cell("object",f[4])+cell("source",f[5])+cell("place",f[17])+cell("goal",f[6])+'<td class="content">'+esc(f[12]||"")+'</td><td>'+optText(f)+'</td><td>'+anaphoraText(f[20])+'</td><td class="v4">'+v4Text(f[21])+'</td></tr>'
           +'<tr class="clause"><td></td><td colspan="16"><span class="muted">子句</span> '+esc(f[7])+'</td></tr>';
       });
@@ -811,16 +812,17 @@ function querySection(){
   var POS=Q.positions;
   function tile(k,v,small){return '<div class="tile"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+small+'</small></div></div>'}
   var TOT=POS.length, max=1;
-  (function walk(ns){ns.forEach(function(n){max=Math.max(max,n[2][TOT]);walk(n[4])})})(Q.nodes);
+  function overviewNode(n){return {name:n[0],qid:n[1],frames:n[2],cards:n[3],kids:n[4]}}
+  (function walk(ns){ns.forEach(function(n){var d=overviewNode(n);max=Math.max(max,d.frames[TOT]);walk(d.kids)})})(Q.nodes);
   function count(f,c,cls){return '<span class="cf'+(cls?' '+cls:'')+'">'+fmt(f)+' <small>'+fmt(c)+' 張</small></span>'}
   function row(n,depth){
-    var f=n[2], c=n[3], tag=n[1]<0?(depth?'中類':'大類'):'';
-    return '<summary><span class="cn">'+esc(n[0])+(tag?'<span class="tag">'+tag+'(聯集)</span>':'')+'</span>'
+    var d=overviewNode(n), f=d.frames, c=d.cards, tag=d.qid<0?(depth?'中類':'大類'):'';
+    return '<summary><span class="cn">'+esc(d.name)+(tag?'<span class="tag">'+tag+'(聯集)</span>':'')+'</span>'
       +POS.map(function(_,i){return count(f[i],c[i],'cp')}).join('')+count(f[TOT],c[TOT])
       +'<span class="cbarw"><span class="cbar" style="width:'+Math.max(2,Math.round(100*f[TOT]/max))+'%"></span></span></summary>';
   }
   function nodeHtml(n,depth){
-    var kids=n[4], qid=n[1];
+    var d=overviewNode(n), kids=d.kids, qid=d.qid;
     var classes=(qid>=0?['cleaf']:[]).concat(kids.length?['cnode']:[]);
     var h='<details class="'+classes.join(' ')+'"'+(qid>=0?' data-key="q'+qid+'"':'')+'>'+row(n,depth);
     if(qid>=0) h+='<div class="flist"></div>';

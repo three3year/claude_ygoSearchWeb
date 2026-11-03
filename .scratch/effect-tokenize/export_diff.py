@@ -22,7 +22,6 @@ CLI:PYTHONIOENCODING=utf-8 python .scratch/effect-tokenize/export_diff.py [--bas
 """
 import argparse
 from collections import namedtuple
-import hashlib
 import json
 import os
 import shutil
@@ -32,6 +31,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from catalog import CATALOG  # noqa: E402
 from constraints import POS_PROCEDURE  # noqa: E402
+from digest_common import changed_input, file_md5, json_md5, write_digest  # noqa: E402
 from export_common import CARDS, TOKENS  # noqa: E402
 from export_frames import OUT as EXPORT  # noqa: E402
 
@@ -86,16 +86,7 @@ def diff(base, cur):
 
 
 def stripped_md5(doc):
-    payload = json.dumps(strip(doc), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.md5(payload.encode("utf-8")).hexdigest()
-
-
-def file_md5(path):
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return json_md5(strip(doc))
 
 
 def _load(path):
@@ -115,9 +106,7 @@ def freeze(loc=DEFAULT):
     """現行匯出檔凍結成基準:輸入檔與剝完的 md5 寫 export-digest.json,匯出檔複製到 baseline/。"""
     digest = {"inputs_md5": {os.path.basename(path): file_md5(path) for path in loc.inputs},
               "stripped_export_md5": stripped_md5(_load(loc.export))}
-    with open(digest_path(loc), "w", encoding="utf-8", newline="\n") as f:
-        json.dump(digest, f, indent=2, ensure_ascii=False)
-        f.write("\n")
+    write_digest(digest_path(loc), digest)
     os.makedirs(loc.baseline_dir, exist_ok=True)
     shutil.copyfile(loc.export, baseline_path(loc))
     return digest
@@ -130,12 +119,11 @@ def check_digest(loc=DEFAULT):
         if not os.path.exists(path):
             return "skip", "沒有 %s(%s)" % (os.path.basename(path), path)
     digest = _load(digest_path(loc))
-    for path in loc.inputs:
-        name = os.path.basename(path)
-        actual = file_md5(path)
-        if actual != digest["inputs_md5"].get(name):
-            return "skip", ("%s 變了(md5 %s,digest 記 %s):匯出檔守門這次略過;確認變化是輸入造成的之後 "
-                            "python export_diff.py --freeze 重新凍結" % (name, actual, digest["inputs_md5"].get(name)))
+    changed = changed_input([(os.path.basename(path), path) for path in loc.inputs], digest["inputs_md5"])
+    if changed:
+        name, _path, actual, frozen = changed
+        return "skip", ("%s 變了(md5 %s,digest 記 %s):匯出檔守門這次略過;確認變化是輸入造成的之後 "
+                        "python export_diff.py --freeze 重新凍結" % (name, actual, frozen))
     actual, expected = stripped_md5(_load(loc.export)), digest["stripped_export_md5"]
     if actual != expected:
         return "mismatch", "剝掉召喚手續後匯出檔的 md5 %s ≠ digest 記的 %s:既有的匯出內容被改了" % (actual, expected)

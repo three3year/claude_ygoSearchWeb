@@ -23,7 +23,10 @@ POSITIONS = (POS_COST, POS_EFFECT, POS_COND, POS_PROCEDURE)
 # 召喚手續框的動作白名單(summon-procedure 規格「白名單是哪幾種動作?」,2026-11-03 定案 9 種):比對抽取時的
 # 動作名(寫法歸一後、詞元正規化前)。不在表內的手續步驟(存在、になる 這類前提、P召喚可能、對手的 発動、
 # 誤認成召喚條件的 選ぶ)只留在約束框架的手續欄,不出框
-PROCEDURE_ACTIONS = frozenset({"リリース", "除外", "重ねる", "送る", "戻す", "捨てる", "取り除く", "見せる", "払う"})
+PROCEDURE_OVERLAY = "重ねる"   # 疊放:受事者一律此卡(patient.judge 讀)
+PROCEDURE_ACTIONS = frozenset({"リリース", "除外", PROCEDURE_OVERLAY, "送る", "戻す", "捨てる", "取り除く", "見せる", "払う"})
+# 召喚條件的白名單手續步驟在述語錨點上記這個鍵(True):落在召喚條件吃掉的範圍內仍要出召喚手續框(frames.py 讀)
+ANCHOR_PROCEDURE = "procedure"
 CAT_LIMIT, CAT_TIMING, CAT_MATERIAL = "限制", "時機", "素材"
 SUB_COUNT, SUB_EVENT_TURN, SUB_PLEDGE, SUB_SUMMON = (
     "次數", "事件回合禁用", "誓約", "召喚條件")
@@ -80,6 +83,23 @@ THIS_EFFECT = "この効果"
 COUNT_UNITS = {"度", "回", "枚"}
 POTENTIAL_ALL = {"できる", "でき", "できない", "できず"}
 OPTION = "●"
+
+
+def is_procedure_frame(frame):
+    """召喚手續框:位置是召喚手續的動作框架。"""
+    return frame.get("kind") == KIND_ACTION and frame.get("position") == POS_PROCEDURE
+
+
+def is_summon_condition(frame):
+    """限制·召喚條件 約束框架。"""
+    return frame.get("kind") == KIND_CONSTRAINT and frame.get("subtype") == SUB_SUMMON
+
+
+def owning_summon_condition(frames, frame):
+    """召喚手續框 → 所屬召喚條件:同句、詞序列範圍包住它的 限制·召喚條件 框;沒有時 None。"""
+    start, end = frame["span"]
+    return next((fr for fr in frames if is_summon_condition(fr) and fr.get("sentence") == frame.get("sentence")
+                 and fr["span"][0] <= start and end <= fr["span"][1]), None)
 
 
 def label_of(frame):
@@ -751,7 +771,7 @@ class ConstraintFinder:
             pre_end = self._possible_case(tokens, seg_start, a["head"], steps)
             for b in pending:
                 step = {"action": self._action_name(tokens, b)}
-                b["procedure"] = step["action"] in PROCEDURE_ACTIONS or b["action"] in PROCEDURE_ACTIONS
+                b[ANCHOR_PROCEDURE] = step["action"] in PROCEDURE_ACTIONS
                 step.update(self._anchor_args(tokens, b, b["clause_start"]))
                 steps.append((b["head"], step))
             procedure = [step for _pos, step in sorted(steps, key=lambda s: s[0])]

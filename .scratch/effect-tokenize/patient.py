@@ -56,7 +56,7 @@ from anaphora import INTRANSITIVE
 from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_NON_CARD, MOD_ARCHETYPE, MOD_ATTRIBUTE,
                            MOD_NUMERIC, MOD_PLAYER, MOD_RACE, MOD_SUBTYPE, MOD_ZONE, OTHER, PATIENT_MODES, PLACE_PLAYER,
                            REGION_GOAL, REGION_PLACE, REGION_SOURCE)
-from constraints import KIND_ACTION, KIND_CONSTRAINT, POS_PROCEDURE, SUB_SUMMON
+from constraints import KIND_ACTION, PROCEDURE_OVERLAY, is_procedure_frame, owning_summon_condition
 import frames
 from frames import POS_COND, POS_COST, POS_EFFECT
 import phrases
@@ -160,6 +160,8 @@ LEAVE_FIELD_ACTIONS = ("破壊", "リリース")
 
 # 發動位置:此卡可能所在的區域集合與判定來源
 Launch = namedtuple("Launch", "zones source")
+# 區域不明的發動位置(召喚手續框沒寫召喚來源、又沒有卡面可推):群體寫什麼區域都可能含此卡
+ZONES_UNKNOWN = frozenset({"區域不明"})
 
 
 def _source_bits(domain):
@@ -205,7 +207,6 @@ XYZ_BIT, LINK_BIT = _MONSTER_TYPE_BITS["X"], _MONSTER_TYPE_BITS["L"]
 _EXTRA_DECK_BITS = (_MONSTER_TYPE_BITS["融合"] | _MONSTER_TYPE_BITS["S"] | XYZ_BIT | LINK_BIT)
 _ZONE_OF_TERM = dict(places.ZONE_TERMS)
 HAND, EXTRA_DECK = _ZONE_OF_TERM["手札"], _ZONE_OF_TERM["EXデッキ"]
-OVERLAY = "重ねる"
 TUNER_BIT = _MONSTER_TYPE_BITS["チューナー"]
 # 數值條件比得了的欄位(レベル/ランク/リンク 共用總表的 level 欄,依卡片子類型分)
 NUMERIC_FIELDS = ("レベル", "ランク", "リンク", "攻撃力", "守備力")
@@ -343,16 +344,13 @@ def launch(frames_, section="main"):
 
 
 def summon_source_launch(frames_, frame, face):
-    """召喚手續框 → 發動位置:所屬召喚條件的召喚來源,沒寫時依卡種;沒寫又沒有卡面時 zones 是 None(區域不明)。"""
-    start, end = frame["span"]
-    owner = next((fr for fr in frames_ if fr.get("kind") == KIND_CONSTRAINT and fr.get("subtype") == SUB_SUMMON
-                  and fr.get("sentence") == frame.get("sentence") and fr["span"][0] <= start and end <= fr["span"][1]),
-                 {})
+    """召喚手續框 → 發動位置:所屬召喚條件的召喚來源,沒寫時依卡種;沒寫又沒有卡面時 zones 是 ZONES_UNKNOWN。"""
+    owner = owning_summon_condition(frames_, frame) or {}
     written = {zone for _, zone in regions.zones_of(owner.get("source"))}
     if written:
         return Launch(written, LAUNCH_SUMMON_WRITTEN)
     if face is None:
-        return Launch(None, LAUNCH_SUMMON_INFERRED)
+        return Launch(ZONES_UNKNOWN, LAUNCH_SUMMON_INFERRED)
     return Launch({EXTRA_DECK if (face.get("type") or 0) & _EXTRA_DECK_BITS else HAND}, LAUNCH_SUMMON_INFERRED)
 
 
@@ -530,10 +528,14 @@ def _all_class(segments, frame_zones, launched, face, goal_zones=()):
     任一個比得了的條件(區域、玩家、卡面)對不上就 非此卡;區域不明只在其餘都對得上時才停在 皆非。"""
     zones = frame_zones or _segment_zones(segments)
     possible = launched.zones
-    # 靈擺區在場上:群體寫場上時含靈擺區的此卡
-    reachable = [(player, zone) for player, zone in zones
-                 if possible is None or zone in possible or (OFF_FIELD in possible and zone != FIELD)
-                 or (zone == FIELD and PENDULUM_ZONE in possible)]
+    launch_unknown = possible is ZONES_UNKNOWN
+    if launch_unknown:
+        reachable = list(zones)
+    else:
+        # 靈擺區在場上:群體寫場上時含靈擺區的此卡
+        reachable = [(player, zone) for player, zone in zones
+                     if zone in possible or (OFF_FIELD in possible and zone != FIELD)
+                     or (zone == FIELD and PENDULUM_ZONE in possible)]
     if zones and not reachable:
         return NONSELF, WHY_ALL_ZONE
     players = _group_players(reachable, segments, goal_zones)
@@ -544,7 +546,7 @@ def _all_class(segments, frame_zones, launched, face, goal_zones=()):
         blocker, uncomparable = _compare_face(segments, face)
         if blocker:
             return NONSELF, blocker
-    if not zones or possible is None:
+    if not zones or launch_unknown:
         return None, WHY_ALL_NO_ZONE
     return None, WHY_ALL_UNCOMPARABLE if uncomparable else WHY_ALL_INCLUDES
 
@@ -923,7 +925,7 @@ def _donor_count(frames_, k):
 def judge(frame, launched, face, counted=False):
     """一個動作框架(所在效果句的發動位置、此卡卡面參數、回填對象從提供框架帶來的數量)→ Verdict。"""
     text, segments, by_topic = patient(frame)
-    if frame.get("position") == POS_PROCEDURE and frame.get("action") == OVERLAY:
+    if is_procedure_frame(frame) and frame.get("action") == PROCEDURE_OVERLAY:
         return Verdict(SELF, WHY_PROCEDURE_OVERLAY, text)
     if frame.get("action") in _NOT_CARD_ACTIONS:
         return Verdict(None, WHY_NOT_CARD, text)
@@ -942,7 +944,7 @@ def judge_sentence(frames_, face=None, section="main"):
     約束框架是 Verdict(None, None)。"""
     positions = _positions(frames_, launch(frames_, section))
     for k, fr in enumerate(frames_):
-        if fr.get("kind") == KIND_ACTION and fr.get("position") == POS_PROCEDURE:
+        if is_procedure_frame(fr):
             positions[k] = summon_source_launch(frames_, fr, face)
     return [judge(fr, positions[k], face, _donor_count(frames_, k)) if fr.get("kind") == KIND_ACTION
             else Verdict(None, None) for k, fr in enumerate(frames_)]

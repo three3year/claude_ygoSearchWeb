@@ -11,10 +11,11 @@ import sys
 from collections import Counter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "effect-tokenize"))
+from constraints import POS_EFFECT as EFFECT, POS_PROCEDURE as PROCEDURE  # noqa: E402
+
 EXPORT = os.path.join(HERE, "..", "..", "..", "data", "action_frames.json")
 OUT = os.path.join(HERE, "results", "handoff_stats.txt")
-PROCEDURE = "召喚手續"
-EFFECT = "效果"
 
 
 def counter_text(counter):

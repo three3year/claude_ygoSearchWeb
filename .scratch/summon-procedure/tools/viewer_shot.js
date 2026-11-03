@@ -18,6 +18,8 @@ const RESULTS = path.join(__dirname, 'results');
 const PORT = 9334;
 const CARD = 59400890;
 const PROCEDURE = '召喚手續';
+// 框架表欄多,1400 寬會橫捲;截圖用寬視埠讓一句的原文與整張框架表同框
+const WIDE_VIEWPORT = { width: 2560, height: 1400, deviceScaleFactor: 1, mobile: false };
 
 const lines = [];
 const log = (...a) => { const s = a.join(' '); lines.push(s); console.log(s); };
@@ -72,6 +74,18 @@ async function waitFor(ev, code, what) {
   throw new Error('等不到 ' + what);
 }
 
+// 卡片拆解分頁打卡號開卡,等到框架表出現
+async function openCard(ev, card) {
+  await ev(`(()=>{const i=document.querySelector('input[type=search]');i.value='${card}';
+    i.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+  await waitFor(ev, `!!document.querySelector('table.frames')`, '框架表');
+}
+
+// 拆掉頁面 .wrap 的最大寬,寬視埠才用得滿
+async function unclampPageWidth(ev) {
+  await ev(`(()=>{const st=document.createElement('style');st.textContent='.wrap{max-width:none}';document.head.appendChild(st);})()`);
+}
+
 async function shot(send, ev, selector, file) {
   const rect = JSON.parse(await ev(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});
     el.scrollIntoView({block:'start'});const r=el.getBoundingClientRect();
@@ -84,14 +98,12 @@ async function shot(send, ev, selector, file) {
 
 (async () => {
   const { ws, send, ev, errors } = await connect();
-  await send('Emulation.setDeviceMetricsOverride', { width: 2560, height: 1400, deviceScaleFactor: 1, mobile: false });
+  await send('Emulation.setDeviceMetricsOverride', WIDE_VIEWPORT);
   log('頁面 ' + PAGE);
   await send('Page.navigate', { url: PAGE });
   await waitFor(ev, `!!document.querySelector('input[type=search]')`, '卡片拆解分頁');
 
-  await ev(`(()=>{const i=document.querySelector('input[type=search]');i.value='${CARD}';
-    i.dispatchEvent(new Event('input',{bubbles:true}));})()`);
-  await waitFor(ev, `!!document.querySelector('table.frames')`, '框架表');
+  await openCard(ev, CARD);
   await sleep(300);
   const blocks = JSON.parse(await ev(`JSON.stringify([...document.querySelectorAll('table.frames')].map(t=>{
     const box=t.closest('.sent-block,section,div');return {head:(box.textContent||'').slice(0,40),
@@ -109,7 +121,7 @@ async function shot(send, ev, selector, file) {
   log('chip 底色:' + colors.map(c => c.join(' ')).join('、'));
   if (new Set(colors.map(c => c[1])).size !== colors.length) bad('位置 chip 底色有重複');
   await ev(`(()=>{const c=document.querySelector('table.frames .chip.f-proc');c.closest('.rec').setAttribute('id','procShot');})()`);
-  await ev(`(()=>{const st=document.createElement('style');st.textContent='.wrap{max-width:none}';document.head.appendChild(st);})()`);
+  await unclampPageWidth(ev);
   await sleep(200);
   await shot(send, ev, '#procShot', `viewer_${CARD}_procedure.png`);
   const legend = await ev(`document.querySelector('.legend').textContent.replace(/\\s+/g,' ').trim()`);

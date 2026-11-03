@@ -15,8 +15,7 @@ import frames  # noqa: E402
 
 def procedure_args(text):
     return [(f["action"], f.get("object"), f.get("source"), f.get("goal"))
-            for f in frames.extract(text, extra=True)
-            if f["kind"] == constraints.KIND_ACTION and f["position"] == constraints.POS_PROCEDURE]
+            for f in frames.extract(text, extra=True) if constraints.is_procedure_frame(f)]
 
 
 class TestSummonThenAlternative(unittest.TestCase):

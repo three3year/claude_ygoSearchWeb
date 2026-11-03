@@ -1158,12 +1158,8 @@ def write_query_batches(round_dir, picked, meta):
 
 def is_procedure_owner(f):
     """手續非空的召喚條件約束框架(召喚手續框的所屬召喚條件;母體與批次檔都認它)。"""
-    return (f.get("kind") == constraints.KIND_CONSTRAINT and f.get("subtype") == constraints.SUB_SUMMON
-            and bool(f.get("procedure")))
+    return constraints.is_summon_condition(f) and bool(f.get("procedure"))
 
-
-def is_procedure_frame(f):
-    return f.get("kind") == constraints.KIND_ACTION and f.get("position") == constraints.POS_PROCEDURE
 
 
 def sample_procedure():
@@ -1173,7 +1169,7 @@ def sample_procedure():
     picked = []
     for r in sorted(records, key=lambda r: (r["card"], r["section"], r["index"])):
         if any(is_procedure_owner(f) for f in r["frames"]):
-            has = any(is_procedure_frame(f) for f in r["frames"])
+            has = any(constraints.is_procedure_frame(f) for f in r["frames"])
             picked.append({"card": r["card"], "section": r["section"], "index": r["index"],
                            "stratum": STRATUM_HAS_PROCEDURE if has else STRATUM_ALL_BLOCKED})
     return picked
@@ -1188,7 +1184,7 @@ def blocked_steps(owner):
 
 def launch_text(launch):
     """發動位置 → 「區域(來源)」;區域不明(沒寫來源又沒有卡面)寫 不明。"""
-    zones = "、".join(sorted(launch.zones)) if launch.zones is not None else "不明"
+    zones = "不明" if launch.zones is patient.ZONES_UNKNOWN else "、".join(sorted(launch.zones))
     return "%s(%s)" % (zones, launch.source)
 
 
@@ -1204,11 +1200,11 @@ def procedure_lines(s, fr, face):
             blocked = blocked_steps(f)
             if blocked:
                 lines.append("被白名單擋掉的步驟:%s" % "、".join("第 %d 步 %s" % step for step in blocked))
-        elif is_procedure_frame(f):
+        elif constraints.is_procedure_frame(f):
             cells = ["動作對象=%s(%s)" % (verdicts[k].mode or patient.NEITHER, verdicts[k].why),
                      "發動位置=%s" % launch_text(patient.summon_source_launch(fr, f, face))]
             lines.append(frame_line(k + 1, f, cells))
-    if not any(is_procedure_frame(f) for f in fr):
+    if not any(constraints.is_procedure_frame(f) for f in fr):
         lines.append("召喚手續框:(無)")
     lines.append("")
     return lines
@@ -1236,18 +1232,94 @@ def write_procedure_batches(round_dir, picked, meta):
         print("written batch-%d.md (%d cards)" % (k, len(chunk)))
 
 
-def finding_frame(x):
-    """一筆回報指的框:有框序用框序;漏出沒有框,用該出的那一步(連步都沒填就自成一框)。"""
+FINDING_FRAME, FINDING_STEP, FINDING_UNPLACED = "框", "步", "筆"
+OTHER_TYPES, TOTAL_ROW = "(其他)", "合計"
+
+
+def finding_where(x):
+    """一筆回報指的位置 → (框|步|筆, 序):有框序用框序;漏出沒有框,用該出的那一步;連步都沒填時 (筆, None)。"""
     if x.get("frame") is not None:
-        return (x["card"], x.get("index"), "框", x["frame"])
+        return FINDING_FRAME, x["frame"]
     if x.get("step") is not None:
-        return (x["card"], x.get("index"), "步", x["step"])
-    return (x["card"], x.get("index"), "筆", id(x))
+        return FINDING_STEP, x["step"]
+    return FINDING_UNPLACED, None
 
 
 def tally(findings):
-    """回報 → (筆數, 框數, 卡數)。"""
-    return (len(findings), len({finding_frame(x) for x in findings}), len({x["card"] for x in findings}))
+    """回報 → (筆數, 框數, 卡數)。框數:指同一框(或同一步)的多筆算一框;沒指框也沒指步的每筆自成一框。"""
+    frames = set()
+    for n, x in enumerate(findings):
+        kind, at = finding_where(x)
+        frames.add((x["card"], x.get("index"), kind, n if kind == FINDING_UNPLACED else at))
+    return (len(findings), len(frames), len({x["card"] for x in findings}))
+
+
+def _of_type(items, t, error_types):
+    """錯誤類型 t 的回報;t 是「(其他)」時取型外的。"""
+    return [x for x in items if (x["type"] not in error_types if t == OTHER_TYPES else x["type"] == t)]
+
+
+def _procedure_summary_lines(round_dir, picked, findings, meta, shown):
+    """報告開頭:樣本與回報總數、各錯誤類型的筆數/框數/卡數與成因分項、值域外的成因。"""
+    error_types = tuple(meta["error_types"])
+    strata = Counter(p["stratum"] for p in picked)
+    total = tally(findings)
+    lines = ["# LLM 檢驗報告:%s" % os.path.basename(round_dir), "",
+             "樣本 %d 句、%d 張卡(%s;母體全取);回報 %d 筆,涉及 %d 個框、%d 張卡(%.1f%%)。框數:同一框多筆算一框,"
+             "漏出沒有框、以該出的步算。" % (
+                 len(picked), len({p["card"] for p in picked}),
+                 "/".join("%s %d" % (k, strata[k]) for k in meta.get("strata", strata)),
+                 total[0], total[1], total[2], 100.0 * total[2] / max(1, len(picked))), "",
+             "| 錯誤類型 | 筆數 | 框數 | 卡數 | " + " | ".join(PROCEDURE_CAUSES) + " |",
+             "|---|---|---|---|" + "---|" * len(PROCEDURE_CAUSES)]
+    for t in shown + (TOTAL_ROW,):
+        items = findings if t == TOTAL_ROW else _of_type(findings, t, error_types)
+        lines.append("| %s | %s | %s |" % (t, " | ".join(str(n) for n in tally(items)), " | ".join(
+            str(sum(1 for x in items if x.get("cause") == c)) for c in PROCEDURE_CAUSES)))
+    odd = Counter(x.get("cause", "(未填)") for x in findings if x.get("cause") not in PROCEDURE_CAUSES)
+    lines.append("")
+    if odd:
+        lines += ["成因不在 %s 的:%s。" % ("/".join(PROCEDURE_CAUSES), "、".join(
+            "%s %d 筆" % kv for kv in sorted(odd.items()))), ""]
+    return lines
+
+
+def _recheck_lines(round_dir, findings, meta, shown):
+    """複檢輪與來源輪的「前 → 後」對照表。"""
+    error_types = tuple(meta["error_types"])
+    src = os.path.join(os.path.dirname(round_dir), re.sub(r"\d+$", str(meta["recheck_of"]),
+                                                           os.path.basename(round_dir)))
+    before = load_findings(src, read_meta(src)["batches"])
+    lines = ["## 與 %s 對照" % os.path.basename(src), "",
+             "| 錯誤類型 | 筆數 | 框數 | 卡數 |", "|---|---|---|---|"]
+    either = shown + ((OTHER_TYPES,) if OTHER_TYPES not in shown and _of_type(before, OTHER_TYPES, error_types)
+                      else ())
+    for t in either + (TOTAL_ROW,):
+        old, new = ((items if t == TOTAL_ROW else _of_type(items, t, error_types)) for items in (before, findings))
+        lines.append("| %s 前 → 後 | %s |" % (t, " | ".join(
+            "%d → %d" % pair for pair in zip(tally(old), tally(new)))))
+    lines.append("")
+    return lines
+
+
+def _finding_detail_lines(items, t):
+    """一種錯誤類型的逐筆清單:依卡號、句、框或步排(沒指框的照回報檔順序),列成因、現值 → 該值與理由。"""
+    def order(x):
+        kind, at = finding_where(x)
+        return (x["card"], str(x.get("index")), kind, "" if at is None else str(at))
+
+    lines = ["## %s(%d 筆)" % (t, len(items)), ""]
+    for x in sorted(items, key=order):
+        kind, at = finding_where(x)
+        where = {FINDING_FRAME: "框架 %s", FINDING_STEP: "第 %s 步"}.get(kind, "(未指框)")
+        if at is not None:
+            where %= at
+        lines.append("- `%s` %s %s〔%s%s〕%s → %s;%s" % (
+            x["card"], x.get("index", ""), where, x.get("cause", "(未填)"),
+            ";型 " + x["type"] if t == OTHER_TYPES else "", x.get("got") or "—", x.get("expected") or "—",
+            (x.get("reason") or "").replace("\n", " ")))
+    lines.append("")
+    return lines
 
 
 def report_procedure(round_dir):
@@ -1259,56 +1331,14 @@ def report_procedure(round_dir):
         picked = json.load(f)
     findings = load_findings(round_dir, meta["batches"])
     error_types = tuple(meta["error_types"])
-    strata = Counter(p["stratum"] for p in picked)
-
-    def of_type(items, t):
-        return [x for x in items if (x["type"] == t if t != "(其他)" else x["type"] not in error_types)]
-
-    shown = error_types + (("(其他)",) if of_type(findings, "(其他)") else ())
-    total = tally(findings)
-    lines = ["# LLM 檢驗報告:%s" % os.path.basename(round_dir), "",
-             "樣本 %d 句、%d 張卡(%s;母體全取);回報 %d 筆,涉及 %d 個框、%d 張卡(%.1f%%)。框數:同一框多筆算一框,"
-             "漏出沒有框、以該出的步算。" % (
-                 len(picked), len({p["card"] for p in picked}),
-                 "/".join("%s %d" % (k, strata[k]) for k in meta.get("strata", strata)),
-                 total[0], total[1], total[2], 100.0 * total[2] / max(1, len(picked))), "",
-             "| 錯誤類型 | 筆數 | 框數 | 卡數 | " + " | ".join(PROCEDURE_CAUSES) + " |",
-             "|---|---|---|---|" + "---|" * len(PROCEDURE_CAUSES)]
-    for t in shown + ("合計",):
-        items = findings if t == "合計" else of_type(findings, t)
-        lines.append("| %s | %s | %s |" % (t, " | ".join(str(n) for n in tally(items)), " | ".join(
-            str(sum(1 for x in items if x.get("cause") == c)) for c in PROCEDURE_CAUSES)))
-    odd = Counter(x.get("cause", "(未填)") for x in findings if x.get("cause") not in PROCEDURE_CAUSES)
-    lines.append("")
-    if odd:
-        lines += ["成因不在 %s 的:%s。" % ("/".join(PROCEDURE_CAUSES), "、".join(
-            "%s %d 筆" % kv for kv in sorted(odd.items()))), ""]
+    shown = error_types + ((OTHER_TYPES,) if _of_type(findings, OTHER_TYPES, error_types) else ())
+    lines = _procedure_summary_lines(round_dir, picked, findings, meta, shown)
     if meta.get("recheck_of") is not None:
-        src = os.path.join(os.path.dirname(round_dir), re.sub(r"\d+$", str(meta["recheck_of"]),
-                                                               os.path.basename(round_dir)))
-        before = load_findings(src, read_meta(src)["batches"])
-        lines += ["## 與 %s 對照" % os.path.basename(src), "",
-                  "| 錯誤類型 | 筆數 | 框數 | 卡數 |", "|---|---|---|---|"]
-        either = shown + (("(其他)",) if "(其他)" not in shown and of_type(before, "(其他)") else ())
-        for t in either + ("合計",):
-            old, new = ((items if t == "合計" else of_type(items, t)) for items in (before, findings))
-            lines.append("| %s 前 → 後 | %s |" % (t, " | ".join(
-                "%d → %d" % pair for pair in zip(tally(old), tally(new)))))
-        lines.append("")
+        lines += _recheck_lines(round_dir, findings, meta, shown)
     for t in shown:
-        items = of_type(findings, t)
-        if not items:
-            continue
-        lines += ["## %s(%d 筆)" % (t, len(items)), ""]
-        for x in sorted(items, key=lambda x: (x["card"], str(x.get("index")), finding_frame(x)[2:3],
-                                              str(finding_frame(x)[3]))):
-            where = ("框架 %s" % x["frame"] if x.get("frame") is not None
-                     else "第 %s 步" % x["step"] if x.get("step") is not None else "(未指框)")
-            lines.append("- `%s` %s %s〔%s%s〕%s → %s;%s" % (
-                x["card"], x.get("index", ""), where, x.get("cause", "(未填)"),
-                ";型 " + x["type"] if t == "(其他)" else "", x.get("got") or "—", x.get("expected") or "—",
-                (x.get("reason") or "").replace("\n", " ")))
-        lines.append("")
+        items = _of_type(findings, t, error_types)
+        if items:
+            lines += _finding_detail_lines(items, t)
     path = os.path.join(round_dir, "report.md")
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")

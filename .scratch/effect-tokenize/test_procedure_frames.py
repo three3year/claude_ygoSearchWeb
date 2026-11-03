@@ -14,9 +14,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import constraints  # noqa: E402
 import frames  # noqa: E402
 
-DARK_MAGICIAN = ("「滅びの黒魔術師」は１ターンに１度、融合召喚及び以下の方法でのみ特殊召喚できる。\n"
-                 "●魔法カードの効果が発動したターン、自分フィールドのレベル６以上の魔法使い族・闇属性"
-                 "モンスター１体を除外した場合にEXデッキから特殊召喚できる。")
+# 59400890「滅びの黒魔術師」的效果外文本(召喚條件)原文
+SUMMON_TEXT_59400890 = ("「滅びの黒魔術師」は１ターンに１度、融合召喚及び以下の方法でのみ特殊召喚できる。\n"
+                        "●魔法カードの効果が発動したターン、自分フィールドのレベル６以上の魔法使い族・闇属性"
+                        "モンスター１体を除外した場合にEXデッキから特殊召喚できる。")
 
 
 def actions(text, **kw):
@@ -24,19 +25,18 @@ def actions(text, **kw):
 
 
 def procedure_frames(text, **kw):
-    return [f for f in actions(text, **kw) if f["position"] == constraints.POS_PROCEDURE]
+    return [f for f in frames.extract(text, **kw) if constraints.is_procedure_frame(f)]
 
 
 def summons(text, **kw):
-    return [f for f in frames.extract(text, **kw)
-            if f["kind"] == constraints.KIND_CONSTRAINT and f.get("subtype") == constraints.SUB_SUMMON]
+    return [f for f in frames.extract(text, **kw) if constraints.is_summon_condition(f)]
 
 
 class TestProcedureFrame(unittest.TestCase):
     """票 02:白名單內的手續步驟出一個動作框架、位置 召喚手續,區域與受事者片語同效果位那一套。"""
 
     def test_dark_magician_banish_is_a_procedure_frame(self):
-        [frame] = procedure_frames(DARK_MAGICIAN)
+        [frame] = procedure_frames(SUMMON_TEXT_59400890)
         self.assertEqual((frame["action"], frame["polarity"]), ("除外", "肯定"))
         self.assertEqual(frame["regions"]["source"], [["自分", "場上"]])
         self.assertEqual(frame["regions"]["goal"], [["無", "除外"]])
@@ -45,14 +45,14 @@ class TestProcedureFrame(unittest.TestCase):
 
     def test_summon_condition_constraint_frames_unchanged(self):
         self.assertEqual(
-            [(f["form"], f["method"], f["procedure"], f["source"]) for f in summons(DARK_MAGICIAN)],
+            [(f["form"], f["method"], f["procedure"], f["source"]) for f in summons(SUMMON_TEXT_59400890)],
             [("只能以某方式特殊召喚", "融合召喚及び以下の方法", [], None),
              ("可以某方式特殊召喚", None,
               [{"action": "除外", "object": "自分フィールドのレベル6以上の魔法使い族・闇属性モンスター1体"}],
               "EXデッキ")])
 
     def test_summon_itself_is_not_a_frame(self):
-        self.assertNotIn("特殊召喚", [f["action"] for f in actions(DARK_MAGICIAN)])
+        self.assertNotIn("特殊召喚", [f["action"] for f in actions(SUMMON_TEXT_59400890)])
 
 
 class TestWhitelist(unittest.TestCase):

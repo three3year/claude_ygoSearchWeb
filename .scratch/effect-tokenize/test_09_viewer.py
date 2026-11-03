@@ -17,7 +17,7 @@ sys.path.insert(0, HERE)
 import catalog  # noqa: E402
 import prepare_view  # noqa: E402
 import report  # noqa: E402
-from constraints import POS_COND, POS_COST, POS_EFFECT  # noqa: E402
+from constraints import POS_COND, POS_COST, POS_EFFECT, POS_PROCEDURE  # noqa: E402
 from test_07_catalog import major, query  # noqa: E402
 
 # 小目錄:大類 小目錄 列中類 墓地系;特殊召喚 的兩片葉宣告中類(路徑走 中類、不掛詞元節點);破壊 三片葉;
@@ -68,7 +68,7 @@ def node(rows, *names):
 
 
 class TestQueryOverview(unittest.TestCase):
-    """具名查詢總覽:每個具名查詢三個位置(代價/效果/條件)加合計的框數與卡數;大類/中類是聯集。"""
+    """具名查詢總覽:每個具名查詢各位置(代價/效果/條件/召喚手續)加合計的框數與卡數;大類/中類是聯集。"""
 
     def test_query_names_and_paths_follow_the_catalog_order(self):
         table, _ = overview()
@@ -77,21 +77,21 @@ class TestQueryOverview(unittest.TestCase):
         self.assertEqual(table["paths"][4], ["小目錄", "破壊", "破壊:モンスター"])
 
     def test_a_query_counts_frames_and_cards_per_position(self):
-        """破壊:モンスター 命中卡 1、卡 2 各一框(效果位);合計欄是三個位置的聯集。"""
+        """破壊:モンスター 命中卡 1、卡 2 各一框(效果位);合計欄是各位置的聯集。"""
         table, _ = overview()
         self.assertEqual(node(table["nodes"], "小目錄", "破壊", "破壊:モンスター")[1:4],
-                         [4, [0, 2, 0, 2], [0, 2, 0, 2]])
+                         [4, [0, 2, 0, 0, 2], [0, 2, 0, 0, 2]])
         self.assertEqual(node(table["nodes"], "小目錄", "破壊", "破壊@フィールド")[1:4],
-                         [5, [0, 1, 0, 1], [0, 1, 0, 1]])
+                         [5, [0, 1, 0, 0, 1], [0, 1, 0, 0, 1]])
         self.assertEqual(node(table["nodes"], "小目錄", "破壊", "破壊(耐性)")[1:4],
-                         [6, [0, 0, 0, 0], [0, 0, 0, 0]])
+                         [6, [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
 
     def test_a_lemma_node_is_a_query_with_its_own_hits(self):
         """詞元節點就是具名查詢(沒有預設葉):特殊召喚 命中卡 1 代價位與卡 3 效果位;兩片葉宣告了中類,
         不掛在它底下。"""
         table, _ = overview()
         row = node(table["nodes"], "小目錄", "特殊召喚")
-        self.assertEqual(row[1:4], [0, [1, 1, 0, 2], [1, 1, 0, 2]])
+        self.assertEqual(row[1:4], [0, [1, 1, 0, 0, 2], [1, 1, 0, 0, 2]])
         self.assertEqual(row[4], [])
 
     def test_major_and_middle_counts_are_unions_of_their_queries(self):
@@ -99,10 +99,10 @@ class TestQueryOverview(unittest.TestCase):
         條件位沒命中的框不算進任何節點。"""
         table, _ = overview()
         top = node(table["nodes"], "小目錄")
-        self.assertEqual(top[1:4], [-1, [1, 3, 0, 4], [1, 3, 0, 3]])
+        self.assertEqual(top[1:4], [-1, [1, 3, 0, 0, 4], [1, 3, 0, 0, 3]])
         self.assertEqual([child[0] for child in top[4]], ["墓地系", "特殊召喚", "破壊"])
         middle = node(table["nodes"], "小目錄", "墓地系")
-        self.assertEqual(middle[1:4], [-1, [1, 1, 0, 2], [1, 1, 0, 2]])
+        self.assertEqual(middle[1:4], [-1, [1, 1, 0, 0, 2], [1, 1, 0, 0, 2]])
         self.assertEqual([child[0] for child in middle[4]], ["特殊召喚←墓地", "特殊召喚←墓地:モンスター"])
 
     def test_expanding_a_query_lists_its_frames_in_corpus_order(self):
@@ -119,11 +119,12 @@ class TestQueryOverview(unittest.TestCase):
 
     def test_dashboard_counts_nodes_and_hit_distribution(self):
         """儀表板:節點數(頂層/中類/具名查詢/詞元節點——述詞只有詞元或詞元加否定形的具名查詢,破壊(耐性) 也算)
-        與三個位置的命中框數分佈(命中 0/1/2/3+ 個具名查詢的框數)。"""
+        與各位置的命中框數分佈(命中 0/1/2/3+ 個具名查詢的框數)。"""
         table, _ = overview()
         self.assertEqual([table["majors"], table["middles"], table["queries"], table["lemma_nodes"]], [1, 1, 7, 3])
         self.assertEqual(table["frames"], 5)
-        self.assertEqual(table["hits"], {POS_COST: [0, 0, 1, 0], POS_EFFECT: [0, 0, 1, 2], POS_COND: [1, 0, 0, 0]})
+        self.assertEqual(table["hits"], {POS_COST: [0, 0, 1, 0], POS_EFFECT: [0, 0, 1, 2], POS_COND: [1, 0, 0, 0],
+                                        POS_PROCEDURE: [0, 0, 0, 0]})
 
 
 class TestFrameRow(unittest.TestCase):
@@ -154,14 +155,14 @@ class TestReportSection(unittest.TestCase):
         text = "\n".join(lines)
         self.assertEqual(lines[0], "## 具名查詢目錄(named-queries)")
         self.assertIn("頂層 1(大類 1、自成大類的具名查詢 0)、中類 1、具名查詢 7(詞元節點 3、葉 4)", text)
-        self.assertIn("| 0 | 0 | 0 | 1 | 1 |", text)
-        self.assertIn("| 2 | 1 | 1 | 0 | 2 |", text)
-        self.assertIn("| 3+ | 0 | 2 | 0 | 2 |", text)
+        self.assertIn("| 0 | 0 | 0 | 1 | 0 | 1 |", text)
+        self.assertIn("| 2 | 1 | 1 | 0 | 0 | 2 |", text)
+        self.assertIn("| 3+ | 0 | 2 | 0 | 0 | 2 |", text)
         self.assertIn("不留(三個位置都沒命中)1 個:破壊(耐性)", text)
         self.assertIn("### 動作對象(此卡/非此卡/皆非)框數分位置", text)
-        self.assertIn("| 此卡 | 1 | 0 | 0 | 1 |", text)
-        self.assertIn("| 非此卡 | 0 | 1 | 0 | 1 |", text)
-        self.assertIn("| 皆非 | 0 | 2 | 1 | 3 |", text)
+        self.assertIn("| 此卡 | 1 | 0 | 0 | 0 | 1 |", text)
+        self.assertIn("| 非此卡 | 0 | 1 | 0 | 0 | 1 |", text)
+        self.assertIn("| 皆非 | 0 | 2 | 1 | 0 | 3 |", text)
 
     def test_section_says_none_when_every_query_hits(self):
         hits = HITS + [{"card": 4, "section": "main", "index": "①", "order": 0, "position": POS_EFFECT,

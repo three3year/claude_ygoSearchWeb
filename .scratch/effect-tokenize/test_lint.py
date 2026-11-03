@@ -21,7 +21,7 @@ import os
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-POSITION_LITERALS = ("代價", "效果", "條件")
+POSITION_LITERALS = ("代價", "效果", "條件", "召喚手續")
 REQUIRED_HOOKS = ("mark", "batch_cells")
 REQUIRED_DECLARATIONS = ("FILL_RATE_ROWS",)
 
@@ -133,7 +133,7 @@ class TestStepModules(unittest.TestCase):
         offenders = {name: [line for line, text in string_literals(parse(name)) if text in POSITION_LITERALS]
                      for name in STEP_MODULES + ("report", "llm_check", "prepare_view")}
         self.assertEqual({k: v for k, v in offenders.items() if v}, {},
-                         "位置用 constraints.POS_COST/POS_EFFECT/POS_COND,別抄字面")
+                         "位置用 constraints.POS_COST/POS_EFFECT/POS_COND/POS_PROCEDURE,別抄字面")
 
 
 class TestPhraseReaders(unittest.TestCase):

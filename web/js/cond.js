@@ -6,7 +6,7 @@
    (drawer-values 票 02:每欄列哪些值、各是亮、最後一個、可按或灰);標籤 ⇄ 欄位對
    (票 04,分隔與轉義在 Hash,值域在這裡)。
    動作標籤 `{ex, pred, origin}`:ex 是排除;pred 是送進引擎的述詞,一定帶位置(引擎沒寫位置就
-   三個位置都看,見 predicate-index 票 05);origin 是產生它的目錄列名字。
+   值域的每個位置都看,見 predicate-index 票 05);origin 是產生它的目錄列名字。
    左側條件標籤 `{key, label, val, part, target}`:每次從左側條件算出來,不存;key 也是網址 or 的鍵;
    part 是它在查詢裡佔的片段;target 告訴側欄它對應哪個控制項。
    狀態 `{and: [標籤…], or: [標籤…], orSide: [鍵…]}` 一律當不可變,改動回傳新狀態;呼叫端用
@@ -26,9 +26,10 @@ const FIELD_GROUPS = Object.freeze({
 });
 const FIELD_ORDER = Object.values(FIELD_GROUPS).flat();
 
-/* 位置預設:效果;效果位 0 張時依序取第一個有張數的(規格 4 裁定,2026-11-02)。 */
+/* 位置預設:效果;效果位 0 張時依序取第一個有張數的(規格 4 裁定,2026-11-02;召喚手續排最後,
+   summon-procedure 規格「效果位 0 張時的後備位置要不要排進召喚手續?」(a),2026-11-03)。 */
 const DEFAULT_POSITION = '效果';
-const POSITION_FALLBACK = ['代價', '條件'];
+const POSITION_FALLBACK = ['代價', '條件', '召喚手續'];
 /* 極性的預設,短句不寫它;抄 catalog.py 的 DEFAULT_POLARITY(2026-11-01 規格 2「詞元節點極性」(a)),
    conditions.test.js 守和來源一致。排序過,比對時不看順序。 */
 const DEFAULT_POLARITY = ['可能', '肯定'];

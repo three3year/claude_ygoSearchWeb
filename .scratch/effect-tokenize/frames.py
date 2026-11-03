@@ -24,9 +24,10 @@ card_type=None):一句效果句原文(帶同卡同段上文;extra 標效果外�
     object    對象(を 前的詞)、source 來源(から 前)、goal 目的(に/へ 前)
               ——述語往前、同一子句內依助詞收;值保留原詞(指示綁定、列舉前項
               補全值、數量約束、卡名佔位);時間語(ターン/フェイズ/時…)的 に 不收
-    position  位置:代價/效果/條件——發動句(以 発動できる/発動する 收尾的第一
+    position  位置:代價/效果/條件/召喚手續——發動句(以 発動できる/発動する 收尾的第一
               句)裡的付出是代價、處理段的動作是效果、觸發句(…場合/…時/…限り)
-              與發動條件(対象として、狀態述語、被動)是條件
+              與發動條件(対象として、狀態述語、被動)是條件;召喚條件的手續步驟動作在
+              白名單(constraints.PROCEDURE_ACTIONS)內的是召喚手續(summon-procedure,ADR-0019)
     polarity  極性:肯定/否定/可能——ない/されない/できない 系否定、できる 系可能
     sentence  句序(。 與 ● 切開的第幾句,0 起)、span 對應詞序列範圍 [start, end)、
               clause 子句字面(span 內 token 字面相連,供拆解頁對照)
@@ -88,7 +89,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from constraints import KIND_ACTION, KIND_CONSTRAINT, POS_COND, POS_COST, POS_EFFECT, ConstraintFinder  # noqa: E402
+from constraints import (KIND_ACTION, KIND_CONSTRAINT, POS_COND, POS_COST, POS_EFFECT,  # noqa: E402
+                         POS_PROCEDURE, ConstraintFinder)
 import action_lemmas  # noqa: E402
 import anaphora  # noqa: E402
 import closed_values  # noqa: E402
@@ -1448,7 +1450,8 @@ class FrameExtractor:
             carry = {}
             pending_subject = None        # 附加子句(〜を素材として/〜するために)的主語,給下一個述語
             for k, a in enumerate(anchors):
-                if any(lo <= a["verb_at"] < hi for lo, hi in consumed):
+                # 召喚條件的白名單手續步驟在吃掉範圍內仍出框(召喚手續,ADR-0019)
+                if not a.get("procedure") and any(lo <= a["verb_at"] < hi for lo, hi in consumed):
                     continue
                 is_marker = in_activation and k == marker_idx
                 before_marker = in_activation and k < marker_idx \
@@ -1499,7 +1502,9 @@ class FrameExtractor:
                         or a["nominalizer"] is None
                         and (args.get("object") or "").endswith("効果")):
                     continue
-                if a["conditional"] or a["action"] == "対象とする":
+                if a.get("procedure"):
+                    position = POS_PROCEDURE          # 不經代價/效果/條件的判定
+                elif a["conditional"] or a["action"] == "対象とする":
                     position = POS_COND
                 elif is_marker:
                     position = POS_EFFECT

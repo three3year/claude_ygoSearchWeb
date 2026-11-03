@@ -861,7 +861,7 @@ def face_digest(card_entry):
 
 
 # 匯出檔「值域」的形狀(票 01):每個封閉類欄 → 值清單,另有玩家與區域兩張,宣告序
-DOMAINS = {"位置": ["代價", "效果", "條件"], "極性": ["肯定", "否定", "可能"],
+DOMAINS = {"位置": ["代價", "效果", "條件", "召喚手續"], "極性": ["肯定", "否定", "可能"],
            "否定形": ["受身", "不成不受", "不可能", "一般"], "態": ["他動", "自動", "受身"],
            "施事者": ["自分", "相手", "お互い", "此卡", "其他卡"],
            "方式類": ["手段:效果", "手段:戰鬥", "其他"], "動作對象": ["此卡", "非此卡"],
@@ -977,7 +977,7 @@ class FramesInIndexTest(unittest.TestCase):
     def doc(self, rows=None, **over):
         cards = self.cards()
         rows = self.rows() if rows is None else rows
-        return {"說明": "", "版本": 2, "值域": DOMAINS, "目錄": self.CATALOG, "統計": {"框架": {"此卡": 9}},
+        return {"說明": "", "版本": 3, "值域": DOMAINS, "目錄": self.CATALOG, "統計": {"框架": {"此卡": 9}},
                 "卡面": [[c["id"], face_digest(c)] for c in cards if c["id"] != 3],
                 "句": rows, **over}
 
@@ -1021,6 +1021,16 @@ class FramesInIndexTest(unittest.TestCase):
         index, _ = self.build()
         positions = index["vocab"]["frame"]["domains"]["位置"]
         self.assertEqual({positions[frame[1] - 1] for frame in index["frames"]}, {"代價", "效果", "條件"})
+
+    def test_summon_procedure_position_is_code_4_and_the_others_keep_theirs(self):
+        """summon-procedure 票 02:位置碼照值域序 + 1——代價 1、效果 2、條件 3 不變,召喚手續 4。"""
+        rows = self.rows()
+        rows[0] = dict(rows[0], frames=[{"action": "捨てる", "position": "代價"}, {"action": "破壊", "position": "效果"},
+                                        {"action": "リリース", "position": "召喚手續"}])
+        index, report = self.build(rows=rows)
+        self.assertEqual(report["problems"], [])
+        codes = {index["vocab"]["frame"]["lemmas"][f[0]]: f[1] for f in index["frames"]}
+        self.assertEqual((codes["捨てる"], codes["破壊"], codes["リリース"]), (1, 2, 4))
 
     def test_frames_with_the_same_content_share_one_number(self):
         index, _ = self.build()
@@ -1140,13 +1150,18 @@ class FramesInIndexTest(unittest.TestCase):
         """舊版匯出檔沒有「值域」:版本不符就停,不往下讀到空值或丟例外。"""
         doc = {"說明": "", "版本": 1, "目錄": [], "統計": {}, "卡面": [], "句": []}
         index, report = build_index(self.cards(), self.tags(), frame_export=doc)
-        self.assertEqual(report["checks"]["frame_version"], [{"expected": 2, "found": 1}])
+        self.assertEqual(report["checks"]["frame_version"], [{"expected": 3, "found": 1}])
         self.assertTrue(any("版本" in p for p in report["problems"]))
         self.assertNotIn("fr", self.entry(index, 1))
 
     def test_export_without_a_version_fails_the_build(self):
         _, report = build_index(self.cards(), self.tags(), frame_export={"句": []})
-        self.assertEqual(report["checks"]["frame_version"], [{"expected": 2, "found": None}])
+        self.assertEqual(report["checks"]["frame_version"], [{"expected": 3, "found": None}])
+
+    def test_version_2_export_fails_the_build(self):
+        """summon-procedure 票 02:版本 3 起位置多 召喚手續;舊版(2)匯出檔明確失敗,不默默少一個位置。"""
+        _, report = build_index(self.cards(), self.tags(), frame_export=self.doc(**{"版本": 2}))
+        self.assertEqual(report["checks"]["frame_version"], [{"expected": 3, "found": 2}])
 
     def test_stale_text_hash_fails_the_build_and_lists_all(self):
         rows = self.rows()

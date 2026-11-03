@@ -489,3 +489,67 @@ test('網址:壞百分比編碼不崩,那一段安靜忽略', () => {
   const back = parsed('act=%E0%A4%A,' + encodeURIComponent('破壊'));
   assert.deepStrictEqual(cond('tags', back.cond).map(t => t.origin), ['破壊']);
 });
+
+/* ── 召喚手續(summon-procedure 票 02):位置的第四個值 ── */
+
+const procCounts = (代價, 效果, 條件, 召喚手續) => ({ 代價, 效果, 條件, 召喚手續 });
+const PROC_CATALOG = [
+  { name: 'リリース', path: ['リリース'], cards: procCounts(0, 0, 0, 7), predicate: pred({ 詞元: 'リリース' }) },
+  { name: '見せる', path: ['見せる'], cards: procCounts(0, 0, 4, 2), predicate: pred({ 詞元: '見せる' }) },
+  { name: '捨てる', path: ['捨てる'], cards: procCounts(3, 0, 4, 2), predicate: pred({ 詞元: '捨てる' }) },
+  { name: '除外', path: ['除外'], cards: procCounts(1, 5, 1, 9), predicate: pred({ 詞元: '除外' }) },
+];
+const procBox = harness.load({ vocab: { catalog: PROC_CATALOG } });
+
+test('召喚手續:新標籤預設效果;效果位 0 張時依序取 代價、條件、召喚手續 第一個有張數的', () => {
+  const positionOf = name => harness.cond(procBox, 'tagAt', name, false).pred.位置;
+  assert.deepStrictEqual(positionOf('除外'), ['效果']);
+  assert.deepStrictEqual(positionOf('捨てる'), ['代價']);
+  assert.deepStrictEqual(positionOf('見せる'), ['條件']);
+  assert.deepStrictEqual(positionOf('リリース'), ['召喚手續']);
+});
+
+test('召喚手續:只在召喚手續有張數的列,目錄樹灰字標「召喚手續 N」', () => {
+  assert.deepStrictEqual(harness.catalogNode(procBox, 'リリース').count, { text: '召喚手續 7', zero: true });
+  assert.deepStrictEqual(harness.catalogNode(procBox, '除外').count, { text: '5', zero: false });
+});
+
+/* 真 data.js:除外 在四個位置都有框,破壊 沒有召喚手續框(不在白名單) */
+/* 詞元節點(述詞只有 詞元 與預設極性)→ 它的新標籤 */
+const realTag = (real, lemma) => {
+  const row = harness.cond(real, 'named', { pred: { 詞元: lemma, 極性: POLAR } });
+  return harness.cond(real, 'tagAt', row.path.join('›'), false);
+};
+const positionChips = (real, tag) => {
+  const field = harness.cond(real, 'drawerOptions', tag)
+    .flatMap(g => g.fields).find(f => f.field === '位置');
+  return field.values.map(v => v.value);
+};
+
+test('召喚手續全語料:抽屜位置欄 除外 四顆、破壊 沒有召喚手續', t => {
+  if (!realBox) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
+  const real = realBox;
+  assert.deepStrictEqual(positionChips(real, realTag(real, '除外')), ['代價', '效果', '條件', '召喚手續']);
+  assert.ok(!positionChips(real, realTag(real, '破壊')).includes('召喚手續'));
+});
+
+test('召喚手續全語料:網址「位置:召喚手續」讀寫來回不變;舊網址的位置不多出召喚手續', t => {
+  if (!realBox) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
+  const real = realBox;
+  const rc = (fn, ...args) => harness.cond(real, fn, ...args);
+  const banish = realTag(real, '除外');
+  const onlyProc = rc('toggleValue', rc('toggleValue', banish, '位置', '召喚手續'), '位置', '效果');
+  assert.deepStrictEqual(onlyProc.pred.位置, ['召喚手續']);
+  const state = rc('add', rc('empty'), onlyProc);
+  const h = harness.hash(real, { cond: state });
+  assert.ok(h.includes(encodeURIComponent('位置') + ':' + encodeURIComponent('召喚手續')), h);
+  const back = harness.parseHash(real, h).cond;
+  assert.deepStrictEqual(rc('tags', back).map(t => [t.origin, t.pred.位置]), [['除外', ['召喚手續']]]);
+  assert.strictEqual(harness.hash(real, { cond: back }), h);
+  assert.strictEqual(harness.canonHash(real, h), h);
+  const leaf = harness.parseHash(real, 'act=' + encodeURIComponent(rc('leafPath', banish)));
+  assert.deepStrictEqual(rc('tags', leaf.cond)[0].pred.位置, ['效果']);
+  const three = rc('toggleValue', rc('toggleValue', banish, '位置', '代價'), '位置', '條件');
+  const h3 = harness.hash(real, { cond: rc('add', rc('empty'), three) });
+  assert.deepStrictEqual(rc('tags', harness.parseHash(real, h3).cond)[0].pred.位置, ['代價', '效果', '條件']);
+});

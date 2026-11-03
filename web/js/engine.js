@@ -166,7 +166,7 @@ const SLOT_LEMMA = 0, SLOT_POSITION = 1, SLOT_POLARITY = 2, SLOT_VOICE = 3, SLOT
       SLOT_PATIENT_PHRASE = 11, SLOT_GOAL_PHRASE = 12;
 const SEG_HEAD = 0, SEG_HEAD_KIND = 1, SEG_QUANTITY = 2, SEG_MODIFIERS = 3;
 
-/* 卡上一個框的位置(效果、代價、條件):hits 的框所在句與框序號 → 值域的字面。呈現層不讀框元組。 */
+/* 卡上一個框的位置(值域的字面:代價、效果、條件、召喚手續):hits 的框所在句與框序號 → 值域的字面。呈現層不讀框元組。 */
 function framePosition(c, row, n) {
   return FRAME_VOCAB.domains.位置[FRAMES[c.fr[row][n]][SLOT_POSITION] - 1];
 }

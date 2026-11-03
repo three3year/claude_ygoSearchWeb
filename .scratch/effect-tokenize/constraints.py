@@ -16,11 +16,14 @@ from report import token_kind
 
 KIND_ACTION, KIND_CONSTRAINT = "動作", "約束"
 # 框架的位置(動作框架與約束框架共用;frames.py 與第四版論元各模組都從這裡 import)
-POS_COST, POS_EFFECT, POS_COND = "代價", "效果", "條件"
-POSITIONS = (POS_COST, POS_EFFECT, POS_COND)
-# 召喚手續:召喚條件的手續步驟另出的動作框架的位置(summon-procedure 規格,2026-11-03 定案)。框架抽取還沒
-# 出這個位置,所以先不排進 POSITIONS;驗收工具(剝框重編、匯出檔比對)要先認得它,才分得出新框與既有框
-POS_PROCEDURE = "召喚手續"
+# 召喚手續:召喚條件的手續步驟另出的動作框架的位置(summon-procedure 規格,2026-11-03 定案;ADR-0019)。
+# 排在最後:索引把位置編成值域序 + 1,既有的 1〜3 不變、召喚手續是 4
+POS_COST, POS_EFFECT, POS_COND, POS_PROCEDURE = "代價", "效果", "條件", "召喚手續"
+POSITIONS = (POS_COST, POS_EFFECT, POS_COND, POS_PROCEDURE)
+# 召喚手續框的動作白名單(summon-procedure 規格「白名單是哪幾種動作?」,2026-11-03 定案 9 種):比對抽取時的
+# 動作名(寫法歸一後、詞元正規化前)。不在表內的手續步驟(存在、になる 這類前提、P召喚可能、對手的 発動、
+# 誤認成召喚條件的 選ぶ)只留在約束框架的手續欄,不出框
+PROCEDURE_ACTIONS = frozenset({"リリース", "除外", "重ねる", "送る", "戻す", "捨てる", "取り除く", "見せる", "払う"})
 CAT_LIMIT, CAT_TIMING, CAT_MATERIAL = "限制", "時機", "素材"
 SUB_COUNT, SUB_EVENT_TURN, SUB_PLEDGE, SUB_SUMMON = (
     "次數", "事件回合禁用", "誓約", "召喚條件")
@@ -226,7 +229,8 @@ class ConstraintFinder:
     def find(self, tokens, sentence, anchors, marker_idx, depth_at, extra=False,
              card_type=None, text_of=None):
         """一句 → (約束框架清單, 吃掉的詞序列範圍清單)。anchors 是這句的述語錨點
-        (frames.py 已算好,clause_start 可被本函式推後)、marker_idx 是發動句收尾
+        (frames.py 已算好,clause_start 可被本函式推後;召喚條件的白名單手續步驟記 procedure,見
+        summon_conditions)、marker_idx 是發動句收尾
         錨點的序(不是發動句時 None)、depth_at 每個 token 的括弧深度、extra 標效果外
         文本、card_type 卡片子類型、text_of(start, end) 取詞序列範圍的原文字面。
         框架只帶類別/子類/專屬欄位與 span,其餘共有欄位由 frames.py 補。"""
@@ -747,6 +751,8 @@ class ConstraintFinder:
             pre_end = self._possible_case(tokens, seg_start, a["head"], steps)
             for b in pending:
                 step = {"action": self._action_name(tokens, b)}
+                # 白名單內的步驟另出召喚手續框(ADR-0019):錨點仍在吃掉範圍內,frames.py 認這個記號放行
+                b["procedure"] = step["action"] in PROCEDURE_ACTIONS or b["action"] in PROCEDURE_ACTIONS
                 step.update(self._anchor_args(tokens, b, b["clause_start"]))
                 steps.append((b["head"], step))
             procedure = [step for _pos, step in sorted(steps, key=lambda s: s[0])]

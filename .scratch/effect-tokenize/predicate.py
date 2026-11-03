@@ -25,7 +25,7 @@
 
 problems(述詞) → 違反字彙的清單(不認得的欄、值不在值域、區域項形狀、詞元不是正規詞元);matches 遇到不認得的欄
 直接 raise,其餘不檢查(目錄載入時先 problems)。
-card_sets(述詞清單, 句列) → 每個述詞三個位置各一個卡集合(票 08 的目錄張數);cards_hash(卡集合) → 卡片密碼依數值
+card_sets(述詞清單, 句列) → 每個述詞每個位置各一個卡集合(票 08 的目錄張數);cards_hash(卡集合) → 卡片密碼依數值
 排序、十進位以逗號連寫後 sha1 前 16 碼(規格說「連寫」;加逗號是讓 12,345 與 123,45 不同串),規格 3 重算要相同。
 """
 import hashlib
@@ -186,7 +186,7 @@ def matches(predicate, row):
 
 def card_sets(predicates, sentences):
     """述詞清單 × 匯出檔的句列(句[]) → 每個述詞 {位置: 命中的卡片密碼集合}(票 08 的目錄張數;
-    三個位置各自算,一張卡多框算一張)。"""
+    每個位置各自算,一張卡多框算一張)。"""
     matchers = [matcher(p) for p in predicates]
     out = [{position: set() for position in POSITIONS} for _ in predicates]
     for row in sentences:

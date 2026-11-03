@@ -18,7 +18,7 @@ const path = require('node:path');
 const harness = require('./frontend_harness.js');
 
 const FIXTURE = JSON.parse(fs.readFileSync(path.join(__dirname, 'predicate-fixture-encoded.json'), 'utf8'));
-const POSITIONS = ['代價', '效果', '條件'];
+const POSITIONS = ['代價', '效果', '條件', '召喚手續'];
 
 /* 卡集合雜湊:規格同 predicate.cards_hash。雜湊不進瀏覽器,只有對照要用,所以在測試裡。 */
 function cardsHash(ids) {
@@ -46,7 +46,7 @@ test('夾具雜湊:卡集合雜湊的算法同參考評估器', () => {
   for (const ex of FIXTURE.雜湊) assert.strictEqual(cardsHash(ex.卡), ex.雜湊, ex.名);
 });
 
-test('夾具小語料:每個述詞三個位置的卡與雜湊同參考評估器', () => {
+test('夾具小語料:每個述詞四個位置的卡與雜湊同參考評估器', () => {
   const frames = [], byCard = new Map();
   for (const line of FIXTURE.張數.句) {
     if (!byCard.has(line.card)) byCard.set(line.card, { id: line.card, tx: [], fr: [] });
@@ -459,7 +459,7 @@ test('全語料 OR:每個具名查詢放在單一片段,效果位張數與雜湊
   assert.deepStrictEqual(wrong, []);
 });
 
-test('全語料:目錄每列 × 三個位置,張數與雜湊同匯出檔', t => {
+test('全語料:目錄每列 × 四個位置,張數與雜湊同匯出檔', t => {
   const exportFile = path.join(__dirname, '..', '..', 'data', 'action_frames.json');
   const data = harness.realData();
   if (!data || !fs.existsSync(exportFile)) {
@@ -484,6 +484,23 @@ test('全語料:目錄每列 × 三個位置,張數與雜湊同匯出檔', t => 
   }
   assert.strictEqual(catalog.length, 261);
   assert.deepStrictEqual(wrong, []);
+});
+
+/* summon-procedure 票 02:召喚條件的手續步驟以位置 召喚手續 進索引。毀滅的黑魔術師(59400890)的除外寫在召喚條件
+   (效果外文本第二句),只有位置帶 召喚手續 的述詞命中它。 */
+test('真 data.js:除外、位置 召喚手續 命中毀滅的黑魔術師的召喚條件句;位置 效果 不中', t => {
+  const data = harness.realData();
+  if (!data) {
+    t.skip('缺 web/data.js,略過全語料對照');
+    return;
+  }
+  const real = harness.load(data);
+  const DARK_MAGICIAN = 59400890;
+  const card = Array.from(data.cards).find(c => c.id === DARK_MAGICIAN);
+  const hit = harness.search(real, include({ 詞元: '除外', 位置: ['召喚手續'] })).find(e => e.id === DARK_MAGICIAN);
+  assert.ok(hit, '除外@召喚手續 沒命中 59400890');
+  assert.deepStrictEqual(hit.rows.map(row => card.tx[row].includes('除外，可以從額外牌組特殊召喚')), [true]);
+  assert.ok(!harness.ids(real, include({ 詞元: '除外', 位置: ['效果'] })).includes(DARK_MAGICIAN));
 });
 
 /* 規格 4 票 02:具名查詢走使用者的入口——葉路徑 → Hash.parse → 條件模型 → runQuery。

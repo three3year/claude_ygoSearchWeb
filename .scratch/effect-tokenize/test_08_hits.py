@@ -4,7 +4,7 @@
 接縫:一句效果句原文 → 每個動作框架命中的具名查詢名清單(catalog_hits.query_names;目錄序,不互斥)。
 真目錄 catalog.json 一個句型一條(不互斥並收、所在取自來源、否定形 耐性/限制、詞元節點不含否定、尾綴);
 機制(同欄多值、欄間 AND、尾綴、不看玩家)以測試小目錄驗,經同一接縫的目錄參數。另:匯出檔目錄欄的列(名、
-路徑、述詞、三個位置的張數、卡集合雜湊;大類/中類是聯集)、「至少命中一張」的建置期檢查、重跑鏈的目錄一步。
+路徑、述詞、四個位置的張數、卡集合雜湊;大類/中類是聯集)、「至少命中一張」的建置期檢查、重跑鏈的目錄一步。
 只斷言命中的名字、目錄列與問題清單,不斷言怎麼比、樹怎麼存。
 
 執行:PYTHONIOENCODING=utf-8 python -m unittest discover -s .scratch/effect-tokenize
@@ -89,7 +89,7 @@ class TestRealCatalog(unittest.TestCase):
                          [["破壊", "破壊@相手フィールド", "破壊@フィールド"]])
 
     def test_every_position_counts_and_a_frame_may_hit_nothing(self):
-        """三個位置都算:代價位的 リリース 命中詞元節點;條件位的 成功(〜に成功した)沒有具名查詢,清單空。"""
+        """每個位置都算:代價位的 リリース 命中詞元節點;條件位的 成功(〜に成功した)沒有具名查詢,清單空。"""
         self.assertEqual(names("①：自分フィールドのモンスター１体をリリースして発動できる。"
                                "このカードの特殊召喚に成功した場合に発動できる。自分の墓地のモンスター１体を特殊召喚する。"),
                          [["リリース"], [], ["特殊召喚", "特殊召喚←墓地"]])
@@ -141,7 +141,7 @@ EXPORT_CARDS = {
     5: [clause("①", "①：このカードは効果では破壊されない。")],
     6: [clause("①", "①：自分フィールドのモンスター１体を破壊して発動できる。自分の墓地からモンスター１体を特殊召喚する。")],
 }
-NONE = {"代價": 0, "效果": 0, "條件": 0}
+NONE = {"代價": 0, "效果": 0, "條件": 0, "召喚手續": 0}
 
 
 def counts(**positions):
@@ -153,7 +153,7 @@ def hashes(**positions):
 
 
 class TestExportCatalog(unittest.TestCase):
-    """匯出檔的目錄欄:每個節點一列(名、路徑、述詞或空、三個位置的張數、卡集合雜湊),目錄序;大類/中類的
+    """匯出檔的目錄欄:每個節點一列(名、路徑、述詞或空、四個位置的張數、卡集合雜湊),目錄序;大類/中類的
     張數是底下具名查詢的聯集;「至少命中一張」違反時匯出失敗、問題清單列名字。"""
 
     def test_catalog_rows_in_catalog_order_with_counts_per_position(self):
@@ -189,12 +189,20 @@ class TestExportCatalog(unittest.TestCase):
     def test_a_query_with_no_card_in_any_position_fails_the_export(self):
         doc, problems = export_frames.export(chain({1: EXPORT_CARDS[1]}), cat=small())
         self.assertEqual(problems, [
-            "具名查詢在全語料三個位置都沒有命中(不留):破壊",
-            "具名查詢在全語料三個位置都沒有命中(不留):破壊:魔法カード/罠カード",
-            "具名查詢在全語料三個位置都沒有命中(不留):破壊:モンスター",
-            "具名查詢在全語料三個位置都沒有命中(不留):破壊@フィールド",
-            "具名查詢在全語料三個位置都沒有命中(不留):破壊(耐性)",
+            "具名查詢在全語料四個位置都沒有命中(不留):破壊",
+            "具名查詢在全語料四個位置都沒有命中(不留):破壊:魔法カード/罠カード",
+            "具名查詢在全語料四個位置都沒有命中(不留):破壊:モンスター",
+            "具名查詢在全語料四個位置都沒有命中(不留):破壊@フィールド",
+            "具名查詢在全語料四個位置都沒有命中(不留):破壊(耐性)",
         ])
+
+    def test_a_query_hit_only_in_the_summon_procedure_is_kept(self):
+        """summon-procedure 票 02:「至少命中一張」看四個位置——只在召喚手續有張數的具名查詢不算不留。"""
+        procedure = {1: [clause("0", "自分の墓地のモンスター１体を除外した場合のみ特殊召喚できる。", kind="效果外文本")]}
+        doc, problems = export_frames.export(chain(procedure),
+                                             cat=catalog.Catalog({"樹": [query("除外", 來源=[[None, "墓地"]])]}))
+        self.assertEqual(problems, [])
+        self.assertEqual([(r["name"], r["cards"]) for r in doc["目錄"]], [("除外←墓地", counts(召喚手續=1))])
 
     def test_without_a_catalog_the_column_stays_empty(self):
         doc, problems = export_frames.export(chain({1: EXPORT_CARDS[1]}))
@@ -202,7 +210,7 @@ class TestExportCatalog(unittest.TestCase):
 
 
 class TestCorpus(unittest.TestCase):
-    """全語料:真目錄每個具名查詢三個位置合計至少命中一張(匯出檔目錄欄),命中中間產物與目錄欄的張數一致;
+    """全語料:真目錄每個具名查詢四個位置合計至少命中一張(匯出檔目錄欄),命中中間產物與目錄欄的張數一致;
     缺輸入時略過並印原因。"""
 
     @classmethod
@@ -229,7 +237,7 @@ class TestCorpus(unittest.TestCase):
         self.assertEqual([q.name for q in cat.queries if not any(rows[q.name]["cards"].values())], [])
 
     def test_hit_records_agree_with_the_catalog_column(self):
-        """中間產物逐框的命中 → 每個具名查詢三個位置的卡集合,張數與匯出檔目錄欄相同;框數等於匯出的框數。"""
+        """中間產物逐框的命中 → 每個具名查詢各位置的卡集合,張數與匯出檔目錄欄相同;框數等於匯出的框數。"""
         sets = {}
         for r in self.records:
             for name in r["queries"]:

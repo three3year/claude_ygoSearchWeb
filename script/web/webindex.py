@@ -507,9 +507,10 @@ def _content_digest(content):
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
-# 索引建置預期的框列匯出檔格式版本(export_frames.VERSION,2026-11-01 規格 3「封閉類的值域放哪?」(a) 升 2;script/web
-# 不 import 分詞鏈,不符就是建置失敗;test_webindex.EncodedFixtureTest 守兩邊相同)
-FRAME_EXPORT_VERSION = 2
+# 索引建置預期的框列匯出檔格式版本(export_frames.VERSION,2026-11-01 規格 3「封閉類的值域放哪?」(a) 升 2;2026-11-03
+# summon-procedure 票 02 位置多 召喚手續 升 3;script/web 不 import 分詞鏈,不符就是建置失敗;test_webindex.EncodedFixtureTest
+# 守兩邊相同)
+FRAME_EXPORT_VERSION = 3
 # 目錄進 VOCAB 的欄(2026-11-01 規格 3 story 7、8):雜湊只有測試要用,高熵字串不佔索引
 _CATALOG_INDEX_KEYS = ("name", "path", "predicate", "cards")
 # ● 子句的 index:領起句的 index 加 -●n(分詞鏈 export_common.owner 組出;2026-10 ADR-0015 標記句的鍵,script/web 不 import

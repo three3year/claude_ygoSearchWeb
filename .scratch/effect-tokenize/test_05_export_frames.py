@@ -90,7 +90,7 @@ class TestSentenceRows(unittest.TestCase):
 
     def test_split_options_go_to_their_own_sub_sentences(self):
         """拆開的效果句:選項 n 的框架屬 index-●n,沒有選項的(領起句的 選択,條件位)屬領起句;
-        雜湊各是自己那一句;三個位置都匯。"""
+        雜湊各是自己那一句;四個位置都匯。"""
         sub1 = "●自分の墓地からモンスター１体を特殊召喚する。"
         doc, problems = export({1: [
             clause("①", "①：以下の効果から１つを選択して発動できる。", kind="效果外文本"),
@@ -223,11 +223,20 @@ class TestDocument(unittest.TestCase):
                                faces)
         self.assertEqual(problems, [])
         self.assertEqual(list(doc), ["說明", "版本", "值域", "目錄", "統計", "卡面", "句"])
-        self.assertEqual(doc["版本"], 2)
+        self.assertEqual(doc["版本"], 3)
         self.assertEqual(doc["目錄"], [])
         self.assertEqual(doc["卡面"], [[1, export_common.face_hash(DRAGON)]])
         self.assertEqual(doc["統計"]["框架"], {"此卡": 1, "非此卡": 1, "皆非": 0})
-        self.assertEqual(doc["統計"]["位置"], {"代價": 0, "效果": 2, "條件": 0})
+        self.assertEqual(doc["統計"]["位置"], {"代價": 0, "效果": 2, "條件": 0, "召喚手續": 0})
+
+    def test_procedure_frames_are_exported_under_the_fourth_position(self):
+        """summon-procedure 票 02:召喚條件的白名單手續步驟以位置 召喚手續 匯出,統計位置多一格。"""
+        text = "自分の墓地のモンスター１体を除外した場合のみ特殊召喚できる。"
+        doc, problems = export({1: [clause("0", text, kind="效果外文本")]})
+        self.assertEqual(problems, [])
+        self.assertEqual([(fr["action"], fr["position"]) for r in doc["句"] for fr in r["frames"]],
+                         [("除外", "召喚手續")])
+        self.assertEqual(doc["統計"]["位置"], {"代價": 0, "效果": 0, "條件": 0, "召喚手續": 1})
 
     def test_serialization_is_one_sentence_per_line_and_roundtrips(self):
         doc, _ = export({1: [clause("①", REVIVE)], 2: [clause("①", REVIVE)]})
@@ -235,7 +244,7 @@ class TestDocument(unittest.TestCase):
         self.assertEqual(json.loads(text), doc)
         self.assertEqual(sum(line.startswith('{"card"') for line in text.splitlines()), 2)
         self.assertIn('\n"目錄":[],\n', text)
-        self.assertIn('\n"版本":2,\n', text)
+        self.assertIn('\n"版本":3,\n', text)
 
     def test_domains_follow_the_reference_evaluator_in_declared_order(self):
         """規格 3 票 01:值域是參考評估器每個封閉類欄的值域,另加玩家與區域兩張;欄序與值序都是宣告序,

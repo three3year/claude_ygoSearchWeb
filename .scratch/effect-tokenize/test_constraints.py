@@ -413,8 +413,9 @@ class TestPledges(unittest.TestCase):
 
 
 class TestSummonConditions(unittest.TestCase):
-    """票 04:效果外文本的召喚條件句出限制·召喚條件(形式/方式/手續/來源),召喚手續與
-    特殊召喚 本身不再出動作框架;編號效果裡的同形句照舊是動作框架。"""
+    """票 04:效果外文本的召喚條件句出限制·召喚條件(形式/方式/手續/來源),特殊召喚 本身不出動作框架;
+    編號效果裡的同形句照舊是動作框架。summon-procedure 票 02 起:手續步驟動作在白名單內的另出動作框架、
+    位置 召喚手續(ADR-0019),約束框架與它的手續欄不變。"""
 
     def test_cannot_normal_summon_then_only_by_procedure(self):
         self.assertEqual(
@@ -423,7 +424,8 @@ class TestSummonConditions(unittest.TestCase):
             [summon("不能通常召喚"),
              summon("只能以某方式特殊召喚",
                     procedure=[{"action": "除外",
-                                "object": "自分の墓地の「SPYRAL」カード3枚"}])])
+                                "object": "自分の墓地の「SPYRAL」カード3枚"}]),
+             A("除外", "召喚手續", "肯定")])
 
     def test_only_by_card_effect(self):
         self.assertEqual(
@@ -453,7 +455,8 @@ class TestSummonConditions(unittest.TestCase):
              summon("只能以某方式特殊召喚",
                     procedure=[{"action": "除外",
                                 "object": "自分の墓地の光属性と闇属性のモンスター"}],
-                    source="EXデッキ")])
+                    source="EXデッキ"),
+             A("除外", "召喚手續", "肯定")])
 
     def test_xyz_summon_procedure_with_count(self):
         self.assertEqual(
@@ -462,7 +465,8 @@ class TestSummonConditions(unittest.TestCase):
             [count("回合", 1, "「FA－ホープ・レイ・ランサー」のX召喚"),
              summon("可以某方式X召喚",
                     procedure=[{"action": "重ねる",
-                                "goal": "自分フィールドの「希望皇ホープ」モンスターの上"}])])
+                                "goal": "自分フィールドの「希望皇ホープ」モンスターの上"}]),
+             A("重ねる", "召喚手續", "肯定")])
 
     def test_method_list_with_option_procedure(self):
         text = ("このカードは融合召喚及び以下の方法でのみ特殊召喚できる。\n●自分のモンスター"
@@ -473,15 +477,17 @@ class TestSummonConditions(unittest.TestCase):
              summon("可以某方式特殊召喚",
                     procedure=[{"action": "送る", "object": "自分のモンスターゾーンの上記のカード",
                                 "goal": "墓地"}],
-                    source="EXデッキ")])
-        self.assertEqual([f["option"] for f in frames.extract(text)], [None, 1])
+                    source="EXデッキ"),
+             A("送る", "召喚手續", "肯定")])
+        self.assertEqual([f["option"] for f in frames.extract(text)], [None, 1, 1])
 
     def test_tribute_then_advance_summon(self):
         self.assertEqual(
             rows("このカードはアドバンス召喚したモンスター１体をリリースしてアドバンス召喚できる。"),
             [summon("可以某方式A召喚",
                     procedure=[{"action": "リリース",
-                                "object": "アドバンス召喚したモンスター1体"}])])
+                                "object": "アドバンス召喚したモンスター1体"}]),
+             A("リリース", "召喚手續", "肯定")])
 
     def test_cannot_synchro_then_only_by_procedure(self):
         self.assertEqual(
@@ -491,7 +497,8 @@ class TestSummonConditions(unittest.TestCase):
              summon("只能以某方式特殊召喚",
                     procedure=[{"action": "送る",
                                 "object": "チューナー1体とチューナー以外のモンスター1体",
-                                "source": "自分フィールド", "goal": "墓地"}])])
+                                "source": "自分フィールド", "goal": "墓地"}]),
+             A("送る", "召喚手續", "肯定")])
 
 
 class TestMaterials(unittest.TestCase):
@@ -675,7 +682,8 @@ class TestConstraintRound1Fixes(unittest.TestCase):
              summon("可以某方式特殊召喚",
                     procedure=[{"action": "リリース",
                                 "object": "融合モンスター以外の自分フィールドの雷族の効果モンスター1体"}],
-                    source="EXデッキ")])
+                    source="EXデッキ"),
+             A("リリース", "召喚手續", "肯定")])
 
     def test_window_with_comma_before_condition_clause(self):
         """round2:「自分・相手ターンに、…場合、…発動できる」的窗口自成一段,是時機。"""
@@ -696,6 +704,7 @@ class TestConstraintRound1Fixes(unittest.TestCase):
                  "召喚しなければならず、このカードは特殊召喚できない。"),
             [summon("必須以某方式召喚",
                     procedure=[{"action": "リリース", "object": "自分フィールドのモンスター3体"}]),
+             A("リリース", "召喚手續", "肯定"),
              summon("不能特殊召喚")])
 
 
@@ -768,7 +777,8 @@ class TestCodeReviewFixes(unittest.TestCase):
         self.assertEqual(
             rows("自分フィールドの「試作機」のみをリリースした場合に特殊召喚できる。"),
             [summon("可以某方式特殊召喚",
-                    procedure=[{"action": "リリース", "object": "自分フィールドの「試作機」"}])])
+                    procedure=[{"action": "リリース", "object": "自分フィールドの「試作機」"}]),
+             A("リリース", "召喚手續", "肯定")])
 
     def test_topic_count_prefix_in_effect_is_action_content(self):
         text = "①：このカードは１ターンに１度、戦闘では破壊されない。"
@@ -816,7 +826,8 @@ class TestHandoffKnownItems(unittest.TestCase):
                     procedure=[{"action": "重ねる",
                                 "goal": "自分フィールドの「リベリオン」Xモンスターの上"},
                                {"action": "P召喚可能", "subject": "レベル７"}],
-                    source="EXデッキ")])
+                    source="EXデッキ"),
+             A("重ねる", "召喚手續", "肯定")])
 
     def test_window_before_passive_or_state_relative_verb_is_still_timing(self):
         self.assertEqual(

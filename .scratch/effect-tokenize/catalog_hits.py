@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """具名查詢的命中(named-queries 票 08,ADR-0018):重跑鏈的「目錄」一步,接在框架之後、框列匯出之前。
 
-做兩件事:載入並檢查目錄(catalog.load,違反即失敗)、對全語料每個動作框架算命中的具名查詢(三個位置都算),寫中間產物
-frame_queries.json(gitignore)。「每個具名查詢在全語料三個位置合計至少命中一張」(規格「不留位置口徑」(a))只在
+做兩件事:載入並檢查目錄(catalog.load,違反即失敗)、對全語料每個動作框架算命中的具名查詢(四個位置都算),寫中間產物
+frame_queries.json(gitignore)。「每個具名查詢在全語料四個位置合計至少命中一張」(規格「不留位置口徑」(a))只在
 緊接的匯出步驟檢查一次(export_frames.unmatched;2026-11-01 code review 修正:兩步各檢查一次是同一件事寫兩處),
 違反時匯出失敗、鏈停在那一步。命中用參考評估器(predicate.matcher)對**匯出的框列**算:框架先經 export_frames.frame_rows
 轉成框列(框架 → 框列只有那一份),評估器讀的就是匯出檔裡的同一個 dict——所以拆解頁、LLM 抽驗看到的命中與索引
@@ -15,7 +15,7 @@ frame_queries.json(JSON 清單,一框一行;前四鍵是框架身分,對得回 f
     index     效果句 index(frames.json 的句,不是標記句)
     order     框架在句裡的序(frames.json 的 order)
     action    動作詞元
-    position  位置(代價/效果/條件)
+    position  位置(代價/效果/條件/召喚手續)
     queries   命中的具名查詢名清單(目錄序;空清單 = 沒命中任何具名查詢)
     patient   動作對象(此卡/非此卡;皆非是 null)——票 09 拆解頁每框照舊顯示,與匯出框列的 patient_mode 同一個判定
     why       動作對象的理由(patient.WHY_*;拆解頁的 title)

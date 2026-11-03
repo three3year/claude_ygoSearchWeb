@@ -2,7 +2,7 @@
 """框列匯出(named-queries 票 05,ADR-0018):分詞鏈 → 網站搜尋的框架檔 data/action_frames.json。
 
 接在框架抽取之後:讀效果句與它的框架(frames.json)、
-效果句原文(tokens.json)與卡片總表的卡面,把每個**動作框架**(三個位置都匯)落到它所屬的標記句上,寫出
+效果句原文(tokens.json)與卡片總表的卡面,把每個**動作框架**(四個位置都匯)落到它所屬的標記句上,寫出
 入版控、一句一行、決定性的匯出檔;索引建置(規格 3)與 Python 參考評估器(票 06)讀的都是這份檔的框列。
 框架對標記句的規則、原文雜湊、卡面雜湊、統計在 export_common.py。
 
@@ -12,7 +12,7 @@
     值域    規格 3 票 01:每個封閉類述詞欄 → 值清單,另有玩家與區域兩張,全部宣告序(predicate.export_domains;
             索引建置原樣放進 VOCAB、不 import 分詞鏈)。
     目錄    具名查詢目錄(票 08;每個節點一列、目錄序,欄在 CATALOG_KEYS):name 節點名、path 路徑(大類 › 中類或
-            詞元節點 › 名)、predicate 明文述詞(大類/中類列是 null)、cards 三個位置各命中幾張卡、hash 三個位置
+            詞元節點 › 名)、predicate 明文述詞(大類/中類列是 null)、cards 四個位置各命中幾張卡、hash 四個位置
             各自的卡集合雜湊(predicate.cards_hash;規格 3 的 JS 評估器重算要相同);大類/中類列是底下具名
             查詢的聯集。「至少命中一張」違反即匯出失敗(問題清單)。
     統計    動作對象判定的框數與理由(Stats.doc()),另加「位置」:匯出的框數分位置。
@@ -21,7 +21,7 @@
 
 框列(FRAME_KEYS;全部可選鍵、只在有值時帶;字面——子句、受事者整段、修飾語字面、數量字面——不匯):
     action        動作詞元
-    position      位置(代價/效果/條件)
+    position      位置(代價/效果/條件/召喚手續)
     polarity      極性(肯定/否定/可能)
     voice         態(他動/自動/受身)
     negation      否定形(受身/不成不受/不可能/一般)
@@ -57,21 +57,22 @@ from predicate import FRAME_KEYS, PHRASE_KEYS, SEGMENT_KEYS, card_sets, cards_ha
 
 OUT = os.path.join(ROOT, "data", "action_frames.json")
 
-# 格式版本:欄位語意變就加一(規格「匯出檔要不要格式版本號」(a));索引建置與參考評估器比對不符即失敗
-VERSION = 2
+# 格式版本:欄位語意變就加一(規格「匯出檔要不要格式版本號」(a));索引建置與參考評估器比對不符即失敗。
+# 3:位置多 召喚手續(summon-procedure 票 02,ADR-0019)——框列、目錄每列、統計位置各多一格
+VERSION = 3
 # 框列的鍵(匯出順序)、片語鍵、段的鍵:拼法定在述詞字彙模組 predicate.py(票 06),這裡只 import
 # 框架上照抄的單值鍵(有值才帶)
 _COPIED_KEYS = ("action", "position", "polarity", "voice", "negation", "agent", "manner_kind", "manner_value")
 PATIENT_PHRASE, GOAL_PHRASE = PHRASE_KEYS
 # 受事者片語取哪一欄:對象 → 主語 → 主題 第一個有片語的(與舊關鍵詞類條件的取法同)
 PATIENT_SOURCES = ("object", "subject", "topic")
-# 目錄列的欄(票 08:名、路徑、述詞或空、三個位置的張數、三個位置的卡集合雜湊)
+# 目錄列的欄(票 08:名、路徑、述詞或空、各位置的張數、各位置的卡集合雜湊)
 CATALOG_KEYS = ("name", "path", "predicate", "cards", "hash")
 
 DOC = ("動作框架匯出檔(.scratch/named-queries,ADR-0018):由 .scratch/effect-tokenize/export_frames.py 產生,"
        "不要手改。「版本」是格式版本(整數,欄位語意變就加一);「目錄」是具名查詢目錄(名、路徑、述詞、"
-       "三個位置的張數、卡集合雜湊;目錄序);「句」每列一句新格式新卡的標記句:卡片密碼、段落、index、"
-       "日文原文雜湊,與它的動作框架框列(依原文順序;三個位置都匯)——詞元、位置、極性、態、否定形、"
+       "四個位置的張數、卡集合雜湊;目錄序);「句」每列一句新格式新卡的標記句:卡片密碼、段落、index、"
+       "日文原文雜湊,與它的動作框架框列(依原文順序;四個位置都匯)——詞元、位置、極性、態、否定形、"
        "來源/目的/所在的結構化值、施事者、方式類、表示形式值、受事者片語與目的片語的段(中心詞、中心詞類、"
        "數量類、修飾語類)、動作對象;全部可選鍵、只在有值時帶,字面不匯。「統計」是動作對象判定的框數與"
        "卡數,與匯出的框數分位置(建置報告照登);「卡面」每列一張卡的此卡卡面參數雜湊(索引建置以卡片總表"
@@ -130,7 +131,7 @@ def query_sets(cat, rows):
 
 
 def unmatched(cat, sets):
-    """「每個具名查詢在全語料三個位置合計至少命中一張」(規格「不留位置口徑」(a))→ 違反的名字(目錄序)。
+    """「每個具名查詢在全語料四個位置合計至少命中一張」(規格「不留位置口徑」(a);summon-procedure 起四個位置)→ 違反的名字(目錄序)。
     「不留」只在這裡(匯出步驟)檢查;目錄步驟 catalog_hits.py 只算命中。"""
     return [q.name for q in cat.queries if not any(sets[q.name].values())]
 
@@ -185,7 +186,7 @@ def export(sentences, faces=None, cat=None):
     rows_of_catalog = []
     if cat is not None:
         sets = query_sets(cat, out)
-        problems.extend("具名查詢在全語料三個位置都沒有命中(不留):%s" % name for name in unmatched(cat, sets))
+        problems.extend("具名查詢在全語料四個位置都沒有命中(不留):%s" % name for name in unmatched(cat, sets))
         rows_of_catalog = catalog_rows(cat, sets)
     return {"說明": DOC, "版本": VERSION, "值域": export_domains(), "目錄": rows_of_catalog,
             "統計": dict(stats.doc(), 位置=positions), "卡面": face_rows, "句": out}, problems
@@ -235,7 +236,7 @@ def main():
         "、".join("%s %d" % kv for kv in positions.items()), doc["版本"], OUT))
     print("各欄有值的框數:" + "、".join("%s %d" % kv for kv in column_counts(rows).items()))
     queries = [r for r in doc["目錄"] if r["predicate"] is not None]
-    print("目錄 %d 列(具名查詢 %d);具名查詢三個位置的張數合計:%s" % (
+    print("目錄 %d 列(具名查詢 %d);具名查詢各位置的張數合計:%s" % (
         len(doc["目錄"]), len(queries),
         "、".join("%s %d" % (position, sum(r["cards"][position] for r in queries)) for position in POSITIONS)))
     print_stats(doc["統計"], "動作對象(匯出的全部動作框架)")

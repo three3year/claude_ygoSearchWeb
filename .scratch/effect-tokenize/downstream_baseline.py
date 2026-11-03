@@ -8,7 +8,9 @@
 - anaphora  回指欄:每個動作框架的整個 anaphora dict(含新子鍵 moving),沒有就是 None。
 
 接縫:
-- snapshot(ruler, records, faces=None) → {(卡號, 段落, 句序, 框序): 值}(frames.json 的紀錄清單)。
+- snapshot(ruler, records, faces=None) → {(卡號, 段落, 句序, 框序): 值}(frames.json 的紀錄清單)。先剝框重編
+  (baseline_diff.strip_procedure,summon-procedure 票 01):召喚手續框不在基準裡,框序是剝掉它們後重編的;
+  動作對象仍整句判完才剝。
 - diff(base, cur, clauses=None, why_aliases=WHY_ALIASES) → [(卡號, 段落, 句序, 框序, 子句字面, 基準值, 現值)];
   一邊沒有的框記 MISSING(回指欄的 None 是正常值,要分得開)。動作對象的理由碼改名時填 WHY_ALIASES
   (舊 → 新),基準值比對前先換,基準不必重凍。
@@ -32,6 +34,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import patient  # noqa: E402
+from baseline_diff import strip_procedure  # noqa: E402
 from constraints import KIND_ACTION  # noqa: E402
 from export_common import card_face  # noqa: E402
 
@@ -56,19 +59,21 @@ def frame_key(rec, frame):
 
 
 def _patient_values(records, faces):
+    """整句判完(召喚手續框在句中)才剝框重編:既有框的判定若因召喚手續框而變,比對看得到。"""
     faces = faces or {}
     out = {}
     for rec in records:
         verdicts = patient.judge_sentence(rec["frames"], faces.get(rec["card"]), rec["section"])
-        for fr, verdict in zip(rec["frames"], verdicts):
+        judged = dict(rec, frames=[dict(fr, _verdict=verdict) for fr, verdict in zip(rec["frames"], verdicts)])
+        for fr in strip_procedure(judged)["frames"]:
             if fr.get("kind") == KIND_ACTION:
-                out[frame_key(rec, fr)] = {"mode": verdict.mode, "why": verdict.why}
+                out[frame_key(rec, fr)] = {"mode": fr["_verdict"].mode, "why": fr["_verdict"].why}
     return out
 
 
 def _anaphora_values(records, faces):
     return {frame_key(rec, fr): fr.get("anaphora")
-            for rec in records for fr in rec["frames"] if fr.get("kind") == KIND_ACTION}
+            for rec in map(strip_procedure, records) for fr in rec["frames"] if fr.get("kind") == KIND_ACTION}
 
 
 _VALUES = {PATIENT: _patient_values, ANAPHORA: _anaphora_values}
@@ -100,8 +105,9 @@ def diff(base, cur, clauses=None, why_aliases=None):
 
 
 def frame_clauses(records):
-    """{框鍵: 子句字面}——差異清單的原文欄。"""
-    return {frame_key(rec, fr): fr.get("clause") or "" for rec in records for fr in rec["frames"]}
+    """{框鍵: 子句字面}——差異清單的原文欄(框鍵是剝框重編後的,和 snapshot 同)。"""
+    return {frame_key(rec, fr): fr.get("clause") or "" for rec in map(strip_procedure, records)
+            for fr in rec["frames"]}
 
 
 def _load(path):

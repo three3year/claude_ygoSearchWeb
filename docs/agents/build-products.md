@@ -10,6 +10,7 @@
 | `.scratch/effect-tokenize/report.md` | `python .scratch/effect-tokenize/report.py` |
 | `.scratch/effect-tokenize/baseline-digest.json` | `python .scratch/effect-tokenize/baseline_diff.py --freeze`(只在刻意改既有欄之後) |
 | `.scratch/effect-tokenize/patient-digest.json`、`anaphora-digest.json` | `python .scratch/effect-tokenize/downstream_baseline.py <patient|anaphora> --freeze`(只在確認差異是要的之後;見下「下游基準」) |
+| `.scratch/effect-tokenize/export-digest.json` | `python .scratch/effect-tokenize/export_diff.py --freeze`(只在確認匯出檔既有內容的差異是要的之後;見下「剝框重編」) |
 
 - `run_chain.py` 的順序:分詞 → 框架 → 目錄(`catalog_hits.py`)→ 框列匯出,任一步失敗停下。具名查詢目錄 `.scratch/effect-tokenize/catalog.json` 是手改的來源檔(入版控),不是產物。
 - 換行:這些檔寫 LF,`.gitattributes` 讓工作樹也是 LF;`git status` 顯示它們 M 時先 `git diff`,內容為空就是沒變。例外:`web/data.js` 不在 `.gitattributes`,工作樹依 `core.autocrlf` 走。
@@ -17,7 +18,7 @@
 
 ## 不入版控的建置輸入
 
-`data/sources/`(下載來源)、`.scratch/effect-tokenize/tokens.json`、`.scratch/effect-tokenize/baseline/`(剝鍵基準 `frames.json`、下游基準 `patient.json`/`anaphora.json`)。工作樹要用時複製進去:
+`data/sources/`(下載來源)、`.scratch/effect-tokenize/tokens.json`、`.scratch/effect-tokenize/baseline/`(剝鍵基準 `frames.json`、下游基準 `patient.json`/`anaphora.json`、匯出基準 `action_frames.json`)。工作樹要用時複製進去:
 
     python script/dev/worktree_bootstrap.py <工作樹路徑> --build
 
@@ -41,3 +42,10 @@
 - 重新凍結:差異逐卡確認「改讀後更對」之後 `--freeze`;語料(tokens.json)或卡面(cards.json)變了 digest 守門會略過並要求重新凍結。
   動作對象的理由碼改名不必重凍,填 `downstream_baseline.WHY_ALIASES`(舊 → 新)。
 - 基準檔在主 repo 凍結一次,工作樹由 `worktree_bootstrap.py` 複製;沒有基準檔時只剩 digest 守門。
+
+## 剝框重編(summon-procedure 票 01,ADR-0019)
+
+召喚手續框(位置 召喚手續)依原文順序和既有框混排,會把後面的框序往後推。三道守門比之前都先剝掉它們、框序照剩下的重編(`baseline_diff.strip_procedure`),所以加召喚手續框**不重凍**任何 digest:
+
+- 剝鍵比對(`baseline_diff.py`)、下游基準(`downstream_baseline.py`;動作對象整句判完才剝)經同一個接縫。
+- 匯出檔:`python .scratch/effect-tokenize/export_diff.py [--baseline P]` 剝掉召喚手續框列、目錄與統計位置的召喚手續格、值域的召喚手續後比——先印 `export-digest.json` 守門(語料、卡面、目錄 catalog.json 變了就略過並要求重凍),有基準檔(預設 `baseline/action_frames.json`,或 `git show main:data/action_frames.json` 存下的檔)再逐列列差異。不比版本、說明與動作對象統計(全部框合計,剝不出來;逐框由 patient 尺守)。`test_procedure_strip.TestExportCorpus` 跑 digest 守門。

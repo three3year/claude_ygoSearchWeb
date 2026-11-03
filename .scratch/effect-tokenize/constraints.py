@@ -18,6 +18,9 @@ KIND_ACTION, KIND_CONSTRAINT = "動作", "約束"
 # 框架的位置(動作框架與約束框架共用;frames.py 與第四版論元各模組都從這裡 import)
 POS_COST, POS_EFFECT, POS_COND = "代價", "效果", "條件"
 POSITIONS = (POS_COST, POS_EFFECT, POS_COND)
+# 召喚手續:召喚條件的手續步驟另出的動作框架的位置(summon-procedure 規格,2026-11-03 定案)。框架抽取還沒
+# 出這個位置,所以先不排進 POSITIONS;驗收工具(剝框重編、匯出檔比對)要先認得它,才分得出新框與既有框
+POS_PROCEDURE = "召喚手續"
 CAT_LIMIT, CAT_TIMING, CAT_MATERIAL = "限制", "時機", "素材"
 SUB_COUNT, SUB_EVENT_TURN, SUB_PLEDGE, SUB_SUMMON = (
     "次數", "事件回合禁用", "誓約", "召喚條件")

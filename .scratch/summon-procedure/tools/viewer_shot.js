@@ -84,13 +84,11 @@ async function shot(send, ev, selector, file) {
 
 (async () => {
   const { ws, send, ev, errors } = await connect();
-  // 拆解頁框架表欄多,寬螢幕才看得到整列(窄了內容欄會擠成直排)
   await send('Emulation.setDeviceMetricsOverride', { width: 2560, height: 1400, deviceScaleFactor: 1, mobile: false });
   log('頁面 ' + PAGE);
   await send('Page.navigate', { url: PAGE });
   await waitFor(ev, `!!document.querySelector('input[type=search]')`, '卡片拆解分頁');
 
-  // 卡片拆解:打卡號(純數字且相符時直接開卡)
   await ev(`(()=>{const i=document.querySelector('input[type=search]');i.value='${CARD}';
     i.dispatchEvent(new Event('input',{bubbles:true}));})()`);
   await waitFor(ev, `!!document.querySelector('table.frames')`, '框架表');
@@ -111,7 +109,6 @@ async function shot(send, ev, selector, file) {
   log('chip 底色:' + colors.map(c => c.join(' ')).join('、'));
   if (new Set(colors.map(c => c[1])).size !== colors.length) bad('位置 chip 底色有重複');
   await ev(`(()=>{const c=document.querySelector('table.frames .chip.f-proc');c.closest('.rec').setAttribute('id','procShot');})()`);
-  // 頁面 .wrap 限寬 1060px,框架表 17 欄擠成直排;截圖時(只在這支工具裡)放開限寬,讓整列一行看得到
   await ev(`(()=>{const st=document.createElement('style');st.textContent='.wrap{max-width:none}';document.head.appendChild(st);})()`);
   await sleep(200);
   await shot(send, ev, '#procShot', `viewer_${CARD}_procedure.png`);
@@ -119,7 +116,6 @@ async function shot(send, ev, selector, file) {
   log('圖例:' + legend.slice(0, 60));
   if (!legend.includes(PROCEDURE)) bad('圖例沒有召喚手續');
 
-  // 具名查詢總覽
   await ev(`[...document.querySelectorAll('#tabs button')].find(b=>/具名查詢/.test(b.textContent)).click()`);
   await waitFor(ev, `!!document.querySelector('.ctree .chead')`, '具名查詢總覽');
   await sleep(300);

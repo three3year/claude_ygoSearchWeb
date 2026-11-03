@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """匯出檔比對(summon-procedure 票 01):召喚手續框進匯出檔是只加不改——剝掉召喚手續的部分後,
 data/action_frames.json 要和加之前的匯出檔逐句相同。
 
@@ -64,7 +63,6 @@ def strip(doc):
 
 
 def _keyed(stripped):
-    """剝完的部分 → {區: {鍵: 值}}(依原序)。"""
     return {
         "值域": stripped["值域"],
         "目錄": {tuple(row["path"]): row for row in stripped["目錄"]},

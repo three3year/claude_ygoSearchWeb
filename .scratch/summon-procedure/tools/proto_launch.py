@@ -5,14 +5,14 @@ from collections import Counter
 HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "effect-tokenize")
 sys.path.insert(0, HERE)
 sys.stdout.reconfigure(encoding="utf-8")
-import constraints  # noqa
+import constraints  # noqa: E402
 P = "召喚手續"
 constraints.POSITIONS = constraints.POSITIONS + (P,)
-import export_common  # noqa
+import export_common  # noqa: E402
 export_common.FRAMES = sys.argv[1]
-import export_frames  # noqa
-import patient  # noqa
-import places  # noqa
+import export_frames  # noqa: E402
+import patient  # noqa: E402
+import places  # noqa: E402
 
 cards = {c["id"]: c for c in json.load(open(os.path.join(HERE, "..", "..", "data", "cards.json"), encoding="utf-8"))}
 EXTRA_BITS = 0x40 | 0x2000 | 0x800000 | 0x4000000

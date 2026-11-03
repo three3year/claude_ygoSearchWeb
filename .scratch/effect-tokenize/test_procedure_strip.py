@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """剝框重編(summon-procedure 票 01)的驗收測試:召喚手續框出框之前,先讓三道守門分得出新加的框和既有的框。
 
 接縫:
@@ -121,7 +120,6 @@ class TestDownstreamSnapshotStripsProcedure(unittest.TestCase):
 
 
 def export_doc(version, positions, rows, catalog_cards, stats_positions):
-    """手寫的匯出文件:一張卡兩句、一個具名查詢列;positions 是值域的位置清單。"""
     return {"說明": "v%d" % version, "版本": version,
             "值域": {"位置": list(positions), "極性": ["肯定", "否定", "可能"]},
             "目錄": [{"name": "除外", "path": ["區域移動", "除外"], "predicate": {"詞元": "除外"},

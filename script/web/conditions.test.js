@@ -490,8 +490,6 @@ test('網址:壞百分比編碼不崩,那一段安靜忽略', () => {
   assert.deepStrictEqual(cond('tags', back.cond).map(t => t.origin), ['破壊']);
 });
 
-/* ── 召喚手續(summon-procedure 票 02):位置的第四個值 ── */
-
 const procCounts = (代價, 效果, 條件, 召喚手續) => ({ 代價, 效果, 條件, 召喚手續 });
 const PROC_CATALOG = [
   { name: 'リリース', path: ['リリース'], cards: procCounts(0, 0, 0, 7), predicate: pred({ 詞元: 'リリース' }) },
@@ -514,8 +512,6 @@ test('召喚手續:只在召喚手續有張數的列,目錄樹灰字標「召喚
   assert.deepStrictEqual(harness.catalogNode(procBox, '除外').count, { text: '5', zero: false });
 });
 
-/* 真 data.js:除外 在四個位置都有框,破壊 沒有召喚手續框(不在白名單) */
-/* 詞元節點(述詞只有 詞元 與預設極性)→ 它的新標籤 */
 const realTag = (real, lemma) => {
   const row = harness.cond(real, 'named', { pred: { 詞元: lemma, 極性: POLAR } });
   return harness.cond(real, 'tagAt', row.path.join('›'), false);

@@ -89,7 +89,6 @@ class TestRealCatalog(unittest.TestCase):
                          [["破壊", "破壊@相手フィールド", "破壊@フィールド"]])
 
     def test_every_position_counts_and_a_frame_may_hit_nothing(self):
-        """每個位置都算:代價位的 リリース 命中詞元節點;條件位的 成功(〜に成功した)沒有具名查詢,清單空。"""
         self.assertEqual(names("①：自分フィールドのモンスター１体をリリースして発動できる。"
                                "このカードの特殊召喚に成功した場合に発動できる。自分の墓地のモンスター１体を特殊召喚する。"),
                          [["リリース"], [], ["特殊召喚", "特殊召喚←墓地"]])
@@ -237,7 +236,6 @@ class TestCorpus(unittest.TestCase):
         self.assertEqual([q.name for q in cat.queries if not any(rows[q.name]["cards"].values())], [])
 
     def test_hit_records_agree_with_the_catalog_column(self):
-        """中間產物逐框的命中 → 每個具名查詢各位置的卡集合,張數與匯出檔目錄欄相同;框數等於匯出的框數。"""
         sets = {}
         for r in self.records:
             for name in r["queries"]:

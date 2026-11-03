@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """召喚手續框的分詞鏈例子(summon-procedure 票 02;ADR-0019)。
 
 接縫:一句效果外文本原文 → 框架清單(frames.extract)。召喚條件的手續步驟,動作在白名單
@@ -15,7 +14,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import constraints  # noqa: E402
 import frames  # noqa: E402
 
-# 滅びの黒魔術師(59400890)效果外文本 0-2
 DARK_MAGICIAN = ("「滅びの黒魔術師」は１ターンに１度、融合召喚及び以下の方法でのみ特殊召喚できる。\n"
                  "●魔法カードの効果が発動したターン、自分フィールドのレベル６以上の魔法使い族・闇属性"
                  "モンスター１体を除外した場合にEXデッキから特殊召喚できる。")
@@ -81,7 +79,6 @@ class TestWhitelist(unittest.TestCase):
         self.assertEqual(frame["goal"], "自分フィールドの「希望皇ホープ」モンスターの上")
 
     def test_numbered_effect_sentence_has_no_procedure_frame(self):
-        """編號效果裡的同形句照舊是效果位的動作框架(召喚條件只在效果外文本)。"""
         text = "①：自分の墓地のモンスター１体を除外した場合のみ特殊召喚できる。"
         self.assertEqual(procedure_frames(text), [])
 

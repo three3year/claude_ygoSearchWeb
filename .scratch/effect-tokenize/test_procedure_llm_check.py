@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """召喚手續抽驗線(summon-procedure 票 05)的行為測試。
 
 接縫:llm_check.sample_procedure() → 母體全取的樣本(句裡有手續非空的召喚條件約束框架);write_procedure_batches(目錄, 樣本,
@@ -44,13 +43,11 @@ class TestCorpusProcedure(unittest.TestCase):
         self.assertEqual(picked, llm_check.sample_procedure())
         self.assertEqual(len(picked), 304)
         self.assertEqual(len({p["card"] for p in picked}), 304)
-        # 效果文被認成召喚條件的那句(Ｄ・テレホン,stratum 是 effect)也在母體
         self.assertIn(38082437, {p["card"] for p in picked})
         self.assertEqual(Counter(p["stratum"] for p in picked),
                          {llm_check.STRATUM_HAS_PROCEDURE: 271, llm_check.STRATUM_ALL_BLOCKED: 33})
 
     def card_sections(self, picked, write=None):
-        """寫進 tempdir 的批次檔 → {卡號: 那張卡的一節}。"""
         with tempfile.TemporaryDirectory() as root:
             (write or llm_check.write_procedure_batches)(root, picked, {"batches": 8})
             text = "".join(read(root, "batch-%d.md" % k) for k in range(8))
@@ -64,7 +61,6 @@ class TestCorpusProcedure(unittest.TestCase):
         self.assertIn("原文:", black)
         self.assertIn("手續 除外", black)
         self.assertRegex(black, r"\[召喚手續\] 除外.*動作對象=非此卡.*發動位置=額外牌組\(寫明的召喚來源\)")
-        # 同一張卡的效果句、和召喚條件無關的框架不列
         self.assertNotIn("加える", black)
         self.assertNotIn("[條件] 発動", black)
 
@@ -95,7 +91,6 @@ class TestCorpusProcedure(unittest.TestCase):
             self.assertIn("被白名單擋掉的步驟:", text)
 
 
-# 假樣本:三句,一句全被擋
 SAMPLE = [{"card": 1, "section": "main", "index": "0", "stratum": llm_check.STRATUM_HAS_PROCEDURE},
           {"card": 2, "section": "main", "index": "0-2", "stratum": llm_check.STRATUM_HAS_PROCEDURE},
           {"card": 3, "section": "main", "index": "0", "stratum": llm_check.STRATUM_ALL_BLOCKED}]
@@ -118,7 +113,6 @@ def write_round(root, name, findings, **meta):
 
 
 def table_row(report, name):
-    """報告表裡某一列 → 各格(去掉首尾的 |)。"""
     line = next(line for line in report.splitlines() if line.startswith("| %s |" % name))
     return [cell.strip() for cell in line.strip("|").split("|")][1:]
 
@@ -135,15 +129,12 @@ class TestProcedureReport(unittest.TestCase):
             round_dir = write_round(root, "procedure-round1", self.FINDINGS)
             llm_check.report_procedure(round_dir)
             report = read(round_dir, "report.md")
-        # 筆數、框數、卡數、規則、抽取
         self.assertEqual(table_row(report, "中心詞錯"), ["3", "2", "1", "1", "2"])
         self.assertEqual(table_row(report, "漏出"), ["2", "2", "1", "0", "2"])
         self.assertEqual(table_row(report, "數量錯"), ["1", "1", "1", "0", "1"])
         self.assertEqual(table_row(report, "多出"), ["0", "0", "0", "0", "0"])
-        # 型外的類型與成因不吞掉
         self.assertEqual(table_row(report, "(其他)")[:3], ["1", "1", "1"])
         self.assertIn("不知道", report)
-        # 合計的框數跨類型去重:(1,2) (1,3) (2,4) (2,5) 與兩個漏的步
         self.assertEqual(table_row(report, "合計")[:3], ["8", "6", "3"])
         self.assertIn("測試 3", report)
         self.assertNotIn("對照", report)
@@ -156,7 +147,6 @@ class TestProcedureReport(unittest.TestCase):
             llm_check.report_procedure(round_dir)
             report = read(round_dir, "report.md")
         self.assertIn("與 procedure-round1 對照", report)
-        # 筆數 前 → 後、框數 前 → 後、卡數 前 → 後
         self.assertEqual(table_row(report, "中心詞錯 前 → 後"), ["3 → 1", "2 → 1", "1 → 1"])
         self.assertEqual(table_row(report, "漏出 前 → 後"), ["2 → 0", "2 → 0", "1 → 0"])
         self.assertEqual(table_row(report, "多出 前 → 後"), ["0 → 1", "0 → 1", "0 → 1"])

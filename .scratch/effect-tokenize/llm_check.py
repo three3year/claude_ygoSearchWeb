@@ -1156,8 +1156,6 @@ def write_query_batches(round_dir, picked, meta):
     write_batches(round_dir, picked, meta, cells_of)
 
 
-# ── 召喚手續(summon-procedure 票 05)──
-
 def is_procedure_owner(f):
     """手續非空的召喚條件約束框架(召喚手續框的所屬召喚條件;母體與批次檔都認它)。"""
     return (f.get("kind") == constraints.KIND_CONSTRAINT and f.get("subtype") == constraints.SUB_SUMMON

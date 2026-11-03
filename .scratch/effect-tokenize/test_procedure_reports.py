@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """報表與拆解頁分得出召喚手續(summon-procedure 票 04)。
 
 接縫:report.position_items(位置 Counter) → 照位置清單排的 (位置, 框數)——分詞報表「位置分佈」與拆解頁覆蓋分頁
@@ -37,7 +36,6 @@ class TestPositionItems(unittest.TestCase):
 
 
 def quantity_frame(position):
-    """帶一段數量(１体)的動作框架,只有數量小節讀的鍵。"""
     return {"kind": "動作", "position": position, "phrases": {"object": {"segments": [
         {"text": "モンスター１体", "quantity": {"kind": "個數", "from_clause": False}}]}}}
 
@@ -52,7 +50,6 @@ class TestQuantitySection(unittest.TestCase):
         self.assertTrue(line.startswith("帶數量的動作框架 4(代價 1、效果 1、條件 0、召喚手續 2);"), line)
 
 
-# 卡 4 的召喚條件句:召喚手續位的 破壊 框命中 破壊、破壊:モンスター(合成;小目錄沒有除外節點,借破壊類)
 PROCEDURE_HIT = {"card": 4, "section": "main", "index": "0-2", "order": 2, "position": POS_PROCEDURE,
                  "text": "モンスター１体を破壊した場合", "queries": ["破壊", "破壊:モンスター"], "patient": "非此卡"}
 

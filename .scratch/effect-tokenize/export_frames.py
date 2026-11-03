@@ -58,7 +58,6 @@ from predicate import FRAME_KEYS, PHRASE_KEYS, SEGMENT_KEYS, card_sets, cards_ha
 OUT = os.path.join(ROOT, "data", "action_frames.json")
 
 # 格式版本:欄位語意變就加一(規格「匯出檔要不要格式版本號」(a));索引建置與參考評估器比對不符即失敗。
-# 3:位置多 召喚手續(summon-procedure 票 02,ADR-0019)——框列、目錄每列、統計位置各多一格
 VERSION = 3
 # 框列的鍵(匯出順序)、片語鍵、段的鍵:拼法定在述詞字彙模組 predicate.py(票 06),這裡只 import
 # 框架上照抄的單值鍵(有值才帶)

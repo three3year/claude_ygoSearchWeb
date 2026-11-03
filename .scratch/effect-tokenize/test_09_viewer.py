@@ -77,7 +77,6 @@ class TestQueryOverview(unittest.TestCase):
         self.assertEqual(table["paths"][4], ["小目錄", "破壊", "破壊:モンスター"])
 
     def test_a_query_counts_frames_and_cards_per_position(self):
-        """破壊:モンスター 命中卡 1、卡 2 各一框(效果位);合計欄是各位置的聯集。"""
         table, _ = overview()
         self.assertEqual(node(table["nodes"], "小目錄", "破壊", "破壊:モンスター")[1:4],
                          [4, [0, 2, 0, 0, 2], [0, 2, 0, 0, 2]])
@@ -118,8 +117,6 @@ class TestQueryOverview(unittest.TestCase):
         self.assertEqual(shards[table["shard_of"]["q4"]]["q4"], rows["q4"])
 
     def test_dashboard_counts_nodes_and_hit_distribution(self):
-        """儀表板:節點數(頂層/中類/具名查詢/詞元節點——述詞只有詞元或詞元加否定形的具名查詢,破壊(耐性) 也算)
-        與各位置的命中框數分佈(命中 0/1/2/3+ 個具名查詢的框數)。"""
         table, _ = overview()
         self.assertEqual([table["majors"], table["middles"], table["queries"], table["lemma_nodes"]], [1, 1, 7, 3])
         self.assertEqual(table["frames"], 5)

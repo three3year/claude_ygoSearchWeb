@@ -89,8 +89,6 @@ class TestSentenceRows(unittest.TestCase):
                                       "frames": [REVIVE_ROW]}])
 
     def test_split_options_go_to_their_own_sub_sentences(self):
-        """拆開的效果句:選項 n 的框架屬 index-●n,沒有選項的(領起句的 選択,條件位)屬領起句;
-        雜湊各是自己那一句;四個位置都匯。"""
         sub1 = "●自分の墓地からモンスター１体を特殊召喚する。"
         doc, problems = export({1: [
             clause("①", "①：以下の効果から１つを選択して発動できる。", kind="效果外文本"),

@@ -505,7 +505,6 @@ function shardLoader(global,prefix){
   };
 }
 var loadShard=shardLoader("VIEW_FRAMES","view_frames_");
-// 位置 → chip 樣式;每個位置各自一種(召喚手續不落到效果的樣式)
 var POS_CHIP={"代價":"f-cost","效果":"f-eff","條件":"f-cond","召喚手續":"f-proc"};
 function posChip(p){
   var cls=POS_CHIP[p]||"f-eff";
@@ -543,7 +542,6 @@ function queryPath(i){
   return esc(p.slice(0,-1).concat([""]).join(" › "))+'<b>'+esc(queryName(i))+'</b>';
 }
 function queryCell(c){
-  // f[14]=命中的具名查詢號清單(目錄序;不互斥、每個位置都算):列路徑、多個並列;空清單是沒命中任何具名查詢
   if(!c) return '<td class="cat"></td>';
   if(!c.length) return '<td class="cat"><span class="cat-na" title="沒命中任何具名查詢:目錄還沒開這個述詞(第三版沒有「未歸」)">—</span></td>';
   return '<td class="cat">'+c.map(function(i){return '<span class="path">'+queryPath(i)+'</span>'}).join("")+'</td>';
@@ -602,7 +600,6 @@ function v4Text(v){
   return V4_RENDERERS.map(function(render){return render(v)}).filter(function(h){return h}).join(' ');
 }
 function agentText(v){
-  // 施事者(票 07):值(來源);預設補的(agent_inferred)淡色加點線——代價/效果位、他動、帶對象、原文沒寫誰做 → 自分;召喚手續位一律 自分(summon-procedure 票 03)
   if(!v.agent)return '';
   var text=esc(v.agent)+'<span class="muted">('+esc(v.agent_source)+')</span>';
   if(v.agent_inferred)text='<span class="inf" title="推得:代價/效果位的他動框架原文沒寫誰做(沒有主題/主語、によって、事件主語)時預設發動者 自分;召喚手續位一律 自分(做手續的是召喚這張卡的玩家,不看主題與主語)">'+text+'</span>';
@@ -817,7 +814,6 @@ function querySection(){
   (function walk(ns){ns.forEach(function(n){max=Math.max(max,n[2][TOT]);walk(n[4])})})(Q.nodes);
   function count(f,c,cls){return '<span class="cf'+(cls?' '+cls:'')+'">'+fmt(f)+' <small>'+fmt(c)+' 張</small></span>'}
   function row(n,depth){
-    // 節點列 [名, 查詢號或 -1, [各位置(照 POS)…, 合計 框數], [同 卡數], 子]:大類/中類(查詢號 -1)是底下具名查詢的聯集
     var f=n[2], c=n[3], tag=n[1]<0?(depth?'中類':'大類'):'';
     return '<summary><span class="cn">'+esc(n[0])+(tag?'<span class="tag">'+tag+'(聯集)</span>':'')+'</span>'
       +POS.map(function(_,i){return count(f[i],c[i],'cp')}).join('')+count(f[TOT],c[TOT])

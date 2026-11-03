@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """召喚手續框的兩條專門規則(summon-procedure 票 03;ADR-0019)。
 
 施事者:位置 召喚手續 的框架一律 自分,來源 預設、標推得,不看主題與主語。接縫:一句效果外文本原文 → 框架清單
@@ -47,7 +46,6 @@ class TestProcedureAgent(unittest.TestCase):
 
 
 def procedure_modes(text, face=DRAGON):
-    """一句效果外文本 → 召喚手續框的 [(動作, 動作對象)…](皆非是 None);face 為 None 時沒有卡面。"""
     faces = {1: export_common.card_face(dict(face, id=1))} if face else {}
     found = frame_rows({1: [clause("0", text, kind="效果外文本")]}, faces)[(1, "main", "0")]
     return [(r["action"], r.get("patient_mode")) for r in found if r["position"] == constraints.POS_PROCEDURE]
@@ -66,17 +64,14 @@ class TestProcedureLaunch(unittest.TestCase):
         self.assertEqual(procedure_modes(WIPE_FIELD, face=XYZ), [("リリース", "非此卡")])
 
     def test_written_source_is_used_as_written(self):
-        """額外牌組怪獸寫了「墓地から」:此卡在墓地,自分の墓地のモンスター全部 可能含此卡(皆非)。"""
         text = "このカードは通常召喚できない。自分の墓地のモンスターを全て除外した場合のみ、墓地から特殊召喚できる。"
         self.assertEqual(procedure_modes(text, face=XYZ), [("除外", None)])
 
     def test_unwritten_source_reads_the_card_kind(self):
-        """對照:同句沒寫來源的額外牌組怪獸在額外牌組,墓地的群體不含此卡。"""
         text = "このカードは通常召喚できない。自分の墓地のモンスターを全て除外した場合のみ特殊召喚できる。"
         self.assertEqual(procedure_modes(text, face=XYZ), [("除外", "非此卡")])
 
     def test_unwritten_source_without_a_card_face_is_unknown(self):
-        """沒寫來源又沒有卡面:發動位置區域不明,全部類停在皆非。"""
         self.assertEqual(procedure_modes(WIPE_FIELD, face=None), [("リリース", None)])
 
     def test_stats_split_written_and_inferred_summon_sources(self):
@@ -96,7 +91,6 @@ class TestProcedureOverlay(unittest.TestCase):
         self.assertEqual(procedure_modes(text, face=XYZ), [("重ねる", "此卡")])
 
     def test_overlay_in_an_effect_keeps_the_patient_rule(self):
-        """反例:效果位的 重ねる 照現行受事者規則(對象是別張就是非此卡)。"""
         found = frame_rows({1: [clause("①", "①：自分の墓地のモンスター１体を選び、このカードの下に重ねてX素材とする。")]},
                            {1: export_common.card_face(dict(XYZ, id=1))})[(1, "main", "①")]
         self.assertIn(("重ねる", constraints.POS_EFFECT, "非此卡"),

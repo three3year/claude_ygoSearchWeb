@@ -59,7 +59,6 @@ def frame_key(rec, frame):
 
 
 def _patient_values(records, faces):
-    """整句判完(召喚手續框在句中)才剝框重編:既有框的判定若因召喚手續框而變,比對看得到。"""
     faces = faces or {}
     out = {}
     for rec in records:

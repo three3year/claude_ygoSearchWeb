@@ -751,7 +751,6 @@ class ConstraintFinder:
             pre_end = self._possible_case(tokens, seg_start, a["head"], steps)
             for b in pending:
                 step = {"action": self._action_name(tokens, b)}
-                # 白名單內的步驟另出召喚手續框(ADR-0019):錨點仍在吃掉範圍內,frames.py 認這個記號放行
                 b["procedure"] = step["action"] in PROCEDURE_ACTIONS or b["action"] in PROCEDURE_ACTIONS
                 step.update(self._anchor_args(tokens, b, b["clause_start"]))
                 steps.append((b["head"], step))

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """召喚手續抽驗 procedure-round1 的抽取修正(summon-procedure 票 05)。
 
 接縫:一句效果外文本原文 → 框架清單(frames.extract),只斷言召喚手續框的論元欄。

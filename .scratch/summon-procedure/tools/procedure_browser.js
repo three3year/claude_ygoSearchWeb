@@ -200,7 +200,6 @@ async function layout(ctx, label) {
   found.out.forEach(s => bad(`版面(${label}):${s}`));
 }
 
-// 量法自檢:塞一個兩倍視埠寬的塊,量得到才算這把尺有用;量完拿掉。
 async function probeLayout(ctx) {
   await ctx.ev(`(()=>{const d=document.createElement('div');d.id='layoutProbe';d.style.width=(2*innerWidth)+'px';d.style.height='4px';
     document.getElementById('results').appendChild(d);})()`);

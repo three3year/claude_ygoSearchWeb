@@ -210,8 +210,6 @@ def load_queries():
         return cat, json.load(f)
 
 
-# ── 具名查詢總覽(named-queries 票 09):每個具名查詢各位置的框數/卡數、大類/中類是聯集、展開看框架 ──
-
 def balanced_shards(groups, count):
     """(鍵, 列數) → 鍵 → 分片號:由大到小(同大小依鍵)放進目前最輕的分片,決定性。"""
     load = [0] * count

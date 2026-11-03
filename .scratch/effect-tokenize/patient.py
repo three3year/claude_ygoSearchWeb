@@ -111,7 +111,7 @@ WHY_ANAPHORA_OWNER_SELF = "回指事件主人是此卡"
 WHY_ANAPHORA_OWNER_OTHER = "回指事件主人不是此卡"
 WHY_ANAPHORA_BLANK = "回指留空"
 WHY_MODIFIER_SELECTED = "修飾語選擇類"
-WHY_PROCEDURE_OVERLAY = "召喚手續的疊放"     # summon-procedure 票 03:召喚手續的 重ねる 一律此卡
+WHY_PROCEDURE_OVERLAY = "召喚手續的疊放"
 ANAPHORA_PREFIX = "回指"
 MODIFIER_PREFIX = "修飾語"
 # 全部類的判定(用到發動位置的框架)
@@ -530,7 +530,7 @@ def _all_class(segments, frame_zones, launched, face, goal_zones=()):
     任一個比得了的條件(區域、玩家、卡面)對不上就 非此卡;區域不明只在其餘都對得上時才停在 皆非。"""
     zones = frame_zones or _segment_zones(segments)
     possible = launched.zones
-    # 靈擺區在場上:群體寫場上時含靈擺區的此卡;發動位置區域不明(None)時每個區域都搆得到
+    # 靈擺區在場上:群體寫場上時含靈擺區的此卡
     reachable = [(player, zone) for player, zone in zones
                  if possible is None or zone in possible or (OFF_FIELD in possible and zone != FIELD)
                  or (zone == FIELD and PENDULUM_ZONE in possible)]

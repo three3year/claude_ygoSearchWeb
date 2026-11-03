@@ -1021,7 +1021,7 @@ class FrameExtractor:
                     absorbed.insert(0, c + (["p:" + r] if r else []))
                     front_hard = h
                     if h or rel == "が" or (copula and r == "が"):
-                        break             # 繫詞定語只吸收自己的主語 が(相手フィールドに|…が自分である効果モンスター)
+                        break
                 chunk = [t for c in absorbed for t in c] + chunk
             # 定語動詞停在屬性 が 前時(攻撃力か守備力が|２０００の通常召喚できないモンスター、
             # 属性が|…と同じ…モンスター):屬性 が 仍屬名詞片語,併進來(frame-args-v3 v3-round1)
@@ -1518,7 +1518,7 @@ class FrameExtractor:
                         and (args.get("object") or "").endswith("効果")):
                     continue
                 if a.get("procedure"):
-                    position = POS_PROCEDURE          # 不經代價/效果/條件的判定
+                    position = POS_PROCEDURE
                 elif a["conditional"] or a["action"] == "対象とする":
                     position = POS_COND
                 elif is_marker:

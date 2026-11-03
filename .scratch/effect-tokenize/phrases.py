@@ -55,9 +55,8 @@ from action_lemmas import MATERIAL_METHODS
 from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_DISPLAY_FORM, HEAD_KINDS, HEAD_NON_CARD,
                            HEAD_PLAYER, HEAD_POSITION, MOD_ARCHETYPE, MOD_ATTRIBUTE, MOD_NUMERIC, MOD_PLAYER, MOD_POSITION,
                            MOD_RACE, MOD_SUBTYPE, MOD_ZONE, MODIFIER_KINDS, OTHER, PHRASE_KEYS, PLACE_PLAYER, QUANTITY_KINDS)
-from constraints import POS_COND, POS_COST, POS_EFFECT
 from extract_seed import CLOSED_VALUES  # 封閉值域(種族/卡片子類型/表示形式)的單一來源
-from report import token_kind
+from report import position_items, token_kind
 
 PHRASE_LABELS = (("object", "對象"), ("topic", "主題"), ("subject", "主語"), ("goal", "目的"))
 # 數量尾的格(票 04 在這裡接手數量本身)
@@ -955,10 +954,10 @@ def quantity_section(records):
             if seen:
                 positions[fr["position"]] += 1
     total = sum(positions.values())
-    lines = ["帶數量的動作框架 {:,}(代價 {:,}、效果 {:,}、條件 {:,});一框同時帶幾類時各類都計。段尾字面=數量寫在受事者"
+    lines = ["帶數量的動作框架 {:,}({});一框同時帶幾類時各類都計。段尾字面=數量寫在受事者"
              "字面的段尾(モンスター１体、２枚まで、全て);取自子句=受事者字面沒有數量、子句裡緊接受事者的 を+數量"
              "(手札を１枚捨てる、カードを全て破壊する、任意の数);引用量(数まで/同じ数/数の分だけ)只記字面、類空。"
-             .format(total, positions[POS_COST], positions[POS_EFFECT], positions[POS_COND]), "",
+             .format(total, "、".join("%s %s" % (pos, format(n, ",")) for pos, n in position_items(positions))), "",
              "| 數量類 | 段尾字面 | 取自子句 | 合計 |", "|---|---:|---:|---:|"]
     for kind in (*QUANTITY_KINDS, QUANTITY_REFERENCE_LABEL):
         tail, clause = counts[(kind, False)], counts[(kind, True)]

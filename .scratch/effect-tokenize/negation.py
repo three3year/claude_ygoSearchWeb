@@ -60,7 +60,7 @@ def fill_state(frame):
 
 
 def count_section(records):
-    """報告小節「否定形各值框數」:四值 × 位置(代價/效果/條件)的動作框架數。"""
+    """報告小節「否定形各值框數」:四值 × 位置(照位置清單)的動作框架數。"""
     lines = ["只在極性 否定 的動作框架上有值(受身=態 受身;不成不受=にならない/受けない;不可能=できない/"
              "行えない;一般=其餘 ず/ない/なく)。", ""]
     return lines + position_table(count_by_position(records, "negation"), NEGATION_FORMS, "否定形")

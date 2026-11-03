@@ -210,7 +210,7 @@ def load_queries():
         return cat, json.load(f)
 
 
-# ── 具名查詢總覽(named-queries 票 09):每個具名查詢三個位置的框數/卡數、大類/中類是聯集、展開看框架 ──
+# ── 具名查詢總覽(named-queries 票 09):每個具名查詢各位置的框數/卡數、大類/中類是聯集、展開看框架 ──
 
 def balanced_shards(groups, count):
     """(鍵, 列數) → 鍵 → 分片號:由大到小(同大小依鍵)放進目前最輕的分片,決定性。"""
@@ -238,9 +238,9 @@ def _counts(rows):
 def query_overview(cat, hits):
     """hits:依語料順序的命中紀錄(frame_queries.json 的列,多帶子句原文 text;只有動作框架)。
     回傳 (總覽表, 分片清單):總覽表放進 view_data 的 frames.queries——names/paths 是具名查詢的名與路徑
-    (查詢號 = 目錄序)、nodes 是樹 [名, 查詢號或 -1, [代價, 效果, 條件, 合計 框數], [同 卡數], 子節點]
+    (查詢號 = 目錄序)、nodes 是樹 [名, 查詢號或 -1, [各位置(照位置清單)…, 合計 框數], [同 卡數], 子節點]
     (大類與中類是底下具名查詢的聯集,一框多命中只算一次;路徑由目錄推得:宣告的大類取代本家、中類取代
-    詞元層,中類列在大類的詞元節點之前、借來的節點排在本家的之後)、節點數、hits 是三個位置的命中框數
+    詞元層,中類列在大類的詞元節點之前、借來的節點排在本家的之後)、節點數、hits 是各位置的命中框數
     分佈(命中 0/1/2/3+ 個具名查詢的框數,report.hit_distribution 同一把尺;節點數的 majors 是頂層數、
     lemma_nodes 依 catalog 的 Node.lemma_node);分片是
     {"q<查詢號>": [[卡號, 段落, 句序, 框架序, 位置, 子句原文]…]},按需載入,沒有框的具名查詢沒有分片。"""
@@ -413,7 +413,7 @@ def write_frame_shards(sentences, surface_of):
         "shards": FRAME_SHARDS,
         "cards": index,
         "stats": stats,
-        "position": [[k, v] for k, v in sorted(position.items())],
+        "position": [[k, v] for k, v in report.position_items(position)],
         "polarity": [[k, v] for k, v in sorted(polarity.items())],
         "constraints": [[k, v] for k, v in sorted(con_dist.items())],
         "top_actions": [[a, c] for a, c in sorted(

@@ -28,6 +28,8 @@ const CATALOG = [
     predicate: pred({ 詞元: '特殊召喚', 來源: [[null, '墓地']] }) },
   { name: '召喚', path: ['召喚'], cards: counts(0, 3, 2),
     predicate: pred({ 詞元: '召喚' }) },
+  { name: 'P召喚', path: ['召喚', 'P召喚'], cards: counts(0, 6, 0),
+    predicate: pred({ 詞元: 'P召喚' }) },
   { name: '規則改寫', path: ['規則改寫'], predicate: null, cards: counts(0, 8, 0) },
   { name: 'にする:種族', path: ['規則改寫', 'にする', 'にする:種族'], cards: counts(0, 8, 0),
     predicate: pred({ 詞元: 'にする', 受事者中心詞: ['種族'] }) },
@@ -278,26 +280,63 @@ test('目錄樹:缺的路徑補純導覽節點,沒有張數也不成標籤', () 
   assert.ok(nodeOf('規則改寫').kids.includes('規則改寫›にする'));
 });
 
-test('目錄樹:詞元節點 召喚 掛在同路徑的大類 召喚 底下,葉路徑仍是 召喚', () => {
+test('目錄樹:詞元節點 召喚 掛在同路徑的大類 召喚 底下、排在大類所有子的最後,葉路徑仍是 召喚', () => {
   const top = nodeOf('召喚');
   assert.strictEqual(top.path, '');
-  assert.strictEqual(top.kids.length, 2);
-  const lemma = nodeOf(top.kids[1]);
+  assert.deepStrictEqual(top.kids.slice(0, -1), ['召喚›特殊召喚', '召喚›P召喚']);
+  const lemma = nodeOf(top.kids[top.kids.length - 1]);
   assert.strictEqual(lemma.name, '召喚');
   assert.strictEqual(lemma.path, '召喚');
   assert.deepStrictEqual(lemma.kids, []);
 });
 
-test('目錄樹:父節點的列排在子節點後面時,補好的節點接回那一列,不多一個同名子節點', () => {
+test('目錄樹:帶子的詞元節點只展開,自己以同名列在子的最後,帶原本的葉路徑與張數', () => {
+  const lemma = nodeOf('破壊');
+  assert.strictEqual(lemma.path, '');
+  assert.deepStrictEqual(lemma.count, { text: '30', zero: false });
+  assert.deepStrictEqual(lemma.kids.slice(0, -1), ['破壊›破壊@自分墓地', '破壊›破壊できない']);
+  const last = nodeOf(lemma.kids[lemma.kids.length - 1]);
+  assert.strictEqual(last.name, '破壊');
+  assert.strictEqual(last.parent, '破壊');
+  assert.strictEqual(last.path, '破壊');
+  assert.deepStrictEqual(last.count, { text: '30', zero: false });
+  assert.deepStrictEqual(last.kids, []);
+  assert.deepStrictEqual(tagAt(last.path), tagAt('破壊'));
+});
+
+test('目錄樹:沒有子的詞元節點不變', () => {
+  assert.deepStrictEqual(nodeOf('対象とする'), { key: '対象とする', name: '対象とする', parent: '', kids: [],
+                                             path: '対象とする', count: { text: '條件 3396', zero: true } });
+});
+
+test('目錄樹:父節點的列排在子節點後面時,補好的節點接回那一列;那一列仍排在子的最後', () => {
   assert.deepStrictEqual(nodeOf('LP'), { key: 'LP', name: 'LP', parent: '', kids: ['LP›ダメージ'],
                                          path: '', count: { text: '90', zero: false } });
   const lemma = nodeOf('LP›ダメージ');
-  assert.strictEqual(lemma.path, 'LP›ダメージ');
+  assert.strictEqual(lemma.path, '');
   assert.deepStrictEqual(lemma.count, { text: '70', zero: false });
-  assert.deepStrictEqual(lemma.kids, ['LP›ダメージ›倍にする']);
+  assert.strictEqual(lemma.kids[0], 'LP›ダメージ›倍にする');
+  const last = nodeOf(lemma.kids[1]);
+  assert.strictEqual(lemma.kids.length, 2);
+  assert.strictEqual(last.name, 'ダメージ');
+  assert.strictEqual(last.path, 'LP›ダメージ');
 });
 
-test('目錄樹全語料:每列一個節點,只多兩個純導覽節點,同路徑的只有詞元節點 召喚', t => {
+test('目錄樹:「已用」照葉路徑標,一條葉路徑只落在一個節點', () => {
+  const all = [];
+  const walk = key => {
+    const n = nodeOf(key);
+    all.push(n);
+    n.kids.forEach(walk);
+  };
+  harness.catalogRoots(box).forEach(walk);
+  const owners = all.filter(n => n.path === '破壊').map(n => n.key);
+  assert.deepStrictEqual(owners, [nodeOf('破壊').kids.slice(-1)[0]]);
+  const paths = all.map(n => n.path).filter(Boolean);
+  assert.strictEqual(new Set(paths).size, paths.length);
+});
+
+test('目錄樹全語料:帶子的詞元節點 25 個只展開、同名列在最後;大類 召喚 的詞元節點 召喚 也在最後', t => {
   const data = harness.realData();
   if (!data) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
   const real = harness.load(data);
@@ -309,10 +348,27 @@ test('目錄樹全語料:每列一個節點,只多兩個純導覽節點,同路�
   };
   harness.catalogRoots(real).forEach(walk);
   assert.strictEqual(data.vocab.catalog.length, 261);
-  assert.strictEqual(all.length, 263);
+  assert.strictEqual(all.length, 263 + 25);
   assert.deepStrictEqual(all.filter(n => !n.count).map(n => n.key).sort(),
                          ['表示形式›にする', '規則改寫›にする'].sort());
-  assert.deepStrictEqual(all.filter(n => n.key.includes('#')).map(n => n.path), ['召喚']);
+  const lasts = all.filter(n => n.key.includes('#'));
+  assert.deepStrictEqual(lasts.map(n => n.name).sort(), [
+    '召喚', '特殊召喚', '加える', '戻す', '置く', '破壊', '無効にする', '融合素材とする', 'X素材とする',
+    '重ねる', '素材とする', 'S素材とする', '取り除く', '得る', '選ぶ', '確認', '見せる', 'めくる', '指定',
+    '行う', '破壊(耐性)', '無効にする(耐性)', '発動(限制)', '特殊召喚(限制)', '対象にする(限制)', '使用(限制)',
+  ].sort());
+  for (const last of lasts) {
+    const parent = harness.catalogNode(real, last.parent);
+    assert.strictEqual(parent.kids[parent.kids.length - 1], last.key, last.key);
+    assert.strictEqual(last.name, parent.name, last.key);
+    assert.deepStrictEqual(last.kids, [], last.key);
+    if (parent.parent || parent.name !== '召喚') {
+      assert.strictEqual(parent.path, '', last.key);
+      assert.deepStrictEqual(parent.count, last.count, last.key);
+    }
+  }
+  assert.strictEqual(lasts.find(n => n.parent === '召喚').path, '召喚');
+  assert.deepStrictEqual(all.filter(n => n.path && n.kids.length), []);
   assert.strictEqual(all.filter(n => n.path).length, 237);
   assert.deepStrictEqual(all.filter(n => n.count && n.count.zero).map(n => n.count.text).sort(),
                          ['代價 10', '條件 3396'].sort());
@@ -333,6 +389,37 @@ test('目錄過濾:留名字含字面的節點與祖先,祖先展開', () => {
     visible: ['召喚', '召喚›特殊召喚', REVIVE, '破壊', '破壊›破壊@自分墓地'].sort(),
     open: ['召喚', '召喚›特殊召喚', '破壊'].sort(),
   });
+});
+
+test('目錄過濾:打帶子的詞元節點名字,節點展開、同名的最後一列看得到', () => {
+  const f = harness.catalogFilter(box, '破壊');
+  const last = nodeOf('破壊').kids.slice(-1)[0];
+  assert.ok(f.open.includes('破壊'));
+  assert.ok(f.visible.includes(last));
+  const g = harness.catalogFilter(box, 'ダメージ');
+  assert.ok(g.open.includes('LP›ダメージ'));
+  assert.ok(g.visible.includes(nodeOf('LP›ダメージ').kids.slice(-1)[0]));
+});
+
+test('目錄過濾全語料:子名不含父名的 破壊(耐性),打父名時展開、最後一列看得到', t => {
+  const data = harness.realData();
+  if (!data) { t.skip('沒有 web/data.js,請先跑 script/web/build_index.py'); return; }
+  const real = harness.load(data);
+  const roots = harness.catalogRoots(real);
+  const find = (keys, name) => {
+    for (const k of keys) {
+      const n = harness.catalogNode(real, k);
+      if (n.name === name && n.kids.length) return n;
+      const hit = find(n.kids, name);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  const resist = find(roots, '破壊(耐性)');
+  assert.ok(resist.kids.slice(0, -1).some(k => !harness.catalogNode(real, k).name.includes('破壊(耐性)')));
+  const f = harness.catalogFilter(real, '破壊(耐性)');
+  assert.ok(f.open.includes(resist.key));
+  assert.ok(f.visible.includes(resist.kids[resist.kids.length - 1]));
 });
 
 test('目錄過濾:命中節點底下的子節點留著可展開;空字面不過濾', () => {

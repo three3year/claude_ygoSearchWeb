@@ -313,7 +313,22 @@ function predValues(pred, field) {
 
 const values = (tag, field) => predValues(tag.pred, field);
 
+/* 鎖住的欄:來源那一列述詞裡詞元、極性以外的欄,值就是那一列的值(drawer-lock 規格條件模型段,
+   2026-11-03)。鎖跟著來源,不看標籤現在的欄位:從詞元節點加、改成和條件葉一樣的標籤沒有鎖住的欄。 */
+function lockedPred(tag) {
+  const row = BY_NAME.get(tag.origin);
+  const out = {};
+  if (!row) return out;
+  Object.keys(row.predicate).forEach(field => {
+    if (field !== '詞元' && field !== '極性') out[field] = asList(row.predicate[field]);
+  });
+  return out;
+}
+
+const isLockedField = (tag, field) => field in lockedPred(tag);
+
 function withValues(tag, field, items) {
+  if (isLockedField(tag, field)) return tag;
   const pred = Object.assign({}, tag.pred);
   const list = orderedValues(field, items);
   if (list.length) pred[field] = list;
@@ -344,9 +359,11 @@ function locked(tag, field, item) {
 const CHIP = Object.freeze({ ON: '亮', LOCKED: '鎖住', OPEN: '可按', GRAY: '灰' });
 const { ON, LOCKED, OPEN, GRAY } = CHIP;
 
-/* seen 定隱藏,只看詞元;hits 定灰色,看述詞其他欄(drawer-values 規格判定段)。 */
+/* seen 定隱藏,看詞元與鎖住的欄,不帶位置、極性;hits 定灰色,看述詞其他欄(drawer-values 規格判定段,
+   drawer-lock 規格改寫隱藏的依據)。 */
 function fieldHits(tag, field) {
-  return { seen: Engine.fieldValues({ 詞元: tag.pred.詞元 }, field), hits: Engine.fieldValues(tag.pred, field) };
+  const seenPred = Object.assign({ 詞元: tag.pred.詞元 }, lockedPred(tag));
+  return { seen: Engine.fieldValues(seenPred, field), hits: Engine.fieldValues(tag.pred, field) };
 }
 
 function chipOptions(tag, field) {
@@ -384,14 +401,23 @@ function textOptions(tag, field) {
 
 const FIELD_OPTIONS = { values: chipOptions, region: regionOptions, text: textOptions };
 
+/* 鎖住的欄只帶鎖住的項與來源名字(抽屜說明「由 X 決定」),不帶選單。 */
+function lockedRegionOptions(tag, field) {
+  return { field, kind: 'region', lock: tag.origin, items: orderedValues(field, lockedPred(tag)[field]) };
+}
+
+const LOCKED_OPTIONS = { region: lockedRegionOptions };
+
 /* 一欄的抽屜選項;這一欄不列時回 null。 */
 function fieldOptions(tag, field) {
-  return FIELD_OPTIONS[kindOf(field)](tag, field);
+  const kind = kindOf(field);
+  const options = (isLockedField(tag, field) && LOCKED_OPTIONS[kind]) || FIELD_OPTIONS[kind];
+  return options(tag, field);
 }
 
 /* 抽屜選項:[{group, fields: [{field, kind, …}]}];沒有欄的組不列。點選鈕的欄帶 values:
    [{value, state}];區域欄帶 players: [{value, state, zones: [{value, state}]}]
-   與已加入的 items;中心詞欄帶 candidates。 */
+   與已加入的 items;中心詞欄帶 candidates。鎖住的欄帶 lock(來源名字)與鎖住的 items,不帶選單。 */
 function drawerOptions(tag) {
   const groups = drawerGroups();
   return Object.keys(groups).map(group => ({

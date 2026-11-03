@@ -5,6 +5,9 @@
    二、條件葉與 耐性/限制 詞元節點:目前抽屜(Cond.drawerOptions)裡、鎖住的欄以外的灰鈕(選值鈕與
        區域鈕),有幾顆在「詞元+鎖住的欄、三個位置、三種極性」下從沒出現過(鎖住後不列)。
    三、耐性/限制 詞元節點:否定形各只留一個值時的張數(鎖住否定形少掉的就是這個)。
+   四、(票 04 交件加)會鎖的標籤現在抽屜裡的灰鈕照種類分:選值鈕、不限玩家底下的區域、指定玩家底下的區域;
+       指定玩家底下的區域再分「(玩家, 區域) 在詞元+鎖住的欄下出現過」與「沒出現過」——區域選單照
+       drawer-values 規格,區域看任何玩家、玩家看任何區域,兩者交叉出來的格子二之一、二之二算成不列,實際仍灰。
    走真前端程式與真 data.js;張數是標籤單獨的張數(Cond.soloQuery)。 */
 'use strict';
 const path = require('path');
@@ -57,10 +60,29 @@ globalThis.__lock = function () {
     return row.name + ' ' + count(tag) + ' 張:' + row.predicate.否定形.map(n =>
       n + ' ' + count(Object.assign({}, tag, { pred: Object.assign({}, tag.pred, { 否定形: [n] }) }))).join('、');
   });
-  return JSON.stringify({ parents, leaf: grayOf(groups.條件葉), neg: grayOf(groups.耐性限制), split });
+  const kinds = { values: 0, regionAny: 0, regionPlayer: 0, regionPlayerUnseen: 0, underOpenPlayer: 0 };
+  groups.條件葉.concat(groups.耐性限制).forEach(row => {
+    const tag = Cond.tagAt(key(row), false);
+    const base = { 詞元: row.predicate.詞元 };
+    lockedFields(row).forEach(k => { base[k] = row.predicate[k]; });
+    Cond.drawerOptions(tag).forEach(g => g.fields.forEach(f => {
+      if (f.lock) return;
+      if (f.kind === 'values') kinds.values += f.values.filter(v => v.state === Cond.CHIP.GRAY).length;
+      if (f.kind !== 'region') return;
+      const seen = Engine.fieldValues(base, f.field);
+      f.players.forEach(p => p.zones.filter(z => z.state === Cond.CHIP.GRAY).forEach(z => {
+        if (p.value === null) { kinds.regionAny++; return; }
+        kinds.regionPlayer++;
+        if (seen.some(([pp, zz]) => pp === p.value && zz === z.value)) return;
+        kinds.regionPlayerUnseen++;
+        if (p.state === Cond.CHIP.OPEN) kinds.underOpenPlayer++;
+      }));
+    }));
+  });
+  return JSON.stringify({ parents, leaf: grayOf(groups.條件葉), neg: grayOf(groups.耐性限制), split, kinds });
 };`, box);
 
-const { parents, leaf, neg, split } = JSON.parse(vm.runInContext('__lock()', box));
+const { parents, leaf, neg, split, kinds } = JSON.parse(vm.runInContext('__lock()', box));
 console.log('== 一、帶子的詞元節點 ==');
 console.log(`${parents.length} 個:${parents.join('、')}`);
 console.log('');
@@ -72,3 +94,7 @@ console.log('');
 });
 console.log('== 三、耐性/限制 詞元節點:否定形只留一個值的張數 ==');
 split.forEach(line => console.log(line));
+console.log('');
+console.log('== 四、會鎖的標籤:抽屜現在的灰鈕照種類分 ==');
+console.log(`選值鈕 ${kinds.values}、不限玩家底下的區域 ${kinds.regionAny}、指定玩家底下的區域 ${kinds.regionPlayer}`
+  + `(其中 (玩家, 區域) 沒出現過 ${kinds.regionPlayerUnseen},在可選的玩家底下 ${kinds.underOpenPlayer})`);

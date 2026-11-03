@@ -1,0 +1,123 @@
+/* 抽屜選值鈕按下去的張數變化(drawer-values 規格的 Further Notes;drawer-lock 票 04 從 drawer-values 的同名
+   工具複製,第三段加鎖住的欄:鎖住的欄不按,它的每個值切換、減值、加值都應回原標籤)。
+   跑法:node .scratch/drawer-lock/tools/press_stats.js > .scratch/drawer-lock/tools/results/press_stats.txt
+   一、單詞標籤(述詞只有詞元與極性的目錄列):位置、極性以外的選值鈕各按一次(加值),0 張時分原因——
+       放開極性有命中、放開位置有命中、兩者都放開才有命中、都放開仍沒有(這個詞元沒有這個值)。
+   二、全部具名查詢:每顆選值鈕(含位置、極性)按一次(切換),結果 0 張、張數不變、張數改變各幾次。
+   三、全部具名查詢:只按抽屜選項(Cond.drawerOptions)裡可按的——可按的選值鈕、可按玩家底下可按的區域、
+       中心詞候選——各加一次,0 張的次數應為 0;鎖住的鈕按了標籤應不變(票 05)。
+   張數都是標籤單獨的張數(Cond.soloQuery),走真前端程式與真 data.js。 */
+'use strict';
+const path = require('path');
+const vm = require('vm');
+const harness = require(path.join(__dirname, '..', '..', '..', 'script', 'web', 'frontend_harness.js'));
+
+const box = harness.load(harness.realData());
+vm.runInContext(`
+globalThis.__stats = function () {
+  const count = t => Engine.runQuery(window.CARD_DATA, Cond.soloQuery(t)).cards.length;
+  const groups = Cond.drawerGroups();
+  const chipFields = groups.常用.concat(groups.進階).filter(f => VOCAB.frame.domains[f]);
+  const rows = VOCAB.catalog.filter(r => r.predicate);
+  const tagOf = row => Cond.tagAt(row.path.join(Cond.SEP), false);
+  const ALL_POS = VOCAB.frame.domains.位置, ALL_POL = VOCAB.frame.domains.極性;
+
+  const single = rows.filter(r => Object.keys(r.predicate).every(k => k === '詞元' || k === '極性'));
+  const one = { rows: single.length, presses: 0, hit: 0, polarity: 0, position: 0, both: 0, never: 0, byField: {} };
+  single.forEach(row => {
+    const tag = tagOf(row);
+    chipFields.filter(f => f !== '位置' && f !== '極性').forEach(f => VOCAB.frame.domains[f].forEach(v => {
+      const t = Cond.addValue(tag, f, v);
+      const relax = (pol, pos) => Object.assign({}, t, { pred: Object.assign({}, t.pred,
+        pol ? { 極性: ALL_POL } : {}, pos ? { 位置: ALL_POS } : {}) });
+      const k = count(t) ? 'hit' : count(relax(true, false)) ? 'polarity'
+        : count(relax(false, true)) ? 'position' : count(relax(true, true)) ? 'both' : 'never';
+      const b = one.byField[f] = one.byField[f] || { hit: 0, polarity: 0, position: 0, both: 0, never: 0 };
+      one.presses++; one[k]++; b[k]++;
+    }));
+  });
+
+  const all = { rows: rows.length, presses: 0, zero: 0, same: 0, changed: 0, deadEverywhere: [] };
+  const perValue = {};
+  rows.forEach(row => {
+    const tag = tagOf(row), base = count(tag);
+    chipFields.forEach(f => VOCAB.frame.domains[f].forEach(v => {
+      const n = count(Cond.toggleValue(tag, f, v));
+      const k = n === 0 ? 'zero' : n === base ? 'same' : 'changed';
+      all.presses++; all[k]++;
+      const key = f + '=' + v;
+      perValue[key] = (perValue[key] || 0) + (n === 0 ? 1 : 0);
+    }));
+  });
+  all.deadEverywhere = Object.keys(perValue).filter(k => perValue[k] === rows.length);
+
+  const open = { rows: rows.length, presses: { values: 0, region: 0, text: 0 }, zero: [], locked: 0, lockedChanged: [],
+    lockedTags: 0, lockedFields: 0, lockedItems: 0, lockedItemChanged: [] };
+  const press = (row, kind, label, next) => {
+    open.presses[kind]++;
+    if (!count(next)) open.zero.push(row.name + ' ' + label);
+  };
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const pressLocked = (row, tag, o) => {
+    const items = o.kind === 'values' ? o.values.map(v => v.value) : o.items;
+    open.lockedFields++;
+    items.forEach(item => {
+      open.lockedItems++;
+      const moves = [Cond.toggleValue(tag, o.field, item), Cond.removeValue(tag, o.field, item), Cond.addValue(tag, o.field, item)];
+      if (!moves.every(t => same(t, tag))) open.lockedItemChanged.push(row.name + ' ' + o.field + '=' + JSON.stringify(item));
+    });
+  };
+  rows.forEach(row => {
+    const tag = tagOf(row);
+    const options = Cond.drawerOptions(tag);
+    if (options.some(g => g.fields.some(o => o.lock))) open.lockedTags++;
+    options.forEach(g => g.fields.forEach(o => {
+      if (o.lock) { pressLocked(row, tag, o); return; }
+      if (o.kind === 'values') o.values.forEach(({ value, state }) => {
+        if (state === Cond.CHIP.OPEN) press(row, 'values', o.field + '=' + value, Cond.toggleValue(tag, o.field, value));
+        if (state === Cond.CHIP.LOCKED) {
+          open.locked++;
+          if (JSON.stringify(Cond.toggleValue(tag, o.field, value)) !== JSON.stringify(tag)) {
+            open.lockedChanged.push(row.name + ' ' + o.field + '=' + value);
+          }
+        }
+      });
+      if (o.kind === 'region') o.players.filter(p => p.state === Cond.CHIP.OPEN).forEach(p =>
+        p.zones.filter(z => z.state === Cond.CHIP.OPEN).forEach(z =>
+          press(row, 'region', o.field + '=' + (p.value || '不限') + '・' + z.value,
+            Cond.addValue(tag, o.field, [p.value, z.value]))));
+      if (o.kind === 'text') o.candidates.forEach(w =>
+        press(row, 'text', o.field + '=' + w, Cond.addValue(tag, o.field, w)));
+    }));
+  });
+  return JSON.stringify({ one, all, open });
+};`, box);
+
+const { one, all, open } = JSON.parse(vm.runInContext('__stats()', box));
+const pct = (n, d) => (100 * n / d).toFixed(1) + '%';
+console.log('== 一、單詞標籤:位置與極性以外的選值鈕各加一次 ==');
+console.log(`標籤 ${one.rows} 張,按 ${one.presses} 次`);
+console.log(`有命中 ${one.hit}(${pct(one.hit, one.presses)})`);
+console.log(`0 張・放開極性有命中 ${one.polarity}、放開位置有命中 ${one.position}、兩者都放開才有 ${one.both}`
+  + `(合計 ${one.polarity + one.position + one.both},${pct(one.polarity + one.position + one.both, one.presses)})`);
+console.log(`0 張・這個詞元沒有這個值 ${one.never}(${pct(one.never, one.presses)})`);
+console.log('欄\t有命中\t放開極性\t放開位置\t兩者\t沒有');
+Object.entries(one.byField).forEach(([f, b]) =>
+  console.log([f, b.hit, b.polarity, b.position, b.both, b.never].join('\t')));
+console.log('');
+console.log('== 二、全部具名查詢:每顆選值鈕切換一次 ==');
+console.log(`標籤 ${all.rows} 張,按 ${all.presses} 次`);
+console.log(`0 張 ${all.zero}(${pct(all.zero, all.presses)})、張數不變 ${all.same}(${pct(all.same, all.presses)})、`
+  + `張數改變 ${all.changed}(${pct(all.changed, all.presses)})`);
+console.log(`在全部 ${all.rows} 張標籤上按了都是 0 張的值:${all.deadEverywhere.join('、') || '無'}`);
+console.log('');
+console.log('== 三、全部具名查詢:只按抽屜選項裡可按的各加一次 ==');
+const opened = open.presses.values + open.presses.region + open.presses.text;
+console.log(`標籤 ${open.rows} 張,按 ${opened} 次(選值鈕 ${open.presses.values}、區域 ${open.presses.region}、`
+  + `中心詞候選 ${open.presses.text})`);
+console.log(`0 張 ${open.zero.length} 次${open.zero.length ? ':' + open.zero.join('、') : ''}`);
+console.log(`鎖住的鈕(位置、極性最後一顆)${open.locked} 顆,按了標籤有變 ${open.lockedChanged.length} 顆`
+  + `${open.lockedChanged.length ? ':' + open.lockedChanged.join('、') : ''}`);
+console.log(`鎖住的欄:標籤 ${open.lockedTags} 張、${open.lockedFields} 欄、鎖住的值 ${open.lockedItems} 個;`
+  + `切換、減值、加值後標籤有變 ${open.lockedItemChanged.length} 個`
+  + `${open.lockedItemChanged.length ? ':' + open.lockedItemChanged.join('、') : ''}`);

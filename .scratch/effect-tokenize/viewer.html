@@ -594,10 +594,10 @@ function v4Text(v){
   return V4_RENDERERS.map(function(render){return render(v)}).filter(function(h){return h}).join(' ');
 }
 function agentText(v){
-  // 施事者(票 07):值(來源);預設補的(agent_inferred)淡色加點線——代價/效果位、他動、帶對象、原文沒寫誰做 → 自分
+  // 施事者(票 07):值(來源);預設補的(agent_inferred)淡色加點線——代價/效果位、他動、帶對象、原文沒寫誰做 → 自分;召喚手續位一律 自分(summon-procedure 票 03)
   if(!v.agent)return '';
   var text=esc(v.agent)+'<span class="muted">('+esc(v.agent_source)+')</span>';
-  if(v.agent_inferred)text='<span class="inf" title="推得:原文沒寫誰做(沒有主題/主語、によって、事件主語),代價/效果位的他動框架預設發動者 自分">'+text+'</span>';
+  if(v.agent_inferred)text='<span class="inf" title="推得:代價/效果位的他動框架原文沒寫誰做(沒有主題/主語、によって、事件主語)時預設發動者 自分;召喚手續位一律 自分(做手續的是召喚這張卡的玩家,不看主題與主語)">'+text+'</span>';
   return '<span class="muted" title="施事者:誰做這個動作。來源 主題/主語=受事者位的字面(玩家、このカード、卡片片語);によって=受身(或沒對象)框架的 によって 片語;事件主語=效果類事件框架的回指主人;預設=規則補的 自分">施事者</span> '+text;
 }
 var PHRASE_LABELS=[["object","對象"],["topic","主題"],["subject","主語"],["goal","目的"]];

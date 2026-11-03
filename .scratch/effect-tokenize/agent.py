@@ -17,7 +17,10 @@ agent 同進退)、frame["agent_inferred"] = True(只在來源是 預設 時)。
    玩家/此卡/其他卡。一般受事者的回指事件主語(相手がモンスターを特殊召喚した時…そのモンスターを破壊する 的
    破壊、その発動を無効にする 的 無効にする)說的是目標的來歷,不是本框架的施事者,不用。
 (4)預設:位置 代價/效果、態不是 受身/自動、帶 object、以上都沒有 → 自分,來源 預設、agent_inferred;條件位、
-   受身、自動、沒對象的留空。
+   受身、自動、沒對象的留空。召喚手續位不走 (1)〜(4),一律 自分(見下)。
+召喚手續框(summon-procedure 票 03,規格「兩條專門規則」2026-11-03)不走 (1)〜(4):做手續的一定是召喚這張卡的玩家,
+一律 自分,來源 預設、agent_inferred;不看主題與主語(このカードは…をリリースして 的 このカード 是被召喚的卡,
+不是施事者),也不要求帶對象(重ねる 沒有對象)。
 
 不 import frames(循環 import);分詞輔助走 ctx,片語的段/中心詞類走 phrases.segment。
 """
@@ -28,7 +31,7 @@ import places
 from action_lemmas import VOICE_ACTIVE, VOICE_PASSIVE
 from referent import VIA_EVENT
 from closed_values import AGENTS, AGENT_SOURCES, HEAD_CARD, PLACE_PLAYER
-from constraints import POS_COST, POS_EFFECT
+from constraints import POS_COST, POS_EFFECT, POS_PROCEDURE
 from report import count_by_position, position_table
 
 AGENT_SELF, AGENT_OPP, AGENT_BOTH, AGENT_THIS_CARD, AGENT_OTHER_CARD = AGENTS
@@ -47,6 +50,9 @@ UNRESOLVED = object()
 
 
 def mark(ctx, tokens, frame):
+    if frame.get("position") == POS_PROCEDURE:
+        frame["agent"], frame["agent_source"], frame["agent_inferred"] = AGENT_SELF, SRC_DEFAULT, True
+        return
     found = _from_patient_slot(frame)
     if found is UNRESOLVED:
         return
@@ -203,7 +209,7 @@ def count_section(records):
             if fr.get("agent"):
                 by_source[(fr["agent"], fr["agent_source"])] += 1
     lines = ["值 自分/相手/お互い/此卡/其他卡;來源 主題/主語(受事者位的字面)、によって(受身與沒對象的框架)、"
-             "事件主語(效果類事件框架的回指主人)、預設(代價/效果位、他動、帶對象、沒寫誰做 → 自分,標推得)。", "",
+             "事件主語(效果類事件框架的回指主人)、預設(代價/效果位、他動、帶對象、沒寫誰做 → 自分,標推得;召喚手續位一律 自分,標推得)。", "",
              "| 施事者 | " + " | ".join(AGENT_SOURCES) + " | 合計 |", "|---|" + "---|" * (len(AGENT_SOURCES) + 1)]
     for agent in AGENTS:
         row = [by_source[(agent, src)] for src in AGENT_SOURCES]

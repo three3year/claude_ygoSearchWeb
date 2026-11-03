@@ -35,7 +35,10 @@ segment,經 frames.context() 的分詞輔助)得到段;目標的所在字面交�
 
 全部類(沒有數量的群體)依**發動位置**判:一句效果句內依序取 條件/代價寫明的此卡區域、條件位觸發事件裡此卡
 的去處、處理中此卡自己移動的起點,都沒有就是場上(此卡在我方)。此卡在代價或處理中自己移動之後,後面的框架
-改看移動的目的(手札から特殊召喚 之後 手札全部 不含此卡)。群體的區域(結構化所在、沒有時來源;都沒有時
+改看移動的目的(手札から特殊召喚 之後 手札全部 不含此卡)。召喚手續框(summon-procedure 票 03,規格「兩條專門規則」
+2026-11-03)另算:發動位置是所屬召喚條件(同句、範圍包住它的 限制·召喚條件 框)的召喚來源——寫了照寫的區域;沒寫時
+主牌組怪獸 手牌、額外牌組怪獸(融合、S、X、連結)額外牌組;沒寫又沒有卡面時區域不明。它不算此卡自己移動,也不改同句
+其他框架的發動位置。召喚手續的 重ねる 一律此卡(被疊上去的就是要召喚的這張),不走受事者判定。群體的區域(結構化所在、沒有時來源;都沒有時
 段自己的玩家/區域)含發動位置,而且玩家(區域帶的;沒有區域時段自己的,再沒有時召喚/移動到的目的的——
 相手フィールドにモンスターが特殊召喚された)、卡種(中心詞字面尾 モンスター/魔法/罠)、種族、屬性、字段、卡片子類型
 (修飾語類,或中心詞字面裡的 効果モンスター/速攻魔法)、數值(修飾語的欄位/比較/數字)全都對得上此卡的卡面參數,
@@ -53,7 +56,7 @@ from anaphora import INTRANSITIVE
 from closed_values import (HEAD_ATTRIBUTE, HEAD_CARD, HEAD_DEMONSTRATIVE, HEAD_NON_CARD, MOD_ARCHETYPE, MOD_ATTRIBUTE,
                            MOD_NUMERIC, MOD_PLAYER, MOD_RACE, MOD_SUBTYPE, MOD_ZONE, OTHER, PATIENT_MODES, PLACE_PLAYER,
                            REGION_GOAL, REGION_PLACE, REGION_SOURCE)
-from constraints import KIND_ACTION
+from constraints import KIND_ACTION, KIND_CONSTRAINT, POS_PROCEDURE, SUB_SUMMON
 import frames
 from frames import POS_COND, POS_COST, POS_EFFECT
 import phrases
@@ -108,6 +111,7 @@ WHY_ANAPHORA_OWNER_SELF = "回指事件主人是此卡"
 WHY_ANAPHORA_OWNER_OTHER = "回指事件主人不是此卡"
 WHY_ANAPHORA_BLANK = "回指留空"
 WHY_MODIFIER_SELECTED = "修飾語選擇類"
+WHY_PROCEDURE_OVERLAY = "召喚手續的疊放"     # summon-procedure 票 03:召喚手續的 重ねる 一律此卡
 ANAPHORA_PREFIX = "回指"
 MODIFIER_PREFIX = "修飾語"
 # 全部類的判定(用到發動位置的框架)
@@ -142,12 +146,11 @@ CARD, EFFECT, VALUE, NOT_CARD, UNKNOWN = "card", "effect", "value", "not_card", 
 REFERENCE, MODIFIER = "reference", "modifier"
 
 
-# 發動位置的來源(建置報告分項)
-LAUNCH_WRITTEN = "寫明"
-LAUNCH_TRIGGER = "觸發"
-LAUNCH_MOVE = "自己移動"
-LAUNCH_DEFAULT = "預設場上"
-LAUNCH_AFTER_MOVE = "移動後"
+# 發動位置的來源(建置報告分項;action-patient 票 04 的五種,summon-procedure 票 03 依規格「兩條專門規則」
+# 2026-11-03 加召喚手續框的兩種)
+LAUNCH_SOURCES = ("寫明", "觸發", "自己移動", "預設場上", "移動後", "寫明的召喚來源", "推得的召喚來源")
+(LAUNCH_WRITTEN, LAUNCH_TRIGGER, LAUNCH_MOVE, LAUNCH_DEFAULT, LAUNCH_AFTER_MOVE,
+ LAUNCH_SUMMON_WRITTEN, LAUNCH_SUMMON_INFERRED) = LAUNCH_SOURCES
 FIELD = "場上"
 PENDULUM_ZONE = "靈擺區"
 OFF_FIELD = "場外"           # 去處不明的「離開場上」:不在場上,也不知道在哪
@@ -198,6 +201,11 @@ _SPELL_TRAP_TYPE_BITS = {
     "罠": _bits_by_word({"永続": "continuous", "カウンター": "counter"}, vocab.SUB["t"])}
 NORMAL = "通常"
 XYZ_BIT, LINK_BIT = _MONSTER_TYPE_BITS["X"], _MONSTER_TYPE_BITS["L"]
+# 召喚來源沒寫時依卡種推(規格「召喚來源沒寫時,此卡算在哪?」2026-11-03):額外牌組怪獸在額外牌組,其餘在手牌
+_EXTRA_DECK_BITS = (_MONSTER_TYPE_BITS["融合"] | _MONSTER_TYPE_BITS["S"] | XYZ_BIT | LINK_BIT)
+_ZONE_OF_TERM = dict(places.ZONE_TERMS)
+HAND, EXTRA_DECK = _ZONE_OF_TERM["手札"], _ZONE_OF_TERM["EXデッキ"]
+OVERLAY = "重ねる"
 TUNER_BIT = _MONSTER_TYPE_BITS["チューナー"]
 # 數值條件比得了的欄位(レベル/ランク/リンク 共用總表的 level 欄,依卡片子類型分)
 NUMERIC_FIELDS = ("レベル", "ランク", "リンク", "攻撃力", "守備力")
@@ -332,6 +340,20 @@ def launch(frames_, section="main"):
         if found:
             return Launch({zone for _, zone in found}, source)
     return Launch({PENDULUM_ZONE} if section == "pendulum" else {FIELD}, LAUNCH_DEFAULT)
+
+
+def _summon_source_launch(frames_, frame, face):
+    """召喚手續框 → 發動位置:所屬召喚條件的召喚來源,沒寫時依卡種;沒寫又沒有卡面時 zones 是 None(區域不明)。"""
+    start, end = frame["span"]
+    owner = next((fr for fr in frames_ if fr.get("kind") == KIND_CONSTRAINT and fr.get("subtype") == SUB_SUMMON
+                  and fr.get("sentence") == frame.get("sentence") and fr["span"][0] <= start and end <= fr["span"][1]),
+                 {})
+    written = {zone for _, zone in regions.zones_of(owner.get("source"))}
+    if written:
+        return Launch(written, LAUNCH_SUMMON_WRITTEN)
+    if face is None:
+        return Launch(None, LAUNCH_SUMMON_INFERRED)
+    return Launch({EXTRA_DECK if (face.get("type") or 0) & _EXTRA_DECK_BITS else HAND}, LAUNCH_SUMMON_INFERRED)
 
 
 def _self_move_zones(frame):
@@ -508,9 +530,9 @@ def _all_class(segments, frame_zones, launched, face, goal_zones=()):
     任一個比得了的條件(區域、玩家、卡面)對不上就 非此卡;區域不明只在其餘都對得上時才停在 皆非。"""
     zones = frame_zones or _segment_zones(segments)
     possible = launched.zones
-    # 靈擺區在場上:群體寫場上時含靈擺區的此卡
+    # 靈擺區在場上:群體寫場上時含靈擺區的此卡;發動位置區域不明(None)時每個區域都搆得到
     reachable = [(player, zone) for player, zone in zones
-                 if zone in possible or (OFF_FIELD in possible and zone != FIELD)
+                 if possible is None or zone in possible or (OFF_FIELD in possible and zone != FIELD)
                  or (zone == FIELD and PENDULUM_ZONE in possible)]
     if zones and not reachable:
         return NONSELF, WHY_ALL_ZONE
@@ -522,7 +544,7 @@ def _all_class(segments, frame_zones, launched, face, goal_zones=()):
         blocker, uncomparable = _compare_face(segments, face)
         if blocker:
             return NONSELF, blocker
-    if not zones:
+    if not zones or possible is None:
         return None, WHY_ALL_NO_ZONE
     return None, WHY_ALL_UNCOMPARABLE if uncomparable else WHY_ALL_INCLUDES
 
@@ -901,6 +923,8 @@ def _donor_count(frames_, k):
 def judge(frame, launched, face, counted=False):
     """一個動作框架(所在效果句的發動位置、此卡卡面參數、回填對象從提供框架帶來的數量)→ Verdict。"""
     text, segments, by_topic = patient(frame)
+    if frame.get("position") == POS_PROCEDURE and frame.get("action") == OVERLAY:
+        return Verdict(SELF, WHY_PROCEDURE_OVERLAY, text)
     if frame.get("action") in _NOT_CARD_ACTIONS:
         return Verdict(None, WHY_NOT_CARD, text)
     frame_zones = _region_pairs(frame, REGION_PLACE, REGION_SOURCE)
@@ -917,5 +941,8 @@ def judge_sentence(frames_, face=None, section="main"):
     """一句效果句的框架清單(與此卡卡面參數,沒有時不比卡面;段落)→ 與它對齊的 [Verdict];
     約束框架是 Verdict(None, None)。"""
     positions = _positions(frames_, launch(frames_, section))
+    for k, fr in enumerate(frames_):
+        if fr.get("kind") == KIND_ACTION and fr.get("position") == POS_PROCEDURE:
+            positions[k] = _summon_source_launch(frames_, fr, face)
     return [judge(fr, positions[k], face, _donor_count(frames_, k)) if fr.get("kind") == KIND_ACTION
             else Verdict(None, None) for k, fr in enumerate(frames_)]

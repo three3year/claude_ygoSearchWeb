@@ -136,8 +136,12 @@ test('改欄位:位置可以改成條件,標籤短句跟著變', () => {
   assert.strictEqual(cond('sentence', tag), '條件位 破壊');
 });
 
+/* 條件葉自己寫的來源欄鎖住(drawer-lock 票 02),區域欄的改法從不鎖的標籤看:欄位和 特殊召喚←墓地 一樣、沒有來源。 */
+const freeRevive = () => cond('addValue', cond('fromPairs', [['詞元', ['特殊召喚']], ['極性', POLAR]], false),
+  '來源', [null, '墓地']);
+
 test('改欄位:區域項帶玩家與不看玩家是兩個值,排在區域順序上,重複不多一個', () => {
-  let tag = cond('addValue', tagAt(REVIVE), '來源', ['自分', '除外']);
+  let tag = cond('addValue', freeRevive(), '來源', ['自分', '除外']);
   tag = cond('addValue', tag, '來源', [null, '除外']);
   tag = cond('addValue', tag, '來源', ['相對', '手牌']);
   tag = cond('addValue', tag, '來源', [null, '除外']);
@@ -147,7 +151,7 @@ test('改欄位:區域項帶玩家與不看玩家是兩個值,排在區域順序
 });
 
 test('改欄位:區域項刪到沒有就是沒寫', () => {
-  const tag = cond('removeValue', tagAt(REVIVE), '來源', [null, '墓地']);
+  const tag = cond('removeValue', freeRevive(), '來源', [null, '墓地']);
   assert.ok(!('來源' in tag.pred));
 });
 
@@ -272,7 +276,7 @@ test('欄位對:改的先後不影響網址', () => {
 });
 
 test('欄位對:區域項 玩家.區域,不看玩家只寫區域,值序照區域', () => {
-  const tag = cond('addValue', cond('removeValue', tagAt(REVIVE), '來源', [null, '墓地']), '來源', [null, '除外']);
+  const tag = cond('addValue', cond('removeValue', freeRevive(), '來源', [null, '墓地']), '來源', [null, '除外']);
   const both = cond('addValue', tag, '來源', ['自分', '墓地']);
   assert.ok(hashOf(both).includes(pair('來源', '自分.墓地', '除外')), hashOf(both));
 });

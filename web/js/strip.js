@@ -87,12 +87,14 @@ function menuOption(value, label, state, selected) {
   return `<option value="${esc(value)}"${disabledAttr(state)}${selected ? ' selected' : ''}>${esc(label)}</option>`;
 }
 
+const regionItemText = ([player, zone]) => (player || '不限') + '・' + zone;
+
 function regionHtml(option, tag) {
   const playerOf = value => option.players.find(p => p.value === value);
   const picked = playerOf(pickedPlayers[option.field] || null) || playerOf(null);
   const players = option.players.map(p => menuOption(p.value || '', p.value || '不限玩家', p.state, p === picked));
   const zones = picked.zones.map(z => menuOption(z.value, z.value, z.state, false));
-  return `${itemsHtml(tag, option.field, ([player, zone]) => (player || '不限') + '・' + zone)}
+  return `${itemsHtml(tag, option.field, regionItemText)}
     <div class="drawer-add"><select data-role="player" data-act="pick-player">${players.join('')}</select>
     <select data-act="add-region"><option value="">+ 區域</option>${zones.join('')}</select></div>`;
 }
@@ -106,9 +108,20 @@ function textHtml(option, tag) {
 
 const FIELD_BODY = { values: chipsHtml, region: regionHtml, text: textHtml };
 
+/* 鎖住的欄畫一行:鎖住的項畫成按不掉的鈕,不帶 ×,說明由哪個具名查詢決定(drawer-lock 規格抽屜畫面段)。 */
+const LOCKED_ITEM_TEXT = { region: regionItemText };
+
+function lockedHtml(option) {
+  const hint = esc(`由 ${option.lock} 決定`);
+  const chip = text => `<button type="button" class="drawer-chip ${CHIP_LOOK[Cond.CHIP.LOCKED].class}" data-v="${
+    esc(text)}" disabled title="${hint}">${esc(text)}</button>`;
+  return `<div class="drawer-chips">${option.items.map(item => chip(LOCKED_ITEM_TEXT[option.kind](item))).join('')}</div>`;
+}
+
 function fieldHtml(tag, option) {
+  const body = option.lock ? lockedHtml(option) : FIELD_BODY[option.kind](option, tag);
   return `<div class="drawer-field" data-field="${esc(option.field)}"><div class="drawer-label">${
-    esc(option.field)}</div>${FIELD_BODY[option.kind](option, tag)}</div>`;
+    esc(option.field)}</div>${body}</div>`;
 }
 
 function groupHtml(tag, { group, fields }) {

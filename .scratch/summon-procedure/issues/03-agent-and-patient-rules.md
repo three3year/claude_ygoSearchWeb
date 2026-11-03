@@ -28,3 +28,4 @@
   - **測試**:新檔 `test_procedure_rules.py` 10 例——施事者 2 例(このカードは…をリリースして アドバンス召喚、沒對象的 重ねる 都是 自分/預設/推得);發動位置 5 例(主牌組/額外牌組沒寫來源「自分フィールドのモンスターを全てリリース」非此卡、額外牌組寫「墓地から」時墓地全部 皆非、對照沒寫時 非此卡、沒卡面 皆非、統計分項寫明/推得各 1);重ねる 2 例(沒主題的 重ねる 此卡、效果位 重ねる 反例照受事者規則)。其中 5 例對改前的 patient.py 會失敗(已實跑確認)。
   - **數字**:effect-tokenize 928 OK(skipped 3);script card_list 66、faq_info 43、tag_card 469、text_format 55、web 169 全 OK;node `script/web/*.test.js` 411 pass / 0 fail(含參考評估器與 JS 評估器全語料對拍)。
   - **給票 05 抽驗**:框列鍵 `agent`/`agent_source`/`agent_inferred`、`patient_mode`;判定理由與發動位置來源從 `patient.judge_sentence(frames, face, section)` 回的 `Verdict.why` / `Verdict.launch`(只在全部類理由時有值)取;所屬召喚條件與發動位置是 `patient._summon_source_launch`;常數 `patient.WHY_PROCEDURE_OVERLAY`、`patient.LAUNCH_SUMMON_WRITTEN`、`patient.LAUNCH_SUMMON_INFERRED`。
+- 2026-11-03 合入 summon-procedure(含票 04 a897ffc)後:無衝突;report.md 重生(merge=ours 取本分支版後重跑),全鏈 exit 0、網站建置「內容沒變,不動」、編碼夾具不變。effect-tokenize 936 OK(skipped 3)、script 五套全 OK、node 411 pass / 0 fail。

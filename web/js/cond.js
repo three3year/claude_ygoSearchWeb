@@ -401,12 +401,17 @@ function textOptions(tag, field) {
 
 const FIELD_OPTIONS = { values: chipOptions, region: regionOptions, text: textOptions };
 
-/* 鎖住的欄只帶鎖住的項與來源名字(抽屜說明「由 X 決定」),不帶選單。 */
-function lockedRegionOptions(tag, field) {
-  return { field, kind: 'region', lock: tag.origin, items: orderedValues(field, lockedPred(tag)[field]) };
+/* 鎖住的欄只帶鎖住的項與來源名字(抽屜說明「由 X 決定」),不帶選單與候選;選值欄每個值狀態為鎖住。 */
+const lockedItems = (tag, field) => orderedValues(field, lockedPred(tag)[field]);
+
+const lockedItemOptions = kind => (tag, field) => ({ field, kind, lock: tag.origin, items: lockedItems(tag, field) });
+
+function lockedChipOptions(tag, field) {
+  const values = lockedItems(tag, field).map(value => ({ value, state: LOCKED }));
+  return { field, kind: 'values', lock: tag.origin, values };
 }
 
-const LOCKED_OPTIONS = { region: lockedRegionOptions };
+const LOCKED_OPTIONS = { values: lockedChipOptions, region: lockedItemOptions('region'), text: lockedItemOptions('text') };
 
 /* 一欄的抽屜選項;這一欄不列時回 null。 */
 function fieldOptions(tag, field) {

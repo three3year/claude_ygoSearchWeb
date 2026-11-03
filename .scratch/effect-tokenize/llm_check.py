@@ -41,6 +41,12 @@
   母體:動作對象變動 164、取自來源 774、回指回填 2,135、中心詞 2,546、區域 1,924、詞元節點 273 張),各層配額見 QUOTA_QUERIES,
   合計 100 張、切 4 批;批次檔每框列既有欄與第四版格之後多兩格:命中=具名查詢名清單、動作對象=值(理由),判定值變過的框尾綴
   【改讀後判定值變】;另寫 catalog.md(整本目錄:名、路徑、述詞明文)。錯誤類型 漏收/誤收/位置/述詞語意 與 動作對象錯。
+- 召喚手續(summon-procedure 票 05;procedure-round1 起):母體全取不抽樣——句裡有手續非空的召喚條件約束框架的句(304 句、
+  304 張;不看 stratum,效果文被認成召喚條件的句也算),分層只給報告當欄(有召喚手續框/全被白名單擋),切 8 批。批次檔一張卡
+  一節、只列那一句:原文、手續非空的召喚條件約束框架(手續欄)、召喚手續框(第四版的格之後多 動作對象=值(理由)、
+  發動位置=區域(來源) 兩格)、被白名單擋掉的步驟一行;框序照整句的框架清單編號,其他框架不列。錯誤類型 漏出/多出/詞元錯/
+  區域切錯/中心詞錯/修飾語類錯/數量錯/動作對象錯,另記成因 規則/抽取;報告(report_procedure)列各型筆數、框數、卡數與成因,
+  複檢輪另出與來源輪的前 → 後對照。
 種子固定,同一種子重抽得到同一批(複檢沿用);不同種子抽新樣本(過擬合抽驗)。
 
     sample   --round R --seed S   全語料抽樣:寫 llm-check/round<R>/sample.json 與 batch-<k>.md
@@ -53,9 +59,11 @@
     anaphora --round R --seed S   回指依來源分層抽樣(寫 llm-check/anaphora-round<R>/)
     v4       --round R --seed S   第四版論元依新欄分層抽樣(寫 llm-check/v4-round<R>/)
     queries  --round R --seed S   具名查詢命中依命中來由分層抽樣(寫 llm-check/queries-round<R>/;先跑 catalog_hits.py)
+    procedure --round R           召喚手續母體全取(寫 llm-check/procedure-round<R>/;不用種子)
     report   --round R            讀 llm-check/round<R>/findings-<k>.json 寫 report.md
     recheck  --round R --from R0  用 round R0 的樣本重出批次檔(同批複檢)
-    (report/recheck 加 --line constraints、v2、v3、lemma、variants、categories、anaphora、v4 或 queries 走各自的目錄)
+    (report/recheck 加 --line constraints、v2、v3、lemma、variants、categories、anaphora、v4、queries 或 procedure
+    走各自的目錄)
 
 批次檔一張卡一節、一句效果句一段:整段效果句(含 ● 選項;拆開的領起句與子效果句
 各標 index 與效果類型)與它的框架(含選項欄「●n 標籤」)。
@@ -64,7 +72,8 @@
 "type": 錯誤類型, "reason": 理由, "merge_related": true/false}];錯誤類型固定五種:
 漏抽動作/論元抽錯/位置判錯/極性判錯/多抽(不是動作);merge_related 標這筆是否和
 ● 合併有關(round5 起)。動作類別的回報一筆指一個樣本:{"sample": 樣本號, "type": 錯誤類型,
-"expected": [該命中的具名查詢], "cause": 成因, "reason": 理由}。
+"expected": [該命中的具名查詢], "cause": 成因, "reason": 理由}。召喚手續的回報一筆指一個框或一步:{"card", "index",
+"frame": 框架序或 null, "step": 手續第幾步或 null(漏出用), "type", "cause": 規則/抽取, "got", "expected", "reason"}。
 """
 import argparse
 import json
@@ -214,6 +223,14 @@ STRATUM_NO_HIT = "(沒命中)"
 BATCHES_CATEGORY = 8
 ERROR_TYPES_CATEGORY = ("誤收", "漏收", "述詞語意")
 CATEGORY_CAUSES = ("規則/目錄", "框架抽取")
+# 召喚手續(summon-procedure 票 05;規格「LLM 抽驗」2026-11-03):母體全取不抽樣,分層只給報告當欄——句裡有召喚手續框、
+# 手續步驟全被白名單擋掉;切 8 批(同約束框架線的規模)。錯誤類型照規格,中心詞/修飾語類沿用第四版論元線的字面但分開兩型;
+# 成因二值同類別線(規則:框架照原文是對的、是規則讓它錯;抽取:框架本身抽錯)
+STRATUM_HAS_PROCEDURE, STRATUM_ALL_BLOCKED = "有召喚手續框", "全被白名單擋"
+STRATA_PROCEDURE = (STRATUM_HAS_PROCEDURE, STRATUM_ALL_BLOCKED)
+BATCHES_PROCEDURE = 8
+ERROR_TYPES_PROCEDURE = ("漏出", "多出", "詞元錯", "區域切錯", "中心詞錯", "修飾語類錯", "數量錯", "動作對象錯")
+PROCEDURE_CAUSES = ("規則", "抽取")
 TYPE_PENDULUM, TYPE_SPELL, TYPE_TRAP = 0x1000000, 0x2, 0x4
 OPTION = "●"
 
@@ -811,7 +828,8 @@ def round_dir_of(line, round_no):
     prefix = {"constraints": "constraint-round", "v2": "v2-round", "v3": "v3-round",
               "lemma": "lemma-round", "variants": "variant-round",
               "anaphora": "anaphora-round", "categories": "category-round",
-              "v4": "v4-round", "queries": "queries-round"}.get(line, "round")
+              "v4": "v4-round", "queries": "queries-round",
+              "procedure": "procedure-round"}.get(line, "round")
     return os.path.join(CHECK_DIR, "%s%d" % (prefix, round_no))
 
 
@@ -1138,22 +1156,194 @@ def write_query_batches(round_dir, picked, meta):
     write_batches(round_dir, picked, meta, cells_of)
 
 
+# ── 召喚手續(summon-procedure 票 05)──
+
+def is_procedure_owner(f):
+    """手續非空的召喚條件約束框架(召喚手續框的所屬召喚條件;母體與批次檔都認它)。"""
+    return (f.get("kind") == constraints.KIND_CONSTRAINT and f.get("subtype") == constraints.SUB_SUMMON
+            and bool(f.get("procedure")))
+
+
+def is_procedure_frame(f):
+    return f.get("kind") == constraints.KIND_ACTION and f.get("position") == constraints.POS_PROCEDURE
+
+
+def sample_procedure():
+    """母體全取:句裡有手續非空的召喚條件約束框架的句(不看 stratum——效果文被認成召喚條件的句也算),依卡號、段落、句序排;
+    分層記這句有沒有召喚手續框。"""
+    _cards, _tokens, records = load()
+    picked = []
+    for r in sorted(records, key=lambda r: (r["card"], r["section"], r["index"])):
+        if any(is_procedure_owner(f) for f in r["frames"]):
+            has = any(is_procedure_frame(f) for f in r["frames"])
+            picked.append({"card": r["card"], "section": r["section"], "index": r["index"],
+                           "stratum": STRATUM_HAS_PROCEDURE if has else STRATUM_ALL_BLOCKED})
+    return picked
+
+
+def blocked_steps(owner):
+    """約束框架的手續裡動作不在白名單(constraints.PROCEDURE_ACTIONS)的步驟 → [(第幾步, 動作)];這些步驟不出召喚手續框,
+    子代理要看裡面有沒有真動作(漏出)。"""
+    return [(n, step["action"]) for n, step in enumerate(owner["procedure"], 1)
+            if step["action"] not in constraints.PROCEDURE_ACTIONS]
+
+
+def launch_text(launch):
+    """發動位置 → 「區域(來源)」;區域不明(沒寫來源又沒有卡面)寫 不明。"""
+    zones = "、".join(sorted(launch.zones)) if launch.zones is not None else "不明"
+    return "%s(%s)" % (zones, launch.source)
+
+
+def procedure_lines(s, fr, face):
+    """一句 → 批次檔的一段:原文、手續非空的召喚條件約束框架(手續欄)、召喚手續框(多 動作對象/發動位置 兩格)、
+    被白名單擋掉的步驟。框序照整句的框架清單編號,和效果位等其他框架共用一套號碼,回報的 frame 指得回 frames.json;
+    其他框架不列(不在本線範圍)。"""
+    verdicts = patient.judge_sentence(fr, face, s["section"])
+    lines = ["### 句 %s" % sentence_label(s)] + sentence_lines(s)
+    for k, f in enumerate(fr):
+        if is_procedure_owner(f):
+            lines.append(frame_line(k + 1, f))
+            blocked = blocked_steps(f)
+            if blocked:
+                lines.append("被白名單擋掉的步驟:%s" % "、".join("第 %d 步 %s" % step for step in blocked))
+        elif is_procedure_frame(f):
+            cells = ["動作對象=%s(%s)" % (verdicts[k].mode or patient.NEITHER, verdicts[k].why),
+                     "發動位置=%s" % launch_text(patient.summon_source_launch(fr, f, face))]
+            lines.append(frame_line(k + 1, f, cells))
+    if not any(is_procedure_frame(f) for f in fr):
+        lines.append("召喚手續框:(無)")
+    lines.append("")
+    return lines
+
+
+def write_procedure_batches(round_dir, picked, meta):
+    """召喚手續線的批次檔:樣本句輪流分到各批(每批混合兩層),一張卡一節、只列樣本那一句;讀當下的 frames.json
+    (複檢時是修後的框架)。"""
+    cards, tokens, records = load()
+    faces = load_faces()
+    texts = {(s["card"], s["section"], s["index"]): s for s in tokens}
+    frames_of = {(r["card"], r["section"], r["index"]): r["frames"] for r in records}
+    write_sample_meta(round_dir, picked, meta)
+    batches = meta["batches"]
+    for k in range(batches):
+        chunk = picked[k::batches]
+        lines = ["# 批次 %d(%d 張卡)" % (k, len(chunk)), ""]
+        for p in chunk:
+            key = (p["card"], p["section"], p["index"])
+            c = cards[p["card"]]
+            lines += ["## 卡 %d %s(%s)" % (p["card"], c["name_ja"], c["name_zh"]), ""]
+            lines += procedure_lines(texts[key], frames_of[key], faces.get(p["card"]))
+        with open(os.path.join(round_dir, "batch-%d.md" % k), "w", encoding="utf-8", newline="\n") as f:
+            f.write("\n".join(lines))
+        print("written batch-%d.md (%d cards)" % (k, len(chunk)))
+
+
+def finding_frame(x):
+    """一筆回報指的框:有框序用框序;漏出沒有框,用該出的那一步(連步都沒填就自成一框)。"""
+    if x.get("frame") is not None:
+        return (x["card"], x.get("index"), "框", x["frame"])
+    if x.get("step") is not None:
+        return (x["card"], x.get("index"), "步", x["step"])
+    return (x["card"], x.get("index"), "筆", id(x))
+
+
+def tally(findings):
+    """回報 → (筆數, 框數, 卡數)。"""
+    return (len(findings), len({finding_frame(x) for x in findings}), len({x["card"] for x in findings}))
+
+
+def report_procedure(round_dir):
+    """讀 findings-<k>.json → report.md:各錯誤類型的筆數、框數(同一框多筆算一框)、卡數與成因分項(規則/抽取),
+    型外的類型併成「(其他)」、值域外的成因另列;複檢輪(meta 帶 recheck_of)多一張與來源輪的「前 → 後」對照表;
+    最後逐筆列卡號、句、框或步、成因、現值 → 該值與理由。"""
+    meta = read_meta(round_dir)
+    with open(os.path.join(round_dir, "sample.json"), encoding="utf-8") as f:
+        picked = json.load(f)
+    findings = load_findings(round_dir, meta["batches"])
+    error_types = tuple(meta["error_types"])
+    strata = Counter(p["stratum"] for p in picked)
+
+    def of_type(items, t):
+        return [x for x in items if (x["type"] == t if t != "(其他)" else x["type"] not in error_types)]
+
+    shown = error_types + (("(其他)",) if of_type(findings, "(其他)") else ())
+    total = tally(findings)
+    lines = ["# LLM 檢驗報告:%s" % os.path.basename(round_dir), "",
+             "樣本 %d 句、%d 張卡(%s;母體全取);回報 %d 筆,涉及 %d 個框、%d 張卡(%.1f%%)。框數:同一框多筆算一框,"
+             "漏出沒有框、以該出的步算。" % (
+                 len(picked), len({p["card"] for p in picked}),
+                 "/".join("%s %d" % (k, strata[k]) for k in meta.get("strata", strata)),
+                 total[0], total[1], total[2], 100.0 * total[2] / max(1, len(picked))), "",
+             "| 錯誤類型 | 筆數 | 框數 | 卡數 | " + " | ".join(PROCEDURE_CAUSES) + " |",
+             "|---|---|---|---|" + "---|" * len(PROCEDURE_CAUSES)]
+    for t in shown + ("合計",):
+        items = findings if t == "合計" else of_type(findings, t)
+        lines.append("| %s | %s | %s |" % (t, " | ".join(str(n) for n in tally(items)), " | ".join(
+            str(sum(1 for x in items if x.get("cause") == c)) for c in PROCEDURE_CAUSES)))
+    odd = Counter(x.get("cause", "(未填)") for x in findings if x.get("cause") not in PROCEDURE_CAUSES)
+    lines.append("")
+    if odd:
+        lines += ["成因不在 %s 的:%s。" % ("/".join(PROCEDURE_CAUSES), "、".join(
+            "%s %d 筆" % kv for kv in sorted(odd.items()))), ""]
+    if meta.get("recheck_of") is not None:
+        src = os.path.join(os.path.dirname(round_dir), re.sub(r"\d+$", str(meta["recheck_of"]),
+                                                               os.path.basename(round_dir)))
+        before = load_findings(src, read_meta(src)["batches"])
+        lines += ["## 與 %s 對照" % os.path.basename(src), "",
+                  "| 錯誤類型 | 筆數 | 框數 | 卡數 |", "|---|---|---|---|"]
+        either = shown + (("(其他)",) if "(其他)" not in shown and of_type(before, "(其他)") else ())
+        for t in either + ("合計",):
+            old, new = ((items if t == "合計" else of_type(items, t)) for items in (before, findings))
+            lines.append("| %s 前 → 後 | %s |" % (t, " | ".join(
+                "%d → %d" % pair for pair in zip(tally(old), tally(new)))))
+        lines.append("")
+    for t in shown:
+        items = of_type(findings, t)
+        if not items:
+            continue
+        lines += ["## %s(%d 筆)" % (t, len(items)), ""]
+        for x in sorted(items, key=lambda x: (x["card"], str(x.get("index")), finding_frame(x)[2:3],
+                                              str(finding_frame(x)[3]))):
+            where = ("框架 %s" % x["frame"] if x.get("frame") is not None
+                     else "第 %s 步" % x["step"] if x.get("step") is not None else "(未指框)")
+            lines.append("- `%s` %s %s〔%s%s〕%s → %s;%s" % (
+                x["card"], x.get("index", ""), where, x.get("cause", "(未填)"),
+                ";型 " + x["type"] if t == "(其他)" else "", x.get("got") or "—", x.get("expected") or "—",
+                (x.get("reason") or "").replace("\n", " ")))
+        lines.append("")
+    path = os.path.join(round_dir, "report.md")
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines) + "\n")
+    print("written", path, "findings", len(findings))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=("sample", "affected", "constraints", "v2", "v3",
                                         "lemma", "variants", "categories", "anaphora", "v4",
-                                        "queries", "report", "recheck"))
+                                        "queries", "procedure", "report", "recheck"))
     ap.add_argument("--round", type=int, required=True)
     ap.add_argument("--seed", type=int, default=20261009)
     ap.add_argument("--from", dest="from_round", type=int)
     ap.add_argument("--line", choices=("frames", "constraints", "v2", "v3", "lemma", "variants",
-                                       "categories", "anaphora", "v4", "queries"), default="frames")
+                                       "categories", "anaphora", "v4", "queries", "procedure"), default="frames")
     args = ap.parse_args()
     line = (args.command if args.command in ("constraints", "v2", "v3", "lemma", "variants",
-                                             "categories", "anaphora", "v4", "queries")
+                                             "categories", "anaphora", "v4", "queries", "procedure")
             else args.line)
     round_dir = round_dir_of(line, args.round)
-    if args.command == "queries":
+    if args.command == "procedure":
+        write_procedure_batches(round_dir, sample_procedure(),
+                                {"mode": "procedure", "batches": BATCHES_PROCEDURE, "strata": list(STRATA_PROCEDURE),
+                                 "error_types": list(ERROR_TYPES_PROCEDURE)})
+    elif args.command == "recheck" and line == "procedure":
+        src = round_dir_of(line, args.from_round)
+        with open(os.path.join(src, "sample.json"), encoding="utf-8") as f:
+            picked = json.load(f)
+        write_procedure_batches(round_dir, picked, dict(read_meta(src), recheck_of=args.from_round))
+    elif args.command == "report" and line == "procedure":
+        report_procedure(round_dir)
+    elif args.command == "queries":
         write_query_batches(round_dir, sample_queries(args.seed),
                             {"mode": "queries", "seed": args.seed, "batches": BATCHES_QUERIES,
                              "strata": list(STRATA_QUERIES), "error_types": list(ERROR_TYPES_QUERIES)})

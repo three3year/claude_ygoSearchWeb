@@ -256,6 +256,8 @@ INFERRED_FIELDS = ("source", "goal")          # 推得欄的值,依框架表的�
 POSITION_WORDS = {"中央", "左端", "右端", "両端"}
 # 「と」後接這些詞時是比較(…と同じ/と異なる),不是並列受事者
 COMPARE_AFTER_TO = {"同じ", "異なる", "違う", "共に", "一緒"}
+# 繫詞「である」的 ある:後面直接接名詞時是定語(元々の持ち主が相手であるモンスター;summon-procedure 票 05 procedure-round1)
+COPULA = "ある"
 PAREN_MAX = 3                 # 區域後括號註記(フィールド（表側表示）)的最多詞數
 # 片語是數量(…の数×100、…の合計)時區域修飾的是數量,不切
 COUNT_WORDS = {"数", "合計"}
@@ -432,6 +434,10 @@ class FrameExtractor:
                 return None
             elif after == "時":
                 action, j, form = "・".join(parts) + "召喚", k + 1, "noun"
+            elif k + 2 < n and tokens[k + 1] == "、" and tokens[k + 2] in ("p:または", "p:及び"):
+                # 「…に召喚、または…をリリース」:省略 する 的連用中止,是述語不是並列名詞(summon-procedure 票 05
+                # procedure-round1);不成錨點時後面那步的論元會從這裡起算,吃進召喚去處與「召喚または」
+                action, j, form = "・".join(parts) + "召喚", k + 1, "stem"
             else:
                 return None
         elif w is not None and self.lex.is_verb(t):
@@ -845,6 +851,11 @@ class FrameExtractor:
                             tokens[m] == "p:の" for m in range(k + 1, min(stop, k + 4))):
                     cur.append(t)         # 種族で属性の:並列修飾
                     continue
+                if (p == "で" and cur and k + 2 < stop and tokens[k + 1].startswith("W")
+                        and self.lex.lemma_of[tokens[k + 1]] == COPULA
+                        and self.is_noun_like(tokens[k + 2])):
+                    cur.append(t)         # 持ち主が相手である|モンスター:繫詞定語,で 不是格助詞
+                    continue
                 if p == "に" and cur and self.word(cur[-1]) in MANNER_NI:
                     out.append(["に(方式)", cur, hard])
                     cur, hard = [], False
@@ -924,7 +935,9 @@ class FrameExtractor:
             for m in range(k - 1, -1, -1):
                 v = self.word(chunk[m])
                 if v is None:
-                    # 〜としている+名詞:として+いる 是定語(X素材としているモンスター)
+                    # 〜としている+名詞:として+いる 是定語(X素材としているモンスター);〜である+名詞 是繫詞定語
+                    if chunk[m] == "p:で" and w == COPULA and m == k - 1:
+                        return COPULA
                     return "とする" if chunk[m] == "p:として" and w in AUXILIARY \
                         else None
                 if v in TAILS or v in AUXILIARY or v in NEGATORS:
@@ -988,6 +1001,8 @@ class FrameExtractor:
                 verb_rel = rel not in ("が", "な", "同じ") \
                     and rel not in ADJECTIVE_LEMMAS and rel not in NEGATORS \
                     and rel not in RELATIVE_SCOPE
+                # 「X が Y である Z」:屬性 が 是繫詞定語的主語,一併吸收(元々のカード名が「A」である自分フィールドのモンスター)
+                copula = rel == COPULA and "p:で" in own
                 taken = set()
                 # 不併的補語(票 05):期間與 する 的唯一對象屬述語,不屬補語裡的定語
                 is_complement = complement is not None and idx == len(parts) - 1
@@ -998,15 +1013,15 @@ class FrameExtractor:
                         or (complement == "する" and r == "を"
                             and all(m[0] != "を" for m in merged)))
                     if (scope is not None and (r not in scope or r in taken)) or (
-                            verb_rel and r == "が" and c
+                            verb_rel and r == "が" and c and not copula
                             and self.word(c[-1]) in ATTR_NOUNS) or complement_stop:
                         merged.append([r, c, h])
                         break
                     taken.add(r)
                     absorbed.insert(0, c + (["p:" + r] if r else []))
                     front_hard = h
-                    if h or rel == "が":
-                        break
+                    if h or rel == "が" or (copula and r == "が"):
+                        break             # 繫詞定語只吸收自己的主語 が(相手フィールドに|…が自分である効果モンスター)
                 chunk = [t for c in absorbed for t in c] + chunk
             # 定語動詞停在屬性 が 前時(攻撃力か守備力が|２０００の通常召喚できないモンスター、
             # 属性が|…と同じ…モンスター):屬性 が 仍屬名詞片語,併進來(frame-args-v3 v3-round1)

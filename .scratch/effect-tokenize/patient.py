@@ -342,7 +342,7 @@ def launch(frames_, section="main"):
     return Launch({PENDULUM_ZONE} if section == "pendulum" else {FIELD}, LAUNCH_DEFAULT)
 
 
-def _summon_source_launch(frames_, frame, face):
+def summon_source_launch(frames_, frame, face):
     """召喚手續框 → 發動位置:所屬召喚條件的召喚來源,沒寫時依卡種;沒寫又沒有卡面時 zones 是 None(區域不明)。"""
     start, end = frame["span"]
     owner = next((fr for fr in frames_ if fr.get("kind") == KIND_CONSTRAINT and fr.get("subtype") == SUB_SUMMON
@@ -943,6 +943,6 @@ def judge_sentence(frames_, face=None, section="main"):
     positions = _positions(frames_, launch(frames_, section))
     for k, fr in enumerate(frames_):
         if fr.get("kind") == KIND_ACTION and fr.get("position") == POS_PROCEDURE:
-            positions[k] = _summon_source_launch(frames_, fr, face)
+            positions[k] = summon_source_launch(frames_, fr, face)
     return [judge(fr, positions[k], face, _donor_count(frames_, k)) if fr.get("kind") == KIND_ACTION
             else Verdict(None, None) for k, fr in enumerate(frames_)]

@@ -25,7 +25,7 @@ globalThis.__lock = function () {
   const parents = rows.filter(r => !groupPaths.has(key(r)) && rows.some(o => childOf(r, o)))
     .map(r => r.name + '(子 ' + rows.filter(o => childOf(r, o)).length + ')');
 
-  const lockedFields = r => Object.keys(r.predicate).filter(k => k !== '詞元' && k !== '極性');
+  const lockedFields = r => Object.keys(r.predicate).filter(k => Cond.UNLOCKED_FIELDS.indexOf(k) < 0);
   const isLemma = r => Object.keys(r.predicate).every(k => ['詞元', '極性', '否定形'].indexOf(k) >= 0);
   const groups = { 條件葉: [], 耐性限制: [] };
   rows.filter(r => lockedFields(r).length).forEach(r => groups[isLemma(r) ? '耐性限制' : '條件葉'].push(r));

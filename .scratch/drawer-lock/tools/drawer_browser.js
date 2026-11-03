@@ -1,4 +1,4 @@
-// 真 Chrome(CDP,零 npm 依賴)走抽屜:依畫面逐顆點可按的鈕,斷言每顆都有結果、灰與鎖住的按了標籤不變。
+// 真 Chrome(CDP,零 npm 依賴)走抽屜:依畫面逐顆點可按的鈕,斷言每顆都有結果、灰、最後一個與鎖住的欄的鈕按了標籤不變。
 // drawer-lock 票 04 從 drawer-values 的同名工具(票 05)複製,加:目錄點帶子的詞元節點只展開、最後一列加標籤與排除、
 // 過濾框;從目錄點具名查詢和網址開的是同一張標籤;鎖住的欄只留一行(按不掉、不帶 ×、沒有選單與輸入框、
 // 說明「由 X 決定」、和目錄列述詞相同);貼網址重開仍鎖、只改位置重開仍鎖、另加一欄重開不鎖(規格使用者故事 22、23、26)。
@@ -23,6 +23,8 @@ const WIDTHS = {
 const DEFAULT_TAGS = ['破壊', '破壊@相手フィールド', '特殊召喚←墓地', '破壊:モンスター', '破壊(耐性)'];
 const CATALOG_LEMMA = '破壊';
 const LOCK_HINT = name => `由 ${name} 決定`;
+const LOCKED_CHIP = '.drawer-chip.locked';
+const FILTER_TOGGLE = '#btnFilters';
 const OUTSIDE_WORD = '存在しない語';
 
 const which = process.argv[2] || 'both';
@@ -146,11 +148,11 @@ async function sweepChips(ctx, p, base) {
   const { ev } = ctx;
   const chips = JSON.parse(await ev(`JSON.stringify([...document.querySelectorAll('#condDrawer .drawer-chip')].map(c=>({
     f:c.closest('[data-field]').dataset.field,v:c.dataset.v,on:c.classList.contains('on'),dis:c.disabled,title:c.title,
-    act:c.hasAttribute('data-act')})))`));
-  const tally = { 可按: 0, 亮: 0, 灰: 0, 鎖住: 0, 鎖住的欄: 0, 亮關掉0張: 0 };
+    lockedField:c.matches(${q(LOCKED_CHIP)})})))`));
+  const tally = { 可按: 0, 亮: 0, 灰: 0, 最後一個: 0, 鎖住的欄: 0, 亮關掉0張: 0 };
   for (const c of chips) {
     const sel = `#condDrawer [data-field=${q(c.f)}] .drawer-chip[data-v=${q(c.v)}]`;
-    const kind = c.dis ? (c.on ? (c.act ? '鎖住' : '鎖住的欄') : '灰') : (c.on ? '亮' : '可按');
+    const kind = c.dis ? (c.on ? (c.lockedField ? '鎖住的欄' : '最後一個') : '灰') : (c.on ? '亮' : '可按');
     tally[kind]++;
     const before = await p.snap();
     await p.tap(sel);
@@ -160,7 +162,7 @@ async function sweepChips(ctx, p, base) {
     if (c.dis) {
       const still = await ev(`(()=>{const el=document.querySelector(${q(sel)});return el?el.classList.contains('on'):null;})()`);
       if (s.hash !== before.hash || still !== c.on) bad(`${c.f}=${c.v}(${kind}):按了標籤變了`);
-      const want = { 灰: '目前條件下沒有結果', 鎖住: '至少要留一個', 鎖住的欄: LOCK_HINT(base.tagName) }[kind];
+      const want = { 灰: '目前條件下沒有結果', 最後一個: '至少要留一個', 鎖住的欄: LOCK_HINT(base.tagName) }[kind];
       if (c.title !== want) bad(`${c.f}=${c.v}(${kind}):提示是「${c.title}」`);
     } else {
       if (s.hash === before.hash) bad(`${c.f}=${c.v}(${kind}):按了沒反應`);
@@ -291,7 +293,7 @@ async function typedThenChip(ctx, p, base) {
 
 async function lockedRows(ctx) {
   return JSON.parse(await ctx.ev(`JSON.stringify([...document.querySelectorAll('#condDrawer [data-field]')]
-    .filter(b=>b.querySelector('.drawer-chip:not([data-act])')).map(b=>({f:b.dataset.field,
+    .filter(b=>b.querySelector(${q(LOCKED_CHIP)})).map(b=>({f:b.dataset.field,
     items:[...b.querySelectorAll('.drawer-chip')].map(c=>({v:c.dataset.v,text:c.textContent,dis:c.disabled,
       locked:c.classList.contains('on')&&c.classList.contains('locked'),title:c.title,act:c.hasAttribute('data-act')})),
     menus:b.querySelectorAll('select').length,inputs:b.querySelectorAll('input,datalist').length,
@@ -302,7 +304,7 @@ const lockedSummary = rows => rows.map(r => `${r.f}=${r.items.map(i => i.v).join
 
 async function checkLocked(ctx, name) {
   const want = JSON.parse(await ctx.ev(`(()=>{const row=VOCAB.catalog.find(r=>r.predicate&&r.name===${q(name)});
-    const out={};Object.keys(row.predicate).filter(k=>k!=='詞元'&&k!=='極性').forEach(k=>{
+    const out={};Object.keys(row.predicate).filter(k=>Cond.UNLOCKED_FIELDS.indexOf(k)<0).forEach(k=>{
       out[k]=[].concat(row.predicate[k]).map(v=>Array.isArray(v)?(v[0]||'不限')+'・'+v[1]:String(v));});
     return JSON.stringify(out);})()`));
   const rows = await lockedRows(ctx);
@@ -349,10 +351,14 @@ async function reopenScenario(ctx, p, base) {
   const openChip = (fields, inside) => ev(`(()=>{const c=[...document.querySelectorAll('#condDrawer .drawer-chip:not(.on):not(:disabled)')]
     .find(c=>${q(fields)}.includes(c.closest('[data-field]').dataset.field)===${inside});
     return c?JSON.stringify({f:c.closest('[data-field]').dataset.field,v:c.dataset.v}):null;})()`);
-  const cases = [['原樣', null, false], ['只改位置', ['位置'], true], ['另加一欄', ['位置', '極性'], false]];
-  for (const [label, fields, inside] of cases) {
-    if (fields) {
-      const c = await openChip(fields, inside);
+  const cases = [
+    { label: '原樣', press: null, staysLocked: true },
+    { label: '只改位置', press: { fields: ['位置'], inside: true }, staysLocked: true },
+    { label: '另加一欄', press: { fields: ['位置', '極性'], inside: false }, staysLocked: false },
+  ];
+  for (const { label, press, staysLocked } of cases) {
+    if (press) {
+      const c = await openChip(press.fields, press.inside);
       if (!c) { log(`  貼網址重開(${label}):沒有可按的鈕,跳過`); continue; }
       const { f, v } = JSON.parse(c);
       const before = await p.snap();
@@ -368,16 +374,21 @@ async function reopenScenario(ctx, p, base) {
       bad(`貼網址重開(${label})不同:${JSON.stringify(was)} → ${JSON.stringify(now)}`);
     }
     const stillLocked = (await lockedRows(ctx)).some(r => r.items.some(i => i.title === LOCK_HINT(name)));
-    const shouldLock = label !== '另加一欄' && was.locked !== '無';
+    const shouldLock = staysLocked && was.locked !== '無';
     if (stillLocked !== shouldLock) bad(`貼網址重開(${label}):鎖住應為 ${shouldLock},實際 ${stillLocked}(重開前 ${was.locked})`);
-    if (label !== '另加一欄' && now.locked !== was.locked) bad(`貼網址重開(${label}):鎖住的欄變了 ${was.locked} → ${now.locked}`);
+    if (staysLocked && now.locked !== was.locked) bad(`貼網址重開(${label}):鎖住的欄變了 ${was.locked} → ${now.locked}`);
     await reload(ctx, p, base.href);
   }
 }
 
-async function sidebar(ctx, p, open) {
-  const st = await ctx.ev(`(()=>{const b=document.getElementById('btnFilters');return b.offsetHeight>0?b.getAttribute('aria-expanded'):'wide';})()`);
-  if (st !== 'wide' && (st === 'true') !== open) await p.tap('#btnFilters');
+async function filterPanel(ctx) {
+  return JSON.parse(await ctx.ev(`(()=>{const b=document.querySelector(${q(FILTER_TOGGLE)});
+    return JSON.stringify({collapsible:b.offsetHeight>0,collapsed:b.getAttribute('aria-expanded')!=='true'});})()`));
+}
+
+async function setFilterPanel(ctx, p, open) {
+  const panel = await filterPanel(ctx);
+  if (panel.collapsible && panel.collapsed === open) await p.tap(FILTER_TOGGLE);
 }
 
 const catPick = key => `#catalogNav .cat-node[data-key=${q(key)}] > .cat-row > .cat-pick`;
@@ -401,7 +412,7 @@ async function catalogScenario(ctx, p) {
   log(`\n-- 目錄:${CATALOG_LEMMA}`);
   await ev(`location.hash=${q(await ev(`Hash.stringify({q:{},cond:Cond.empty(),sort:{}})`))}`);
   await sleep(300);
-  await sidebar(ctx, p, true);
+  await setFilterPanel(ctx, p, true);
   const chain = JSON.parse(await ev(`(()=>{const find=(keys,trail)=>{for(const k of keys){const n=Acat.node(k);const t=trail.concat([k]);
     if(n.name===${q(CATALOG_LEMMA)}&&n.kids.length)return t;const r=find(n.kids,t);if(r)return r;}return null;};
     return JSON.stringify(find(Acat.roots,[]));})()`));
@@ -454,14 +465,14 @@ async function catalogScenario(ctx, p) {
   log(`  過濾框打 ${CATALOG_LEMMA}:父列${f1.hidden ? '藏' : '看得到'}、${f1.open ? '展開' : '收合'};最後一列${f2.hidden ? '藏' : '看得到'}`);
   if (f1.hidden || !f1.open || f2.hidden) bad(`過濾 ${CATALOG_LEMMA}:父列沒展開或最後一列看不到`);
   await ev(`(()=>{const i=document.querySelector('#catalogNav .cat-filter');i.value='';i.dispatchEvent(new Event('input',{bubbles:true}));})()`);
-  await sidebar(ctx, p, false);
+  await setFilterPanel(ctx, p, false);
 }
 
 async function pickFromCatalog(ctx, p, name) {
   const { ev } = ctx;
   await ev(`location.hash=${q(await ev(`Hash.stringify({q:{},cond:Cond.empty(),sort:{}})`))}`);
   await sleep(300);
-  await sidebar(ctx, p, true);
+  await setFilterPanel(ctx, p, true);
   await p.tap('#catalogNav .cat-filter');
   await p.type(name);
   await sleep(200);
@@ -473,7 +484,7 @@ async function pickFromCatalog(ctx, p, name) {
   await p.tap(catPick(key));
   const s = await p.settle(before.hash, true);
   await ev(`(()=>{const i=document.querySelector('#catalogNav .cat-filter');i.value='';i.dispatchEvent(new Event('input',{bubbles:true}));})()`);
-  await sidebar(ctx, p, false);
+  await setFilterPanel(ctx, p, false);
   return s.hash;
 }
 
@@ -530,7 +541,7 @@ async function run(ctx, width) {
   log(`\n摘要(${width}):`);
   for (const s of sum) {
     log(`  ${s.name}:鎖住的欄 ${lockedSummary(s.locked)};可按 ${s.chips.可按}、亮 ${s.chips.亮}(關掉 0 張 ${s.chips.亮關掉0張})、灰 ${s.chips.灰}、`
-      + `鎖住 ${s.chips.鎖住}、鎖住的欄的鈕 ${s.chips.鎖住的欄};`
+      + `最後一個 ${s.chips.最後一個}、鎖住的欄的鈕 ${s.chips.鎖住的欄};`
       + `區域 ${s.regions.區域}(灰區域 ${s.regions.灰區域}、灰玩家 ${s.regions.灰玩家});中心詞候選 ${s.heads.候選}、清單外 ${s.heads.清單外};`
       + `點鈕到畫完 ${s.time.click.toFixed(1)} ms、抽屜選項 ${s.time.options.toFixed(1)} ms;走完 ${s.sec.toFixed(0)} 秒`);
   }

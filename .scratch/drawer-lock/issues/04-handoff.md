@@ -9,7 +9,7 @@
 - [x] 真 Chrome 桌面寬與手機寬(390 px)各走一輪:點 破壊 只展開、最後一列加標籤與排除;破壊@相手フィールド、特殊召喚←墓地、破壊:モンスター、破壊(耐性) 的抽屜——鎖住那一行按不掉、說明文字對、可按的鈕都有結果;貼網址重開仍鎖;console 無錯
 - [x] 真瀏覽器腳本(drawer-values 的 `drawer_browser.js` 改寫或本功能 tools 另寫)結果寫進本功能 `tools/results/`
 - [x] `press_stats.js` 第三段照跑,0 張 0 次;鎖住的值按了標籤不變;結果記進 Comments
-- [ ] `lock_stats.js` 重跑:鎖住後條件葉與耐性/限制的灰鈕數和規格 Further Notes 對得上(實作後應只剩「仍灰」那些),結果記進 Comments
+- [x] `lock_stats.js` 重跑:鎖住後條件葉與耐性/限制的灰鈕數和規格 Further Notes 對得上(實作後應只剩「仍灰」那些),結果記進 Comments
 - [x] 全套測試通過:node 測試、effect-tokenize、script 五套
 - [x] 規格 Further Notes 補交件註記
 
@@ -76,3 +76,5 @@
 ### 沒驗到的
 
 只有 Chrome headless,沒開 Firefox、Safari;手機是模擬;玩家與區域選單是設 value 發 change,原生彈出的選單沒看到;滑鼠停在鎖住的鈕上的提示只驗了 title 屬性,沒看到真的浮出來的提示框。「從詞元那一列加、改成和細分項一樣不鎖」(故事 21)沒在瀏覽器走,由 node 測試守。
+
+2026-11-03 code review:判定規格 Further Notes 的不列數算錯、實作不改;Further Notes 改成實際數字(條件葉灰 3,443 → 406、耐性/限制 738 → 18,重跑 `lock_stats.js` 與 `lock_stats_handoff.txt` 相同),`lock_stats.js` 那一格打勾。

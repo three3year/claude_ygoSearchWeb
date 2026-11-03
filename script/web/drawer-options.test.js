@@ -3,7 +3,7 @@
  *
  * 跑法:`node --test script/web/drawer-options.test.js`
  *
- * 接縫:條件模型 `Cond.drawerOptions(標籤)` → 分組 → 欄 → 值與狀態(亮、鎖住、可按、灰)。
+ * 接縫:條件模型 `Cond.drawerOptions(標籤)` → 分組 → 欄 → 值與狀態(亮、最後一個、可按、灰)。
  * 經 harness 載入真前端程式,框表是手寫的小表;全語料核對用真 data.js 與 `Engine.runQuery` 的張數。
  * 區域三欄(票 03)與中心詞兩欄(票 04)的例子各在自己的檔。
  */
@@ -69,7 +69,7 @@ function chips(tag) {
 test('只列詞元有的值:破壊 沒有的施事者 此卡、態 受身、否定形 不可能 不列,整欄沒有值的不列', () => {
   assert.deepStrictEqual(chips(tagAt('破壊')), {
     常用: {
-      位置: { 代價: '可按', 效果: '鎖住', 條件: '可按' },
+      位置: { 代價: '可按', 效果: '最後一個', 條件: '可按' },
       極性: { 肯定: '亮', 否定: '可按', 可能: '亮' },
       動作對象: { 此卡: '灰', 非此卡: '可按' },
       施事者: { 自分: '可按', 相手: '灰' },
@@ -84,7 +84,7 @@ test('只列詞元有的值:破壊 沒有的施事者 此卡、態 受身、否�
 test('欄全空不列、進階全空不列組:ドロー 只剩位置與極性', () => {
   assert.deepStrictEqual(chips(tagAt('ドロー')), {
     常用: {
-      位置: { 效果: '鎖住' },
+      位置: { 效果: '最後一個' },
       極性: { 肯定: '亮', 可能: '亮' },
     },
   });
@@ -107,8 +107,8 @@ test('同欄已選一值:另一值本身沒命中仍是灰,不看按下去的張
 
 test('其他欄含位置與極性:判位置的鈕看極性,判極性的鈕看位置', () => {
   const onlyDenied = toggle(toggle(toggle(tagAt('破壊'), '極性', '否定'), '極性', '肯定'), '極性', '可能');
-  assert.deepStrictEqual(chips(onlyDenied).常用.極性, { 肯定: '可按', 否定: '鎖住', 可能: '灰' });
-  assert.deepStrictEqual(chips(onlyDenied).常用.位置, { 代價: '灰', 效果: '鎖住', 條件: '灰' });
+  assert.deepStrictEqual(chips(onlyDenied).常用.極性, { 肯定: '可按', 否定: '最後一個', 可能: '灰' });
+  assert.deepStrictEqual(chips(onlyDenied).常用.位置, { 代價: '灰', 效果: '最後一個', 條件: '灰' });
   const atCondition = toggle(toggle(tagAt('破壊'), '位置', '條件'), '位置', '效果');
   assert.deepStrictEqual(chips(atCondition).常用.極性, { 肯定: '亮', 否定: '灰', 可能: '亮' });
 });
@@ -126,15 +126,15 @@ test('亮著的值一律列出:詞元沒有的值(網址帶進來)照列、亮�
   assert.deepStrictEqual(toggle(odd, '施事者', '此卡'), tagAt('ドロー'));
 });
 
-test('位置、極性最後一顆鎖住,兩顆亮著時都不鎖', () => {
+test('位置、極性只剩一顆亮著時是最後一個、按不掉,兩顆亮著時都可關', () => {
   const tag = tagAt('破壊');
-  assert.strictEqual(chips(tag).常用.位置.效果, '鎖住');
+  assert.strictEqual(chips(tag).常用.位置.效果, '最後一個');
   const only = toggle(tag, '極性', '肯定');
-  assert.deepStrictEqual(chips(only).常用.極性, { 肯定: '可按', 否定: '可按', 可能: '鎖住' });
+  assert.deepStrictEqual(chips(only).常用.極性, { 肯定: '可按', 否定: '可按', 可能: '最後一個' });
   assert.deepStrictEqual(toggle(only, '極性', '可能'), only);
 });
 
-test('還原:鎖住後還原回來源那一列,極性解鎖', () => {
+test('還原:極性剩最後一個後還原回來源那一列,兩顆都可關', () => {
   const back = cond('restore', toggle(tagAt('破壊'), '極性', '肯定'));
   assert.deepStrictEqual(back, tagAt('破壊'));
   assert.deepStrictEqual(chips(back).常用.極性, { 肯定: '亮', 否定: '可按', 可能: '亮' });

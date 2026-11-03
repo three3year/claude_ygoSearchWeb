@@ -59,20 +59,22 @@ function zoneHtml(zone, html) {
 /* 抽屜選項四種狀態的畫法(drawer-values 規格 Implementation Decisions「抽屜照抽屜選項畫」,2026-11-02)。 */
 const CHIP_LOOK = Object.freeze({
   [Cond.CHIP.ON]: { class: 'on', hint: '', disabled: false },
-  [Cond.CHIP.LOCKED]: { class: 'on locked', hint: '至少要留一個', disabled: true },
+  [Cond.CHIP.LAST]: { class: 'on last', hint: '至少要留一個', disabled: true },
   [Cond.CHIP.OPEN]: { class: '', hint: '', disabled: false },
   [Cond.CHIP.GRAY]: { class: 'gray', hint: '目前條件下沒有結果', disabled: true },
 });
 
-function disabledAttr(state) {
-  const look = CHIP_LOOK[state];
-  return look.disabled ? ` disabled title="${esc(look.hint)}"` : '';
+const offAttr = look => (look.disabled ? ` disabled title="${esc(look.hint)}"` : '');
+
+const disabledAttr = state => offAttr(CHIP_LOOK[state]);
+
+function chipButton(value, look, act) {
+  const actAttr = act ? ` data-act="${act}"` : '';
+  return `<button type="button" class="drawer-chip ${look.class}"${actAttr} data-v="${esc(value)}"${
+    offAttr(look)}>${esc(value)}</button>`;
 }
 
-function chipHtml({ value, state }) {
-  return `<button type="button" class="drawer-chip ${CHIP_LOOK[state].class}" data-act="toggle" data-v="${esc(value)}"${
-    disabledAttr(state)}>${esc(value)}</button>`;
-}
+const chipHtml = ({ value, state }) => chipButton(value, CHIP_LOOK[state], 'toggle');
 
 function chipsHtml(option) {
   return `<div class="drawer-chips">${option.values.map(chipHtml).join('')}</div>`;
@@ -108,17 +110,12 @@ function textHtml(option, tag) {
 
 const FIELD_BODY = { values: chipsHtml, region: regionHtml, text: textHtml };
 
-const LOCKED_TEXTS = {
-  values: option => option.values.map(v => v.value),
-  region: option => option.items.map(regionItemText),
-  text: option => option.items.map(String),
-};
+const ITEM_TEXT = { values: String, region: regionItemText, text: String };
 
 function lockedHtml(option) {
-  const hint = esc(`由 ${option.lock} 決定`);
-  const chip = text => `<button type="button" class="drawer-chip ${CHIP_LOOK[Cond.CHIP.LOCKED].class}" data-v="${
-    esc(text)}" disabled title="${hint}">${esc(text)}</button>`;
-  return `<div class="drawer-chips">${LOCKED_TEXTS[option.kind](option).map(chip).join('')}</div>`;
+  const look = { class: 'on locked', hint: `由 ${option.lock} 決定`, disabled: true };
+  const chips = option.items.map(ITEM_TEXT[option.kind]).map(text => chipButton(text, look));
+  return `<div class="drawer-chips">${chips.join('')}</div>`;
 }
 
 function fieldHtml(tag, option) {

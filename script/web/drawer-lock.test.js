@@ -60,7 +60,6 @@ const cond = (fn, ...args) => harness.cond(box, fn, ...args);
 const tagAt = path => cond('tagAt', path, false);
 const leafTag = () => tagAt('破壊›' + LEAF);
 
-/* 選值欄 → {值: 狀態};區域欄鎖住 → ['鎖住', 來源名字, 項];沒鎖 → {玩家: [狀態, {區域: 狀態}]}。 */
 function drawer(tag) {
   const out = {};
   for (const { group, fields } of cond('drawerOptions', tag)) {
@@ -168,7 +167,6 @@ test('包含與排除同一份選項', () => {
   assert.deepStrictEqual(cond('drawerOptions', cond('setEx', tag, true)), cond('drawerOptions', tag));
 });
 
-/* 票 03:中心詞欄與否定形。另一張小框表,中心詞表有字。 */
 const HEAD_VOCAB = { ...FRAME_VOCAB, lemmas: ['破壊'], heads: ['モンスター', 'カード', '手札', '墓地'] };
 const headFrame = fields => harness.frame(HEAD_VOCAB, { 詞元: '破壊', ...fields });
 const HEAD_FRAMES = [

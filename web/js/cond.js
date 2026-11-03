@@ -313,8 +313,6 @@ function predValues(pred, field) {
 
 const values = (tag, field) => predValues(tag.pred, field);
 
-/* 鎖住的欄:來源那一列述詞裡詞元、極性以外的欄,值就是那一列的值(drawer-lock 規格條件模型段,
-   2026-11-03)。鎖跟著來源,不看標籤現在的欄位:從詞元節點加、改成和條件葉一樣的標籤沒有鎖住的欄。 */
 function lockedPred(tag) {
   const row = BY_NAME.get(tag.origin);
   const out = {};
@@ -359,8 +357,6 @@ function locked(tag, field, item) {
 const CHIP = Object.freeze({ ON: '亮', LOCKED: '鎖住', OPEN: '可按', GRAY: '灰' });
 const { ON, LOCKED, OPEN, GRAY } = CHIP;
 
-/* seen 定隱藏,看詞元與鎖住的欄,不帶位置、極性;hits 定灰色,看述詞其他欄(drawer-values 規格判定段,
-   drawer-lock 規格改寫隱藏的依據)。 */
 function fieldHits(tag, field) {
   const seenPred = Object.assign({ 詞元: tag.pred.詞元 }, lockedPred(tag));
   return { seen: Engine.fieldValues(seenPred, field), hits: Engine.fieldValues(tag.pred, field) };
@@ -401,7 +397,6 @@ function textOptions(tag, field) {
 
 const FIELD_OPTIONS = { values: chipOptions, region: regionOptions, text: textOptions };
 
-/* 鎖住的欄只帶鎖住的項與來源名字(抽屜說明「由 X 決定」),不帶選單與候選;選值欄每個值狀態為鎖住。 */
 const lockedItems = (tag, field) => orderedValues(field, lockedPred(tag)[field]);
 
 const lockedItemOptions = kind => (tag, field) => ({ field, kind, lock: tag.origin, items: lockedItems(tag, field) });

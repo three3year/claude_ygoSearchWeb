@@ -108,8 +108,6 @@ function textHtml(option, tag) {
 
 const FIELD_BODY = { values: chipsHtml, region: regionHtml, text: textHtml };
 
-/* 鎖住的欄畫一行:鎖住的項畫成按不掉的鈕,不帶 ×,沒有選單、輸入框與候選,說明由哪個具名查詢決定
-   (drawer-lock 規格抽屜畫面段)。 */
 const LOCKED_TEXTS = {
   values: option => option.values.map(v => v.value),
   region: option => option.items.map(regionItemText),

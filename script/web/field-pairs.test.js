@@ -136,7 +136,6 @@ test('改欄位:位置可以改成條件,標籤短句跟著變', () => {
   assert.strictEqual(cond('sentence', tag), '條件位 破壊');
 });
 
-/* 條件葉自己寫的來源欄鎖住(drawer-lock 票 02),區域欄的改法從不鎖的標籤看:欄位和 特殊召喚←墓地 一樣、沒有來源。 */
 const freeRevive = () => cond('addValue', cond('fromPairs', [['詞元', ['特殊召喚']], ['極性', POLAR]], false),
   '來源', [null, '墓地']);
 

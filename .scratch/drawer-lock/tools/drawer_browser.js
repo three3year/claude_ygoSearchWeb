@@ -289,7 +289,6 @@ async function typedThenChip(ctx, p, base) {
   await restore(ctx, p, base, '打字後按鈕');
 }
 
-/* 鎖住的欄:抽屜裡帶沒有 data-act 的鈕的欄(鎖住那一行的鈕不能切換)。 */
 async function lockedRows(ctx) {
   return JSON.parse(await ctx.ev(`JSON.stringify([...document.querySelectorAll('#condDrawer [data-field]')]
     .filter(b=>b.querySelector('.drawer-chip:not([data-act])')).map(b=>({f:b.dataset.field,
@@ -301,8 +300,6 @@ async function lockedRows(ctx) {
 
 const lockedSummary = rows => rows.map(r => `${r.f}=${r.items.map(i => i.v).join('/')}`).join('、') || '無';
 
-/* 鎖住那一行對目錄列述詞(詞元、極性以外的欄,區域項畫成「玩家或不限・區域」):欄與值都相同、每顆按不掉、
-   樣式同按不掉的鈕、說明「由 X 決定」、沒有選單、輸入框、×。 */
 async function checkLocked(ctx, name) {
   const want = JSON.parse(await ctx.ev(`(()=>{const row=VOCAB.catalog.find(r=>r.predicate&&r.name===${q(name)});
     const out={};Object.keys(row.predicate).filter(k=>k!=='詞元'&&k!=='極性').forEach(k=>{
@@ -343,7 +340,6 @@ async function reload(ctx, p, href) {
   for (let i = 0; i < 20 && !(await p.snap()).open; i++) await sleep(50);
 }
 
-/* 貼網址重開:原樣重開仍鎖(故事 22);只改位置重開仍鎖(故事 26);另加一欄重開條件、張數相同,但不鎖(故事 23)。 */
 async function reopenScenario(ctx, p, base) {
   const { ev } = ctx;
   const name = base.tagName;
@@ -379,7 +375,6 @@ async function reopenScenario(ctx, p, base) {
   }
 }
 
-/* 手機寬時篩選條件收在摺疊鈕裡,目錄要先打開。 */
 async function sidebar(ctx, p, open) {
   const st = await ctx.ev(`(()=>{const b=document.getElementById('btnFilters');return b.offsetHeight>0?b.getAttribute('aria-expanded'):'wide';})()`);
   if (st !== 'wide' && (st === 'true') !== open) await p.tap('#btnFilters');
@@ -401,8 +396,6 @@ async function catalogState(ctx, key) {
 
 const tagCount = ctx => ctx.ev(`document.querySelectorAll('#condStrip .strip-tag:not(.side)').length`);
 
-/* 目錄:大類、中類一路點下去只展開;點 破壊 只展開、沒有 −;它的最後一列同名、帶葉路徑與 −;點最後一列加標籤、
-   「已用」只標最後一列;點 − 加排除;大類 召喚 的最後一列是 召喚;過濾框打 破壊 時父節點展開、最後一列看得到。 */
 async function catalogScenario(ctx, p) {
   const { ev } = ctx;
   log(`\n-- 目錄:${CATALOG_LEMMA}`);
@@ -464,7 +457,6 @@ async function catalogScenario(ctx, p) {
   await sidebar(ctx, p, false);
 }
 
-/* 從目錄點具名查詢(過濾框找到那一列再點)加的標籤,網址和直接開網址的那張相同。 */
 async function pickFromCatalog(ctx, p, name) {
   const { ev } = ctx;
   await ev(`location.hash=${q(await ev(`Hash.stringify({q:{},cond:Cond.empty(),sort:{}})`))}`);

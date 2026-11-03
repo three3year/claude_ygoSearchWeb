@@ -5,7 +5,7 @@
        放開極性有命中、放開位置有命中、兩者都放開才有命中、都放開仍沒有(這個詞元沒有這個值)。
    二、全部具名查詢:每顆選值鈕(含位置、極性)按一次(切換),結果 0 張、張數不變、張數改變各幾次。
    三、全部具名查詢:只按抽屜選項(Cond.drawerOptions)裡可按的——可按的選值鈕、可按玩家底下可按的區域、
-       中心詞候選——各加一次,0 張的次數應為 0;鎖住的鈕按了標籤應不變(票 05)。
+       中心詞候選——各加一次,0 張的次數應為 0;最後一個的鈕按了標籤應不變(票 05)。
    張數都是標籤單獨的張數(Cond.soloQuery),走真前端程式與真 data.js。 */
 'use strict';
 const path = require('path');
@@ -51,7 +51,7 @@ globalThis.__stats = function () {
   });
   all.deadEverywhere = Object.keys(perValue).filter(k => perValue[k] === rows.length);
 
-  const open = { rows: rows.length, presses: { values: 0, region: 0, text: 0 }, zero: [], locked: 0, lockedChanged: [],
+  const open = { rows: rows.length, presses: { values: 0, region: 0, text: 0 }, zero: [], last: 0, lastChanged: [],
     lockedTags: 0, lockedFields: 0, lockedItems: 0, lockedItemChanged: [] };
   const press = (row, kind, label, next) => {
     open.presses[kind]++;
@@ -59,9 +59,8 @@ globalThis.__stats = function () {
   };
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const pressLocked = (row, tag, o) => {
-    const items = o.kind === 'values' ? o.values.map(v => v.value) : o.items;
     open.lockedFields++;
-    items.forEach(item => {
+    o.items.forEach(item => {
       open.lockedItems++;
       const moves = [Cond.toggleValue(tag, o.field, item), Cond.removeValue(tag, o.field, item), Cond.addValue(tag, o.field, item)];
       if (!moves.every(t => same(t, tag))) open.lockedItemChanged.push(row.name + ' ' + o.field + '=' + JSON.stringify(item));
@@ -75,10 +74,10 @@ globalThis.__stats = function () {
       if (o.lock) { pressLocked(row, tag, o); return; }
       if (o.kind === 'values') o.values.forEach(({ value, state }) => {
         if (state === Cond.CHIP.OPEN) press(row, 'values', o.field + '=' + value, Cond.toggleValue(tag, o.field, value));
-        if (state === Cond.CHIP.LOCKED) {
-          open.locked++;
+        if (state === Cond.CHIP.LAST) {
+          open.last++;
           if (JSON.stringify(Cond.toggleValue(tag, o.field, value)) !== JSON.stringify(tag)) {
-            open.lockedChanged.push(row.name + ' ' + o.field + '=' + value);
+            open.lastChanged.push(row.name + ' ' + o.field + '=' + value);
           }
         }
       });
@@ -116,8 +115,8 @@ const opened = open.presses.values + open.presses.region + open.presses.text;
 console.log(`標籤 ${open.rows} 張,按 ${opened} 次(選值鈕 ${open.presses.values}、區域 ${open.presses.region}、`
   + `中心詞候選 ${open.presses.text})`);
 console.log(`0 張 ${open.zero.length} 次${open.zero.length ? ':' + open.zero.join('、') : ''}`);
-console.log(`鎖住的鈕(位置、極性最後一顆)${open.locked} 顆,按了標籤有變 ${open.lockedChanged.length} 顆`
-  + `${open.lockedChanged.length ? ':' + open.lockedChanged.join('、') : ''}`);
+console.log(`最後一個的鈕(位置、極性只剩一顆亮著)${open.last} 顆,按了標籤有變 ${open.lastChanged.length} 顆`
+  + `${open.lastChanged.length ? ':' + open.lastChanged.join('、') : ''}`);
 console.log(`鎖住的欄:標籤 ${open.lockedTags} 張、${open.lockedFields} 欄、鎖住的值 ${open.lockedItems} 個;`
   + `切換、減值、加值後標籤有變 ${open.lockedItemChanged.length} 個`
   + `${open.lockedItemChanged.length ? ':' + open.lockedItemChanged.join('、') : ''}`);

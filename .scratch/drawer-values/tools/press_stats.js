@@ -60,7 +60,7 @@ globalThis.__stats = function () {
     Cond.drawerOptions(tag).forEach(g => g.fields.forEach(o => {
       if (o.kind === 'values') o.values.forEach(({ value, state }) => {
         if (state === Cond.CHIP.OPEN) press(row, 'values', o.field + '=' + value, Cond.toggleValue(tag, o.field, value));
-        if (state === Cond.CHIP.LOCKED) {
+        if (state === Cond.CHIP.LAST) {
           open.locked++;
           if (JSON.stringify(Cond.toggleValue(tag, o.field, value)) !== JSON.stringify(tag)) {
             open.lockedChanged.push(row.name + ' ' + o.field + '=' + value);

@@ -3,7 +3,7 @@
 /* 條件模型(predicate-ui 規格 4 票 02 起,票 05 加左側條件標籤與 OR 區;純函式,不碰 DOM)。
    接縫:目錄列 → 標籤;左側條件 → 標籤;兩區 + 左側條件 → 引擎查詢(含 q.or);標籤 → 具名查詢、
    葉路徑、短句;引擎查詢 → 句尾標籤的短句;抽屜的欄位與值、改欄位(票 04);標籤 → 抽屜選項
-   (drawer-values 票 02:每欄列哪些值、各是亮、鎖住、可按或灰);標籤 ⇄ 欄位對
+   (drawer-values 票 02:每欄列哪些值、各是亮、最後一個、可按或灰);標籤 ⇄ 欄位對
    (票 04,分隔與轉義在 Hash,值域在這裡)。
    動作標籤 `{ex, pred, origin}`:ex 是排除;pred 是送進引擎的述詞,一定帶位置(引擎沒寫位置就
    三個位置都看,見 predicate-index 票 05);origin 是產生它的目錄列名字。
@@ -32,7 +32,10 @@ const POSITION_FALLBACK = ['代價', '條件'];
 /* 極性的預設,短句不寫它;抄 catalog.py 的 DEFAULT_POLARITY(2026-11-01 規格 2「詞元節點極性」(a)),
    conditions.test.js 守和來源一致。排序過,比對時不看順序。 */
 const DEFAULT_POLARITY = ['可能', '肯定'];
-const LOCKED_FIELDS = ['位置', '極性'];
+/* 至少要留一個值的欄:只剩一個亮著時那一個按不掉(drawer-values 規格,2026-11-02)。 */
+const KEEP_ONE_FIELDS = ['位置', '極性'];
+/* 具名查詢自己寫的欄,這兩欄以外的在它產生的標籤上鎖住(drawer-lock 規格,2026-11-03)。 */
+const UNLOCKED_FIELDS = Object.freeze(['詞元', '極性']);
 
 /* 區域三欄,抄 predicate.py 的 REGION_FIELDS(2026-11-01 規格 3);conditions.test.js 守和來源一致。 */
 const REGION_FIELDS = ['來源', '目的', '所在'];
@@ -313,24 +316,24 @@ function predValues(pred, field) {
 
 const values = (tag, field) => predValues(tag.pred, field);
 
-function lockedPred(tag) {
-  const row = BY_NAME.get(tag.origin);
+function lockedPred(origin) {
+  const row = BY_NAME.get(origin);
   const out = {};
   if (!row) return out;
   Object.keys(row.predicate).forEach(field => {
-    if (field !== '詞元' && field !== '極性') out[field] = asList(row.predicate[field]);
+    if (UNLOCKED_FIELDS.indexOf(field) < 0) out[field] = asList(row.predicate[field]);
   });
   return out;
 }
 
-const isLockedField = (tag, field) => field in lockedPred(tag);
+const isLockedField = (origin, field) => field in lockedPred(origin);
 
 function withValues(tag, field, items) {
-  if (isLockedField(tag, field)) return tag;
+  if (isLockedField(tag.origin, field)) return tag;
   const pred = Object.assign({}, tag.pred);
   const list = orderedValues(field, items);
   if (list.length) pred[field] = list;
-  else if (LOCKED_FIELDS.indexOf(field) >= 0) return tag;
+  else if (KEEP_ONE_FIELDS.indexOf(field) >= 0) return tag;
   else delete pred[field];
   return Object.assign({}, tag, { pred });
 }
@@ -348,35 +351,35 @@ function toggleValue(tag, field, item) {
   return on ? removeValue(tag, field, item) : addValue(tag, field, item);
 }
 
-function locked(tag, field, item) {
+function isLastOne(tag, field, item) {
   const list = values(tag, field);
-  return LOCKED_FIELDS.indexOf(field) >= 0 && list.length === 1 && sameItem(list[0], item);
+  return KEEP_ONE_FIELDS.indexOf(field) >= 0 && list.length === 1 && sameItem(list[0], item);
 }
 
 /* 抽屜選項的值狀態(drawer-values 規格 Implementation Decisions「抽屜選項」,2026-11-02);Strip 照它畫。 */
-const CHIP = Object.freeze({ ON: '亮', LOCKED: '鎖住', OPEN: '可按', GRAY: '灰' });
-const { ON, LOCKED, OPEN, GRAY } = CHIP;
+const CHIP = Object.freeze({ ON: '亮', LAST: '最後一個', OPEN: '可按', GRAY: '灰' });
+const { ON, LAST, OPEN, GRAY } = CHIP;
 
-function fieldHits(tag, field) {
-  const seenPred = Object.assign({ 詞元: tag.pred.詞元 }, lockedPred(tag));
-  return { seen: Engine.fieldValues(seenPred, field), hits: Engine.fieldValues(tag.pred, field) };
-}
+const listedValues = (tag, field) =>
+  Engine.fieldValues(Object.assign({ 詞元: tag.pred.詞元 }, lockedPred(tag.origin)), field);
+
+const hitValues = (tag, field) => Engine.fieldValues(tag.pred, field);
 
 function chipOptions(tag, field) {
   const on = values(tag, field);
-  const { seen, hits } = fieldHits(tag, field);
+  const listed = listedValues(tag, field), hits = hitValues(tag, field);
   const state = value => (on.indexOf(value) < 0 ? (hits.indexOf(value) >= 0 ? OPEN : GRAY)
-    : locked(tag, field, value) ? LOCKED : ON);
-  const list = (DOMAINS[field] || []).filter(v => on.indexOf(v) >= 0 || seen.indexOf(v) >= 0)
+    : isLastOne(tag, field, value) ? LAST : ON);
+  const list = (DOMAINS[field] || []).filter(v => on.indexOf(v) >= 0 || listed.indexOf(v) >= 0)
     .map(value => ({ value, state: state(value) }));
   return list.length ? { field, kind: 'values', values: list } : null;
 }
 
 function regionOptions(tag, field) {
-  const { seen, hits } = fieldHits(tag, field);
+  const listed = listedValues(tag, field), hits = hitValues(tag, field);
   const items = values(tag, field);
-  const zones = (DOMAINS.區域 || []).filter(zone => seen.some(([, z]) => z === zone));
-  const players = [null].concat((DOMAINS.玩家 || []).filter(player => seen.some(([p]) => p === player)));
+  const zones = (DOMAINS.區域 || []).filter(zone => listed.some(([, z]) => z === zone));
+  const players = [null].concat((DOMAINS.玩家 || []).filter(player => listed.some(([p]) => p === player)));
   if (!zones.length && !items.length) return null;
   const hit = (player, zone) => hits.some(([p, z]) => z === zone && (player === null || p === player));
   return {
@@ -390,29 +393,22 @@ function regionOptions(tag, field) {
 
 function textOptions(tag, field) {
   const on = values(tag, field);
-  const { seen, hits } = fieldHits(tag, field);
+  const listed = listedValues(tag, field), hits = hitValues(tag, field);
   const candidates = hits.filter(w => on.indexOf(w) < 0);
-  return seen.length || on.length ? { field, kind: 'text', candidates } : null;
+  return listed.length || on.length ? { field, kind: 'text', candidates } : null;
 }
 
 const FIELD_OPTIONS = { values: chipOptions, region: regionOptions, text: textOptions };
 
-const lockedItems = (tag, field) => orderedValues(field, lockedPred(tag)[field]);
-
-const lockedItemOptions = kind => (tag, field) => ({ field, kind, lock: tag.origin, items: lockedItems(tag, field) });
-
-function lockedChipOptions(tag, field) {
-  const values = lockedItems(tag, field).map(value => ({ value, state: LOCKED }));
-  return { field, kind: 'values', lock: tag.origin, values };
+function lockedOptions(tag, field) {
+  const items = orderedValues(field, lockedPred(tag.origin)[field]);
+  return { field, kind: kindOf(field), lock: tag.origin, items };
 }
-
-const LOCKED_OPTIONS = { values: lockedChipOptions, region: lockedItemOptions('region'), text: lockedItemOptions('text') };
 
 /* 一欄的抽屜選項;這一欄不列時回 null。 */
 function fieldOptions(tag, field) {
-  const kind = kindOf(field);
-  const options = (isLockedField(tag, field) && LOCKED_OPTIONS[kind]) || FIELD_OPTIONS[kind];
-  return options(tag, field);
+  if (isLockedField(tag.origin, field)) return lockedOptions(tag, field);
+  return FIELD_OPTIONS[kindOf(field)](tag, field);
 }
 
 /* 抽屜選項:[{group, fields: [{field, kind, …}]}];沒有欄的組不列。點選鈕的欄帶 values:
@@ -553,7 +549,7 @@ function hitLabels(q) {
 }
 
   return Object.freeze({
-    SEP, DEFAULT_POSITION, COMMON_GROUP, CHIP, defaultPosition, tagAt, named, leafPath,
+    SEP, DEFAULT_POSITION, COMMON_GROUP, UNLOCKED_FIELDS, CHIP, defaultPosition, tagAt, named, leafPath,
     empty, tags, tagsIn, isEmpty, add, addInZone, removeAt, replaceAt, moveAt, usedPaths,
     sideTags, sideZone, moveSide, syncSide, toQuery,
     sentenceParts, sentence, hitLabels, positionPrefix, note, soloQuery,

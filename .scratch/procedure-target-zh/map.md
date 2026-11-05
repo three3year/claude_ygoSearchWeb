@@ -28,6 +28,8 @@ Charted: 2026-11-03(/mattpocock-skills:wayfinder)
 
 - [寫規格甲:召喚手續進索引](issues/02-spec-summon-procedure.md):規格與 6 張票在 `.scratch/summon-procedure/`;白名單 9 種、283 框;召喚來源沒寫依卡種、重ねる 一律此卡;剝框重編後比既有欄;寫 ADR 0019。
 
+- [寫規格乙:針對卡片](issues/03-spec-target-card.md):規格與 8 張票在 `.scratch/target-card/`;段的條件建置期解析、前端比對,與動作對象共用一份判法(順手修區間與屬性段);回指目標存段、目的片語也解;字段用卡名包含加核可的對照表;寫 ADR 0020。
+
 ## Not yet specified
 
 - 拆解頁(`.scratch/effect-tokenize` 的 viewer)與其他工具頁的日文要不要一起中文化:這次只說「搜尋介面」,寫規格丙時再看。

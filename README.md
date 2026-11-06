@@ -118,9 +118,13 @@ python -X utf8 script/action_structure/build_structure.py
 
 # 只印報告,不寫產物
 python -X utf8 script/action_structure/build_structure.py --no-write
+
+# 覆蓋報告:讀產物與卡片總表 → .scratch/action-structure/report/coverage.md(不需 data/sources/)
+python -X utf8 script/action_structure/build_report.py
 ```
 
 產物一卡一行、不含時間(時間與來源雜湊只印在報告),同一份輸入兩次建置逐位元組相同。
+覆蓋報告同樣不寫時間、排序固定;產物張數與卡片總表不符時以非 0 結束、不寫檔。
 規格與各票在 `.scratch/action-structure/`。
 
 ### 查卡網站
@@ -183,8 +187,10 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/block_split.py` | 區塊切分(純函式):官方 DB 文本 → 區塊 + 略過文本 |
 | `script/action_structure/segment_extract.py` | 段抽取(純函式):區塊 → 段、段樹、物件;同義表、推得表、位置自動規則 |
 | `script/action_structure/card_structure.py` | 建置管線(純函式):總表 + 官方 DB 文本 → 卡片結構 + 報告;序列化與讀回 |
-| `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用分組 |
+| `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用分組、未解析組 |
 | `script/action_structure/build_structure.py` | 建置 CLI 薄殼(讀檔 → 寫 data/action_structure.json → 印報告) |
+| `script/action_structure/coverage_report.py` | 覆蓋報告(純函式):全庫結構 → 依區塊種類、段類別、各格、物件計數,依原因附卡號 → markdown |
+| `script/action_structure/build_report.py` | 覆蓋報告 CLI 薄殼(讀產物與總表 → 寫 .scratch/action-structure/report/coverage.md) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
 | `data/action_structure.json` | 動作搜尋的卡片結構(建置產物,**入版控**,一卡一行;產物省略空格,讀回用 `card_structure.load_structures`) |
 | `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |

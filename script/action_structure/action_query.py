@@ -14,11 +14,23 @@
   polarities        極性範圍(預設只算「做」)
   generic_only      只查泛用組(票 07)
 
-結果:{"hits": [{"id", "segments", "group"}], "groups": {"特定", "泛用", "全部"},
-      "unparsed": [...]}(未解析組由票 03 填)。
+結果:{"hits": [{"id", "segments", "group"}],
+      "groups": {"特定", "泛用", "全部", "未解析"}(各組是卡片密碼列表;未解析組的張數 = 長度),
+      "unparsed": [{"id", "reason", "segments": [{"segment", "reason", "text"}]}]}
+
+未解析組(spec「解析不出的段怎麼呈現」):不靜默略過。兩種來源:
+- 整張無官方日文的卡:任何查詢都列,`reason` = 無官方日文、`segments` 為空。
+- 字面含查詢動作詞、但結構不完整所以沒命中的段:段本身標解析不出,或段的對象線
+  引用的物件標解析不出(指定卡代入時判不了),或所在區塊標解析不出。
+  「字面」比的是整段原文而不是只比原述語字面:子句切錯時原述語字面也是錯的
+  (「このカードが特殊召喚に成功した時、…めくる事ができる」切出的述語是「めくる…」),
+  多列總比漏列好。動作詞經同義表換成述語字面(「破壞」→「破壊」)再比。
+一張卡任一段命中就在命中組、不再列進未解析組;段類別、極性的篩選對未解析組同樣生效;
+區塊種類被篩掉的區塊,只有種類判不出(標解析不出)的才列,因為那才可能是靜默漏掉。
 """
 import json
 
+from segment_extract import PREDICATE_STEMS
 from structure_shape import ZONE_PARENT, iter_segments
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
@@ -164,11 +176,41 @@ def _objects_by_id(card):
     return {obj["id"]: obj for obj in card["objects"]}
 
 
+def action_literals(actions):
+    """查詢動作詞 → 每個動作詞在同義表裡的述語字面列表;同義表沒有的動作詞給空列表,
+    字面就不可能含它。"""
+    return [[stem for stem, action, _ in PREDICATE_STEMS if action == want]
+            for want in actions]
+
+
+def literal_has_actions(text, literals):
+    """段的原文字面含每一個查詢動作詞(各取任一述語字面)才算「字面含查詢動作詞」;
+    查詢沒給動作詞時沒有字面可比,不算。"""
+    if not literals:
+        return False
+    return all(any(stem in text for stem in stems) for stems in literals)
+
+
+def incomplete_reason(seg, objects):
+    """段沒命中時,它結構不完整的原因;結構完整(只是不符查詢)回 None。
+    先看段自己,再看對象線引用的物件(物件解析不出時指定卡代入判不了)。"""
+    if seg["unparsed"]:
+        return seg["unparsed"]["reason"]
+    for line in seg["lines"]:
+        obj = objects.get(line["object"])
+        if obj is not None and obj["unparsed"]:
+            return obj["unparsed"]["reason"]
+    return None
+
+
+def segment_in_scope(seg, q):
+    """段類別、極性的篩選;命中與未解析組共用,被篩掉的段兩邊都不列。"""
+    return seg["kind"] in q["allowed_kinds"] and seg["polarity"] in q["polarities"]
+
+
 def segment_hit_lines(seg, card, q, judge, objects):
     """段命中時回傳命中的對象線(可為空列表);不命中回 None。"""
-    if seg["unparsed"] or seg["kind"] not in q["allowed_kinds"]:
-        return None
-    if seg["polarity"] not in q["polarities"]:
+    if seg["unparsed"] or not segment_in_scope(seg, q):
         return None
     if any(a not in seg["actions"] for a in q["actions"]):
         return None
@@ -195,29 +237,46 @@ def run_query(structures, cards, query):
     """全庫結構 + 卡片總表 + 查詢 → 命中結果;一張卡任一分支、任一段命中即命中。"""
     q = _normalise(query)
     judge = _Judge(cards, q)
-    hits = []
+    literals = action_literals(q["actions"])
+    hits, unparsed = [], []
     for card in structures:
         if card["unparsed"]:
+            unparsed.append({"id": card["id"],
+                             "reason": card["unparsed"]["reason"],
+                             "segments": []})
             continue
         objects = _objects_by_id(card)
-        matched, generic = [], True
+        matched, generic, incomplete = [], True, []
         for block in card["blocks"]:
-            if q["block_kinds"] and block["kind"] not in q["block_kinds"]:
+            # 區塊種類被篩掉:種類判不出的區塊才可能是靜默漏掉,列進未解析組。
+            skipped = q["block_kinds"] and block["kind"] not in q["block_kinds"]
+            if skipped and not block["unparsed"]:
                 continue
             for _, seg in iter_segments(block):
-                lines = segment_hit_lines(seg, card, q, judge, objects)
-                if lines is None:
+                lines = None if skipped else segment_hit_lines(
+                    seg, card, q, judge, objects)
+                if lines is not None:
+                    matched.append(seg["id"])
+                    if not all(is_generic(objects[l["object"]]) for l in lines):
+                        generic = False
                     continue
-                matched.append(seg["id"])
-                if not all(is_generic(objects[l["object"]]) for l in lines):
-                    generic = False
-        if not matched:
-            continue
-        group = "泛用" if generic else "特定"
-        if q["generic_only"] and group != "泛用":
-            continue
-        hits.append({"id": card["id"], "segments": matched, "group": group})
+                if not segment_in_scope(seg, q):
+                    continue
+                reason = (block["unparsed"]["reason"] if skipped
+                          else incomplete_reason(seg, objects))
+                if reason and literal_has_actions(seg["text"], literals):
+                    incomplete.append({"segment": seg["id"], "reason": reason,
+                                       "text": seg["text"]})
+        if matched:
+            group = "泛用" if generic else "特定"
+            if q["generic_only"] and group != "泛用":
+                continue
+            hits.append({"id": card["id"], "segments": matched, "group": group})
+        elif incomplete:
+            unparsed.append({"id": card["id"], "reason": None,
+                             "segments": incomplete})
     groups = {"特定": [h["id"] for h in hits if h["group"] == "特定"],
               "泛用": [h["id"] for h in hits if h["group"] == "泛用"],
-              "全部": [h["id"] for h in hits]}
-    return {"hits": hits, "groups": groups, "unparsed": []}
+              "全部": [h["id"] for h in hits],
+              "未解析": [u["id"] for u in unparsed]}
+    return {"hits": hits, "groups": groups, "unparsed": unparsed}

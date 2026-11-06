@@ -36,18 +36,26 @@ def zone(name, side=None):
     return {"zone": name, "side": side}
 
 
-def position(zones, source, inferred=False):
+def position(zones, source, inferred=False, text=None, form=None):
     """從/到:區域集合 + 來源標記;`inferred` = 推得值或繼承自推得值,
     查詢預設不算、開關開才算(spec:推得的終點預設不算命中)。
-    明寫的「從」寫在物件後(XをデッキからYに加える)時另帶 `placement`: 述語前,
-    句型模板據此放回原位;寫在物件前(預設)不帶。"""
-    return {"zones": list(zones), "source": source, "inferred": inferred}
+    `text` 是明寫時含助詞的原文字面(「自分のデッキの上から」「墓地の」「デッキの一番下に」,
+    反向檢查據此還原、解析時驗過與 zones 一致);
+    `form` 是到的放置形式(「好きな順番で」、表側守備表示…,spec「到可帶表示形式」)。
+    明寫的「從」寫在物件後(XをデッキからYに加える)時另帶 `placement`: 述語前(票 07),
+    模板據此放回原位;寫在物件前(預設)不帶。"""
+    return {"zones": list(zones), "source": source, "inferred": inferred,
+            "text": text, "form": form}
 
 
-def new_line(obj_id, role, targeting=False, from_=None, to=None):
-    """對象線:物件、取對象標記、角色、從、到。"""
+def new_line(obj_id, role, targeting=False, from_=None, to=None, marker=None,
+             ref=None, count=None):
+    """對象線:物件、取對象標記、角色、從、到;另記這一次提及的字面:`marker` 是助詞
+    (を/が/は,None = を),`ref` 是回指字面(None = 本段首次出現;「そのモンスター」
+    「それらのカード」「めくったカード」),`count` 是助詞後的數量(「を全て」「を２枚まで」,
+    屬於這次提及、不屬於物件)。"""
     return {"object": obj_id, "targeting": targeting, "role": role,
-            "from": from_, "to": to}
+            "from": from_, "to": to, "marker": marker, "ref": ref, "count": count}
 
 
 def new_segment(seg_id, kind, span, text, predicate=None, voice=None):
@@ -86,7 +94,7 @@ def new_object(obj_id, source, text=None, span=None, block=None,
         "kind": kind,                  # 物件種類
         "condition": condition,        # 條件式
         "initial_position": initial_position,
-        "count": count,                # {"text", "value", "unit", "cmp", "placement"(名詞內/述語前)}
+        "count": count,                # {"text", "value", "unit", "cmp"};助詞後的數量在對象線上
         "block": block,                # 首次出現的區塊 id
         "span": list(span) if span else None,
         "text": text,

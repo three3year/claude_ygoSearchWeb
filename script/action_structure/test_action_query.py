@@ -8,7 +8,7 @@ from action_query import run_query
 from card_structure import build_structures
 from test_golden import SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT, card, faq
 
-TAIL_UNKNOWN = 11111111   # 述語語尾「する事ができる」同義表沒收:段解析不出
+TAIL_UNKNOWN = 11111111   # 述語語尾「させる」(使役)同義表沒收:段解析不出
 MODS_UNKNOWN = 22222222   # 物件修飾「レベル４以下の」票 04 前解析不出
 NO_TEXT = 33333333        # 無官方日文
 BLACK_MAGICIAN = 46986414
@@ -25,7 +25,7 @@ def fixtures():
     entries = [
         faq(SINGULARITY_FIEND, "特異点の悪魔", SINGULARITY_FIEND_TEXT),
         faq(TAIL_UNKNOWN, "語尾不明",
-            "①：手札からモンスター１体を特殊召喚する事ができる。"),
+            "①：手札からモンスター１体を特殊召喚させる。"),
         faq(MODS_UNKNOWN, "修飾不明",
             "①：手札からレベル４以下のモンスター１体を特殊召喚する。"),
     ]

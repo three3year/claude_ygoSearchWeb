@@ -6,7 +6,8 @@
   card              指定卡(卡片密碼),代入對象物件
   condition         只給條件:卡片總表裡存在一張實卡同時滿足查詢條件與物件條件
                     (查詢側的原子不帶名稱表,直接寫值:{"op": "字段", "setcodes": [...]}、
-                    {"op": "卡名", "text": ...}、{"op": "卡名包含", "text": ...})
+                    {"op": "卡名"|"卡名包含"|"記載", "text": ...}、{"op": "卡名範圍", "texts": [A, B]}、
+                    {"op": "屬性比較", "attr", "cmp", "value"})
   targeting         True 時只算有標取對象的線
   kinds             段類別範圍(預設 效果、代價、召喚手續)
   block_kinds       區塊種類範圍(預設全部)
@@ -45,6 +46,7 @@ import operator
 import re
 
 from archetype_table import fold_width, setcode_matches, split_setcode
+from attribute_words import ATTRIBUTE_JA, RACE_JA
 from condition_atoms import referenced_objects
 from segment_extract import PREDICATE_STEMS, action_ancestors
 from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
@@ -83,7 +85,9 @@ def card_attr(entry, attr):
 
 
 def compare_attr(condition, entry, binding):
-    """屬性 比較 值/引用:引用的物件沒綁定候選卡時判不了(None);一邊沒有這個值就不符。"""
+    """屬性 比較 值/引用:引用的物件沒綁定候選卡時判不了(None);一邊沒有這個值就不符。
+    值的寫法照抽取端(票 10):種族、屬性是官方日文字面(魔法使い族、光),等級是整數,
+    卡片子類型是中文名;引用比的是卡片總表的位元。"""
     lhs = card_attr(entry, condition["attr"])
     if "ref" in condition:
         bound = (binding or {}).get(condition["ref"]["object"])
@@ -92,6 +96,10 @@ def compare_attr(condition, entry, binding):
         rhs = card_attr(bound, condition["ref"]["attr"])
     else:
         rhs = condition.get("value")
+        if condition["attr"] == "種族":
+            rhs = RACE_JA.get(rhs)
+        elif condition["attr"] == "屬性":
+            rhs = ATTRIBUTE_JA.get(rhs)
     if lhs is None or rhs is None:
         return False
     if isinstance(lhs, set):

@@ -7,6 +7,7 @@ import unittest
 
 from card_structure import build_structures
 from action_query import run_query
+from reverse_check import check_card
 
 MONSTER = 0x21  # 效果怪獸
 SPELL = 0x2
@@ -121,6 +122,12 @@ class SingularityFiendTest(unittest.TestCase):
     def test_unrelated_action_does_not_hit(self):
         """這張卡沒有除外:不命中。"""
         self.assertNotIn(SINGULARITY_FIEND, self.hits(actions=["除外"]))
+
+    def test_whole_card_passes_reverse_check(self):
+        """整張卡通過反向檢查(票 02):每段由結構套句型模板產生的日文與原文全等。"""
+        structure = next(c for c in self.structures
+                         if c["id"] == SINGULARITY_FIEND)
+        self.assertEqual(check_card(structure), [])
 
 
 if __name__ == "__main__":

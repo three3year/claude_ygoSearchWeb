@@ -28,6 +28,10 @@ from structure_shape import (new_line, new_object, new_segment, position,
 # ── 同義表:述語字面 → 動作詞;第三欄是述語本身寫明的終點(「墓地へ送る」)。
 PREDICATE_STEMS = (
     ("特殊召喚", "特殊召喚", None),
+    ("融合召喚", "融合召喚", None),
+    ("S召喚", "S召喚", None),
+    ("X召喚", "X召喚", None),
+    ("L召喚", "L召喚", None),
     ("破壊", "破壞", None),
     ("捨て", "捨棄", None),
     ("リリース", "解放", None),
@@ -49,6 +53,21 @@ TAILS = {
     "しない": ("主動", "不會"), "されない": ("被動", "不會"),
     "られない": ("被動", "不會"),
 }
+# 下位詞:S、X、L、融合召喚是特殊召喚的下位(spec「動作詞」),查「特殊召喚」要含它們;
+# 推得表與角色也照上位詞算。
+ACTION_PARENT = {"融合召喚": "特殊召喚", "S召喚": "特殊召喚", "X召喚": "特殊召喚",
+                 "L召喚": "特殊召喚"}
+
+
+def action_ancestors(action):
+    """動作詞與它的全部上位詞(含自己):融合召喚 → [融合召喚, 特殊召喚]。"""
+    out = [action]
+    while action in ACTION_PARENT:
+        action = ACTION_PARENT[action]
+        out.append(action)
+    return out
+
+
 # 推得表:動作詞 → (沒寫「從」時的出發地, 沒寫「到」時的終點)。
 INFERENCE_TABLE = {
     "破壞": ("場上", "墓地"),
@@ -313,9 +332,13 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
         if from_zones is None:
             seg["unparsed"] = unparsed(REASON_FROM)
             return
-    inferred_from, inferred_to = INFERENCE_TABLE.get(action, (None, None))
-    # 推得的場上/墓地歸誰:特殊召喚到施事者的場上;其餘不知道就不標方。
-    inferred_side = (agent or "我方") if action == "特殊召喚" else None
+    ancestors = action_ancestors(action)
+    inferred_from, inferred_to = next(
+        (INFERENCE_TABLE[a] for a in ancestors if a in INFERENCE_TABLE),
+        (None, None))
+    # 推得的場上/墓地歸誰:特殊召喚(含下位詞)到施事者的場上;其餘不知道就不標方。
+    summoning = "特殊召喚" in ancestors
+    inferred_side = (agent or "我方") if summoning else None
     for phrase in phrases:
         obj_id, reason = state.object_at(phrase, sentence_start)
         if obj_id is None:
@@ -327,7 +350,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
                 seg["unparsed"] = unparsed(REASON_OBJECT)
                 return
             obj["count"] = parse_count(_POSTCOUNT_RE.match(postcount), "述語前")
-        role = "被召喚" if action == "特殊召喚" else "受事"
+        role = "被召喚" if summoning else "受事"
         line = new_line(obj_id, role,
                         targeting=(kind == "效果" and obj_id in state.targeted))
         if from_zones is not None:

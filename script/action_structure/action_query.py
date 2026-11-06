@@ -38,7 +38,7 @@ name_ja 與 setcode。名稱比對雙方先全半形折疊。
 import json
 
 from archetype_table import fold_width, setcode_matches, split_setcode
-from segment_extract import PREDICATE_STEMS
+from segment_extract import PREDICATE_STEMS, action_ancestors
 from structure_shape import ZONE_PARENT, iter_segments
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
@@ -308,10 +308,16 @@ def _objects_by_id(card):
 
 
 def action_literals(actions):
-    """查詢動作詞 → 每個動作詞在同義表裡的述語字面列表;同義表沒有的動作詞給空列表,
-    字面就不可能含它。"""
-    return [[stem for stem, action, _ in PREDICATE_STEMS if action == want]
+    """查詢動作詞 → 每個動作詞在同義表裡的述語字面列表(含下位詞的字面:查「特殊召喚」
+    的字面也含「融合召喚」);同義表沒有的動作詞給空列表,字面就不可能含它。"""
+    return [[stem for stem, action, _ in PREDICATE_STEMS
+             if want in action_ancestors(action)]
             for want in actions]
+
+
+def segment_actions(seg):
+    """段的動作詞連同上位詞:段寫「融合召喚」,查「特殊召喚」也要對得上。"""
+    return {a for action in seg["actions"] for a in action_ancestors(action)}
 
 
 def literal_has_actions(text, literals):
@@ -343,7 +349,7 @@ def segment_hit_lines(seg, card, q, judge, objects, names):
     """段命中時回傳命中的對象線(可為空列表);不命中回 None。"""
     if seg["unparsed"] or not segment_in_scope(seg, q):
         return None
-    if any(a not in seg["actions"] for a in q["actions"]):
+    if any(a not in segment_actions(seg) for a in q["actions"]):
         return None
     if not q["line_constrained"]:
         return list(seg["lines"])

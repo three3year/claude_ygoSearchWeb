@@ -13,11 +13,12 @@
   block_kinds       區塊種類範圍(預設全部)
   include_condition 條件段開關(預設關)
   include_inferred  推得終點開關(預設關):推得值與繼承自推得值只在開時算
-  replacement       查詢含「代替」時才看被代替段(票 08)
-  polarities        極性範圍(預設只算「做」)
+  replacement       查詢含「代替」時才看被代替段與做代替的段(帶「代替誰」的「代わりに〜」);
+                    命中的被代替段在 hit 的 "replaced_by"(被代替段 id → 做代替的段 id)指出做代替的段
+  polarities        極性範圍(預設只算「做」;不能、不會、可以、只能、必須要指定才算)
   generic_only      只查泛用組(票 07)
 
-結果:{"hits": [{"id", "segments", "group"}],
+結果:{"hits": [{"id", "segments", "group", "replaced_by"(有命中被代替段才有)}],
       "groups": {"特定", "泛用", "全部", "未解析"}(各組是卡片密碼列表;未解析組的張數 = 長度),
       "unparsed": [{"id", "reason", "segments": [{"segment", "reason", "text"}]}]}
 
@@ -57,6 +58,8 @@ GENERIC_ATOMS = ("大類", "位置", "控制方", "表示形式")
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
                 "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000}
+EXTRA_DECK_BITS = (SUBTYPE_BITS["融合"] | SUBTYPE_BITS["同步"] | SUBTYPE_BITS["超量"]
+                   | SUBTYPE_BITS["連結"] | SUBTYPE_BITS["靈擺"])
 COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
                "≤": operator.le, ">": operator.gt, "<": operator.lt}
 REASON_REF_MISSING = "引用的物件找不到"
@@ -301,6 +304,11 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
     if op in ("位置", "控制方", "表示形式"):
         # 位置、控制方與表示形式不是卡的屬性:任何卡都代得進去(泛用原子)。
         return True
+    if op == "曾被特殊召喚":
+        # 從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。
+        if any(z["zone"] == "額外牌組" for z in condition.get("zones", ())):
+            return bool(view.entry["type"] & EXTRA_DECK_BITS)
+        return True
     if op == "屬性比較":
         return compare_attr(condition, view.entry, binding)
     if op == "卡名範圍":
@@ -476,7 +484,11 @@ def _normalise(query):
             kinds.add("條件")
     else:
         kinds.discard("條件")
-    if not q["replacement"]:
+    # 代替:被代替段與做代替的段(帶「代替誰」)都只在查詢含「代替」時看。
+    if q["replacement"]:
+        if q["kinds"] is None:
+            kinds.add("被代替")
+    else:
         kinds.discard("被代替")
     q["allowed_kinds"] = kinds
     q["line_constrained"] = any((q["from_zones"], q["to_zones"],
@@ -532,8 +544,21 @@ def incomplete_reason(seg, objects):
 
 
 def segment_in_scope(seg, q):
-    """段類別、極性的篩選;命中與未解析組共用,被篩掉的段兩邊都不列。"""
+    """段類別、極性、代替的篩選;命中與未解析組共用,被篩掉的段兩邊都不列。
+    做代替的段(「代わりに〜」,帶代替誰)不是卡片自己做的動作,與被代替段一樣只在查詢含代替時看。"""
+    if seg["replaces"] and not q["replacement"]:
+        return False
     return seg["kind"] in q["allowed_kinds"] and seg["polarity"] in q["polarities"]
+
+
+def replaced_by(matched, card):
+    """命中的被代替段 → 做代替的段(同區塊裡 `replaces` 指向它的段),讓查詢含代替時找得到。"""
+    found = {}
+    for block in card["blocks"]:
+        for _, seg in iter_segments(block):
+            if seg["replaces"] in matched:
+                found[seg["replaces"]] = seg["id"]
+    return found
 
 
 def segment_hit_lines(seg, card, q, judge, objects, names):
@@ -575,7 +600,7 @@ def run_query(structures, cards, query):
             continue
         objects = _objects_by_id(card)
         names = {row["id"]: row for row in card["names"]}
-        matched, generic, incomplete = [], True, []
+        matched, generic, incomplete, replaced_hits = [], True, [], set()
         for block in card["blocks"]:
             # 區塊種類被篩掉:種類判不出的區塊才可能是靜默漏掉,列進未解析組。
             skipped = q["block_kinds"] and block["kind"] not in q["block_kinds"]
@@ -586,6 +611,8 @@ def run_query(structures, cards, query):
                     seg, card, q, judge, objects, names)
                 if lines is not None:
                     matched.append(seg["id"])
+                    if seg["kind"] == "被代替":
+                        replaced_hits.add(seg["id"])
                     if not all(is_generic(objects[l["object"]]) for l in lines):
                         generic = False
                     continue
@@ -600,7 +627,10 @@ def run_query(structures, cards, query):
             group = "泛用" if generic else "特定"
             if q["generic_only"] and group != "泛用":
                 continue
-            hits.append({"id": card["id"], "segments": matched, "group": group})
+            hit = {"id": card["id"], "segments": matched, "group": group}
+            if replaced_hits:
+                hit["replaced_by"] = replaced_by(replaced_hits, card)
+            hits.append(hit)
         elif incomplete:
             unparsed.append({"id": card["id"], "reason": None,
                              "segments": incomplete})

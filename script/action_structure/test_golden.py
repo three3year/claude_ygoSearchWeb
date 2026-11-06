@@ -650,5 +650,277 @@ class KamikazeDragunityTest(unittest.TestCase):
         self.assertEqual(check_card(structure), [])
 
 
+MAGISTUS_FLAME = 327051  # 絶火の祆現
+MAGISTUS_FLAME_TEXT = (
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。"
+    "①：自分の墓地のレベル４以下の「マギストス」モンスター１体を対象として発動できる。"
+    "そのモンスターを特殊召喚する。"
+    "②：自分の魔法＆罠ゾーンの「マギストス」カードが相手の効果で破壊される場合、"
+    "代わりに墓地のこのカードを除外できる。")
+MAGISTUS = 0x150
+ZOROA_SAGE = 36099130      # 絶火の大賢者ゾロア:マギストス、等級 4
+ZOROA_FIEND = 95911373     # 絶火の魔神ゾロア:マギストス、等級 8(同步)
+MAGISTUS_ARCHETYPES = ARCHETYPES + [
+    {"setcode": MAGISTUS, "hex": "0x150", "names_ja": ["マギストス"],
+     "name_zh": "偉魔", "source": "strings.conf"},
+]
+
+
+class MagistusFlameTest(unittest.TestCase):
+    """絶火の祆現 327051(票 08):取對象、代替。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(MAGISTUS_FLAME, name_ja="絶火の祆現", type=SPELL, setcode=MAGISTUS),
+            card(ZOROA_SAGE, name_ja="絶火の大賢者ゾロア", type=0x1021, level=4,
+                 race=0x2, attribute=0x4, atk=1500, setcode=MAGISTUS),
+            card(ZOROA_FIEND, name_ja="絶火の魔神ゾロア", type=0x2021, level=8,
+                 race=0x2, attribute=0x4, atk=2900, setcode=MAGISTUS),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20, atk=2500),
+        ]
+        cls.faq = [faq(MAGISTUS_FLAME, "絶火の祆現", MAGISTUS_FLAME_TEXT)]
+        cls.structures, cls.report = build_structures(
+            cls.cards, cls.faq, archetypes=MAGISTUS_ARCHETYPES)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_targeted_magistus_from_graveyard_special_summon(self):
+        """①「取對象 墓地 → 特殊召喚 マギストス」:等級 4 的マギストス怪獸代入命中;
+        等級 8 的不符(レベル４以下)、黑魔導不符(字段);從墓地由取對象的物件繼承,推得關也命中。"""
+        self.assertIn(MAGISTUS_FLAME,
+                      self.hits(actions=["特殊召喚"], targeting=True,
+                                from_zones=["墓地"], card=ZOROA_SAGE))
+        self.assertNotIn(MAGISTUS_FLAME,
+                         self.hits(actions=["特殊召喚"], card=ZOROA_FIEND))
+        self.assertNotIn(MAGISTUS_FLAME,
+                         self.hits(actions=["特殊召喚"], card=BLACK_MAGICIAN))
+
+    def test_replacement_banish_only_with_replacement_switch(self):
+        """②「代わりに墓地のこのカードを除外できる」是做代替的段:查「除外」預設不命中,
+        查詢含代替才命中(從墓地明寫)。"""
+        self.assertNotIn(MAGISTUS_FLAME, self.hits(actions=["除外"]))
+        self.assertNotIn(MAGISTUS_FLAME,
+                         self.hits(actions=["除外"], card=MAGISTUS_FLAME))
+        self.assertIn(MAGISTUS_FLAME,
+                      self.hits(actions=["除外"], from_zones=["墓地"],
+                                card=MAGISTUS_FLAME, replacement=True))
+
+    def test_replaced_destruction_is_reachable_from_the_replacing_segment(self):
+        """②被代替段「「マギストス」カードが相手の効果で破壊される」:查「破壞」預設不命中,
+        查詢含代替時命中,且結果指出做代替的段(= 查「除外」含代替時命中的那段)。"""
+        self.assertNotIn(MAGISTUS_FLAME, self.hits(actions=["破壞"], card=ZOROA_SAGE))
+        destroyed = run_query(self.structures, self.cards,
+                              {"actions": ["破壞"], "card": ZOROA_SAGE,
+                               "replacement": True})
+        banished = run_query(self.structures, self.cards,
+                             {"actions": ["除外"], "card": MAGISTUS_FLAME,
+                              "replacement": True})
+        hit = next(h for h in destroyed["hits"] if h["id"] == MAGISTUS_FLAME)
+        self.assertEqual(sorted(hit["replaced_by"].values()),
+                         next(h for h in banished["hits"]
+                              if h["id"] == MAGISTUS_FLAME)["segments"])
+
+    def test_unrelated_actions_do_not_hit(self):
+        for action in ("捨棄", "送墓", "加入手牌"):
+            self.assertNotIn(MAGISTUS_FLAME, self.hits(actions=[action]))
+
+    def test_whole_card_passes_reverse_check(self):
+        structure = next(c for c in self.structures if c["id"] == MAGISTUS_FLAME)
+        self.assertEqual(check_card(structure), [])
+
+
+CROSS_DIMENSION = 56889  # 競闘－クロス・ディメンション
+CROSS_DIMENSION_TEXT = (
+    "①：自分フィールドの「アンティーク・ギア」モンスター１体を対象として発動できる。"
+    "そのモンスターを除外する。この効果で除外したモンスターは次のスタンバイフェイズに"
+    "フィールドに戻り、その攻撃力はそのターンの終了時まで元々の攻撃力の倍になる。"
+    "②：自分フィールドの、「古代の機械巨人」または「古代の機械巨人－アルティメット・パウンド」"
+    "が戦闘・効果で破壊される場合、代わりに墓地のこのカードを除外できる。")
+ANCIENT_GEAR = 0x7
+ANCIENT_GEAR_GOLEM = 83104731          # 古代の機械巨人
+ANCIENT_GEAR_GOLEM_ULTIMATE = 95735217  # 古代の機械巨人－アルティメット・パウンド
+ANCIENT_GEAR_ARCHETYPES = ARCHETYPES + [
+    {"setcode": ANCIENT_GEAR, "hex": "0x7", "names_ja": ["古代の機械", "アンティーク・ギア"],
+     "name_zh": "古代機械齒輪", "source": "strings.conf"},
+]
+
+
+class CrossDimensionTest(unittest.TestCase):
+    """競闘－クロス・ディメンション 56889(票 08):取對象、延遲回場、被改的屬性、代替。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(CROSS_DIMENSION, name_ja="競闘－クロス・ディメンション", type=TRAP),
+            card(ANCIENT_GEAR_GOLEM, name_ja="古代の機械巨人", level=8, race=0x20,
+                 attribute=0x1, atk=3000, setcode=ANCIENT_GEAR),
+            card(ANCIENT_GEAR_GOLEM_ULTIMATE,
+                 name_ja="古代の機械巨人－アルティメット・パウンド", level=8, race=0x20,
+                 attribute=0x1, atk=3000, setcode=ANCIENT_GEAR),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20, atk=2500),
+        ]
+        cls.faq = [faq(CROSS_DIMENSION, "競闘－クロス・ディメンション",
+                       CROSS_DIMENSION_TEXT)]
+        cls.structures, cls.report = build_structures(
+            cls.cards, cls.faq, archetypes=ANCIENT_GEAR_ARCHETYPES)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_targeted_ancient_gear_on_field_is_banished(self):
+        """①「取對象 場上 → 除外」:アンティーク・ギア 怪獸(setcode)代入命中,從場上(我方)由
+        取對象的物件繼承、到除外明寫;黑魔導不符(字段)。"""
+        own_field = [{"zone": "場上", "side": "我方"}]
+        self.assertIn(CROSS_DIMENSION,
+                      self.hits(actions=["除外"], targeting=True, from_zones=own_field,
+                                to_zones=["除外"], card=ANCIENT_GEAR_GOLEM))
+        self.assertNotIn(CROSS_DIMENSION,
+                         self.hits(actions=["除外"], card=BLACK_MAGICIAN))
+
+    def test_return_at_next_standby_phase_is_delayed_and_not_targeting(self):
+        """回場段「次のスタンバイフェイズにフィールドに戻り」是延遲段:仍算卡片做的動作
+        (「除外 → 場上 返回」命中,從除外由前一段繼承),但不標取對象。"""
+        self.assertIn(CROSS_DIMENSION,
+                      self.hits(actions=["返回"], from_zones=["除外"], to_zones=["場上"],
+                                card=ANCIENT_GEAR_GOLEM))
+        self.assertNotIn(CROSS_DIMENSION, self.hits(actions=["返回"], targeting=True))
+
+    def test_attack_change_is_a_modification_segment(self):
+        """「その攻撃力は…元々の攻撃力の倍になる」:性質變更段,對象是回場的怪獸、不標取對象。"""
+        self.assertIn(CROSS_DIMENSION,
+                      self.hits(actions=["性質變更"], card=ANCIENT_GEAR_GOLEM))
+        self.assertNotIn(CROSS_DIMENSION,
+                         self.hits(actions=["性質變更"], targeting=True))
+        self.assertNotIn(CROSS_DIMENSION,
+                         self.hits(actions=["性質變更"], card=BLACK_MAGICIAN))
+
+    def test_replacement_banish_needs_the_replacement_switch(self):
+        """②「代わりに墓地のこのカードを除外できる」:查「除外 此卡」預設不命中(①的除外對象
+        不是此卡),查詢含代替才命中;被代替的「「古代の機械巨人」または「…パウンド」が破壊される」
+        兩個卡名都代得進去、黑魔導不行。"""
+        self.assertNotIn(CROSS_DIMENSION,
+                         self.hits(actions=["除外"], card=CROSS_DIMENSION))
+        self.assertIn(CROSS_DIMENSION,
+                      self.hits(actions=["除外"], from_zones=["墓地"],
+                                card=CROSS_DIMENSION, replacement=True))
+        for golem in (ANCIENT_GEAR_GOLEM, ANCIENT_GEAR_GOLEM_ULTIMATE):
+            with self.subTest(card=golem):
+                self.assertNotIn(CROSS_DIMENSION,
+                                 self.hits(actions=["破壞"], card=golem))
+                self.assertIn(CROSS_DIMENSION,
+                              self.hits(actions=["破壞"], card=golem, replacement=True))
+        self.assertNotIn(CROSS_DIMENSION,
+                         self.hits(actions=["破壞"], card=BLACK_MAGICIAN,
+                                   replacement=True))
+
+    def test_whole_card_passes_reverse_check(self):
+        structure = next(c for c in self.structures if c["id"] == CROSS_DIMENSION)
+        self.assertEqual(check_card(structure), [])
+
+
+CRIMSON_BLADER_BUSTER = 50604072  # クリムゾン・ブレーダー／バスター
+CRIMSON_BLADER_BUSTER_TEXT = (
+    "このカードは通常召喚できず、「バスター・モード」の効果でのみ特殊召喚できる。\n"
+    "このカード名の①の効果は１ターンに１度しか使用できない。\n"
+    "①：手札のこのカードを相手に見せて発動できる。「バスター・モード」またはそのカード名が"
+    "記されたカード１枚をデッキから手札に加え、このカードをデッキに戻す。\n"
+    "②：相手はEXデッキから特殊召喚されたレベル５以上のモンスターの効果を発動できない。\n"
+    "③：このカードが破壊された場合に発動できる。自分の墓地から「クリムゾン・ブレーダー」"
+    "１体を特殊召喚する。")
+CRIMSON_BLADER = 80321197      # クリムゾン・ブレーダー(同步、等級 8)
+BUSTER_MODE = 80280737         # バスター・モード(陷阱)
+BLUE_EYES_ULTIMATE = 23995346  # 青眼の究極竜(融合、等級 12)
+SUMMON_CONDITION_SENTENCE = "このカードは通常召喚できず"
+
+
+class CrimsonBladerBusterTest(unittest.TestCase):
+    """クリムゾン・ブレーダー／バスター 50604072(票 08):極性「不能」、連用形串接、記載。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(CRIMSON_BLADER_BUSTER, name_ja="クリムゾン・ブレーダー／バスター",
+                 type=0x2000021, level=10, race=0x1, attribute=0x4, atk=3300,
+                 setcode=0x104f),
+            card(CRIMSON_BLADER, name_ja="クリムゾン・ブレーダー", type=0x2021, level=8,
+                 race=0x1, attribute=0x4, atk=2800),
+            card(BUSTER_MODE, name_ja="バスター・モード", type=TRAP),
+            card(BLUE_EYES_ULTIMATE, name_ja="青眼の究極竜", type=0x41, level=12,
+                 race=0x2000, attribute=0x10, atk=4500),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20, atk=2500),
+        ]
+        cls.faq = [faq(CRIMSON_BLADER_BUSTER, "クリムゾン・ブレーダー／バスター",
+                       CRIMSON_BLADER_BUSTER_TEXT)]
+        cls.structures, cls.report = build_structures(cls.cards, cls.faq,
+                                                      archetypes=ARCHETYPES)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_search_buster_mode_or_card_that_mentions_it(self):
+        """①「デッキ → 手牌」:バスター・モード 代入命中(卡名);記載「バスター・モード」的卡
+        (此卡自己)也命中;黑魔導不符。"""
+        self.assertIn(CRIMSON_BLADER_BUSTER,
+                      self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                to_zones=["手牌"], card=BUSTER_MODE))
+        self.assertIn(CRIMSON_BLADER_BUSTER,
+                      self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                card=CRIMSON_BLADER_BUSTER))
+        self.assertNotIn(CRIMSON_BLADER_BUSTER,
+                         self.hits(actions=["加入手牌"], card=BLACK_MAGICIAN))
+
+    def test_this_card_returns_to_deck_in_the_same_sentence(self):
+        """①「〜手札に加え、このカードをデッキに戻す」:連用形串接的第二段,此卡「→ 牌組 返回」命中。"""
+        self.assertIn(CRIMSON_BLADER_BUSTER,
+                      self.hits(actions=["返回"], to_zones=["牌組"],
+                                card=CRIMSON_BLADER_BUSTER))
+
+    def test_cannot_activate_is_not_an_activation_hit(self):
+        """②「〜効果を発動できない」極性「不能」:查「發動」預設不命中、也不列進未解析組;
+        極性範圍含「不能」才命中,且只有額外牌組的等級 5 以上怪獸代得進去。"""
+        result = run_query(self.structures, self.cards, {"actions": ["發動"]})
+        self.assertNotIn(CRIMSON_BLADER_BUSTER, result["groups"]["全部"])
+        self.assertNotIn(CRIMSON_BLADER_BUSTER, result["groups"]["未解析"])
+        self.assertIn(CRIMSON_BLADER_BUSTER,
+                      self.hits(actions=["發動"], polarities=["不能"],
+                                card=BLUE_EYES_ULTIMATE))
+        self.assertNotIn(CRIMSON_BLADER_BUSTER,
+                         self.hits(actions=["發動"], polarities=["不能"],
+                                   card=BLACK_MAGICIAN))
+
+    def test_destroyed_condition_then_special_summon_from_graveyard(self):
+        """③「このカードが破壊された場合」是條件段(開關開才算);「墓地 → 特殊召喚
+        クリムゾン・ブレーダー」命中、此卡自己不符。"""
+        self.assertNotIn(CRIMSON_BLADER_BUSTER,
+                         self.hits(actions=["破壞"], card=CRIMSON_BLADER_BUSTER))
+        self.assertIn(CRIMSON_BLADER_BUSTER,
+                      self.hits(actions=["破壞"], card=CRIMSON_BLADER_BUSTER,
+                                include_condition=True))
+        self.assertIn(CRIMSON_BLADER_BUSTER,
+                      self.hits(actions=["特殊召喚"], from_zones=["墓地"],
+                                card=CRIMSON_BLADER))
+        self.assertNotIn(CRIMSON_BLADER_BUSTER,
+                         self.hits(actions=["特殊召喚"], card=CRIMSON_BLADER_BUSTER))
+
+    def test_whole_card_passes_reverse_check_except_summon_condition(self):
+        """整張通過反向檢查;召喚條件句「このカードは通常召喚できず、…」留給票 09 的區塊種類,
+        它所在的區塊除外。"""
+        structure = next(c for c in self.structures
+                         if c["id"] == CRIMSON_BLADER_BUSTER)
+        summon_blocks = {b["id"] for b in structure["blocks"]
+                         if SUMMON_CONDITION_SENTENCE in b["text"]}
+        self.assertEqual(len(summon_blocks), 1)
+        self.assertEqual([f for f in check_card(structure)
+                          if f["block"] not in summon_blocks], [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -68,14 +68,14 @@ class TemplateTest(unittest.TestCase):
                          [("無模板", "段未解析:述語解析不出")])
 
     def test_filled_slot_without_template_is_reported_by_slot_name(self):
-        """後面的票填了新格(例:期間)但還沒寫模板:記「無模板」並指出是哪一格。"""
+        """後面的票填了新格(例:數量,票 09)但還沒寫模板:記「無模板」並指出是哪一格。"""
         structure = build_one(1, "甲", "①：このカードを破壊する。")
-        segment(structure)["duration"] = "本回合"
+        segment(structure)["amount"] = {"text": "１０００LP"}
         self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
-                         [("無模板", "格 duration 無模板")])
+                         [("無模板", "格 amount 無模板")])
 
-    def test_targeting_line_without_literal_has_no_template(self):
-        """標了取對象、卻沒有取對象字面也沒指回被點名物件的線:無模板(票 11)。"""
+    def test_targeting_line_has_no_template_yet(self):
+        """沒有取對象字面、也沒指回先前被點名的物件,卻標了取對象:無模板(票 11 的規則)。"""
         structure = build_one(1, "甲", "①：このカードを破壊する。")
         segment(structure)["lines"][0]["targeting"] = True
         self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],

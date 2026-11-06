@@ -25,12 +25,16 @@ _MENTION_OR_RE = re.compile("^「(?P<name>[^「」]+)」またはそのカード
 _MENTION_RE = re.compile("^「(?P<name>[^「」]+)」のカード名が記された")
 _RANGE_RE = re.compile("^「(?P<lo>[^「」]+)」～「(?P<hi>[^「」]+)」のいずれかの")
 _ZONE_RE = re.compile("^(?P<side>自分|相手)?(?P<zone>EXデッキ|デッキ|手札|フィールド|墓地)の")
+# 曾被特殊召喚(票 08):「EXデッキから特殊召喚された」→ {"op": "曾被特殊召喚", "zones": [出發地]};
+# 查詢時從額外牌組特殊召喚的只有額外牌組的怪獸(融合/同步/超量/連結/靈擺)代得進去,其餘任何卡都算。
+_SUMMONED_FROM_RE = re.compile(
+    "^(?P<side>自分|相手)?の?(?P<zone>EXデッキ|デッキ|手札|フィールド|墓地)から特殊召喚された")
 SUBTYPE_LETTERS = (("融合", "融合"), ("儀式", "儀式"), ("S", "同步"), ("X", "超量"),
                    ("L", "連結"), ("P", "靈擺"))
 _SUBTYPE = "|".join(letter for letter, _ in SUBTYPE_LETTERS)
 _ARCHETYPE_SUBTYPE_RE = re.compile(f"^「(?P<name>[^「」]+)」(?P<sub>{_SUBTYPE})$")
 _SUBTYPE_RE = re.compile(f"^(?P<sub>{_SUBTYPE})$")
-# 表示形式(表側、裏側是狀態,不是卡的屬性;spec「區域」):閉集,值就是字面。
+# 表示形式(表側、裏側是狀態,不是卡的屬性;spec「區域」;票 06):閉集,值就是字面。
 FACE_WORDS = ("表側攻撃表示", "表側守備表示", "裏側守備表示", "表側表示", "裏側表示")
 _FACE_RE = re.compile("^(?P<face>" + "|".join(FACE_WORDS) + ")")
 ATTR_WORDS = (("種族", "種族"), ("属性", "屬性"), ("レベル", "等級"), ("ランク", "階級"))
@@ -74,6 +78,11 @@ def parse_modifier(rest, state):
             return [], why_lo or why_hi, m.end()
         return ([{"op": "卡名範圍", "names": [lo["name"], hi["name"]]}],
                 why_lo or why_hi, m.end())
+    m = _SUMMONED_FROM_RE.match(rest)
+    if m:
+        side = _SIDE.get(m.group("side"))
+        return ([{"op": "曾被特殊召喚",
+                  "zones": [zone(_ZONE_NAME[m.group("zone")], side)]}], None, m.end())
     m = _ZONE_RE.match(rest)
     if m:
         side = _SIDE.get(m.group("side"))
@@ -157,13 +166,14 @@ def render_atom(atom, names):
     if op == "卡名範圍":
         lo, hi = (_quoted(n, names) for n in atom["names"])
         return None if lo is None or hi is None else f"{lo}～{hi}のいずれかの"
-    if op == "位置":
+    if op in ("位置", "曾被特殊召喚"):
         # 條件式裡的區域不經 load_structures 補格,產物省略的 side 要用 get。
         zones = atom["zones"]
         if len(zones) != 1 or zones[0]["zone"] not in _ZONE_TEXT:
             return None
         side = zones[0].get("side")
-        return (_SIDE_TEXT.get(side, "") if side else "") + _ZONE_TEXT[zones[0]["zone"]] + "の"
+        prefix = (_SIDE_TEXT.get(side, "") if side else "") + _ZONE_TEXT[zones[0]["zone"]]
+        return prefix + ("の" if op == "位置" else "から特殊召喚された")
     if op == "表示形式":
         return atom.get("value") if atom.get("value") in FACE_WORDS else None
     if op == "屬性比較":

@@ -18,6 +18,12 @@ _race_alt = "|".join(re.escape(w) for w in sorted(RACE_JA, key=len, reverse=True
 _attr_alt = "|".join(re.escape(w) for w in ATTRIBUTE_JA)
 _RACES_RE = re.compile(f"^(?P<words>(?:{_race_alt})(?:・(?:{_race_alt}))*)(?P<no>の)?")
 _ATTRS_RE = re.compile(f"^(?P<words>(?:{_attr_alt})(?:・(?:{_attr_alt}))*)属性(?P<no>の)?")
+# 等級:「レベル１」緊接頭名詞;「レベル４以下の」「レベル５以上の」帶比較與「の」(joiner 照 cmp 寫回)。
+_LEVEL_RE = re.compile("^レベル(?P<n>[０-９]+)(?P<cmp>以上|以下)?(?P<no>の)?")
+_LEVEL_CMP = {None: "=", "以上": "≥", "以下": "≤"}
+_LEVEL_CMP_TEXT = {v: k or "" for k, v in _LEVEL_CMP.items()}
+_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
+_TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 
 
 def _atom(attr, value):
@@ -41,7 +47,23 @@ def parse_modifier(text):
     if m:
         atoms = [_atom("屬性", w) for w in m.group("words").split("・")]
         return _or(atoms), skip + m.end()
+    m = _LEVEL_RE.match(rest)
+    if m:
+        # 「レベル１の」沒有這種寫法,等級相等時不吃「の」(留給後面的修飾語判)。
+        end = m.end() - (1 if m.group("no") and not m.group("cmp") else 0)
+        atom = {"op": "屬性比較", "attr": "等級", "cmp": _LEVEL_CMP[m.group("cmp")],
+                "value": int(m.group("n").translate(_FULLWIDTH_DIGITS))}
+        return atom, skip + end
     return None, 0
+
+
+def render_level(atom):
+    """等級原子 → 「レベル４以下」「レベル１」;不是等級比較回 None。"""
+    if atom.get("op") != "屬性比較" or atom.get("attr") != "等級" \
+            or atom.get("cmp") not in _LEVEL_CMP_TEXT:
+        return None
+    digits = str(atom["value"]).translate(_TO_FULLWIDTH_DIGITS)
+    return "レベル" + digits + _LEVEL_CMP_TEXT[atom["cmp"]]
 
 
 def is_param_atom(atom):

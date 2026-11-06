@@ -68,17 +68,17 @@ class TemplateTest(unittest.TestCase):
                          [("無模板", "段未解析:述語解析不出")])
 
     def test_filled_slot_without_template_is_reported_by_slot_name(self):
-        """後面的票填了新格(例:期間)但還沒寫模板:記「無模板」並指出是哪一格。"""
+        """後面的票填了新格(例:數量,票 09)但還沒寫模板:記「無模板」並指出是哪一格。"""
         structure = build_one(1, "甲", "①：このカードを破壊する。")
-        segment(structure)["duration"] = "本回合"
+        segment(structure)["amount"] = {"text": "１０００LP"}
         self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
-                         [("無模板", "格 duration 無模板")])
+                         [("無模板", "格 amount 無模板")])
 
-    def test_targeting_line_has_no_template_yet(self):
+    def test_targeting_flag_does_not_change_the_rendered_text(self):
+        """取對象只是對象線上的旗標(票 08):字面在取對象宣言段,效果段的模板不另寫。"""
         structure = build_one(1, "甲", "①：このカードを破壊する。")
         segment(structure)["lines"][0]["targeting"] = True
-        self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
-                         [("無模板", "取對象線無模板")])
+        self.assertEqual(check_card(structure), [])
 
     def test_predicate_literal_must_agree_with_action_and_polarity(self):
         """述語字面與動作詞/態/極性對不上(結構內部矛盾):不通過,不照字面放行。"""

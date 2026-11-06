@@ -124,7 +124,12 @@ python -X utf8 script/action_structure/build_report.py
 
 # 反向檢查:結構套句型模板產生日文,與原文比對 → .scratch/action-structure/report/reverse_check.md
 python -X utf8 script/action_structure/build_reverse_check.py
+
+# 區塊邊界比對:舊式無編號卡的切法對共識集(stats/boundary_consensus.json)→ .scratch/action-structure/report/block_boundaries.md
+python -X utf8 script/action_structure/build_block_boundaries.py
 ```
+
+舊式無編號卡的區塊邊界由規則切,站主判過的寫進 `data/block_boundaries.json`(邊界補丁,一卡一筆、只記官方日文的區塊子字串與雜湊),規則先讀補丁、卡文變動整筆失效。
 
 產物一卡一行、不含時間(時間與來源雜湊只印在報告),同一份輸入兩次建置逐位元組相同。
 覆蓋報告與反向檢查報告同樣不寫時間、排序固定,重建結構後重跑即刷新;覆蓋報告在產物張數與卡片總表不符時以非 0 結束、不寫檔。

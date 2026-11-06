@@ -1,21 +1,30 @@
 """段抽取:一個區塊的原文 → 段(扁平)+ 段樹 + 物件(寫進整卡共用的物件表)。
 
 規則是句型層級的,不針對任何一張卡:
-- 句子以「。」切;「その後、」開頭的句子與前一句連接為「先後」。
+- 句子以「。」切;「その後、」開頭的句子與前一句連接為「先後」;區塊開頭的「また、」是接著詞。
 - 發動句(…発動できる / …発動する):
     (條件子句)(時|場合|際)(に)、(代價子句)て  → 條件段 + 代價段
   條件段帶觸發形;代價子句以て形結尾才算代價。
-- 其他句子是效果段;極性由述語語尾判(できる → 可以、できない → 不能…)。
-- 簡單子句:[誰が][從から][物件を]述語。述語字面經同義表收成動作詞,語尾決定態與極性。
+- 舊式的「(條件子句)(時|場合|際)、(效果子句)」(沒有発動できる)→ 條件段 + 效果段。
+- 其他句子是效果段;極性由述語語尾判(できない → 不能…);「〜できる」「〜事ができる」是
+  可選的效果(可選格 `optional`,極性仍是做,查詢預設算命中;票 08 再分辨永續的「可以」)。
+- 簡單子句:[誰が][從から|從の][物件](を|が|は)[數量][原因][形式][到に]述語。
+  述語字面經同義表收成動作詞,語尾決定態與極性;て形串接的多個述語(めくられて墓地へ送られた)
+  是多個動作詞。從/到保留含助詞的原文字面(`text`:「墓地の」「自分のデッキの上から」「デッキの一番下に」),
+  反向檢查據此還原(の/から、に/へ 是字面的選擇,結構上都是明寫的從/到)。
+- 存在前提:「(容器)の中に(物件)が(あった|ある|存在する)」→ 條件段,物件是容器的子集。
 - 物件:このカード = 物件0;その/それらの モンスター|カード 指回本區塊最近的同大類物件
-  (從條件段指回來的不標取對象);其餘是新建物件,頭名詞給大類、數量給數量,
-  前面的修飾語先整段標「解析不出」(票 04 起逐步填)。
-- 位置:處理完一段把「到」寫回物件目前位置;「從」沒寫先繼承目前位置,
+  (從條件段指回來的不標取對象;回指字面記在對象線 `ref`);「めくったカード」這類動作回指
+  也指回;助詞後的數量(「を全て」「を２枚まで」)記在對象線 `count`,屬於這次提及;「残りのX」是
+  剩餘物件(容器 − 最近的子集);其餘是新建物件,頭名詞給大類、數量給數量,修飾語能解析的
+  (種族、等級、屬性)進條件式,解析不出的整段標「解析不出」(票 04 起逐步填)。
+- 位置:處理完一段把「到」寫回物件目前位置;「從」沒寫先繼承目前位置(沒動過就是初始位置),
   再查推得表;推得值與繼承自推得值的標 inferred,查詢開關開才算。
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
 """
 import re
 
+from attribute_words import ATTRIBUTE_JA, RACE_JA
 from structure_shape import (new_line, new_object, new_segment, position,
                              segment_node, unparsed, zone)
 
@@ -28,21 +37,31 @@ PREDICATE_STEMS = (
     ("除外", "除外", "除外"),
     ("墓地へ送", "送墓", "墓地"),
     ("手札に加え", "加入手牌", "手牌"),
+    ("めく", "翻開", None),
+    ("戻", "返回", None),
 )
-# 述語語尾 → (態, 極性)。語尾不在表內的述語標「述語語尾不明」,不猜。
+# 動作回指(「めくったカード」「特殊召喚したモンスター」)用的過去形。
+ACTION_PAST = {"翻開": "めくった", "特殊召喚": "特殊召喚した", "破壞": "破壊した",
+               "除外": "除外した", "送墓": "墓地へ送った", "捨棄": "捨てた",
+               "解放": "リリースした", "加入手牌": "手札に加えた", "返回": "戻した"}
+# 述語語尾 → (態, 極性[, 可選])。語尾不在表內的述語標「述語語尾不明」,不猜。
 TAILS = {
     "": ("主動", "做"), "る": ("主動", "做"), "する": ("主動", "做"),
     "した": ("主動", "做"), "し": ("主動", "做"), "して": ("主動", "做"),
-    "て": ("主動", "做"),
+    "て": ("主動", "做"), "った": ("主動", "做"), "す": ("主動", "做"),
     "される": ("被動", "做"), "された": ("被動", "做"), "され": ("被動", "做"),
     "されて": ("被動", "做"),
     "られる": ("被動", "做"), "られた": ("被動", "做"), "られ": ("被動", "做"),
     "られて": ("被動", "做"),
-    "できる": ("主動", "可以"), "できない": ("主動", "不能"),
-    "できず": ("主動", "不能"),
+    "に成功した": ("被動", "做"), "に成功する": ("被動", "做"),
+    "できる": ("主動", "做", True), "る事ができる": ("主動", "做", True),
+    "する事ができる": ("主動", "做", True), "事ができる": ("主動", "做", True),
+    "できない": ("主動", "不能"), "できず": ("主動", "不能"),
+    "する事ができない": ("主動", "不能"), "る事ができない": ("主動", "不能"),
     "しない": ("主動", "不會"), "されない": ("被動", "不會"),
     "られない": ("被動", "不會"),
 }
+_TAILS_LONGEST_FIRST = sorted(TAILS, key=len, reverse=True)
 # 推得表:動作詞 → (沒寫「從」時的出發地, 沒寫「到」時的終點)。
 INFERENCE_TABLE = {
     "破壞": ("場上", "墓地"),
@@ -50,46 +69,91 @@ INFERENCE_TABLE = {
     "捨棄": ("手牌", "墓地"),
     "特殊召喚": (None, "場上"),
 }
-# 區域字面(長的在前,EXデッキ 不能被 デッキ 先吃掉)。
-ZONE_WORDS = (("EXデッキ", "額外牌組"), ("デッキ", "牌組"), ("手札", "手牌"),
+# 區域字面(長的在前,EXデッキ 不能被 デッキ 先吃掉;同一區域多個字面時後者是反向檢查的預設寫法)。
+ZONE_WORDS = (("EXデッキ", "額外牌組"), ("デッキの一番下", "牌組底"),
+              ("デッキの一番上", "牌組頂"), ("デッキの上", "牌組頂"),
+              ("デッキ", "牌組"), ("手札", "手牌"),
               ("フィールド", "場上"), ("墓地", "墓地"))
 HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠カード": "陷阱",
                  "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
 SIDE_WORDS = {"自分": "我方", "相手": "對手"}
+# 原因:種類 → 允許的字面(反向檢查只認這些)。
+CAUSE_TEXTS = {"效果": ("カードの効果によって", "効果によって", "カードの効果で", "効果で"),
+               "戰鬥": ("戦闘によって", "戦闘で")}
+EXIST_WORDS = ("あった", "ある", "存在する", "存在した")
 FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
 
+_ZONE_PHRASE = ("(?:(?:自分|相手)の?)?(?:" + "|".join(w for w, _ in ZONE_WORDS) + ")"
+                "(?:・(?:" + "|".join(w for w, _ in ZONE_WORDS) + "))*")
 _ACTIVATION_RE = re.compile("^(?P<body>.*?)(?P<suffix>発動できる|発動する)$")
 _TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)に?、?(?P<rest>.*)$")
+# 舊式的條件句:觸發形後一定有「、」才算,免得「終了時に」這類句中的時被當觸發。
+_OLD_TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)(?:に)?、(?P<rest>.+)$")
 _CLAUSE_RE = re.compile(
-    "^(?:(?P<agent>自分|相手)が)?(?:(?P<from>[^を]+?)から)?"
-    "(?P<objects>[^を]+?)を(?P<pred>[^を]+)$")
+    "^(?:(?P<agent>自分|相手)(?:が|は))?"
+    f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>から|の))?"
+    "(?P<objects>.+?)(?P<marker>を|が|は)"
+    "(?P<count>[０-９]+(?:体|枚)(?:まで)?|全て)?"
+    "(?P<cause>(?:カードの効果|効果|戦闘)(?:によって|で))?"
+    "(?P<form>好きな順番で)?"
+    f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
+    "(?P<pred>.+)$")
+_EXIST_RE = re.compile(
+    "^(?P<container>.+?)の中に(?P<objects>.+?)が(?P<pred>" + "|".join(EXIST_WORDS) + ")$")
 _FROM_RE = re.compile("^(?:(?P<side>自分|相手)の?)?(?P<zones>.+)$")
 _SELF_RE = re.compile("^このカード$")
-_REF_RE = re.compile("^(?:その|それらの)(?P<head>モンスター|カード)$")
+_REF_RE = re.compile("^(?P<ref>その|それらの)(?P<head>モンスター|カード)$")
+_REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
+_ACTION_REF_RE = re.compile("^(?P<past>.+?)(?P<head>モンスター|カード)$")
 _NOUN_RE = re.compile(
     "^(?P<mods>.*?)(?P<head>モンスター|魔法・罠カード|魔法カード|罠カード|カード)"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
+_LEVEL_RE = re.compile("^レベル(?P<n>[０-９]+)$")
 
 REASON_PREDICATE = "述語解析不出"
 REASON_TAIL = "述語語尾不明"
 REASON_CLAUSE = "子句解析不出"
 REASON_FROM = "從解析不出"
+REASON_TO = "到解析不出"
 REASON_OBJECT = "物件解析不出"
 REASON_MODS = "物件修飾解析不出"
 REASON_REF = "指回的物件找不到"
 REASON_ACTIVATION = "發動句解析不出"
+REASON_CAUSE = "原因解析不出"
 
 
 def parse_predicate(pred):
-    """述語字面 → (動作詞, 態, 極性, 寫明的終點) 或 (None, 原因)。"""
+    """述語字面 → (動作詞, 態, 極性, 寫明的終點, 可選) 或 (None, 原因)。"""
     for stem, action, to in PREDICATE_STEMS:
         if pred.startswith(stem):
             tail = pred[len(stem):]
             if tail not in TAILS:
                 return None, REASON_TAIL
-            voice, polarity = TAILS[tail]
-            return (action, voice, polarity, to), None
+            voice, polarity, *optional = TAILS[tail]
+            return (action, voice, polarity, to, bool(optional and optional[0])), None
     return None, REASON_PREDICATE
+
+
+def parse_predicates(pred):
+    """て形串接的述語字面(めくられて墓地へ送られた)→ [parse_predicate 的結果] 或 (None, 原因)。
+    單一述語也走這裡;串接時前面的語尾必須以て/で收尾。"""
+    parsed, reason = parse_predicate(pred)
+    if parsed is not None:
+        return [parsed], None
+    for stem, action, to in PREDICATE_STEMS:
+        if not pred.startswith(stem):
+            continue
+        rest = pred[len(stem):]
+        for tail in _TAILS_LONGEST_FIRST:
+            if tail and tail.endswith(("て", "で")) and rest.startswith(tail) \
+                    and len(rest) > len(tail):
+                following, reason = parse_predicates(rest[len(tail):])
+                if following is not None:
+                    voice, polarity, *optional = TAILS[tail]
+                    head = (action, voice, polarity, to, bool(optional and optional[0]))
+                    return [head] + following, None
+        return None, REASON_TAIL
+    return None, reason
 
 
 def parse_from(phrase):
@@ -118,6 +182,15 @@ def parse_count(m):
             "unit": m.group("unit"), "cmp": "≤" if m.group("upto") else "="}
 
 
+def floating_count(text):
+    """助詞後的數量(「カードを２枚まで」「それらのモンスターを全て」),記在對象線上。"""
+    if text == "全て":
+        return {"text": text, "cmp": "全部"}
+    m = re.match("^(?P<count>(?P<digits>[０-９]+)(?P<unit>体|枚)(?P<upto>まで)?)$", text)
+    return {"text": text, "value": int(m.group("digits").translate(FULLWIDTH_DIGITS)),
+            "unit": m.group("unit"), "cmp": "≤" if m.group("upto") else "="}
+
+
 def category_condition(head):
     value = HEAD_CATEGORY[head]
     if isinstance(value, tuple):
@@ -125,8 +198,33 @@ def category_condition(head):
     return {"op": "大類", "value": value}
 
 
+# ── 條件式:修飾語(票 10 只填種族、等級、屬性;票 04 的卡名、字段另加) ──
+def parse_modifier(part):
+    """一截修飾語 → 屬性比較原子;認不得回 None。"""
+    if part in RACE_JA:
+        return {"op": "屬性比較", "attr": "種族", "cmp": "=", "value": part}
+    if part.endswith("属性") and part[:-2] in ATTRIBUTE_JA:
+        return {"op": "屬性比較", "attr": "屬性", "cmp": "=", "value": part[:-2]}
+    m = _LEVEL_RE.match(part)
+    if m:
+        return {"op": "屬性比較", "attr": "等級", "cmp": "=",
+                "value": int(m.group("n").translate(FULLWIDTH_DIGITS))}
+    return None
+
+
+def parse_modifiers(mods):
+    """「植物族・レベル１」→ [原子…];任何一截認不得就整段回 None(物件標解析不出)。"""
+    atoms = []
+    for part in mods.split("・"):
+        atom = parse_modifier(part)
+        if atom is None:
+            return None
+        atoms.append(atom)
+    return atoms
+
+
 def split_objects(phrase):
-    """以「と」切物件,但「」裡的と不算(「X」と名のついた 是字段寫法,票 04)。"""
+    """以「と」切物件,但「」裡のと不算(「X」と名のついた 是字段寫法,票 04)。"""
     parts, depth, buf = [], 0, ""
     for ch in phrase:
         if ch == "「":
@@ -152,44 +250,107 @@ class BlockState:
         self.recent = []      # 本區塊建立或引用過的物件 id(其後者優先)
         self.targeted = set()  # 「を対象として」點名的物件(票 08 填)
 
-    def object_at(self, phrase, sentence_start):
-        """物件短語 → (物件 id, 由條件段指回來的?) 或 (None, 原因)。"""
-        if _SELF_RE.match(phrase):
-            return "o0", None
-        ref = _REF_RE.match(phrase)
-        if ref:
-            want = HEAD_CATEGORY[ref.group("head")]
-            for obj_id in reversed(self.recent):
-                obj = self.find(obj_id)
-                if want == "卡" or _category_of(obj["condition"]) == want:
-                    return obj_id, None
-            return None, REASON_REF
-        m = _NOUN_RE.match(phrase)
-        if not m:
-            return None, REASON_OBJECT
-        text = self.block["text"]
-        offset = text.find(phrase, sentence_start)
-        if offset < 0:
-            offset = sentence_start
-        obj = new_object(f"{self.block['id']}.o{offset}", {"kind": "新建"},
-                         text=phrase, span=(offset, offset + len(phrase)),
-                         block=self.block["id"],
-                         condition=category_condition(m.group("head")),
-                         count=parse_count(m))
-        if m.group("mods"):
-            obj["condition"] = {"op": "且", "args": [
-                obj["condition"],
-                {"op": "解析不出", "text": m.group("mods")}]}
-            obj["unparsed"] = unparsed(REASON_MODS)
-        self.card["objects"].append(obj)
-        self.recent.append(obj["id"])
-        return obj["id"], None
-
     def find(self, obj_id):
         for obj in self.card["objects"]:
             if obj["id"] == obj_id:
                 return obj
         return None
+
+    def current_position(self, obj_id):
+        """物件目前位置:動過就是最後的「到」,沒動過就是初始位置;都沒有回 None。"""
+        if obj_id in self.positions:
+            return self.positions[obj_id]
+        obj = self.find(obj_id)
+        if obj and obj["initial_position"]:
+            return {"zones": list(obj["initial_position"]), "inferred": False}
+        return None
+
+    def recent_of(self, head):
+        want = HEAD_CATEGORY[head]
+        for obj_id in reversed(self.recent):
+            obj = self.find(obj_id)
+            if want == "卡" or _category_of(obj["condition"]) == want:
+                return obj_id
+        return None
+
+    def add_object(self, obj):
+        self.card["objects"].append(obj)
+        self.recent.append(obj["id"])
+        return obj["id"]
+
+    def _offset(self, phrase, sentence_start):
+        offset = self.block["text"].find(phrase, sentence_start)
+        return offset if offset >= 0 else sentence_start
+
+    def object_at(self, phrase, sentence_start):
+        """物件短語 → (物件 id, 回指字面, 原因);回指字面 None = 本段首次出現。"""
+        if _SELF_RE.match(phrase):
+            return "o0", None, None
+        ref = _REF_RE.match(phrase)
+        if ref:
+            obj_id = self.recent_of(ref.group("head"))
+            return obj_id, phrase, (None if obj_id else REASON_REF)
+        remainder = _REMAINDER_RE.match(phrase)
+        if remainder:
+            return self.remainder_object(phrase, remainder.group("head"),
+                                         sentence_start)
+        action_ref = _ACTION_REF_RE.match(phrase)
+        if action_ref and action_ref.group("past") in ACTION_PAST.values():
+            obj_id = self.recent_of(action_ref.group("head"))
+            return obj_id, phrase, (None if obj_id else REASON_REF)
+        return self.new_object(phrase, sentence_start, {"kind": "新建"})
+
+    def new_object(self, phrase, sentence_start, source, initial_position=None):
+        m = _NOUN_RE.match(phrase)
+        if not m:
+            return None, None, REASON_OBJECT
+        offset = self._offset(phrase, sentence_start)
+        obj = new_object(f"{self.block['id']}.o{offset}", source,
+                         text=phrase, span=(offset, offset + len(phrase)),
+                         block=self.block["id"],
+                         condition=category_condition(m.group("head")),
+                         count=parse_count(m), initial_position=initial_position)
+        if m.group("mods"):
+            atoms = parse_modifiers(m.group("mods"))
+            if atoms is None:
+                obj["condition"] = {"op": "且", "args": [
+                    obj["condition"],
+                    {"op": "解析不出", "text": m.group("mods")}]}
+                obj["unparsed"] = unparsed(REASON_MODS)
+            else:
+                obj["condition"] = {"op": "且", "args": [obj["condition"]] + atoms}
+        return self.add_object(obj), None, None
+
+    # ── 物件來源:子集、剩餘(票 10;集中在這裡,票 04 不動) ──
+    def subset_object(self, phrase, container_id, sentence_start):
+        """容器的子集:條件是子集自己的條件,初始位置繼承容器目前位置;
+        來源的 select(全部/選)、chooser、random 有值才寫(產物省略空格)。"""
+        current = self.current_position(container_id)
+        obj_id, _, reason = self.new_object(
+            phrase, sentence_start,
+            {"kind": "子集", "of": container_id},
+            initial_position=current["zones"] if current else None)
+        return obj_id, None, reason
+
+    def remainder_object(self, phrase, head, sentence_start):
+        """「残りのX」= 最近的子集的容器 − 那個子集;子集是「全部」時剩餘 = 容器條件且非子集條件。"""
+        subset = next((self.find(i) for i in reversed(self.recent)
+                       if self.find(i)["source"]["kind"] == "子集"), None)
+        if subset is None:
+            return None, None, REASON_REF
+        container = self.find(subset["source"]["of"])
+        current = self.current_position(container["id"])
+        condition = container["condition"]
+        if subset["source"].get("select") == "全部":
+            condition = {"op": "且", "args": [condition,
+                                              {"op": "非", "arg": subset["condition"]}]}
+        offset = self._offset(phrase, sentence_start)
+        obj = new_object(f"{self.block['id']}.o{offset}",
+                         {"kind": "剩餘", "of": container["id"], "minus": subset["id"]},
+                         text=phrase, span=(offset, offset + len(phrase)),
+                         block=self.block["id"], condition=condition,
+                         initial_position=current["zones"] if current else None)
+        return self.add_object(obj), None, None
 
 
 def _category_of(condition):
@@ -205,54 +366,106 @@ def _category_of(condition):
     return None
 
 
+def _fill_existence(seg, m, state, sentence_start):
+    """存在前提:「(容器)の中に(物件)があった」→ 容器回指線 + 子集物件。"""
+    container_id, ref, reason = state.object_at(m.group("container"), sentence_start)
+    if container_id is None:
+        seg["unparsed"] = unparsed(reason)
+        return
+    subset_id, _, reason = state.subset_object(m.group("objects"), container_id,
+                                               sentence_start)
+    if subset_id is None:
+        seg["unparsed"] = unparsed(reason)
+        return
+    seg["predicate"] = m.group("pred")
+    seg["lines"] = [new_line(container_id, "受事", ref=ref),
+                    new_line(subset_id, "受事")]
+    seg["premise"] = {"op": "存在", "object": subset_id, "in": container_id}
+
+
 def _fill_clause(seg, clause_text, kind, state, sentence_start):
     """把簡單子句解析進段;失敗就在段上標原因。"""
+    exist = _EXIST_RE.match(clause_text)
+    if exist:
+        _fill_existence(seg, exist, state, sentence_start)
+        return
     m = _CLAUSE_RE.match(clause_text)
     if not m:
         seg["unparsed"] = unparsed(REASON_CLAUSE)
         return
-    parsed, reason = parse_predicate(m.group("pred"))
-    seg["predicate"] = m.group("pred")
+    pred, to_phrase = m.group("pred"), m.group("to")
+    parsed = None
+    if to_phrase:
+        # 「墓地へ送る」「手札に加える」的到在述語裡:先試整串當述語。
+        parsed, _ = parse_predicates(to_phrase + m.group("to_particle") + pred)
+        if parsed is not None:
+            pred, to_phrase = to_phrase + m.group("to_particle") + pred, None
+    if parsed is None:
+        parsed, reason = parse_predicates(pred)
+    seg["predicate"] = pred
     if parsed is None:
         seg["unparsed"] = unparsed(reason)
         return
-    action, voice, polarity, written_to = parsed
-    seg["actions"] = [action]
-    seg["voice"] = voice
-    seg["polarity"] = polarity
+    seg["actions"] = [p[0] for p in parsed]
+    voices = {p[1] for p in parsed}
+    seg["voice"] = voices.pop() if len(voices) == 1 else "混合"
+    seg["polarity"] = parsed[-1][2]
+    seg["optional"] = True if any(p[4] for p in parsed) else None
+    written_to = next((p[3] for p in reversed(parsed) if p[3]), None)
     agent = SIDE_WORDS.get(m.group("agent")) if m.group("agent") else None
     seg["agent"] = agent
+    if m.group("cause"):
+        kind_of = "戰鬥" if m.group("cause").startswith("戦闘") else "效果"
+        seg["cause"] = {"kind": kind_of, "text": m.group("cause")}
     from_zones = None
     if m.group("from"):
         from_zones = parse_from(m.group("from"))
         if from_zones is None:
             seg["unparsed"] = unparsed(REASON_FROM)
             return
-    inferred_from, inferred_to = INFERENCE_TABLE.get(action, (None, None))
+    to_zones = None
+    if to_phrase:
+        to_zones = parse_from(to_phrase)
+        if to_zones is None:
+            seg["unparsed"] = unparsed(REASON_TO)
+            return
+    inferred_from, inferred_to = (None, None)
+    if len(parsed) == 1:
+        inferred_from, inferred_to = INFERENCE_TABLE.get(seg["actions"][0], (None, None))
     # 推得的場上/墓地歸誰:特殊召喚到施事者的場上;其餘不知道就不標方。
-    inferred_side = (agent or "我方") if action == "特殊召喚" else None
+    inferred_side = (agent or "我方") if "特殊召喚" in seg["actions"] else None
+    count = floating_count(m.group("count")) if m.group("count") else None
     for phrase in split_objects(m.group("objects")):
-        obj_id, reason = state.object_at(phrase, sentence_start)
+        obj_id, ref, reason = state.object_at(phrase, sentence_start)
         if obj_id is None:
             seg["unparsed"] = unparsed(reason)
             return
-        role = "被召喚" if action == "特殊召喚" else "受事"
+        obj = state.find(obj_id)
+        if count is not None and count["cmp"] == "全部" and obj["source"]["kind"] == "子集":
+            obj["source"]["select"] = "全部"
+        role = "被召喚" if "特殊召喚" in seg["actions"] else "受事"
         line = new_line(obj_id, role,
-                        targeting=(kind == "效果" and obj_id in state.targeted))
+                        targeting=(kind == "效果" and obj_id in state.targeted),
+                        marker=m.group("marker"), ref=ref, count=count)
         if from_zones is not None:
-            line["from"] = position(from_zones, "明寫")
-            obj = state.find(obj_id)
+            line["from"] = position(from_zones, "明寫",
+                                    text=m.group("from") + m.group("from_particle"))
             if obj["source"]["kind"] == "新建" and obj["initial_position"] is None:
                 obj["initial_position"] = list(from_zones)
-        elif obj_id in state.positions:
-            current = state.positions[obj_id]
-            line["from"] = position(current["zones"], "繼承",
-                                    inferred=current["inferred"])
-        elif inferred_from:
-            side = "我方" if inferred_from == "手牌" else None
-            line["from"] = position([zone(inferred_from, side)], "推得",
-                                    inferred=True)
-        if written_to:
+        else:
+            current = state.current_position(obj_id)
+            if current is not None:
+                line["from"] = position(current["zones"], "繼承",
+                                        inferred=current["inferred"])
+            elif inferred_from:
+                side = "我方" if inferred_from == "手牌" else None
+                line["from"] = position([zone(inferred_from, side)], "推得",
+                                        inferred=True)
+        if to_zones is not None:
+            line["to"] = position(to_zones, "明寫",
+                                  text=to_phrase + m.group("to_particle"),
+                                  form=m.group("form"))
+        elif written_to:
             line["to"] = position([zone(written_to, None)], "明寫")
         elif inferred_to:
             line["to"] = position([zone(inferred_to, inferred_side)], "推得",
@@ -299,28 +512,41 @@ def _sentences(text, body_start):
     return spans
 
 
+def _condition_and_rest(state, start, body, trig, segs):
+    """觸發子句 → 條件段;回傳 (剩下的子句, 它的起點)。"""
+    cond_end = start + len(trig.group("cond"))
+    seg = _segment(state, "條件", start, cond_end + len(trig.group("trig")))
+    seg["trigger"] = trig.group("trig")
+    _fill_clause(seg, trig.group("cond"), "條件", state, start)
+    segs.append(seg)
+    rest = trig.group("rest")
+    return rest, start + body.rfind(rest) if rest else None
+
+
 def _parse_sentence(state, start, end):
-    """一句 → 段列表(發動句可產生條件段 + 代價段)。"""
+    """一句 → 段列表(發動句可產生條件段 + 代價段;舊式條件句產生條件段 + 效果段)。"""
     text = state.block["text"]
     sent = text[start:end]
     act = _ACTIVATION_RE.match(sent)
     if not act:
+        trig = _OLD_TRIGGER_RE.match(sent)
+        if trig:
+            segs = []
+            rest, rest_start = _condition_and_rest(state, start, sent, trig, segs)
+            seg = _segment(state, "效果", rest_start, rest_start + len(rest))
+            _fill_clause(seg, rest, "效果", state, rest_start)
+            segs.append(seg)
+            return segs
         seg = _segment(state, "效果", start, end)
         _fill_clause(seg, sent, "效果", state, start)
         return [seg]
     body = act.group("body")
     segs = []
     trig = _TRIGGER_RE.match(body)
-    rest = body
+    rest, rest_start = body, start
     if trig:
-        cond_end = start + len(trig.group("cond"))
-        seg = _segment(state, "條件", start, cond_end + len(trig.group("trig")))
-        seg["trigger"] = trig.group("trig")
-        _fill_clause(seg, trig.group("cond"), "條件", state, start)
-        segs.append(seg)
-        rest = trig.group("rest")
+        rest, rest_start = _condition_and_rest(state, start, body, trig, segs)
     if rest:
-        rest_start = start + body.rfind(rest)
         seg = _segment(state, "代價", rest_start, rest_start + len(rest))
         if rest.endswith(("て", "で")):
             _fill_clause(seg, rest, "代價", state, rest_start)
@@ -334,6 +560,8 @@ def extract_block(block, card):
     """就地把段、段樹寫進 block,物件寫進 card["objects"]。"""
     state = BlockState(block, card)
     body_start = 2 if block["label"] else 0  # 「①：」兩個字元
+    if block["text"].startswith("また、", body_start):
+        body_start += 3  # 區塊開頭的接著詞
     join = None
     for start, end in _sentences(block["text"], body_start):
         if block["text"].startswith("その後、", start):

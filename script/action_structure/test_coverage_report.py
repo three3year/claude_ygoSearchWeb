@@ -66,7 +66,9 @@ class BuildCoverageTest(unittest.TestCase):
         for name, cell in fields.items():
             self.assertEqual(cell["filled"] + cell["empty"] + cell["unparsed"],
                              parsed, name)
-        self.assertEqual(fields["actions"]["filled"], parsed)
+        # 存在前提的條件段(「めくったカードの中に植物族モンスターがあった場合」)沒有動作詞,留空。
+        self.assertEqual(fields["actions"]["filled"] + fields["actions"]["empty"], parsed)
+        self.assertEqual(fields["actions"]["unparsed"], 0)
         self.assertEqual(fields["trigger"]["filled"],
                          self.coverage["segments"]["by_kind"]["條件"]["parsed"])
 

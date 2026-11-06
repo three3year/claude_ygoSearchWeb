@@ -265,10 +265,10 @@ def _split_old_style(text, source, kind_fixed, prefix, supplement, patch,
         if pieces:
             groups = []
             for s, e in pieces:
-                units = _units(text[s:e])
-                kinds = [classify_unit(text[s + us:s + ue], i == 0,
-                                       None if i == 0 else kinds[-1])
-                         for i, (us, ue) in enumerate(units)]
+                kinds, previous = [], None
+                for i, (us, ue) in enumerate(_units(text[s:e])):
+                    previous = classify_unit(text[s + us:s + ue], i == 0, previous)
+                    kinds.append(previous)
                 groups.append([min(kinds, key=_PRIORITY.index), s, e])
             return _emit_groups(text, groups, source, prefix, kind_fixed)
     units = _units(text)

@@ -30,6 +30,7 @@
 """
 import json
 
+from attribute_words import ATTRIBUTE_JA, RACE_JA
 from segment_extract import PREDICATE_STEMS
 from structure_shape import ZONE_PARENT, iter_segments
 
@@ -84,6 +85,29 @@ def eval_condition(condition, entry):
         if condition["value"] == "卡":
             return True
         return bool(entry["type"] & CATEGORY_BITS[condition["value"]])
+    if op == "屬性比較":
+        return compare_attribute(condition, entry)
+    return None
+
+
+_COMPARATORS = {"=": lambda a, b: a == b, "≥": lambda a, b: a >= b,
+                "≤": lambda a, b: a <= b, ">": lambda a, b: a > b,
+                "<": lambda a, b: a < b}
+
+
+def compare_attribute(condition, entry):
+    """屬性比較原子(種族、屬性、等級)對一張卡;魔陷沒有種族等級,判 False。"""
+    attr, cmp, value = condition["attr"], condition["cmp"], condition["value"]
+    if not entry["type"] & CATEGORY_BITS["怪獸"]:
+        return False
+    if attr == "種族":
+        return cmp == "=" and bool(entry["race"] & RACE_JA.get(value, 0))
+    if attr == "屬性":
+        return cmp == "=" and bool(entry["attribute"] & ATTRIBUTE_JA.get(value, 0))
+    if attr == "等級":
+        if entry["level"] is None or cmp not in _COMPARATORS:
+            return None
+        return _COMPARATORS[cmp](entry["level"], value)
     return None
 
 

@@ -148,6 +148,9 @@ class ReportTest(unittest.TestCase):
     def test_report_counts_and_lists_every_card_per_reason(self):
         cards, entries = self.library()
         structures, _ = build_structures(cards, entries)
+        # 戊 的「自分の手札から」照字面還原會通過;拿掉字面,模板只能由區域拼回,製造字面不符。
+        wu = next(c for c in structures if c["id"] == 5)
+        wu["blocks"][0]["segments"][0]["lines"][0]["from"]["text"] = None
         md = render_report(check_structures(structures))
         self.assertIn("| 段 | 8 |", md)
         self.assertIn("| 通過 | 4 |", md)
@@ -194,7 +197,7 @@ class CliTest(unittest.TestCase):
                 second = f.read()
             self.assertEqual(first, second)
             self.assertNotIn(b"\r\n", first)
-            self.assertIn("| 不通過 | 4 |".encode("utf-8"), first)
+            self.assertIn("| 不通過 | 3 |".encode("utf-8"), first)
 
 
 if __name__ == "__main__":

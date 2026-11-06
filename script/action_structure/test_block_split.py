@@ -195,12 +195,14 @@ class BoundaryPatchTest(unittest.TestCase):
     def test_patch_pieces_are_classified_like_rule_units(self):
         """補丁只記切點:切出的素材行、召喚條件句、次數限制照規則定種類。"""
         text = ("「A」＋「B」\nこのカードは融合召喚でしか特殊召喚できない。"
-                "Cを破壊する。この効果は１ターンに１度しか使用できない。")
+                "Cを破壊する。Dを除外する。この効果は１ターンに１度しか使用できない。")
         patch = self.patch(["「A」＋「B」", "このカードは融合召喚でしか特殊召喚できない。",
-                            "Cを破壊する。", "この効果は１ターンに１度しか使用できない。"],
+                            "Cを破壊する。Dを除外する。",
+                            "この効果は１ターンに１度しか使用できない。"],
                            text=text)
         blocks, omitted = split_blocks(text, boundary_patch={"card_text": patch})
         self.assertEqual([b["kind"] for b in blocks], ["素材", "召喚條件", "編號效果"])
+        self.assertEqual(blocks[2]["text"], "Cを破壊する。Dを除外する。")
         self.assertEqual([o["reason"] for o in omitted], ["次數限制"])
 
     def test_stale_hash_invalidates_whole_record(self):

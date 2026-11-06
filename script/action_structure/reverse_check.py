@@ -18,7 +18,9 @@
 """
 import re
 
-from segment_extract import HEAD_CATEGORY, SIDE_WORDS, ZONE_WORDS, parse_predicate
+from segment_extract import (ACTION_PAST, CAUSE_TEXTS, EXIST_WORDS, HEAD_CATEGORY,
+                             SIDE_WORDS, ZONE_WORDS, parse_from, parse_predicates)
+from segment_extract import _ACTION_REF_RE, _REF_RE  # 回指字面的句型,與抽取端同一把尺
 from structure_shape import iter_segments
 
 REASON_NO_TEMPLATE = "無模板"
@@ -27,10 +29,11 @@ REASON_RESIDUE = "段外殘留"
 
 # 簡單子句模板會寫的格;其餘格一有值就是「無模板」。
 TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "polarity",
-                  "trigger", "span", "text", "predicate", "voice", "unparsed"}
+                  "trigger", "span", "text", "predicate", "voice", "unparsed",
+                  "optional", "cause", "premise"}
 TEMPLATE_KINDS = ("條件", "代價", "效果")
-# 區塊裡不屬於任何段的固定接著詞:發動句語尾、先後連接。去掉標點後只能剩這些。
-GLUE = ("発動できる", "発動する", "その後")
+# 區塊裡不屬於任何段的固定接著詞:發動句語尾、先後連接、區塊開頭的「また」。去掉標點後只能剩這些。
+GLUE = ("発動できる", "発動する", "その後", "また")
 _GLUE_RE = re.compile("|".join(GLUE))
 _PUNCT_RE = re.compile("[。、\n ]")
 _WS_RE = re.compile(r"[\s　]+")
@@ -53,8 +56,21 @@ class NoTemplate(Exception):
 
 
 # ── 模板 ─────────────────────────────────────────────────────
+def _render_atom(atom):
+    """屬性比較原子 → 修飾語字面(種族名、「レベル１」、「光属性」)。"""
+    if atom.get("op") != "屬性比較" or atom.get("cmp") != "=":
+        raise NoTemplate(f"物件條件無模板:{atom.get('op')}")
+    if atom["attr"] == "種族":
+        return atom["value"]
+    if atom["attr"] == "屬性":
+        return atom["value"] + "属性"
+    if atom["attr"] == "等級":
+        return "レベル" + str(atom["value"]).translate(_TO_FULLWIDTH_DIGITS)
+    raise NoTemplate(f"屬性比較無模板:{atom['attr']}")
+
+
 def _render_condition(condition):
-    """條件式 → 頭名詞;目前只有大類(與 魔法・罠 的或)有模板。"""
+    """條件式 → [修飾語・…]頭名詞;大類(與 魔法・罠 的或)是頭名詞,屬性比較原子照順序是修飾語。"""
     if condition is None:
         raise NoTemplate("物件條件無模板:空")
     op = condition.get("op")
@@ -65,6 +81,11 @@ def _render_condition(condition):
                        if a.get("op") == "大類")
         if len(values) == len(condition["args"]) and values in _HEAD_TEXT:
             return _HEAD_TEXT[values]
+    if op == "且":
+        heads = [a for a in condition["args"] if a.get("op") in ("大類", "或")]
+        mods = [a for a in condition["args"] if a.get("op") not in ("大類", "或")]
+        if len(heads) == 1:
+            return "・".join(_render_atom(a) for a in mods) + _render_condition(heads[0])
     if op == "解析不出":
         raise NoTemplate("物件條件無模板:解析不出")
     raise NoTemplate(f"物件條件無模板:{op}")
@@ -73,6 +94,8 @@ def _render_condition(condition):
 def _render_count(count):
     if not count:
         return ""
+    if count.get("cmp") == "全部":
+        return "全て"
     if count.get("cmp") not in ("=", "≤") or not count.get("unit"):
         raise NoTemplate("物件數量無模板")
     # 官方卡文的數字是全形,照它寫(正規化時兩邊都會折成半形,這裡只為報告好讀)。
@@ -80,22 +103,105 @@ def _render_count(count):
     return f"{digits}{count['unit']}{'まで' if count['cmp'] == '≤' else ''}"
 
 
-def _render_object(obj, seg):
+def _head_of(obj):
+    """回指時的頭名詞:條件式裡第一個大類(剩餘物件的條件帶「非」,不能整個條件式去拼)。"""
+    return "モンスター" if _first_category(obj["condition"]) == "怪獸" else "カード"
+
+
+def _first_category(condition):
+    if not condition:
+        return None
+    if condition.get("op") == "大類":
+        return condition["value"]
+    if condition.get("op") == "且":
+        for arg in condition["args"]:
+            found = _first_category(arg)
+            if found:
+                return found
+    return None
+
+
+def _last_action_on(obj_id, seg, card):
+    """同一區塊裡、這一段之前最後一個作用在該物件上的動作詞(動作回指「めくったカード」用)。"""
+    block_id = seg["id"].split(".")[0]
+    for block in card["blocks"]:
+        if block["id"] != block_id:
+            continue
+        found = None
+        for other in block["segments"]:
+            if other["id"] == seg["id"]:
+                break
+            if other["actions"] and any(l["object"] == obj_id for l in other["lines"]):
+                found = other["actions"][-1]
+        return found
+    return None
+
+
+def _render_object(obj, seg, card, line=None, with_count=True):
     """物件在這一段的字面:物件0 是このカード;本段首次出現的寫全名(條件+數量);
-    別段建立、本段指回的寫 その+頭名詞(抽取端 _REF_RE 只認 モンスター|カード)。"""
+    回指的照對象線的回指字面(驗過句型);剩餘物件寫 残りの+頭名詞。
+    助詞後的數量在對象線上,由呼叫端接在助詞後。"""
     if obj["source"]["kind"] == "自己":
         return "このカード"
-    if obj["source"]["kind"] != "新建":
-        raise NoTemplate(f"物件來源無模板:{obj['source']['kind']}")
     if obj["unparsed"]:
         raise NoTemplate(f"物件無模板:{obj['unparsed']['reason']}")
+    ref = line["ref"] if line else None
+    if ref is not None:
+        return _render_ref(ref, obj, seg, card)
+    kind = obj["source"]["kind"]
+    if kind == "剩餘":
+        return "残りの" + _head_of(obj)
+    if kind not in ("新建", "子集"):
+        raise NoTemplate(f"物件來源無模板:{kind}")
     start, end = seg["span"]
     defined_here = (obj["span"] and obj["block"] == seg["id"].split(".")[0]
                     and start <= obj["span"][0] and obj["span"][1] <= end)
-    if defined_here:
-        return _render_condition(obj["condition"]) + _render_count(obj["count"])
-    head = _render_condition(obj["condition"])
-    return "その" + ("モンスター" if head == "モンスター" else "カード")
+    if not defined_here:
+        return "その" + _head_of(obj)
+    text = _render_condition(obj["condition"])
+    if with_count and obj["count"]:
+        text += _render_count(obj["count"])
+    return text
+
+
+_POSITION_PARTICLES = ("から", "の", "に", "へ")
+
+
+def _render_ref(ref, obj, seg, card):
+    """回指字面:その/それらの+頭名詞照字面;動作回指(「めくったカード」)的動詞必須是
+    這一段之前最後一個作用在該物件上的動作詞的過去形。"""
+    if _REF_RE.match(ref):
+        return ref
+    m = _ACTION_REF_RE.match(ref)
+    if m and m.group("past") in ACTION_PAST.values():
+        action = _last_action_on(obj["id"], seg, card)
+        if ACTION_PAST.get(action) != m.group("past"):
+            raise NoTemplate("動作回指與先前的動作不符")
+        return ref
+    raise NoTemplate(f"回指字面無模板:{ref}")
+
+
+def _render_zone_text(pos, particle):
+    """明寫的從/到:有含助詞的原文字面且與區域一致就照字面寫;否則由區域拼回、接上預設助詞。"""
+    zones = pos["zones"]
+    text = pos.get("text")
+    if text:
+        phrase = next((text[:-len(p)] for p in _POSITION_PARTICLES
+                       if text.endswith(p)), None)
+        if phrase is None or parse_from(phrase) != zones:
+            raise NoTemplate("從/到的字面與區域不一致")
+        return text
+    sides = {z["side"] for z in zones}
+    if len(sides) != 1:
+        raise NoTemplate("從的區域分屬兩方")
+    side = sides.pop()
+    # 抽取端沒寫「自分の」也歸我方,這裡只有對手寫得出字面;「自分の〜から」的卡會以
+    # 字面不符列出,留給位置那張票決定要不要記「方是否明寫」。
+    prefix = "相手の" if side == "對手" else ""
+    try:
+        return prefix + "・".join(_ZONE_TEXT[z["zone"]] for z in zones) + particle
+    except KeyError as e:
+        raise NoTemplate(f"區域無模板:{e.args[0]}") from None
 
 
 def _render_from(lines):
@@ -106,32 +212,64 @@ def _render_from(lines):
         return ""
     if len(written) != len(lines) or any(w != written[0] for w in written):
         raise NoTemplate("對象線的從不一致")
-    zones = written[0]["zones"]
-    sides = {z["side"] for z in zones}
-    if len(sides) != 1:
-        raise NoTemplate("從的區域分屬兩方")
-    side = sides.pop()
-    # 抽取端沒寫「自分の」也歸我方,這裡只有對手寫得出字面;「自分の〜から」的卡會以
-    # 字面不符列出,留給位置那張票決定要不要記「方是否明寫」。
-    prefix = "相手の" if side == "對手" else ""
-    try:
-        return prefix + "・".join(_ZONE_TEXT[z["zone"]] for z in zones) + "から"
-    except KeyError as e:
-        raise NoTemplate(f"區域無模板:{e.args[0]}") from None
+    return _render_zone_text(written[0], "から")
+
+
+def _render_to(lines, predicate_to):
+    """明寫、不在述語裡的「到」(「デッキの一番下に」),可帶放置形式(「好きな順番で」)。"""
+    written = [line["to"] for line in lines
+               if line["to"] and line["to"]["source"] == "明寫"]
+    if not written or predicate_to:
+        if any(w.get("form") for w in written):
+            raise NoTemplate("到的形式無模板")
+        return ""
+    if len(written) != len(lines) or any(w != written[0] for w in written):
+        raise NoTemplate("對象線的到不一致")
+    return (written[0].get("form") or "") + _render_zone_text(written[0], "に")
 
 
 def _render_predicate(seg):
-    if len(seg["actions"]) != 1 or not seg["predicate"]:
-        raise NoTemplate("多動作詞無模板" if seg["actions"] else "段無動作詞")
-    parsed, _ = parse_predicate(seg["predicate"])
-    if parsed is None or parsed[:3] != (seg["actions"][0], seg["voice"],
-                                       seg["polarity"]):
+    """述語字面必須能拆回段的動作詞、態、極性(多動作詞是て形串接)。回傳 (字面, 述語寫明的終點)。"""
+    if not seg["actions"] or not seg["predicate"]:
+        raise NoTemplate("段無動作詞")
+    parsed, _ = parse_predicates(seg["predicate"])
+    if parsed is None or [p[0] for p in parsed] != seg["actions"]:
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
-    return seg["predicate"]
+    voices = {p[1] for p in parsed}
+    voice = voices.pop() if len(voices) == 1 else "混合"
+    optional = True if any(p[4] for p in parsed) else None
+    if (voice, parsed[-1][2], optional) != (seg["voice"], seg["polarity"], seg["optional"]):
+        raise NoTemplate("述語字面與動作詞、態、極性不一致")
+    return seg["predicate"], next((p[3] for p in parsed if p[3]), None)
+
+
+def _render_cause(cause):
+    if not cause:
+        return ""
+    if cause.get("text") not in CAUSE_TEXTS.get(cause.get("kind"), ()):
+        raise NoTemplate(f"原因無模板:{cause.get('kind')}")
+    return cause["text"]
+
+
+def _render_existence(seg, card, objects):
+    """存在前提:「(容器回指)の中に(子集全名)が(あった)」。"""
+    premise = seg["premise"]
+    if premise.get("op") != "存在" or seg["actions"] or seg["kind"] != "條件":
+        raise NoTemplate(f"前提無模板:{premise.get('op')}")
+    if seg["predicate"] not in EXIST_WORDS:
+        raise NoTemplate("存在述語無模板")
+    container = next((l for l in seg["lines"] if l["object"] == premise.get("in")), None)
+    if container is None or premise.get("object") not in objects:
+        raise NoTemplate("存在前提缺容器或子集")
+    inner = objects[premise["object"]]
+    return (_render_object(objects[container["object"]], seg, card, container)
+            + "の中に" + _render_object(inner, seg, card, with_count=False)
+            + "が" + seg["predicate"])
 
 
 def render_segment(seg, card):
-    """簡單子句模板:[誰が][從から][物件を]述語[觸發形]。回傳日文;寫不出就丟 NoTemplate。"""
+    """簡單子句模板:[誰が][從から|の][物件][助詞][數量][原因][形式][到に]述語[觸發形];
+    存在前提另有模板。回傳日文;寫不出就丟 NoTemplate。"""
     if seg["unparsed"]:
         raise NoTemplate(f"段未解析:{seg['unparsed']['reason']}")
     if seg["kind"] not in TEMPLATE_KINDS:
@@ -142,26 +280,38 @@ def render_segment(seg, card):
     if not seg["lines"]:
         raise NoTemplate("段無對象線")
     objects = {o["id"]: o for o in card["objects"]}
-    parts = []
-    if seg["agent"] is not None:
-        if seg["agent"] not in _SIDE_TEXT:
-            raise NoTemplate(f"誰無模板:{seg['agent']}")
-        parts.append(_SIDE_TEXT[seg["agent"]] + "が")
-    parts.append(_render_from(seg["lines"]))
-    words = []
-    for line in seg["lines"]:
-        if line["targeting"]:
-            raise NoTemplate("取對象線無模板")
-        if line["role"] not in ("受事", "被召喚"):
-            raise NoTemplate(f"角色無模板:{line['role']}")
-        words.append(_render_object(objects[line["object"]], seg))
-    parts.append("と".join(words) + "を")
-    parts.append(_render_predicate(seg))
+    if seg["premise"]:
+        text = _render_existence(seg, card, objects)
+    else:
+        parts = []
+        if seg["agent"] is not None:
+            if seg["agent"] not in _SIDE_TEXT:
+                raise NoTemplate(f"誰無模板:{seg['agent']}")
+            parts.append(_SIDE_TEXT[seg["agent"]] + "が")
+        parts.append(_render_from(seg["lines"]))
+        words, markers, counts = [], set(), set()
+        for line in seg["lines"]:
+            if line["targeting"]:
+                raise NoTemplate("取對象線無模板")
+            if line["role"] not in ("受事", "被召喚"):
+                raise NoTemplate(f"角色無模板:{line['role']}")
+            words.append(_render_object(objects[line["object"]], seg, card, line))
+            markers.add(line["marker"] or "を")
+            counts.add(_render_count(line["count"]))
+        if len(markers) != 1 or len(counts) != 1:
+            raise NoTemplate("對象線的助詞或數量不一致")
+        parts.append("と".join(words) + markers.pop())
+        parts.append(counts.pop())
+        parts.append(_render_cause(seg["cause"]))
+        predicate, predicate_to = _render_predicate(seg)
+        parts.append(_render_to(seg["lines"], predicate_to))
+        parts.append(predicate)
+        text = "".join(parts)
     if seg["kind"] == "條件":
         if not seg["trigger"]:
             raise NoTemplate("條件段無觸發形")
-        parts.append(seg["trigger"])
-    return "".join(parts)
+        text += seg["trigger"]
+    return text
 
 
 # ── 檢查 ─────────────────────────────────────────────────────

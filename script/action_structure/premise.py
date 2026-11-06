@@ -18,6 +18,9 @@
   `{"op": "本回合發生過", "segment": 段id}`;要用到它的卡(滅びの黒魔術師的召喚條件)
   在那張票補句型與模板。
 
+位置/存在原子的區域照方的來源還原;區域字面不是預設寫法(舊式「フィールド上」,票 11)時
+原子另帶 `text`(區域短語原文,不含「に」),模板照它寫。
+
 多個前提依字面順序組成「且」。接縫是 `split_premises(body, state, start)`:回傳
 (前提條件式, 前提字面結束偏移, 子句開始偏移);沒有前提回 (None, start, start)。
 `render_premise` 是反向檢查的模板,只從原子的格產生日文。
@@ -77,10 +80,11 @@ def parse_game_state(text):
     return atom, m.end()
 
 
-def split_premises(body, state, start, parse_zones):
+def split_premises(body, state, start, parse_zones, zone_literal=lambda phrase: None):
     """發動句主體開頭的前提 → (條件式或 None, 前提字面結束偏移, 子句開始偏移)。
     `state` 是 segment_extract.BlockState(要寫位置、建物件);`parse_zones` 是區域短語
-    的解析函式(「自分の手札・フィールド」→ 區域列表,認不得回 None)。
+    的解析函式(「自分の手札・フィールド」→ 區域列表,認不得回 None);`zone_literal` 回傳
+    區域短語要不要留原文字面(不是預設寫法時回該短語,否則 None)。
     偏移相對於區塊原文,`start` 是 body 在區塊裡的位置。"""
     atoms = []
     pos = 0
@@ -89,7 +93,8 @@ def split_premises(body, state, start, parse_zones):
         rest = body[pos:]
         atom, length = parse_game_state(rest)
         if atom is None:
-            atom, length = _parse_existence(rest, state, parse_zones, start + pos)
+            atom, length = _parse_existence(rest, state, parse_zones, zone_literal,
+                                            start + pos)
         if atom is None:
             break
         atoms.append(atom)
@@ -103,7 +108,7 @@ def split_premises(body, state, start, parse_zones):
     return premise, text_end, start + pos
 
 
-def _parse_existence(text, state, parse_zones, offset):
+def _parse_existence(text, state, parse_zones, zone_literal, offset):
     for pattern, first in ((_OBJECT_FIRST_RE, "物件"), (_ZONE_FIRST_RE, "區域")):
         m = pattern.match(text)
         if not m:
@@ -120,12 +125,11 @@ def _parse_existence(text, state, parse_zones, offset):
         else:
             atom = {"op": "存在", "object": obj_id, "zones": zones,
                     "form": m.group("form"), "order": first}
-            if m.group("neg"):
-                atom = {"op": "非", "arg": atom}
-        # 區域短語的字面(「自分のフィールドか墓地」:「か」與「・」都是列舉),模板照它還原;
-        # 解析時驗過與 zones 一致。
-        atom_body = atom["arg"] if atom["op"] == "非" else atom
-        atom_body["text"] = m.group("zones")
+        literal = zone_literal(m.group("zones"))
+        if literal is not None:
+            atom["text"] = literal
+        if m.group("neg"):
+            atom = {"op": "非", "arg": atom}
         if not m.group("neg"):
             obj = state.find(obj_id)
             if obj["source"]["kind"] == "新建" and obj["initial_position"] is None:
@@ -179,7 +183,8 @@ def render_game_state(atom, last):
 
 def render_premise(premise, render_zones, render_object, followed=True):
     """前提條件式 → 日文。`render_zones(區域列表, 原文字面或 None) → 字面`、
-    `render_object(物件id) → 字面` 由反向檢查提供(位置與物件的字面規則在那裡,前提只負責排列)。
+    `render_object(物件id) → 字面`
+    由反向檢查提供(位置與物件的字面規則在那裡,前提只負責排列)。
     位置/存在原子後面接讀點(`、`)——除非它是最後一個且後面沒有子句(`followed`);
     遊戲狀態原子照它的 form(「に」或「に、」)寫,同樣的例外。"""
     atoms = premise["args"] if premise.get("op") == "且" else [premise]

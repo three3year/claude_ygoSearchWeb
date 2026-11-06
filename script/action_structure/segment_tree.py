@@ -12,8 +12,8 @@
   那個方式的分歧,● 列舉共用。「存在しない場合」省略了物件與區域,對回前一個前提的存在原子
   (原子標 `elided`,模板只寫「存在しない場合」)。引導句認不得時分歧的方式標解析不出
   (節點帶 `unparsed`),引導句仍照一般句子解析。
-- 每支各一份位置(`fork_state`):物件目前位置、本區塊提過的物件、取對象集合都從分歧前的狀態
-  複製,支走完取各支聯集(沒動過的支算分歧前的位置)。
+- 每支各一份位置(`fork_state`):物件目前位置、本區塊提過的物件、被取對象的物件列都從分歧前的
+  狀態複製,支走完取各支聯集(沒動過的支算分歧前的位置)。
 - 內嵌效果:「Xは以下の効果を得る」→ 內嵌效果節點,綁定 自己 = X 的物件,內容是一個區塊
   (● 列舉成「各自可以」的分歧);區塊內「このカード」指 X。區塊 id `<區塊id>e<偏移>`,
   段與物件 id 照它的 text 算偏移。
@@ -25,7 +25,8 @@
 import re
 
 from premise import NoPremiseTemplate, render_premise, split_premises
-from segment_extract import BlockState, parse_from, parse_sentence, sentences
+from segment_extract import (BlockState, parse_from, parse_sentence, sentences,
+                             zone_literal)
 from structure_shape import (branch_node, embedded_node, new_block, segment_node,
                              unparsed)
 
@@ -144,19 +145,19 @@ def fork_state(state, runs):
     """分歧時每支各一份位置:每個 run 從分歧前的狀態出發,走完把位置取聯集、提過的物件與
     取對象集合合併。回傳各 run 的結果列表。"""
     base_positions = {k: dict(v) for k, v in state.positions.items()}
-    base_recent, base_targeted = list(state.recent), set(state.targeted)
+    base_recent, base_targeted = list(state.recent), list(state.targeted)
     base_acted = {k: list(v) for k, v in state.acted.items()}
     results, branch_positions = [], []
-    added_recent, targeted, acted = [], set(base_targeted), {}
+    added_recent, targeted, acted = [], list(base_targeted), {}
     for run in runs:
         state.positions = {k: dict(v) for k, v in base_positions.items()}
-        state.recent, state.targeted = list(base_recent), set(base_targeted)
+        state.recent, state.targeted = list(base_recent), list(base_targeted)
         state.acted = {k: list(v) for k, v in base_acted.items()}
         results.append(run())
         branch_positions.append(state.positions)
         added_recent.extend(i for i in state.recent
                             if i not in base_recent and i not in added_recent)
-        targeted |= state.targeted
+        targeted.extend(i for i in state.targeted if i not in targeted)
         for obj_id, actions in state.acted.items():
             known = acted.setdefault(obj_id, [])
             known.extend([a for a in actions if a not in known])
@@ -239,7 +240,8 @@ def _header_premise(state, pre, start, previous):
         elided = {k: v for k, v in atom.items() if k != "order"}
         elided["elided"] = True
         return {"op": "非", "arg": elided}
-    premise, _, clause_start = split_premises(pre, state, start, parse_from)
+    premise, _, clause_start = split_premises(pre, state, start, parse_from,
+                                              zone_literal)
     if premise is None or clause_start != start + len(pre):
         return None
     return premise

@@ -444,5 +444,211 @@ class WhiteForestLisetteTest(unittest.TestCase):
         self.assertEqual(check_card(structure), [])
 
 
+FALLEN_VIRTUOUS = 30271097  # The Fallen ＆ The Virtuous
+FALLEN_VIRTUOUS_TEXT = (
+    "このカード名はルール上「烙印」カード、「ドラグマ」カードとしても扱う。\n"
+    "このカード名のカードは１ターンに１枚しか発動できない。\n"
+    "①：以下の効果から１つを選択して発動できる。\n"
+    "●EXデッキから「アルバスの落胤」のカード名が記されたモンスター１体を墓地へ送り、"
+    "フィールドの表側表示カード１枚を対象として発動できる。そのカードを破壊する。\n"
+    "●自分のフィールドか墓地に「エクレシア」モンスターが存在する場合、"
+    "自分か相手の墓地のモンスター１体を対象として発動できる。"
+    "そのモンスターを自分フィールドに特殊召喚する。")
+ALBAZ = 68468459            # アルバスの落胤(setcode 0x15d 烙印)
+MIRRORJADE = 44146295       # 氷剣竜ミラージェイド:卡文記載「アルバスの落胤」的融合怪獸(測試文本)
+MIRRORJADE_TEXT = (
+    "「アルバスの落胤」＋モンスター１体\n"
+    "①：相手フィールドのモンスター１体を対象として発動できる。そのモンスターを除外する。")
+BRANCH_ARCHETYPES = ARCHETYPES + [
+    {"setcode": 0x15d, "hex": "0x15d", "names_ja": ["烙印"], "name_zh": "烙印",
+     "source": "strings.conf"},
+    {"setcode": 0x145, "hex": "0x145", "names_ja": ["ドラグマ"], "name_zh": "教導",
+     "source": "strings.conf"},
+    {"setcode": 0x157, "hex": "0x157", "names_ja": ["エクレシア"], "name_zh": "教會",
+     "source": "strings.conf"},
+    {"setcode": 0x29, "hex": "0x29", "names_ja": ["ドラグニティ"], "name_zh": "龍盟",
+     "source": "strings.conf"},
+]
+
+
+class FallenVirtuousTest(unittest.TestCase):
+    """The Fallen ＆ The Virtuous 30271097(票 06):● 列舉是「選1」分歧,兩支各自查得到;
+    「〜墓地へ送り、〜を対象として発動できる」是同時連接的兩個子句。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(FALLEN_VIRTUOUS, name_ja="The Fallen ＆ The Virtuous",
+                 type=0x10002, setcode=0x145015d),
+            card(ALBAZ, name_ja="アルバスの落胤", level=4, race=0x2000,
+                 attribute=0x20, atk=1800, setcode=0x15d),
+            card(MIRRORJADE, name_ja="氷剣竜ミラージェイド", type=0x61, level=8,
+                 race=0x2000, attribute=0x20, atk=3000, setcode=0x15d),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20, atk=2500),
+            card(GREEDY_POT, name_ja="強欲な壺", type=SPELL),
+        ]
+        cls.faq = [faq(FALLEN_VIRTUOUS, "The Fallen ＆ The Virtuous",
+                       FALLEN_VIRTUOUS_TEXT),
+                   faq(MIRRORJADE, "氷剣竜ミラージェイド", MIRRORJADE_TEXT)]
+        cls.structures, cls.report = build_structures(
+            cls.cards, cls.faq, archetypes=BRANCH_ARCHETYPES)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_first_option_sends_albaz_mentioning_monster_from_extra_to_graveyard(self):
+        """第一支「EXデッキから「アルバスの落胤」のカード名が記されたモンスター１体を墓地へ送り」:
+        卡文記載「アルバスの落胤」的 ミラージェイド 代入命中「額外牌組 → 墓地 送墓」;
+        黑魔導(卡文不記載)不命中;強欲な壺(魔法)不命中。"""
+        self.assertIn(FALLEN_VIRTUOUS,
+                      self.hits(actions=["送墓"], from_zones=["額外牌組"],
+                                to_zones=["墓地"], card=MIRRORJADE))
+        self.assertNotIn(FALLEN_VIRTUOUS,
+                         self.hits(actions=["送墓"], from_zones=["額外牌組"],
+                                   card=BLACK_MAGICIAN))
+        self.assertNotIn(FALLEN_VIRTUOUS,
+                         self.hits(actions=["送墓"], card=GREEDY_POT))
+
+    def test_first_option_destroys_targeted_face_up_card_on_field(self):
+        """「そのカードを破壊する」指回取對象的「フィールドの表側表示カード１枚」:
+        查「取對象 場上 → 破壞」命中(從場上是明寫的,推得關也命中),任何卡都代得進去。"""
+        self.assertIn(FALLEN_VIRTUOUS,
+                      self.hits(actions=["破壞"], targeting=True,
+                                from_zones=["場上"]))
+        self.assertIn(FALLEN_VIRTUOUS,
+                      self.hits(actions=["破壞"], targeting=True,
+                                from_zones=["場上"], card=GREEDY_POT))
+
+    def test_second_option_special_summons_targeted_monster_from_graveyard(self):
+        """第二支「自分か相手の墓地のモンスター１体を対象として…そのモンスターを自分フィールドに
+        特殊召喚する」:查「取對象 墓地 → 特殊召喚」命中、到=自分フィールド 是明寫的;
+        黑魔導代入命中,魔法卡不符。"""
+        self.assertIn(FALLEN_VIRTUOUS,
+                      self.hits(actions=["特殊召喚"], targeting=True,
+                                from_zones=["墓地"], card=BLACK_MAGICIAN))
+        self.assertIn(FALLEN_VIRTUOUS,
+                      self.hits(actions=["特殊召喚"], targeting=True,
+                                from_zones=["墓地"],
+                                to_zones=[{"zone": "場上", "side": "我方"}],
+                                card=BLACK_MAGICIAN))
+        self.assertNotIn(FALLEN_VIRTUOUS,
+                         self.hits(actions=["特殊召喚"], card=GREEDY_POT))
+
+    def test_branches_do_not_leak_positions_into_each_other(self):
+        """分歧每支各一份位置:第一支送墓的怪獸不會讓第二支的特殊召喚從額外牌組出發,
+        第二支的墓地也不會讓第一支的破壞從墓地出發。"""
+        self.assertNotIn(FALLEN_VIRTUOUS,
+                         self.hits(actions=["特殊召喚"], from_zones=["額外牌組"],
+                                   card=BLACK_MAGICIAN))
+        self.assertNotIn(FALLEN_VIRTUOUS,
+                         self.hits(actions=["破壞"], from_zones=["墓地"]))
+
+    def test_unrelated_actions_do_not_hit(self):
+        self.assertNotIn(FALLEN_VIRTUOUS, self.hits(actions=["捨棄"]))
+        self.assertNotIn(FALLEN_VIRTUOUS, self.hits(actions=["除外"]))
+        self.assertNotIn(FALLEN_VIRTUOUS, self.hits(actions=["加入手牌"]))
+
+    def test_whole_card_passes_reverse_check(self):
+        structure = next(c for c in self.structures
+                         if c["id"] == FALLEN_VIRTUOUS)
+        self.assertEqual(check_card(structure), [])
+
+
+KAMIKAZE_DRAGUNITY = 7917970  # 神風のドラグニティ
+KAMIKAZE_DRAGUNITY_TEXT = (
+    "このカード名の①の効果は１ターンに１度しか使用できない。\n"
+    "①：自分メインフェイズに発動できる。自分の墓地に「竜の渓谷」が存在する場合、"
+    "以下の効果をそれぞれ適用できる。存在しない場合、以下の効果から１つを選んで適用する。\n"
+    "●自分の墓地からドラゴン族・鳥獣族モンスター１体を手札に加える。\n"
+    "●手札から「ドラグニティ」モンスター１体を特殊召喚する。その後、デッキから"
+    "ドラゴン族の「ドラグニティ」モンスター１体を装備魔法カード扱いで、"
+    "この効果で特殊召喚したモンスターに装備できる。")
+DRAGON_RAVINE = 74822425     # 竜の渓谷(場地魔法,setcode 0x29)
+DRAGUNITY_DUX = 76445440     # ドラグニティ－ドゥクス:鳥獣族・風屬性的「ドラグニティ」
+DRAGUNITY_PHALANX = 60645181  # ドラグニティ－ファランクス:ドラゴン族的「ドラグニティ」
+
+
+class KamikazeDragunityTest(unittest.TestCase):
+    """神風のドラグニティ 7917970(票 06):「依前提」分歧——墓地有「竜の渓谷」時各自可以、
+    沒有時選 1;兩支的段各自查得到;「その後」是先後連接。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(KAMIKAZE_DRAGUNITY, name_ja="神風のドラグニティ", type=0x80002,
+                 setcode=0x29),
+            card(DRAGON_RAVINE, name_ja="竜の渓谷", type=0x80002, setcode=0x29),
+            card(DRAGUNITY_DUX, name_ja="ドラグニティ－ドゥクス", level=4,
+                 race=0x200, attribute=0x4, atk=1500, setcode=0x29),
+            card(DRAGUNITY_PHALANX, name_ja="ドラグニティ－ファランクス", level=2,
+                 race=0x2000, attribute=0x4, atk=500, setcode=0x29),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20, atk=2500),
+            card(GREEDY_POT, name_ja="強欲な壺", type=SPELL),
+        ]
+        cls.faq = [faq(KAMIKAZE_DRAGUNITY, "神風のドラグニティ",
+                       KAMIKAZE_DRAGUNITY_TEXT)]
+        cls.structures, cls.report = build_structures(
+            cls.cards, cls.faq, archetypes=BRANCH_ARCHETYPES)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_first_option_adds_dragon_or_winged_beast_from_graveyard_to_hand(self):
+        """第一支「自分の墓地からドラゴン族・鳥獣族モンスター１体を手札に加える」:
+        鳥獣族的 ドゥクス、ドラゴン族的 ファランクス 代入都命中「墓地 → 手牌」;
+        黑魔導(魔法使い族)不命中。"""
+        for cid in (DRAGUNITY_DUX, DRAGUNITY_PHALANX):
+            with self.subTest(card=cid):
+                self.assertIn(KAMIKAZE_DRAGUNITY,
+                              self.hits(actions=["加入手牌"], from_zones=["墓地"],
+                                        to_zones=["手牌"], card=cid))
+        self.assertNotIn(KAMIKAZE_DRAGUNITY,
+                         self.hits(actions=["加入手牌"], from_zones=["墓地"],
+                                   card=BLACK_MAGICIAN))
+
+    def test_second_option_special_summons_dragunity_from_hand(self):
+        """第二支「手札から「ドラグニティ」モンスター１体を特殊召喚する」:
+        ドゥクス(字段 ドラグニティ)代入命中「手牌 → 特殊召喚」;黑魔導不命中;
+        竜の渓谷(ドラグニティ 魔法卡)因大類不符。"""
+        self.assertIn(KAMIKAZE_DRAGUNITY,
+                      self.hits(actions=["特殊召喚"], from_zones=["手牌"],
+                                card=DRAGUNITY_DUX))
+        self.assertNotIn(KAMIKAZE_DRAGUNITY,
+                         self.hits(actions=["特殊召喚"], card=BLACK_MAGICIAN))
+        self.assertNotIn(KAMIKAZE_DRAGUNITY,
+                         self.hits(actions=["特殊召喚"], card=DRAGON_RAVINE))
+
+    def test_second_option_then_equips_dragon_dragunity_from_deck(self):
+        """「その後、デッキからドラゴン族の「ドラグニティ」モンスター１体を装備魔法カード扱いで、
+        この効果で特殊召喚したモンスターに装備できる」:ドラゴン族的 ファランクス 代入命中
+        「牌組 → 裝備」;鳥獣族的 ドゥクス 不命中。"""
+        self.assertIn(KAMIKAZE_DRAGUNITY,
+                      self.hits(actions=["裝備"], from_zones=["牌組"],
+                                card=DRAGUNITY_PHALANX))
+        self.assertNotIn(KAMIKAZE_DRAGUNITY,
+                         self.hits(actions=["裝備"], from_zones=["牌組"],
+                                   card=DRAGUNITY_DUX))
+
+    def test_branches_do_not_leak_positions_into_each_other(self):
+        """第一支把怪獸加入手牌後,第二支的特殊召喚不會因此從墓地出發。"""
+        self.assertNotIn(KAMIKAZE_DRAGUNITY,
+                         self.hits(actions=["特殊召喚"], from_zones=["墓地"],
+                                   card=DRAGUNITY_DUX))
+
+    def test_unrelated_actions_do_not_hit(self):
+        self.assertNotIn(KAMIKAZE_DRAGUNITY, self.hits(actions=["破壞"]))
+        self.assertNotIn(KAMIKAZE_DRAGUNITY, self.hits(actions=["除外"]))
+        self.assertNotIn(KAMIKAZE_DRAGUNITY, self.hits(actions=["送墓"]))
+
+    def test_whole_card_passes_reverse_check(self):
+        structure = next(c for c in self.structures
+                         if c["id"] == KAMIKAZE_DRAGUNITY)
+        self.assertEqual(check_card(structure), [])
+
+
 if __name__ == "__main__":
     unittest.main()

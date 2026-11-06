@@ -114,7 +114,7 @@ def _parse_existence(text, state, parse_zones, offset):
         obj_id, _, _ = state.object_at(m.group("obj"), offset)
         if obj_id is None:
             continue
-        if obj_id == "o0" and not m.group("neg"):
+        if obj_id == state.self_id and not m.group("neg"):
             atom = {"op": "位置", "object": obj_id, "zones": zones,
                     "form": m.group("form")}
         else:
@@ -122,6 +122,10 @@ def _parse_existence(text, state, parse_zones, offset):
                     "form": m.group("form"), "order": first}
             if m.group("neg"):
                 atom = {"op": "非", "arg": atom}
+        # 區域短語的字面(「自分のフィールドか墓地」:「か」與「・」都是列舉),模板照它還原;
+        # 解析時驗過與 zones 一致。
+        atom_body = atom["arg"] if atom["op"] == "非" else atom
+        atom_body["text"] = m.group("zones")
         if not m.group("neg"):
             obj = state.find(obj_id)
             if obj["source"]["kind"] == "新建" and obj["initial_position"] is None:
@@ -174,8 +178,8 @@ def render_game_state(atom, last):
 
 
 def render_premise(premise, render_zones, render_object, followed=True):
-    """前提條件式 → 日文。`render_zones(區域列表) → 字面`、`render_object(物件id) → 字面`
-    由反向檢查提供(位置與物件的字面規則在那裡,前提只負責排列)。
+    """前提條件式 → 日文。`render_zones(區域列表, 原文字面或 None) → 字面`、
+    `render_object(物件id) → 字面` 由反向檢查提供(位置與物件的字面規則在那裡,前提只負責排列)。
     位置/存在原子後面接讀點(`、`)——除非它是最後一個且後面沒有子句(`followed`);
     遊戲狀態原子照它的 form(「に」或「に、」)寫,同樣的例外。"""
     atoms = premise["args"] if premise.get("op") == "且" else [premise]
@@ -192,13 +196,19 @@ def render_premise(premise, render_zones, render_object, followed=True):
         if op not in ("位置", "存在"):
             raise NoPremiseTemplate(f"前提原子無模板:{op}")
         verb = "存在しない" if negated else "存在する"
+        if atom.get("form") not in ("場合", "状態で"):
+            raise NoPremiseTemplate("前提形式無模板")
+        if atom.get("elided"):
+            # 分歧引導句的「存在しない場合」:物件與區域承前省略(segment_tree)。
+            if not negated:
+                raise NoPremiseTemplate("省略的存在前提只能是否定")
+            pieces.append(verb + atom["form"] + ("" if last else "、"))
+            continue
         obj = render_object(atom["object"])
-        zones = render_zones(atom["zones"])
+        zones = render_zones(atom["zones"], atom.get("text"))
         if op == "位置" or atom.get("order") == "物件":
             text = f"{obj}が{zones}に{verb}{atom.get('form', '')}"
         else:
             text = f"{zones}に{obj}が{verb}{atom.get('form', '')}"
-        if atom.get("form") not in ("場合", "状態で"):
-            raise NoPremiseTemplate("前提形式無模板")
         pieces.append(text + ("" if last else "、"))
     return "".join(pieces)

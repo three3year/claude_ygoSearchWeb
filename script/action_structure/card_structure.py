@@ -36,8 +36,9 @@ import json
 from archetype_table import archetype_lookup, fold_width
 from block_split import split_blocks
 from names_attributes import (SOURCE_OFFICIAL_NAME, extract_names,
-                              extract_treat_as, fill_from_card_list)
-from segment_extract import extract_block
+                              extract_treat_as, fill_from_card_list,
+                              treat_as_sentences)
+from segment_tree import extract_block
 from structure_shape import (  # noqa: F401  形狀的詞與工廠從這裡再匯出
     ATTRIBUTE_TABLES, BLOCK_KINDS, BRANCH_MODES, JOINS, NO_OFFICIAL_TEXT,
     OBJECT_KINDS, OBJECT_SOURCES, POLARITIES, POSITION_SOURCES, ROLES,
@@ -71,10 +72,29 @@ def build_card(entry, faq_entry, lookups, boundary_patch=None, patch_status=None
                                    faq_entry.get("supplement"),
                                    boundary_patch, patch_status)
     card["omitted"] = omitted
+    treat_as = treat_as_sentences(texts)
     for block in blocks:
+        if _is_treat_as_block(block, treat_as):
+            # 整個區塊就是一句「〜として扱う」:已記進卡片屬性表,不是效果,進略過文本。
+            omitted.append({"source": block["source"], "span": block["span"],
+                            "text": block["text"], "reason": TREAT_AS_REASON})
+            continue
         extract_block(block, card, lookups)
         card["blocks"].append(block)
+    card["omitted"].sort(key=lambda item: (item["source"] != "card_text", item["span"][0]))
     return card
+
+
+TREAT_AS_REASON = "視為(卡片屬性表)"
+
+
+def _is_treat_as_block(block, treat_as):
+    """沒有編號、整段原文(扣句號)就是一句「〜として扱う」的區塊。"""
+    if block["label"] or not treat_as:
+        return False
+    text = block["text"].rstrip("。")
+    span = (block["span"][0], block["span"][0] + len(text))
+    return (block["source"], span) in treat_as
 
 
 def build_lookups(cards, faq_entries, archetypes):
@@ -230,7 +250,7 @@ def _hydrate_nodes(items):
         if node["node"] == "段":
             node = _hydrate(node, segment_node(node["segment"]))
         elif node["node"] == "分歧":
-            node = _hydrate(node, branch_node(node["mode"]))
+            node = _hydrate(node, branch_node(node.get("mode")))
             node["branches"] = [
                 {"premise": None, **branch,
                  "items": _hydrate_nodes(branch.get("items", []))}

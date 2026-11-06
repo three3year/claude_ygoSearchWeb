@@ -92,11 +92,13 @@ def build_coverage(structures):
         for row in card["names"]:
             if row.get("unparsed"):
                 unknown_names[row["text"]].add(cid)
+        counted = set()
         for block in card["blocks"]:
             _count_block(block, cid, block_kinds, block_reasons)
             for owner, seg in iter_segments(block):
-                if owner is not block:
-                    # 內嵌效果的區塊也各算一個區塊。
+                if owner is not block and owner["id"] not in counted:
+                    # 內嵌效果的區塊也各算一個區塊(一次)。
+                    counted.add(owner["id"])
                     _count_block(owner, cid, block_kinds, block_reasons)
                 kind = seg_kinds[seg["kind"]]
                 kind["count"] += 1

@@ -149,6 +149,17 @@ def extract_treat_as(card, texts, lookups):
                     _add_row(tables["name"], name, where, source, span, sent)
 
 
+def treat_as_sentences(texts):
+    """「〜として扱う」句的 (來源, 原文範圍) 集合:句型認得就算,不管名稱對不對得到
+    (卡片總表的 setcode 已含那個系列時列不會新增,但那句仍不是效果)。"""
+    found = set()
+    for source, text in texts:
+        for offset, sent in _sentences(text or ""):
+            if _TREAT_RE.match(sent):
+                found.add((source, (offset, offset + len(sent))))
+    return found
+
+
 def _add_row(table, value, where, source, span, sent):
     """同值同位置只記一列(卡片總表的 setcode 已含 cdb 寫進去的「ルール上」系列時不重複)。"""
     for row in table:

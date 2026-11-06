@@ -53,7 +53,7 @@ from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
-GENERIC_ATOMS = ("大類", "位置", "控制方")
+GENERIC_ATOMS = ("大類", "位置", "控制方", "表示形式")
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
                 "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000}
@@ -298,8 +298,8 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
         if condition["value"] == "卡":
             return True
         return bool(view.entry["type"] & CATEGORY_BITS[condition["value"]])
-    if op in ("位置", "控制方"):
-        # 位置與控制方不是卡的屬性:任何卡都代得進去(泛用原子)。
+    if op in ("位置", "控制方", "表示形式"):
+        # 位置、控制方與表示形式不是卡的屬性:任何卡都代得進去(泛用原子)。
         return True
     if op == "屬性比較":
         return compare_attr(condition, view.entry, binding)

@@ -30,6 +30,9 @@ SUBTYPE_LETTERS = (("融合", "融合"), ("儀式", "儀式"), ("S", "同步"), 
 _SUBTYPE = "|".join(letter for letter, _ in SUBTYPE_LETTERS)
 _ARCHETYPE_SUBTYPE_RE = re.compile(f"^「(?P<name>[^「」]+)」(?P<sub>{_SUBTYPE})$")
 _SUBTYPE_RE = re.compile(f"^(?P<sub>{_SUBTYPE})$")
+# 表示形式(表側、裏側是狀態,不是卡的屬性;spec「區域」):閉集,值就是字面。
+FACE_WORDS = ("表側攻撃表示", "表側守備表示", "裏側守備表示", "表側表示", "裏側表示")
+_FACE_RE = re.compile("^(?P<face>" + "|".join(FACE_WORDS) + ")")
 ATTR_WORDS = (("種族", "種族"), ("属性", "屬性"), ("レベル", "等級"), ("ランク", "階級"))
 _ATTR = "|".join(word for word, _ in ATTR_WORDS)
 _REF = "(?:見せた|その|それらの)(?:モンスター|カード)"
@@ -85,6 +88,9 @@ def parse_modifier(rest, state):
     m = _SUBTYPE_RE.match(rest)
     if m:
         return [_subtype_atom(m.group("sub"))], None, m.end()
+    m = _FACE_RE.match(rest)
+    if m:
+        return [{"op": "表示形式", "value": m.group("face")}], None, m.end()
     m = _SAME_AS_RE.match(rest)
     if m:
         obj_id = state.resolve_reference(m.group("ref"))
@@ -158,6 +164,8 @@ def render_atom(atom, names):
             return None
         side = zones[0].get("side")
         return (_SIDE_TEXT.get(side, "") if side else "") + _ZONE_TEXT[zones[0]["zone"]] + "の"
+    if op == "表示形式":
+        return atom.get("value") if atom.get("value") in FACE_WORDS else None
     if op == "屬性比較":
         return _render_compare([atom])
     if op == "或" and all(a.get("op") == "屬性比較" for a in atom.get("args", ())):

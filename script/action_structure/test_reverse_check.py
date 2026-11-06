@@ -74,11 +74,14 @@ class TemplateTest(unittest.TestCase):
         self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
                          [("無模板", "格 duration 無模板")])
 
-    def test_targeting_line_has_no_template_yet(self):
-        structure = build_one(1, "甲", "①：このカードを破壊する。")
-        segment(structure)["lines"][0]["targeting"] = True
-        self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
-                         [("無模板", "取對象線無模板")])
+    def test_targeting_clause_renders_as_object_wo_taishou_toshite(self):
+        """取對象子句「Xを対象として」(票 06):沒有動作詞的代價段,述語就是那個字面;
+        後文指回 X 的效果段對象線帶取對象標記,標記本身沒有字面。"""
+        structure = build_one(
+            1, "甲", "①：相手フィールドのモンスター１体を対象として発動できる。"
+                     "そのモンスターを破壊する。")
+        self.assertEqual(check_card(structure), [])
+        self.assertTrue(segment(structure, 0, 1)["lines"][0]["targeting"])
 
     def test_predicate_literal_must_agree_with_action_and_polarity(self):
         """述語字面與動作詞/態/極性對不上(結構內部矛盾):不通過,不照字面放行。"""

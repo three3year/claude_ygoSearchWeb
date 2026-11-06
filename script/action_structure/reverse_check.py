@@ -22,10 +22,11 @@ from attribute_atoms import is_param_atom, joiner, render_group
 from premise import NoPremiseTemplate, render_premise, split_premise
 from condition_atoms import render_atom
 from segment_extract import (ACTION_PAST, CAUSE_TEXTS, EXIST_WORDS, HEAD_CATEGORY,
-                             HEAD_SUBTYPE, SIDE_WORDS, ZONE_WORDS, parse_from,
-                             parse_predicates)
+                             HEAD_SUBTYPE, SIDE_WORDS, TARGET_WORD, ZONE_WORDS,
+                             parse_from, parse_predicates)
 from segment_extract import _ACTION_REF_RE, _REF_RE  # 回指字面的句型,與抽取端同一把尺
-from structure_shape import iter_segments
+from segment_tree import (NoTreeTemplate, embedded_bindings, render_premise_prefix,
+                          tree_glue)
 
 REASON_NO_TEMPLATE = "無模板"
 REASON_MISMATCH = "字面不符"
@@ -36,8 +37,9 @@ TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polar
                   "trigger", "span", "text", "predicate", "voice", "unparsed",
                   "optional", "cause", "premise"}
 TEMPLATE_KINDS = ("條件", "代價", "效果")
-# 區塊裡不屬於任何段的固定接著詞:發動句語尾、先後連接、區塊開頭的「また」。去掉標點後只能剩這些。
-GLUE = ("発動できる", "発動する", "その後", "また")
+# 區塊裡不屬於任何段的固定接著詞:發動句語尾、先後連接、區塊開頭的「また」、分歧的「●」。
+# 去掉標點與段樹引導句(tree_glue)後只能剩這些。
+GLUE = ("発動できる", "発動する", "その後", "また", "●")
 _GLUE_RE = re.compile("|".join(GLUE))
 _PUNCT_RE = re.compile("[。、\n ]")
 _WS_RE = re.compile(r"[\s　]+")
@@ -182,10 +184,29 @@ def _first_category(condition):
     return None
 
 
+def _all_blocks(card):
+    """區塊與內嵌效果的區塊。"""
+    stack = list(card["blocks"])
+    while stack:
+        block = stack.pop()
+        yield block
+        for node in _iter_nodes(block["tree"]["items"]):
+            if node.get("node") == "內嵌效果" and node.get("block"):
+                stack.append(node["block"])
+
+
+def _iter_nodes(items):
+    for node in items:
+        yield node
+        if node.get("node") == "分歧":
+            for branch in node["branches"]:
+                yield from _iter_nodes(branch["items"])
+
+
 def _last_action_on(obj_id, seg, card):
     """同一區塊裡、這一段之前最後一個作用在該物件上的動作詞(動作回指「めくったカード」用)。"""
     block_id = seg["id"].split(".")[0]
-    for block in card["blocks"]:
+    for block in _all_blocks(card):
         if block["id"] != block_id:
             continue
         found = None
@@ -198,11 +219,12 @@ def _last_action_on(obj_id, seg, card):
     return None
 
 
-def _render_object(obj, seg, card, names, line=None, with_count=True):
-    """物件在這一段的字面:物件0 是このカード;本段首次出現的寫全名(條件+數量);
-    回指的照對象線的回指字面(驗過句型);剩餘物件寫 残りの+頭名詞。
-    助詞後的數量在對象線上,由呼叫端接在助詞後。"""
-    if obj["source"]["kind"] == "自己":
+def _render_object(obj, seg, card, names, line=None, with_count=True, self_id="o0"):
+    """物件在這一段的字面:物件0(內嵌效果裡是綁定的物件)是このカード;本段首次出現的寫全名
+    (條件+數量);回指的照對象線的回指字面(驗過句型);剩餘物件寫 残りの+頭名詞。
+    助詞後的數量在對象線上,由呼叫端接在助詞後。`seg` 為 None 時是段樹引導句裡的物件,
+    一律寫全名。"""
+    if obj["source"]["kind"] == "自己" or obj["id"] == self_id:
         return "このカード"
     ref = line["ref"] if line else None
     if ref is not None:
@@ -214,9 +236,11 @@ def _render_object(obj, seg, card, names, line=None, with_count=True):
         return "残りの" + _head_of(obj)
     if kind not in ("新建", "子集"):
         raise NoTemplate(f"物件來源無模板:{kind}")
-    start, end = seg["span"]
-    defined_here = (obj["span"] and obj["block"] == seg["id"].split(".")[0]
-                    and start <= obj["span"][0] and obj["span"][1] <= end)
+    defined_here = seg is None
+    if seg is not None:
+        start, end = seg["span"]
+        defined_here = (obj["span"] and obj["block"] == seg["id"].split(".")[0]
+                        and start <= obj["span"][0] and obj["span"][1] <= end)
     if not defined_here:
         return "その" + _head_of(obj)
     text = _render_condition(obj["condition"], names)
@@ -255,11 +279,16 @@ def _render_zone_text(pos, particle):
     return _render_zones(zones) + particle
 
 
-def _render_zones(zones):
-    """區域列表 → 字面(沒有原文字面時用):方明寫才加「自分の/相手の」,只有一個區域且是
+def _render_zones(zones, text=None):
+    """區域列表 → 字面:有原文字面(前提的「自分のフィールドか墓地」)且與區域一致就照它寫;
+    否則由區域拼回:方明寫才加「自分の/相手の」,只有一個區域且是
     フィールド時不加「の」(「自分フィールド」「自分の手札・フィールド」「自分の墓地」是官方的
     寫法);明寫的方是整個列表共用的前綴,沒寫的(預設或沒有方)各區域可以不同
     (「手札・フィールド」:手牌預設我方、場上沒有方)。"""
+    if text:
+        if parse_from(text) != zones:
+            raise NoTemplate("從/到的字面與區域不一致")
+        return text
     written = {z["side"] for z in zones if z.get("side_source") == "明寫"}
     if len(written) > 1 or (written and any(
             z.get("side_source") != "明寫" for z in zones)):
@@ -298,6 +327,12 @@ def _render_to(lines, predicate_to):
     if not written or predicate_to:
         if any(w.get("form") for w in written):
             raise NoTemplate("到的形式無模板")
+        # 到是推得的但形式明寫(「装備魔法カード扱いで、〜に装備できる」):只寫形式。
+        forms = {line["to"].get("form") for line in lines if line["to"]}
+        if len(forms) == 1 and None not in forms:
+            return forms.pop(), "述語前"
+        if len(forms) > 1:
+            raise NoTemplate("對象線的到不一致")
         return "", "述語前"
     if len(written) != len(lines) or any(w != written[0] for w in written):
         raise NoTemplate("對象線的到不一致")
@@ -306,7 +341,12 @@ def _render_to(lines, predicate_to):
 
 
 def _render_predicate(seg):
-    """述語字面必須能拆回段的動作詞、態、極性(多動作詞是て形串接)。回傳 (字面, 述語寫明的終點)。"""
+    """述語字面必須能拆回段的動作詞、態、極性(多動作詞是て形串接)。回傳 (字面, 述語寫明的終點)。
+    取對象子句(「を対象として」)沒有動作詞,述語就是那個字面。"""
+    if seg["predicate"] == TARGET_WORD and not seg["actions"]:
+        if seg["voice"] or seg["polarity"] != "做" or seg["optional"]:
+            raise NoTemplate("取對象子句的態、極性無模板")
+        return TARGET_WORD, None
     if not seg["actions"] or not seg["predicate"]:
         raise NoTemplate("段無動作詞")
     parsed, _ = parse_predicates(seg["predicate"])
@@ -344,21 +384,35 @@ def _render_existence(seg, premise, card, objects):
             + "が" + seg["predicate"])
 
 
-def _render_leading_premise(leading, seg, card, objects, names, followed):
+def _render_leading_premise(leading, seg, card, objects, names, followed, self_id="o0"):
     """句首的前提(位置、存在、遊戲狀態)→ 字面;區域與物件的字面規則借這裡的。"""
     try:
         return render_premise(
             leading, _render_zones,
-            lambda obj_id: _render_object(objects[obj_id], seg, card, names),
+            lambda obj_id: _render_object(objects[obj_id], seg, card, names,
+                                          self_id=self_id),
             followed=followed)
     except NoPremiseTemplate as e:
         raise NoTemplate(str(e)) from None
 
 
-def render_segment(seg, card):
+def _render_recipient(recipient, seg, card, objects):
+    """受方:我方/對手寫「自分に/相手に」;物件的回指(裝備的對象)照回指字面。"""
+    if isinstance(recipient, dict):
+        obj = objects.get(recipient.get("object"))
+        if obj is None or not recipient.get("ref"):
+            raise NoTemplate("受方的物件找不到")
+        return _render_ref(recipient["ref"], obj, seg, card) + "に"
+    if recipient not in _SIDE_TEXT:
+        raise NoTemplate(f"受方無模板:{recipient}")
+    return _SIDE_TEXT[recipient] + "に"
+
+
+def render_segment(seg, card, self_id="o0"):
     """簡單子句模板:[前提][誰が][到に][從から|の][物件][助詞][數量][原因][形式][從から][到に][受方に]述語[觸發形]
     (物件前的「到に」只在助詞是「が」時;「從」只在物件前或述語前其中一處,照 placement);
-    存在前提另有模板;只有前提的條件段寫前提。
+    存在前提另有模板;只有前提的條件段寫前提;取對象子句 [從の][物件]を対象として。
+    `self_id` 是「このカード」指的物件(內嵌效果裡是綁定的物件)。
     回傳日文;寫不出就丟 NoTemplate。"""
     if seg["unparsed"]:
         raise NoTemplate(f"段未解析:{seg['unparsed']['reason']}")
@@ -375,7 +429,7 @@ def render_segment(seg, card):
     prefix = ""
     if leading is not None:
         prefix = _render_leading_premise(leading, seg, card, objects, names,
-                                         followed=not premise_only)
+                                         followed=not premise_only, self_id=self_id)
     if premise_only:
         return prefix
     if not seg["lines"]:
@@ -391,11 +445,11 @@ def render_segment(seg, card):
             parts.append(_SIDE_TEXT[seg["agent"]] + ("が" if seg["kind"] == "條件" else "は"))
         words, markers, counts = [], set(), set()
         for line in seg["lines"]:
-            if line["targeting"]:
-                raise NoTemplate("取對象線無模板")
+            # 取對象標記沒有自己的字面:它來自取對象子句(述語 対象として)或指回被點名的物件。
             if line["role"] not in ("受事", "被召喚"):
                 raise NoTemplate(f"角色無模板:{line['role']}")
-            words.append(_render_object(objects[line["object"]], seg, card, names, line))
+            words.append(_render_object(objects[line["object"]], seg, card, names, line,
+                                        self_id=self_id))
             markers.add(line["marker"] or "を")
             counts.add(_render_count(line["count"]))
         if len(markers) != 1 or len(counts) != 1:
@@ -417,9 +471,7 @@ def render_segment(seg, card):
         if to_placement == "述語前":
             parts.append(to_text)
         if seg["recipient"] is not None:
-            if seg["recipient"] not in _SIDE_TEXT:
-                raise NoTemplate(f"受方無模板:{seg['recipient']}")
-            parts.append(_SIDE_TEXT[seg["recipient"]] + "に")
+            parts.append(_render_recipient(seg["recipient"], seg, card, objects))
         parts.append(predicate)
         text = "".join(parts)
     if seg["kind"] == "條件":
@@ -436,10 +488,42 @@ def _failure(card, block, seg_id, reason, detail, rendered=None, original=None):
             "rendered": rendered, "original": original}
 
 
-def _residue(block):
-    """區塊原文扣掉各段範圍與標點後剩下的片段;不是固定接著詞的就是殘留。"""
+def _tree_glue(block, card, names):
+    """段樹引導句的字面(分歧、內嵌效果),去掉標點後供殘留比對;節點無模板就丟 NoTemplate。"""
+    objects = {o["id"]: o for o in card["objects"]}
+
+    def render_object(obj_id, ref):
+        if ref is None:
+            return _render_object(objects[obj_id], None, card, names)
+        # 引導句主語的回指(その/動作回指):字面照句型驗過就照寫,動作與先前的段對不對在段上驗。
+        m = _ACTION_REF_RE.match(ref)
+        if _REF_RE.match(ref) or (m and m.group("past") in ACTION_PAST.values()):
+            return ref
+        raise NoTemplate(f"回指字面無模板:{ref}")
+
+    def render_premise_text(premise):
+        return render_premise_prefix(premise, _render_zones, render_object)
+
+    try:
+        return [_PUNCT_RE.sub("", piece)
+                for piece in tree_glue(block, render_premise_text, render_object)]
+    except NoTreeTemplate as e:
+        raise NoTemplate(str(e)) from None
+
+
+def _residue(block, glue, glue_failed=False):
+    """區塊原文扣掉各段範圍、內嵌效果的區塊範圍與標點後剩下的片段;不是段樹引導句(`glue`)
+    也不是固定接著詞的就是殘留。引導句寫不出字面(`glue_failed`,已列無模板)時扣掉節點的
+    原文範圍,不重複列成殘留;寫得出時靠字面比對,引導句與原文不符就會留下來。"""
     text = block["text"]
     cut = [(s["span"][0], s["span"][1], s["kind"]) for s in block["segments"]]
+    for node in _iter_nodes(block["tree"]["items"]):
+        if node.get("node") == "內嵌效果" and node.get("block"):
+            inner = node["block"]
+            cut.append((inner["span"][0] - block["span"][0],
+                        inner["span"][1] - block["span"][0], None))
+        if glue_failed and node.get("span"):
+            cut.append((node["span"][0], node["span"][1], None))
     if block["label"]:
         cut.append((0, 2, None))  # 「①：」
     cut.sort()
@@ -457,6 +541,8 @@ def _residue(block):
         # 的 _TRIGGER_RE),只有緊接在條件段後面的「に」算接著詞。
         if kind == "條件" and rest.startswith("に"):
             rest = rest[1:]
+        for header in glue:
+            rest = rest.replace(header, "")
         if _GLUE_RE.sub("", rest):
             residue.append(piece)
     return residue
@@ -465,18 +551,28 @@ def _residue(block):
 def check_card(card):
     """一張卡的不通過清單;空清單 = 整張通過。無官方日文的卡沒有段,清單也是空的。"""
     failures = []
-    for block in card["blocks"]:
-        for owner, seg in iter_segments(block):
+    bindings = embedded_bindings(card)
+    names = {row["id"]: row for row in card["names"]}
+    for block in _all_blocks(card):
+        # 內嵌效果的區塊也各自檢查,段裡的「このカード」是綁定的物件。
+        self_id = (bindings.get(block["id"]) or {}).get("自己", "o0")
+        for seg in block["segments"]:
             try:
-                rendered = render_segment(seg, card)
+                rendered = render_segment(seg, card, self_id=self_id)
             except NoTemplate as e:
-                failures.append(_failure(card, owner, seg["id"],
+                failures.append(_failure(card, block, seg["id"],
                                          REASON_NO_TEMPLATE, str(e)))
                 continue
             if normalise(rendered) != normalise(seg["text"]):
-                failures.append(_failure(card, owner, seg["id"], REASON_MISMATCH,
+                failures.append(_failure(card, block, seg["id"], REASON_MISMATCH,
                                          None, rendered, seg["text"]))
-        for piece in _residue(block):
+        glue, glue_failed = [], False
+        try:
+            glue = _tree_glue(block, card, names)
+        except NoTemplate as e:
+            failures.append(_failure(card, block, None, REASON_NO_TEMPLATE, str(e)))
+            glue_failed = True
+        for piece in _residue(block, glue, glue_failed):
             failures.append(_failure(card, block, None, REASON_RESIDUE,
                                      piece.strip("。、\n ")))
     return failures
@@ -491,8 +587,7 @@ def check_structures(structures):
         if card["unparsed"]:
             no_text += 1
             continue
-        segments += sum(1 for block in card["blocks"]
-                        for _ in iter_segments(block))
+        segments += sum(len(block["segments"]) for block in _all_blocks(card))
         failures.extend(check_card(card))
     failed_segments = sum(1 for f in failures if f["segment"])
     residue_blocks = len({(f["card"], f["block"]) for f in failures

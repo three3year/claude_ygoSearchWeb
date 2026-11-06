@@ -473,13 +473,16 @@ print(f"舊卡效果有 2 句以上(依 cdb 對位):{m}/{b} 個效果區塊 = {m
 if OUT_JSON:
     data = {
         "description": "舊式卡效果邊界共識集(boundary.py 產出)。full_agree:拆句表與 ja-JP.cdb①效果數與邊界都一致;"
-                       "full_agree_en:其中英文分組數也一致;two_to_one:兩者效果數不同,英文或官方補足引用支持其中一方。",
+                       "full_agree_en:其中英文分組數也一致;two_to_one:兩者效果數不同,英文或官方補足引用支持其中一方;"
+                       "no_consensus:仍無共識(cs≠cdb 且無第三方、數同邊界不同、無 cdb① 僅 cs 且英文不同),交站主判。",
         "full_agree": sorted(ex["A"] + ex["A_en"]),
         "full_agree_en": sorted(ex["A_en"]),
         "two_to_one": sorted(
             ({"id": c, "cs": res[c]["cs"], "cdb": res[c]["cdb1"], "en": res[c]["en"], "supp": supp_full.get(c)}
              for c in ex["C"]), key=lambda d: d["id"]),
+        "no_consensus": sorted(ex["B"] + ex["D"] + ex["E"]),
     }
     with open(OUT_JSON, "w", encoding="utf8") as f:
         json.dump(data, f, ensure_ascii=False, indent=1)
-    print(f"共識集寫到 {OUT_JSON}:full_agree {len(data['full_agree'])}、two_to_one {len(data['two_to_one'])}")
+    print(f"共識集寫到 {OUT_JSON}:full_agree {len(data['full_agree'])}、two_to_one {len(data['two_to_one'])}、"
+          f"no_consensus {len(data['no_consensus'])}")

@@ -25,6 +25,7 @@ ROOT = os.path.dirname(
 DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_FAQ_INFO = os.path.join(ROOT, "data", "sources", "faq_info.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "data", "action_structure.json")
+DEFAULT_BOUNDARIES = os.path.join(ROOT, "data", "block_boundaries.json")
 
 
 def _load(path):
@@ -48,6 +49,8 @@ def print_report(report, file=None):
     for name, digest in report["sources"].items():
         p(f"來源 {name} digest={digest}")
     p(f"卡片 {report['cards']} 張、無官方日文 {len(report['no_official_text'])} 張")
+    for status, ids in sorted(report.get("boundary_patches", {}).items()):
+        p(f"邊界補丁 {status} {len(ids)} 張:{', '.join(map(str, ids))}")
     p(f"區塊 {report['blocks']}(解析不出 {report['unparsed_blocks']})、"
       f"段 {report['segments']}(解析不出 {report['unparsed_segments']})、"
       f"物件 {report['objects']}(解析不出 {report['unparsed_objects']})")
@@ -61,6 +64,8 @@ def main(argv=None):
                         help="官方 DB 文本路徑(預設 data/sources/faq_info.json)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
                         help="產物路徑(預設 data/action_structure.json)")
+    parser.add_argument("--boundaries", default=DEFAULT_BOUNDARIES,
+                        help="邊界補丁來源檔(預設 data/block_boundaries.json,不存在不是錯)")
     parser.add_argument("--no-write", action="store_true",
                         help="只印報告,不寫產物")
     args = parser.parse_args(argv)
@@ -70,10 +75,15 @@ def main(argv=None):
         return 1
     built_at = datetime.datetime.now().astimezone().strftime(
         "%Y-%m-%dT%H:%M:%S%z")
+    sources = {os.path.basename(args.cards): _digest(args.cards),
+               os.path.basename(args.faq): _digest(args.faq)}
+    patches = []
+    if os.path.exists(args.boundaries):
+        patches = _load(args.boundaries)
+        sources[os.path.basename(args.boundaries)] = _digest(args.boundaries)
     structures, report = build_structures(
-        _load(args.cards), _load(args.faq), built_at=built_at,
-        sources={os.path.basename(args.cards): _digest(args.cards),
-                 os.path.basename(args.faq): _digest(args.faq)})
+        _load(args.cards), _load(args.faq), built_at=built_at, sources=sources,
+        boundary_patches=patches)
     print_report(report)
     if not args.no_write:
         with open(args.output, "w", encoding="utf-8", newline="\n") as f:

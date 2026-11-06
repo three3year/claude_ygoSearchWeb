@@ -43,8 +43,12 @@ from structure_shape import (  # noqa: F401  形狀的詞與工廠從這裡再�
     unparsed, zone)
 
 # ── 建置 ─────────────────────────────────────────────────────
-def build_card(entry, faq_entry):
-    """一張卡:官方 DB 文本 → 區塊 → 段 → 卡片結構。沒有官方文本整張標未解析。"""
+def build_card(entry, faq_entry, boundary_patch=None, patch_status=None):
+    """一張卡:官方 DB 文本 → 區塊 → 段 → 卡片結構。沒有官方文本整張標未解析。
+
+    `boundary_patch` 是這張卡的邊界補丁 {"card_text": 紀錄, "pen_effect": 紀錄};
+    `patch_status`(dict)收補丁結果,只進 report、不進產物。
+    """
     if faq_entry is None:
         card = new_card(entry["id"], entry["name_ja"])
         card["unparsed"] = unparsed(NO_OFFICIAL_TEXT)
@@ -54,7 +58,9 @@ def build_card(entry, faq_entry):
     card["attributes"]["name"].append(
         attribute_row(faq_entry["name_ja"], source="官方卡名"))
     blocks, omitted = split_blocks(faq_entry.get("card_text", ""),
-                                   faq_entry.get("pen_effect"))
+                                   faq_entry.get("pen_effect"),
+                                   faq_entry.get("supplement"),
+                                   boundary_patch, patch_status)
     card["omitted"] = omitted
     for block in blocks:
         extract_block(block, card)
@@ -62,27 +68,37 @@ def build_card(entry, faq_entry):
     return card
 
 
-def build_structures(cards, faq_entries, built_at="", sources=None):
+def build_structures(cards, faq_entries, built_at="", sources=None,
+                     boundary_patches=None):
     """卡片總表 + 官方 DB 文本 → (一卡一結構的列表, report)。
 
     `built_at` 與 `sources` 只寫進 report:產物不含時間,入版控後 git diff 才讀得出
-    改了什麼(筆記 03 第 6 點)。
+    改了什麼(筆記 03 第 6 點)。`boundary_patches` 是邊界補丁列表(`data/block_boundaries.json`),
+    每筆的結果(生效 / 卡文已變動 / …)依狀態附卡號進 report["boundary_patches"]。
     """
     by_password = {}
     for faq in faq_entries:
         by_password[faq["password"]] = faq
+    patches = {}
+    for patch in boundary_patches or ():
+        patches.setdefault(patch["id"], {})[patch.get("source", "card_text")] = patch
     structures = []
     no_text = []
+    patch_report = {}
     for entry in sorted(cards, key=lambda c: c["id"]):
         faq = by_password.get(entry["id"])
         if faq is None:
             no_text.append(entry["id"])
-        structures.append(build_card(entry, faq))
+        status = {}
+        structures.append(build_card(entry, faq, patches.get(entry["id"]), status))
+        for result in status.values():
+            patch_report.setdefault(result, []).append(entry["id"])
     report = {
         "built_at": built_at,
         "sources": sources or {},
         "cards": len(structures),
         "no_official_text": no_text,
+        "boundary_patches": patch_report,
         "blocks": 0, "segments": 0, "objects": 0,
         "unparsed_blocks": 0, "unparsed_segments": 0, "unparsed_objects": 0,
     }

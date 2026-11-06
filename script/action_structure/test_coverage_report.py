@@ -37,10 +37,10 @@ class BuildCoverageTest(unittest.TestCase):
         self.assertEqual(blocks["by_kind"]["靈擺效果"]["cards"], 1)
         self.assertEqual(sum(k["blocks"] for k in blocks["by_kind"].values()),
                          blocks["total"])
-        self.assertEqual(blocks["reasons"]["舊式無編號卡未切分"]["cards"],
-                         [10753491])
         self.assertEqual(blocks["reasons"]["區塊種類判不出"]["cards"],
                          [59400890])
+        # 舊式無編號卡(票 10 起會切)沒有標解析不出的區塊。
+        self.assertNotIn(10753491, sum((r["cards"] for r in blocks["reasons"].values()), []))
         self.assertEqual(sum(r["blocks"] for r in blocks["reasons"].values()),
                          blocks["unparsed"])
 
@@ -148,8 +148,8 @@ class CliTest(unittest.TestCase):
             self.assertIn("卡片總表 5 張", text)
             self.assertIn("無官方日文 1 張", text)
             self.assertIn("20240828", text)
-            self.assertIn("舊式無編號卡未切分", text)
-            self.assertIn("10753491", text)
+            self.assertIn("區塊種類判不出", text)
+            self.assertIn("59400890", text)
 
     def test_cli_fails_when_product_does_not_cover_card_list(self):
         """產物張數與卡片總表不符:報告的加總對不上,以非 0 結束、不寫檔。"""

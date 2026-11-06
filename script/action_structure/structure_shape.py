@@ -38,7 +38,9 @@ def zone(name, side=None):
 
 def position(zones, source, inferred=False):
     """從/到:區域集合 + 來源標記;`inferred` = 推得值或繼承自推得值,
-    查詢預設不算、開關開才算(spec:推得的終點預設不算命中)。"""
+    查詢預設不算、開關開才算(spec:推得的終點預設不算命中)。
+    明寫的「從」寫在物件後(XをデッキからYに加える)時另帶 `placement`: 述語前,
+    句型模板據此放回原位;寫在物件前(預設)不帶。"""
     return {"zones": list(zones), "source": source, "inferred": inferred}
 
 

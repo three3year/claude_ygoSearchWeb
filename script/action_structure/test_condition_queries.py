@@ -220,5 +220,104 @@ class MentionTest(unittest.TestCase):
             self.assertEqual(check_card(structure), [], cid)
 
 
+SEVEN_EMPERORS = 7477101   # 時空の七皇(真實卡:範圍 + 種族/屬性引用 + 等級 = 階級引用)
+SEVEN_EMPERORS_TEXT = (
+    "このカード名のカードは１ターンに１枚しか発動できない。\n"
+    "①：EXデッキの「No.101」～「No.107」のいずれかの「No.」Xモンスター１体を相手に見せて"
+    "発動できる。種族か属性が見せたモンスターと同じで、そのモンスターのランクと同じ数値の"
+    "レベルを持つモンスター１体をデッキから手札に加える。その後、自分の手札を１枚選んで"
+    "デッキの一番上に戻す。このカードの発動後、ターン終了時まで自分はXモンスターしか"
+    "EXデッキから特殊召喚できない。")
+SEVEN_EMPERORS_MINI = 20000011   # 測試用:只有 時空の七皇 ① 的前兩句(給反向檢查)
+XYZ = 0x800021
+SUMMONER_MONK = 423585      # 召喚僧サモンプリースト:等級 4 魔法使い族 闇
+GALAXY_EYES = 93717133      # 銀河眼の光子竜:等級 8 ドラゴン族 光
+FAKE_NO108 = 20000012       # 測試用:範圍外的「No.108」,階級 7 魔法使い族 闇
+NUMBERS = [  # No.101～No.107 的真實參數(階級、種族、屬性、setcode)
+    (48739166, "Ｎｏ．１０１ Ｓ・Ｈ・Ａｒｋ Ｋｎｉｇｈｔ", 4, 0x40, 0x2, 0x48),
+    (49678559, "Ｎｏ．１０２ 光天使グローリアス・ヘイロー", 4, 0x4, 0x10, 0x860048),
+    (94380860, "Ｎｏ．１０３ 神葬零嬢ラグナ・ゼロ", 4, 0x4, 0x2, 0x48),
+    (2061963, "Ｎｏ．１０４ 仮面魔踏士シャイニング", 4, 0x2, 0x10, 0x1e30048),
+    (59627393, "Ｎｏ．１０５ ＢＫ 流星のセスタス", 4, 0x1, 0x4, 0x10840048),
+    (63746411, "Ｎｏ．１０６ 巨岩掌ジャイアント・ハンド", 4, 0x100, 0x1, 0x48),
+    (88177324, "Ｎｏ．１０７ 銀河眼の時空竜", 8, 0x2000, 0x10, 0x1b4307b0048),
+]
+ARCHETYPES_WITH_NUMBERS = ARCHETYPES + [
+    {"setcode": 0x48, "hex": "0x48", "names_ja": ["Ｎｏ."], "name_zh": "No.",
+     "source": "strings.conf"},
+]
+
+
+class ReferenceTest(unittest.TestCase):
+    """卡名 ∈ 範圍與屬性 比較 引用:代入的卡只要能在被引用物件的候選卡裡找到一組
+    讓全部條件成立就符合。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(SEVEN_EMPERORS, name_ja="時空の七皇", type=SPELL, setcode=0x17501b4),
+            card(SEVEN_EMPERORS_MINI, name_ja="七皇の縮図", type=SPELL),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20),
+            card(SUMMONER_MONK, name_ja="召喚僧サモンプリースト", level=4,
+                 race=0x2, attribute=0x20),
+            card(GALAXY_EYES, name_ja="銀河眼の光子竜", level=8, race=0x2000,
+                 attribute=0x10, setcode=0x107b0055),
+            card(FAKE_NO108, name_ja="Ｎｏ．１０８ 試験", type=XYZ, level=7,
+                 race=0x2, attribute=0x20, setcode=0x48),
+        ] + [card(cid, name_ja=name, type=XYZ, level=rank, race=race,
+                  attribute=attr, setcode=setcode)
+             for cid, name, rank, race, attr, setcode in NUMBERS]
+        entries = [
+            faq(SEVEN_EMPERORS, "時空の七皇", SEVEN_EMPERORS_TEXT),
+            faq(SEVEN_EMPERORS_MINI, "七皇の縮図",
+                "①：EXデッキの「No.101」～「No.107」のいずれかの「No.」Xモンスター１体を"
+                "相手に見せて発動できる。種族か属性が見せたモンスターと同じで、"
+                "そのモンスターのランクと同じ数値のレベルを持つモンスター１体をデッキから"
+                "手札に加える。"),
+        ]
+        cls.structures, _ = build_structures(cls.cards, entries,
+                                             archetypes=ARCHETYPES_WITH_NUMBERS)
+
+    def hits(self, **query):
+        return [h["id"] for h in run_query(self.structures, self.cards, query)["hits"]]
+
+    def test_black_magician_does_not_fit(self):
+        """黑魔導(等級 7、魔法使い族、闇):No.104 種族同但階級 4、No.107 階級 8 但種族屬性都不同;
+        範圍外的 No.108(階級 7、魔法使い族)不算 → 不符。"""
+        self.assertNotIn(SEVEN_EMPERORS,
+                         self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                   card=BLACK_MAGICIAN))
+
+    def test_level_four_spellcaster_fits_via_no104(self):
+        """召喚僧サモンプリースト(等級 4、魔法使い族):No.104(魔法使い族、階級 4)→ 符合。"""
+        self.assertIn(SEVEN_EMPERORS,
+                      self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                card=SUMMONER_MONK))
+
+    def test_level_eight_light_dragon_fits_via_no107(self):
+        """銀河眼の光子竜(等級 8、ドラゴン族、光):No.107(ドラゴン族、光、階級 8)→ 符合。"""
+        self.assertIn(SEVEN_EMPERORS,
+                      self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                card=GALAXY_EYES))
+
+    def test_condition_only_monster_from_deck_to_hand(self):
+        """只給條件「怪獸 牌組 → 手牌」:總表裡有實卡滿足 → 命中。"""
+        self.assertIn(SEVEN_EMPERORS,
+                      self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                condition=MONSTER))
+
+    def test_reference_object_is_specific_not_generic(self):
+        result = run_query(self.structures, self.cards,
+                           {"actions": ["加入手牌"], "card": SUMMONER_MONK})
+        self.assertIn(SEVEN_EMPERORS, result["groups"]["特定"])
+
+    def test_two_sentences_pass_reverse_check(self):
+        """範圍、位置、字段+X、種族か属性が…と同じで、ランクと同じ数値のレベルを持つ、
+        相手に見せて、物件後的デッキから:都有句型模板。"""
+        structure = next(c for c in self.structures if c["id"] == SEVEN_EMPERORS_MINI)
+        self.assertEqual(check_card(structure), [])
+
+
 if __name__ == "__main__":
     unittest.main()

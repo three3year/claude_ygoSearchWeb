@@ -27,7 +27,7 @@ REASON_MISMATCH = "字面不符"
 REASON_RESIDUE = "段外殘留"
 
 # 簡單子句模板會寫的格;其餘格一有值就是「無模板」。
-TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "polarity",
+TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polarity",
                   "trigger", "span", "text", "predicate", "voice", "unparsed"}
 TEMPLATE_KINDS = ("條件", "代價", "效果")
 # 區塊裡不屬於任何段的固定接著詞:發動句語尾、先後連接。去掉標點後只能剩這些。
@@ -151,11 +151,12 @@ def _render_object(obj, seg, names):
 
 
 def _render_from(lines):
-    """所有對象線共用一個明寫的「從」才有字面;繼承、推得的不寫。"""
+    """所有對象線共用一個明寫的「從」才有字面 → (字面, 寫在物件前還是述語前);
+    繼承、推得的不寫。"""
     written = [line["from"] for line in lines
                if line["from"] and line["from"]["source"] == "明寫"]
     if not written:
-        return ""
+        return "", "名詞前"
     if len(written) != len(lines) or any(w != written[0] for w in written):
         raise NoTemplate("對象線的從不一致")
     zones = written[0]["zones"]
@@ -167,9 +168,10 @@ def _render_from(lines):
     # 字面不符列出,留給位置那張票決定要不要記「方是否明寫」。
     prefix = "相手の" if side == "對手" else ""
     try:
-        return prefix + "・".join(_ZONE_TEXT[z["zone"]] for z in zones) + "から"
+        text = prefix + "・".join(_ZONE_TEXT[z["zone"]] for z in zones) + "から"
     except KeyError as e:
         raise NoTemplate(f"區域無模板:{e.args[0]}") from None
+    return text, written[0].get("placement") or "名詞前"
 
 
 def _render_predicate(seg):
@@ -183,7 +185,8 @@ def _render_predicate(seg):
 
 
 def render_segment(seg, card):
-    """簡單子句模板:[誰が][從から][物件を]述語[觸發形]。回傳日文;寫不出就丟 NoTemplate。"""
+    """簡單子句模板:[誰が][從から][物件を][從から][受方に]述語[觸發形](「從」只在
+    物件前或述語前其中一處,照 placement)。回傳日文;寫不出就丟 NoTemplate。"""
     if seg["unparsed"]:
         raise NoTemplate(f"段未解析:{seg['unparsed']['reason']}")
     if seg["kind"] not in TEMPLATE_KINDS:
@@ -200,7 +203,9 @@ def render_segment(seg, card):
         if seg["agent"] not in _SIDE_TEXT:
             raise NoTemplate(f"誰無模板:{seg['agent']}")
         parts.append(_SIDE_TEXT[seg["agent"]] + "が")
-    parts.append(_render_from(seg["lines"]))
+    from_text, from_placement = _render_from(seg["lines"])
+    if from_placement == "名詞前":
+        parts.append(from_text)
     words, postcount = [], ""
     for line in seg["lines"]:
         if line["targeting"]:
@@ -214,6 +219,12 @@ def render_segment(seg, card):
                 raise NoTemplate("述語前的數量只能屬於唯一的物件")
             postcount = count
     parts.append("と".join(words) + "を" + postcount)
+    if from_placement == "述語前":
+        parts.append(from_text)
+    if seg["recipient"] is not None:
+        if seg["recipient"] not in _SIDE_TEXT:
+            raise NoTemplate(f"受方無模板:{seg['recipient']}")
+        parts.append(_SIDE_TEXT[seg["recipient"]] + "に")
     parts.append(_render_predicate(seg))
     if seg["kind"] == "條件":
         if not seg["trigger"]:

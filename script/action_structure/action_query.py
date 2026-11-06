@@ -34,16 +34,99 @@
 (官方卡名、setcode,加「〜として扱う」的列);帶位置條件的列只在該對象線的「從」落在
 該位置時算,「從」沒寫就只算任何位置的列。無官方日文的卡沒有結構,退回卡片總表的
 name_ja 與 setcode。名稱比對雙方先全半形折疊。
+條件式含引用(等級 = 物件1.階級)時:先求被引用物件的候選卡(卡片總表裡滿足它條件式的卡),
+X 只要能在候選卡裡找到一組讓全部條件成立就符合(spec 使用者故事 15);被引用物件解析不出
+就判不了,列進未解析組。
 """
+import functools
+import itertools
 import json
+import operator
+import re
 
 from archetype_table import fold_width, setcode_matches, split_setcode
+from condition_atoms import referenced_objects
 from segment_extract import PREDICATE_STEMS, action_ancestors
 from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
 GENERIC_ATOMS = ("大類", "位置", "控制方")
+# 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
+SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
+                "靈擺": 0x1000000, "連結": 0x4000000}
+COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
+               "≤": operator.le, ">": operator.gt, "<": operator.lt}
+REASON_REF_MISSING = "引用的物件找不到"
+_RANGE_END_RE = re.compile(r"^(?P<prefix>.*?)(?P<num>\d+)$")
+# 條件式裡的名稱字面對幾千張卡反覆折疊,記住結果。
+_fold = functools.lru_cache(maxsize=None)(fold_width)
+
+
+def card_attr(entry, attr):
+    """代入的卡在卡片總表的屬性值;沒有這個值(魔陷的種族、非超量怪獸的階級)回 None。
+    等級與階級、連結值同存在 `level` 欄,照 type 位元分開。"""
+    kind = entry["type"]
+    if not kind & 0x1:
+        return None
+    if attr == "等級":
+        return None if kind & (SUBTYPE_BITS["超量"] | SUBTYPE_BITS["連結"]) else entry["level"]
+    if attr == "階級":
+        return entry["level"] if kind & SUBTYPE_BITS["超量"] else None
+    if attr == "種族":
+        return entry["race"]
+    if attr == "屬性":
+        return entry["attribute"]
+    if attr == "卡片子類型":
+        return {name for name, bit in SUBTYPE_BITS.items() if kind & bit}
+    return None
+
+
+def compare_attr(condition, entry, binding):
+    """屬性 比較 值/引用:引用的物件沒綁定候選卡時判不了(None);一邊沒有這個值就不符。"""
+    lhs = card_attr(entry, condition["attr"])
+    if "ref" in condition:
+        bound = (binding or {}).get(condition["ref"]["object"])
+        if bound is None:
+            return None
+        rhs = card_attr(bound, condition["ref"]["attr"])
+    else:
+        rhs = condition.get("value")
+    if lhs is None or rhs is None:
+        return False
+    if isinstance(lhs, set):
+        if condition["cmp"] == "=":
+            return rhs in lhs
+        return (rhs not in lhs) if condition["cmp"] == "≠" else None
+    op = COMPARATORS.get(condition["cmp"])
+    return None if op is None else op(lhs, rhs)
+
+
+@functools.lru_cache(maxsize=None)
+def _name_range(lo_text, hi_text):
+    """範圍兩端 → (前綴樣式, 下限, 上限);兩端寫法對不上回 None。整次查詢對幾千張卡
+    反覆用同一個範圍,樣式只編譯一次。"""
+    ends = [_RANGE_END_RE.match(fold_width(t)) for t in (lo_text, hi_text)]
+    if None in ends or ends[0].group("prefix") != ends[1].group("prefix"):
+        return None
+    pattern = re.compile(re.escape(ends[0].group("prefix")) + r"(\d+)(?!\d)")
+    return pattern, int(ends[0].group("num")), int(ends[1].group("num"))
+
+
+def name_in_range(view, texts, from_zones):
+    """卡名 ∈ 範圍:兩端是「共同前綴 + 數字」(No.101、No.107),卡名以同前綴接數字、
+    數字落在兩端之間就符合;兩端寫法對不上就判不了。"""
+    if len(texts) != 2:
+        return None
+    parsed = _name_range(*texts)
+    if parsed is None:
+        return None
+    pattern, lo, hi = parsed
+    for name in view.names(from_zones):
+        m = pattern.match(name)
+        if m and lo <= int(m.group(1)) <= hi:
+            return True
+    return False
 
 
 def _zone_names(name):
@@ -87,9 +170,17 @@ class CardView:
         # 折疊與位置條件只算一次:只給條件的查詢會對幾千張卡反覆代入。
         self._names = [(fold_width(r["value"]), self._where(r)) for r in name_rows]
         self._codes = [(r["value"], self._where(r)) for r in archetype_rows]
-        # 記載掃的全卡文:結構裡的區塊原文加略過文本就是整份官方 DB 文本(不另建表);
-        # 無官方日文的卡沒有文本,記載一律不符。
-        self.text = fold_width(_card_text(structure)) if tables else ""
+        self._structure = structure if tables else None
+        self._text = None
+
+    @property
+    def text(self):
+        """記載掃的全卡文:結構裡的區塊原文加略過文本就是整份官方 DB 文本(不另建表);
+        無官方日文的卡沒有文本,記載一律不符。第一次用到才折疊(候選卡要建幾千個 CardView)。"""
+        if self._text is None:
+            self._text = (fold_width(_card_text(self._structure))
+                          if self._structure else "")
+        return self._text
 
     @staticmethod
     def _where(row):
@@ -140,7 +231,7 @@ def _position_sensitive(condition):
         node = stack.pop()
         if not isinstance(node, dict):
             continue
-        if node.get("op") in ("卡名", "卡名包含", "字段"):
+        if node.get("op") in ("卡名", "卡名包含", "字段", "卡名範圍"):
             return True
         stack.extend(node.get("args", ()))
         if "arg" in node:
@@ -158,6 +249,8 @@ def _referenced_names(condition, names):
             continue
         if "name" in node:
             found[node["name"]] = _name_text(node, names)
+        for name_id in node.get("names", ()):
+            found[name_id] = _name_text({"name": name_id}, names)
         stack.extend(node.get("args", ()))
         if "arg" in node:
             stack.append(node["arg"])
@@ -172,30 +265,42 @@ def _name_text(condition, names):
     return None if row is None or row["unparsed"] else row["text"]
 
 
-def eval_condition(condition, view, names=None, from_zones=None):
+def eval_condition(condition, view, names=None, from_zones=None, binding=None):
     """條件式對一張卡(CardView):True / False / None(含解析不出,判不了)。
-    `names` 是物件所屬那張卡的名稱表(id → 列),`from_zones` 是該對象線的「從」。"""
+    `names` 是物件所屬那張卡的名稱表(id → 列),`from_zones` 是該對象線的「從」,
+    `binding` 是被引用物件 id → 這一輪代入的候選卡(卡片總表條目)。"""
     if condition is None:
         return True
     names = names or {}
     op = condition["op"]
     if op == "且":
-        results = [eval_condition(a, view, names, from_zones)
+        results = [eval_condition(a, view, names, from_zones, binding)
                    for a in condition["args"]]
         return None if None in results else all(results)
     if op == "或":
-        results = [eval_condition(a, view, names, from_zones)
+        results = [eval_condition(a, view, names, from_zones, binding)
                    for a in condition["args"]]
         if True in results:
             return True
         return None if None in results else False
     if op == "非":
-        inner = eval_condition(condition["arg"], view, names, from_zones)
+        inner = eval_condition(condition["arg"], view, names, from_zones, binding)
         return None if inner is None else not inner
     if op == "大類":
         if condition["value"] == "卡":
             return True
         return bool(view.entry["type"] & CATEGORY_BITS[condition["value"]])
+    if op in ("位置", "控制方"):
+        # 位置與控制方不是卡的屬性:任何卡都代得進去(泛用原子)。
+        return True
+    if op == "屬性比較":
+        return compare_attr(condition, view.entry, binding)
+    if op == "卡名範圍":
+        texts = condition.get("texts") or [
+            _name_text({"name": n}, names) for n in condition.get("names", ())]
+        if None in texts:
+            return None
+        return name_in_range(view, texts, from_zones)
     if op == "字段":
         wants = condition.get("setcodes") or []
         if not wants:
@@ -206,7 +311,7 @@ def eval_condition(condition, view, names=None, from_zones=None):
         text = _name_text(condition, names)
         if text is None:
             return None
-        folded = fold_width(text)
+        folded = _fold(text)
         if op == "卡名":
             return folded in view.names(from_zones)
         if op == "記載":
@@ -248,6 +353,9 @@ class _Judge:
         self.structure_by_id = {s["id"]: s for s in structures}
         self.views = {}
         self.exists_cache = {}
+        self.candidate_cache = {}   # (卡號, 被引用物件 id) → 候選卡列表
+        self.pool_cache = {}        # (卡號, 物件 id) → 引用的 [(物件 id, 候選卡列表)]
+        self.objects_cache = {}     # 卡號 → 物件 id → 物件
 
     def view(self, entry):
         if entry["id"] not in self.views:
@@ -261,8 +369,52 @@ class _Judge:
         if obj["source"]["kind"] == "自己":
             return entry["id"] == owner["id"] or entry["id"] in owner.get(
                 "alt_ids", ())
-        return eval_condition(obj["condition"], self.view(entry), names,
-                              from_zones) is True
+        pools = self.reference_pools(obj, owner, names)
+        if pools is None:
+            return False
+        if not pools:
+            return eval_condition(obj["condition"], self.view(entry), names,
+                                  from_zones) is True
+        # 引用:在每個被引用物件的候選卡裡找得到一組讓全部條件成立即可。
+        view = self.view(entry)
+        for combo in itertools.product(*(pool for _, pool in pools)):
+            binding = {ref_id: bound for (ref_id, _), bound in zip(pools, combo)}
+            if eval_condition(obj["condition"], view, names, from_zones,
+                              binding) is True:
+                return True
+        return False
+
+    def reference_pools(self, obj, owner, names):
+        """物件條件式引用到的每個物件與它的候選卡 [(物件 id, 候選卡列表)];沒有引用是空列表,
+        被引用物件找不到或解析不出是 None(判不了)。每個物件整次查詢只算一次:
+        只給條件的查詢會對幾千張卡反覆代入同一個物件。"""
+        key = (owner["id"], obj["id"])
+        if key not in self.pool_cache:
+            pools = []
+            for ref_id in referenced_objects(obj["condition"]):
+                ref_obj = self.objects_of(owner).get(ref_id)
+                if ref_obj is None or ref_obj["unparsed"]:
+                    pools = None
+                    break
+                pools.append((ref_id, self.candidates(owner, ref_obj, names)))
+            self.pool_cache[key] = pools
+        return self.pool_cache[key]
+
+    def candidates(self, owner, ref_obj, names):
+        """被引用物件的候選卡:卡片總表裡滿足它條件式的卡(不看位置)。先放空列表,
+        引用成環時不會無限遞迴(環裡的物件就沒有候選卡)。"""
+        key = (owner["id"], ref_obj["id"])
+        if key not in self.candidate_cache:
+            self.candidate_cache[key] = []
+            self.candidate_cache[key] = [
+                entry for entry in self.cards
+                if self.card_fits(entry, ref_obj, owner, names, None)]
+        return self.candidate_cache[key]
+
+    def objects_of(self, owner):
+        if owner["id"] not in self.objects_cache:
+            self.objects_cache[owner["id"]] = _objects_by_id(owner)
+        return self.objects_cache[owner["id"]]
 
     def object_matches(self, obj, owner, names, line):
         q = self.query
@@ -275,10 +427,12 @@ class _Judge:
             if obj["unparsed"]:
                 return False
             # 快取鍵只看條件式本身(名稱換成字面)與來源:幾千張卡的「モンスター１体」只對
-            # 總表掃一次;「從」只在條件式有看位置的原子(卡名、字段)時才進鍵。
+            # 總表掃一次;「從」只在條件式有看位置的原子(卡名、字段)時才進鍵;
+            # 引用的物件 id 是這張卡的,有引用時卡號也進鍵。
             referenced = _referenced_names(obj["condition"], names)
             key = json.dumps([obj["condition"], obj["source"], referenced,
-                              from_zones if _position_sensitive(obj["condition"]) else None],
+                              from_zones if _position_sensitive(obj["condition"]) else None,
+                              owner["id"] if referenced_objects(obj["condition"]) else None],
                              sort_keys=True, ensure_ascii=False)
             if key not in self.exists_cache:
                 self.exists_cache[key] = any(
@@ -355,8 +509,17 @@ def incomplete_reason(seg, objects):
         return seg["unparsed"]["reason"]
     for line in seg["lines"]:
         obj = objects.get(line["object"])
-        if obj is not None and obj["unparsed"]:
+        if obj is None:
+            continue
+        if obj["unparsed"]:
             return obj["unparsed"]["reason"]
+        # 條件式引用的物件(等級 = 物件1.階級)解析不出,代入也判不了。
+        for ref_id in referenced_objects(obj["condition"]):
+            ref = objects.get(ref_id)
+            if ref is None:
+                return REASON_REF_MISSING
+            if ref["unparsed"]:
+                return ref["unparsed"]["reason"]
     return None
 
 

@@ -33,6 +33,7 @@ PREDICATE_STEMS = (
     ("S召喚", "S召喚", None),
     ("X召喚", "X召喚", None),
     ("L召喚", "L召喚", None),
+    ("見せ", "展示", None),
     ("破壊", "破壞", None),
     ("捨て", "捨棄", None),
     ("リリース", "解放", None),
@@ -44,7 +45,7 @@ PREDICATE_STEMS = (
 TAILS = {
     "": ("主動", "做"), "る": ("主動", "做"), "する": ("主動", "做"),
     "した": ("主動", "做"), "し": ("主動", "做"), "して": ("主動", "做"),
-    "て": ("主動", "做"),
+    "て": ("主動", "做"), "た": ("主動", "做"),
     "される": ("被動", "做"), "された": ("被動", "做"), "され": ("被動", "做"),
     "されて": ("被動", "做"),
     "られる": ("被動", "做"), "られた": ("被動", "做"), "られ": ("被動", "做"),
@@ -89,12 +90,17 @@ _TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)に?、?(?P<rest
 _COUNT = "[０-９]+(?:体|枚)(?:まで)?"
 _CLAUSE_RE = re.compile(
     "^(?:(?P<agent>自分|相手)が)?(?:(?P<from>[^を]+?)から)?"
-    # 物件短語裡的「を含む」(カード名に「X」を含む)不是受詞助詞。
-    f"(?P<objects>(?:を含む|[^を])+?)を(?P<pcount>{_COUNT})?(?P<pred>[^を]+)$")
+    # 物件短語裡的「を含む」(カード名に「X」を含む)、「を持つ」(…と同じ数値のレベルを持つ)
+    # 不是受詞助詞。「從」可寫在物件前(デッキからXを)或物件後(XをデッキからYに加える);
+    # 受方(相手に見せて)緊接述語前。
+    f"(?P<objects>(?:を含む|を持つ|[^を])+?)を(?P<pcount>{_COUNT})?"
+    "(?:(?P<from2>[^を]+?)から)?(?:(?P<recipient>自分|相手)に)?(?P<pred>[^を]+)$")
 _POSTCOUNT_RE = re.compile("^(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)$")
 _FROM_RE = re.compile("^(?:(?P<side>自分|相手)の?)?(?P<zones>.+)$")
 _SELF_RE = re.compile("^このカード$")
 _REF_RE = re.compile("^(?:その|それらの)(?P<head>モンスター|カード)$")
+# 「見せたモンスター」:做過某動作的物件(述語字面 + た + 頭名詞)。
+_DONE_REF_RE = re.compile("^(?P<verb>[^「」]+?)た(?P<head>モンスター|カード)$")
 _NOUN_RE = re.compile(
     "^(?P<mods>.*?)(?P<head>モンスター|魔法・罠カード|魔法カード|罠カード|カード)"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
@@ -175,7 +181,8 @@ def split_objects(phrase):
             depth += 1
         elif ch == "」":
             depth -= 1
-        if ch == "と" and depth == 0 and not phrase.startswith("と名のついた", i):
+        if (ch == "と" and depth == 0
+                and not phrase.startswith(("と名のついた", "と同じ"), i)):
             parts.append(buf)
             buf = ""
         else:
@@ -253,18 +260,34 @@ class BlockState:
             rest = rest[m.end():]
         return atoms, reason
 
-    def object_at(self, phrase, sentence_start):
-        """物件短語 → (物件 id, 由條件段指回來的?) 或 (None, 原因)。"""
-        if _SELF_RE.match(phrase):
-            return "o0", None
+    def resolve_reference(self, phrase):
+        """指回的物件短語 → 物件 id 或 None:その/それらの+頭名詞 指回本區塊最近的同大類物件;
+        「見せたモンスター」這類「<述語>た+頭名詞」指回本區塊最近一個做過該動作的物件。"""
         ref = _REF_RE.match(phrase)
         if ref:
             want = HEAD_CATEGORY[ref.group("head")]
             for obj_id in reversed(self.recent):
                 obj = self.find(obj_id)
                 if want == "卡" or _category_of(obj["condition"]) == want:
-                    return obj_id, None
-            return None, REASON_REF
+                    return obj_id
+            return None
+        done = _DONE_REF_RE.match(phrase)
+        if done:
+            parsed, _ = parse_predicate(done.group("verb") + "た")
+            if parsed is None:
+                return None
+            for seg in reversed(self.block["segments"]):
+                if parsed[0] in seg["actions"] and seg["lines"]:
+                    return seg["lines"][-1]["object"]
+        return None
+
+    def object_at(self, phrase, sentence_start):
+        """物件短語 → (物件 id, 由條件段指回來的?) 或 (None, 原因)。"""
+        if _SELF_RE.match(phrase):
+            return "o0", None
+        if _REF_RE.match(phrase):
+            obj_id = self.resolve_reference(phrase)
+            return (obj_id, None) if obj_id else (None, REASON_REF)
         named = _NAMED_RE.match(phrase)
         m = named or _NOUN_RE.match(phrase)
         if not m:
@@ -337,9 +360,12 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
     seg["polarity"] = polarity
     agent = SIDE_WORDS.get(m.group("agent")) if m.group("agent") else None
     seg["agent"] = agent
+    seg["recipient"] = SIDE_WORDS.get(m.group("recipient")) if m.group("recipient") else None
     from_zones = None
-    if m.group("from"):
-        from_zones = parse_from(m.group("from"))
+    # 「從」寫在物件後(XをデッキからYに加える)記 placement 述語前,模板放回原位。
+    from_placement = "名詞前" if m.group("from") else "述語前"
+    if m.group("from") or m.group("from2"):
+        from_zones = parse_from(m.group("from") or m.group("from2"))
         if from_zones is None:
             seg["unparsed"] = unparsed(REASON_FROM)
             return
@@ -366,6 +392,8 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
                         targeting=(kind == "效果" and obj_id in state.targeted))
         if from_zones is not None:
             line["from"] = position(from_zones, "明寫")
+            if from_placement == "述語前":
+                line["from"]["placement"] = from_placement
             obj = state.find(obj_id)
             if obj["source"]["kind"] == "新建" and obj["initial_position"] is None:
                 obj["initial_position"] = list(from_zones)

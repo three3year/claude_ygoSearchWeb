@@ -118,10 +118,13 @@ python -X utf8 script/action_structure/build_structure.py
 
 # 只印報告,不寫產物
 python -X utf8 script/action_structure/build_structure.py --no-write
+
+# 反向檢查:結構套句型模板產生日文,與原文比對 → .scratch/action-structure/report/reverse_check.md
+python -X utf8 script/action_structure/build_reverse_check.py
 ```
 
 產物一卡一行、不含時間(時間與來源雜湊只印在報告),同一份輸入兩次建置逐位元組相同。
-規格與各票在 `.scratch/action-structure/`。
+反向檢查報告也不寫時間,重建結構後重跑即刷新。規格與各票在 `.scratch/action-structure/`。
 
 ### 查卡網站
 
@@ -185,6 +188,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/card_structure.py` | 建置管線(純函式):總表 + 官方 DB 文本 → 卡片結構 + 報告;序列化與讀回 |
 | `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用分組 |
 | `script/action_structure/build_structure.py` | 建置 CLI 薄殼(讀檔 → 寫 data/action_structure.json → 印報告) |
+| `script/action_structure/reverse_check.py` | 反向檢查(純函式):結構 → 句型模板 → 日文,與原文比對;`check_card` 給標準卡驗收 |
+| `script/action_structure/build_reverse_check.py` | 反向檢查 CLI 薄殼(讀產物 → 寫 .scratch/action-structure/report/reverse_check.md) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
 | `data/action_structure.json` | 動作搜尋的卡片結構(建置產物,**入版控**,一卡一行;產物省略空格,讀回用 `card_structure.load_structures`) |
 | `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |

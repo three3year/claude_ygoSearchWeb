@@ -41,7 +41,9 @@ def position(zones, source, inferred=False, text=None, form=None):
     查詢預設不算、開關開才算(spec:推得的終點預設不算命中)。
     `text` 是明寫時含助詞的原文字面(「自分のデッキの上から」「墓地の」「デッキの一番下に」,
     反向檢查據此還原、解析時驗過與 zones 一致);
-    `form` 是到的放置形式(「好きな順番で」、表側守備表示…,spec「到可帶表示形式」)。"""
+    `form` 是到的放置形式(「好きな順番で」、表側守備表示…,spec「到可帶表示形式」)。
+    明寫的「從」寫在物件後(XをデッキからYに加える)時另帶 `placement`: 述語前(票 07),
+    模板據此放回原位;寫在物件前(預設)不帶。"""
     return {"zones": list(zones), "source": source, "inferred": inferred,
             "text": text, "form": form}
 

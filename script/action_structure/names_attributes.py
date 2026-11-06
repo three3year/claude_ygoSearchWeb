@@ -29,6 +29,7 @@ SOURCE_CARD_LIST = "卡片總表"
 CATEGORY_BITS = (("怪獸", 0x1), ("魔法", 0x2), ("陷阱", 0x4))
 
 _QUOTE_RE = re.compile("「([^「」]+)」")
+_RANGE_RE = re.compile("「(?P<lo>[^「」]+)」～「(?P<hi>[^「」]+)」のいずれかの")
 # 「〜として扱う」句:主語(このカード / このカード名 / このカードのカード名)、
 # 範圍(ルール上 / <位置>に存在する限り)、名稱列(「X」カード、「X」カード…)、尾綴(カード/モンスター)。
 _TREAT_RE = re.compile(
@@ -91,6 +92,10 @@ def extract_names(card, texts, lookups):
             if folded not in lookups["card_names"] and folded not in lookups["archetypes"]:
                 row["unparsed"] = unparsed(REASON_NAME_UNKNOWN)
             rows[name] = row
+        # 範圍端點(「No.101」～「No.107」)不是卡名也不是字段,但範圍規則認得它:不算不認得。
+        for m in _RANGE_RE.finditer(text or ""):
+            for name in (m.group("lo"), m.group("hi")):
+                rows[name]["unparsed"] = None
     card["names"] = list(rows.values())
     return rows
 

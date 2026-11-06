@@ -25,7 +25,8 @@
 
     <div class="sidebar-body" id="sidebarBody">
     <div class="sidebar-actions">
-      <button type="button" id="btnResults" class="primary">看結果</button>
+      <button type="button" id="btnSearch" class="primary">搜尋</button>
+      <button type="button" id="btnClear">清除條件</button>
     </div>
 
     <div class="crit">
@@ -71,8 +72,6 @@
   </aside>
 
   <main class="results-area">
-    <!-- 條件列:這次查詢的全部條件(strip.js)。 -->
-    <div id="condStrip"></div>
     <div class="actions">
       <span class="result-info" id="resultInfo"></span>
       <span class="spacer"></span>
@@ -98,9 +97,6 @@
   </main>
 </div>
 
-<!-- 抽屜:點動作標籤改欄位(strip.js),點外面關閉。 -->
-<aside id="condDrawer" hidden></aside>
-
 <!-- 頁尾聲明兩行:資料更新一行、來源一行(2026-08-21 使用者裁示;
      2026-08-22 使用者裁示移除 KONAMI 免責一行)。
      靜態文案住 HTML;唯一動態的是第一行的資料更新時間——值來自 META,由
@@ -114,17 +110,14 @@
 <!-- 零建置協定(ADR-0007):沒有 bundler、沒有 ES modules,<script> 依序載入,
      模組是掛在全域的 IIFE 閉包。索引是 window.CARD_DATA=… 的 .js 而不是 .json,
      因為 file:// 下 fetch 會被 CORS 擋而 <script src> 不會。
-     順序即相依:資料 → 工具 → 條件模型 → 目錄 → 排序 → 引擎 → 輸入 → 網址 → 呈現 → 條件列 → 主流程。 -->
+     順序即相依:資料 → 工具 → 排序 → 引擎 → 輸入 → 網址 → 呈現 → 主流程。 -->
 <script src="data.js"></script>
 <script src="js/util.js"></script>
-<script src="js/cond.js"></script>
-<script src="js/acat.js"></script>
 <script src="js/sort.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/query.js"></script>
 <script src="js/hash.js"></script>
 <script src="js/render.js"></script>
-<script src="js/strip.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

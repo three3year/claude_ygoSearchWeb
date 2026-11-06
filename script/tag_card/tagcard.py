@@ -2,12 +2,12 @@
 
 單一接縫:build_tag_cards(卡片總表條目, 補足情報條目[, 既有標記表, 判定結果,
     拆句表]) → (entries, report)
-純函式,不碰網路與檔案系統。詞彙見 GLOSSARY.md:效果標記表、標記句、效果類型、
+純函式,不碰網路與檔案系統。詞彙見 GLOSSARY.md:效果標記表、效果句、效果類型、
 效果外文本、必發/選發、拆句表。
 
 三個選用參數的生效時機不同,順序是本模組的骨幹(ADR-0003):
     拆句表 → 官方明示抽取 → 必發/選發 → 判定結果 → 既有標記表 → 影子預測
-拆句表決定標記句的**集合**、判定結果決定標記句上的**值**。
+拆句表決定效果句的**集合**、判定結果決定效果句上的**值**。
 """
 import hashlib
 import json
@@ -16,7 +16,6 @@ from collections import Counter
 
 import official
 import rules
-import tag_rules
 from official import (BULLET, INDEX_PREAMBLE, INDEX_UNNUMBERED,
                       KIND_NON_EFFECT, KIND_QUICK, KIND_TRIGGER, NUMERALS,
                       OPTIONAL_MANDATORY, OPTIONAL_OPTIONAL, SPELLTRAP_KINDS)
@@ -80,7 +79,6 @@ ACTIVATED_KINDS = (KIND_QUICK, KIND_TRIGGER)
 # 卡本身要不要發動永遠是玩家的選擇,寫「選發」是廢話;墓地/場上被動觸發的那族
 # 才有強制與否的資訊。這組值因此只吃官方明示與判定,不用規則補值。
 OPTIONAL_KINDS = ACTIVATED_KINDS + SPELLTRAP_KINDS
-TIMING_KINDS = OPTIONAL_KINDS
 
 HEAD_PENDULUM = "【靈擺效果】"
 HEAD_MONSTER_RE = re.compile(r"【怪獸(效果|敘述|描述)】")
@@ -91,13 +89,11 @@ FOOTNOTE_RE = re.compile(r"\n\n※[^\n]*$")
 
 CLAUSE_FIELDS = ("index", "section", "text_zh", "text_ja", "text_hash", "kind",
                  "optional", "role", "source", "needs_review", "rule_predicted",
-                 "confidence", "tags", "tags_checked", "timing", "timing_src")
-# [[觸發時機]]的承載類型與[[必發/選發]]完全同一組(裁定批4,理由同 ADR-0004);
-# TIMING_KINDS 於 OPTIONAL_KINDS 宣告處設值
+                 "confidence", "tags")
 
 
 def is_pure_normal(ctype):
-    """純通常怪獸嗎?已處理且確實沒有效果,整張排除在標記句集合之外。
+    """純通常怪獸嗎?已處理且確實沒有效果,整張排除在效果句集合之外。
 
     三級分類器(script/text_format/classify.py)沿用同一把尺,判準只住這一份。
     """
@@ -195,7 +191,7 @@ def _activation_profile_matches(zh_text, ja_text):
 
     對位是**照位置**配的(第 n 個編號配第 n 個編號),而官方改寫現行文本時會
     **重排編號**——阿修羅 `2134346` 與武尊神-日孁 `9418365` 的①②在官方現行
-    文本裡剛好對調。編號數一樣、位置一配就錯,而且錯得無聲無息:那一條標記句
+    文本裡剛好對調。編號數一樣、位置一配就錯,而且錯得無聲無息:那一條效果句
     會掛上別條效果的日文原文。
 
     「發動 / 発動」是譯後仍然對得起來的錨點:逐段比對有沒有這個詞,形狀不一樣
@@ -213,7 +209,7 @@ def modern_ja_helps(zh_text, faq_ja, modern_ja):
     不配、`text_ja` 留空。`faq_info` 的 `card_text` 對**未再版舊卡**是官方 DB 停在
     最後一次印刷世代的舊文本,常常沒有編號;[[文本改寫表]]又替繁中補上了編號,
     於是**每一張改寫卡都對不上**(2026-08-28 實測:已進站的 139 張無一例外,
-    192 條標記句 `text_ja` 全空)。`ja-JP.cdb` 的現行文本自帶官方編號,補位後
+    192 條效果句 `text_ja` 全空)。`ja-JP.cdb` 的現行文本自帶官方編號,補位後
     197 張對不上的救回 192 張。
 
     只在 `faq` 對不上、而現行文本對得上時才換——**`faq` 優先不可動**:補足情報
@@ -308,7 +304,7 @@ def _preamble_role(text, ctype):
     return _unit_role(text)
 
 
-# ---------------------------------------------------------------- 標記句
+# ---------------------------------------------------------------- 效果句
 
 def _text_hash(text_ja, text_zh):
     """**判定基礎文本**的雜湊(身分變動偵測用);兩側都空時為 None。
@@ -339,9 +335,6 @@ def _clause(index, section, text_zh, text_ja, confidence,
         "rule_predicted": None,
         "confidence": confidence,
         "tags": [],
-        "tags_checked": [],
-        "timing": None,
-        "timing_src": None,
     }
 
 
@@ -383,7 +376,7 @@ def _cover_spans(text, parts):
 def _quotes_cut_apart(text_ja, spans, supplement):
     """**驗證二・引用交叉驗證**:被拆點切成兩半的官方 『原文』 引用。
 
-    不需要標準答案就能自動檢查——引用橫跨拆點,就證明那兩段是同一個標記句。
+    不需要標準答案就能自動檢查——引用橫跨拆點,就證明那兩段是同一個效果句。
     """
     if not text_ja:
         return []
@@ -620,11 +613,11 @@ def _bullet_authorised(clause, supplement, headers):
     官方都是拿整個 `●` 當一個東西在講:`【●…について】` 標頭(票03)、行內
     `『●…』` 引用逐項給裁定(票16),或**逐項給出不同的類型**(票58)。第二種
     只對**賦予型領起句**開火——領起句自己就寫了發動時 `●` 只是同一個發動的
-    選項列舉,拆了反而製造出官方沒有認可的標記句,而票14 實測那一族的官方類型
+    選項列舉,拆了反而製造出官方沒有認可的效果句,而票14 實測那一族的官方類型
     本來就是對的。
 
     第三種不受領起句形態限制,因為它的證據是官方**已經把這些 `●` 判成不同的
-    類型**:不拆的話一條標記句只有一個類型欄位,必然有一半是錯的(查詢層也就
+    類型**:不拆的話一條效果句只有一個類型欄位,必然有一半是錯的(查詢層也就
     定位不到那一半)。只給一種類型時不開火,整段照那一種判即可。
     """
     if headers:
@@ -636,11 +629,11 @@ def _bullet_authorised(clause, supplement, headers):
 
 
 def _bullet_pieces(cid, section, clause, supplement, headers, report):
-    """一個標記句 → 拆開的 ● 分項;沒有依據或驗證不成立時回 None(不拆)。
+    """一個效果句 → 拆開的 ● 分項;沒有依據或驗證不成立時回 None(不拆)。
 
     拆之前兩道驗證比照[[拆句表]]:分項串接後必須等於原文(`_cover_spans`,同時
     讓每一段都從原文切片,連續子字串因此是結構上的保證),官方 `『原文』` 引用
-    不得被 ● 拆點切開——引用橫跨拆點就證明那兩段是同一個標記句(ADR-0003)。
+    不得被 ● 拆點切開——引用橫跨拆點就證明那兩段是同一個效果句(ADR-0003)。
     """
     both = clause["text_zh"] + clause["text_ja"]
     if official._is_preamble(clause["index"]) or BULLET not in both:
@@ -687,9 +680,9 @@ def _bullet_pieces(cid, section, clause, supplement, headers, report):
 
 
 def _split_bullets(cid, section, clauses, supplement, report):
-    """官方認可 ● 是獨立子效果時,把 ● 分項拆成獨立標記句。
+    """官方認可 ● 是獨立子效果時,把 ● 分項拆成獨立效果句。
 
-    沒有依據的 ● 只是同一個效果的選項列舉,拆了反而製造出官方沒有認可的標記句;
+    沒有依據的 ● 只是同一個效果的選項列舉,拆了反而製造出官方沒有認可的效果句;
     繁中與日文的 ● 數量不一致時同樣不拆。
     """
     headers = bool(official.bullet_specs(supplement))
@@ -830,7 +823,7 @@ def _non_effect_quote_covers_run(quoted, segments, ja_spans, text_ja,
 
 
 def _apply_split(cid, section, record, blob, ctype, supplement, report):
-    """拆句表的一筆 → 切開整團的標記句;任一道驗證不成立時回 None(退回整團)。"""
+    """拆句表的一筆 → 切開整團的效果句;任一道驗證不成立時回 None(退回整團)。"""
     spans, problem = _validate_split(record, blob, supplement)
     if problem is not None:
         key, extra = problem
@@ -863,9 +856,9 @@ def _apply_split(cid, section, record, blob, ctype, supplement, report):
 
 def _apply_attestations(cid, section, clauses, name_ja, supplement, unsplit,
                         split_indexes, report):
-    """官方明示的效果類型寫進標記句;歸屬不確定的只進報告,不猜測。
+    """官方明示的效果類型寫進效果句;歸屬不確定的只進報告,不猜測。
 
-    回傳官方寫了「必ず発動」的標記句 index 集合,交給必發/選發那一層使用。
+    回傳官方寫了「必ず発動」的效果句 index 集合,交給必發/選發那一層使用。
     """
     assignments, mandatory, notes = official.attest(name_ja, supplement,
                                                     clauses, unsplit)
@@ -932,7 +925,7 @@ def _first_sentence(text):
 
 
 def _activation_clause(text_ja):
-    """標記句的日文原文 → 發動子句(到第一個句號為止);抓不到時回 None。
+    """效果句的日文原文 → 發動子句(到第一個句號為止);抓不到時回 None。
 
     掃描起點是這一句自己的開頭、終點是第一個句號。效果句在拆句時已經切開,
     掃描因此天然停在效果句邊界內,不會咬到下一個編號效果的「発動できる」——
@@ -955,7 +948,7 @@ def _activation_clause(text_ja):
 
 
 def _optional_by_rule(clause, unsplit):
-    """標記句 → (必發/選發, 發動子句);規則判不出時回 (None, 原因)。
+    """效果句 → (必發/選發, 發動子句);規則判不出時回 (None, 原因)。
 
     舊式無編號卡文還沒依語意拆開,第一句常是素材指定或召喚條件而不是發動子句
     (實測這樣硬掃會把官方明示為必發的 79 條標成選發),因此整團留待判定。
@@ -1042,7 +1035,7 @@ def _apply_optional(cid, section, clauses, attested, unsplit, judged, report):
 
 
 def _validate_optional(cid, section, clause, predicted, detail, report):
-    """官方說必發的標記句 → 遮住答案跑規則,記一致率與所有不一致的條目。"""
+    """官方說必發的效果句 → 遮住答案跑規則,記一致率與所有不一致的條目。"""
     validation = report["optional_validation"]
     validation["attested"] += 1
     if predicted is None:
@@ -1069,7 +1062,7 @@ def _index_judgments(judgments):
 
 
 def _apply_judgments(cid, section, clauses, judgments, report):
-    """判定結果 → 標記句上的 kind / role;回傳 {index: 判定給的必發/選發}。
+    """判定結果 → 效果句上的 kind / role;回傳 {index: 判定給的必發/選發}。
 
     官方明示高於判定:一致時留 official(這一行不占 ADR-0002 的判定額度),不一致
     時保留判定並把這一行標 needs_review——呼叫端會把整張卡一起標,因為這條路徑上
@@ -1117,7 +1110,7 @@ def _apply_judgments(cid, section, clauses, judgments, report):
 
 
 def _report_judgment_orphans(entries, judgments, report):
-    """結果檔涵蓋的標記句集合必須與標記表對得上;多出來的一筆就是判錯批次。"""
+    """結果檔涵蓋的效果句集合必須與標記表對得上;多出來的一筆就是判錯批次。"""
     present = {(entry["id"], clause["section"], clause["index"])
                for entry in entries for clause in entry["clauses"]}
     report["judgment_orphans"] = [
@@ -1135,17 +1128,14 @@ PRESERVED_SOURCES = (SOURCE_MANUAL, official.SOURCE_OFFICIAL, SOURCE_LLM,
 # **重跑不覆蓋**,不是「判錯了也不能改」;規範改版後回頭修判定要一張自己的票,而
 # 官方明示與人工修正的權威高於判定票,改判動不了它們(票52)。
 REJUDGEABLE_SOURCES = (SOURCE_LLM, SOURCE_LLM_THEN_RULE)
-# 沿用既有行時整組帶過來的判定欄位。tags / tags_checked / timing 不在其中——
-# [[效果 Tag]]的合併獨立於效果類型的來源路徑(`_merge_tag_fields`,票07):
-# kind 是 rule 來源的行照樣可能帶著 llm 判的 tag,綁在 kind 的保留條件上會把
-# 那些 tag 隨重跑洗掉。
-JUDGED_FIELDS = ("kind", "optional", "role", "source")
+# 沿用既有行時整組帶過來的判定欄位
+JUDGED_FIELDS = ("kind", "optional", "role", "source", "tags")
 # 官方明示能決定的欄位(tags 不在其列)
 ATTESTED_FIELDS = ("kind", "optional", "role", "source")
 
 
 def _index_existing(existing):
-    """既有標記表 → {(卡片密碼, section, index): 標記句}。"""
+    """既有標記表 → {(卡片密碼, section, index): 效果句}。"""
     index = {}
     for entry in existing or ():
         for clause in entry.get("clauses", ()):
@@ -1195,7 +1185,7 @@ def _apply_late_attestation(cid, merged, fresh, prior, report):
 
 def _merge_clause(cid, fresh, prior, official_optional, report,
                   rejudge=False):
-    """本次重跑的標記句 + 既有標記表的同一行 → 寫進標記表的那一行。
+    """本次重跑的效果句 + 既有標記表的同一行 → 寫進標記表的那一行。
 
     首次建置時 prior 一律是 None,與重跑走同一條路徑。文本欄位(text_zh /
     text_ja / text_hash)與規則層欄位(rule_predicted / confidence)永遠取本次
@@ -1240,9 +1230,8 @@ def _merge_clause(cid, fresh, prior, official_optional, report,
         if prior_source in REJUDGEABLE_SOURCES:
             if changed:
                 report["judgment_rejudged"].append(row)
-            # [[效果 Tag]]是另一條軸,不隨效果類型改判而消失——由
-            # `_merge_tag_fields` 統一保留,這裡直接回本次的行即可
-            return fresh
+            # [[效果 Tag]]是另一條軸,不隨效果類型改判而消失
+            return {**fresh, "tags": prior.get("tags", fresh["tags"])}
         if changed:
             # 官方明示與人工修正改判動不了,而且默默擋掉會讓改判票以為改上去了。
             # 這一行接下來照既有那一行保留,底下的 judgment_overridden 不必再說
@@ -1279,50 +1268,6 @@ def _merge_clause(cid, fresh, prior, official_optional, report,
     return merged
 
 
-def _tag_sort_key(tag):
-    return (tag.get("cat") or "",
-            sorted((k, v) for k, v in tag.items()
-                   if k not in ("src", "rule", "ticket")),
-            tag.get("src") or "")
-
-
-def _tag_content_key(tag):
-    """tag 的內容身分:類別+全部槽位值;來歷不算(單一來源在 tag_rules)。"""
-    return tag_rules._content(tag)
-
-
-def _merge_tag_fields(merged, prior):
-    """tags / tags_checked / timing 的保留,獨立於效果類型的來源路徑(票07)。
-
-    保留的是**判定的成果**:`src` 在 TAG_PRESERVED_SRC 的 tag、判空紀錄
-    (tags_checked)與 llm/manual 的時機值。`rule` 來源的 tag 與時機不保留——
-    它們是當前規則層對當前文本的純函式輸出,`_apply_tag_rules` 每次重算
-    (ADR-0013);`llm_then_rule` 降回 `llm` 再由本輪規則重新升級,規則收窄後
-    不再命中的行因此誠實地退回單一來源。
-    """
-    kept = []
-    for tag in (prior or {}).get("tags") or ():
-        src = tag.get("src")
-        if src not in tag_rules.TAG_PRESERVED_SRC:
-            continue
-        if src == tag_rules.TAG_SRC_LLM_THEN_RULE:
-            tag = {k: v for k, v in tag.items() if k != "rule"}
-            tag["src"] = tag_rules.TAG_SRC_LLM
-        kept.append(dict(tag))
-    merged["tags"] = sorted(kept, key=_tag_sort_key)
-    merged["tags_checked"] = sorted((prior or {}).get("tags_checked") or ())
-    timing_src = (prior or {}).get("timing_src")
-    if timing_src == tag_rules.TAG_SRC_LLM_THEN_RULE:
-        timing_src = tag_rules.TAG_SRC_LLM
-    if timing_src in tag_rules.TAG_PRESERVED_SRC:
-        merged["timing"] = prior.get("timing")
-        merged["timing_src"] = timing_src
-    else:
-        merged["timing"] = None
-        merged["timing_src"] = None
-    return merged
-
-
 def _merge_clauses(cid, clauses, existing_index, matched, official_optional,
                    judgments, report):
     merged = []
@@ -1331,10 +1276,9 @@ def _merge_clauses(cid, clauses, existing_index, matched, official_optional,
         if key in existing_index:
             matched.add(key)
         rejudge = bool((judgments.get(key) or {}).get("rejudge"))
-        merged.append(_merge_tag_fields(
-            _merge_clause(cid, clause, existing_index.get(key),
-                          official_optional, report, rejudge=rejudge),
-            existing_index.get(key)))
+        merged.append(_merge_clause(cid, clause, existing_index.get(key),
+                                    official_optional, report,
+                                    rejudge=rejudge))
     return merged
 
 
@@ -1366,7 +1310,7 @@ def _report_orphans(existing_index, matched, entries, report):
 # ------------------------------------------------- 效果類型規則層(影子預測)
 
 def _rule_targets(entries):
-    """規則層的管轄範圍:有日文原文的標記句。
+    """規則層的管轄範圍:有日文原文的效果句。
 
     前言段不在其中——它的類型由位置規則決定(第一個效果編號之前的段落即
     效果外文本),不是歸納出來的效果類型規則管得到的事。
@@ -1380,8 +1324,8 @@ def _rule_targets(entries):
 def _bullet_leads(entries):
     """{(卡片密碼, section, ● 子效果 index): 領起句的日文原文}。
 
-    `●` 拆成獨立標記句之後,「這個 `●` 底下的發動寫在哪裡」只有領起句那一行答得
-    出來,而規則層一次只看一條標記句(票61)。領起句不存在時記空字串——「看不到
+    `●` 拆成獨立效果句之後,「這個 `●` 底下的發動寫在哪裡」只有領起句那一行答得
+    出來,而規則層一次只看一條效果句(票61)。領起句不存在時記空字串——「看不到
     領起句」與「這一行不是 `●` 子效果」是兩件事,帶 lead 前提的規則要分得出來。
     """
     leads = {}
@@ -1439,7 +1383,7 @@ def _compare_prediction(cid, clause, rule_ids, report):
 
 
 def _predict(cid, clause, matched, report):
-    """一個標記句 → 影子預測。多條規則結論不同時不寫,那是規則層該修了。"""
+    """一個效果句 → 影子預測。多條規則結論不同時不寫,那是規則層該修了。"""
     if not matched:
         return
     rule_ids = [rule["id"] for rule in matched]
@@ -1504,187 +1448,6 @@ def _apply_rules(entries, existing_index, report):
     report["rule_below_attested"] = [
         row["id"] for row in report["rules"]
         if row["applied"] and row["attested"] < rules.MIN_ATTESTED]
-
-
-# ------------------------------------------------- 效果 Tag 規則層(直接寫入)
-
-def _process_text(text_ja):
-    """標記句的日文原文 → (發動子句或 None, 處理段)。
-
-    切法與 `_activation_clause` 同一把尺(第一個不在括號內的句號):第一句含
-    「発動」時它是發動子句、其餘是處理段;不含時整句都是處理段——觸發條件與
-    代價住在發動子句裡,處理段規則因此天然咬不到它們(tag_rules 的骨幹前提)。
-    """
-    text = text_ja.strip()
-    if text[:1] in NUMERALS:
-        text = text[1:].lstrip("：:").strip()
-    elif text[:1] == BULLET:
-        text = text[1:].strip()
-    head = _first_sentence(text)
-    stripped = head
-    while True:
-        bare = _TRAILING_PAREN_RE.sub("", stripped).strip()
-        if bare == stripped:
-            break
-        stripped = bare
-    # 發動子句以**句尾**認定:「〜発動できる/〜発動する」。「発動時の効果処理
-    # として、…」「発動後、…となり特殊召喚する」這些句子帶著「発動」二字但
-    # 整句都是處理內容,照字面掃會把整句處理白白讓給發動子句(票10)
-    if not stripped.endswith(("発動できる", "発動する", "発動可能")):
-        return None, text
-    activation = _activation_clause(text_ja)
-    return activation, text[len(head):].lstrip("。").strip()
-
-
-def rule_tag_segments(text_ja):
-    """標記句 → [(發動子句, 處理段), ...]。
-
-    未拆的 ● 選項列舉(官方未認可拆句的那種)各選項自帶「〜して発動できる」
-    的內嵌發動子句(「●…を墓地へ送って発動できる。…デッキに戻す。」),
-    整段餵給處理段規則會把選項代價標成效果——逐 ● 再切一次,規則層照樣
-    只認發動子句/處理段兩種範圍(票10)。遮蔽測試與管線共用這一份切法。
-    """
-    activation, process = _process_text(text_ja)
-    if BULLET not in (process or ""):
-        return [(activation, process)]
-    head, bullets = _bullet_parts(process)
-    pairs = [(activation, head)]
-    pairs.extend(_process_text(part) for part in bullets)
-    return pairs
-
-
-def rule_tags_for(text_ja, registry=None):
-    """標記句的日文原文 → 規則層發出的 tag 清單(含 ● 逐段與內容吸收)。"""
-    tags = []
-    for activation, process in rule_tag_segments(text_ja):
-        for tag in tag_rules.match_tags(activation, process, registry):
-            tags.append(tag)
-    return tag_rules._absorb(tags)
-
-
-def _tag_scope_clauses(entries):
-    """tag 規則層與貼標期的管轄範圍:新式卡文標記句(第一期,spec)。
-
-    操作型定義:index 以①系編號起頭(● 子效果隨母句計入)、kind 非效果外文本、
-    有日文原文。舊文卡標記句(拆句表切出的 1/2/3…)於體系穩定後另期補判。
-    """
-    for entry in entries:
-        for clause in entry["clauses"]:
-            if (clause["index"][:1] in NUMERALS
-                    and clause["kind"] != KIND_NON_EFFECT
-                    and clause["text_ja"]):
-                yield entry["id"], clause
-
-
-def _merge_rule_tags(cid, clause, rule_tags, report):
-    """規則層發出的 tag 併進標記句;LLM 判過的類別由 LLM 的結論當家。
-
-    - 內容相同的 tag 已由 llm/manual 給出 → 升 `llm_then_rule`(雙重確認;
-      manual 保留來歷不升,理由同效果類型線)。
-    - 類別在 tags_checked(LLM 判過該類)→ 不寫入;規則 tag 是該句某個
-      已判 tag 的**子集**(判定者把規則不猜的槽位也填上)算弱確認,其餘
-      進 `tag_rule_vs_llm` 清單——這正是 ADR-0013 要的免費對照,子集語意
-      與遮蔽計分同一把尺(票15修訂)。
-    - 其餘照寫(`src: "rule"`,直貼)。
-    """
-    by_key = {_tag_content_key(tag): tag for tag in clause["tags"]}
-    checked = set(clause["tags_checked"])
-    for tag in rule_tags:
-        key = _tag_content_key(tag)
-        prior = by_key.get(key)
-        if prior is not None:
-            if prior.get("src") == tag_rules.TAG_SRC_LLM:
-                prior["src"] = tag_rules.TAG_SRC_LLM_THEN_RULE
-                prior["rule"] = tag["rule"]
-                report["tag_rule_confirms"] += 1
-            continue
-        if tag["cat"] in checked:
-            if any(set(key) <= set(k) for k in by_key):
-                continue
-            report["tag_rule_vs_llm"].append(
-                {"id": cid, "section": clause["section"],
-                 "index": clause["index"], "rule": tag["rule"],
-                 "tag": {k: v for k, v in tag.items()
-                         if k not in ("src", "rule")}})
-            continue
-        by_key[key] = tag
-        clause["tags"].append(tag)
-        report["tag_rule_tags"] += 1
-    clause["tags"].sort(key=_tag_sort_key)
-
-
-def _apply_timing_rule(cid, clause, activation, report, coverage):
-    """觸發時機的規則層:只上在承載類型、含「発動」的發動子句上(裁定批4)。"""
-    if clause["kind"] not in TIMING_KINDS or not activation:
-        return
-    value, rule_id = tag_rules.match_timing(activation)
-    if value is None:
-        return
-    coverage[rule_id] += 1
-    if clause["timing_src"] in tag_rules.TAG_PRESERVED_SRC:
-        if clause["timing"] == value:
-            if clause["timing_src"] == tag_rules.TAG_SRC_LLM:
-                clause["timing_src"] = tag_rules.TAG_SRC_LLM_THEN_RULE
-                report["timing_rule_confirms"] += 1
-        else:
-            report["timing_rule_vs_llm"].append(
-                {"id": cid, "section": clause["section"],
-                 "index": clause["index"], "existing": clause["timing"],
-                 "predicted": value, "rule": rule_id,
-                 "source": clause["timing_src"]})
-        return
-    clause["timing"] = value
-    clause["timing_src"] = tag_rules.TAG_SRC_RULE
-    report["timing_rule_values"] += 1
-
-
-def _apply_tag_rules(entries, report):
-    """效果 Tag 規則層(ADR-0013):對管轄範圍逐句發 tag 與時機,**直接寫入**。
-
-    規則清單有毛病時整層不上工(與效果類型規則層同一條規矩)。已開貼類別的
-    「待判餘量」(粗篩命中、無該類 tag、未判空)同場算出來——判定票的入選與
-    seal 的零空缺讀的都是這一份。
-    """
-    report["tag_rules_problems"] = tag_rules.problems()
-    report["tag_rules_digest"] = tag_rules.digest()
-    if report["tag_rules_problems"]:
-        return
-    registry = tag_rules.active()
-    coverage = Counter()
-    timing_coverage = Counter()
-    for cid, clause in _tag_scope_clauses(entries):
-        report["tag_scope_clauses"] += 1
-        rule_tags = rule_tags_for(clause["text_ja"], registry)
-        for tag in rule_tags:
-            coverage[tag["rule"]] += 1
-        _merge_rule_tags(cid, clause, rule_tags, report)
-        activation, _ = _process_text(clause["text_ja"])
-        _apply_timing_rule(cid, clause, activation, report, timing_coverage)
-        for cat in tag_rules.PHASES:
-            if (tag_rules.screen_hit(cat, clause["text_ja"])
-                    and cat not in {t["cat"] for t in clause["tags"]}
-                    and cat not in clause["tags_checked"]):
-                report["tag_pending"].append(
-                    {"id": cid, "section": clause["section"],
-                     "index": clause["index"], "cat": cat})
-        if (clause["kind"] in TIMING_KINDS and clause["timing"] is None
-                and "觸發時機" not in clause["tags_checked"]
-                and activation
-                and tag_rules.TIMING_SCREEN.search(activation)):
-            report["timing_pending"].append(
-                {"id": cid, "section": clause["section"],
-                 "index": clause["index"]})
-    report["tag_rules"] = [
-        {"id": rule["id"], "cat": rule["cat"], "scope": rule["scope"],
-         "condition": rule["condition"], "ticket": rule["ticket"],
-         "coverage": coverage[rule["id"]],
-         "active": rule["cat"] in tag_rules.PHASES}
-        for rule in tag_rules.RULES]
-    report["timing_rules"] = [
-        {"id": rule["id"], "value": rule["value"],
-         "condition": rule["condition"],
-         "coverage": timing_coverage[rule["id"]]}
-        for rule in tag_rules.TIMING_RULES]
 
 
 def _registry_row(rule, coverage, applied, report):
@@ -1795,31 +1558,13 @@ def _new_report():
         "rule_below_threshold": [],
         "rule_below_attested": [],
         "rule_validation": {},
-        "tag_rules_problems": [],
-        "tag_rules_digest": "",
-        "tag_rules": [],
-        "timing_rules": [],
-        "tag_scope_clauses": 0,
-        "tag_rule_tags": 0,
-        "tag_rule_confirms": 0,
-        "tag_rule_vs_llm": [],
-        "tag_pending": [],
-        "tag_counts": {},
-        "tag_src_counts": {},
-        "tags_checked_counts": {},
-        "timing_rule_values": 0,
-        "timing_rule_confirms": 0,
-        "timing_rule_vs_llm": [],
-        "timing_counts": {},
-        "timing_pending": [],
-        "timing_on_wrong_kind": [],
         **{key: [] for key in official.NOTE_KEYS},
     }
 
 
 def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
                    split, judgments, report):
-    """單一段落 → 標記句清單。繁中負責拆句,日文靠編號序列對位。
+    """單一段落 → 效果句清單。繁中負責拆句,日文靠編號序列對位。
 
     split 是這一段的[[拆句表]]紀錄(沒有則為 None),judgments 是全表的判定結果
     索引。兩者的生效時機夾著官方明示的抽取:拆句在前,判定在後(ADR-0003)。
@@ -1929,7 +1674,7 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
         segments = None if split is None else _apply_split(
             cid, section, split, blob, ctype, supplement, report)
         if segments is None:
-            # 無編號舊式卡文還沒拆:整團先當單一標記句,語意拆分交給判定者。
+            # 無編號舊式卡文還沒拆:整團先當單一效果句,語意拆分交給判定者。
             # 待拆清單帶著整團的兩側原文與雜湊,因為 ● 待會可能把這一行切掉一塊
             # ——批次檔要給判定者看的、與拆句表要對的,都是這裡這一份整團
             clauses.append(blob)
@@ -1946,7 +1691,7 @@ def _build_section(card, section, zh_text, ja_text, supplement, name_ja,
 
     clauses = _split_bullets(cid, section, clauses, supplement, report)
     if split_indexes:
-        # 整團是這一段唯一的標記句(無編號才會有整團),所以拆完之後這一段的每一行
+        # 整團是這一段唯一的效果句(無編號才會有整團),所以拆完之後這一段的每一行
         # 都出自拆句表——● 又把某一段拆得更細時,新的 index 也算在內
         split_indexes = {clause["index"] for clause in clauses}
     attested = _apply_attestations(cid, section, clauses, name_ja, supplement,
@@ -1996,7 +1741,7 @@ def _count_clauses(entries, report):
     zh_judged = set(report["no_japanese_text"])
     for entry in entries:
         if entry["id"] in zh_judged:
-            # 無官方日文文本那批的標記句數(ADR-0006):判定基礎是繁中卡文,
+            # 無官方日文文本那批的效果句數(ADR-0006):判定基礎是繁中卡文,
             # 沒有官方明示也沒有影子預測,票09 的定版報告要單獨列出來
             report["zh_judged_clauses"] += len(entry["clauses"])
         for clause in entry["clauses"]:
@@ -2007,7 +1752,7 @@ def _count_clauses(entries, report):
             key = {"id": entry["id"], "section": clause["section"],
                    "index": clause["index"]}
             if clause["kind"] is None:
-                # 還沒判的標記句。定版時必須是空的——「已處理且確實沒有效果」由
+                # 還沒判的效果句。定版時必須是空的——「已處理且確實沒有效果」由
                 # 純通常怪獸的空 clauses 表達,不是由 kind 留 null 表達(票09)
                 report["kind_missing"].append(key)
             if (clause["optional"] is not None
@@ -2016,21 +1761,6 @@ def _count_clauses(entries, report):
             if clause["role"] is not None and clause["kind"] != KIND_NON_EFFECT:
                 # role 是效果外文本的子分類,別的類型上有值就是填錯欄位
                 report["role_on_wrong_kind"].append(key)
-            if (clause["timing"] is not None
-                    and clause["kind"] not in TIMING_KINDS):
-                # 時機只長在誘發系承載類型上(裁定批4),別處有值就是貼錯了
-                report["timing_on_wrong_kind"].append(key)
-            if clause["timing"] is not None:
-                counts = report["timing_counts"]
-                counts[clause["timing"]] = counts.get(clause["timing"], 0) + 1
-            for tag in clause["tags"]:
-                cats = report["tag_counts"]
-                cats[tag.get("cat")] = cats.get(tag.get("cat"), 0) + 1
-                srcs = report["tag_src_counts"]
-                srcs[tag.get("src")] = srcs.get(tag.get("src"), 0) + 1
-            for cat in clause["tags_checked"]:
-                checked = report["tags_checked_counts"]
-                checked[cat] = checked.get(cat, 0) + 1
         report["clauses"] += len(entry["clauses"])
 
 
@@ -2045,9 +1775,9 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
         既有行,保留已判定的成果;首次建置傳 None,兩者走同一條路徑。
         效果類型規則層的影子預測在合併之後才跑,因此既有判定與本次規則的比對
         (升為 llm_then_rule、或列進衝突清單)看的是合併後的那一行。
-    judgments: 判定結果,一卡一物件、內含 clauses。決定標記句上的**值**
+    judgments: 判定結果,一卡一物件、內含 clauses。決定效果句上的**值**
         (kind / optional / role),在官方明示抽取**之後**合併。
-    splits: 拆句表,一張卡一筆、鍵為 (卡片密碼, section)。決定標記句的**集合**,
+    splits: 拆句表,一張卡一筆、鍵為 (卡片密碼, section)。決定效果句的**集合**,
         在官方明示抽取**之前**生效——拆完才對得出歸屬(ADR-0003)。
     modern_ja: 官方**現行**日文卡文 {卡片密碼: 卡文},`ja-JP.cdb` 那一份。
         只在 `faq_info` 的 `card_text` 與繁中編號數對不上、而現行文本對得上時
@@ -2135,7 +1865,6 @@ def build_tag_cards(cards, faq_entries, existing=None, judgments=None,
     _report_orphans(existing_index, matched, entries, report)
     _report_judgment_orphans(entries, judgment_index, report)
     _apply_rules(entries, existing_index, report)
-    _apply_tag_rules(entries, report)
     _count_clauses(entries, report)
     report["no_japanese_text"].sort()
     report["low_confidence"].sort()

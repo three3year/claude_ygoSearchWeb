@@ -1,6 +1,1 @@
-# 程式寫出、又入版控的建置產物:內容一律 LF,工作樹也保持 LF——否則 core.autocrlf 會讓每次重生後
-# git status 顯示假修改。合併時取本分支版、合併後重生(merge=ours 要先 git config merge.ours.driver true,
-# 見 docs/agents/build-products.md)。
-*.json                                        text eol=lf
-.scratch/effect-tokenize/report.md            text eol=lf merge=ours
-script/web/predicate-fixture-encoded.json     text eol=lf merge=ours
+*.json text eol=lf

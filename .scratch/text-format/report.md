@@ -2,7 +2,7 @@
 
 <!-- 由 script/text_format/build_report.py 產生,不要手改;資料更新後重跑即刷新。 -->
 
-分級判準見 CONTEXT.md「舊式卡文/新式卡文」與 script/text_format/classify.py:①編號段為界的二分,再以 OCG 首發日對 9 期界日(2014-03-21)細分。
+分級判準見 GLOSSARY.md「舊式卡文/新式卡文」與 script/text_format/classify.py:①編號段為界的二分,再以 OCG 首發日對 9 期界日(2014-03-21)細分。
 
 ## 總覽
 

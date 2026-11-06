@@ -34,8 +34,6 @@ const FIELDS = [
   { tri: 'ban_m', dom: 'ban_m', parent: 'ban' },
 ];
 
-const CATALOG_AFTER = 'opt';
-
 const STATES = ['', 'in', 'ex'];
 const STATE_TITLE = {
   3: { '': '未選（再點一次＝包含）', in: '包含（再點一次＝排除）',
@@ -150,99 +148,6 @@ function groupBoxHtml(f, kids) {
     (kids || []).map(k => k.html).join('')}</div></div>`;
 }
 
-/* 具名查詢目錄導覽(規格 4 目錄導覽段):樹由 Acat 來,這裡只畫。點具名查詢的列
-   是包含、點 − 是排除;點大類、中類、帶子的詞元節點只展開。初始全部收合,寫回條件時也不動展開狀態:
-   上一頁或清除條件時,使用者正在看的那一段樹不該收起來。 */
-function catalogNodeHtml(key) {
-  const n = Acat.node(key);
-  const tog = n.kids.length
-    ? '<button type="button" class="cat-tog" aria-expanded="false" aria-label="展開或收合"></button>'
-    : '<span class="cat-tog-pad"></span>';
-  const count = n.count
-    ? `<span class="cat-n">${esc(n.count.text)}</span>` : '';
-  const cls = (n.path ? '' : ' group') + (n.count && n.count.zero ? ' zero' : '');
-  const pick = n.path ? ` data-path="${esc(n.path)}"` : '';
-  const minus = n.path
-    ? `<button type="button" class="cat-minus" data-path="${esc(n.path)}" title="排除：沒有這個動作">−</button>`
-    : '';
-  return `<li class="cat-node" data-key="${esc(key)}"><div class="cat-row">${tog}
-    <button type="button" class="cat-pick${cls}"${pick}><span>${esc(n.name)}</span>
-      <span class="cat-used" hidden>已用</span>${count}</button>${minus}</div>${
-    n.kids.length ? `<ul class="cat-kids" hidden>${
-      n.kids.map(catalogNodeHtml).join('')}</ul>` : ''}</li>`;
-}
-
-function catalogHtml() {
-  return `<div class="catalog" id="catalogNav">
-    <div class="cat-title">動作<span class="cat-note">點一列包含、點 − 排除</span></div>
-    <input type="search" class="cat-filter" placeholder="過濾：例 墓地"
-      aria-label="過濾具名查詢目錄（比對日文名稱）">
-    <div class="cat-scroll"><ul class="cat-tree">${
-      Acat.roots.map(catalogNodeHtml).join('')}</ul></div></div>`;
-}
-
-function catalogNodes() {
-  return Array.prototype.slice.call($('catalogNav').querySelectorAll('.cat-node'));
-}
-
-function setNodeOpen(li, open) {
-  const tog = li.querySelector(':scope > .cat-row > .cat-tog');
-  const kids = li.querySelector(':scope > .cat-kids');
-  if (!tog || !kids) return;
-  tog.setAttribute('aria-expanded', open ? 'true' : 'false');
-  kids.hidden = !open;
-}
-
-function nodeOpen(li) {
-  const tog = li.querySelector(':scope > .cat-row > .cat-tog');
-  return !!tog && tog.getAttribute('aria-expanded') === 'true';
-}
-
-/* 過濾框(Acat.filter 決定留哪些、展開哪些祖先):開始過濾前記下各節點的展開狀態,
-   每次換字面都從那份狀態重套,清空時還原——過濾只是「找」,不改展開也不改條件。 */
-let catalogSaved = null;
-
-function applyCatalogFilter(term) {
-  const f = Acat.filter(term);
-  const nodes = catalogNodes();
-  if (f && !catalogSaved) {
-    catalogSaved = {};
-    nodes.forEach(li => { catalogSaved[li.dataset.key] = nodeOpen(li); });
-  }
-  if (catalogSaved) nodes.forEach(li => setNodeOpen(li, catalogSaved[li.dataset.key]));
-  nodes.forEach(li => {
-    li.hidden = !!f && !f.visible.has(li.dataset.key);
-    if (f && f.open.has(li.dataset.key)) setNodeOpen(li, true);
-  });
-  if (!f) catalogSaved = null;
-}
-
-function markUsed(paths) {
-  const used = new Set(paths);
-  $('catalogNav').querySelectorAll('.cat-pick[data-path]').forEach(btn => {
-    const on = used.has(btn.dataset.path);
-    btn.classList.toggle('used', on);
-    btn.querySelector('.cat-used').hidden = !on;
-  });
-}
-
-function initCatalog(onPick) {
-  const nav = $('catalogNav');
-  nav.addEventListener('click', e => {
-    const minus = e.target.closest('.cat-minus');
-    if (minus) { onPick(minus.dataset.path, true); return; }
-    const pick = e.target.closest('.cat-pick');
-    if (pick && pick.dataset.path) { onPick(pick.dataset.path, false); return; }
-    if (pick || e.target.closest('.cat-tog')) {
-      const li = e.target.closest('.cat-node');
-      setNodeOpen(li, !nodeOpen(li));
-    }
-  });
-  nav.addEventListener('input', e => {
-    if (e.target.closest('.cat-filter')) applyCatalogFilter(e.target.value);
-  });
-}
-
 function build() {
   const axisByKey = {};
   axes().forEach(ax => { axisByKey[ax.key + '/' + ax.side] = ax; });
@@ -252,9 +157,8 @@ function build() {
     : rangeHtml(f);
   const kidsOf = key => FIELDS.filter(f => f.parent === key)
     .map(f => ({ key: blockKey(f), html: htmlOf(f) }));
-  /* 目錄接在句層條件(大類、效果類型、必發／選發)後面,不是一條軸,不進 FIELDS。 */
-  $('critParams').innerHTML = FIELDS.filter(f => !f.parent).map(f =>
-    htmlOf(f) + (f.tri === CATALOG_AFTER ? catalogHtml() : '')).join('');
+  $('critParams').innerHTML =
+    FIELDS.filter(f => !f.parent).map(htmlOf).join('');
 }
 
 function all(sel) {
@@ -272,8 +176,7 @@ function num(v) {
 
 function ownTris(el) {
   return Array.prototype.filter.call(
-    el.querySelectorAll('.tri'),
-    btn => btn.closest('.axis') === el);
+    el.querySelectorAll('.tri'), btn => btn.closest('.axis') === el);
 }
 
 function triSel(f) {
@@ -316,16 +219,24 @@ function read() {
   return q;
 }
 
+function count(q) {
+  const isSet = v => {
+    if (v == null || v === '') return false;
+    if (typeof v !== 'object') return true;
+    return Object.keys(v).some(k => v[k] != null);
+  };
+  return Object.keys(q || {})
+    .filter(k => k !== 'nameLang' && k !== 'textMat' && isSet(q[k])).length;
+}
+
 function blockKey(f) {
   return f.tri ? f.dom : (f.range || f.group);
 }
 
-function rangeEl(range) {
-  return $('critParams').querySelector(`.range[data-range="${range}"]`);
-}
-
 function blockEl(f) {
-  if (f.range) return rangeEl(f.range);
+  if (f.range) {
+    return $('critParams').querySelector(`.range[data-range="${f.range}"]`);
+  }
   return axisEl(f.tri || f.group, f.side);
 }
 
@@ -406,10 +317,9 @@ function isOpen() {
   return $('btnFilters').getAttribute('aria-expanded') === 'true';
 }
 
-/* n 是條件數(沒有條件時 total 沒有意義),total 是結果張數。 */
-function summarize(n, total) {
+function summarize(q) {
+  const n = count(q);
   $('btnFilters').textContent = n ? `篩選條件・${n} 項` : '篩選條件';
-  $('btnResults').textContent = n ? `看結果(${total.toLocaleString()} 張)` : '看結果';
 }
 
 function statesOf(btn) {
@@ -491,7 +401,7 @@ function writeTri(q, f) {
 }
 
 function writeRange(q, f) {
-  const box = rangeEl(f.range);
+  const box = $('critParams').querySelector(`.range[data-range="${f.range}"]`);
   const r = (box.hidden ? null : q[f.range]) || {};
   const set = (end, v) => {
     box.querySelector(`[data-end="${end}"]`).value = v == null ? '' : v;
@@ -540,77 +450,15 @@ function clear() {
   updateCounts();
 }
 
-/* 控制項清掉之後:連動的軸收起、標題列的數字重算。 */
-function afterClear() {
+function clearBlock(box) {
+  box.querySelectorAll('.tri').forEach(b => setTri(b, ''));
+  box.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
   syncSubs();
   syncOptional();
   updateCounts();
 }
 
-function clearBlock(box) {
-  box.querySelectorAll('.tri').forEach(b => setTri(b, ''));
-  box.querySelectorAll('.range-in').forEach(input => { input.value = ''; });
-  afterClear();
-}
-
-/* 文字類標籤(target.text)→ 側欄的輸入框:條件模型只說是哪一項,DOM id 留在側欄。效果文的素材行
-   勾選是它的比法,清掉時一起清。 */
-const TEXT_CONTROLS = { code: { input: 'fId' }, name: { input: 'fName' },
-                        text: { input: 'fText', check: 'fTextMat' } };
-
-/* 左側條件標籤對應的控制項(target 見 cond.js)。子軸巢在母軸裡,只動自己這軸的控制項。 */
-function tagBox(target) {
-  if (target.range) return rangeEl(target.range);
-  return target.axis ? axisEl(target.axis, target.side) : null;
-}
-
-function ownControls(box, sel) {
-  return Array.prototype.filter.call(box.querySelectorAll(sel),
-    el => el.closest('.axis, .range') === box);
-}
-
-/* 標籤的 × 走側欄自己的控制項,大類連動收子類型那些規則才一起生效。只清標籤列出的值:
-   大類標籤只寫魔法時,怪獸(由子類型標籤代表)不動。 */
-function clearTag(tag) {
-  const target = tag.target;
-  const text = TEXT_CONTROLS[target.text];
-  if (text) {
-    $(text.input).value = '';
-    if (text.check) $(text.check).checked = false;
-  }
-  const box = tagBox(target);
-  if (box) {
-    ownControls(box, '.tri')
-      .filter(btn => !target.codes || target.codes.indexOf(btn.dataset.code) >= 0)
-      .forEach(btn => setTri(btn, ''));
-    ownControls(box, '.range-in').forEach(input => { input.value = ''; });
-  }
-  afterClear();
-}
-
-const FLASH_MS = 900;
-
-/* 點標籤跳到左邊那一項:連祖先一起展開,選到的值在收起的分組裡時也打開。 */
-function focusTag(tag) {
-  setOpen(true);
-  const box = tagBox(tag.target);
-  const el = box || $(TEXT_CONTROLS[tag.target.text].input);
-  if (box) {
-    for (let at = box; at; at = at.parentElement.closest('.axis, .range, .axis-group')) {
-      setAxisOpen(at, true);
-    }
-    ownControls(box, '.tri').filter(btn => btn.dataset.st).forEach(btn => {
-      const group = btn.closest('.axis-group');
-      if (group) setAxisOpen(group, true);
-    });
-  }
-  el.scrollIntoView({ block: 'center' });
-  if (!box) el.focus();
-  el.classList.add('side-flash');
-  setTimeout(() => el.classList.remove('side-flash'), FLASH_MS);
-}
-
-function init({ onPick }) {
+function init() {
   $('btnFilters').addEventListener('click', () => setOpen(!isOpen()));
   const langBtn = $('fNameLang');
   showLang(langBtn, langBtn.dataset.v);
@@ -621,7 +469,6 @@ function init({ onPick }) {
   build();
   syncSubs();
   syncOptional();
-  initCatalog(onPick);
   $('critParams').addEventListener('click', e => {
     const clr = e.target.closest('.axis-clear');
     if (clr) {
@@ -647,9 +494,8 @@ function init({ onPick }) {
   });
 }
 
-  return Object.freeze({ read, write, clear, clearTag, focusTag, init, axes,
-                         optionalAvailable,
-                         nextState, axisCounts, treeCounts, expandedAxes,
-                         summarize, markUsed, collapse: () => setOpen(false),
+  return Object.freeze({ read, write, clear, init, axes, optionalAvailable,
+                         nextState, count, axisCounts, treeCounts, expandedAxes,
+                         summarize, collapse: () => setOpen(false),
                          LANGS, FIELDS });
 })();

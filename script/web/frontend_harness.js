@@ -54,7 +54,6 @@ const DRIVER = `
       return {
         id: e.card.id,
         rows: e.rows ? Array.from(e.rows).sort(function (a, b) { return a - b; }) : null,
-        hits: e.hits,
       };
     }),
     marks: result.marks,
@@ -66,6 +65,7 @@ const DRIVER = `
   return Query.nextState(a.st, a.states);
 }
 ;function __optAvail(json) { return JSON.stringify(Query.optionalAvailable(JSON.parse(json))); }
+;function __critCount(json) { return Query.count(JSON.parse(json)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
 ;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
@@ -80,29 +80,14 @@ const DRIVER = `
 ;function __unhash(s) { return JSON.stringify(Hash.parse(s)); }
 ;function __canonHash(s) { return Hash.canon(s); }
 ;function __fmtTime(v) { return Util.fmtTime(v); }
-;function __cond(fn, json) {
-  return JSON.stringify(Cond[fn].apply(null, JSON.parse(json)));
-}
-;function __catalogRoots() { return JSON.stringify(Acat.roots); }
-;function __catalogNode(key) { return JSON.stringify(Acat.node(key)); }
-;function __catalogFilter(term) {
-  var f = Acat.filter(term);
-  return JSON.stringify(f && { visible: Array.from(f.visible).sort(),
-                                open: Array.from(f.open).sort() });
-}
 ;function __cardHtml(json) { return View.cardHtml(JSON.parse(json), null); }
-;function __cardHtmlHl(json) {
-  var a = JSON.parse(json);
-  return View.cardHtml(a.entry,
-                       a.marks ? { parts: [], marks: a.marks, labels: a.labels || [] } : null);
-}
 `;
 
 /**
  * 載入前端程式碼,回傳沙箱。
- * fixture:{ cards, vocab, meta, frames } —— 合成的 window.CARD_DATA / VOCAB / META / FRAMES。
+ * fixture:{ cards, vocab, meta } —— 合成的 window.CARD_DATA / VOCAB / META。
  */
-function load({ cards = [], vocab = {}, meta = {}, frames = [] } = {}) {
+function load({ cards = [], vocab = {}, meta = {} } = {}) {
   const sandbox = {
     console, setTimeout, clearTimeout,
     document: {
@@ -121,7 +106,6 @@ function load({ cards = [], vocab = {}, meta = {}, frames = [] } = {}) {
   sandbox.CARD_DATA = cards;
   sandbox.VOCAB = vocab;
   sandbox.META = meta;
-  sandbox.FRAMES = frames;
   vm.createContext(sandbox);
   for (const src of scriptSrcs()) {
     if (src === DATA) continue;
@@ -132,42 +116,7 @@ function load({ cards = [], vocab = {}, meta = {}, frames = [] } = {}) {
   return sandbox;
 }
 
-/* 框元組的欄序(2026-11-01 規格 3「索引形狀」段;同 frameindex.py 與引擎的 SLOT_*) */
-const FRAME_SCALARS = ['位置', '極性', '態', '否定形', '施事者', '方式類', '動作對象'];
-const FRAME_REGIONS = ['來源', '目的', '所在'];
-const FRAME_HEADS = ['受事者中心詞', '目的中心詞'];
-
-/**
- * 手寫框表用的框元組:`frame(框詞彙, { 詞元, 位置, 極性, …, 來源: ['自分.墓地'], 受事者中心詞: ['カード'] })`。
- * 封閉值寫值域的字(沒寫是 0,值域碼從 1 起);區域項寫 `玩家.區域`;中心詞寫中心詞表裡的字。
- */
-function frame(vocab, fields) {
-  const { 玩家: players = [], 區域: zones = [] } = vocab.domains;
-  const scalar = field => (fields[field] == null ? 0 : vocab.domains[field].indexOf(fields[field]) + 1);
-  const region = text => {
-    const [player, zone] = text.split('.');
-    return players.indexOf(player) * zones.length + zones.indexOf(zone);
-  };
-  const segment = word => [vocab.heads.indexOf(word), 0, 0, 0];
-  return [vocab.lemmas.indexOf(fields.詞元)]
-    .concat(FRAME_SCALARS.map(scalar))
-    .concat(FRAME_REGIONS.map(field => (fields[field] || []).map(region)))
-    .concat(FRAME_HEADS.map(field => (fields[field] || []).map(segment)));
-}
-
-/** 真 data.js 的內容 → load 吃的 fixture(全語料對照用;檔案不在回 null,測試自己略過並印原因) */
-function realData() {
-  const file = path.join(WEB, DATA);
-  if (!fs.existsSync(file)) return null;
-  const box = {};
-  box.window = box;
-  vm.createContext(box);
-  vm.runInContext(fs.readFileSync(file, 'utf8'), box, { filename: DATA });
-  return { cards: box.CARD_DATA, vocab: box.VOCAB, meta: box.META, frames: box.FRAMES };
-}
-
-/** 接縫 3:查詢條件 → [{ id, rows, hits? }],rows 是該卡命中的效果句索引(沒有句層條件時為 null);
-    有包含述詞時多 hits,hits[k] 是 rows[k] 那句的 [述詞序號, 框所在句, 框序號] 清單 */
+/** 接縫 3:查詢條件 → [{ id, rows }],rows 是該卡命中的效果句索引(沒有句層條件時為 null) */
 function search(sandbox, query) {
   return JSON.parse(sandbox.__runQuery(JSON.stringify(query))).cards;
 }
@@ -207,6 +156,14 @@ function optionalAvailable(sandbox, kindSel) {
  */
 function nextState(sandbox, st, states) {
   return sandbox.__nextState(JSON.stringify({ st, states }));
+}
+
+/**
+ * 生效中的條件數(票09:窄螢幕的側欄摺起來之後,摺疊鈕上寫的就是它)。
+ * 與 `optionalAvailable()` 同一個理由:規則是純的,DOM 那一層只是把數字寫上去。
+ */
+function critCount(sandbox, q) {
+  return sandbox.__critCount(JSON.stringify(q || {}));
 }
 
 /**
@@ -279,34 +236,6 @@ function cardHtml(sandbox, entry) {
   return sandbox.__cardHtml(JSON.stringify(entry));
 }
 
-/** 同一條呈現縫,帶生效中的句層條件(marks)與述詞序號 → 短句(labels)——命中行的 badge 與句尾標籤字面由此驗。 */
-function cardHtmlHl(sandbox, entry, marks, labels) {
-  return sandbox.__cardHtmlHl(JSON.stringify({ entry, marks, labels }));
-}
-
-/**
- * 條件模型的接縫(predicate-ui 票 02):`Cond.<fn>(...args)`,參數與回傳都走 JSON。
- * 條件模型是純函式,所以測得到;條件列的 DOM 只照它的答案畫。
- */
-function cond(sandbox, fn, ...args) {
-  return JSON.parse(sandbox.__cond(fn, JSON.stringify(args)));
-}
-
-/** 目錄導覽樹(`Acat`):根節點鍵清單、單一節點、過濾答案({ visible, open },節點鍵排序過;空字串回 null)。 */
-function catalogRoots(sandbox) {
-  return JSON.parse(sandbox.__catalogRoots());
-}
-
-function catalogNode(sandbox, key) {
-  return JSON.parse(sandbox.__catalogNode(key));
-}
-
-function catalogFilter(sandbox, term) {
-  return JSON.parse(sandbox.__catalogFilter(String(term == null ? '' : term)));
-}
-
-module.exports = { load, frame, realData, search, ids, marks, axes,
-                   optionalAvailable, nextState,
-                   axisCounts, treeCounts, expandedAxes,
-                   sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml,
-                   cardHtmlHl, cond, catalogRoots, catalogNode, catalogFilter };
+module.exports = { load, search, ids, marks, axes, optionalAvailable, nextState,
+                   critCount, axisCounts, treeCounts, expandedAxes,
+                   sortedIds, sortKeys, hash, parseHash, canonHash, cardHtml };

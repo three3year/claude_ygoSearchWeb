@@ -5,13 +5,6 @@ const { VOCAB } = Util;
 
 const TEXTS = ['name', 'code', 'text'];
 const LANG = 'nameLang';
-/* 動作標籤(規格 4 網址段):act 是 AND 區、actOr 是 OR 區,兩區同一套編解碼。標籤之間逗號接,
-   排除在開頭加 `-`。沒改過的標籤寫葉路徑,逐個 encodeURIComponent;改過的寫欄位對
-   `欄:值~值;欄:值`。目錄找不到的路徑(目錄改名或搬節點後的舊網址)安靜忽略。or 列出放在 OR 區的左側條件鍵(Cond.sideTags 的 key),對不到
-   標籤的鍵安靜忽略。舊軸的 actCost、actPat 不再認得,開舊網址時當未知參數。 */
-const ACT = 'act';
-const ACT_OR = 'actOr';
-const OR_SIDE = 'or';
 
 function schema() {
   const tri = [], range = [];
@@ -34,12 +27,13 @@ const SCHEMA = schema();
 const DEFAULT_LANG = Query.LANGS[0].v;
 const DEFAULT_SORT = Sort.KEYS[0].key;
 
+/* 所有參數名,長的在前——`text` 不該在交替比對時先吃掉 `textMat` 的位置。 */
 const PARAM_NAMES = [].concat(
-  TEXTS, ['textMat', LANG, 'sort', 'dir', ACT, ACT_OR, OR_SIDE],
+  TEXTS, ['textMat', LANG, 'sort', 'dir'],
   SCHEMA.tri.map(a => a.key),
   SCHEMA.range.map(f => f.key),
   SCHEMA.range.map(f => f.unknown).filter(Boolean)
-);
+).sort((a, b) => b.length - a.length);
 
 /* 被轉傳端動過手腳的段分隔符:`&` 被多編一次成 `%26`(信箱、聊天軟體的連結
    包裝),或手打網址時輸入法吐出全形 `＆`/`＝`(瀏覽器會把它們編成
@@ -65,54 +59,6 @@ function numText(v) {
   return v == null ? '' : String(v);
 }
 
-/* encodeURIComponent 不編 `~`,要補編,否則值裡的 `~` 會和值的分隔符撞。分隔符不選 `|`:
-   它不是合法網址字元,聊天軟體會改編(規格 4 網址段)。 */
-function encPiece(s) {
-  return encodeURIComponent(s).replace(/~/g, '%7E');
-}
-
-function tagToken(tag) {
-  const path = Cond.leafPath(tag);
-  const body = path ? encodeURIComponent(path)
-    : Cond.toPairs(tag).map(p => encPiece(p[0]) + ':' + p[1].map(encPiece).join('~')).join(';');
-  return (tag.ex ? '-' : '') + body;
-}
-
-/* `欄:值~值;欄:值` → 欄位對。解不開的欄名或值只掉它自己;認不認得交給條件模型。 */
-function pairsOf(body) {
-  const pairs = [];
-  body.split(';').forEach(seg => {
-    const i = seg.indexOf(':');
-    const field = i < 0 ? null : dec(seg.slice(0, i));
-    if (field == null) return;
-    pairs.push([field, seg.slice(i + 1).split('~').map(dec).filter(v => v != null)]);
-  });
-  return pairs;
-}
-
-/* 字面的 `:` 只會是欄位對:路徑裡的 `:` 寫出時都編掉了。認不出來回 null。 */
-function tokenTag(token) {
-  const ex = token.charAt(0) === '-';
-  const body = ex ? token.slice(1) : token;
-  if (body.indexOf(':') >= 0) return Cond.fromPairs(pairsOf(body), ex);
-  const path = dec(body);
-  return path ? Cond.tagAt(path, ex) : null;
-}
-
-/* 兩區共用:一區的標籤 ⇄ 參數值。同一區兩張改到一模一樣,語意不變,網址只寫第一張;parse 也只留
-   第一張,否則 canon 不冪等。不跨區:兩區都有同一張是另一個查詢(Story 28;2026-11-02 code review
-   裁定),所以 parse 不走目錄點列的 Cond.add。 */
-function encodeTags(tags) {
-  return Array.from(new Set(tags.map(tagToken).filter(Boolean))).join(',');
-}
-
-function decodeTags(raw, state, zone) {
-  return raw.split(',').reduce((st, token) => {
-    const tag = tokenTag(token);
-    return tag ? Cond.addInZone(st, tag, zone) : st;
-  }, state);
-}
-
 function stringify(state) {
   const st = state || {};
   const q = st.q || {};
@@ -130,14 +76,6 @@ function stringify(state) {
       .map(c => (sel[c] < 0 ? '-' : '') + c);
     if (codes.length) parts.push(ax.key + '=' + codes.join(','));
   });
-  if (st.cond) {
-    const and = encodeTags(Cond.tagsIn(st.cond, 'and'));
-    const or = encodeTags(Cond.tagsIn(st.cond, 'or'));
-    const orSide = Cond.syncSide(st.cond, q).orSide;
-    if (and) parts.push(ACT + '=' + and);
-    if (or) parts.push(ACT_OR + '=' + or);
-    if (orSide.length) parts.push(OR_SIDE + '=' + orSide.join(','));
-  }
   SCHEMA.range.forEach(f => {
     const r = q[f.key];
     if (r && (r.min != null || r.max != null)) {
@@ -191,21 +129,14 @@ function toTri(v, ax) {
 function parse(hash) {
   const q = { name: '', nameLang: DEFAULT_LANG, code: '', text: '' };
   const raw = {};
-  let cond = Cond.empty();
-  let orSide = [];
   String(hash == null ? '' : hash).replace(/^#/, '')
     .replace(MANGLED_SEP, '&$1=').split('&').forEach(seg => {
     const i = seg.indexOf('=');
     if (i < 0) return;
     const key = seg.slice(0, i);
     if (!key) return;
-    if (key === ACT || key === ACT_OR) {
-      cond = decodeTags(seg.slice(i + 1), cond, key === ACT ? 'and' : 'or');
-      return;
-    }
     const v = dec(seg.slice(i + 1));
     if (v == null) return;
-    if (key === OR_SIDE) { orSide = orSide.concat(v.split(',')); return; }
     if (TEXTS.indexOf(key) >= 0) { q[key] = v.trim(); return; }
     if (key === 'textMat') { if (v === '1') q.textMat = 1; return; }
     if (key === LANG) { q[LANG] = langOf(v); return; }
@@ -225,11 +156,7 @@ function parse(hash) {
     const unknown = SCHEMA.range.find(f => f.unknown === key);
     if (unknown && (v === '1' || v === '-1')) q[key] = +v;
   });
-  const state = { q, sort: sortOf({ key: raw.sort, dir: raw.dir }) };
-  /* 鍵要等左側條件都解析完才知道對不對得到標籤:or 寫在哪一段都一樣。 */
-  cond = Cond.syncSide(orSide.reduce((st, key) => Cond.moveSide(st, key, 'or'), cond), q);
-  if (!Cond.isEmpty(cond)) state.cond = cond;
-  return state;
+  return { q, sort: sortOf({ key: raw.sort, dir: raw.dir }) };
 }
 
 function canon(hash) {

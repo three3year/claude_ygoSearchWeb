@@ -2,7 +2,7 @@
 """PreToolUse hook(Bash/PowerShell):擋下兩件 2026-11-01 讓 data/sources/ 全失的事。
 
 1. 建連結(mklink、New-Item -ItemType Junction/SymbolicLink、ln -s、fsutil hardlink):
-   工作樹需要建置輸入時用 script/dev/worktree_bootstrap.py 複製,不建連結。
+   工作樹需要建置輸入時用複製,不建連結。
 2. `git worktree remove` 的目標底下還有 reparse point(junction/symlink)時:git 會穿過連結
    刪掉連結目標的真檔;先把連結拆掉再刪。
 
@@ -79,8 +79,7 @@ def main():
         return 0
     command = (data.get("tool_input") or {}).get("command") or ""
     if LINK_COMMANDS.search(command):
-        deny("建連結(junction/symlink/hardlink)被擋下:工作樹要建置輸入時用 "
-             "python script/dev/worktree_bootstrap.py <工作樹路徑> 複製進去。"
+        deny("建連結(junction/symlink/hardlink)被擋下:工作樹要建置輸入時用複製,不建連結。"
              "原因:git worktree remove/clean 會穿過連結刪掉目標的真檔(2026-11-01 data/sources 全失)。")
     cwd = data.get("cwd") or os.getcwd()
     for target in worktree_targets(command, cwd):

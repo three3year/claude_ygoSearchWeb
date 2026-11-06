@@ -24,19 +24,16 @@ function setSort(key, dir) {
   paintSort();
 }
 
-const LEAD_HINT = '命中的框在領起句,此 ● 子句繼承';
-
 const MARK_ZH = {
   text: () => '',
   kind: (c, i) => KIND_ZH[(c.k || [])[i]],
   opt: (c, i) => OPT_ZH[(c.o || [])[i]],
-  pred: () => '',   // 命中的述詞列在句尾標籤,徽章不重複
 };
 
-function highlight({ marks, labels }) {
+function highlight(marks) {
   if (!marks || !marks.length) return null;
   const text = marks.find(m => m.type === 'text');
-  return { parts: text ? Engine.likeParts(text.value) : [], marks, labels };
+  return { parts: text ? Engine.likeParts(text.value) : [], marks };
 }
 
 function badgeText(marks, c, i) {
@@ -57,7 +54,7 @@ function render(result = lastResult) {
     ? `共 ${total} 張，第 ${page}/${pages} 頁`
     : '沒有符合條件的卡片';
 
-  const hl = highlight(result);
+  const hl = highlight(result.marks);
   const slice = entries.slice((page - 1) * per, page * per);
   $('results').innerHTML = slice.map(e => cardHtml(e, hl)).join('');
   renderPager('pagerTop', pages, page);
@@ -67,7 +64,7 @@ function render(result = lastResult) {
 function renderIdle() {
   $('resultInfo').textContent = '';
   $('results').innerHTML = `<div class="idle">
-    <p class="idle-title">從左邊選條件,結果會立刻出現</p>
+    <p class="idle-title">設定條件後按「搜尋」</p>
   </div>`;
   renderPager('pagerTop', 1, 1);
   renderPager('pagerBottom', 1, 1);
@@ -96,7 +93,7 @@ function cardHtml(e, hl) {
       ${banHtml(c)}
       ${printHtml(c)}
       ${metaHtml(c)}
-      <div class="card-text">${cardText(e, hl)}</div>
+      <div class="card-text">${cardText(c, e.rows, hl)}</div>
       ${ogTextHtml(c)}
     </div>
   </article>`;
@@ -211,11 +208,10 @@ function lmGridHtml(c) {
     : `<b>${c.lk == null ? '' : c.lk}</b>`).join('')}</span>`;
 }
 
-function cardText(e, hl) {
-  const c = e.card;
+function cardText(c, rows, hl) {
   const flavor = c.d ? `<p class="eff flavor">${lineHtml(c.d)}</p>` : '';
   const tx = c.tx || [];
-  const line = (t, i) => effHtml(e, t, i, hl);
+  const line = (t, i) => effHtml(c, t, i, rows, hl);
   if (!(c.s || []).includes('pendulum')) return tx.map(line).join('') + flavor;
 
   const pend = new Set(c.pz || []);
@@ -233,38 +229,20 @@ function group(label, lines, divider) {
     <div class="eff-group-label">${label}</div>${lines}`;
 }
 
-function effHtml(e, text, i, hl) {
-  const { card: c, rows, hits } = e;
+function effHtml(c, text, i, rows, hl) {
   const role = (c.ro && c.ro[i]) || '';
   const kind = (c.k && c.k[i]) || '';
   const labels = (role ? [ROLE_ZH[role]]
     : [KIND_ZH[kind] || kind, OPT_ZH[(c.o || [])[i]]]).filter(Boolean);
-  const rowIndex = rows ? rows.indexOf(i) : -1;
-  const hit = rowIndex >= 0;
+  const hit = !!rows && rows.indexOf(i) >= 0;
   const ranges = hit && hl && hl.parts.length
     ? Engine.likeRanges(text, hl.parts) : null;
   const badge = hit ? badgeText(hl.marks, c, i) : '';
   return `<p class="eff${roleClass(c, role)}${hit ? ' hit' : ''}" data-ei="${i}">${
     badge ? `<span class="eff-hit">${esc(badge)}</span>` : ''}${
-    lineHtml(text, ranges)}${hit && hits ? tailHtml(c, i, hits[rowIndex], hl.labels) : ''}${
+    lineHtml(text, ranges)}${
     labels.length ? `<span class="eff-kinds">${labels.map(t =>
       `<span class="eff-kind">${esc(t)}</span>`).join('')}</span>` : ''}</p>`;
-}
-
-/* 句尾標籤(規格 4 句尾標籤段):這一句命中的述詞,每個述詞一個。只有帶 hits 的命中句才有:
-   只因左側條件命中的句沒有 hits,或 hits 是空清單。 */
-function tailHtml(c, i, rowHits, labels) {
-  const seqs = Array.from(new Set(rowHits.map(hit => hit[0])));
-  if (!seqs.length) return '';
-  return `<span class="eff-tail">${seqs.map(seq => {
-    /* 同一述詞在這一句自己與領起句都有框時算這一句的:hits 裡領起句的框排在前,不能只取第一個。 */
-    const mine = rowHits.filter(hit => hit[0] === seq);
-    const [, row, n] = mine.find(hit => hit[1] === i) || mine[0];
-    const prefix = Cond.positionPrefix(Engine.framePosition(c, row, n));
-    return row === i
-      ? `<span class="tail-tag">${esc(prefix + labels[seq])}</span>`
-      : `<span class="tail-tag" title="${esc(LEAD_HINT)}">${esc(prefix + labels[seq] + ' ↑領起句')}</span>`;
-  }).join('')}</span>`;
 }
 
 function roleClass(c, role) {

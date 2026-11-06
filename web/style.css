@@ -59,19 +59,19 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   max-height: calc(100vh - 28px); overflow-y: auto;
 }
 /* 摺疊的對象是內層而不是側欄本身(窄螢幕才收得起來,見檔尾)。留白**在寬螢幕仍然
-   留在 .sidebar 上**:動作鈕是 sticky 的,而 sticky 貼齊的是捲動容器的 padding
+   留在 .sidebar 上**:「搜尋」是 sticky 的,而 sticky 貼齊的是捲動容器的 padding
    邊——把 padding 搬進內層會讓那一條往上跑 12px,那就是動到桌機版面了。 */
 .sidebar-body { padding: 0; }
 
 /* 摺疊鈕:**桌機不存在**。側欄在寬螢幕是常駐的,多一顆收合鈕只是多一個狀態。
    窄螢幕的樣式在檔尾的 media query 裡一起講。 */
 .sidebar-toggle { display: none; }
-/* 條件一變就重查,桌面沒有這顆鈕(規格 4);手機的「看結果」收起側欄回到結果(下面的 720 段)。 */
-/* 條件變多之後側欄自己會捲(卡片參數一長串),動作鈕因此釘在側欄頂端。
+/* 條件變多之後側欄自己會捲(卡片參數一長串),「搜尋」因此釘在側欄頂端——
+   調完種族按鈕還要捲回最上面才按得到,那是每一次搜尋都要付一遍的代價。
    負 margin 是為了蓋掉側欄的 padding:不蓋的話捲動的內容會從兩側露出來。 */
 .sidebar-actions {
   position: sticky; top: 0; z-index: 1;
-  display: none; gap: 8px;
+  display: flex; gap: 8px;
   margin: -12px -12px 12px; padding: 12px 12px 10px;
   background: var(--surface); border-bottom: 1px solid var(--border);
 }
@@ -461,15 +461,6 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   border-radius: 3px; padding: 0 1px;
 }
 
-/* ─── 句尾標籤(predicate-ui 票 03)──────────────────────
-   命中句句尾自佔一行,列這次查詢命中的述詞:與關鍵字同一種金色,和「哪幾個字讓這行中的」
-   是同一個問題。 */
-.eff-tail { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.tail-tag {
-  padding: 0 6px; border: 1px solid var(--hl-border); border-radius: 4px;
-  background: var(--surface2); color: var(--gold); font-size: 11px; font-weight: bold;
-}
-
 /* ─── 效果外文本的三種弱化樣式 ────────────────────────────
    素材指定 / 召喚條件 / 使用次數限制:一眼分得出哪幾行根本不是效果。
    三種各有形狀而不是統一淡化——它們在卡面上本來就長得不一樣。 */
@@ -563,9 +554,9 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   .sidebar-toggle::after { content: '▾'; margin-left: auto; color: var(--muted); }
   .sidebar-toggle[aria-expanded="true"]::after { content: '▴'; }
   .sidebar:not(.open) .sidebar-body { display: none; }
-  /* 條件一長串,「看結果」跟著釘在摺疊鈕下面——桌機版釘的是側欄自己的捲動頂端,
+  /* 條件一長串,「搜尋」跟著釘在摺疊鈕下面——桌機版釘的是側欄自己的捲動頂端,
      手機版沒有那個捲動容器,所以改釘在頁面上、讓開摺疊鈕的高度 */
-  .sidebar-actions { display: flex; top: var(--bar-h); }
+  .sidebar-actions { top: var(--bar-h); }
 
   /* 卡片改單欄:卡圖置頂置中、卡文佔滿整寬。圖比平板再大一點——它獨佔一列,
      縮太小反而看不清卡面 */
@@ -607,199 +598,4 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   /* 上下頁只留箭頭:360px 寬的手機上那兩個詞佔掉近八十點,留著的話中段的頁碼
      會被擠到第二排,分頁器整個變成三排 */
   .pg-txt { display: none; }
-}
-
-/* ─── 具名查詢目錄(規格 4 目錄導覽,版面同原型 D 版)──────────
-   檔案總管式:每層縮一格、左側導引線;列是「展開箭頭 + 名字與張數 + 排除鈕」。 */
-.catalog { margin: 10px 0; }
-.cat-title {
-  display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px;
-  color: #b3bac9; font-size: 13px; font-weight: 600;
-}
-.cat-note { color: var(--muted); font-size: 11px; font-weight: normal; }
-.cat-filter {
-  width: 100%; margin-bottom: 6px; padding: 4px 8px;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-  color: var(--text); font: inherit; font-size: 12px;
-}
-.cat-filter:focus { outline: none; border-color: var(--accent); }
-.cat-scroll { max-height: 340px; overflow-y: auto; }
-.cat-tree, .cat-kids { list-style: none; }
-.cat-kids { margin-left: 9px; padding-left: 8px; border-left: 1px solid var(--border); }
-.cat-row { display: flex; align-items: center; gap: 2px; margin: 1px 0; }
-.cat-tog, .cat-tog-pad { flex: none; width: 18px; text-align: center; }
-.cat-tog {
-  background: none; border: none; color: var(--muted); cursor: pointer;
-  font-size: 12px; padding: 0;
-}
-.cat-tog::before { content: '▸'; }
-.cat-tog[aria-expanded="true"]::before { content: '▾'; }
-.cat-tog:hover { color: var(--text); }
-.cat-pick {
-  flex: 1; min-width: 0; display: flex; gap: 6px; justify-content: space-between;
-  align-items: baseline; text-align: left; padding: 1px 6px; cursor: pointer;
-  background: none; border: 1px solid transparent; border-radius: 5px;
-  color: var(--text); font: inherit; font-size: 12px;
-}
-.cat-pick:hover { border-color: var(--accent); }
-.cat-pick.group { color: #b3bac9; font-weight: 600; }
-.cat-pick.zero { color: var(--muted); }
-.cat-pick.used { border-color: var(--hl-border); color: var(--gold); }
-.cat-used { flex: none; margin-left: auto; font-size: 10px; }
-.cat-n {
-  flex: none; color: var(--muted); font-size: 11px; font-weight: normal;
-  font-variant-numeric: tabular-nums;
-}
-.cat-minus {
-  flex: none; padding: 0 5px; cursor: pointer; line-height: 1.3;
-  background: none; border: 1px solid var(--border); border-radius: 4px;
-  color: #e57f8a; font-size: 11px;
-}
-/* 手機:箭頭與列都是觸控目標 */
-@media (max-width: 720px) {
-  .cat-tog, .cat-tog-pad { width: 28px; }
-  .cat-tog { font-size: 15px; padding: 4px 0; }
-  .cat-pick { font-size: 14px; padding: 4px 9px; }
-  .cat-minus { padding: 3px 8px; }
-  .cat-filter { font-size: 16px; }
-  .cat-scroll { max-height: none; }
-}
-
-/* ─── 條件列(規格 4,版面同原型 D 版):結果上方,一個條件一顆標籤,排滿才換行 ─── */
-#condStrip {
-  position: sticky; top: 0; z-index: 4;
-  padding: 4px 0 6px; margin-bottom: 4px;
-  background: var(--bg); border-bottom: 1px solid var(--border);
-}
-.strip-top { margin-bottom: 4px; }
-.strip-clear {
-  padding: 0 8px; line-height: 1.7; font-size: 12px; cursor: pointer;
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
-  color: var(--text);
-}
-.strip-clear:hover:not(:disabled) { border-color: var(--accent); }
-.strip-clear:disabled { opacity: .45; cursor: default; }
-.strip-zone {
-  display: flex; align-items: flex-start; gap: 8px; padding: 2px 0; border-radius: 6px;
-}
-.strip-zone.over { background: var(--surface2); box-shadow: inset 0 0 0 1px var(--accent); }
-.strip-zone-l {
-  flex: none; width: 32px; text-align: right; line-height: 22px;
-  color: var(--muted); font-size: 11px; font-weight: bold;
-}
-.strip-tags {
-  flex: 1; min-width: 0; min-height: 22px;
-  display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
-}
-.strip-hint { color: var(--muted); font-size: 11px; opacity: .7; }
-.strip-tag {
-  display: inline-flex; align-items: center; gap: 2px; max-width: 100%;
-  padding: 0 3px 0 9px; line-height: 1.7; font-size: 12px;
-  background: var(--surface2); border: 1px solid var(--accent-dim); border-radius: 12px;
-  cursor: move;
-}
-.strip-tag.side { border-color: var(--border); }
-.strip-tag.ex { background: #2a1c21; border-color: #7c2d36; }
-.strip-lead { color: #e57f8a; font-weight: bold; }
-.strip-glue { color: var(--muted); font-size: 11px; }
-.strip-lemma { color: var(--gold); font-weight: 600; }
-.strip-val { color: var(--accent); }
-.strip-tag.ex .strip-lemma, .strip-tag.ex .strip-val { color: #f0a3ac; }
-.strip-x {
-  background: none; border: none; color: var(--muted); cursor: pointer;
-  font-size: 15px; line-height: 1; padding: 0 3px;
-}
-.strip-x:hover { color: var(--text); }
-.side-flash { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-.strip-tag.active { box-shadow: 0 0 0 1px var(--accent); }
-.strip-tag [data-field]:hover { text-decoration: underline; }
-
-/* ─── 抽屜(規格 4,版面同原型 D 版):點標籤開在右側,改欄位結果立刻更新 ─── */
-#condDrawer {
-  position: fixed; top: 0; right: 0; bottom: 0; z-index: 40;
-  width: 380px; max-width: 100%; padding: 14px 14px 80px; overflow-y: auto;
-  background: var(--surface); border-left: 1px solid var(--border);
-  box-shadow: -8px 0 24px #0008;
-}
-.drawer-head {
-  position: sticky; top: 0; z-index: 1;
-  display: flex; gap: 8px; align-items: center;
-  padding: 6px 0; margin-bottom: 6px; background: var(--surface);
-}
-.drawer-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; word-break: break-all; }
-.drawer-name.named { color: var(--gold); }
-.drawer-seg { display: inline-flex; flex: none; }
-.drawer-seg button {
-  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
-  font: inherit; font-size: 11px; padding: 1px 7px; cursor: pointer;
-}
-.drawer-seg button + button { border-left: none; }
-.drawer-seg button:first-child { border-radius: 5px 0 0 5px; }
-.drawer-seg button:last-child { border-radius: 0 5px 5px 0; }
-.drawer-seg button.on { background: var(--accent-dim); color: var(--text); font-weight: bold; }
-.drawer-seg button.on.ex { background: #7c2d36; }
-.drawer-note {
-  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-  color: var(--muted); font-size: 11px;
-}
-.drawer-btn {
-  background: var(--surface2); border: 1px dashed var(--border); border-radius: 6px;
-  color: var(--text); padding: 0 6px; font: inherit; font-size: 12px; cursor: pointer;
-}
-.drawer-btn:hover { border-color: var(--accent); }
-.drawer-remove { margin-left: auto; }
-.drawer-group {
-  margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--border);
-  color: var(--muted); font-size: 11px;
-}
-.drawer-field { margin-top: 7px; }
-.drawer-field.focus { outline: 1px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
-.drawer-label { font-size: 12px; color: #b3bac9; margin-bottom: 2px; }
-.drawer-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.drawer-chip {
-  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
-  color: var(--muted); padding: 1px 9px; font: inherit; font-size: 12px; cursor: pointer;
-}
-.drawer-chip.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
-.drawer-chip.last, .drawer-chip.locked { cursor: not-allowed; border-style: dashed; }
-.drawer-chip.gray { cursor: not-allowed; opacity: .35; }
-.drawer-item {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 0 3px 0 9px; font-size: 12px; background: var(--accent-dim); border-radius: 12px;
-}
-.drawer-add { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 3px; }
-.drawer-add select, .drawer-add input {
-  min-width: 0; padding: 2px 4px; font: inherit; font-size: 12px;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text);
-}
-.drawer-add input { width: 130px; }
-
-/* ─── 手機(規格 4,版面同原型 D 版):條件列列內捲動、⇄ 換區、抽屜是底部面板 ─── */
-.strip-swap {
-  display: none; background: none; border: none; color: var(--muted); cursor: pointer;
-  font-size: 13px; line-height: 1; padding: 0 3px;
-}
-.strip-swap:hover { color: var(--text); }
-@media (max-width: 720px) {
-  /* 手機拖不了:上限是一屏的五分之一左右,再多在列內捲,結果才看得到。 */
-  #condStrip { max-height: 132px; overflow-y: auto; }
-  .strip-tag { cursor: pointer; -webkit-user-drag: none; }
-  .strip-swap { display: inline; }
-  /* 觸控目標 */
-  .strip-tag { padding: 2px 3px 2px 9px; font-size: 13px; }
-  .strip-swap, .strip-tag .strip-x { font-size: 16px; padding: 2px 6px; }
-  .strip-clear { padding: 2px 10px; font-size: 13px; }
-
-  #condDrawer {
-    top: auto; left: 0; width: auto; max-height: 72vh; padding-bottom: 20px;
-    border-left: none; border-top: 1px solid var(--accent-dim); border-radius: 14px 14px 0 0;
-    overscroll-behavior: contain;
-  }
-  .drawer-seg button { font-size: 13px; padding: 4px 10px; }
-  .drawer-chip { font-size: 14px; padding: 4px 9px; }
-  .drawer-btn { padding: 3px 8px; }
-  .drawer-item .strip-x { padding: 3px 6px; }
-  .drawer-head .strip-x { font-size: 18px; padding: 4px 6px; }
-  /* 16px 同上面的 iOS 自動放大 */
-  .drawer-add select, .drawer-add input { font-size: 16px; padding: 4px 6px; }
 }

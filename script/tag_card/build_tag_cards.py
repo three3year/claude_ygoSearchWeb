@@ -26,13 +26,10 @@ import re
 import sys
 
 import rules
-import tag_rules
 from store import (DEFAULT_CARDS, DEFAULT_FAQ_INFO, DEFAULT_RULES_DOC,
-                   DEFAULT_SPLITS, DEFAULT_TAG_CARDS, ROOT, load_json,
+                   DEFAULT_SPLITS, DEFAULT_TAG_CARDS, load_json,
                    load_modern_ja, load_optional)
 from tagcard import build_tag_cards, serialize_tag_cards
-
-DEFAULT_TAG_RULES_DOC = os.path.join(ROOT, "docs", "effect_tag_rules.md")
 
 LIST_PREVIEW = 20  # 清單過長時只印前幾筆,完整內容看輸出檔
 OPTIONAL_THRESHOLD = 0.98  # 必發/選發規則層的獨立驗證門檻(票04)
@@ -60,7 +57,7 @@ def print_splits(report, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
     p("")
     p(f"拆句表: 套用 {report['split_records']} 筆,"
-      f"拆出標記句 {report['split_clauses']} 條,"
+      f"拆出效果句 {report['split_clauses']} 條,"
       f"因拆句新取得官方明示 {report['split_new_official']} 條")
     for key, label in (
             ("split_coverage_failed", "驗證一・無遺漏覆蓋不成立"),
@@ -185,7 +182,7 @@ def rule_status(row):
 
 
 def clause_line(row, tail, indent="  "):
-    """報告裡指向單一標記句的一行,前綴一律是那三個穩定鍵。"""
+    """報告裡指向單一效果句的一行,前綴一律是那三個穩定鍵。"""
     return (f"{indent}id={row['id']} section={row['section']} "
             f"index={row['index']} {tail}")
 
@@ -268,7 +265,7 @@ def rules_doc_preamble(report):
         "(定義有異動時才會變,覆蓋條數變動不算)",
         "",
         f"統計基準:{report['cards']:,} 張卡 / {report['rule_targets']:,} 條"
-        "有日文原文的標記句(規則層的管轄範圍,前言段不在其中),"
+        "有日文原文的效果句(規則層的管轄範圍,前言段不在其中),"
         f"產出影子預測 {report['rule_predictions']:,} 條"
         f"(其中尚未判定 {report['rule_predictions_pending']:,} 條)。",
         "",
@@ -294,7 +291,7 @@ def rules_doc_registry(report):
 
 def rules_doc_validation(report):
     lines = [
-        "## 獨立驗證(以[[官方明示]]的標記句遮答案跑規則)",
+        "## 獨立驗證(以[[官方明示]]的效果句遮答案跑規則)",
         "",
         f"門檻 {100 * rules.AGREEMENT_THRESHOLD:.0f}%。未達門檻的規則不自動停用"
         "——那會把問題藏起來;它會一直標成 FAIL,直到判別條件收緊或使用者判定"
@@ -363,82 +360,9 @@ def write_rules_doc(path, report):
     return previous != report["rules_digest"]
 
 
-def print_tag_rules(report, file=sys.stdout):
-    """效果 Tag 規則層(ADR-0013:直接寫入)與觸發時機的本輪成績。"""
-    p = lambda *a: print(*a, file=file)  # noqa: E731
-    p("")
-    p(f"效果 Tag 規則層(直接寫入,ADR-0013):管轄 "
-      f"{report['tag_scope_clauses']:,} 條新式標記句,"
-      f"寫入 tag {report['tag_rule_tags']:,} 個、"
-      f"雙重確認升級 {report['tag_rule_confirms']} 個,"
-      f"指紋 {report['tag_rules_digest']}")
-    p(f"規則清單自身的毛病(必須為 0): {len(report['tag_rules_problems'])} 筆 "
-      f"{report['tag_rules_problems'][:LIST_PREVIEW]}")
-    p(f"規則與 LLM 判空衝突(必須為 0): {len(report['tag_rule_vs_llm'])} 筆")
-    for row in report["tag_rule_vs_llm"][:LIST_PREVIEW]:
-        p(f"  {row}")
-    p(f"已開貼類別的待判餘量: {len(report['tag_pending'])} 條")
-    p("tag 類別分布:")
-    for cat, count in sorted(report["tag_counts"].items()):
-        p(f"  {cat}: {count:,}")
-    p(f"tag 來源分布: {report['tag_src_counts']},"
-      f"判空紀錄 {report['tags_checked_counts']}")
-    p(f"觸發時機:規則寫入 {report['timing_rule_values']:,} 條、"
-      f"雙重確認 {report['timing_rule_confirms']} 條、"
-      f"與 LLM 衝突(必須為 0) {len(report['timing_rule_vs_llm'])} 筆、"
-      f"貼在不承載類型上(必須為 0) {len(report['timing_on_wrong_kind'])} 筆")
-
-
-def render_tag_rules_doc(report):
-    """報告 → docs/effect_tag_rules.md(tag 規則清單,產出物不手改)。
-
-    遮蔽測試的成績不寫死在這裡——tag seal 對著入版控的樣本與標準答案
-    **現場重算**(`masked_tags.score_tag_masked`),過期的及格單不存在。
-    """
-    lines = [
-        "# 效果 Tag 規則清單",
-        "",
-        "<!-- 這份文件由 script/tag_card/build_tag_cards.py 產生,不要手改。 -->",
-        "<!-- 規則定義寫在 script/tag_card/tag_rules.py;覆蓋條數由建置流程"
-        "統計後回寫。 -->",
-        "",
-        f"規則定義指紋:`{report['tag_rules_digest']}`;"
-        f"體系定稿指紋(vocab tag_digest)由 tag seal 對帳。",
-        "",
-        f"規則**直接寫入** `tags`(ADR-0013),敘用門檻為遮蔽測試"
-        f"(錯標 0、框架 recall ≥ {tag_rules.MASKED_MIN_RECALL:.0%}、"
-        f"樣本分母 ≥ {tag_rules.MASKED_MIN_HITS};樣本與標準答案入版控於 "
-        f".scratch/effect-tag/masked/,seal 現場重算)。",
-        "",
-        f"分期開貼:{tag_rules.PHASES}",
-        "",
-        "## 動作 tag 規則",
-        "",
-        "| 編號 | 類別 | 範圍 | 判別條件 | 覆蓋 | 票號 |",
-        "|---|---|---|---|---|---|",
-    ]
-    lines += [f"| {row['id']} | {row['cat']} | {row['scope']} | "
-              f"{escape_cell(row['condition'])} | {row['coverage']} | "
-              f"{row['ticket']} |"
-              for row in report["tag_rules"]]
-    lines += ["", "## 觸發時機規則", "",
-              "| 編號 | 時機值 | 判別條件 | 覆蓋 |", "|---|---|---|---|"]
-    lines += [f"| {row['id']} | {row['value']} | "
-              f"{escape_cell(row['condition'])} | {row['coverage']} |"
-              for row in report["timing_rules"]]
-    lines.append("")
-    return "\n".join(lines)
-
-
-def write_tag_rules_doc(path, report):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(render_tag_rules_doc(report))
-
-
 def print_report(report, digest_changed=False, file=sys.stdout):
     p = lambda *a: print(*a, file=file)  # noqa: E731
-    p(f"卡片: {report['cards']} 張,標記句: {report['clauses']} 條")
+    p(f"卡片: {report['cards']} 張,效果句: {report['clauses']} 條")
     p(f"純通常怪獸(空 clauses): {report['pure_normal']} 張")
     p(f"靈擺段: {report['pendulum_sections']} 張,"
       f"丟棄怪獸敘述段: {report['flavor_dropped']} 張")
@@ -464,7 +388,7 @@ def print_report(report, digest_changed=False, file=sys.stdout):
     # 因此是繁中卡文,這些行沒有官方明示、也沒有影子預測,confidence 一律低。
     p(f"無官方日文文本(改以繁中卡文判定,ADR-0006): "
       f"{len(report['no_japanese_text'])} 張 / "
-      f"{report['zh_judged_clauses']} 條標記句")
+      f"{report['zh_judged_clauses']} 條效果句")
     p(f"  {report['no_japanese_text']}")
 
     p(f"繁中/日文編號數量不一致: {len(report['numeral_mismatch'])} 段")
@@ -520,8 +444,6 @@ def print_report(report, digest_changed=False, file=sys.stdout):
 
     print_rules(report, digest_changed, file=file)
 
-    print_tag_rules(report, file=file)
-
     print_judgments(report, file=file)
 
     print_merge(report, file=file)
@@ -531,7 +453,7 @@ def print_report(report, digest_changed=False, file=sys.stdout):
     for key, label in (("seq_missing", "序號引用對不到編號(必須為 0)"),
                        ("header_index_missing", "標頭指名的編號卡文沒有"),
                        ("quote_ambiguous", "引號同時命中多個編號區段"),
-                       ("kind_conflicts", "同一標記句被官方寫成兩種類型"),
+                       ("kind_conflicts", "同一效果句被官方寫成兩種類型"),
                        ("kind_ambiguous", "同一行寫出多種類型"),
                        ("non_effect_outside_preamble", "效果外明示不在前言段")):
         rows = report[key]
@@ -554,9 +476,6 @@ def main(argv=None):
     parser.add_argument("--rules-doc", default=DEFAULT_RULES_DOC,
                         help="效果類型規則清單的回寫路徑 "
                              "(預設 docs/effect_kind_rules.md)")
-    parser.add_argument("--tag-rules-doc", default=DEFAULT_TAG_RULES_DOC,
-                        help="效果 Tag 規則清單的回寫路徑 "
-                             "(預設 docs/effect_tag_rules.md)")
     parser.add_argument("--attribution-lists",
                         help="把三份人工清單完整寫成 JSON 的路徑")
     parser.add_argument("--ignore-existing", action="store_true",
@@ -594,9 +513,8 @@ def main(argv=None):
             f.write("\n")
 
     rules_changed = write_rules_doc(args.rules_doc, report)
-    write_tag_rules_doc(args.tag_rules_doc, report)
     print_report(report, digest_changed=rules_changed)
-    print(f"已寫出 {args.out}、{args.rules_doc} 與 {args.tag_rules_doc}")
+    print(f"已寫出 {args.out} 與 {args.rules_doc}")
     return 0
 
 

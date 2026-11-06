@@ -15,8 +15,16 @@ BRANCH_MODES = ("選1", "各自可以", "依前提")
 SIDES = ("我方", "對手", "任一方", "雙方各自")
 OBJECT_KINDS = ("卡", "玩家", "計數器", "格位", "宣言值")
 OBJECT_SOURCES = ("自己", "新建", "子集", "剩餘", "聯集")
+VOICES = ("主動", "被動", "混合")  # 混合:て形串接的多個述語態不同
 ZONES = ("手牌", "牌組", "牌組頂", "牌組底", "額外牌組", "場上", "怪獸區",
          "魔陷區", "P區", "場地區", "EX怪獸區", "墓地", "除外", "素材")
+# 區域的方從哪來:明寫(自分の/相手の)、預設(沒寫,照慣例歸我方)。
+SIDE_SOURCES = ("明寫", "預設")
+# 遊戲狀態原子(只出現在前提):回合方的值是我方/對手;階段的值是階段名、另帶方;
+# 傷害步驟沒有值。
+GAME_STATES = ("回合方", "階段", "傷害步驟")
+PHASES = ("抽牌階段", "準備階段", "主要階段", "主要階段1", "主要階段2", "戰鬥階段",
+          "結束階段")
 # 子區域 → 上位區域;查「牌組」要含牌組頂、牌組底,查「場上」要含各區。
 ZONE_PARENT = {"牌組頂": "牌組", "牌組底": "牌組", "怪獸區": "場上",
                "魔陷區": "場上", "P區": "場上", "場地區": "場上",
@@ -32,8 +40,9 @@ def unparsed(reason):
     return {"reason": reason}
 
 
-def zone(name, side=None):
-    return {"zone": name, "side": side}
+def zone(name, side=None, side_source=None):
+    """區域 + 方 + 方的來源(明寫/預設;None = 沒有方)。反向檢查只在明寫時寫「自分の」。"""
+    return {"zone": name, "side": side, "side_source": side_source}
 
 
 def position(zones, source, inferred=False, text=None, form=None):
@@ -42,6 +51,7 @@ def position(zones, source, inferred=False, text=None, form=None):
     `text` 是明寫時含助詞的原文字面(「自分のデッキの上から」「墓地の」「デッキの一番下に」,
     反向檢查據此還原、解析時驗過與 zones 一致);
     `form` 是到的放置形式(「好きな順番で」、表側守備表示…,spec「到可帶表示形式」)。
+    明寫的「到」寫在物件前(自分フィールドにXが特殊召喚された)時另帶 `placement`: 名詞前(票 05);
     明寫的「從」寫在物件後(XをデッキからYに加える)時另帶 `placement`: 述語前(票 07),
     模板據此放回原位;寫在物件前(預設)不帶。"""
     return {"zones": list(zones), "source": source, "inferred": inferred,

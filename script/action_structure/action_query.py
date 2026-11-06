@@ -56,7 +56,7 @@ CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
 GENERIC_ATOMS = ("大類", "位置", "控制方")
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
-                "靈擺": 0x1000000, "連結": 0x4000000}
+                "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000}
 COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
                "≤": operator.le, ">": operator.gt, "<": operator.lt}
 REASON_REF_MISSING = "引用的物件找不到"

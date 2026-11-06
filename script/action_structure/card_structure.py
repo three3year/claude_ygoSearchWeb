@@ -210,6 +210,20 @@ def _hydrate_line(line):
     return line
 
 
+def _hydrate_condition(condition):
+    """條件式裡帶區域的原子(前提的位置、存在)把區域補齊;其餘原子原樣。"""
+    if not isinstance(condition, dict):
+        return condition
+    out = dict(condition)
+    if "zones" in out:
+        out["zones"] = _hydrate_zones(out["zones"])
+    if "args" in out:
+        out["args"] = [_hydrate_condition(a) for a in out["args"]]
+    if "arg" in out:
+        out["arg"] = _hydrate_condition(out["arg"])
+    return out
+
+
 def _hydrate_nodes(items):
     out = []
     for node in items:
@@ -240,6 +254,7 @@ def _hydrate_block(block):
         seg = _hydrate(seg, new_segment(seg["id"], seg["kind"], seg["span"],
                                         text[start:end]))
         seg["lines"] = [_hydrate_line(line) for line in seg["lines"]]
+        seg["premise"] = _hydrate_condition(seg["premise"])
         segments.append(seg)
     block["segments"] = segments
     block["tree"] = {**block["tree"],
@@ -264,6 +279,7 @@ def load_structures(text):
             obj = _hydrate(obj, new_object(obj["id"], obj["source"]))
             if obj["initial_position"]:
                 obj["initial_position"] = _hydrate_zones(obj["initial_position"])
+            obj["condition"] = _hydrate_condition(obj["condition"])
             objects.append(obj)
         card["objects"] = objects
         card["blocks"] = [_hydrate_block(block) for block in card["blocks"]]

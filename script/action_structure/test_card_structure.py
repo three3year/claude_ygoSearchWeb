@@ -11,7 +11,8 @@ from action_query import run_query
 from card_structure import (build_structures, load_structures,
                             serialize_structures)
 from test_golden import (ARCHETYPES, SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT,
-                         SPELL, card, faq)
+                         SPELL, WHITE_FOREST_LISETTE, WHITE_FOREST_LISETTE_TEXT,
+                         card, faq)
 
 OLD_STYLE_TEXT = (
     "このカードが特殊召喚に成功した時、自分のデッキの上からカードを２枚までめくる事"
@@ -79,6 +80,18 @@ class BuildStructuresTest(unittest.TestCase):
                                       "card": SINGULARITY_FIEND})["groups"],
             run_query(structures, cards, {"actions": ["捨棄"],
                                           "card": SINGULARITY_FIEND})["groups"])
+
+    def test_premise_zones_survive_the_round_trip(self):
+        """前提(位置、存在)帶區域,產物省略 side_source 等空格,讀回要補齊才相等。"""
+        cards = [card(WHITE_FOREST_LISETTE, name_ja="白き森のリゼット", level=2,
+                      race=0x2, attribute=0x10, setcode=0x1b1)]
+        entries = [faq(WHITE_FOREST_LISETTE, "白き森のリゼット",
+                       WHITE_FOREST_LISETTE_TEXT)]
+        structures, _ = build_structures(cards, entries, archetypes=ARCHETYPES)
+        text = serialize_structures(structures)
+        loaded = load_structures(text)
+        self.assertEqual(loaded, structures)
+        self.assertEqual(serialize_structures(loaded), text)
 
     def test_card_without_official_text_is_unparsed_with_reason(self):
         """沒有官方日文的卡:整張標未解析、原因「無官方日文」,查詢不會命中它。"""

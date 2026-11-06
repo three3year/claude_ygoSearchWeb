@@ -3,14 +3,17 @@
 規則是句型層級的,不針對任何一張卡:
 - 句子以「。」切;「その後、」開頭的句子與前一句連接為「先後」;區塊開頭的「また、」是接著詞。
 - 發動句(…発動できる / …発動する):
-    (條件子句)(時|場合|際)(に)、(代價子句)て  → 條件段 + 代價段
-  條件段帶觸發形;代價子句以て形結尾才算代價。
+    (前提)(條件子句)(時|場合|際)(に)、(代價子句)て  → 條件段 + 代價段
+  條件段帶觸發形;代價子句以て形結尾才算代價。前提(`premise` 模組:「〜に存在する場合、」
+  「相手ターンに」)先剝掉、寫進第一個段的前提格(段的範圍從前提起算);整句只有前提的
+  (「自分メインフェイズに発動できる」)開一個沒有動作詞的條件段放它;效果句開頭的前提同樣。
 - 舊式的「(條件子句)(時|場合|際)、(效果子句)」(沒有発動できる)→ 條件段 + 效果段。
 - 舊式的「(代價子句)る事で、(效果子句)」(= 新式「〜て発動できる。〜」)→ 代價段 + 效果段。
 - 其他句子是效果段;極性由述語語尾判(できない → 不能…);「〜できる」「〜事ができる」是
   可選的效果(可選格 `optional`,極性仍是做,查詢預設算命中;票 08 再分辨永續的「可以」)。
-- 簡單子句:[誰が][從から|從の|從に存在する][物件](を|が|は)[數量][取對象][原因][形式][從から][到に][受方に]述語
-  (「從」寫在物件後的記 placement 述語前;受方是「相手に見せて」的相手)。
+- 簡單子句:[誰が][到に][從から|從の|從に存在する][物件](を|が|は)[數量][取對象][原因][形式][從から][到に][受方に]述語
+  (物件前的「到に」只在助詞是「が」時:「自分フィールドにモンスターが特殊召喚された」;
+  「從」寫在物件後的記 placement 述語前;受方是「相手に見せて」的相手)。
   述語字面經同義表(`synonyms`)收成動作詞,語尾決定態與極性;て形串接的多個述語
   (めくられて墓地へ送られた)是多個動作詞。從/到保留含助詞的原文字面(`text`:「墓地の」
   「自分のデッキの上から」「デッキの一番下に」「墓地に存在する」),反向檢查據此還原
@@ -26,18 +29,23 @@
   剩餘物件(容器 − 最近的子集);其餘是新建物件,頭名詞給大類、數量給數量,修飾語從左到右認:
   「X」以外の = 非(卡名∋X);「X」と名のついた、緊接頭名詞的「X」= 字段(依字段表換成 setcode);
   カード名に「X」を含む = 卡名包含;「X」１体 = 卡名∋X;種族、屬性、レベルN = 屬性比較
-  (「・」分隔)。認不得的修飾語整截標「解析不出」(票 05 起逐步填);「X」對不到卡名與字段的,
+  (「・」列舉的種族/屬性是「或」,種族接屬性是「且」,`attribute_atoms`);頭名詞 チューナー =
+  怪獸 且 子類型 協調。認不得的修飾語整截標「解析不出」;「X」對不到卡名與字段的,
   物件標「不認得的「」名稱」。
 - 位置:處理完一段把「到」寫回物件目前位置;「從」沒寫先繼承目前位置(沒動過就是初始位置),
   再查推得表;推得值與繼承自推得值的標 inferred,查詢開關開才算。
+  區域的方沒寫(「墓地から」)照慣例歸我方但記 side_source 預設,場上系沒寫方不預設(任一方的
+  場上);明寫「自分の」記明寫,反向檢查沒有字面時只在明寫才寫出來。
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
 """
 import re
 
 from archetype_table import fold_width
+from attribute_atoms import parse_modifier as parse_param_group
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN
+from premise import split_premises
 from structure_shape import (new_line, new_object, new_segment, position,
                              segment_node, unparsed, zone)
 # 同義表(述語字面 → 動作詞、語尾、取對象字面)在 synonyms;這裡再匯出,舊的匯入點不變。
@@ -57,12 +65,21 @@ INFERENCE_TABLE = {
 ZONE_WORDS = (("EXデッキ", "額外牌組"), ("デッキの一番下", "牌組底"),
               ("デッキの一番上", "牌組頂"), ("デッキの上", "牌組頂"),
               ("デッキ", "牌組"), ("手札", "手牌"),
+              ("EXモンスターゾーン", "EX怪獸區"), ("モンスターゾーン", "怪獸區"),
+              ("魔法＆罠ゾーン", "魔陷區"), ("ペンデュラムゾーン", "P區"),
+              ("フィールドゾーン", "場地區"),
               ("フィールド上", "場上"),  # 舊式:フィールド上の = フィールドの
               ("フィールド", "場上"), ("墓地", "墓地"))
+# 場上系區域:沒寫方時不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
+FIELD_ZONES = ("場上", "EX怪獸區", "怪獸區", "魔陷區", "P區", "場地區")
 # 從的助詞:新式「墓地の」「墓地から」;舊式連體修飾「墓地に存在するX」(= 墓地のX)。
 FROM_PARTICLES = ("から", "の", "に存在する")
 HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠カード": "陷阱",
                  "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
+# 帶子類型的頭名詞:大類 且 屬性比較(卡片子類型 = 協調,與票 07 的 Xモンスター 同一種原子)。
+HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
+_HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE), key=len,
+                         reverse=True))
 SIDE_WORDS = {"自分": "我方", "相手": "對手"}
 # 原因:種類 → 允許的字面(反向檢查只認這些)。
 CAUSE_TEXTS = {"效果": ("カードの効果によって", "効果によって", "カードの効果で", "効果で"),
@@ -79,8 +96,12 @@ _OLD_TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)(?:に)?、(
 # 舊式的代價句:「(代價子句)る事で、(效果子句)」= 新式「(代價子句)て発動できる。(效果子句)」。
 # 代價子句以非過去形收尾(る/う/す)才算,「〜された事で」是條件意味、不切。
 _OLD_COST_RE = re.compile("^(?P<cost>.+?[るうす])" + COST_GLUE + "、?(?P<rest>.+)$")
-_CLAUSE_RE = re.compile(
+# 物件前的「到に」:主語形「自分フィールドにモンスターが特殊召喚された」(助詞が時才有);
+# 後接「存在する」的是舊式從的助詞(フィールド上に存在するモンスター),不是到。
+_TO_FRONT = f"(?:(?P<to_front>{_ZONE_PHRASE})に(?!存在する))?"
+_CLAUSE_PATTERN = (
     "^(?:(?P<agent>自分|相手)(?:が|は))?"
+    f"{_TO_FRONT}"
     f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)}))?"
     # 物件短語裡的「を含む」(カード名に「X」を含む)、「を持つ」(…と同じ数値のレベルを持つ)
     # 不是受詞助詞;述語裡沒有を,所以切錯時會回頭把「を含む」吃進物件短語。
@@ -95,6 +116,10 @@ _CLAUSE_RE = re.compile(
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
     "(?:(?P<recipient>自分|相手)に)?"
     "(?P<pred>[^を]*)$")
+_CLAUSE_RE = re.compile(_CLAUSE_PATTERN)
+# 助詞不是「が」時物件前那截不是到,而是物件修飾的一部分(相手フィールド上にセットされたカード):
+# 拿掉「到に」再比一次。
+_CLAUSE_NO_TO_FRONT_RE = re.compile(_CLAUSE_PATTERN.replace(_TO_FRONT, "", 1))
 _EXIST_RE = re.compile(
     "^(?P<container>.+?)の中に(?P<objects>.+?)が(?P<pred>" + "|".join(EXIST_WORDS) + ")$")
 _FROM_RE = re.compile("^(?:(?P<side>自分|相手)の?)?(?P<zones>.+)$")
@@ -105,7 +130,7 @@ _REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
 _TARGET_REF_RE = re.compile(f"^{TARGET_REF}(?P<head>モンスター|カード)$")
 _ACTION_REF_RE = re.compile("^(?P<past>.+?)(?P<head>モンスター|カード)$")
 _NOUN_RE = re.compile(
-    "^(?P<mods>.*?)(?P<head>モンスター|魔法・罠カード|魔法カード|罠カード|カード)"
+    f"^(?P<mods>.*?)(?P<head>{_HEADS})"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
 # 「X」１体:只有卡名、沒有頭名詞的物件。
 _NAMED_RE = re.compile(
@@ -135,15 +160,21 @@ def parse_from(phrase):
     m = _FROM_RE.match(phrase)
     if not m:
         return None
-    side = SIDE_WORDS.get(m.group("side"), "我方")
     zones = []
     for part in m.group("zones").split("・"):
         for word, name in ZONE_WORDS:
             if part == word:
-                zones.append(zone(name, side))
                 break
         else:
             return None
+        if m.group("side"):
+            side, side_source = SIDE_WORDS[m.group("side")], "明寫"
+        elif name in FIELD_ZONES:
+            # 「フィールドに「海」が存在する場合」是任一方的場上:場上系沒寫方就不預設。
+            side, side_source = None, None
+        else:
+            side, side_source = "我方", "預設"
+        zones.append(zone(name, side, side_source))
     return zones
 
 
@@ -156,6 +187,20 @@ def parse_count(m):
             "unit": m.group("unit"), "cmp": "≤" if m.group("upto") else "="}
 
 
+# 每個區域的預設字面(ZONE_WORDS 同一區域的最後一個,也是反向檢查沒有字面時的寫法)。
+_DEFAULT_ZONE_WORD = {name: word for word, name in ZONE_WORDS}
+
+
+def zone_literal(phrase):
+    """區域短語用了非預設的字面(舊式「フィールド上」)就回短語本身(要留原文字面),否則 None。
+    前提的區域平常照方的來源還原(票 05),只有這種情形還原不回原文。"""
+    m = _FROM_RE.match(phrase)
+    parts = m.group("zones").split("・") if m else []
+    if any(part != _DEFAULT_ZONE_WORD.get(dict(ZONE_WORDS).get(part)) for part in parts):
+        return phrase
+    return None
+
+
 def floating_count(text):
     """助詞後的數量(「カードを２枚まで」「それらのモンスターを全て」),記在對象線上。"""
     if text == "全て":
@@ -166,6 +211,11 @@ def floating_count(text):
 
 
 def category_condition(head):
+    if head in HEAD_SUBTYPE:
+        category, subtype = HEAD_SUBTYPE[head]
+        return {"op": "且", "args": [{"op": "大類", "value": category},
+                                    {"op": "屬性比較", "attr": "卡片子類型",
+                                     "cmp": "=", "value": subtype}]}
     value = HEAD_CATEGORY[head]
     if isinstance(value, tuple):
         return {"op": "或", "args": [{"op": "大類", "value": v} for v in value]}
@@ -239,6 +289,15 @@ class BlockState:
         `parse_modifier`(種族、屬性、レベルN);認不得的那截以「解析不出」原子收尾。"""
         atoms, reason, rest = [], None, mods
         while rest:
+            # 種族/屬性的「・」列舉(含後面的「の」)整組先認:「ドラゴン族・鳥獣族」是或、
+            # 「光・闇属性」逐截切會把「光」認不出。
+            atom, length = parse_param_group(rest)
+            if atom is not None:
+                atoms.append(atom)
+                rest = rest[length:]
+                continue
+            if rest.startswith("・"):  # 列舉後接的其他修飾語(植物族・レベル１)
+                rest = rest[1:]
             for kind, pattern in _MOD_RES:
                 m = pattern.match(rest)
                 if m:
@@ -439,10 +498,13 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
         _fill_existence(seg, exist, state, sentence_start)
         return
     m = _CLAUSE_RE.match(clause_text)
+    if m and m.group("to_front") and m.group("marker") != "が":
+        m = _CLAUSE_NO_TO_FRONT_RE.match(clause_text)
     if not m or not (m.group("pred") or m.group("targeting")):
         seg["unparsed"] = unparsed(REASON_CLAUSE)
         return
     pred, to_phrase, targeting = m.group("pred"), m.group("to"), m.group("targeting")
+    to_front = m.groupdict().get("to_front")
     parsed = None
     if to_phrase:
         # 「墓地へ送る」「手札に加える」的到在述語裡:先試整串當述語。
@@ -483,12 +545,14 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
         if from_zones is None:
             seg["unparsed"] = unparsed(REASON_FROM)
             return
-    to_zones = None
+    to_zones, to_text = None, None
     if to_phrase:
-        to_zones = parse_from(to_phrase)
-        if to_zones is None:
-            seg["unparsed"] = unparsed(REASON_TO)
-            return
+        to_zones, to_text = parse_from(to_phrase), to_phrase + m.group("to_particle")
+    elif to_front:
+        to_zones, to_text = parse_from(to_front), to_front + "に"
+    if to_text and to_zones is None:
+        seg["unparsed"] = unparsed(REASON_TO)
+        return
     inferred_from, inferred_to = (None, None)
     if len(parsed) == 1:
         # 推得表照上位詞查:融合召喚沒寫「到」也是場上。
@@ -528,16 +592,18 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
                                         inferred=current["inferred"])
             elif inferred_from:
                 side = "我方" if inferred_from == "手牌" else None
-                line["from"] = position([zone(inferred_from, side)], "推得",
-                                        inferred=True)
+                line["from"] = position([zone(inferred_from, side, side and "預設")],
+                                        "推得", inferred=True)
         if to_zones is not None:
-            line["to"] = position(to_zones, "明寫",
-                                  text=to_phrase + m.group("to_particle"),
+            line["to"] = position(to_zones, "明寫", text=to_text,
                                   form=m.group("form"))
+            if to_front:
+                line["to"]["placement"] = "名詞前"
         elif written_to:
             line["to"] = position([zone(written_to, None)], "明寫")
         elif inferred_to:
-            line["to"] = position([zone(inferred_to, inferred_side)], "推得",
+            line["to"] = position([zone(inferred_to, inferred_side,
+                                        inferred_side and "預設")], "推得",
                                   inferred=True)
         seg["lines"].append(line)
         if obj_id != "o0" and obj_id not in state.recent:
@@ -581,26 +647,36 @@ def _sentences(text, body_start):
     return spans
 
 
-def _condition_and_rest(state, start, body, trig, segs):
-    """觸發子句 → 條件段;回傳 (剩下的子句, 它的起點)。"""
-    cond_end = start + len(trig.group("cond"))
-    seg = _segment(state, "條件", start, cond_end + len(trig.group("trig")))
+def _condition_and_rest(state, seg_start, clause_start, body, trig, segs):
+    """觸發子句 → 條件段(範圍從 seg_start 起算:前面可能有前提);回傳 (剩下的子句, 它的起點)。"""
+    cond_end = clause_start + len(trig.group("cond"))
+    seg = _segment(state, "條件", seg_start, cond_end + len(trig.group("trig")))
     seg["trigger"] = trig.group("trig")
-    _fill_clause(seg, trig.group("cond"), "條件", state, start)
+    _fill_clause(seg, trig.group("cond"), "條件", state, clause_start)
     segs.append(seg)
     rest = trig.group("rest")
-    return rest, start + body.rfind(rest) if rest else None
+    return rest, clause_start + body.rfind(rest) if rest else None
 
 
-def _cost_and_effect(state, clause, start):
-    """效果子句 → [效果段],或舊式代價句「(代價)る事で、(效果)」→ [代價段, 效果段]。"""
+def _attach_premise(seg, premise):
+    """前提寫進段;段已有前提(存在前提的條件段)時依字面順序組成「且」。"""
+    if seg["premise"] is None:
+        seg["premise"] = premise
+        return
+    atoms = premise["args"] if premise.get("op") == "且" else [premise]
+    seg["premise"] = {"op": "且", "args": atoms + [seg["premise"]]}
+
+
+def _cost_and_effect(state, clause, start, seg_start):
+    """效果子句 → [效果段],或舊式代價句「(代價)る事で、(效果)」→ [代價段, 效果段]。
+    第一個段的範圍從 seg_start 起算(前面可能有前提)。"""
     cost = _OLD_COST_RE.match(clause)
     if not cost:
-        seg = _segment(state, "效果", start, start + len(clause))
+        seg = _segment(state, "效果", seg_start, start + len(clause))
         _fill_clause(seg, clause, "效果", state, start)
         return [seg]
     cost_text, rest = cost.group("cost"), cost.group("rest")
-    cost_seg = _segment(state, "代價", start, start + len(cost_text))
+    cost_seg = _segment(state, "代價", seg_start, start + len(cost_text))
     _fill_clause(cost_seg, cost_text, "代價", state, start)
     rest_start = start + len(clause) - len(rest)
     effect_seg = _segment(state, "效果", rest_start, rest_start + len(rest))
@@ -610,30 +686,36 @@ def _cost_and_effect(state, clause, start):
 
 def _parse_sentence(state, start, end):
     """一句 → 段列表(發動句可產生條件段 + 代價段;舊式條件句產生條件段 + 效果段;
-    舊式代價句產生代價段 + 效果段)。"""
+    舊式代價句產生代價段 + 效果段)。句首的前提先剝掉,掛在第一個段上、段的範圍從前提起算。"""
     text = state.block["text"]
     sent = text[start:end]
     act = _ACTIVATION_RE.match(sent)
-    if not act:
-        trig = _OLD_TRIGGER_RE.match(sent)
-        if trig:
-            segs = []
-            rest, rest_start = _condition_and_rest(state, start, sent, trig, segs)
-            return segs + _cost_and_effect(state, rest, rest_start)
-        return _cost_and_effect(state, sent, start)
-    body = act.group("body")
+    body = act.group("body") if act else sent
+    premise, premise_end, clause_start = split_premises(body, state, start,
+                                                        parse_from, zone_literal)
+    body = text[clause_start:start + len(body)]
+    if act and premise and body in ("", "に"):
+        seg = _segment(state, "條件", start, premise_end)
+        seg["premise"] = premise
+        return [seg]
     segs = []
-    trig = _TRIGGER_RE.match(body)
-    rest, rest_start = body, start
+    trig = (_TRIGGER_RE if act else _OLD_TRIGGER_RE).match(body)
+    rest, rest_start, seg_start = body, clause_start, start
     if trig:
-        rest, rest_start = _condition_and_rest(state, start, body, trig, segs)
-    if rest:
-        seg = _segment(state, "代價", rest_start, rest_start + len(rest))
+        rest, rest_start = _condition_and_rest(state, start, clause_start, body,
+                                               trig, segs)
+        seg_start = rest_start
+    if rest and not act:
+        segs += _cost_and_effect(state, rest, rest_start, seg_start)
+    elif rest:
+        seg = _segment(state, "代價", seg_start, rest_start + len(rest))
         if rest.endswith(("て", "で")):
             _fill_clause(seg, rest, "代價", state, rest_start)
         else:
             seg["unparsed"] = unparsed(REASON_ACTIVATION)
         segs.append(seg)
+    if premise and segs:
+        _attach_premise(segs[0], premise)
     return segs
 
 

@@ -141,16 +141,14 @@ class ReportTest(unittest.TestCase):
             faq(2, "乙", "①：このカードをバウンスする。"),
             faq(3, "丙", "①：このカードをバウンスする。②：このカードを破壊する。"),
             faq(4, "丁", "①：このカードをバウンスする。"),
-            faq(5, "戊", "①：自分の手札からこのカードを捨てて発動できる。"),
+            # 「闇属性のモンスター」的「の」模板不寫(attribute_atoms):字面不符的固定例。
+            faq(5, "戊", "①：デッキから闇属性のモンスター１体を特殊召喚する。"),
         ]
         return cards, entries
 
     def test_report_counts_and_lists_every_card_per_reason(self):
         cards, entries = self.library()
         structures, _ = build_structures(cards, entries)
-        # 戊 的「自分の手札から」照字面還原會通過;拿掉字面,模板只能由區域拼回,製造字面不符。
-        wu = next(c for c in structures if c["id"] == 5)
-        wu["blocks"][0]["segments"][0]["lines"][0]["from"]["text"] = None
         md = render_report(check_structures(structures))
         self.assertIn("| 段 | 8 |", md)
         self.assertIn("| 通過 | 4 |", md)
@@ -160,8 +158,8 @@ class ReportTest(unittest.TestCase):
         self.assertIn("### 無模板(3 段 / 3 張)", md)
         self.assertIn("段未解析:述語解析不出(3 段 / 3 張):2, 3, 4", md)
         self.assertIn("### 字面不符(1 段 / 1 張)", md)
-        self.assertIn("`5` 戊 `b0.s2` 產生「手札からこのカードを捨てて」"
-                      "原文「自分の手札からこのカードを捨てて」", md)
+        self.assertIn("`5` 戊 `b0.s2` 產生「デッキから闇属性モンスター１体を特殊召喚する」"
+                      "原文「デッキから闇属性のモンスター１体を特殊召喚する」", md)
         self.assertIn("<!-- 由 script/action_structure/build_reverse_check.py 產生", md)
 
     def test_same_input_renders_identical_report(self):
@@ -197,7 +195,7 @@ class CliTest(unittest.TestCase):
                 second = f.read()
             self.assertEqual(first, second)
             self.assertNotIn(b"\r\n", first)
-            self.assertIn("| 不通過 | 3 |".encode("utf-8"), first)
+            self.assertIn("| 不通過 | 4 |".encode("utf-8"), first)
 
 
 if __name__ == "__main__":

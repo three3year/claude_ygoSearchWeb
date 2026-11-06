@@ -21,13 +21,15 @@ import re
 from attribute_atoms import is_param_atom, joiner, render_group, render_level
 from premise import NoPremiseTemplate, render_premise, split_premise
 from condition_atoms import render_atom
-from segment_extract import (ACTION_PAST, EXIST_WORDS, HEAD_CATEGORY,
-                             HEAD_SUBTYPE, SIDE_WORDS, ZONE_WORDS, parse_from,
-                             parse_predicates)
-from segment_extract import _ACTION_REF_RE, _REF_RE  # 回指字面的句型,與抽取端同一把尺
-from segment_fields import (MODIFY_ACTION, REPLACEMENT_PREFIX, render_cause,
-                            render_modify, render_timing, resolve_polarity)
+from segment_extract import (ACTION_PAST, EXIST_WORDS, FROM_PARTICLES,
+                             HEAD_CATEGORY, HEAD_SUBTYPE, SIDE_WORDS, ZONE_WORDS,
+                             parse_from)
+from segment_extract import _ACTION_REF_RE, _REF_RE, _TARGET_REF_RE  # 回指字面的句型,與抽取端同一把尺
+from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
+                            render_timing, resolve_polarity)
 from structure_shape import iter_segments
+from synonyms import (ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION, parse_predicates,
+                      split_targeting)
 
 REASON_NO_TEMPLATE = "無模板"
 REASON_MISMATCH = "字面不符"
@@ -40,8 +42,9 @@ TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polar
                   "replaces"}
 # 被代替段是改了類別的條件段,模板同條件段(帶觸發形)。
 TEMPLATE_KINDS = ("條件", "代價", "效果", "被代替")
-# 區塊裡不屬於任何段的固定接著詞:發動句語尾、先後連接、區塊開頭的「また」。去掉標點後只能剩這些。
-GLUE = ("発動できる", "発動する", "その後", "また")
+# 區塊裡不屬於任何段的固定接著詞:發動句語尾(含舊式「発動する事ができる」,長的在前)、
+# 舊式代價句的「事で」、先後連接、區塊開頭的「また」。去掉標點後只能剩這些。
+GLUE = ACTIVATION_SUFFIXES + (COST_GLUE, "その後", "また")
 _GLUE_RE = re.compile("|".join(GLUE))
 _PUNCT_RE = re.compile("[。、\n ]")
 _WS_RE = re.compile(r"[\s　]+")
@@ -90,7 +93,7 @@ def _render_atom(atom, names):
         return _quoted(atom["arg"], names) + "以外の"
     if op == "卡名包含":
         return "カード名に" + _quoted(atom, names) + "を含む"
-    level = render_level(atom)
+    level = render_level(atom)   # レベル１、レベル４以下、レベル５以上
     if level is not None:
         return level
     if op == "屬性比較" and atom.get("cmp") == "=":
@@ -232,13 +235,34 @@ def _render_object(obj, seg, card, names, line=None, with_count=True):
     return text
 
 
-_POSITION_PARTICLES = ("から", "の", "に", "へ")
+_POSITION_PARTICLES = FROM_PARTICLES + ("に", "へ")
+
+
+def _targeted_earlier(obj_id, seg, card):
+    """這一段之前,同一區塊裡有沒有一段以取對象字面(選択して/対象として)點名過該物件。"""
+    block_id = seg["id"].split(".")[0]
+    for block in card["blocks"]:
+        if block["id"] != block_id:
+            continue
+        for other in block["segments"]:
+            if other["id"] == seg["id"]:
+                return False
+            prefix, _ = split_targeting(other["predicate"] or "")
+            if prefix and any(l["object"] == obj_id and l["targeting"]
+                              for l in other["lines"]):
+                return True
+    return False
 
 
 def _render_ref(ref, obj, seg, card):
     """回指字面:その/それらの+頭名詞照字面;動作回指(「めくったカード」)的動詞必須是
-    這一段之前最後一個作用在該物件上的動作詞的過去形。"""
+    這一段之前最後一個作用在該物件上的動作詞的過去形;「選択したモンスター」必須指回
+    先前被取對象的物件。"""
     if _REF_RE.match(ref):
+        return ref
+    if _TARGET_REF_RE.match(ref):
+        if not _targeted_earlier(obj["id"], seg, card):
+            raise NoTemplate("「選択した」回指的物件先前沒被取對象")
         return ref
     m = _ACTION_REF_RE.match(ref)
     if m and m.group("past") in ACTION_PAST.values():
@@ -316,10 +340,18 @@ def _render_to(lines, predicate_to):
 
 def _render_predicate(seg, marker):
     """述語字面必須能拆回段的動作詞、態、極性(多動作詞是て形串接;「Xは〜できる」的極性是可以,
-    與抽取端同一把尺 resolve_polarity)。回傳 (字面, 述語寫明的終點)。"""
-    if not seg["actions"] or not seg["predicate"]:
+    與抽取端同一把尺 resolve_polarity);開頭的取對象字面(「選択して」「対象として」)拆出來、
+    單獨出現時是沒有動作詞的取對象宣告。回傳 (取對象字面或 None, 述語字面, 述語寫明的終點)。"""
+    if not seg["predicate"]:
         raise NoTemplate("段無動作詞")
-    parsed, _ = parse_predicates(seg["predicate"])
+    prefix, rest = split_targeting(seg["predicate"])
+    if not rest:
+        if seg["actions"] or (seg["voice"], seg["polarity"], seg["optional"]) != (None, "做", None):
+            raise NoTemplate("取對象宣告帶了動作詞")
+        return prefix, "", None
+    if not seg["actions"]:
+        raise NoTemplate("段無動作詞")
+    parsed, _ = parse_predicates(rest)
     if parsed is None or [p[0] for p in parsed] != seg["actions"]:
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
     voices = {p[1] for p in parsed}
@@ -327,7 +359,7 @@ def _render_predicate(seg, marker):
     polarity, optional = resolve_polarity(parsed, marker)
     if (voice, polarity, optional) != (seg["voice"], seg["polarity"], seg["optional"]):
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
-    return seg["predicate"], next((p[3] for p in parsed if p[3]), None)
+    return prefix, rest, next((p[3] for p in parsed if p[3]), None)
 
 
 def _render_cause(cause):
@@ -375,11 +407,20 @@ def _render_existence(seg, premise, card, objects):
             + "が" + seg["predicate"])
 
 
+def _render_premise_zones(zones, text):
+    """前提的區域:帶原文字面(舊式「フィールド上」)時先驗過與區域一致再照字面,否則照方的來源還原。"""
+    if text is None:
+        return _render_zones(zones)
+    if parse_from(text) != zones:
+        raise NoTemplate("前提的區域字面與區域不一致")
+    return text
+
+
 def _render_leading_premise(leading, seg, card, objects, names, followed):
     """句首的前提(位置、存在、遊戲狀態)→ 字面;區域與物件的字面規則借這裡的。"""
     try:
         return render_premise(
-            leading, _render_zones,
+            leading, _render_premise_zones,
             lambda obj_id: _render_object(objects[obj_id], seg, card, names),
             followed=followed)
     except NoPremiseTemplate as e:
@@ -387,11 +428,13 @@ def _render_leading_premise(leading, seg, card, objects, names, followed):
 
 
 def render_segment(seg, card):
-    """簡單子句模板:[代わりに][前提][誰が][到に][從から|の][物件][助詞][數量][原因][時機][形式][從から][到に][受方に]述語[觸發形]
+    """簡單子句模板:[代わりに][前提][誰が][到に][從から|の|に存在する][物件][助詞][數量][取對象][原因][時機][形式][從から][到に][受方に]述語[觸發形]
     (物件前的「到に」只在助詞是「が」時;「從」只在物件前或述語前其中一處,照 placement;
     「代わりに」在做代替的段前;時機只寫有字面的延遲;被代替段同條件段帶觸發形);
     存在前提、性質變更句另有模板;只有前提的條件段寫前提。
-    回傳日文;寫不出就丟 NoTemplate。"""
+    回傳日文;寫不出就丟 NoTemplate。
+    取對象線只有兩種寫得出:這一段的述語帶取對象字面(每條線都標),或這一條線指回
+    本區塊先前被取對象字面點名的物件(その/選択したモンスター)。"""
     if seg["unparsed"]:
         raise NoTemplate(f"段未解析:{seg['unparsed']['reason']}")
     if seg["kind"] not in TEMPLATE_KINDS:
@@ -426,18 +469,24 @@ def render_segment(seg, card):
             # 誰的助詞:條件子句是「相手が〜した時」,效果句是「自分は〜する」(全庫 66:0、31:1)。
             parts.append(_SIDE_TEXT[seg["agent"]] + (
                 "が" if seg["kind"] in ("條件", "被代替") else "は"))
-        words, markers, counts = [], set(), set()
+        markers = {line["marker"] or "を" for line in seg["lines"]}
+        if len(markers) != 1:
+            raise NoTemplate("對象線的助詞或數量不一致")
+        marker = markers.pop()
+        targeting_text, predicate, predicate_to = _render_predicate(seg, marker)
+        words, counts = [], set()
         for line in seg["lines"]:
-            # 取對象標記只是對象線上的旗標,字面是取對象宣言段的述語「対象として」,不另寫。
+            if targeting_text and not line["targeting"]:
+                raise NoTemplate("取對象字面下有線沒標取對象")
+            if line["targeting"] and not targeting_text and not (
+                    line["ref"] and _targeted_earlier(line["object"], seg, card)):
+                raise NoTemplate("取對象線無模板")
             if line["role"] not in ("受事", "被召喚"):
                 raise NoTemplate(f"角色無模板:{line['role']}")
             words.append(_render_object(objects[line["object"]], seg, card, names, line))
-            markers.add(line["marker"] or "を")
             counts.add(_render_count(line["count"]))
-        if len(markers) != 1 or len(counts) != 1:
+        if len(counts) != 1:
             raise NoTemplate("對象線的助詞或數量不一致")
-        marker = markers.pop()
-        predicate, predicate_to = _render_predicate(seg, marker)
         to_text, to_placement = _render_to(seg["lines"], predicate_to)
         from_text, from_placement = _render_from(seg["lines"])
         # 物件前的到(自分フィールドにモンスターが特殊召喚された)照 placement 放回。
@@ -447,6 +496,7 @@ def render_segment(seg, card):
             parts.append(from_text)
         parts.append("と".join(words) + marker)
         parts.append(counts.pop())
+        parts.append(targeting_text or "")
         parts.append(_render_cause(seg["cause"]))
         parts.append(_render_timing(seg["timing"]))
         if from_placement == "述語前":

@@ -178,5 +178,37 @@ class SubjectClauseTest(unittest.TestCase):
                                  card=SELF, include_condition=True))
 
 
+class OldStylePremiseTest(unittest.TestCase):
+    """前提(票 05)與舊式用語(票 11)同時出現的句型。"""
+
+    def test_old_style_field_ue_in_premise_is_written_back_literally(self):
+        """「自分フィールド上にモンスターが存在しない場合、このカードは手札から特殊召喚できる」:
+        フィールド上 是前提的區域(場上、我方),反向檢查照原文字面寫回「フィールド上」;
+        從手牌特殊召喚此卡命中。"""
+        cards, structures = library(
+            "自分フィールド上にモンスターが存在しない場合、このカードは手札から特殊召喚できる。")
+        self.assertEqual(check_card(own(structures)), [])
+        self.assertIn(SELF, hits(cards, structures, actions=["特殊召喚"],
+                                 from_zones=["手牌"], card=SELF))
+
+    def test_field_ue_before_object_with_wo_is_a_modifier_not_a_front_destination(self):
+        """「相手フィールド上にセットされたカード１枚を選択して破壊する」:物件前的「到に」只在
+        助詞が時成立,這裡的「相手フィールド上に」是物件修飾,段照樣解析出、查破壞 + 取對象命中。"""
+        cards, structures = library(
+            "相手フィールド上にセットされたカード１枚を選択して破壊する。")
+        self.assertIn(SELF, hits(cards, structures, actions=["破壞"], targeting=True))
+
+    def test_old_style_ni_sonzai_suru_from_is_not_a_front_destination(self):
+        """「自分フィールド上に存在するモンスターが破壊された時、〜」:助詞是が,但「に存在する」
+        是舊式從的助詞,不是物件前的到;條件段的從 = 場上(我方),整張通過反向檢查。"""
+        cards, structures = library(
+            "自分フィールド上に存在するモンスターが破壊された時、"
+            "デッキから「竜の渓谷」１枚を手札に加える。")
+        self.assertEqual(check_card(own(structures)), [])
+        self.assertIn(SELF, hits(cards, structures, actions=["破壞"],
+                                 from_zones=[{"zone": "場上", "side": "我方"}],
+                                 include_condition=True))
+
+
 if __name__ == "__main__":
     unittest.main()

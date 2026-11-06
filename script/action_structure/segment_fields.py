@@ -21,6 +21,7 @@
 import re
 
 from premise import PHASE_WORDS
+from synonyms import MODIFY_ACTION, MODIFY_PREDICATE  # noqa: F401  動作詞與述語字面在同義表
 
 # ── 原因 ─────────────────────────────────────────────────────
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
@@ -59,12 +60,18 @@ def render_cause(cause):
 
 
 # ── 極性 ─────────────────────────────────────────────────────
+# 永續許可的動作詞:「Xは直接攻撃できる」是卡在場上時一直成立的許可,不是一次做的動作;
+# 「このカードは手札から特殊召喚できる」仍是可選的做(票 05/11 的斷言),所以只認不移動卡的動作。
+PERMISSION_ACTIONS = ("直接攻擊",)
+
+
 def resolve_polarity(parsed, marker):
     """述語解析結果(parse_predicates 的列表)+ 物件助詞 → (極性, 可選)。
-    「Xは〜できる」是永續的許可:極性「可以」、不可選;其餘照語尾。"""
+    「Xは〜できる」且動作詞是永續許可的(直接攻擊)→ 極性「可以」、不可選;其餘照語尾。"""
     polarity = parsed[-1][2]
     optional = True if any(p[4] for p in parsed) else None
-    if optional and marker == "は" and polarity == "做":
+    if (optional and marker == "は" and polarity == "做"
+            and all(p[0] in PERMISSION_ACTIONS for p in parsed)):
         return "可以", None
     return polarity, optional
 
@@ -157,9 +164,7 @@ _TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８�
 _MODIFY_RE = re.compile(
     f"^(?P<mention>{_MENTION_ALT})(?P<attr>{_STAT_ALT})は"
     "(?P<duration>[^、]+?まで)?"
-    f"(?:(?P<base>元々の(?:{_STAT_ALT}))の(?P<form>倍|半分)|(?P<value>[０-９]+))になる$")
-MODIFY_ACTION = "性質變更"
-MODIFY_PREDICATE = "になる"
+    f"(?:(?P<base>元々の(?:{_STAT_ALT}))の(?P<form>倍|半分)|(?P<value>[０-９]+)){MODIFY_PREDICATE}$")
 
 
 def parse_modify(clause):

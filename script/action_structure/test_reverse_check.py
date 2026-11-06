@@ -74,11 +74,12 @@ class TemplateTest(unittest.TestCase):
         self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
                          [("無模板", "格 amount 無模板")])
 
-    def test_targeting_flag_does_not_change_the_rendered_text(self):
-        """取對象只是對象線上的旗標(票 08):字面在取對象宣言段,效果段的模板不另寫。"""
+    def test_targeting_line_has_no_template_yet(self):
+        """沒有取對象字面、也沒指回先前被點名的物件,卻標了取對象:無模板(票 11 的規則)。"""
         structure = build_one(1, "甲", "①：このカードを破壊する。")
         segment(structure)["lines"][0]["targeting"] = True
-        self.assertEqual(check_card(structure), [])
+        self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
+                         [("無模板", "取對象線無模板")])
 
     def test_predicate_literal_must_agree_with_action_and_polarity(self):
         """述語字面與動作詞/態/極性對不上(結構內部矛盾):不通過,不照字面放行。"""

@@ -10,8 +10,8 @@ import build_structure
 from action_query import run_query
 from card_structure import (build_structures, load_structures,
                             serialize_structures)
-from test_golden import (SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT, SPELL,
-                         card, faq)
+from test_golden import (ARCHETYPES, SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT,
+                         SPELL, card, faq)
 
 OLD_STYLE_TEXT = (
     "このカードが特殊召喚に成功した時、自分のデッキの上からカードを２枚までめくる事"

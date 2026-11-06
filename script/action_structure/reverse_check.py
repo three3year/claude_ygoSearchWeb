@@ -56,23 +56,42 @@ class NoTemplate(Exception):
 
 
 # ── 模板 ─────────────────────────────────────────────────────
-def _render_atom(atom):
-    """屬性比較原子 → 修飾語字面(種族名、「レベル１」、「光属性」)。"""
-    if atom.get("op") != "屬性比較" or atom.get("cmp") != "=":
-        raise NoTemplate(f"物件條件無模板:{atom.get('op')}")
-    if atom["attr"] == "種族":
-        return atom["value"]
-    if atom["attr"] == "屬性":
-        return atom["value"] + "属性"
-    if atom["attr"] == "等級":
-        return "レベル" + str(atom["value"]).translate(_TO_FULLWIDTH_DIGITS)
-    raise NoTemplate(f"屬性比較無模板:{atom['attr']}")
+def _quoted(atom, names):
+    """名稱原子 → 「X」:只從名稱表取字面(查詢側才會直接帶 text,結構裡不會)。"""
+    row = names.get(atom.get("name"))
+    if row is None:
+        raise NoTemplate("名稱原子引用的名稱列找不到")
+    return f"「{row['text']}」"
 
 
-def _render_condition(condition):
-    """條件式 → [修飾語・…]頭名詞;大類(與 魔法・罠 的或)是頭名詞,屬性比較原子照順序是修飾語。"""
-    if condition is None:
-        raise NoTemplate("物件條件無模板:空")
+def _render_atom(atom, names):
+    """修飾語原子 → 字面:字段(「X」/「X」と名のついた)、「X」以外の、カード名に「X」を含む、
+    屬性比較(種族名、「レベル１」、「光属性」)。"""
+    op = atom.get("op")
+    if op == "字段":
+        form = atom.get("form")
+        if form not in (None, "と名のついた"):
+            raise NoTemplate(f"字段寫法無模板:{form}")
+        return _quoted(atom, names) + (form or "")
+    if op == "非" and atom.get("arg", {}).get("op") == "卡名":
+        return _quoted(atom["arg"], names) + "以外の"
+    if op == "卡名包含":
+        return "カード名に" + _quoted(atom, names) + "を含む"
+    if op == "屬性比較" and atom.get("cmp") == "=":
+        if atom["attr"] == "種族":
+            return atom["value"]
+        if atom["attr"] == "屬性":
+            return atom["value"] + "属性"
+        if atom["attr"] == "等級":
+            return "レベル" + str(atom["value"]).translate(_TO_FULLWIDTH_DIGITS)
+        raise NoTemplate(f"屬性比較無模板:{atom['attr']}")
+    if op == "解析不出":
+        raise NoTemplate("物件條件無模板:解析不出")
+    raise NoTemplate(f"物件條件無模板:{op}")
+
+
+def _render_head(condition):
+    """大類(與 魔法・罠 的或)→ 頭名詞;不是頭名詞回 None。"""
     op = condition.get("op")
     if op == "大類":
         return _HEAD_TEXT[condition["value"]]
@@ -81,14 +100,33 @@ def _render_condition(condition):
                        if a.get("op") == "大類")
         if len(values) == len(condition["args"]) and values in _HEAD_TEXT:
             return _HEAD_TEXT[values]
+    return None
+
+
+def _render_condition(condition, names):
+    """條件式 → 名詞短語:且 = 修飾語(照字面順序,相鄰的屬性比較以「・」連)+ 頭名詞(且 的末項);
+    單獨的卡名 = 「X」。"""
+    if condition is None:
+        raise NoTemplate("物件條件無模板:空")
+    head = _render_head(condition)
+    if head:
+        return head
+    op = condition.get("op")
+    if op == "卡名":
+        return _quoted(condition, names)
     if op == "且":
-        heads = [a for a in condition["args"] if a.get("op") in ("大類", "或")]
-        mods = [a for a in condition["args"] if a.get("op") not in ("大類", "或")]
-        if len(heads) == 1:
-            return "・".join(_render_atom(a) for a in mods) + _render_condition(heads[0])
-    if op == "解析不出":
-        raise NoTemplate("物件條件無模板:解析不出")
-    raise NoTemplate(f"物件條件無模板:{op}")
+        *mods, last = condition["args"]
+        head = _render_head(last)
+        if head is None:
+            raise NoTemplate("物件條件無模板:且 的末項不是大類")
+        text, previous = "", None
+        for atom in mods:
+            if previous == "屬性比較" and atom.get("op") == "屬性比較":
+                text += "・"
+            text += _render_atom(atom, names)
+            previous = atom.get("op")
+        return text + head
+    return _render_atom(condition, names)
 
 
 def _render_count(count):
@@ -137,17 +175,17 @@ def _last_action_on(obj_id, seg, card):
     return None
 
 
-def _render_object(obj, seg, card, line=None, with_count=True):
+def _render_object(obj, seg, card, names, line=None, with_count=True):
     """物件在這一段的字面:物件0 是このカード;本段首次出現的寫全名(條件+數量);
     回指的照對象線的回指字面(驗過句型);剩餘物件寫 残りの+頭名詞。
     助詞後的數量在對象線上,由呼叫端接在助詞後。"""
     if obj["source"]["kind"] == "自己":
         return "このカード"
-    if obj["unparsed"]:
-        raise NoTemplate(f"物件無模板:{obj['unparsed']['reason']}")
     ref = line["ref"] if line else None
     if ref is not None:
         return _render_ref(ref, obj, seg, card)
+    if obj["unparsed"]:
+        raise NoTemplate(f"物件無模板:{obj['unparsed']['reason']}")
     kind = obj["source"]["kind"]
     if kind == "剩餘":
         return "残りの" + _head_of(obj)
@@ -158,7 +196,7 @@ def _render_object(obj, seg, card, line=None, with_count=True):
                     and start <= obj["span"][0] and obj["span"][1] <= end)
     if not defined_here:
         return "その" + _head_of(obj)
-    text = _render_condition(obj["condition"])
+    text = _render_condition(obj["condition"], names)
     if with_count and obj["count"]:
         text += _render_count(obj["count"])
     return text
@@ -262,8 +300,9 @@ def _render_existence(seg, card, objects):
     if container is None or premise.get("object") not in objects:
         raise NoTemplate("存在前提缺容器或子集")
     inner = objects[premise["object"]]
-    return (_render_object(objects[container["object"]], seg, card, container)
-            + "の中に" + _render_object(inner, seg, card, with_count=False)
+    names = {row["id"]: row for row in card["names"]}
+    return (_render_object(objects[container["object"]], seg, card, names, container)
+            + "の中に" + _render_object(inner, seg, card, names, with_count=False)
             + "が" + seg["predicate"])
 
 
@@ -280,6 +319,7 @@ def render_segment(seg, card):
     if not seg["lines"]:
         raise NoTemplate("段無對象線")
     objects = {o["id"]: o for o in card["objects"]}
+    names = {row["id"]: row for row in card["names"]}
     if seg["premise"]:
         text = _render_existence(seg, card, objects)
     else:
@@ -295,7 +335,7 @@ def render_segment(seg, card):
                 raise NoTemplate("取對象線無模板")
             if line["role"] not in ("受事", "被召喚"):
                 raise NoTemplate(f"角色無模板:{line['role']}")
-            words.append(_render_object(objects[line["object"]], seg, card, line))
+            words.append(_render_object(objects[line["object"]], seg, card, names, line))
             markers.add(line["marker"] or "を")
             counts.add(_render_count(line["count"]))
         if len(markers) != 1 or len(counts) != 1:

@@ -113,7 +113,14 @@ python script/tag_card/run_masked_test.py score
 ### 動作搜尋的卡片結構
 
 ```bash
-# 建置卡片結構:卡片總表 + 官方 DB 文本(data/sources/faq_info.json)→ data/action_structure.json
+# 字段表:上游 strings.conf(data/sources_vendored/,入版控)+ 補丁(data/archetype_patches.json)
+# + 卡片總表 + 官方 DB 文本 → data/archetypes.json 與 .scratch/action-structure/report/archetypes.md
+python -X utf8 script/action_structure/build_archetypes.py
+
+# 更新上游 strings.conf(用 Python 下載,本機 curl 對 github.com 有憑證撤銷檢查問題)再建置
+python -X utf8 script/action_structure/build_archetypes.py --fetch
+
+# 建置卡片結構:卡片總表 + 官方 DB 文本(data/sources/faq_info.json)+ 字段表 → data/action_structure.json
 python -X utf8 script/action_structure/build_structure.py
 
 # 只印報告,不寫產物
@@ -133,6 +140,9 @@ python -X utf8 script/action_structure/build_block_boundaries.py
 
 產物一卡一行、不含時間(時間與來源雜湊只印在報告),同一份輸入兩次建置逐位元組相同。
 覆蓋報告與反向檢查報告同樣不寫時間、排序固定,重建結構後重跑即刷新;覆蓋報告在產物張數與卡片總表不符時以非 0 結束、不寫檔。
+字段表是建置產物(一筆一行、入版控):日文名與 setcode 來自上游 ja-JP `strings.conf` 的 `!setname`,
+中文名從同 setcode 卡的繁中卡文「」引用配對,配不到或候選不唯一的列進報告;上游缺漏或錯誤寫進
+`data/archetype_patches.json`(來源檔,每筆 `setcode`、`names_ja`、`name_zh`、`remove`、`reason`)覆蓋。
 規格與各票在 `.scratch/action-structure/`。
 
 ### 查卡網站
@@ -194,7 +204,10 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/structure_shape.py` | 卡片結構的形狀:值域、各層工廠函式、走訪 |
 | `script/action_structure/block_split.py` | 區塊切分(純函式):官方 DB 文本 → 區塊 + 略過文本 |
 | `script/action_structure/segment_extract.py` | 段抽取(純函式):區塊 → 段、段樹、物件;同義表、推得表、位置自動規則 |
-| `script/action_structure/card_structure.py` | 建置管線(純函式):總表 + 官方 DB 文本 → 卡片結構 + 報告;序列化與讀回 |
+| `script/action_structure/archetype_table.py` | 字段表(純函式):strings.conf 的 `!setname` + 補丁 + 中文「」引用配對 → 字段列;setcode 比對規則 |
+| `script/action_structure/build_archetypes.py` | 字段表 CLI 薄殼(讀 strings.conf、補丁、總表、官方 DB 文本 → 寫 data/archetypes.json 與報告;`--fetch` 下載上游) |
+| `script/action_structure/names_attributes.py` | 名稱表與卡片屬性表(純函式):「」引用 → 名稱表;總表參數與「〜として扱う」句 → 帶位置條件的屬性列 |
+| `script/action_structure/card_structure.py` | 建置管線(純函式):總表 + 官方 DB 文本 + 字段表 → 卡片結構 + 報告;序列化與讀回 |
 | `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用分組、未解析組 |
 | `script/action_structure/build_structure.py` | 建置 CLI 薄殼(讀檔 → 寫 data/action_structure.json → 印報告) |
 | `script/action_structure/coverage_report.py` | 覆蓋報告(純函式):全庫結構 → 依區塊種類、段類別、各格、物件計數,依原因附卡號 → markdown |
@@ -203,6 +216,9 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/build_reverse_check.py` | 反向檢查 CLI 薄殼(讀產物 → 寫 .scratch/action-structure/report/reverse_check.md) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
 | `data/action_structure.json` | 動作搜尋的卡片結構(建置產物,**入版控**,一卡一行;產物省略空格,讀回用 `card_structure.load_structures`) |
+| `data/archetypes.json` | 字段表(建置產物,入版控,一筆一行:setcode、日文名各寫法、中文名、來源) |
+| `data/archetype_patches.json` | 字段補丁表(來源檔):覆蓋上游 strings.conf 的缺漏或錯誤 |
+| `data/sources_vendored/strings.conf` | 上游 mycard/ygopro-database ja-JP `strings.conf` 原檔(入版控,`build_archetypes.py --fetch` 更新) |
 | `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |
 | `data/clause_splits.json` | 拆句表:舊式無編號卡文的效果句邊界(入版控的來源檔) |
 | `data/cid_overrides.json` | 人工查證的 cid→卡片密碼 對應(ygoprodeck 查不到的卡) |

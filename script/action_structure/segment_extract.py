@@ -10,8 +10,9 @@
 - 舊式的「(條件子句)(時|場合|際)、(效果子句)」(沒有発動できる)→ 條件段 + 效果段。
 - 其他句子是效果段;極性由述語語尾判(できない → 不能…);「〜できる」「〜事ができる」是
   可選的效果(可選格 `optional`,極性仍是做,查詢預設算命中;票 08 再分辨永續的「可以」)。
-- 簡單子句:[誰が][到に][從から|從の][物件](を|が|は)[數量][原因][形式][到に]述語;
-  物件前的「到に」只在助詞是「が」時(「自分フィールドにモンスターが特殊召喚された」)。
+- 簡單子句:[誰が][到に][從から|從の][物件](を|が|は)[數量][原因][形式][從から][到に][受方に]述語
+  (物件前的「到に」只在助詞是「が」時:「自分フィールドにモンスターが特殊召喚された」;
+  「從」寫在物件後的記 placement 述語前;受方是「相手に見せて」的相手)。
   述語字面經同義表收成動作詞,語尾決定態與極性;て形串接的多個述語(めくられて墓地へ送られた)
   是多個動作詞。從/到保留含助詞的原文字面(`text`:「墓地の」「自分のデッキの上から」「デッキの一番下に」),
   反向檢查據此還原(の/から、に/へ 是字面的選擇,結構上都是明寫的從/到)。
@@ -36,6 +37,7 @@ import re
 from archetype_table import fold_width
 from attribute_atoms import parse_modifier as parse_param_group
 from attribute_words import ATTRIBUTE_JA, RACE_JA
+from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN
 from premise import split_premises
 from structure_shape import (new_line, new_object, new_segment, position,
@@ -44,6 +46,11 @@ from structure_shape import (new_line, new_object, new_segment, position,
 # ── 同義表:述語字面 → 動作詞;第三欄是述語本身寫明的終點(「墓地へ送る」)。
 PREDICATE_STEMS = (
     ("特殊召喚", "特殊召喚", None),
+    ("融合召喚", "融合召喚", None),
+    ("S召喚", "S召喚", None),
+    ("X召喚", "X召喚", None),
+    ("L召喚", "L召喚", None),
+    ("見せ", "展示", None),
     ("破壊", "破壞", None),
     ("捨て", "捨棄", None),
     ("リリース", "解放", None),
@@ -56,7 +63,22 @@ PREDICATE_STEMS = (
 # 動作回指(「めくったカード」「特殊召喚したモンスター」)用的過去形。
 ACTION_PAST = {"翻開": "めくった", "特殊召喚": "特殊召喚した", "破壞": "破壊した",
                "除外": "除外した", "送墓": "墓地へ送った", "捨棄": "捨てた",
-               "解放": "リリースした", "加入手牌": "手札に加えた", "返回": "戻した"}
+               "解放": "リリースした", "加入手牌": "手札に加えた", "返回": "戻した",
+               "融合召喚": "融合召喚した", "S召喚": "S召喚した", "X召喚": "X召喚した",
+               "L召喚": "L召喚した", "展示": "見せた"}
+# 下位詞:S、X、L、融合召喚是特殊召喚的下位(spec「動作詞」),查「特殊召喚」要含它們;
+# 推得表與角色也照上位詞算。
+ACTION_PARENT = {"融合召喚": "特殊召喚", "S召喚": "特殊召喚", "X召喚": "特殊召喚",
+                 "L召喚": "特殊召喚"}
+
+
+def action_ancestors(action):
+    """動作詞與它的全部上位詞(含自己):融合召喚 → [融合召喚, 特殊召喚]。"""
+    out = [action]
+    while action in ACTION_PARENT:
+        action = ACTION_PARENT[action]
+        out.append(action)
+    return out
 # 述語語尾 → (態, 極性[, 可選])。語尾不在表內的述語標「述語語尾不明」,不猜。
 TAILS = {
     "": ("主動", "做"), "る": ("主動", "做"), "する": ("主動", "做"),
@@ -95,7 +117,7 @@ ZONE_WORDS = (("EXデッキ", "額外牌組"), ("デッキの一番下", "牌組
 FIELD_ZONES = ("場上", "EX怪獸區", "怪獸區", "魔陷區", "P區", "場地區")
 HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠カード": "陷阱",
                  "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
-# 帶子類型的頭名詞:大類 且 子類型(卡片子類型的詞,GLOSSARY)。
+# 帶子類型的頭名詞:大類 且 屬性比較(卡片子類型 = 協調,與票 07 的 Xモンスター 同一種原子)。
 HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
 _HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE), key=len,
                          reverse=True))
@@ -117,13 +139,16 @@ _CLAUSE_RE = re.compile(
     # 物件前的「到に」:主語形「自分フィールドにモンスターが特殊召喚された」(助詞が時才有)。
     f"(?:(?P<to_front>{_ZONE_PHRASE})に)?"
     f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>から|の))?"
-    # 物件短語裡的「を含む」(カード名に「X」を含む)不是受詞助詞;述語裡沒有を,
-    # 所以切錯時會回頭把「を含む」吃進物件短語。
-    "(?P<objects>(?:を含む|[^を])+?)(?P<marker>を|が|は)"
+    # 物件短語裡的「を含む」(カード名に「X」を含む)、「を持つ」(…と同じ数値のレベルを持つ)
+    # 不是受詞助詞;述語裡沒有を,所以切錯時會回頭把「を含む」吃進物件短語。
+    "(?P<objects>(?:を含む|を持つ|[^を])+?)(?P<marker>を|が|は)"
     "(?P<count>[０-９]+(?:体|枚)(?:まで)?|全て)?"
     "(?P<cause>(?:カードの効果|効果|戦闘)(?:によって|で))?"
     "(?P<form>好きな順番で)?"
+    # 「從」也可寫在物件後(XをデッキからYに加える);受方(相手に見せて)緊接述語前。
+    f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
+    "(?:(?P<recipient>自分|相手)に)?"
     "(?P<pred>[^を]+)$")
 _EXIST_RE = re.compile(
     "^(?P<container>.+?)の中に(?P<objects>.+?)が(?P<pred>" + "|".join(EXIST_WORDS) + ")$")
@@ -239,7 +264,8 @@ def category_condition(head):
     if head in HEAD_SUBTYPE:
         category, subtype = HEAD_SUBTYPE[head]
         return {"op": "且", "args": [{"op": "大類", "value": category},
-                                    {"op": "子類型", "value": subtype}]}
+                                    {"op": "屬性比較", "attr": "卡片子類型",
+                                     "cmp": "=", "value": subtype}]}
     value = HEAD_CATEGORY[head]
     if isinstance(value, tuple):
         return {"op": "或", "args": [{"op": "大類", "value": v} for v in value]}
@@ -268,7 +294,8 @@ def split_objects(phrase):
             depth += 1
         elif ch == "」":
             depth -= 1
-        if ch == "と" and depth == 0 and not phrase.startswith("と名のついた", i):
+        if (ch == "と" and depth == 0
+                and not phrase.startswith(("と名のついた", "と同じ"), i)):
             parts.append(buf)
             buf = ""
         else:
@@ -328,11 +355,21 @@ class BlockState:
             else:
                 piece, _, remainder = rest.partition("・")
                 atom = parse_modifier(piece)
-                if atom is None:
+                if atom is not None:
+                    atoms.append(atom)
+                    rest = remainder
+                    continue
+                extra = parse_atom_modifier(rest, self)   # 票 07 的原子(condition_atoms)
+                if extra is None:
                     atoms.append({"op": "解析不出", "text": rest})
                     return atoms, reason or REASON_MODS
-                atoms.append(atom)
-                rest = remainder
+                new_atoms, why, end = extra
+                if not new_atoms:
+                    atoms.append({"op": "解析不出", "text": rest})
+                    return atoms, reason or why
+                atoms.extend(new_atoms)
+                reason = reason or why
+                rest = rest[end:]
                 continue
             if kind == "以外":
                 atom, why = self.name_atom("卡名", m.group("name"))
@@ -373,6 +410,17 @@ class BlockState:
             obj = self.find(obj_id)
             if want == "卡" or _category_of(obj["condition"]) == want:
                 return obj_id
+        return None
+
+    def resolve_reference(self, phrase):
+        """修飾語裡指回的物件短語(「そのモンスターのランク」「見せたモンスターと同じ」的
+        その/それらの+頭名詞、動作回指)→ 物件 id 或 None;與 object_at 同一把尺。"""
+        ref = _REF_RE.match(phrase)
+        if ref:
+            return self.recent_of(ref.group("head"))
+        action_ref = _ACTION_REF_RE.match(phrase)
+        if action_ref and action_ref.group("past") in ACTION_PAST.values():
+            return self.recent_of(action_ref.group("head"))
         return None
 
     def add_object(self, obj):
@@ -519,12 +567,19 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
     written_to = next((p[3] for p in reversed(parsed) if p[3]), None)
     agent = SIDE_WORDS.get(m.group("agent")) if m.group("agent") else None
     seg["agent"] = agent
+    seg["recipient"] = SIDE_WORDS.get(m.group("recipient")) if m.group("recipient") else None
     if m.group("cause"):
         kind_of = "戰鬥" if m.group("cause").startswith("戦闘") else "效果"
         seg["cause"] = {"kind": kind_of, "text": m.group("cause")}
     from_zones = None
+    # 「從」寫在物件後(XをデッキからYに加える)記 placement 述語前,模板放回原位。
+    from_text, from_placement = None, "名詞前"
     if m.group("from"):
-        from_zones = parse_from(m.group("from"))
+        from_text = m.group("from") + m.group("from_particle")
+    elif m.group("from2"):
+        from_text, from_placement = m.group("from2") + "から", "述語前"
+    if from_text:
+        from_zones = parse_from(m.group("from") or m.group("from2"))
         if from_zones is None:
             seg["unparsed"] = unparsed(REASON_FROM)
             return
@@ -541,9 +596,13 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
         return
     inferred_from, inferred_to = (None, None)
     if len(parsed) == 1:
-        inferred_from, inferred_to = INFERENCE_TABLE.get(seg["actions"][0], (None, None))
-    # 推得的場上/墓地歸誰:特殊召喚到施事者的場上;其餘不知道就不標方。
-    inferred_side = (agent or "我方") if "特殊召喚" in seg["actions"] else None
+        # 推得表照上位詞查:融合召喚沒寫「到」也是場上。
+        inferred_from, inferred_to = next(
+            (INFERENCE_TABLE[a] for a in action_ancestors(seg["actions"][0])
+             if a in INFERENCE_TABLE), (None, None))
+    # 推得的場上/墓地歸誰:特殊召喚(含下位詞)到施事者的場上;其餘不知道就不標方。
+    summoning = any("特殊召喚" in action_ancestors(a) for a in seg["actions"])
+    inferred_side = (agent or "我方") if summoning else None
     count = floating_count(m.group("count")) if m.group("count") else None
     for phrase in split_objects(m.group("objects")):
         obj_id, ref, reason = state.object_at(phrase, sentence_start)
@@ -553,13 +612,14 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
         obj = state.find(obj_id)
         if count is not None and count["cmp"] == "全部" and obj["source"]["kind"] == "子集":
             obj["source"]["select"] = "全部"
-        role = "被召喚" if "特殊召喚" in seg["actions"] else "受事"
+        role = "被召喚" if summoning else "受事"
         line = new_line(obj_id, role,
                         targeting=(kind == "效果" and obj_id in state.targeted),
                         marker=m.group("marker"), ref=ref, count=count)
         if from_zones is not None:
-            line["from"] = position(from_zones, "明寫",
-                                    text=m.group("from") + m.group("from_particle"))
+            line["from"] = position(from_zones, "明寫", text=from_text)
+            if from_placement == "述語前":
+                line["from"]["placement"] = from_placement
             if obj["source"]["kind"] == "新建" and obj["initial_position"] is None:
                 obj["initial_position"] = list(from_zones)
         else:
@@ -574,6 +634,8 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
         if to_zones is not None:
             line["to"] = position(to_zones, "明寫", text=to_text,
                                   form=m.group("form"))
+            if m.group("to_front"):
+                line["to"]["placement"] = "名詞前"
         elif written_to:
             line["to"] = position([zone(written_to, None)], "明寫")
         elif inferred_to:

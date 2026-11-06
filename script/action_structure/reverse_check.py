@@ -20,6 +20,7 @@ import re
 
 from attribute_atoms import is_param_atom, joiner, render_group
 from premise import NoPremiseTemplate, render_premise, split_premise
+from condition_atoms import render_atom
 from segment_extract import (ACTION_PAST, CAUSE_TEXTS, EXIST_WORDS, HEAD_CATEGORY,
                              HEAD_SUBTYPE, SIDE_WORDS, ZONE_WORDS, parse_from,
                              parse_predicates)
@@ -31,7 +32,7 @@ REASON_MISMATCH = "字面不符"
 REASON_RESIDUE = "段外殘留"
 
 # 簡單子句模板會寫的格;其餘格一有值就是「無模板」。
-TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "polarity",
+TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polarity",
                   "trigger", "span", "text", "predicate", "voice", "unparsed",
                   "optional", "cause", "premise"}
 TEMPLATE_KINDS = ("條件", "代價", "效果")
@@ -70,7 +71,11 @@ def _quoted(atom, names):
 
 def _render_atom(atom, names):
     """修飾語原子 → 字面:字段(「X」/「X」と名のついた)、「X」以外の、カード名に「X」を含む、
-    屬性比較(種族名、「レベル１」、「光属性」)。"""
+    屬性比較(種族名、「レベル１」、「光属性」);票 07 的原子(記載、卡名範圍、位置、
+    卡片子類型、引用)的模板在 condition_atoms.render_atom,先問它。"""
+    rendered = render_atom(atom, names)
+    if rendered is not None:
+        return rendered
     op = atom.get("op")
     if op == "字段":
         form = atom.get("form")
@@ -106,8 +111,9 @@ def _render_head(condition):
             return _HEAD_TEXT[values]
     if op == "且" and len(condition["args"]) == 2:
         category, subtype = condition["args"]
-        if category.get("op") == "大類" and subtype.get("op") == "子類型":
-            return _SUBTYPE_HEAD_TEXT.get((category["value"], subtype["value"]))
+        if (category.get("op") == "大類" and subtype.get("op") == "屬性比較"
+                and subtype.get("attr") == "卡片子類型" and subtype.get("cmp") == "="):
+            return _SUBTYPE_HEAD_TEXT.get((category["value"], subtype.get("value")))
     return None
 
 
@@ -272,27 +278,31 @@ def _render_zones(zones):
 
 
 def _render_from(lines):
-    """所有對象線共用一個明寫的「從」才有字面;繼承、推得的不寫。"""
+    """所有對象線共用一個明寫的「從」才有字面 → (字面, 寫在物件前還是述語前);
+    繼承、推得的不寫。"""
     written = [line["from"] for line in lines
                if line["from"] and line["from"]["source"] == "明寫"]
     if not written:
-        return ""
+        return "", "名詞前"
     if len(written) != len(lines) or any(w != written[0] for w in written):
         raise NoTemplate("對象線的從不一致")
-    return _render_zone_text(written[0], "から")
+    return _render_zone_text(written[0], "から"), written[0].get("placement") or "名詞前"
 
 
 def _render_to(lines, predicate_to):
-    """明寫、不在述語裡的「到」(「デッキの一番下に」),可帶放置形式(「好きな順番で」)。"""
+    """明寫、不在述語裡的「到」(「デッキの一番下に」),可帶放置形式(「好きな順番で」)
+    → (字面, 寫在物件前還是述語前):「自分フィールドにモンスターが特殊召喚された」的到在
+    物件前(placement 名詞前),其餘在述語前。"""
     written = [line["to"] for line in lines
                if line["to"] and line["to"]["source"] == "明寫"]
     if not written or predicate_to:
         if any(w.get("form") for w in written):
             raise NoTemplate("到的形式無模板")
-        return ""
+        return "", "述語前"
     if len(written) != len(lines) or any(w != written[0] for w in written):
         raise NoTemplate("對象線的到不一致")
-    return (written[0].get("form") or "") + _render_zone_text(written[0], "に")
+    return ((written[0].get("form") or "") + _render_zone_text(written[0], "に"),
+            written[0].get("placement") or "述語前")
 
 
 def _render_predicate(seg):
@@ -346,8 +356,9 @@ def _render_leading_premise(leading, seg, card, objects, names, followed):
 
 
 def render_segment(seg, card):
-    """簡單子句模板:[前提][誰が][到に][從から|の][物件][助詞][數量][原因][形式][到に]述語[觸發形]
-    (物件前的「到に」只在助詞是「が」時);存在前提另有模板;只有前提的條件段寫前提。
+    """簡單子句模板:[前提][誰が][到に][從から|の][物件][助詞][數量][原因][形式][從から][到に][受方に]述語[觸發形]
+    (物件前的「到に」只在助詞是「が」時;「從」只在物件前或述語前其中一處,照 placement);
+    存在前提另有模板;只有前提的條件段寫前提。
     回傳日文;寫不出就丟 NoTemplate。"""
     if seg["unparsed"]:
         raise NoTemplate(f"段未解析:{seg['unparsed']['reason']}")
@@ -376,7 +387,8 @@ def render_segment(seg, card):
         if seg["agent"] is not None:
             if seg["agent"] not in _SIDE_TEXT:
                 raise NoTemplate(f"誰無模板:{seg['agent']}")
-            parts.append(_SIDE_TEXT[seg["agent"]] + "が")
+            # 誰的助詞:條件子句是「相手が〜した時」,效果句是「自分は〜する」(全庫 66:0、31:1)。
+            parts.append(_SIDE_TEXT[seg["agent"]] + ("が" if seg["kind"] == "條件" else "は"))
         words, markers, counts = [], set(), set()
         for line in seg["lines"]:
             if line["targeting"]:
@@ -390,16 +402,24 @@ def render_segment(seg, card):
             raise NoTemplate("對象線的助詞或數量不一致")
         marker = markers.pop()
         predicate, predicate_to = _render_predicate(seg)
-        to_text = _render_to(seg["lines"], predicate_to)
-        # 助詞是「が」的主語形,明寫的到寫在物件前(自分フィールドにモンスターが特殊召喚された)。
-        if marker == "が":
+        to_text, to_placement = _render_to(seg["lines"], predicate_to)
+        from_text, from_placement = _render_from(seg["lines"])
+        # 物件前的到(自分フィールドにモンスターが特殊召喚された)照 placement 放回。
+        if to_placement == "名詞前":
             parts.append(to_text)
-        parts.append(_render_from(seg["lines"]))
+        if from_placement == "名詞前":
+            parts.append(from_text)
         parts.append("と".join(words) + marker)
         parts.append(counts.pop())
         parts.append(_render_cause(seg["cause"]))
-        if marker != "が":
+        if from_placement == "述語前":
+            parts.append(from_text)
+        if to_placement == "述語前":
             parts.append(to_text)
+        if seg["recipient"] is not None:
+            if seg["recipient"] not in _SIDE_TEXT:
+                raise NoTemplate(f"受方無模板:{seg['recipient']}")
+            parts.append(_SIDE_TEXT[seg["recipient"]] + "に")
         parts.append(predicate)
         text = "".join(parts)
     if seg["kind"] == "條件":

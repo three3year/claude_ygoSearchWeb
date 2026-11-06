@@ -45,10 +45,12 @@ def parse_modifier(text):
 
 
 def is_param_atom(atom):
-    """這個原子(或它的「或」)是屬性比較。"""
+    """這個原子(或它的「或」)是帶值的種族/屬性/等級比較(「・」「の」的規則只管這些);
+    票 07 的引用(`ref`)與卡片子類型有自己的模板,不算。"""
     if atom.get("op") == "或":
         return all(is_param_atom(a) for a in atom["args"])
-    return atom.get("op") == "屬性比較"
+    return (atom.get("op") == "屬性比較" and "ref" not in atom
+            and atom.get("attr") in ("種族", "屬性", "等級"))
 
 
 def render_group(atom):
@@ -76,4 +78,8 @@ def joiner(atom, following):
         return ""
     if is_param_atom(following):
         return "の" if atom.get("op") == "或" else "・"
+    if following.get("op") == "屬性比較" and following.get("attr") == "卡片子類型":
+        # 「ドラゴン族・闇属性Sモンスター」字母緊接,不寫「の」;「サイバース族の儀式モンスター」
+        # 「恐竜族の融合モンスター」是整個詞,寫「の」。
+        return "の" if following.get("value") in ("融合", "儀式") else ""
     return "の"

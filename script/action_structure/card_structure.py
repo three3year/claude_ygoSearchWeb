@@ -1,8 +1,10 @@
 """卡片結構的形狀與建置管線(純函式)。
 
-單一接縫:`build_structures(卡片總表條目, 官方 DB 文本條目) → (structures, report)`。
+單一接縫:`build_structures(卡片總表條目, 官方 DB 文本條目, 字段表列) → (structures, report)`。
 讀檔、寫檔、印報告都在薄殼 `build_structure.py`;時間與來源雜湊由薄殼給進來、
 只進 report 不進產物,所以同一份輸入兩次建置的產物逐位元組相同。
+字段表(`data/archetypes.json`,由 build_archetypes.py 建出)把「X」換成 setcode;
+名稱表與卡片屬性表的規則在 `names_attributes`。
 
 形狀(鍵名英文、值用 GLOSSARY 的詞;每格都允許 None 或「解析不出」,
 後面的票只填值、不改形狀):
@@ -10,7 +12,7 @@
 卡片 card
   id / name_ja / unparsed(整張未解析:{"reason": "無官方日文"})
   attributes  卡片屬性表:{屬性名: [{"value", "where"(位置條件,None=任何位置), "source", "span", "text"}]}
-  names       名稱表:[{"id", "text", "source"(「」引用 / 宣言)}]
+  names       名稱表:[{"id", "text", "source"(「」引用 / 宣言), "unparsed"}]
   objects     物件表(整張卡共用;objects[0] 是物件0 = 這張卡自己)
   blocks      區塊列表
   omitted     略過文本:[{"span", "text", "reason"}](次數限制前言等不記的字面)
@@ -31,7 +33,10 @@
 """
 import json
 
+from archetype_table import archetype_lookup, fold_width
 from block_split import split_blocks
+from names_attributes import (SOURCE_OFFICIAL_NAME, extract_names,
+                              extract_treat_as, fill_from_card_list)
 from segment_extract import extract_block
 from structure_shape import (  # noqa: F401  形狀的詞與工廠從這裡再匯出
     ATTRIBUTE_TABLES, BLOCK_KINDS, BRANCH_MODES, JOINS, NO_OFFICIAL_TEXT,
@@ -43,8 +48,10 @@ from structure_shape import (  # noqa: F401  形狀的詞與工廠從這裡再�
     unparsed, zone)
 
 # ── 建置 ─────────────────────────────────────────────────────
-def build_card(entry, faq_entry):
-    """一張卡:官方 DB 文本 → 區塊 → 段 → 卡片結構。沒有官方文本整張標未解析。"""
+def build_card(entry, faq_entry, lookups):
+    """一張卡:官方 DB 文本 → 名稱表、卡片屬性表 → 區塊 → 段 → 卡片結構。
+    沒有官方文本整張標未解析。`lookups` = {"card_names": 折疊後卡名集合,
+    "archetypes": 折疊後字段名 → setcode 列表}。"""
     if faq_entry is None:
         card = new_card(entry["id"], entry["name_ja"])
         card["unparsed"] = unparsed(NO_OFFICIAL_TEXT)
@@ -52,18 +59,34 @@ def build_card(entry, faq_entry):
     card = new_card(entry["id"], faq_entry["name_ja"])
     # 卡名列:官方卡名,任何位置都算(位置條件 None)。
     card["attributes"]["name"].append(
-        attribute_row(faq_entry["name_ja"], source="官方卡名"))
+        attribute_row(faq_entry["name_ja"], source=SOURCE_OFFICIAL_NAME))
+    fill_from_card_list(card, entry)
+    texts = [("card_text", faq_entry.get("card_text", "")),
+             ("pen_effect", faq_entry.get("pen_effect"))]
+    extract_names(card, texts, lookups)
+    extract_treat_as(card, texts, lookups)
     blocks, omitted = split_blocks(faq_entry.get("card_text", ""),
                                    faq_entry.get("pen_effect"))
     card["omitted"] = omitted
     for block in blocks:
-        extract_block(block, card)
+        extract_block(block, card, lookups)
         card["blocks"].append(block)
     return card
 
 
-def build_structures(cards, faq_entries, built_at="", sources=None):
-    """卡片總表 + 官方 DB 文本 → (一卡一結構的列表, report)。
+def build_lookups(cards, faq_entries, archetypes):
+    """「」名稱的對照:卡名(卡片總表與官方 DB 文本的 name_ja 都收,兩者全半形有別)
+    與字段表,都折疊後再比。"""
+    card_names = {fold_width(c["name_ja"]) for c in cards if c.get("name_ja")}
+    card_names.update(fold_width(f["name_ja"]) for f in faq_entries
+                      if f.get("name_ja"))
+    return {"card_names": card_names,
+            "archetypes": archetype_lookup(archetypes or [])}
+
+
+def build_structures(cards, faq_entries, archetypes=None, built_at="",
+                     sources=None):
+    """卡片總表 + 官方 DB 文本 + 字段表 → (一卡一結構的列表, report)。
 
     `built_at` 與 `sources` 只寫進 report:產物不含時間,入版控後 git diff 才讀得出
     改了什麼(筆記 03 第 6 點)。
@@ -71,13 +94,14 @@ def build_structures(cards, faq_entries, built_at="", sources=None):
     by_password = {}
     for faq in faq_entries:
         by_password[faq["password"]] = faq
+    lookups = build_lookups(cards, faq_entries, archetypes)
     structures = []
     no_text = []
     for entry in sorted(cards, key=lambda c: c["id"]):
         faq = by_password.get(entry["id"])
         if faq is None:
             no_text.append(entry["id"])
-        structures.append(build_card(entry, faq))
+        structures.append(build_card(entry, faq, lookups))
     report = {
         "built_at": built_at,
         "sources": sources or {},
@@ -159,6 +183,13 @@ def _hydrate_position(pos):
     return pos
 
 
+def _hydrate_attribute_row(row):
+    row = _hydrate(row, attribute_row(row["value"]))
+    if row["where"]:
+        row["where"] = _hydrate_zones(row["where"])
+    return row
+
+
 def _hydrate_line(line):
     line = _hydrate(line, new_line(line["object"], line["role"]))
     line["from"] = _hydrate_position(line["from"])
@@ -210,7 +241,7 @@ def load_structures(text):
     for card in json.loads(text):
         card = _hydrate(card, new_card(card["id"], card["name_ja"]))
         card["attributes"] = {
-            name: [_hydrate(row, attribute_row(row["value"]))
+            name: [_hydrate_attribute_row(row)
                    for row in card["attributes"].get(name, [])]
             for name in ATTRIBUTE_TABLES}
         card["names"] = [_hydrate(row, name_row(row["id"], row["text"], None))

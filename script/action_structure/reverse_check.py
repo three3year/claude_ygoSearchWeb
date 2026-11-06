@@ -53,10 +53,33 @@ class NoTemplate(Exception):
 
 
 # ── 模板 ─────────────────────────────────────────────────────
-def _render_condition(condition):
-    """條件式 → 頭名詞;目前只有大類(與 魔法・罠 的或)有模板。"""
-    if condition is None:
-        raise NoTemplate("物件條件無模板:空")
+def _quoted(atom, names):
+    """名稱原子 → 「X」:只從名稱表取字面(查詢側才會直接帶 text,結構裡不會)。"""
+    row = names.get(atom.get("name"))
+    if row is None:
+        raise NoTemplate("名稱原子引用的名稱列找不到")
+    return f"「{row['text']}」"
+
+
+def _render_atom(atom, names):
+    """修飾語原子 → 字面:字段(「X」/「X」と名のついた)、「X」以外の、カード名に「X」を含む。"""
+    op = atom.get("op")
+    if op == "字段":
+        form = atom.get("form")
+        if form not in (None, "と名のついた"):
+            raise NoTemplate(f"字段寫法無模板:{form}")
+        return _quoted(atom, names) + (form or "")
+    if op == "非" and atom.get("arg", {}).get("op") == "卡名":
+        return _quoted(atom["arg"], names) + "以外の"
+    if op == "卡名包含":
+        return "カード名に" + _quoted(atom, names) + "を含む"
+    if op == "解析不出":
+        raise NoTemplate("物件條件無模板:解析不出")
+    raise NoTemplate(f"物件條件無模板:{op}")
+
+
+def _render_head(condition):
+    """大類(與 魔法・罠 的或)→ 頭名詞。"""
     op = condition.get("op")
     if op == "大類":
         return _HEAD_TEXT[condition["value"]]
@@ -65,9 +88,26 @@ def _render_condition(condition):
                        if a.get("op") == "大類")
         if len(values) == len(condition["args"]) and values in _HEAD_TEXT:
             return _HEAD_TEXT[values]
-    if op == "解析不出":
-        raise NoTemplate("物件條件無模板:解析不出")
-    raise NoTemplate(f"物件條件無模板:{op}")
+    return None
+
+
+def _render_condition(condition, names):
+    """條件式 → 名詞短語:且 = 修飾語(照字面順序)+ 頭名詞;單獨的卡名 = 「X」。"""
+    if condition is None:
+        raise NoTemplate("物件條件無模板:空")
+    head = _render_head(condition)
+    if head:
+        return head
+    op = condition.get("op")
+    if op == "卡名":
+        return _quoted(condition, names)
+    if op == "且":
+        *mods, last = condition["args"]
+        head = _render_head(last)
+        if head is None:
+            raise NoTemplate("物件條件無模板:且 的末項不是大類")
+        return "".join(_render_atom(a, names) for a in mods) + head
+    return _render_atom(condition, names)
 
 
 def _render_count(count):
@@ -80,11 +120,12 @@ def _render_count(count):
     return f"{digits}{count['unit']}{'まで' if count['cmp'] == '≤' else ''}"
 
 
-def _render_object(obj, seg):
-    """物件在這一段的字面:物件0 是このカード;本段首次出現的寫全名(條件+數量);
-    別段建立、本段指回的寫 その+頭名詞(抽取端 _REF_RE 只認 モンスター|カード)。"""
+def _render_object(obj, seg, names):
+    """物件在這一段的字面 → (名詞短語, 述語前的數量):物件0 是このカード;本段首次出現的
+    寫全名(條件+名詞內的數量,述語前的數量另回傳);別段建立、本段指回的寫 その+頭名詞
+    (抽取端 _REF_RE 只認 モンスター|カード)。"""
     if obj["source"]["kind"] == "自己":
-        return "このカード"
+        return "このカード", ""
     if obj["source"]["kind"] != "新建":
         raise NoTemplate(f"物件來源無模板:{obj['source']['kind']}")
     if obj["unparsed"]:
@@ -93,9 +134,16 @@ def _render_object(obj, seg):
     defined_here = (obj["span"] and obj["block"] == seg["id"].split(".")[0]
                     and start <= obj["span"][0] and obj["span"][1] <= end)
     if defined_here:
-        return _render_condition(obj["condition"]) + _render_count(obj["count"])
-    head = _render_condition(obj["condition"])
-    return "その" + ("モンスター" if head == "モンスター" else "カード")
+        noun = _render_condition(obj["condition"], names)
+        count = _render_count(obj["count"])
+        if obj["count"] and obj["count"].get("placement") == "述語前":
+            return noun, count
+        return noun + count, ""
+    condition = obj["condition"]
+    if condition.get("op") == "且":
+        condition = condition["args"][-1]   # 且 的末項是大類頭名詞
+    head = _render_head(condition)
+    return "その" + ("モンスター" if head == "モンスター" else "カード"), ""
 
 
 def _render_from(lines):
@@ -142,20 +190,26 @@ def render_segment(seg, card):
     if not seg["lines"]:
         raise NoTemplate("段無對象線")
     objects = {o["id"]: o for o in card["objects"]}
+    names = {row["id"]: row for row in card["names"]}
     parts = []
     if seg["agent"] is not None:
         if seg["agent"] not in _SIDE_TEXT:
             raise NoTemplate(f"誰無模板:{seg['agent']}")
         parts.append(_SIDE_TEXT[seg["agent"]] + "が")
     parts.append(_render_from(seg["lines"]))
-    words = []
+    words, postcount = [], ""
     for line in seg["lines"]:
         if line["targeting"]:
             raise NoTemplate("取對象線無模板")
         if line["role"] not in ("受事", "被召喚"):
             raise NoTemplate(f"角色無模板:{line['role']}")
-        words.append(_render_object(objects[line["object"]], seg))
-    parts.append("と".join(words) + "を")
+        noun, count = _render_object(objects[line["object"]], seg, names)
+        words.append(noun)
+        if count:
+            if postcount or len(seg["lines"]) != 1:
+                raise NoTemplate("述語前的數量只能屬於唯一的物件")
+            postcount = count
+    parts.append("と".join(words) + "を" + postcount)
     parts.append(_render_predicate(seg))
     if seg["kind"] == "條件":
         if not seg["trigger"]:

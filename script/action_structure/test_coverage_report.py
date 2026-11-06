@@ -86,8 +86,13 @@ class BuildCoverageTest(unittest.TestCase):
                          objects["unparsed"])
         self.assertEqual(objects["by_source"]["自己"], self.coverage["with_structure"])
 
-    def test_unknown_names_section_is_present_but_empty_before_ticket_04(self):
-        self.assertEqual(self.coverage["unknown_names"], {})
+    def test_unknown_quoted_names_listed_with_card_ids(self):
+        """滅びの黒魔術師 的 fixture 引用「ブラック・マジシャン」,而這組 fixture 的總表沒有
+        這張卡、也沒給字段表:名稱對不到 → 列進「不認得的「」名稱」附卡號。"""
+        self.assertEqual(self.coverage["unknown_names"],
+                         {"ブラック・マジシャン": [59400890]})
+        text = render_coverage(self.coverage)
+        self.assertIn("- 「ブラック・マジシャン」(1 張):`59400890`", text)
 
 
 class RenderCoverageTest(unittest.TestCase):

@@ -371,6 +371,14 @@ _Avoid_: 效果 Tag、動作框架(main 分支的舊做法)
 
 _Avoid_: 卡名包含(那是另一種條件,見[[卡名包含]])
 
+### 字段表 (Archetype Table)
+
+`data/archetypes.json`(建置產物,入版控,一筆一行):每個 setcode 的日文名各寫法(`names_ja`,「漢字（読み）」與「A／B」兩種都登記)、中文名(`name_zh`)與來源。日文名與 setcode 來自上游 mycard/ygopro-database 的 ja-JP `strings.conf` `!setname`(原檔入版控於 `data/sources_vendored/`);中文名從同 setcode 卡的繁中卡文「」引用依位置配對,同 setcode 的卡都沒引用時退而用全部卡;配不到、候選不唯一、用全部卡配對的列進 `.scratch/action-structure/report/archetypes.md`。由 `build_archetypes.py` 建出,卡片結構建置時把「X」換成 setcode。
+
+### 字段補丁表 (Archetype Patch Table)
+
+`data/archetype_patches.json`(來源檔,站主維護):覆蓋[[字段表]]上游的缺漏或錯誤,每筆 `setcode`(0x 十六進位字串)、`names_ja`、`name_zh`、`remove`、`reason`。setcode 不在上游的就是補缺漏;欄位不認得或格式錯,建置以非 0 結束。
+
 ### 卡名包含 (Name Contains)
 
 條件「カード名に「X」を含む」:比對卡名的子字串,不看 setcode。與[[字段]]是不同的條件,「X」不必是字段名。
@@ -389,7 +397,7 @@ _Avoid_: 卡名包含(那是另一種條件,見[[卡名包含]])
 
 ### 卡片屬性表 (Card Attribute Table)
 
-[[卡片結構]]的一部分(鍵 `attributes`):每種屬性(`name` 卡名、`archetype` 字段、`attribute` 屬性、`race` 種族、`level` 等級、`category` 大類)一張表,每列帶值與位置條件(`where`,None = 任何位置)。物件0 的來源;官方卡名是第一列,「ルール上〜としても扱う」「〜に存在する限り〜として扱う」由票 04 填。
+[[卡片結構]]的一部分(鍵 `attributes`):每種屬性(`name` 卡名、`archetype` 字段、`attribute` 屬性、`race` 種族、`level` 等級、`category` 大類)一張表,每列帶值與位置條件(`where`,None = 任何位置)。物件0 的來源,也是判斷一張卡能否代入某[[物件]]時卡名與字段的依據:帶位置條件的列只在該[[對象線]]的「從」落在那些區域時算,「從」沒寫就只算任何位置的列。官方卡名是第一列;[[卡片總表]]的 setcode、大類、屬性、種族、等級各一列(來源「卡片總表」);「ルール上「X」カードとしても扱う」= 字段 X 任何位置、「〜に存在する限り「X」として扱う」= 卡名 X 只在該位置(來源 `card_text`/`pen_effect`,附原文範圍)。規則在 `names_attributes.py`。
 
 ### 物件表 (Object Table)
 
@@ -397,7 +405,7 @@ _Avoid_: 卡名包含(那是另一種條件,見[[卡名包含]])
 
 ### 名稱表 (Name Table)
 
-[[卡片結構]]裡「」引用與宣言的名稱列表(鍵 `names`),條件比的是名稱而非字串;比對前雙方做全半形折疊,表裡保留原文字面。
+[[卡片結構]]裡「」引用與宣言的名稱列表(鍵 `names`,每列 `id`、`text`、`source`、`unparsed`),條件式的卡名、字段、卡名包含原子以 `name` 引用列的 id;比對前雙方做全半形折疊,表裡保留原文字面。對不到卡名也對不到[[字段表]]的名稱標 `unparsed`(原因「不認得的「」名稱」),[[覆蓋報告]]的「不認得的「」名稱」一節列出、引用它的[[物件]]標[[未解析]],建置照常通過。宣言名稱沒有字面,尚未登記。
 
 ### 條件式 (Condition Expression)
 

@@ -9,7 +9,8 @@
     python -X utf8 script/action_structure/build_structure.py --no-write   # 只印報告
 
 `data/sources/faq_info.json` 不入版控(由 script/faq_info/build_faq_info.py 建出),
-沒有它就建不了結構,這支會以非 0 結束。
+沒有它就建不了結構,這支會以非 0 結束。字段表 `data/archetypes.json`(入版控,
+由 build_archetypes.py 建出)也必須在,「X」才換得成 setcode。
 """
 import argparse
 import datetime
@@ -24,6 +25,7 @@ ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_FAQ_INFO = os.path.join(ROOT, "data", "sources", "faq_info.json")
+DEFAULT_ARCHETYPES = os.path.join(ROOT, "data", "archetypes.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "data", "action_structure.json")
 
 
@@ -59,6 +61,8 @@ def main(argv=None):
                         help="卡片總表路徑(預設 data/cards.json)")
     parser.add_argument("--faq", default=DEFAULT_FAQ_INFO,
                         help="官方 DB 文本路徑(預設 data/sources/faq_info.json)")
+    parser.add_argument("--archetypes", default=DEFAULT_ARCHETYPES,
+                        help="字段表路徑(預設 data/archetypes.json)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
                         help="產物路徑(預設 data/action_structure.json)")
     parser.add_argument("--no-write", action="store_true",
@@ -68,12 +72,18 @@ def main(argv=None):
         print(f"找不到官方 DB 文本 {args.faq}(data/sources/ 不入版控,"
               "先跑 script/faq_info/build_faq_info.py)", file=sys.stderr)
         return 1
+    if not os.path.exists(args.archetypes):
+        print(f"找不到字段表 {args.archetypes}(先跑 "
+              "script/action_structure/build_archetypes.py)", file=sys.stderr)
+        return 1
     built_at = datetime.datetime.now().astimezone().strftime(
         "%Y-%m-%dT%H:%M:%S%z")
     structures, report = build_structures(
-        _load(args.cards), _load(args.faq), built_at=built_at,
+        _load(args.cards), _load(args.faq), _load(args.archetypes),
+        built_at=built_at,
         sources={os.path.basename(args.cards): _digest(args.cards),
-                 os.path.basename(args.faq): _digest(args.faq)})
+                 os.path.basename(args.faq): _digest(args.faq),
+                 os.path.basename(args.archetypes): _digest(args.archetypes)})
     print_report(report)
     if not args.no_write:
         with open(args.output, "w", encoding="utf-8", newline="\n") as f:

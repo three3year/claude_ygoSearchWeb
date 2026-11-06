@@ -37,6 +37,15 @@ def faq(password, name_ja, card_text, pen_effect=None):
     return entry
 
 
+ARCHETYPES = [
+    {"setcode": 0x5a, "hex": "0x5a", "names_ja": ["ペンギン"], "name_zh": "企鵝",
+     "source": "strings.conf"},
+    {"setcode": 0x1b1, "hex": "0x1b1", "names_ja": ["白き森"], "name_zh": "白森林",
+     "source": "strings.conf"},
+    {"setcode": 0x1bc, "hex": "0x1bc", "names_ja": ["アザミナ"], "name_zh": "聖徒",
+     "source": "strings.conf"},
+]
+
 SINGULARITY_FIEND = 32484853  # 特異点の悪魔
 SINGULARITY_FIEND_TEXT = (
     "このカード名の効果は１ターンに１度しか使用できない。\n"
@@ -127,6 +136,94 @@ class SingularityFiendTest(unittest.TestCase):
         """整張卡通過反向檢查(票 02):每段由結構套句型模板產生的日文與原文全等。"""
         structure = next(c for c in self.structures
                          if c["id"] == SINGULARITY_FIEND)
+        self.assertEqual(check_card(structure), [])
+
+
+EMPEROR_PENGUIN = 6836211  # 大皇帝ペンギン
+EMPEROR_PENGUIN_TEXT = (
+    "①：このカードをリリースして発動できる。デッキから「大皇帝ペンギン」以外の"
+    "「ペンギン」モンスターを２体まで特殊召喚する。")
+PENGUIN_SOLDIER = 93920745   # ペンギン・ソルジャー(setcode 0x5a)
+PENGUIN_SPELL = 55555555     # 測試用:帶 ペンギン setcode 的魔法卡
+BLACK_MAGICIAN = 46986414
+
+
+class EmperorPenguinTest(unittest.TestCase):
+    """大皇帝ペンギン 6836211(票 04):卡名「以外」、字段依 setcode、物件後置數量。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(EMPEROR_PENGUIN, name_ja="大皇帝ペンギン", level=5, race=0x40,
+                 attribute=0x2, atk=1800, setcode=0x5a),
+            card(PENGUIN_SOLDIER, name_ja="ペンギン・ソルジャー", level=2,
+                 race=0x40, attribute=0x2, atk=750, setcode=0x5a),
+            card(PENGUIN_SPELL, name_ja="ペンギンの魔法", type=SPELL, setcode=0x5a),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20, atk=2500),
+        ]
+        cls.faq = [faq(EMPEROR_PENGUIN, "大皇帝ペンギン", EMPEROR_PENGUIN_TEXT)]
+        cls.structures, cls.report = build_structures(cls.cards, cls.faq,
+                                                      archetypes=ARCHETYPES)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_penguin_monster_from_deck_special_summon_hits(self):
+        """「ペンギン 怪獸 牌組 → 特殊召喚」:ペンギン・ソルジャー(setcode 0x5a)代入命中;
+        只給條件(怪獸 且 字段 ペンギン)也命中。"""
+        self.assertIn(EMPEROR_PENGUIN,
+                      self.hits(actions=["特殊召喚"], from_zones=["牌組"],
+                                card=PENGUIN_SOLDIER))
+        penguin_monster = {"op": "且", "args": [
+            {"op": "大類", "value": "怪獸"},
+            {"op": "字段", "setcodes": [0x5a]}]}
+        self.assertIn(EMPEROR_PENGUIN,
+                      self.hits(actions=["特殊召喚"], from_zones=["牌組"],
+                                condition=penguin_monster))
+
+    def test_itself_is_excluded_by_igai(self):
+        """「大皇帝ペンギン」以外:指定大皇帝ペンギン本身查「牌組 → 特殊召喚」不命中。"""
+        self.assertNotIn(EMPEROR_PENGUIN,
+                         self.hits(actions=["特殊召喚"], from_zones=["牌組"],
+                                   card=EMPEROR_PENGUIN))
+
+    def test_non_penguin_and_penguin_spell_do_not_fit(self):
+        """字段依 setcode:黑魔導(無 setcode)不符;帶 ペンギン setcode 的魔法卡因大類不符。"""
+        self.assertNotIn(EMPEROR_PENGUIN,
+                         self.hits(actions=["特殊召喚"], card=BLACK_MAGICIAN))
+        self.assertNotIn(EMPEROR_PENGUIN,
+                         self.hits(actions=["特殊召喚"], card=PENGUIN_SPELL))
+
+    def test_release_this_card_hits(self):
+        """「此卡 解放」:代價段「このカードをリリースして」;從場上、到墓地是推得的,
+        開關開才算。"""
+        self.assertIn(EMPEROR_PENGUIN,
+                      self.hits(actions=["解放"], card=EMPEROR_PENGUIN))
+        self.assertIn(EMPEROR_PENGUIN,
+                      self.hits(actions=["解放"], card=EMPEROR_PENGUIN,
+                                from_zones=["場上"], to_zones=["墓地"],
+                                include_inferred=True))
+        self.assertNotIn(EMPEROR_PENGUIN,
+                         self.hits(actions=["解放"], card=EMPEROR_PENGUIN,
+                                   from_zones=["場上"]))
+
+    def test_special_summon_destination_is_inferred(self):
+        """特殊召喚的終點「場上」是推得的:推得開才以「→ 場上」命中。"""
+        self.assertIn(EMPEROR_PENGUIN,
+                      self.hits(actions=["特殊召喚"], to_zones=["場上"],
+                                include_inferred=True))
+        self.assertNotIn(EMPEROR_PENGUIN,
+                         self.hits(actions=["特殊召喚"], to_zones=["場上"]))
+
+    def test_unrelated_actions_do_not_hit(self):
+        self.assertNotIn(EMPEROR_PENGUIN, self.hits(actions=["破壞"]))
+        self.assertNotIn(EMPEROR_PENGUIN, self.hits(actions=["捨棄"]))
+
+    def test_whole_card_passes_reverse_check(self):
+        structure = next(c for c in self.structures
+                         if c["id"] == EMPEROR_PENGUIN)
         self.assertEqual(check_card(structure), [])
 
 

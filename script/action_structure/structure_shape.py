@@ -84,7 +84,7 @@ def new_object(obj_id, source, text=None, span=None, block=None,
         "kind": kind,                  # 物件種類
         "condition": condition,        # 條件式
         "initial_position": initial_position,
-        "count": count,                # {"text", "value", "unit", "cmp"}
+        "count": count,                # {"text", "value", "unit", "cmp", "placement"(名詞內/述語前)}
         "block": block,                # 首次出現的區塊 id
         "span": list(span) if span else None,
         "text": text,
@@ -127,8 +127,8 @@ def attribute_row(value, where=None, source=None, span=None, text=None):
 
 
 def name_row(name_id, text, source):
-    """名稱表的一列:來源是「」引用或宣言。"""
-    return {"id": name_id, "text": text, "source": source}
+    """名稱表的一列:來源是「」引用或宣言;對不到卡名也對不到字段的標 unparsed。"""
+    return {"id": name_id, "text": text, "source": source, "unparsed": None}
 
 
 def new_card(card_id, name_ja):

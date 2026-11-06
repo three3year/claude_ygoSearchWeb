@@ -35,6 +35,7 @@ python -m unittest discover -s script/faq_info
 python -m unittest discover -s script/tag_card
 python -m unittest discover -s script/text_format
 python -m unittest discover -s script/web
+python -X utf8 -m unittest discover -s script/action_structure   # 動作搜尋的卡片結構
 node --test                       # 前端查詢引擎(node 內建,零 npm 依賴)
 ```
 
@@ -109,6 +110,19 @@ python script/tag_card/run_masked_test.py score
 判定與拆句的成果同樣活過每一次重跑,只有 `rule` 那一種來源會重算。
 判定規範見 `docs/effect_kind_guide.md`,規則清單 `docs/effect_kind_rules.md` 由建置流程產生。
 
+### 動作搜尋的卡片結構
+
+```bash
+# 建置卡片結構:卡片總表 + 官方 DB 文本(data/sources/faq_info.json)→ data/action_structure.json
+python -X utf8 script/action_structure/build_structure.py
+
+# 只印報告,不寫產物
+python -X utf8 script/action_structure/build_structure.py --no-write
+```
+
+產物一卡一行、不含時間(時間與來源雜湊只印在報告),同一份輸入兩次建置逐位元組相同。
+規格與各票在 `.scratch/action-structure/`。
+
 ### 查卡網站
 
 ```bash
@@ -165,7 +179,14 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/web/build_index.py` | 建置 CLI 薄殼(讀檔 → 寫 web/data.js → 印報告 → 依 problems 定 exit code) |
 | `script/web/frontend_harness.js` | 接縫 3 的沙箱載入器(`node:vm` 依 index.html 的順序載入真實前端程式碼) |
 | `script/web/engine.test.js` | 前端查詢引擎的接縫測試(`node:test`,合成資料集) |
+| `script/action_structure/structure_shape.py` | 卡片結構的形狀:值域、各層工廠函式、走訪 |
+| `script/action_structure/block_split.py` | 區塊切分(純函式):官方 DB 文本 → 區塊 + 略過文本 |
+| `script/action_structure/segment_extract.py` | 段抽取(純函式):區塊 → 段、段樹、物件;同義表、推得表、位置自動規則 |
+| `script/action_structure/card_structure.py` | 建置管線(純函式):總表 + 官方 DB 文本 → 卡片結構 + 報告;序列化與讀回 |
+| `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用分組 |
+| `script/action_structure/build_structure.py` | 建置 CLI 薄殼(讀檔 → 寫 data/action_structure.json → 印報告) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
+| `data/action_structure.json` | 動作搜尋的卡片結構(建置產物,**入版控**,一卡一行;產物省略空格,讀回用 `card_structure.load_structures`) |
 | `data/tag_cards.json` | 效果標記表(一卡一物件,入版控的來源檔) |
 | `data/clause_splits.json` | 拆句表:舊式無編號卡文的效果句邊界(入版控的來源檔) |
 | `data/cid_overrides.json` | 人工查證的 cid→卡片密碼 對應(ygoprodeck 查不到的卡) |

@@ -6,12 +6,18 @@
     (條件子句)(時|場合|際)(に)、(代價子句)て  → 條件段 + 代價段
   條件段帶觸發形;代價子句以て形結尾才算代價。
 - 舊式的「(條件子句)(時|場合|際)、(效果子句)」(沒有発動できる)→ 條件段 + 效果段。
+- 舊式的「(代價子句)る事で、(效果子句)」(= 新式「〜て発動できる。〜」)→ 代價段 + 效果段。
 - 其他句子是效果段;極性由述語語尾判(できない → 不能…);「〜できる」「〜事ができる」是
   可選的效果(可選格 `optional`,極性仍是做,查詢預設算命中;票 08 再分辨永續的「可以」)。
-- 簡單子句:[誰が][從から|從の][物件](を|が|は)[數量][原因][形式][到に]述語。
-  述語字面經同義表收成動作詞,語尾決定態與極性;て形串接的多個述語(めくられて墓地へ送られた)
-  是多個動作詞。從/到保留含助詞的原文字面(`text`:「墓地の」「自分のデッキの上から」「デッキの一番下に」),
-  反向檢查據此還原(の/から、に/へ 是字面的選擇,結構上都是明寫的從/到)。
+- 簡單子句:[誰が][從から|從の|從に存在する][物件](を|が|は)[數量][取對象][原因][形式][到に]述語。
+  述語字面經同義表(`synonyms`)收成動作詞,語尾決定態與極性;て形串接的多個述語
+  (めくられて墓地へ送られた)是多個動作詞。從/到保留含助詞的原文字面(`text`:「墓地の」
+  「自分のデッキの上から」「デッキの一番下に」「墓地に存在する」),反向檢查據此還原
+  (の/から/に存在する、に/へ 是字面的選擇,結構上都是明寫的從/到)。
+- 取對象:舊式「Xを選択して(述語)」、新式「Xを対象として(述語)」把 X 的對象線標 `targeting`,
+  字面留在原述語字面的開頭(「選択して破壊する」);述語空的(「Xを選択して発動できる」)是
+  發動句的取對象宣告,代價段、沒有動作詞。之後效果段裡指回被點名物件的線(そのモンスター、
+  舊式 選択したモンスター)也標取對象。「選択」不是動作詞。
 - 存在前提:「(容器)の中に(物件)が(あった|ある|存在する)」→ 條件段,物件是容器的子集。
 - 物件:このカード = 物件0;その/それらの モンスター|カード 指回本區塊最近的同大類物件
   (從條件段指回來的不標取對象;回指字面記在對象線 `ref`);「めくったカード」這類動作回指
@@ -32,41 +38,12 @@ from attribute_words import ATTRIBUTE_JA, RACE_JA
 from names_attributes import REASON_NAME_UNKNOWN
 from structure_shape import (new_line, new_object, new_segment, position,
                              segment_node, unparsed, zone)
+# 同義表(述語字面 → 動作詞、語尾、取對象字面)在 synonyms;這裡再匯出,舊的匯入點不變。
+from synonyms import (  # noqa: F401
+    ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, PREDICATE_STEMS,
+    REASON_PREDICATE, REASON_TAIL, TAILS, TARGET_REF, TARGETING_PREFIXES,
+    parse_predicate, parse_predicates, split_targeting)
 
-# ── 同義表:述語字面 → 動作詞;第三欄是述語本身寫明的終點(「墓地へ送る」)。
-PREDICATE_STEMS = (
-    ("特殊召喚", "特殊召喚", None),
-    ("破壊", "破壞", None),
-    ("捨て", "捨棄", None),
-    ("リリース", "解放", None),
-    ("除外", "除外", "除外"),
-    ("墓地へ送", "送墓", "墓地"),
-    ("手札に加え", "加入手牌", "手牌"),
-    ("めく", "翻開", None),
-    ("戻", "返回", None),
-)
-# 動作回指(「めくったカード」「特殊召喚したモンスター」)用的過去形。
-ACTION_PAST = {"翻開": "めくった", "特殊召喚": "特殊召喚した", "破壞": "破壊した",
-               "除外": "除外した", "送墓": "墓地へ送った", "捨棄": "捨てた",
-               "解放": "リリースした", "加入手牌": "手札に加えた", "返回": "戻した"}
-# 述語語尾 → (態, 極性[, 可選])。語尾不在表內的述語標「述語語尾不明」,不猜。
-TAILS = {
-    "": ("主動", "做"), "る": ("主動", "做"), "する": ("主動", "做"),
-    "した": ("主動", "做"), "し": ("主動", "做"), "して": ("主動", "做"),
-    "て": ("主動", "做"), "った": ("主動", "做"), "す": ("主動", "做"),
-    "される": ("被動", "做"), "された": ("被動", "做"), "され": ("被動", "做"),
-    "されて": ("被動", "做"),
-    "られる": ("被動", "做"), "られた": ("被動", "做"), "られ": ("被動", "做"),
-    "られて": ("被動", "做"),
-    "に成功した": ("被動", "做"), "に成功する": ("被動", "做"),
-    "できる": ("主動", "做", True), "る事ができる": ("主動", "做", True),
-    "する事ができる": ("主動", "做", True), "事ができる": ("主動", "做", True),
-    "できない": ("主動", "不能"), "できず": ("主動", "不能"),
-    "する事ができない": ("主動", "不能"), "る事ができない": ("主動", "不能"),
-    "しない": ("主動", "不會"), "されない": ("被動", "不會"),
-    "られない": ("被動", "不會"),
-}
-_TAILS_LONGEST_FIRST = sorted(TAILS, key=len, reverse=True)
 # 推得表:動作詞 → (沒寫「從」時的出發地, 沒寫「到」時的終點)。
 INFERENCE_TABLE = {
     "破壞": ("場上", "墓地"),
@@ -78,7 +55,10 @@ INFERENCE_TABLE = {
 ZONE_WORDS = (("EXデッキ", "額外牌組"), ("デッキの一番下", "牌組底"),
               ("デッキの一番上", "牌組頂"), ("デッキの上", "牌組頂"),
               ("デッキ", "牌組"), ("手札", "手牌"),
+              ("フィールド上", "場上"),  # 舊式:フィールド上の = フィールドの
               ("フィールド", "場上"), ("墓地", "墓地"))
+# 從的助詞:新式「墓地の」「墓地から」;舊式連體修飾「墓地に存在するX」(= 墓地のX)。
+FROM_PARTICLES = ("から", "の", "に存在する")
 HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠カード": "陷阱",
                  "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
 SIDE_WORDS = {"自分": "我方", "相手": "對手"}
@@ -90,27 +70,34 @@ FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
 
 _ZONE_PHRASE = ("(?:(?:自分|相手)の?)?(?:" + "|".join(w for w, _ in ZONE_WORDS) + ")"
                 "(?:・(?:" + "|".join(w for w, _ in ZONE_WORDS) + "))*")
-_ACTIVATION_RE = re.compile("^(?P<body>.*?)(?P<suffix>発動できる|発動する)$")
+_ACTIVATION_RE = re.compile("^(?P<body>.*?)(?P<suffix>" + "|".join(ACTIVATION_SUFFIXES) + ")$")
 _TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)に?、?(?P<rest>.*)$")
 # 舊式的條件句:觸發形後一定有「、」才算,免得「終了時に」這類句中的時被當觸發。
 _OLD_TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)(?:に)?、(?P<rest>.+)$")
+# 舊式的代價句:「(代價子句)る事で、(效果子句)」= 新式「(代價子句)て発動できる。(效果子句)」。
+# 代價子句以非過去形收尾(る/う/す)才算,「〜された事で」是條件意味、不切。
+_OLD_COST_RE = re.compile("^(?P<cost>.+?[るうす])" + COST_GLUE + "、?(?P<rest>.+)$")
 _CLAUSE_RE = re.compile(
     "^(?:(?P<agent>自分|相手)(?:が|は))?"
-    f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>から|の))?"
+    f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)}))?"
     # 物件短語裡的「を含む」(カード名に「X」を含む)不是受詞助詞;述語裡沒有を,
     # 所以切錯時會回頭把「を含む」吃進物件短語。
     "(?P<objects>(?:を含む|[^を])+?)(?P<marker>を|が|は)"
     "(?P<count>[０-９]+(?:体|枚)(?:まで)?|全て)?"
+    # 取對象字面(舊式 選択して、新式 対象として):單獨出現(述語空)是發動句的取對象宣告。
+    f"(?P<targeting>{'|'.join(TARGETING_PREFIXES)})?"
     "(?P<cause>(?:カードの効果|効果|戦闘)(?:によって|で))?"
     "(?P<form>好きな順番で)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
-    "(?P<pred>[^を]+)$")
+    "(?P<pred>[^を]*)$")
 _EXIST_RE = re.compile(
     "^(?P<container>.+?)の中に(?P<objects>.+?)が(?P<pred>" + "|".join(EXIST_WORDS) + ")$")
 _FROM_RE = re.compile("^(?:(?P<side>自分|相手)の?)?(?P<zones>.+)$")
 _SELF_RE = re.compile("^このカード$")
 _REF_RE = re.compile("^(?P<ref>その|それらの)(?P<head>モンスター|カード)$")
 _REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
+# 「選択したモンスター」:指回本區塊最近被取對象的同大類物件(舊式;新式用 そのモンスター)。
+_TARGET_REF_RE = re.compile(f"^{TARGET_REF}(?P<head>モンスター|カード)$")
 _ACTION_REF_RE = re.compile("^(?P<past>.+?)(?P<head>モンスター|カード)$")
 _NOUN_RE = re.compile(
     "^(?P<mods>.*?)(?P<head>モンスター|魔法・罠カード|魔法カード|罠カード|カード)"
@@ -127,9 +114,7 @@ _MOD_RES = (
 )
 _LEVEL_RE = re.compile("^レベル(?P<n>[０-９]+)$")
 
-REASON_PREDICATE = "述語解析不出"
 REASON_NOT_ARCHETYPE = "「」名稱不是字段"
-REASON_TAIL = "述語語尾不明"
 REASON_CLAUSE = "子句解析不出"
 REASON_FROM = "從解析不出"
 REASON_TO = "到解析不出"
@@ -138,40 +123,6 @@ REASON_MODS = "物件修飾解析不出"
 REASON_REF = "指回的物件找不到"
 REASON_ACTIVATION = "發動句解析不出"
 REASON_CAUSE = "原因解析不出"
-
-
-def parse_predicate(pred):
-    """述語字面 → (動作詞, 態, 極性, 寫明的終點, 可選) 或 (None, 原因)。"""
-    for stem, action, to in PREDICATE_STEMS:
-        if pred.startswith(stem):
-            tail = pred[len(stem):]
-            if tail not in TAILS:
-                return None, REASON_TAIL
-            voice, polarity, *optional = TAILS[tail]
-            return (action, voice, polarity, to, bool(optional and optional[0])), None
-    return None, REASON_PREDICATE
-
-
-def parse_predicates(pred):
-    """て形串接的述語字面(めくられて墓地へ送られた)→ [parse_predicate 的結果] 或 (None, 原因)。
-    單一述語也走這裡;串接時前面的語尾必須以て/で收尾。"""
-    parsed, reason = parse_predicate(pred)
-    if parsed is not None:
-        return [parsed], None
-    for stem, action, to in PREDICATE_STEMS:
-        if not pred.startswith(stem):
-            continue
-        rest = pred[len(stem):]
-        for tail in _TAILS_LONGEST_FIRST:
-            if tail and tail.endswith(("て", "で")) and rest.startswith(tail) \
-                    and len(rest) > len(tail):
-                following, reason = parse_predicates(rest[len(tail):])
-                if following is not None:
-                    voice, polarity, *optional = TAILS[tail]
-                    head = (action, voice, polarity, to, bool(optional and optional[0]))
-                    return [head] + following, None
-        return None, REASON_TAIL
-    return None, reason
 
 
 def parse_from(phrase):
@@ -258,7 +209,7 @@ class BlockState:
         self.names = {row["text"]: row for row in card["names"]}
         self.positions = {}   # 物件 id → {"zones", "inferred"}
         self.recent = []      # 本區塊建立或引用過的物件 id(其後者優先)
-        self.targeted = set()  # 「を対象として」點名的物件(票 08 填)
+        self.targeted = []     # 被取對象的物件 id(「を選択して」「を対象として」點名的,後者優先)
 
     def name_atom(self, op, name, form=None):
         """「X」→ (條件式原子, 原因):名稱列對不到卡名與字段 → 不認得的「」名稱;
@@ -328,9 +279,10 @@ class BlockState:
             return {"zones": list(obj["initial_position"]), "inferred": False}
         return None
 
-    def recent_of(self, head):
+    def recent_of(self, head, among=None):
+        """本區塊最近提過的同大類物件(頭名詞 カード 任何大類都算);`among` 可改成別的候選列。"""
         want = HEAD_CATEGORY[head]
-        for obj_id in reversed(self.recent):
+        for obj_id in reversed(self.recent if among is None else among):
             obj = self.find(obj_id)
             if want == "卡" or _category_of(obj["condition"]) == want:
                 return obj_id
@@ -357,6 +309,10 @@ class BlockState:
         if remainder:
             return self.remainder_object(phrase, remainder.group("head"),
                                          sentence_start)
+        target_ref = _TARGET_REF_RE.match(phrase)
+        if target_ref:
+            obj_id = self.recent_of(target_ref.group("head"), among=self.targeted)
+            return obj_id, phrase, (None if obj_id else REASON_REF)
         action_ref = _ACTION_REF_RE.match(phrase)
         if action_ref and action_ref.group("past") in ACTION_PAST.values():
             obj_id = self.recent_of(action_ref.group("head"))
@@ -456,26 +412,30 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
         _fill_existence(seg, exist, state, sentence_start)
         return
     m = _CLAUSE_RE.match(clause_text)
-    if not m:
+    if not m or not (m.group("pred") or m.group("targeting")):
         seg["unparsed"] = unparsed(REASON_CLAUSE)
         return
-    pred, to_phrase = m.group("pred"), m.group("to")
+    pred, to_phrase, targeting = m.group("pred"), m.group("to"), m.group("targeting")
     parsed = None
     if to_phrase:
         # 「墓地へ送る」「手札に加える」的到在述語裡:先試整串當述語。
         parsed, _ = parse_predicates(to_phrase + m.group("to_particle") + pred)
         if parsed is not None:
             pred, to_phrase = to_phrase + m.group("to_particle") + pred, None
-    if parsed is None:
+    if parsed is None and pred:
         parsed, reason = parse_predicates(pred)
-    seg["predicate"] = pred
-    if parsed is None:
+    # 原述語字面含取對象字面(「選択して破壊する」);反向檢查以 split_targeting 拆回。
+    seg["predicate"] = (targeting or "") + pred
+    if parsed is None and pred:
         seg["unparsed"] = unparsed(reason)
         return
+    if parsed is None:
+        # 發動句的取對象宣告(「Xを選択して発動できる」):沒有動作詞,只把物件標成取對象。
+        parsed = []
     seg["actions"] = [p[0] for p in parsed]
     voices = {p[1] for p in parsed}
-    seg["voice"] = voices.pop() if len(voices) == 1 else "混合"
-    seg["polarity"] = parsed[-1][2]
+    seg["voice"] = voices.pop() if len(voices) == 1 else ("混合" if voices else None)
+    seg["polarity"] = parsed[-1][2] if parsed else "做"
     seg["optional"] = True if any(p[4] for p in parsed) else None
     written_to = next((p[3] for p in reversed(parsed) if p[3]), None)
     agent = SIDE_WORDS.get(m.group("agent")) if m.group("agent") else None
@@ -510,8 +470,12 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
         if count is not None and count["cmp"] == "全部" and obj["source"]["kind"] == "子集":
             obj["source"]["select"] = "全部"
         role = "被召喚" if "特殊召喚" in seg["actions"] else "受事"
+        if targeting:
+            state.targeted.append(obj_id)
+        # 取對象標記:這一句點名的,或效果段裡指回先前被點名的物件(そのモンスター、選択したモンスター)。
         line = new_line(obj_id, role,
-                        targeting=(kind == "效果" and obj_id in state.targeted),
+                        targeting=bool(targeting) or (kind == "效果"
+                                                      and obj_id in state.targeted),
                         marker=m.group("marker"), ref=ref, count=count)
         if from_zones is not None:
             line["from"] = position(from_zones, "明寫",
@@ -589,8 +553,25 @@ def _condition_and_rest(state, start, body, trig, segs):
     return rest, start + body.rfind(rest) if rest else None
 
 
+def _cost_and_effect(state, clause, start):
+    """效果子句 → [效果段],或舊式代價句「(代價)る事で、(效果)」→ [代價段, 效果段]。"""
+    cost = _OLD_COST_RE.match(clause)
+    if not cost:
+        seg = _segment(state, "效果", start, start + len(clause))
+        _fill_clause(seg, clause, "效果", state, start)
+        return [seg]
+    cost_text, rest = cost.group("cost"), cost.group("rest")
+    cost_seg = _segment(state, "代價", start, start + len(cost_text))
+    _fill_clause(cost_seg, cost_text, "代價", state, start)
+    rest_start = start + len(clause) - len(rest)
+    effect_seg = _segment(state, "效果", rest_start, rest_start + len(rest))
+    _fill_clause(effect_seg, rest, "效果", state, rest_start)
+    return [cost_seg, effect_seg]
+
+
 def _parse_sentence(state, start, end):
-    """一句 → 段列表(發動句可產生條件段 + 代價段;舊式條件句產生條件段 + 效果段)。"""
+    """一句 → 段列表(發動句可產生條件段 + 代價段;舊式條件句產生條件段 + 效果段;
+    舊式代價句產生代價段 + 效果段)。"""
     text = state.block["text"]
     sent = text[start:end]
     act = _ACTIVATION_RE.match(sent)
@@ -599,13 +580,8 @@ def _parse_sentence(state, start, end):
         if trig:
             segs = []
             rest, rest_start = _condition_and_rest(state, start, sent, trig, segs)
-            seg = _segment(state, "效果", rest_start, rest_start + len(rest))
-            _fill_clause(seg, rest, "效果", state, rest_start)
-            segs.append(seg)
-            return segs
-        seg = _segment(state, "效果", start, end)
-        _fill_clause(seg, sent, "效果", state, start)
-        return [seg]
+            return segs + _cost_and_effect(state, rest, rest_start)
+        return _cost_and_effect(state, sent, start)
     body = act.group("body")
     segs = []
     trig = _TRIGGER_RE.match(body)

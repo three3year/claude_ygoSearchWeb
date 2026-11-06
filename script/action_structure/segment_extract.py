@@ -3,25 +3,33 @@
 規則是句型層級的,不針對任何一張卡:
 - 句子以「。」切;「その後、」開頭的句子與前一句連接為「先後」。
 - 發動句(…発動できる / …発動する):
-    (條件子句)(時|場合|際)(に)、(代價子句)て  → 條件段 + 代價段
-  條件段帶觸發形;代價子句以て形結尾才算代價。
+    (前提)(條件子句)(時|場合|際)(に)、(代價子句)て  → 條件段 + 代價段
+  條件段帶觸發形;代價子句以て形結尾才算代價。前提(`premise` 模組:「〜に存在する場合、」
+  「相手ターンに」)先剝掉、寫進第一個段的前提格;整句只有前提的(「自分メインフェイズに
+  発動できる」)開一個沒有動作詞的條件段放它。
 - 其他句子是效果段;極性由述語語尾判(できる → 可以、できない → 不能…)。
-- 簡單子句:[誰が][從から][物件を]述語。述語字面經同義表收成動作詞,語尾決定態與極性。
+- 簡單子句:[誰が][從から][物件を]述語;主語形 [到に][物件が][從から]述語
+  (「自分フィールドにモンスターが特殊召喚された」),態是被動,語尾不是被動的記「自動」
+  (「このカードが特殊召喚した」)。述語字面經同義表收成動作詞,語尾決定態與極性。
 - 物件:このカード = 物件0;その/それらの モンスター|カード 指回本區塊最近的同大類物件
   (從條件段指回來的不標取對象);其餘是新建物件,頭名詞給大類、數量給數量
   (「Xを２体まで特殊召喚する」的數量在述語前,記 placement 述語前)。
   修飾語從左到右認:「X」以外の = 非(卡名∋X);「X」と名のついた、緊接頭名詞的「X」= 字段
-  (依字段表換成 setcode);カード名に「X」を含む = 卡名包含;「X」１体 = 卡名∋X。
-  認不得的修飾語整截標「解析不出」(票 05 起逐步填);「X」對不到卡名與字段的,
-  物件標「不認得的「」名稱」。
+  (依字段表換成 setcode);カード名に「X」を含む = 卡名包含;「X」１体 = 卡名∋X;
+  種族、屬性(`attribute_atoms` 模組)= 屬性比較。頭名詞 チューナー = 怪獸 且 子類型 協調。
+  認不得的修飾語整截標「解析不出」;「X」對不到卡名與字段的,物件標「不認得的「」名稱」。
 - 位置:處理完一段把「到」寫回物件目前位置;「從」沒寫先繼承目前位置,
   再查推得表;推得值與繼承自推得值的標 inferred,查詢開關開才算。
+  區域的方沒寫(「墓地から」)照慣例歸我方,但記 side_source 預設;明寫「自分の」記明寫,
+  反向檢查只在明寫時寫出來。
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
 """
 import re
 
 from archetype_table import fold_width
+from attribute_atoms import parse_modifier as parse_param_modifier
 from names_attributes import REASON_NAME_UNKNOWN
+from premise import split_premises
 from structure_shape import (new_line, new_object, new_segment, position,
                              segment_node, unparsed, zone)
 
@@ -39,7 +47,7 @@ PREDICATE_STEMS = (
 TAILS = {
     "": ("主動", "做"), "る": ("主動", "做"), "する": ("主動", "做"),
     "した": ("主動", "做"), "し": ("主動", "做"), "して": ("主動", "做"),
-    "て": ("主動", "做"),
+    "て": ("主動", "做"), "って": ("主動", "做"), "った": ("主動", "做"),
     "される": ("被動", "做"), "された": ("被動", "做"), "され": ("被動", "做"),
     "されて": ("被動", "做"),
     "られる": ("被動", "做"), "られた": ("被動", "做"), "られ": ("被動", "做"),
@@ -56,11 +64,19 @@ INFERENCE_TABLE = {
     "捨棄": ("手牌", "墓地"),
     "特殊召喚": (None, "場上"),
 }
-# 區域字面(長的在前,EXデッキ 不能被 デッキ 先吃掉)。
+# 區域字面(長的在前,EXデッキ 不能被 デッキ 先吃掉、フィールドゾーン 不能被 フィールド 先吃掉)。
 ZONE_WORDS = (("EXデッキ", "額外牌組"), ("デッキ", "牌組"), ("手札", "手牌"),
-              ("フィールド", "場上"), ("墓地", "墓地"))
+              ("EXモンスターゾーン", "EX怪獸區"), ("モンスターゾーン", "怪獸區"),
+              ("魔法＆罠ゾーン", "魔陷區"), ("ペンデュラムゾーン", "P區"),
+              ("フィールドゾーン", "場地區"), ("フィールド", "場上"), ("墓地", "墓地"))
+# 場上系區域:沒寫方時不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
+FIELD_ZONES = ("場上", "EX怪獸區", "怪獸區", "魔陷區", "P區", "場地區")
 HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠カード": "陷阱",
                  "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
+# 帶子類型的頭名詞:大類 且 子類型(卡片子類型的詞,GLOSSARY)。
+HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
+_HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE), key=len,
+                         reverse=True))
 SIDE_WORDS = {"自分": "我方", "相手": "對手"}
 FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
 
@@ -73,10 +89,14 @@ _CLAUSE_RE = re.compile(
     f"(?P<objects>(?:を含む|[^を])+?)を(?P<pcount>{_COUNT})?(?P<pred>[^を]+)$")
 _POSTCOUNT_RE = re.compile("^(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)$")
 _FROM_RE = re.compile("^(?:(?P<side>自分|相手)の?)?(?P<zones>.+)$")
+# 主語形子句:[到に][物件が][從から]述語;「〜が存在する」是前提,不會到這裡。
+_SUBJECT_RE = re.compile(
+    "^(?:(?P<to>[^がを]+?)に)?(?P<objects>[^がを]+?)が(?:(?P<from>[^がを]+?)から)?"
+    "(?P<pred>[^がを]+)$")
 _SELF_RE = re.compile("^このカード$")
 _REF_RE = re.compile("^(?:その|それらの)(?P<head>モンスター|カード)$")
 _NOUN_RE = re.compile(
-    "^(?P<mods>.*?)(?P<head>モンスター|魔法・罠カード|魔法カード|罠カード|カード)"
+    f"^(?P<mods>.*?)(?P<head>{_HEADS})"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
 # 「X」１体:只有卡名、沒有頭名詞的物件。
 _NAMED_RE = re.compile(
@@ -94,6 +114,7 @@ REASON_NOT_ARCHETYPE = "「」名稱不是字段"
 REASON_TAIL = "述語語尾不明"
 REASON_CLAUSE = "子句解析不出"
 REASON_FROM = "從解析不出"
+REASON_TO = "到解析不出"
 REASON_OBJECT = "物件解析不出"
 REASON_MODS = "物件修飾解析不出"
 REASON_REF = "指回的物件找不到"
@@ -113,19 +134,26 @@ def parse_predicate(pred):
 
 
 def parse_from(phrase):
-    """「自分の手札・フィールド」→ 區域列表;任何一截不是區域字面就回 None。"""
+    """「自分の手札・フィールド」→ 區域列表;任何一截不是區域字面就回 None。
+    方沒寫照慣例歸我方,side_source 記「預設」;寫了「自分の/相手の」記「明寫」。"""
     m = _FROM_RE.match(phrase)
     if not m:
         return None
-    side = SIDE_WORDS.get(m.group("side"), "我方")
     zones = []
     for part in m.group("zones").split("・"):
         for word, name in ZONE_WORDS:
             if part == word:
-                zones.append(zone(name, side))
                 break
         else:
             return None
+        if m.group("side"):
+            side, side_source = SIDE_WORDS[m.group("side")], "明寫"
+        elif name in FIELD_ZONES:
+            # 「フィールドに「海」が存在する場合」是任一方的場上:場上系沒寫方就不預設。
+            side, side_source = None, None
+        else:
+            side, side_source = "我方", "預設"
+        zones.append(zone(name, side, side_source))
     return zones
 
 
@@ -141,6 +169,10 @@ def parse_count(m, placement="名詞內"):
 
 
 def category_condition(head):
+    if head in HEAD_SUBTYPE:
+        category, subtype = HEAD_SUBTYPE[head]
+        return {"op": "且", "args": [{"op": "大類", "value": category},
+                                    {"op": "子類型", "value": subtype}]}
     value = HEAD_CATEGORY[head]
     if isinstance(value, tuple):
         return {"op": "或", "args": [{"op": "大類", "value": v} for v in value]}
@@ -198,6 +230,11 @@ class BlockState:
         """修飾語 → (原子列表, 原因);認不得的那截以「解析不出」原子收尾。"""
         atoms, reason, rest = [], None, mods
         while rest:
+            atom, length = parse_param_modifier(rest)
+            if atom is not None:
+                atoms.append(atom)
+                rest = rest[length:]
+                continue
             for kind, pattern in _MOD_RES:
                 m = pattern.match(rest)
                 if m:
@@ -232,7 +269,7 @@ class BlockState:
             want = HEAD_CATEGORY[ref.group("head")]
             for obj_id in reversed(self.recent):
                 obj = self.find(obj_id)
-                if want == "卡" or _category_of(obj["condition"]) == want:
+                if want == "卡" or category_of(obj["condition"]) == want:
                     return obj_id, None
             return None, REASON_REF
         named = _NAMED_RE.match(phrase)
@@ -270,30 +307,47 @@ class BlockState:
         return None
 
 
-def _category_of(condition):
+def category_of(condition):
+    """條件式的大類(且 裡第一個找到的);沒有回 None。"""
     if not condition:
         return None
     if condition.get("op") == "大類":
         return condition["value"]
     if condition.get("op") == "且":
         for arg in condition["args"]:
-            found = _category_of(arg)
+            found = category_of(arg)
             if found:
                 return found
     return None
 
 
+def _parse_clause(clause_text):
+    """子句 → 各部分的 dict(agent/from/to/objects/pcount/pred/subject)或 None。
+    先試受詞形 [誰が][從から][物件を]述語,再試主語形 [到に][物件が][從から]述語。"""
+    m = _CLAUSE_RE.match(clause_text)
+    if m:
+        return {"agent": m.group("agent"), "from": m.group("from"), "to": None,
+                "objects": m.group("objects"), "pcount": m.group("pcount"),
+                "pred": m.group("pred"), "subject": False}
+    m = _SUBJECT_RE.match(clause_text)
+    if m:
+        return {"agent": None, "from": m.group("from"), "to": m.group("to"),
+                "objects": m.group("objects"), "pcount": None,
+                "pred": m.group("pred"), "subject": True}
+    return None
+
+
 def _fill_clause(seg, clause_text, kind, state, sentence_start):
     """把簡單子句解析進段;失敗就在段上標原因。"""
-    m = _CLAUSE_RE.match(clause_text)
-    if not m:
+    m = _parse_clause(clause_text)
+    if m is None:
         seg["unparsed"] = unparsed(REASON_CLAUSE)
         return
-    phrases = split_objects(m.group("objects"))
-    pred = m.group("pred")
+    phrases = split_objects(m["objects"])
+    pred = m["pred"]
     # 「Xを２体まで特殊召喚する」:述語前的數量歸唯一的物件;物件不只一個就還給述語
     # (述語解析不出,不猜數量歸誰)。
-    postcount = m.group("pcount")
+    postcount = m["pcount"]
     if postcount and len(phrases) != 1:
         pred, postcount = postcount + pred, None
     parsed, reason = parse_predicate(pred)
@@ -302,16 +356,26 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
         seg["unparsed"] = unparsed(reason)
         return
     action, voice, polarity, written_to = parsed
+    # 主語形(「このカードが特殊召喚した」)語尾不是被動時,態記「自動」:模板靠態分辨
+    # 要寫「物件が」還是「物件を」。
+    if m["subject"] and voice == "主動":
+        voice = "自動"
     seg["actions"] = [action]
     seg["voice"] = voice
     seg["polarity"] = polarity
-    agent = SIDE_WORDS.get(m.group("agent")) if m.group("agent") else None
+    agent = SIDE_WORDS.get(m["agent"]) if m["agent"] else None
     seg["agent"] = agent
     from_zones = None
-    if m.group("from"):
-        from_zones = parse_from(m.group("from"))
+    if m["from"]:
+        from_zones = parse_from(m["from"])
         if from_zones is None:
             seg["unparsed"] = unparsed(REASON_FROM)
+            return
+    to_zones = None
+    if m["to"]:
+        to_zones = parse_from(m["to"])
+        if to_zones is None:
+            seg["unparsed"] = unparsed(REASON_TO)
             return
     inferred_from, inferred_to = INFERENCE_TABLE.get(action, (None, None))
     # 推得的場上/墓地歸誰:特殊召喚到施事者的場上;其餘不知道就不標方。
@@ -341,12 +405,16 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start):
                                     inferred=current["inferred"])
         elif inferred_from:
             side = "我方" if inferred_from == "手牌" else None
-            line["from"] = position([zone(inferred_from, side)], "推得",
+            line["from"] = position([zone(inferred_from, side,
+                                          side and "預設")], "推得",
                                     inferred=True)
-        if written_to:
+        if to_zones is not None:
+            line["to"] = position(to_zones, "明寫")
+        elif written_to:
             line["to"] = position([zone(written_to, None)], "明寫")
         elif inferred_to:
-            line["to"] = position([zone(inferred_to, inferred_side)], "推得",
+            line["to"] = position([zone(inferred_to, inferred_side,
+                                        inferred_side and "預設")], "推得",
                                   inferred=True)
         seg["lines"].append(line)
         if obj_id != "o0" and obj_id not in state.recent:
@@ -396,23 +464,41 @@ def _parse_sentence(state, start, end):
     sent = text[start:end]
     act = _ACTIVATION_RE.match(sent)
     if not act:
+        # 效果句開頭也可有前提(「自分フィールドにモンスターが存在しない場合、〜する」):
+        # 前提寫進這一段,段的範圍從前提起算。
+        premise, _, clause_start = split_premises(sent, state, start, parse_from)
         seg = _segment(state, "效果", start, end)
-        _fill_clause(seg, sent, "效果", state, start)
+        seg["premise"] = premise
+        _fill_clause(seg, text[clause_start:end], "效果", state, clause_start)
         return [seg]
     body = act.group("body")
     segs = []
+    # 前提先剝掉(「〜に存在する場合、」會被觸發形誤認成條件段),寫進第一個段的前提格;
+    # 前提後面只剩「に」或什麼都沒有的,開一個沒有動作詞的條件段放前提。
+    premise, premise_end, clause_start = split_premises(body, state, start,
+                                                        parse_from)
+    body = text[clause_start:start + len(body)]
+    if premise and body in ("", "に"):
+        seg = _segment(state, "條件", start, premise_end)
+        seg["premise"] = premise
+        return [seg]
+    seg_start = clause_start if premise is None else start
     trig = _TRIGGER_RE.match(body)
     rest = body
     if trig:
-        cond_end = start + len(trig.group("cond"))
-        seg = _segment(state, "條件", start, cond_end + len(trig.group("trig")))
+        cond_end = clause_start + len(trig.group("cond"))
+        seg = _segment(state, "條件", seg_start, cond_end + len(trig.group("trig")))
         seg["trigger"] = trig.group("trig")
-        _fill_clause(seg, trig.group("cond"), "條件", state, start)
+        seg["premise"] = premise
+        premise = None
+        _fill_clause(seg, trig.group("cond"), "條件", state, clause_start)
         segs.append(seg)
         rest = trig.group("rest")
     if rest:
-        rest_start = start + body.rfind(rest)
-        seg = _segment(state, "代價", rest_start, rest_start + len(rest))
+        rest_start = clause_start + body.rfind(rest)
+        seg = _segment(state, "代價", rest_start if premise is None else seg_start,
+                       rest_start + len(rest))
+        seg["premise"] = premise
         if rest.endswith(("て", "で")):
             _fill_clause(seg, rest, "代價", state, rest_start)
         else:

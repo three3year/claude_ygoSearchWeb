@@ -227,5 +227,123 @@ class EmperorPenguinTest(unittest.TestCase):
         self.assertEqual(check_card(structure), [])
 
 
+WHITE_FOREST_LISETTE = 61980241  # 白き森のリゼット
+WHITE_FOREST_LISETTE_TEXT = (
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。\n"
+    "①：このカードが手札に存在する場合、自分の手札・フィールドから魔法・罠カード１枚を"
+    "墓地へ送って発動できる。このカードを特殊召喚する。その後、デッキから"
+    "「白き森のリゼット」以外の「白き森」モンスター１体を手札に加える。\n"
+    "②：このカードが墓地に存在する状態で、相手ターンに自分フィールドに魔法使い族・"
+    "光属性チューナーが特殊召喚された場合に発動できる。このカードを手札に加える。")
+LISETTE_SAINT = 38648860     # 白き森の聖徒リゼット setcode 0x1bc01b1(白き森 + アザミナ)
+LIGHT_SPELLCASTER_TUNER = 77777777  # 測試用:光屬性・魔法使族的協調怪獸,無字段
+GREEDY_POT = 24094653        # 強欲な壺(魔法)
+
+
+class WhiteForestLisetteTest(unittest.TestCase):
+    """白き森のリゼット 61980241(票 05):前提把此卡的目前位置設成手牌/墓地,
+    後續段的「從」繼承;遊戲狀態(相手ターンに)記進前提;代價段兩個出發地。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(WHITE_FOREST_LISETTE, name_ja="白き森のリゼット", level=2,
+                 race=0x2, attribute=0x10, atk=0, setcode=0x1b1),
+            card(LISETTE_SAINT, name_ja="白き森の聖徒リゼット", level=2,
+                 race=0x2, attribute=0x10, setcode=0x1bc01b1),
+            card(LIGHT_SPELLCASTER_TUNER, name_ja="光の魔法使いチューナー",
+                 type=0x1021, level=3, race=0x2, attribute=0x10),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20, atk=2500),
+            card(GREEDY_POT, name_ja="強欲な壺", type=SPELL),
+        ]
+        cls.faq = [faq(WHITE_FOREST_LISETTE, "白き森のリゼット",
+                       WHITE_FOREST_LISETTE_TEXT)]
+        cls.structures, cls.report = build_structures(cls.cards, cls.faq,
+                                                      archetypes=ARCHETYPES)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_white_forest_monster_from_deck_to_hand_hits(self):
+        """「白き森 怪獸 牌組 → 手牌」:只給條件命中;白き森の聖徒リゼット 代入命中;
+        リゼット 本身不命中(「白き森のリゼット」以外)。"""
+        white_forest_monster = {"op": "且", "args": [
+            {"op": "大類", "value": "怪獸"},
+            {"op": "字段", "setcodes": [0x1b1]}]}
+        self.assertIn(WHITE_FOREST_LISETTE,
+                      self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                to_zones=["手牌"], condition=white_forest_monster))
+        self.assertIn(WHITE_FOREST_LISETTE,
+                      self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                to_zones=["手牌"], card=LISETTE_SAINT))
+        self.assertNotIn(WHITE_FOREST_LISETTE,
+                         self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                   card=WHITE_FOREST_LISETTE))
+
+    def test_this_card_from_graveyard_to_hand_hits_via_premise(self):
+        """「此卡 墓地 → 手牌」:②的「このカードが墓地に存在する状態で」把此卡的位置
+        設成墓地,「このカードを手札に加える」的從繼承它;不是推得,推得關也命中。"""
+        self.assertIn(WHITE_FOREST_LISETTE,
+                      self.hits(actions=["加入手牌"], from_zones=["墓地"],
+                                to_zones=["手牌"], card=WHITE_FOREST_LISETTE))
+
+    def test_this_card_from_hand_special_summon_hits_via_premise(self):
+        """「此卡 手牌 → 特殊召喚」:①的「このカードが手札に存在する場合」把位置設成手牌;
+        終點場上仍是推得的,推得開才以「→ 場上」命中。"""
+        self.assertIn(WHITE_FOREST_LISETTE,
+                      self.hits(actions=["特殊召喚"], from_zones=["手牌"],
+                                card=WHITE_FOREST_LISETTE))
+        self.assertIn(WHITE_FOREST_LISETTE,
+                      self.hits(actions=["特殊召喚"], from_zones=["手牌"],
+                                to_zones=["場上"], card=WHITE_FOREST_LISETTE,
+                                include_inferred=True))
+        self.assertNotIn(WHITE_FOREST_LISETTE,
+                         self.hits(actions=["特殊召喚"], from_zones=["手牌"],
+                                   to_zones=["場上"], card=WHITE_FOREST_LISETTE))
+
+    def test_lisette_to_banish_does_not_hit(self):
+        """「莉賽特 → 除外」:這張卡沒有除外。"""
+        self.assertNotIn(WHITE_FOREST_LISETTE,
+                         self.hits(actions=["除外"], card=WHITE_FOREST_LISETTE))
+        self.assertNotIn(WHITE_FOREST_LISETTE, self.hits(actions=["除外"]))
+
+    def test_cost_has_two_departure_zones(self):
+        """代價段「自分の手札・フィールドから魔法・罠カード１枚を墓地へ送って」:
+        從手牌或從場上都命中、到墓地是明寫;魔法卡代入命中,怪獸不符。"""
+        for zone_name in ("手牌", "場上"):
+            with self.subTest(from_zone=zone_name):
+                self.assertIn(WHITE_FOREST_LISETTE,
+                              self.hits(actions=["送墓"], from_zones=[zone_name],
+                                        to_zones=["墓地"], card=GREEDY_POT))
+        self.assertNotIn(WHITE_FOREST_LISETTE,
+                         self.hits(actions=["送墓"], card=BLACK_MAGICIAN))
+        self.assertNotIn(WHITE_FOREST_LISETTE,
+                         self.hits(actions=["送墓"], from_zones=["牌組"],
+                                   card=GREEDY_POT))
+
+    def test_condition_segment_with_race_attribute_tuner(self):
+        """條件段「自分フィールドに魔法使い族・光属性チューナーが特殊召喚された」:
+        條件段開時,光屬性魔法使族協調怪獸代入命中「特殊召喚 → 場上(我方)」,
+        黑魔導(非協調)不符;條件段關不命中。"""
+        own_field = [{"zone": "場上", "side": "我方"}]
+        self.assertIn(WHITE_FOREST_LISETTE,
+                      self.hits(actions=["特殊召喚"], to_zones=own_field,
+                                card=LIGHT_SPELLCASTER_TUNER,
+                                include_condition=True))
+        self.assertNotIn(WHITE_FOREST_LISETTE,
+                         self.hits(actions=["特殊召喚"], to_zones=own_field,
+                                   card=BLACK_MAGICIAN, include_condition=True))
+        self.assertNotIn(WHITE_FOREST_LISETTE,
+                         self.hits(actions=["特殊召喚"], to_zones=own_field,
+                                   card=LIGHT_SPELLCASTER_TUNER))
+
+    def test_whole_card_passes_reverse_check(self):
+        structure = next(c for c in self.structures
+                         if c["id"] == WHITE_FOREST_LISETTE)
+        self.assertEqual(check_card(structure), [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -18,7 +18,10 @@
 """
 import re
 
-from segment_extract import HEAD_CATEGORY, SIDE_WORDS, ZONE_WORDS, parse_predicate
+from attribute_atoms import is_param_atom, render_modifier
+from premise import NoPremiseTemplate, render_premise
+from segment_extract import (HEAD_CATEGORY, HEAD_SUBTYPE, SIDE_WORDS, ZONE_WORDS,
+                             category_of, parse_predicate)
 from structure_shape import iter_segments
 
 REASON_NO_TEMPLATE = "無模板"
@@ -27,7 +30,8 @@ REASON_RESIDUE = "段外殘留"
 
 # 簡單子句模板會寫的格;其餘格一有值就是「無模板」。
 TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "polarity",
-                  "trigger", "span", "text", "predicate", "voice", "unparsed"}
+                  "trigger", "premise", "span", "text", "predicate", "voice",
+                  "unparsed"}
 TEMPLATE_KINDS = ("條件", "代價", "效果")
 # 區塊裡不屬於任何段的固定接著詞:發動句語尾、先後連接。去掉標點後只能剩這些。
 GLUE = ("発動できる", "発動する", "その後")
@@ -39,6 +43,7 @@ _SIDE_TEXT = {v: k for k, v in SIDE_WORDS.items()}           # 我方 → 自分
 _ZONE_TEXT = {name: word for word, name in ZONE_WORDS}      # 手牌 → 手札
 _HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
 _HEAD_TEXT[("魔法", "陷阱")] = "魔法・罠カード"
+_SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}  # (怪獸, 協調) → チューナー
 _FULLWIDTH_ASCII = {i: i - 0xFEE0 for i in range(0xFF01, 0xFF5F)}
 _TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 
@@ -79,7 +84,7 @@ def _render_atom(atom, names):
 
 
 def _render_head(condition):
-    """大類(與 魔法・罠 的或)→ 頭名詞。"""
+    """大類(與 魔法・罠 的或)、大類 且 子類型 → 頭名詞。"""
     op = condition.get("op")
     if op == "大類":
         return _HEAD_TEXT[condition["value"]]
@@ -88,7 +93,31 @@ def _render_head(condition):
                        if a.get("op") == "大類")
         if len(values) == len(condition["args"]) and values in _HEAD_TEXT:
             return _HEAD_TEXT[values]
+    if op == "且" and len(condition["args"]) == 2:
+        category, subtype = condition["args"]
+        if category.get("op") == "大類" and subtype.get("op") == "子類型":
+            return _SUBTYPE_HEAD_TEXT.get((category["value"], subtype["value"]))
     return None
+
+
+def _render_modifiers(mods, names):
+    """修飾語列表 → 字面:相鄰的屬性比較以「・」相連(魔法使い族・光属性),但前一個是
+    多個種族的「或」時以「の」相連(獣族・獣戦士族・鳥獣族の炎属性,官方 14:7);
+    屬性比較後面接「」名稱時補「の」(ドラゴン族の「ドラグニティ」);接頭名詞不補。"""
+    out = []
+    for i, atom in enumerate(mods):
+        if not is_param_atom(atom):
+            out.append(_render_atom(atom, names))
+            continue
+        text = render_modifier(atom)
+        if text is None:
+            raise NoTemplate("屬性比較無模板")
+        following = mods[i + 1] if i + 1 < len(mods) else None
+        if following is not None:
+            joined = is_param_atom(following) and atom.get("op") != "或"
+            text += "・" if joined else "の"
+        out.append(text)
+    return "".join(out)
 
 
 def _render_condition(condition, names):
@@ -106,7 +135,7 @@ def _render_condition(condition, names):
         head = _render_head(last)
         if head is None:
             raise NoTemplate("物件條件無模板:且 的末項不是大類")
-        return "".join(_render_atom(a, names) for a in mods) + head
+        return _render_modifiers(mods, names) + head
     return _render_atom(condition, names)
 
 
@@ -139,47 +168,77 @@ def _render_object(obj, seg, names):
         if obj["count"] and obj["count"].get("placement") == "述語前":
             return noun, count
         return noun + count, ""
-    condition = obj["condition"]
-    if condition.get("op") == "且":
-        condition = condition["args"][-1]   # 且 的末項是大類頭名詞
-    head = _render_head(condition)
-    return "その" + ("モンスター" if head == "モンスター" else "カード"), ""
+    # 指回的物件:怪獸寫 そのモンスター(含チューナー),其餘寫 そのカード。
+    return "その" + ("モンスター" if category_of(obj["condition"]) == "怪獸"
+                   else "カード"), ""
+
+
+def _render_zones(zones):
+    """區域列表 → 字面:方明寫時加「自分の/相手の」(只有一個區域且是フィールド時不加「の」:
+    「自分フィールド」「自分の手札・フィールド」「自分の墓地」是官方的寫法);
+    方沒寫(預設)不加。"""
+    # 明寫的方是整個列表共用的一個前綴;沒寫的(預設或沒有方)各區域可以不同
+    # (「手札・フィールド」:手牌預設我方、場上沒有方)。
+    written = {z["side"] for z in zones if z.get("side_source") == "明寫"}
+    if len(written) > 1 or (written and any(
+            z.get("side_source") != "明寫" for z in zones)):
+        raise NoTemplate("從的區域分屬兩方")
+    try:
+        words = [_ZONE_TEXT[z["zone"]] for z in zones]
+    except KeyError as e:
+        raise NoTemplate(f"區域無模板:{e.args[0]}") from None
+    prefix = ""
+    if written:
+        side = written.pop()
+        if side not in _SIDE_TEXT:
+            raise NoTemplate(f"方無模板:{side}")
+        prefix = _SIDE_TEXT[side] + ("" if words == ["フィールド"] else "の")
+    return prefix + "・".join(words)
+
+
+def _written_position(lines, key):
+    """所有對象線共用一個明寫的 從/到 才有字面;繼承、推得的不寫。"""
+    written = [line[key] for line in lines
+               if line[key] and line[key]["source"] == "明寫"]
+    if not written:
+        return None
+    if len(written) != len(lines) or any(w != written[0] for w in written):
+        raise NoTemplate(f"對象線的{'從' if key == 'from' else '到'}不一致")
+    return written[0]["zones"]
 
 
 def _render_from(lines):
-    """所有對象線共用一個明寫的「從」才有字面;繼承、推得的不寫。"""
-    written = [line["from"] for line in lines
-               if line["from"] and line["from"]["source"] == "明寫"]
-    if not written:
+    zones = _written_position(lines, "from")
+    return _render_zones(zones) + "から" if zones else ""
+
+
+def _render_to_prefix(seg):
+    """主語形的「<到>に」前綴:到是明寫、且不是述語自己寫的終點(「墓地へ送る」)。"""
+    zones = _written_position(seg["lines"], "to")
+    if not zones:
         return ""
-    if len(written) != len(lines) or any(w != written[0] for w in written):
-        raise NoTemplate("對象線的從不一致")
-    zones = written[0]["zones"]
-    sides = {z["side"] for z in zones}
-    if len(sides) != 1:
-        raise NoTemplate("從的區域分屬兩方")
-    side = sides.pop()
-    # 抽取端沒寫「自分の」也歸我方,這裡只有對手寫得出字面;「自分の〜から」的卡會以
-    # 字面不符列出,留給位置那張票決定要不要記「方是否明寫」。
-    prefix = "相手の" if side == "對手" else ""
-    try:
-        return prefix + "・".join(_ZONE_TEXT[z["zone"]] for z in zones) + "から"
-    except KeyError as e:
-        raise NoTemplate(f"區域無模板:{e.args[0]}") from None
+    parsed, _ = parse_predicate(seg["predicate"])
+    if parsed and parsed[3] is not None:
+        return ""
+    return _render_zones(zones) + "に"
 
 
 def _render_predicate(seg):
     if len(seg["actions"]) != 1 or not seg["predicate"]:
         raise NoTemplate("多動作詞無模板" if seg["actions"] else "段無動作詞")
     parsed, _ = parse_predicate(seg["predicate"])
-    if parsed is None or parsed[:3] != (seg["actions"][0], seg["voice"],
+    # 自動(主語形、非被動語尾)的述語字面與主動相同,只差句型。
+    voice = "主動" if seg["voice"] == "自動" else seg["voice"]
+    if parsed is None or parsed[:3] != (seg["actions"][0], voice,
                                        seg["polarity"]):
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
     return seg["predicate"]
 
 
 def render_segment(seg, card):
-    """簡單子句模板:[誰が][從から][物件を]述語[觸發形]。回傳日文;寫不出就丟 NoTemplate。"""
+    """簡單子句模板:[前提][誰が][從から][物件を]述語[觸發形];主語形(態是被動或自動)
+    [前提][到に][物件が][從から]述語[觸發形];只有前提的條件段寫前提。
+    回傳日文;寫不出就丟 NoTemplate。"""
     if seg["unparsed"]:
         raise NoTemplate(f"段未解析:{seg['unparsed']['reason']}")
     if seg["kind"] not in TEMPLATE_KINDS:
@@ -187,16 +246,27 @@ def render_segment(seg, card):
     for slot, value in seg.items():
         if slot not in TEMPLATE_SLOTS and value not in (None, [], {}, False):
             raise NoTemplate(f"格 {slot} 無模板")
-    if not seg["lines"]:
-        raise NoTemplate("段無對象線")
     objects = {o["id"]: o for o in card["objects"]}
     names = {row["id"]: row for row in card["names"]}
     parts = []
+    premise_only = (seg["kind"] == "條件" and seg["premise"] is not None
+                    and not seg["actions"] and not seg["lines"])
+    if seg["premise"] is not None:
+        try:
+            parts.append(render_premise(
+                seg["premise"], _render_zones,
+                lambda obj_id: _render_object(objects[obj_id], seg, names)[0],
+                followed=not premise_only))
+        except NoPremiseTemplate as e:
+            raise NoTemplate(str(e)) from None
+    if premise_only:
+        return "".join(parts)
+    if not seg["lines"]:
+        raise NoTemplate("段無對象線")
     if seg["agent"] is not None:
         if seg["agent"] not in _SIDE_TEXT:
             raise NoTemplate(f"誰無模板:{seg['agent']}")
         parts.append(_SIDE_TEXT[seg["agent"]] + "が")
-    parts.append(_render_from(seg["lines"]))
     words, postcount = [], ""
     for line in seg["lines"]:
         if line["targeting"]:
@@ -209,7 +279,15 @@ def render_segment(seg, card):
             if postcount or len(seg["lines"]) != 1:
                 raise NoTemplate("述語前的數量只能屬於唯一的物件")
             postcount = count
-    parts.append("と".join(words) + "を" + postcount)
+    if seg["voice"] in ("被動", "自動"):
+        if postcount:
+            raise NoTemplate("主語形的述語前數量無模板")
+        parts.append(_render_to_prefix(seg))
+        parts.append("と".join(words) + "が")
+        parts.append(_render_from(seg["lines"]))
+    else:
+        parts.append(_render_from(seg["lines"]))
+        parts.append("と".join(words) + "を" + postcount)
     parts.append(_render_predicate(seg))
     if seg["kind"] == "條件":
         if not seg["trigger"]:

@@ -110,8 +110,8 @@ class BuildStructuresTest(unittest.TestCase):
         structures, report = build_structures(cards, entries)
         by_id = {c["id"]: c for c in structures}
         old = by_id[10753491]["blocks"]
-        self.assertEqual([b["unparsed"]["reason"] for b in old],
-                         ["舊式無編號卡未切分"])
+        self.assertEqual([(b["kind"], b["label"], b["unparsed"]) for b in old],
+                         [("編號效果", None, None)])
         fusion = by_id[59400890]["blocks"]
         self.assertEqual([b["unparsed"] and b["unparsed"]["reason"]
                           for b in fusion], ["區塊種類判不出", None])

@@ -38,6 +38,7 @@ name_ja 與 setcode。名稱比對雙方先全半形折疊。
 import json
 
 from archetype_table import fold_width, setcode_matches, split_setcode
+from attribute_words import ATTRIBUTE_JA, RACE_JA
 from segment_extract import PREDICATE_STEMS
 from structure_shape import ZONE_PARENT, iter_segments
 
@@ -46,8 +47,6 @@ CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
 # 卡片子類型(GLOSSARY)→ 卡片總表 type 的位元;目前只有頭名詞 チューナー 用到。
 SUBTYPE_BITS = {"協調": 0x1000}
 GENERIC_ATOMS = ("大類", "位置", "控制方")
-# 屬性比較原子的 attr → 卡片屬性表的表名(值是卡片總表的位元/數值)。
-PARAM_TABLES = {"race": "race", "attribute": "attribute", "level": "level"}
 
 
 def _zone_names(name):
@@ -84,19 +83,13 @@ class CardView:
         tables = structure["attributes"] if structure and not structure["unparsed"] else None
         if tables:
             name_rows, archetype_rows = tables["name"], tables["archetype"]
-            param_rows = {attr: tables[table] for attr, table in PARAM_TABLES.items()}
         else:
             name_rows = [{"value": entry["name_ja"], "where": None}]
             archetype_rows = [{"value": code, "where": None}
                               for code in split_setcode(entry.get("setcode") or 0)]
-            param_rows = {attr: ([{"value": entry[attr], "where": None}]
-                                 if entry.get(attr) else [])
-                          for attr in PARAM_TABLES}
         # 折疊與位置條件只算一次:只給條件的查詢會對幾千張卡反覆代入。
         self._names = [(fold_width(r["value"]), self._where(r)) for r in name_rows]
         self._codes = [(r["value"], self._where(r)) for r in archetype_rows]
-        self._params = {attr: [(r["value"], self._where(r)) for r in rows]
-                        for attr, rows in param_rows.items()}
 
     @staticmethod
     def _where(row):
@@ -125,10 +118,6 @@ class CardView:
     def setcodes(self, from_zones):
         return self._pick(self._codes, from_zones)
 
-    def params(self, attr, from_zones):
-        """種族、屬性、等級的值(卡片屬性表的列,帶位置條件);不認得的 attr 回空列表。"""
-        return self._pick(self._params.get(attr, []), from_zones)
-
 
 def _position_sensitive(condition):
     """條件式裡有沒有看位置的原子(卡名、卡名包含、字段:卡片屬性表的列帶位置條件)。"""
@@ -137,7 +126,7 @@ def _position_sensitive(condition):
         node = stack.pop()
         if not isinstance(node, dict):
             continue
-        if node.get("op") in ("卡名", "卡名包含", "字段", "屬性比較"):
+        if node.get("op") in ("卡名", "卡名包含", "字段"):
             return True
         stack.extend(node.get("args", ()))
         if "arg" in node:
@@ -196,8 +185,6 @@ def eval_condition(condition, view, names=None, from_zones=None):
     if op == "子類型":
         bit = SUBTYPE_BITS.get(condition["value"])
         return None if bit is None else bool(view.entry["type"] & bit)
-    if op == "屬性比較":
-        return _compare_param(condition, view, from_zones)
     if op == "字段":
         wants = condition.get("setcodes") or []
         if not wants:
@@ -212,26 +199,29 @@ def eval_condition(condition, view, names=None, from_zones=None):
         if op == "卡名":
             return folded in view.names(from_zones)
         return any(folded in name for name in view.names(from_zones))
+    if op == "屬性比較":
+        return compare_attribute(condition, view.entry)
     return None
 
 
-def _compare_param(condition, view, from_zones):
-    """屬性比較:種族、屬性是位元(cards.json 可能多位元,用 &),等級是數值;
-    比較子 =、≥、≤;引用(value 不是數)留給之後的票,回 None。"""
-    attr, cmp, want = condition.get("attr"), condition.get("cmp"), condition.get("value")
-    if attr not in PARAM_TABLES or not isinstance(want, int):
-        return None
-    values = view.params(attr, from_zones)
-    if not values:
+_COMPARATORS = {"=": lambda a, b: a == b, "≥": lambda a, b: a >= b,
+                "≤": lambda a, b: a <= b, ">": lambda a, b: a > b,
+                "<": lambda a, b: a < b}
+
+
+def compare_attribute(condition, entry):
+    """屬性比較原子(種族、屬性、等級)對一張卡片總表條目;魔陷沒有種族等級,判 False。"""
+    attr, cmp, value = condition["attr"], condition["cmp"], condition["value"]
+    if not entry["type"] & CATEGORY_BITS["怪獸"]:
         return False
-    if attr in ("race", "attribute"):
-        return cmp == "=" and any(have & want for have in values)
-    if cmp == "=":
-        return want in values
-    if cmp == "≥":
-        return any(have >= want for have in values)
-    if cmp == "≤":
-        return any(have <= want for have in values)
+    if attr == "種族":
+        return cmp == "=" and bool(entry["race"] & RACE_JA.get(value, 0))
+    if attr == "屬性":
+        return cmp == "=" and bool(entry["attribute"] & ATTRIBUTE_JA.get(value, 0))
+    if attr == "等級":
+        if entry["level"] is None or cmp not in _COMPARATORS:
+            return None
+        return _COMPARATORS[cmp](entry["level"], value)
     return None
 
 

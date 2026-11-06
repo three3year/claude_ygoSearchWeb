@@ -12,6 +12,8 @@
   後文「そのモンスター」指回它),這就是「併進該物件條件」。
 - 遊戲狀態:「相手ターンに」「自分メインフェイズに」「自分・相手のバトルフェイズに」
   「ダメージステップに」→ `遊戲狀態` 原子(回合方 / 階段 / 傷害步驟);只出現在前提。
+- 票 10 的存在前提 `{"op": "存在", "object", "in": 容器}`(「めくったカードの中に〜があった」)
+  是同一個 op、以 `in` 分辨;它是那個條件段的本體,`split_premise` 把它與句首前提分開。
 - 段引用(形狀,尚未抽取):`{"op": "段已執行", "segment": 段id}`、
   `{"op": "本回合發生過", "segment": 段id}`;要用到它的卡(滅びの黒魔術師的召喚條件)
   在那張票補句型與模板。
@@ -109,7 +111,7 @@ def _parse_existence(text, state, parse_zones, offset):
         zones = parse_zones(m.group("zones"))
         if zones is None:
             continue
-        obj_id, _ = state.object_at(m.group("obj"), offset)
+        obj_id, _, _ = state.object_at(m.group("obj"), offset)
         if obj_id is None:
             continue
         if obj_id == "o0" and not m.group("neg"):
@@ -128,6 +130,19 @@ def _parse_existence(text, state, parse_zones, offset):
                                        "inferred": False}
         return atom, m.end()
     return None, 0
+
+
+def split_premise(premise):
+    """段的前提 → (句首前提或 None, 票 10 的存在前提原子或 None)。"""
+    if premise is None:
+        return None, None
+    atoms = premise["args"] if premise.get("op") == "且" else [premise]
+    inner = [a for a in atoms if a.get("op") == "存在" and "in" in a]
+    leading = [a for a in atoms if not (a.get("op") == "存在" and "in" in a)]
+    existence = inner[0] if inner else None
+    if not leading:
+        return None, existence
+    return (leading[0] if len(leading) == 1 else {"op": "且", "args": leading}), existence
 
 
 # ── 模板(反向檢查)────────────────────────────────────────────

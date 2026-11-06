@@ -107,5 +107,118 @@ class GenericGroupTest(unittest.TestCase):
         self.assertEqual(check_card(structure), [])
 
 
+BUSTER_MODE = 80280737          # バスター・モード(陷阱)
+CRIMSON_BLADER_BUSTER = 50604072  # クリムゾン・ブレーダー／バスター(票 08 的標準卡,這裡只借①做記載夾具)
+CRIMSON_BLADER_BUSTER_TEXT = (
+    "このカードは通常召喚できず、「バスター・モード」の効果でのみ特殊召喚できる。\n"
+    "このカード名の①の効果は１ターンに１度しか使用できない。\n"
+    "①：手札のこのカードを相手に見せて発動できる。「バスター・モード」またはそのカード名が"
+    "記されたカード１枚をデッキから手札に加え、このカードをデッキに戻す。\n"
+    "②：相手はEXデッキから特殊召喚されたレベル５以上のモンスターの効果を発動できない。\n"
+    "③：このカードが破壊された場合に発動できる。自分の墓地から「クリムゾン・ブレーダー」"
+    "１体を特殊召喚する。")
+BUSTER_SNIPER = 39015           # バスター・スナイパー(真實卡:「X」以外の「Y」のカード名が記されたモンスター)
+BUSTER_SNIPER_TEXT = (
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。①：このカードを"
+    "リリースして発動できる。手札・デッキから「バスター・スナイパー」以外の「バスター・モード」"
+    "のカード名が記されたモンスター１体を特殊召喚する。この効果を発動したターン、自分は"
+    "SモンスターしかEXデッキから特殊召喚できない。②：自分フィールドの表側表示モンスター"
+    "１体を対象として発動できる。EXデッキのSモンスター１体を相手に見せ、対象のモンスターの"
+    "種族・属性はターン終了時まで、見せたモンスターと同じになる。")
+BUSTER_SEARCHER = 20000002      # 測試用:「X」またはそのカード名が記されたカード
+BUSTER_MODE_ZERO = 20000003     # 測試用:卡名含「バスター・モード」但不等、卡文沒引用它
+MENTIONS_ZERO = 20000004        # 測試用:卡文引用「バスター・モード・ゼロ」,不算記載「バスター・モード」
+MENTION_MONSTER = 20000005      # 測試用:「X」のカード名が記されたモンスター
+
+
+class MentionTest(unittest.TestCase):
+    """記載(名稱):卡文含「X」(含括號精確比對),查詢時直接掃卡文、不建表。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20),
+            card(BUSTER_MODE, name_ja="バスター・モード", type=TRAP),
+            card(CRIMSON_BLADER_BUSTER, name_ja="クリムゾン・ブレーダー／バスター",
+                 type=0x2000021, level=10, race=0x1, attribute=0x4,
+                 setcode=0x104f),
+            card(BUSTER_SNIPER, name_ja="バスター・スナイパー", level=4,
+                 race=0x8000, attribute=0x1),
+            card(BUSTER_SEARCHER, name_ja="バスター探し"),
+            card(BUSTER_MODE_ZERO, name_ja="バスター・モード・ゼロ"),
+            card(MENTIONS_ZERO, name_ja="ゼロ探し"),
+            card(MENTION_MONSTER, name_ja="記載探し"),
+        ]
+        entries = [
+            faq(CRIMSON_BLADER_BUSTER, "クリムゾン・ブレーダー／バスター",
+                CRIMSON_BLADER_BUSTER_TEXT),
+            faq(BUSTER_SNIPER, "バスター・スナイパー", BUSTER_SNIPER_TEXT),
+            faq(BUSTER_SEARCHER, "バスター探し",
+                "①：デッキから「バスター・モード」またはそのカード名が記されたカード１枚を"
+                "手札に加える。"),
+            faq(BUSTER_MODE_ZERO, "バスター・モード・ゼロ", "①：このカードを破壊する。"),
+            faq(MENTIONS_ZERO, "ゼロ探し",
+                "①：デッキから「バスター・モード・ゼロ」１枚を手札に加える。"),
+            faq(MENTION_MONSTER, "記載探し",
+                "①：デッキから「バスター・モード」のカード名が記されたモンスター１体を"
+                "特殊召喚する。"),
+        ]
+        cls.structures, _ = build_structures(cls.cards, entries,
+                                             archetypes=ARCHETYPES)
+
+    def hits(self, **query):
+        return [h["id"] for h in run_query(self.structures, self.cards, query)["hits"]]
+
+    def test_black_magician_is_not_buster_mode_nor_mentions_it(self):
+        """「「バスター・モード」またはそのカード名が記されたカード」:黑魔導不符。"""
+        self.assertNotIn(BUSTER_SEARCHER,
+                         self.hits(actions=["加入手牌"], card=BLACK_MAGICIAN))
+
+    def test_the_named_card_itself_fits(self):
+        self.assertIn(BUSTER_SEARCHER,
+                      self.hits(actions=["加入手牌"], card=BUSTER_MODE))
+
+    def test_card_whose_text_quotes_the_name_fits(self):
+        """クリムゾン・ブレーダー／バスター 的卡文含「バスター・モード」→ 符合記載。"""
+        self.assertIn(BUSTER_SEARCHER,
+                      self.hits(actions=["加入手牌"], card=CRIMSON_BLADER_BUSTER))
+        self.assertIn(BUSTER_SEARCHER,
+                      self.hits(actions=["加入手牌"], card=BUSTER_SNIPER))
+
+    def test_mention_is_exact_with_brackets(self):
+        """卡名只是含「バスター・モード」子字串、卡文沒引用它 → 不符;
+        卡文引用的是「バスター・モード・ゼロ」→ 不算記載「バスター・モード」。"""
+        self.assertNotIn(BUSTER_SEARCHER,
+                         self.hits(actions=["加入手牌"], card=BUSTER_MODE_ZERO))
+        self.assertNotIn(BUSTER_SEARCHER,
+                         self.hits(actions=["加入手牌"], card=MENTIONS_ZERO))
+
+    def test_condition_only_query_finds_a_mentioning_card(self):
+        """只給條件「記載 バスター・モード」:總表裡有實卡(クリムゾン・ブレーダー／バスター)符合。"""
+        mention = {"op": "記載", "text": "バスター・モード"}
+        self.assertIn(BUSTER_SEARCHER,
+                      self.hits(actions=["加入手牌"], condition=mention))
+        self.assertNotIn(BUSTER_SEARCHER,
+                         self.hits(actions=["加入手牌"],
+                                   condition={"op": "記載", "text": "ペンギン"}))
+
+    def test_real_card_buster_sniper_mention_monster(self):
+        """バスター・スナイパー ①:「バスター・スナイパー」以外の「バスター・モード」のカード名が
+        記されたモンスター:クリムゾン・ブレーダー／バスター 符合;自己(以外)、黑魔導、
+        バスター・モード(陷阱)不符。"""
+        self.assertIn(BUSTER_SNIPER,
+                      self.hits(actions=["特殊召喚"], from_zones=["牌組"],
+                                card=CRIMSON_BLADER_BUSTER))
+        for cid in (BUSTER_SNIPER, BLACK_MAGICIAN, BUSTER_MODE):
+            self.assertNotIn(BUSTER_SNIPER,
+                             self.hits(actions=["特殊召喚"], card=cid), cid)
+
+    def test_mention_cards_pass_reverse_check(self):
+        for cid in (BUSTER_SEARCHER, MENTION_MONSTER):
+            structure = next(c for c in self.structures if c["id"] == cid)
+            self.assertEqual(check_card(structure), [], cid)
+
+
 if __name__ == "__main__":
     unittest.main()

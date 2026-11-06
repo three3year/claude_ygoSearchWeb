@@ -18,6 +18,7 @@
 """
 import re
 
+from condition_atoms import render_atom
 from segment_extract import HEAD_CATEGORY, SIDE_WORDS, ZONE_WORDS, parse_predicate
 from structure_shape import iter_segments
 
@@ -75,6 +76,9 @@ def _render_atom(atom, names):
         return "カード名に" + _quoted(atom, names) + "を含む"
     if op == "解析不出":
         raise NoTemplate("物件條件無模板:解析不出")
+    rendered = render_atom(atom, names)   # 票 07 起的原子(condition_atoms)
+    if rendered is not None:
+        return rendered
     raise NoTemplate(f"物件條件無模板:{op}")
 
 

@@ -39,7 +39,7 @@ import json
 
 from archetype_table import fold_width, setcode_matches, split_setcode
 from segment_extract import PREDICATE_STEMS, action_ancestors
-from structure_shape import ZONE_PARENT, iter_segments
+from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
@@ -87,6 +87,9 @@ class CardView:
         # 折疊與位置條件只算一次:只給條件的查詢會對幾千張卡反覆代入。
         self._names = [(fold_width(r["value"]), self._where(r)) for r in name_rows]
         self._codes = [(r["value"], self._where(r)) for r in archetype_rows]
+        # 記載掃的全卡文:結構裡的區塊原文加略過文本就是整份官方 DB 文本(不另建表);
+        # 無官方日文的卡沒有文本,記載一律不符。
+        self.text = fold_width(_card_text(structure)) if tables else ""
 
     @staticmethod
     def _where(row):
@@ -114,6 +117,20 @@ class CardView:
 
     def setcodes(self, from_zones):
         return self._pick(self._codes, from_zones)
+
+
+def _card_text(structure):
+    """卡片結構裡的全部原文:各區塊(含內嵌效果的區塊)的原文與略過文本。「」引用
+    不跨區塊也不跨略過文本,所以各段原文串起來掃「X」與掃整份卡文結果相同。"""
+    pieces = [item["text"] for item in structure["omitted"]]
+    stack = list(structure["blocks"])
+    while stack:
+        block = stack.pop()
+        pieces.append(block["text"])
+        for node in iter_nodes(block["tree"]["items"]):
+            if node.get("node") == "內嵌效果" and node.get("block"):
+                stack.append(node["block"])
+    return "\n".join(pieces)
 
 
 def _position_sensitive(condition):
@@ -185,13 +202,16 @@ def eval_condition(condition, view, names=None, from_zones=None):
             return None
         return any(setcode_matches(have, want)
                    for have in view.setcodes(from_zones) for want in wants)
-    if op in ("卡名", "卡名包含"):
+    if op in ("卡名", "卡名包含", "記載"):
         text = _name_text(condition, names)
         if text is None:
             return None
         folded = fold_width(text)
         if op == "卡名":
             return folded in view.names(from_zones)
+        if op == "記載":
+            # 含括號精確比對:「バスター・モード」不會被「バスター・モード・ゼロ」誤收。
+            return f"「{folded}」" in view.text
         return any(folded in name for name in view.names(from_zones))
     return None
 

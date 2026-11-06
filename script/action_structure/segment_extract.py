@@ -21,6 +21,7 @@
 import re
 
 from archetype_table import fold_width
+from condition_atoms import parse_modifier
 from names_attributes import REASON_NAME_UNKNOWN
 from structure_shape import (new_line, new_object, new_segment, position,
                              segment_node, unparsed, zone)
@@ -222,8 +223,18 @@ class BlockState:
                 if m:
                     break
             else:
-                atoms.append({"op": "解析不出", "text": rest})
-                return atoms, reason or REASON_MODS
+                extra = parse_modifier(rest, self)   # 票 07 起的原子(condition_atoms)
+                if extra is None:
+                    atoms.append({"op": "解析不出", "text": rest})
+                    return atoms, reason or REASON_MODS
+                new_atoms, why, end = extra
+                if not new_atoms:
+                    atoms.append({"op": "解析不出", "text": rest})
+                    return atoms, reason or why
+                atoms.extend(new_atoms)
+                reason = reason or why
+                rest = rest[end:]
+                continue
             if kind == "以外":
                 atom, why = self.name_atom("卡名", m.group("name"))
                 if atom:

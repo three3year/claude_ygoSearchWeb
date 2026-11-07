@@ -47,7 +47,7 @@
 
 ## 驗收結果
 
-- 測試全綠(本票實跑):action_structure 244(原 243 + 本票 1)、card_list 66、faq_info 43、tag_card 379、text_format 55、text_glossary 37、web 104、`node --test` 121。
+- 測試全綠(code review 修正後實跑):action_structure 256、card_list 66、faq_info 43、tag_card 379、text_format 55、text_glossary 37、web 104、`node --test` 121。
 - 全建置鏈(`build_archetypes.py` 不帶 `--fetch` → `build_structure.py` → `build_report.py` → `build_reverse_check.py` → `build_block_boundaries.py` → `stats/old_style_phrases.py`)跑兩次,產物 `data/archetypes.json`、`data/action_structure.json` 與五份報告逐位元組相同。
 - 10 張標準卡加 白き森のリゼット 都有查詢斷言測試,且在**全庫產物**(`data/action_structure.json` 經 `load_structures` 讀回)上逐張跑 `reverse_check.check_card` 全部通過,見[標準卡狀態](#標準卡狀態)。
 
@@ -72,7 +72,7 @@
 | 層次 | 總數 | 解析出 | 解析不出 | 解析出比例 |
 |---|---|---|---|---|
 | 區塊 | 28,247 | 28,110 | 137 | 99.5% |
-| 段 | 62,816 | 25,281 | 37,535 | 40.2% |
+| 段 | 62,816 | 25,281 | 37,530(另 5 段標未結構化) | 40.2% |
 | 物件 | 32,301 | 23,902 | 8,399 | 74.0% |
 
 | 區塊種類 | 區塊數 | 解析不出 | 張數 |
@@ -103,7 +103,8 @@
 |---|---|
 | 段 | 62,816 |
 | 通過 | 17,220(27.4%;佔解析出的段 68.1%) |
-| 不通過 | 45,596 |
+| 不通過 | 45,591 |
+| 未結構化(重複到停為止,只寫第一輪;不計通過也不計不通過) | 5 |
 | 字面不符 | 5 段 / 5 張 |
 | 段外殘留 | 0 |
 
@@ -324,6 +325,30 @@
   - 取對象宣告段是沒有動作詞的代價段;若站主認為不該算代價,改宣告路徑即可。
 - 票 12(本票):
   - `load_structures` 補齊讀回漏掉的格(見[本票修的一個讀回漏洞](#本票修的一個讀回漏洞)),產物不變。
+
+## code review(main → action-structure)
+
+票 12 之後對整條分支做了兩軸審查(Standards 對 `CODING_STANDARDS.md` 與 Fowler 壞味道基線;Spec 對 spec 與 12 張票),再由一個子代理一次修完;修正清單與落點在票 12 檔 Comments「code review 後留給站主裁決的事」之前的各 commit(0ed5f91..e657b93)。
+
+已修:
+
+- 用詞:「解析不出」(格、段、物件、區塊、條件原子抽不出)與「未解析」(查詢結果組、整張無官方日文)分工,GLOSSARY 兩詞條互標;結構的英文鍵名(`agent`、`actions`、`voice`、`initial_position`…)在 GLOSSARY 新詞條「結構鍵名」逐一對照;`UNIT_EFFECT` 改「效果句」不再撞段類別「效果」。
+- 「列全部」測試改走 CLI 寫出的檔、筆數超過截斷、兩類違反同時、含壞值;壞值原本會讓覆蓋與反向檢查報告崩(卡號 int/str 混排、原因含換行),新 `report_common.py` 收攏卡序與標籤;乾淨產物上報告不變。
+- 重複碼收攏:`_digest` 五份 → `digest.py`;區域字面表三份 → `structure_shape.ZONE_WORDS`;`quoted_name`、全半形折疊表、「態」合併各一份;`parse_predicates` 回 `NamedTuple`;「無模板」收成一個例外 `NoTemplate`;轉匯出墊片與死 import 刪除;底線私名跨模組匯入改公開名;魔術數字具名。純重構段產物逐位元組不變。
+- Spec:12 張票「站主核可」項改回未勾;標準卡測試裡兩處結構快照斷言改成查詢層斷言;`archetype_patches.json` 的 0x1e 是實作者自判、非站主補丁,已移除(回到報告「候選不唯一」節);故事 28「重複到停為止」最小實作(`繰り返す` 句型標 `unstructured`,反向檢查與覆蓋報告另列、查詢不命中也不列未解析組,5 段);名稱表「宣言」來源(「カード名を１つ宣言し」,約 20 張)。
+
+未修、交站主裁決(逐條附位置在票 12 Comments「code review 後留給站主裁決的事」):
+
+- 做代替的段也被「代替」閘門擋(spec 只說被代替段;票 08 票面寫「② 只在查詢含代替時命中」)。
+- 泛用原子多收「表示形式」(spec 的泛用定義只有大類、位置、控制方)。
+- 字段中文名配不到時退而數全部卡(110 筆,報告有標)。
+- 「EXデッキの」位置原子寫進初始位置(票 06);「卡片發動」= 魔陷第一個無編號區塊(票 09)。
+- 極性「可以」只收永續許可,「〜できる」記 可選+做(故事 12「可以」預設不命中與段表「可選」格的界線)。
+- 繼承自推得值也歸推得開關(票 01)。
+- 註解與 docstring 全庫用半形標點,與 CODING_STANDARDS「全形標點」衝突(改標準或統一改)。
+- 條件式 `op` 的 if 串散在四個模組、`segment_extract.py` 與 `reverse_check.py` 各承擔多票職責:結構性重整留下一輪。
+
+Spec 仍缺、本輪未做:內嵌效果「我方」重新綁定與「」となる;條件式 召喚方式/持ち主/裝備或連結/可為物件Y的素材 原子;`段已執行` 抽取;性質變更後後續段讀改後屬性;時機 立即/每次X 與期間 持續/該戰鬥 句型(都已在[留給之後的事](#留給之後的事))。
 
 ## 留給之後的事
 

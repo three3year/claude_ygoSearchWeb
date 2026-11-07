@@ -9,7 +9,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] 覆蓋報告可產出,張數加總等於卡片總表張數;同一輸入兩次產出相同
 - [x] 無官方日文的卡出現在報告與未解析組,原因正確

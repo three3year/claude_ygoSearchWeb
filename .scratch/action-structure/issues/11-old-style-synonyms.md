@@ -8,7 +8,7 @@
 
 **Blocked by:** 10
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] 舊式用語在官方 DB 文本上的出現次數報告(可重跑),覆蓋報告附收表前後對比(`report/old_style_phrases.md`,`stats/old_style_phrases.py` 產生)
 - [x] 測試:一張舊式「選択して」卡查「取對象」命中;同一機制的新舊寫法卡查同一動作詞都命中(`test_old_style_synonyms.py`,真實卡;斷言列在 Comments,站主**待核可**)

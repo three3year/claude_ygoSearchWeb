@@ -11,7 +11,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] 森羅の神芽 スプラウト(10753491)的查詢斷言寫成測試(`test_golden.py` SproutTest),站主核可(**待核可**,斷言列在 Comments);涵蓋:命中「植物族 怪獸 牌組 → 墓地 送墓」、命中「牌組 → 特殊召喚 植物族 等級1」、剩餘的卡「牌組頂 → 牌組底」
 - [x] 森羅の神芽 スプラウト 整張通過反向檢查

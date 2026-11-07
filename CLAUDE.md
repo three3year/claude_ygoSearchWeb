@@ -20,6 +20,10 @@ Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `read
 
 實作票、審查、合併各用哪個 `model`,見 `docs/agents/subagent-models.md`。
 
+### implement-spec
+
+工作樹要複製 `data/sources/`、票分支不 commit 建置產物,見 `docs/agents/implement-spec.md`。
+
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.`CONTEXT.md` 為舊名(v1.3.0 前的 skill),現僅轉址到 `GLOSSARY.md`。

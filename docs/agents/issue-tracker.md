@@ -9,6 +9,7 @@ Issues and specs (you may know a spec as a PRD) for this repo live as markdown f
 - Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` — never a single combined tickets file
 - Triage state is recorded as a `Status:` line near the top of each issue file (see `triage-labels.md` for the role strings)
 - Comments and conversation history append to the bottom of the file under a `## Comments` heading
+- An acceptance criterion only the owner can perform (approving assertions, judging cards) is written `- [ ] (站主)…`. Agents leave it unticked and list what needs approval under `## Comments`; the owner ticks it. A ticket is still resolved when every other criterion is ticked.
 
 ## When a skill says "publish to the issue tracker"
 

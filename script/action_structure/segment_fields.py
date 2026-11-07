@@ -21,9 +21,8 @@
 import re
 
 from premise import PHASE_WORDS
-from synonyms import MODIFY_ACTION, MODIFY_PREDICATE  # noqa: F401  動作詞與述語字面在同義表
+from synonyms import MODIFY_ACTION, MODIFY_PREDICATE
 
-# ── 原因 ─────────────────────────────────────────────────────
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
 CAUSE_FORMS = {
     "戦闘によって": ("戰鬥", None), "戦闘で": ("戰鬥", None),
@@ -78,7 +77,6 @@ def render_cause(cause):
     return text
 
 
-# ── 極性 ─────────────────────────────────────────────────────
 # 永續許可的動作詞:「Xは直接攻撃できる」是卡在場上時一直成立的許可,不是一次做的動作;
 # 「このカードは手札から特殊召喚できる」仍是可選的做(票 05/11 的斷言),所以只認不移動卡的動作。
 PERMISSION_ACTIONS = ("直接攻擊",)
@@ -95,7 +93,6 @@ def resolve_polarity(parsed, marker):
     return polarity, optional
 
 
-# ── 時機(延遲)──────────────────────────────────────────────
 _PHASE_ALT = "|".join(w for w, _ in PHASE_WORDS)
 TIMING_PATTERN = f"(?:次の|このターンの)?(?:自分・相手の|自分|相手)?(?:{_PHASE_ALT})に"
 _TIMING_RE = re.compile(
@@ -144,7 +141,6 @@ def is_delayed(seg):
     return bool(seg.get("timing")) and seg["timing"].get("kind") == DELAY
 
 
-# ── 期間 ─────────────────────────────────────────────────────
 DURATION_THIS_TURN = ("そのターンの終了時まで", "ターン終了時まで", "このターンの終了時まで")
 _DURATION_RE = re.compile("^(?P<text>.+?まで)")
 
@@ -169,7 +165,6 @@ def render_duration(duration):
     return None
 
 
-# ── 被改的屬性(性質變更句)────────────────────────────────────
 STAT_WORDS = (("攻撃力", "攻擊力"), ("守備力", "守備力"))
 _STAT_NAME = dict(STAT_WORDS)
 _STAT_TEXT = {v: k for k, v in STAT_WORDS}

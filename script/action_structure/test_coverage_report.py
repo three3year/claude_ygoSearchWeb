@@ -39,7 +39,7 @@ class BuildCoverageTest(unittest.TestCase):
                          blocks["total"])
         self.assertEqual(blocks["reasons"]["區塊種類判不出"]["cards"],
                          [59400890])
-        # 舊式無編號卡(票 10 起會切)沒有標解析不出的區塊。
+        # 舊式無編號卡沒有標解析不出的區塊。
         self.assertNotIn(10753491, sum((r["cards"] for r in blocks["reasons"].values()), []))
         self.assertEqual(sum(r["blocks"] for r in blocks["reasons"].values()),
                          blocks["unparsed"])

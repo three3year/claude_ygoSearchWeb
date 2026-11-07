@@ -22,7 +22,7 @@ import re
 from collections import Counter, defaultdict
 
 _FOLD = {i: i - 0xFEE0 for i in range(0xFF01, 0xFF5F)}
-_FOLD[0x3000] = 0x20   # 全形空白
+_FOLD[0x3000] = 0x20
 _READING_RE = re.compile("^(?P<kanji>.+?)（(?P<reading>.+)）$")
 _QUOTE_RE = re.compile("「([^「」]+)」")
 _HEX_RE = re.compile("^0x[0-9a-fA-F]+$")
@@ -212,7 +212,6 @@ def archetype_lookup(rows):
     return {name: sorted(codes) for name, codes in lookup.items()}
 
 
-# ── 報告 ─────────────────────────────────────────────────────
 def _names(names_ja):
     return "／".join(names_ja or [])
 

@@ -64,8 +64,7 @@ from segment_fields import (CAUSE_PATTERN, MODIFY_ACTION, MODIFY_PREDICATE,
                             is_delayed, mention_head, parse_cause, parse_modify,
                             parse_timing, resolve_polarity)
 from structure_shape import new_line, new_object, new_segment, position, unparsed, zone
-# 同義表(述語字面 → 動作詞、語尾、取對象字面)在 synonyms;這裡再匯出,舊的匯入點不變。
-from synonyms import (  # noqa: F401
+from synonyms import (
     ACTION_PARENT, ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, PREDICATE_STEMS,
     REASON_PREDICATE, REASON_TAIL, TAILS, TARGET_REF, TARGETING_PREFIXES,
     action_ancestors, parse_predicate, parse_predicates, split_targeting)
@@ -330,7 +329,7 @@ class BlockState:
         self.card = card
         self.lookups = lookups or {"card_names": set(), "archetypes": {}}
         self.names = {row["text"]: row for row in card["names"]}
-        self.positions = {}   # 物件 id → {"zones", "inferred"}
+        self.positions = {}
         self.recent = []      # 本區塊建立或引用過的物件 id(其後者優先)
         self.targeted = []     # 被取對象的物件 id(「を選択して」「を対象として」點名的,後者優先)
         self.delayed = False  # 序列中段出現條件段之後:後面的段算延遲、不標取對象(票 08)
@@ -565,7 +564,6 @@ class BlockState:
             obj["unparsed"] = unparsed(reason)
         return self.add_object(obj), None, None
 
-    # ── 物件來源:子集、剩餘(票 10;集中在這裡,票 04 不動) ──
     def subset_object(self, phrase, container_id, sentence_start):
         """容器的子集:條件是子集自己的條件,初始位置繼承容器目前位置;
         來源的 select(全部/選)、chooser、random 有值才寫(產物省略空格)。"""

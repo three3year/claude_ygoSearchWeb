@@ -40,7 +40,7 @@ from names_attributes import (SOURCE_OFFICIAL_NAME, TREAT_PREDICATE, extract_nam
                               treat_as_sentences)
 from premise import GAME_STATE_PHASE
 from segment_tree import extract_block
-from structure_shape import (  # noqa: F401  形狀的詞與工廠從這裡再匯出
+from structure_shape import (
     ATTRIBUTE_TABLES, BLOCK_KINDS, BRANCH_MODES, JOINS, NO_OFFICIAL_TEXT,
     OBJECT_KINDS, OBJECT_SOURCES, POLARITIES, POSITION_SOURCES, ROLES,
     SEGMENT_KINDS, SIDES, TRIGGER_FORMS, ZONE_PARENT, ZONES, attribute_row,
@@ -49,7 +49,6 @@ from structure_shape import (  # noqa: F401  形狀的詞與工廠從這裡再�
     new_line, new_object, new_segment, position, segment_node, self_object,
     unparsed, zone)
 
-# ── 建置 ─────────────────────────────────────────────────────
 def build_card(entry, faq_entry, lookups, boundary_patch=None, patch_status=None):
     """一張卡:官方 DB 文本 → 名稱表、卡片屬性表 → 區塊 → 段 → 卡片結構。
     沒有官方文本整張標未解析。`lookups` = {"card_names": 折疊後卡名集合,

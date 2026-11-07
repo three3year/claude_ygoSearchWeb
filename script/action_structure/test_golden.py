@@ -9,7 +9,7 @@ from card_structure import build_structures
 from action_query import run_query
 from reverse_check import check_card
 
-MONSTER = 0x21  # 效果怪獸
+MONSTER = 0x21
 SPELL = 0x2
 TRAP = 0x4
 
@@ -911,8 +911,7 @@ class CrimsonBladerBusterTest(unittest.TestCase):
                          self.hits(actions=["特殊召喚"], card=CRIMSON_BLADER_BUSTER))
 
     def test_whole_card_passes_reverse_check_except_summon_condition(self):
-        """整張通過反向檢查;召喚條件句「このカードは通常召喚できず、…」留給票 09 的區塊種類,
-        它所在的區塊除外。"""
+        """整張通過反向檢查;召喚條件句「このカードは通常召喚できず、…」所在的區塊除外。"""
         structure = next(c for c in self.structures
                          if c["id"] == CRIMSON_BLADER_BUSTER)
         summon_blocks = {b["id"] for b in structure["blocks"]

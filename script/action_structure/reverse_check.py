@@ -26,7 +26,7 @@ from segment_extract import (ACTION_PAST, ACTIVATION_REF, CAUSE_EFFECT_OF,
                              CAUSE_METHOD, EXIST_WORDS, FROM_PARTICLES,
                              HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER,
                              SIDE_WORDS, SUMMON_METHODS, ZONE_WORDS, parse_from)
-from segment_extract import _ACTION_REF_RE, _REF_RE, _TARGET_REF_RE  # 回指字面的句型,與抽取端同一把尺
+from segment_extract import _ACTION_REF_RE, _REF_RE, _TARGET_REF_RE
 from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
                             render_timing, resolve_polarity)
 from segment_tree import (NoTreeTemplate, embedded_bindings, render_premise_prefix,
@@ -54,11 +54,11 @@ _GLUE_RE = re.compile("|".join(GLUE))
 _PUNCT_RE = re.compile("[。、\n ]")
 _WS_RE = re.compile(r"[\s　]+")
 
-_SIDE_TEXT = {v: k for k, v in SIDE_WORDS.items()}           # 我方 → 自分
-_ZONE_TEXT = {name: word for word, name in ZONE_WORDS}      # 手牌 → 手札
+_SIDE_TEXT = {v: k for k, v in SIDE_WORDS.items()}
+_ZONE_TEXT = {name: word for word, name in ZONE_WORDS}
 _HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
 _HEAD_TEXT[("魔法", "陷阱")] = "魔法・罠カード"
-_SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}  # (怪獸, 協調) → チューナー
+_SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}
 _FULLWIDTH_ASCII = {i: i - 0xFEE0 for i in range(0xFF01, 0xFF5F)}
 _TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 
@@ -72,7 +72,6 @@ class NoTemplate(Exception):
     """模板寫不出這一段:訊息是 detail(哪一格、什麼原因)。"""
 
 
-# ── 模板 ─────────────────────────────────────────────────────
 def _quoted(atom, names):
     """名稱原子 → 「X」:只從名稱表取字面(查詢側才會直接帶 text,結構裡不會)。"""
     row = names.get(atom.get("name"))
@@ -628,7 +627,6 @@ def render_segment(seg, card, self_id="o0"):
     return prefix + text
 
 
-# ── 檢查 ─────────────────────────────────────────────────────
 def _failure(card, block, seg_id, reason, detail, rendered=None, original=None):
     return {"card": card["id"], "name_ja": card["name_ja"], "block": block["id"],
             "segment": seg_id, "reason": reason, "detail": detail,
@@ -695,7 +693,7 @@ def _residue(block, glue, glue_failed=False, holes=()):
         if glue_failed and node.get("span"):
             cut.append((node["span"][0], node["span"][1], None))
     if block["label"]:
-        cut.append((0, 2, False))  # 「①：」
+        cut.append((0, 2, False))
     cut.sort()
     pieces, pos, after = [], 0, False
     for start, end, triggered in cut:
@@ -770,7 +768,6 @@ def check_structures(structures):
             "failures": failures}
 
 
-# ── 報告 ─────────────────────────────────────────────────────
 def _group(failures, key):
     groups = {}
     for f in failures:

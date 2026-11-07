@@ -152,7 +152,6 @@ def referenced_objects(condition):
     return found
 
 
-# ── 模板 ─────────────────────────────────────────────────────
 def _quoted(atom_or_id, names):
     name_id = atom_or_id if isinstance(atom_or_id, str) else atom_or_id.get("name")
     row = names.get(name_id)

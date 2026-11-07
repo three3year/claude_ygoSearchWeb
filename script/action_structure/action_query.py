@@ -377,9 +377,9 @@ class _Judge:
         self.structure_by_id = {s["id"]: s for s in structures}
         self.views = {}
         self.exists_cache = {}
-        self.candidate_cache = {}   # (卡號, 被引用物件 id) → 候選卡列表
-        self.pool_cache = {}        # (卡號, 物件 id) → 引用的 [(物件 id, 候選卡列表)]
-        self.objects_cache = {}     # 卡號 → 物件 id → 物件
+        self.candidate_cache = {}
+        self.pool_cache = {}
+        self.objects_cache = {}
 
     def view(self, entry):
         if entry["id"] not in self.views:

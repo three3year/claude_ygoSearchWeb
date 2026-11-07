@@ -32,7 +32,7 @@ class SimultaneousJoinTest(unittest.TestCase):
     """「〜し、〜」「〜え、〜」串接的子句各自成段(同時連接),兩個動作都查得到。"""
 
     def test_two_clauses_joined_by_renyoukei_both_hit(self):
-        """クリムゾン・ブレーダー／バスター ① 的句型(票 07 留):「〜手札に加え、このカードをデッキに戻す」。"""
+        """クリムゾン・ブレーダー／バスター ① 的句型:「〜手札に加え、このカードをデッキに戻す」。"""
         structures, cards = build(
             "①：デッキから「バスター・モード」１枚を手札に加え、このカードをデッキに戻す。",
             cards=[card(TEST_CARD, name_ja="甲"),

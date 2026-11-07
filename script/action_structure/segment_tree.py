@@ -55,14 +55,13 @@ REASON_BRANCH_PREMISE = "分歧前提解析不出"
 EMBED_HEADER = "は以下の効果を得る"
 
 
-# ── 抽取 ─────────────────────────────────────────────────────
 def extract_block(block, card, lookups=None, self_id="o0"):
     """就地把段、段樹寫進 block,物件寫進 card["objects"];lookups 見 card_structure.build_lookups。"""
     state = BlockState(block, card, lookups, self_id=self_id)
     text = block["text"]
-    body_start = 2 if block["label"] else 0  # 「①：」兩個字元
+    body_start = 2 if block["label"] else 0
     if text.startswith("また、", body_start):
-        body_start += 3  # 區塊開頭的接著詞
+        body_start += 3
     items = [m.end() for m in _ITEM_RE.finditer(text, body_start)]
     if not items:
         block["tree"]["items"] = _parse_run(state, sentences(text, body_start))
@@ -336,7 +335,6 @@ def _embedded(state, subject, start, join, lookups):
     return node
 
 
-# ── 模板(反向檢查)────────────────────────────────────────────
 class NoTreeTemplate(Exception):
     """分歧或內嵌效果的引導句寫不出字面:訊息是 detail。"""
 

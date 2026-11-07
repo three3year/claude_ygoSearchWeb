@@ -20,6 +20,7 @@ OLD_STYLE_TEXT = (
     "全て墓地へ送る。")
 FUSION_TEXT = (
     "「ブラック・マジシャン」＋光・闇属性モンスター\n"
+    "このカードの効果を発動するターン、自分は他の効果を発動できない。\n"
     "①：このカードが特殊召喚した場合に発動できる。「ブラック・マジシャン」１体を"
     "デッキから手札に加える。")
 PENDULUM_TEXT = "①：自分フィールドのモンスターの攻撃力は３００アップする。"
@@ -113,8 +114,10 @@ class BuildStructuresTest(unittest.TestCase):
         self.assertEqual([(b["kind"], b["label"], b["unparsed"]) for b in old],
                          [("編號效果", None, None)])
         fusion = by_id[59400890]["blocks"]
-        self.assertEqual([b["unparsed"] and b["unparsed"]["reason"]
-                          for b in fusion], ["區塊種類判不出", None])
+        self.assertEqual([(b["kind"], b["unparsed"] and b["unparsed"]["reason"])
+                          for b in fusion],
+                         [("素材", None), ("編號效果", "區塊種類判不出"),
+                          ("編號效果", None)])
         pendulum = by_id[94415058]["blocks"]
         self.assertEqual([b["kind"] for b in pendulum], ["編號效果", "靈擺效果"])
         self.assertGreater(report["unparsed_segments"], 0)

@@ -1,15 +1,17 @@
 """區塊切分:官方 DB 文本 → 區塊列表 + 略過文本。
 
 新式卡依 ①②③ 的編號字元切(筆記 01:①前不一定有換行,所以用字元不用換行);
-編號前的前言依官方換行逐行處理:次數限制(「１ターンに１度しか使用できない」等)
-不記、進略過文本;其他行(素材行、召喚條件句、卡片發動句…)先各成一個區塊、
-種類暫歸編號效果並標「區塊種類判不出」,由票 09 的句型接手。
-
-舊式無編號卡(票 10):先切成「單位」——句號(「」『』（）外)與換行處各一句——
-再把單位分類:素材行(不以句號結尾的開頭行)、召喚條件句、次數限制(略過)、效果句;
-相鄰的效果句依後一句的開頭決定切不切(spec「區塊切分」的候選清單,照共識集 3,363 張
-調過:`_NO_CUT_RE` 續前一區塊、`_CUT_RE` 另起區塊、其餘看句首有沒有觸發子句)。
+編號前的前言與舊式無編號卡的全文走同一支(票 09 收成一支):先切成「單位」——句號
+(「」『』（）外)與換行處各一句——再把單位分類:素材行(不以句號結尾的開頭行)、
+召喚條件句(`_SUMMON_RE`)、次數限制(不記、進略過文本)、效果句;相鄰的效果句依後一句
+的開頭決定切不切(spec「區塊切分」的候選清單,照共識集 3,363 張調過:`_NO_CUT_RE`
+續前一區塊、`_CUT_RE` 另起區塊、其餘看句首有沒有觸發子句);● 開頭的單位一律續前一區塊
+(spec:● 列舉留在區塊內當段樹的分歧)。
 硬約束:補足情報的『』引用跨句號時不得切斷——引用跨過的切點一律撤掉。
+區塊種類:素材行 → 素材、召喚條件句 → 召喚條件;沒有編號的效果句,魔陷卡的第一個是
+卡片發動(舊式魔陷的整段卡文、新式魔陷前言的「このカードを発動するターン、〜」),其餘歸
+編號效果——新式怪獸卡前言裡的這種句子(維持コスト、「〜するターン、〜できない」)沒有編號
+也不是召喚條件,標「區塊種類判不出」(spec:判不出歸編號效果、標未解析)。
 邊界補丁(`data/block_boundaries.json`,站主判過的卡)先讀:一卡一筆、只記官方日文的
 區塊子字串、雜湊只算官方日文;雜湊不符(卡文變動)、覆蓋不成立、引用被切斷或格式
 不合法時整筆失效、退回規則(同拆句表,ADR-0003)。
@@ -33,6 +35,8 @@ _LIMIT_RE = re.compile(
 
 KIND_UNKNOWN = "區塊種類判不出"
 LIMIT_REASON = "次數限制"
+CATEGORY_SPELL_TRAP = "魔陷"
+KIND_ACTIVATION = "卡片發動"
 
 # ── 舊式無編號卡:單位分類 ──────────────────────────────────
 # 召喚條件句:召喚限制、特殊召喚方法、降臨、素材限制、裝備限制、「〜なければならない」。
@@ -198,7 +202,8 @@ def _group_units(text, units, spans):
         kind = classify_unit(sentence, i == 0, previous)
         cut = (not groups or kind != previous or kind != UNIT_EFFECT
                or starts_new_block(sentence))
-        if cut and groups and _quote_crosses(spans, condensed_starts[i]):
+        if cut and groups and (sentence.startswith("●")
+                               or _quote_crosses(spans, condensed_starts[i])):
             cut = False
         if cut:
             groups.append([kind, s, e])
@@ -210,16 +215,26 @@ def _group_units(text, units, spans):
     return groups
 
 
-def _emit_groups(text, groups, source, prefix, kind_fixed):
+def _emit_groups(text, groups, source, prefix, kind_fixed, category, numbered):
+    """單位群 → 區塊與略過文本。`numbered` = 這段文本後面還有 ①②③(新式卡的前言):
+    沒有編號的效果句歸編號效果就標「區塊種類判不出」;魔陷卡的第一個無編號效果群是卡片發動。"""
     blocks, omitted = [], []
+    activation_used = False
     for kind, start, end in groups:
         if kind == UNIT_LIMIT:
             omitted.append({"source": source, "span": [start, end],
                             "text": text[start:end], "reason": LIMIT_REASON})
             continue
         block_kind = kind_fixed or _UNIT_KIND[kind]
-        blocks.append(new_block(f"{prefix}{start}", block_kind, None, source,
-                                (start, end), text[start:end]))
+        block = new_block(f"{prefix}{start}", block_kind, None, source,
+                          (start, end), text[start:end])
+        if kind == UNIT_EFFECT and not kind_fixed:
+            if category == CATEGORY_SPELL_TRAP and not activation_used:
+                block["kind"] = KIND_ACTIVATION
+                activation_used = True
+            elif numbered:
+                block["unparsed"] = unparsed(KIND_UNKNOWN)
+        blocks.append(block)
     return blocks, omitted
 
 
@@ -254,11 +269,14 @@ def check_boundary_patch(record, text, supplement):
     return spans, None
 
 
-def _split_old_style(text, source, kind_fixed, prefix, supplement, patch,
-                     patch_status):
+def _split_unnumbered(text, end, source, kind_fixed, prefix, supplement, patch,
+                      patch_status, category):
+    """沒有編號的文字(舊式卡的全文,或新式卡編號前的前言 `text[:end]`)→ 區塊與略過文本。
+    邊界補丁只對舊式卡的全文生效(`end` 是全文長度時)。"""
     condensed, _ = _condense(text)
     spans = quote_spans(supplement, condensed)
-    if patch is not None:
+    numbered = end < len(text)
+    if patch is not None and not numbered:
         pieces, reason = check_boundary_patch(patch, text, supplement)
         if patch_status is not None:
             patch_status[source] = reason or PATCH_APPLIED
@@ -270,39 +288,24 @@ def _split_old_style(text, source, kind_fixed, prefix, supplement, patch,
                     previous = classify_unit(text[s + us:s + ue], i == 0, previous)
                     kinds.append(previous)
                 groups.append([min(kinds, key=_PRIORITY.index), s, e])
-            return _emit_groups(text, groups, source, prefix, kind_fixed)
-    units = _units(text)
+            return _emit_groups(text, groups, source, prefix, kind_fixed,
+                                category, numbered)
+    units = _units(text[:end])
     groups = _group_units(text, units, spans)
-    return _emit_groups(text, groups, source, prefix, kind_fixed)
+    return _emit_groups(text, groups, source, prefix, kind_fixed, category,
+                        numbered)
 
 
 def _split_text(text, source, kind_numbered, prefix, supplement, patch,
-                patch_status):
-    blocks, omitted = [], []
+                patch_status, category):
     if not text:
-        return blocks, omitted
+        return [], []
     labels = list(_LABEL_RE.finditer(text))
-    if not labels:
-        kind_fixed = None if kind_numbered == "編號效果" else kind_numbered
-        return _split_old_style(text, source, kind_fixed, prefix, supplement,
-                                patch, patch_status)
-    # 前言:編號前的文字,依官方換行逐行。
-    preamble_end = labels[0].start()
-    pos = 0
-    for line in text[:preamble_end].split("\n"):
-        start, end = _strip_span(text, pos, pos + len(line))
-        pos += len(line) + 1
-        if start == end:
-            continue
-        if _LIMIT_RE.match(text[start:end]):
-            omitted.append({"source": source, "span": [start, end],
-                            "text": text[start:end], "reason": LIMIT_REASON})
-            continue
-        block = new_block(f"{prefix}{start}", kind_numbered, None, source,
-                          (start, end), text[start:end])
-        if kind_numbered == "編號效果":
-            block["unparsed"] = unparsed(KIND_UNKNOWN)
-        blocks.append(block)
+    kind_fixed = None if kind_numbered == "編號效果" else kind_numbered
+    preamble_end = labels[0].start() if labels else len(text)
+    blocks, omitted = _split_unnumbered(text, preamble_end, source, kind_fixed,
+                                        prefix, supplement, patch, patch_status,
+                                        category)
     # 編號區塊:從這個編號到下一個編號前。
     for i, m in enumerate(labels):
         stop = labels[i + 1].start() if i + 1 < len(labels) else len(text)
@@ -314,22 +317,23 @@ def _split_text(text, source, kind_numbered, prefix, supplement, patch,
 
 
 def split_blocks(card_text, pen_effect=None, supplement=None,
-                 boundary_patch=None, patch_status=None):
+                 boundary_patch=None, patch_status=None, category=None):
     """→ (區塊列表, 略過文本列表);每個區塊帶原文範圍(相對於各自的來源文本)。
 
     `supplement` 是補足情報(『』引用跨句號不得切斷);`boundary_patch` 是這張卡的邊界補丁
     {"card_text": 紀錄, "pen_effect": 紀錄};`patch_status`(dict)給呼叫端收補丁結果:
-    {來源: 生效 / 卡文已變動 / 覆蓋不成立 / 引用被切斷 / 格式不合法}。
+    {來源: 生效 / 卡文已變動 / 覆蓋不成立 / 引用被切斷 / 格式不合法};`category` 是卡片大類
+    (「魔陷」時沒有編號的第一個效果區塊是卡片發動,其餘值不影響切法)。
     """
     patches = boundary_patch or {}
     blocks, omitted = _split_text(card_text or "", "card_text", "編號效果", "b",
                                   supplement, patches.get("card_text"),
-                                  patch_status)
+                                  patch_status, category)
     if pen_effect:
         pen_blocks, pen_omitted = _split_text(pen_effect, "pen_effect",
                                               "靈擺效果", "p", supplement,
                                               patches.get("pen_effect"),
-                                              patch_status)
+                                              patch_status, category)
         blocks.extend(pen_blocks)
         omitted.extend(pen_omitted)
     return blocks, omitted

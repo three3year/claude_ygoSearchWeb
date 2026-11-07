@@ -921,6 +921,212 @@ class CrimsonBladerBusterTest(unittest.TestCase):
         self.assertEqual([f for f in check_card(structure)
                           if f["block"] not in summon_blocks], [])
 
+    def test_summon_condition_block_is_a_restriction(self):
+        """召喚條件句(票 09):「通常召喚できず」極性不能、「〜の効果でのみ特殊召喚できる」極性只能,
+        都是限制段,預設不命中;極性範圍含只能時命中,且只在召喚條件區塊。"""
+        self.assertNotIn(CRIMSON_BLADER_BUSTER,
+                         self.hits(actions=["特殊召喚"], card=CRIMSON_BLADER_BUSTER))
+        self.assertIn(CRIMSON_BLADER_BUSTER,
+                      self.hits(actions=["特殊召喚"], card=CRIMSON_BLADER_BUSTER,
+                                polarities=["只能"], kinds=["限制"],
+                                block_kinds=["召喚條件"]))
+        self.assertNotIn(CRIMSON_BLADER_BUSTER,
+                         self.hits(actions=["特殊召喚"], card=CRIMSON_BLADER_BUSTER,
+                                   polarities=["只能"], kinds=["限制"],
+                                   block_kinds=["編號效果"]))
+        self.assertIn(CRIMSON_BLADER_BUSTER,
+                      self.hits(actions=["通常召喚"], card=CRIMSON_BLADER_BUSTER,
+                                polarities=["不能"], kinds=["限制"]))
+
+    def test_whole_card_passes_reverse_check(self):
+        """票 09:召喚條件區塊也過,整張通過。"""
+        structure = next(c for c in self.structures
+                         if c["id"] == CRIMSON_BLADER_BUSTER)
+        self.assertEqual(check_card(structure), [])
+
+
+DARK_MAGICIAN_OF_DESTRUCTION = 59400890  # 滅びの黒魔術師
+DARK_MAGICIAN_OF_DESTRUCTION_TEXT = (
+    "「ブラック・マジシャン」＋光・闇属性モンスター\n"
+    "「滅びの黒魔術師」は１ターンに１度、融合召喚及び以下の方法でのみ特殊召喚できる。\n"
+    "●魔法カードの効果が発動したターン、自分フィールドのレベル６以上の魔法使い族・闇属性"
+    "モンスター１体を除外した場合にEXデッキから特殊召喚できる。\n"
+    "①：このカードのカード名は、フィールド・墓地に存在する限り「ブラック・マジシャン」として扱う。\n"
+    "②：このカードが特殊召喚した場合に発動できる。「ブラック・マジシャン」１体またはそのカード名が"
+    "記されたカード１枚をデッキから手札に加える。")
+# 測試虛構的三張卡:黑魔導的送墓與除外手段,看滅び在哪個位置被當成黑魔導。
+FIELD_SENDER = 70000091      # 場上的「ブラック・マジシャン」送墓
+DECK_SENDER = 70000092       # 牌組的「ブラック・マジシャン」送墓
+GRAVE_BANISHER = 70000093    # 墓地的「ブラック・マジシャン」除外
+
+
+class DarkMagicianOfDestructionTest(unittest.TestCase):
+    """滅びの黒魔術師 59400890(票 09):素材、召喚條件(● 召喚手續)、修飾(視為黑魔導)。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(DARK_MAGICIAN_OF_DESTRUCTION, name_ja="滅びの黒魔術師", type=0x61,
+                 level=8, race=0x2, attribute=0x20, atk=2800),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20, atk=2500),
+            card(SINGULARITY_FIEND, name_ja="特異点の悪魔", level=1,
+                 race=0x40, attribute=0x20, atk=0),
+            card(GREEDY_POT, name_ja="強欲な壺", type=SPELL),
+            card(FIELD_SENDER, name_ja="場の送り手", type=SPELL),
+            card(DECK_SENDER, name_ja="デッキの送り手", type=SPELL),
+            card(GRAVE_BANISHER, name_ja="墓地の除外手", type=SPELL),
+        ]
+        cls.faq = [
+            faq(DARK_MAGICIAN_OF_DESTRUCTION, "滅びの黒魔術師",
+                DARK_MAGICIAN_OF_DESTRUCTION_TEXT),
+            faq(FIELD_SENDER, "場の送り手",
+                "①：自分フィールドの「ブラック・マジシャン」１体を墓地へ送る。"),
+            faq(DECK_SENDER, "デッキの送り手",
+                "①：デッキから「ブラック・マジシャン」１体を墓地へ送る。"),
+            faq(GRAVE_BANISHER, "墓地の除外手",
+                "①：自分の墓地の「ブラック・マジシャン」１体を除外する。"),
+        ]
+        cls.structures, cls.report = build_structures(cls.cards, cls.faq,
+                                                      archetypes=ARCHETYPES)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_summoning_procedure_banishes_a_monster_from_the_field(self):
+        """● 召喚手續「自分フィールドのレベル６以上の魔法使い族・闇属性モンスター１体を除外した場合」:
+        「場上 → 除外」限定召喚條件區塊命中;黑魔導(等級 7 魔法使い族 闇)代入符合、特異点の悪魔
+        (等級 1)不符;限定編號效果區塊不命中。"""
+        self.assertIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                      self.hits(actions=["除外"], from_zones=["場上"],
+                                to_zones=["除外"], block_kinds=["召喚條件"]))
+        self.assertIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                      self.hits(actions=["除外"], from_zones=["場上"],
+                                card=BLACK_MAGICIAN, block_kinds=["召喚條件"]))
+        self.assertNotIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                         self.hits(actions=["除外"], card=SINGULARITY_FIEND))
+        self.assertNotIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                         self.hits(actions=["除外"], block_kinds=["編號效果"]))
+
+    def test_summoning_procedure_special_summons_itself_from_the_extra_deck(self):
+        """● 的「EXデッキから特殊召喚できる」主語省略 = 此卡:「額外牌組 → 特殊召喚」此卡命中,
+        是召喚手續(預設段類別範圍內);限定召喚條件區塊也命中。"""
+        self.assertIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                      self.hits(actions=["特殊召喚"], from_zones=["額外牌組"],
+                                card=DARK_MAGICIAN_OF_DESTRUCTION))
+        self.assertIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                      self.hits(actions=["特殊召喚"], card=DARK_MAGICIAN_OF_DESTRUCTION,
+                                block_kinds=["召喚條件"], kinds=["召喚手續"]))
+
+    def test_only_by_fusion_or_the_listed_method_is_a_restriction(self):
+        """「融合召喚及び以下の方法でのみ特殊召喚できる」是限制段(極性只能):極性範圍含只能才命中;
+        查「融合召喚」不命中(它是召喚方式,不是這張卡做的動作)。"""
+        self.assertIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                      self.hits(actions=["特殊召喚"], card=DARK_MAGICIAN_OF_DESTRUCTION,
+                                polarities=["只能"], kinds=["限制"]))
+        self.assertNotIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                         self.hits(actions=["融合召喚"], include_condition=True))
+
+    def test_spell_activation_in_this_turn_is_a_condition_segment(self):
+        """「魔法カードの効果が発動したターン、」是條件段(本回合發生過):條件段關不命中、開命中。"""
+        self.assertNotIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                         self.hits(actions=["發動"], card=GREEDY_POT))
+        self.assertIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                      self.hits(actions=["發動"], card=GREEDY_POT,
+                                include_condition=True))
+
+    def test_second_effect_adds_dark_magician_or_a_card_naming_it_to_hand(self):
+        """②「黑魔導 牌組 → 手牌」命中;記載「ブラック・マジシャン」的卡(此卡自己)也命中;強欲な壺不符。"""
+        self.assertIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                      self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                to_zones=["手牌"], card=BLACK_MAGICIAN))
+        self.assertIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                      self.hits(actions=["加入手牌"], from_zones=["牌組"],
+                                card=DARK_MAGICIAN_OF_DESTRUCTION))
+        self.assertNotIn(DARK_MAGICIAN_OF_DESTRUCTION,
+                         self.hits(actions=["加入手牌"], card=GREEDY_POT))
+
+    def test_treated_as_dark_magician_only_on_the_field_and_in_the_graveyard(self):
+        """①「フィールド・墓地に存在する限り「ブラック・マジシャン」として扱う」:查「送墓」「除外」
+        時,此卡只在場上與墓地被當成黑魔導——場上的送墓手段、墓地的除外手段命中,牌組的送墓手段不命中。"""
+        self.assertIn(FIELD_SENDER,
+                      self.hits(actions=["送墓"], card=DARK_MAGICIAN_OF_DESTRUCTION))
+        self.assertIn(GRAVE_BANISHER,
+                      self.hits(actions=["除外"], card=DARK_MAGICIAN_OF_DESTRUCTION))
+        self.assertNotIn(DECK_SENDER,
+                         self.hits(actions=["送墓"], card=DARK_MAGICIAN_OF_DESTRUCTION))
+        self.assertIn(DECK_SENDER, self.hits(actions=["送墓"], card=BLACK_MAGICIAN))
+
+    def test_material_line_is_its_own_block_kind(self):
+        """素材行「「ブラック・マジシャン」＋光・闇属性モンスター」自成素材區塊:限定素材區塊時沒有動作可命中,
+        也不列進未解析組(素材行不含動作詞)。"""
+        result = run_query(self.structures, self.cards,
+                           {"actions": ["特殊召喚"], "block_kinds": ["素材"]})
+        self.assertEqual(result["groups"]["全部"], [])
+        self.assertNotIn(DARK_MAGICIAN_OF_DESTRUCTION, result["groups"]["未解析"])
+
+    def test_whole_card_passes_reverse_check(self):
+        for cid in (DARK_MAGICIAN_OF_DESTRUCTION, FIELD_SENDER, DECK_SENDER,
+                    GRAVE_BANISHER):
+            with self.subTest(card=cid):
+                structure = next(c for c in self.structures if c["id"] == cid)
+                self.assertEqual(check_card(structure), [])
+
+
+SEVEN_TOOLS = 3819470  # 盗賊の七つ道具
+SEVEN_TOOLS_TEXT = "①：罠カードが発動した時、１０００LPを払って発動できる。その発動を無効にし破壊する。"
+MIRROR_FORCE = 44095762  # 聖なるバリア－ミラーフォース－(陷阱)
+
+
+class SevenToolsTest(unittest.TestCase):
+    """盗賊の七つ道具 3819470(票 09):卡片發動、數量格(1000LP、段無物件)、無效且破壞。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(SEVEN_TOOLS, name_ja="盗賊の七つ道具", type=0x100004),
+            card(MIRROR_FORCE, name_ja="聖なるバリア－ミラーフォース－", type=TRAP),
+            card(GREEDY_POT, name_ja="強欲な壺", type=SPELL),
+            card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7,
+                 race=0x2, attribute=0x20, atk=2500),
+        ]
+        cls.faq = [faq(SEVEN_TOOLS, "盗賊の七つ道具", SEVEN_TOOLS_TEXT)]
+        cls.structures, cls.report = build_structures(cls.cards, cls.faq)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_negates_and_destroys_the_activated_trap(self):
+        """「その発動を無効にし破壊する」:「無效 且 破壞」命中;對象是發動的那張陷阱卡,
+        陷阱代入符合、魔法與怪獸不符。"""
+        self.assertIn(SEVEN_TOOLS, self.hits(actions=["無效", "破壞"]))
+        self.assertIn(SEVEN_TOOLS,
+                      self.hits(actions=["無效", "破壞"], card=MIRROR_FORCE))
+        self.assertNotIn(SEVEN_TOOLS, self.hits(actions=["無效"], card=GREEDY_POT))
+        self.assertNotIn(SEVEN_TOOLS, self.hits(actions=["破壞"], card=BLACK_MAGICIAN))
+
+    def test_paying_lp_is_a_cost_without_an_object(self):
+        """「１０００LPを払って」:支付 LP 是代價段、段無物件;只看效果段不命中。"""
+        self.assertIn(SEVEN_TOOLS, self.hits(actions=["支付"], kinds=["代價"]))
+        self.assertNotIn(SEVEN_TOOLS, self.hits(actions=["支付"], kinds=["效果"]))
+
+    def test_trap_activation_is_a_condition_segment(self):
+        """「罠カードが発動した時」:條件段,開關關不命中、開命中。"""
+        self.assertNotIn(SEVEN_TOOLS, self.hits(actions=["發動"]))
+        self.assertIn(SEVEN_TOOLS, self.hits(actions=["發動"], include_condition=True,
+                                             card=MIRROR_FORCE))
+
+    def test_numbered_effect_of_a_trap_is_a_numbered_block(self):
+        """魔陷的①是編號效果(spec 決定):限定編號效果區塊命中、限定卡片發動區塊不命中。"""
+        self.assertIn(SEVEN_TOOLS, self.hits(actions=["無效"], block_kinds=["編號效果"]))
+        self.assertNotIn(SEVEN_TOOLS, self.hits(actions=["無效"], block_kinds=["卡片發動"]))
+
+    def test_whole_card_passes_reverse_check(self):
+        structure = next(c for c in self.structures if c["id"] == SEVEN_TOOLS)
+        self.assertEqual(check_card(structure), [])
+
 
 if __name__ == "__main__":
     unittest.main()

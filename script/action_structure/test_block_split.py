@@ -66,12 +66,58 @@ class SplitBlocksTest(unittest.TestCase):
                 self.assertEqual(omitted[0]["text"], line)
 
     def test_summon_condition_and_material_lines_stay_as_blocks(self):
-        for line in KEPT_LINES:
+        """新式卡前言行的種類與舊式單位同一把尺(票 09):召喚條件句、素材行各自是區塊,種類判得出。"""
+        for line, kind in zip(KEPT_LINES, ("召喚條件", "召喚條件", "素材")):
             with self.subTest(line=line):
                 blocks, omitted = split_blocks(line + "\n①：Aを破壊する。")
                 self.assertEqual(omitted, [])
                 self.assertEqual(texts(blocks)[0], line)
-                self.assertEqual(blocks[0]["unparsed"]["reason"], "區塊種類判不出")
+                self.assertEqual(blocks[0]["kind"], kind)
+                self.assertIsNone(blocks[0]["unparsed"])
+
+    def test_bullet_list_stays_in_the_summon_condition_block(self):
+        """● 列舉一律留在區塊內(spec):新式卡前言的召喚條件句與它的 ● 行是同一個區塊。"""
+        text = ("「A」＋光属性モンスター\n"
+                "このカードは融合召喚及び以下の方法でのみ特殊召喚できる。\n"
+                "●自分フィールドの上記カードをリリースした場合にEXデッキから特殊召喚できる。\n"
+                "①：Aを破壊する。")
+        blocks, _ = split_blocks(text)
+        self.assertEqual([(b["kind"], b["label"]) for b in blocks],
+                         [("素材", None), ("召喚條件", None), ("編號效果", "①")])
+        self.assertEqual(texts(blocks)[1],
+                         "このカードは融合召喚及び以下の方法でのみ特殊召喚できる。\n"
+                         "●自分フィールドの上記カードをリリースした場合にEXデッキから特殊召喚できる。")
+
+    def test_one_line_with_two_sentences_splits_the_limit_off(self):
+        """一行兩句(「X」により降臨。このカード名の…):召喚條件句成區塊、次數限制進略過文本。"""
+        blocks, omitted = split_blocks(
+            "「機械天使の儀式」により降臨。このカード名の①の効果は１ターンに１度しか使用できない。\n"
+            "①：Aを破壊する。")
+        self.assertEqual([(b["kind"], b["text"]) for b in blocks],
+                         [("召喚條件", "「機械天使の儀式」により降臨。"), ("編號效果", "①：Aを破壊する。")])
+        self.assertEqual([(o["reason"], o["text"]) for o in omitted],
+                         [("次數限制", "このカード名の①の効果は１ターンに１度しか使用できない。")])
+
+    def test_unnumbered_effect_sentence_in_a_new_style_preamble_is_still_unknown(self):
+        """新式怪獸卡前言裡既非素材、召喚條件也非次數限制的句子:歸編號效果、標區塊種類判不出。"""
+        blocks, _ = split_blocks("このカードの効果を発動するターン、自分は他の効果を発動できない。\n"
+                                 "①：Aを破壊する。", category="怪獸")
+        self.assertEqual(blocks[0]["kind"], "編號效果")
+        self.assertEqual(blocks[0]["unparsed"]["reason"], "區塊種類判不出")
+
+    def test_first_unnumbered_effect_block_of_a_spell_or_trap_is_card_activation(self):
+        """魔陷卡沒有編號的第一個效果區塊是卡片發動(舊式魔陷整段卡文、新式魔陷前言的
+        「このカードを発動するターン、〜」);之後的「また、」區塊與①②③是編號效果。"""
+        blocks, _ = split_blocks("相手フィールド上のモンスター１体を破壊する。"
+                                 "また、このカードが墓地に存在する場合、Aを除外する。",
+                                 category="魔陷")
+        self.assertEqual([b["kind"] for b in blocks], ["卡片發動", "編號效果"])
+        self.assertTrue(all(b["unparsed"] is None for b in blocks))
+        blocks, _ = split_blocks("このカードを発動するターン、自分はモンスターを特殊召喚できない。\n"
+                                 "①：Aを破壊する。", category="魔陷")
+        self.assertEqual([(b["kind"], b["label"]) for b in blocks],
+                         [("卡片發動", None), ("編號效果", "①")])
+        self.assertTrue(all(b["unparsed"] is None for b in blocks))
 
     def test_pendulum_effect_blocks_come_from_pen_effect(self):
         blocks, _ = split_blocks("①：Aを破壊する。", pen_effect="①：Bを除外する。")

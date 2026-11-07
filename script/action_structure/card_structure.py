@@ -34,7 +34,7 @@
 import json
 
 from archetype_table import archetype_lookup, fold_width
-from block_split import split_blocks
+from block_split import CATEGORY_SPELL_TRAP, split_blocks
 from names_attributes import (SOURCE_OFFICIAL_NAME, extract_names,
                               extract_treat_as, fill_from_card_list,
                               treat_as_sentences)
@@ -70,7 +70,9 @@ def build_card(entry, faq_entry, lookups, boundary_patch=None, patch_status=None
     blocks, omitted = split_blocks(faq_entry.get("card_text", ""),
                                    faq_entry.get("pen_effect"),
                                    faq_entry.get("supplement"),
-                                   boundary_patch, patch_status)
+                                   boundary_patch, patch_status,
+                                   category=CATEGORY_SPELL_TRAP
+                                   if entry["type"] & 0x6 else "怪獸")
     card["omitted"] = omitted
     treat_as = treat_as_sentences(texts)
     for block in blocks:

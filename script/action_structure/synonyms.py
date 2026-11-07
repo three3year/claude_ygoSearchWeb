@@ -34,6 +34,9 @@ PREDICATE_STEMS = (
     ("直接攻撃", "直接攻擊", None),
     ("になる", "性質變更", None),       # 性質變更句「〜攻撃力は〜になる」(票 08,segment_fields)
     ("装備", "裝備", None),             # 票 06:〜を装備魔法カード扱いで〜に装備できる
+    ("払", "支付", None),               # 票 09:１０００LPを払って(段無物件,數量格)
+    ("無効に", "無效", None),           # 票 09:その発動を無効にし破壊する(し 串接)
+    ("通常召喚", "通常召喚", None),     # 票 09:召喚條件句「このカードは通常召喚できない」
 )
 MODIFY_ACTION = "性質變更"
 MODIFY_PREDICATE = "になる"
@@ -43,7 +46,8 @@ ACTION_PAST = {"翻開": "めくった", "特殊召喚": "特殊召喚した", "
                "解放": "リリースした", "加入手牌": "手札に加えた", "返回": "戻した",
                "融合召喚": "融合召喚した", "S召喚": "S召喚した", "X召喚": "X召喚した",
                "L召喚": "L召喚した", "展示": "見せた", "發動": "発動した",
-               "裝備": "装備した"}
+               "裝備": "装備した", "支付": "払った", "無效": "無効にした",
+               "通常召喚": "通常召喚した"}
 # 下位詞:S、X、L、融合召喚是特殊召喚的下位(spec「動作詞」),查「特殊召喚」要含它們;
 # 推得表與角色也照上位詞算(票 07)。
 ACTION_PARENT = {"融合召喚": "特殊召喚", "S召喚": "特殊召喚", "X召喚": "特殊召喚",
@@ -68,6 +72,7 @@ TAILS = {
     "て": ("主動", "做"), "た": ("主動", "做"), "った": ("主動", "做"), "って": ("主動", "做"),
     "す": ("主動", "做"), "り": ("主動", "做"),   # 連用形串接「〜に戻り、」(票 08)
     "え": ("主動", "做"),                         # 連用形串接「〜手札に加え、」(票 06)
+    "い": ("主動", "做"),                         # 連用形串接「〜LPを払い、」(票 09)
     "される": ("被動", "做"), "された": ("被動", "做"), "され": ("被動", "做"),
     "されて": ("被動", "做"),
     "られる": ("被動", "做"), "られた": ("被動", "做"), "られ": ("被動", "做"),
@@ -125,8 +130,9 @@ def parse_predicate(pred):
 
 
 def parse_predicates(pred):
-    """て形串接的述語字面(めくられて墓地へ送られた)→ [parse_predicate 的結果] 或 (None, 原因)。
-    單一述語也走這裡;串接時前面的語尾必須以て/で收尾。"""
+    """て形串接的述語字面(めくられて墓地へ送られた)、連用形串接(無効にし破壊する)→
+    [parse_predicate 的結果] 或 (None, 原因)。單一述語也走這裡;串接時前面的語尾必須是
+    て/で 或連用形的「し」。"""
     parsed, reason = parse_predicate(pred)
     if parsed is not None:
         return [parsed], None
@@ -135,8 +141,8 @@ def parse_predicates(pred):
             continue
         rest = pred[len(stem):]
         for tail in _TAILS_LONGEST_FIRST:
-            if tail and tail.endswith(("て", "で")) and rest.startswith(tail) \
-                    and len(rest) > len(tail):
+            if tail and (tail.endswith(("て", "で")) or tail == "し") \
+                    and rest.startswith(tail) and len(rest) > len(tail):
                 following, reason = parse_predicates(rest[len(tail):])
                 if following is not None:
                     voice, polarity, *optional = TAILS[tail]

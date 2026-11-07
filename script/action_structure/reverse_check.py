@@ -21,9 +21,9 @@ import re
 from attribute_atoms import is_param_atom, joiner, render_group, render_level
 from premise import NoPremiseTemplate, render_premise, split_premise
 from condition_atoms import render_atom
-from segment_extract import (ACTION_PAST, EXIST_WORDS, FROM_PARTICLES,
-                             HEAD_CATEGORY, HEAD_SUBTYPE, SIDE_WORDS, ZONE_WORDS,
-                             parse_from)
+from segment_extract import (ACTION_PAST, ACTIVATION_REF, EXIST_WORDS,
+                             FROM_PARTICLES, HEAD_CATEGORY, HEAD_SUBTYPE,
+                             SIDE_WORDS, ZONE_WORDS, parse_from)
 from segment_extract import _ACTION_REF_RE, _REF_RE, _TARGET_REF_RE  # 回指字面的句型,與抽取端同一把尺
 from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
                             render_timing, resolve_polarity)
@@ -40,7 +40,7 @@ REASON_RESIDUE = "段外殘留"
 TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polarity",
                   "trigger", "span", "text", "predicate", "voice", "unparsed",
                   "optional", "cause", "premise", "timing", "duration", "modified",
-                  "replaces"}
+                  "replaces", "amount"}
 # 被代替段是改了類別的條件段,模板同條件段(帶觸發形)。
 TEMPLATE_KINDS = ("條件", "代價", "效果", "被代替")
 # 區塊裡不屬於任何段的固定接著詞:發動句語尾(含舊式「発動する事ができる」,長的在前)、
@@ -285,6 +285,11 @@ def _render_ref(ref, obj, seg, card):
     先前被取對象的物件。"""
     if _REF_RE.match(ref):
         return ref
+    if ref == ACTIVATION_REF:
+        # 「その発動」指回本區塊先前被發動的那張卡(票 09)。
+        if _last_action_on(obj["id"], seg, card) != "發動":
+            raise NoTemplate("「その発動」回指的物件先前沒被發動")
+        return ref
     if _TARGET_REF_RE.match(ref):
         if not _targeted_earlier(obj["id"], seg, card):
             raise NoTemplate("「選択した」回指的物件先前沒被取對象")
@@ -498,7 +503,7 @@ def render_segment(seg, card, self_id="o0"):
                                          followed=not premise_only, self_id=self_id)
     if premise_only:
         return prefix
-    if not seg["lines"]:
+    if not seg["lines"] and not seg["amount"]:
         raise NoTemplate("段無對象線")
     if seg["replaces"]:
         prefix += REPLACEMENT_PREFIX   # 做代替的段:「代わりに」在段的範圍內
@@ -514,12 +519,19 @@ def render_segment(seg, card, self_id="o0"):
             # 誰的助詞:條件子句是「相手が〜した時」,效果句是「自分は〜する」(全庫 66:0、31:1)。
             parts.append(_SIDE_TEXT[seg["agent"]] + (
                 "が" if seg["kind"] in ("條件", "被代替") else "は"))
-        markers = {line["marker"] or "を" for line in seg["lines"]}
+        markers = {line["marker"] or "を" for line in seg["lines"]} or {"を"}
         if len(markers) != 1:
             raise NoTemplate("對象線的助詞或數量不一致")
         marker = markers.pop()
         targeting_text, predicate, predicate_to = _render_predicate(seg, marker)
         words, counts = [], set()
+        if seg["amount"]:
+            # 數量格(「１０００LPを払って」):段無物件,數量當受詞寫。
+            if seg["lines"] or seg["amount"].get("unit") != "LP" \
+                    or not isinstance(seg["amount"].get("value"), int):
+                raise NoTemplate("數量無模板")
+            words.append(str(seg["amount"]["value"]).translate(_TO_FULLWIDTH_DIGITS) + "LP")
+            counts.add("")
         for line in seg["lines"]:
             if targeting_text and not line["targeting"]:
                 raise NoTemplate("取對象字面下有線沒標取對象")

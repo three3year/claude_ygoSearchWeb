@@ -152,6 +152,10 @@ _EXIST_RE = re.compile(
 _FROM_RE = re.compile("^(?:(?P<side>自分か相手|自分|相手)の?)?(?P<zones>.+)$")
 _SELF_RE = re.compile("^このカード$")
 _REF_RE = re.compile("^(?P<ref>その|それらの)(?P<head>モンスター|カード)$")
+# 「その発動」:指回本區塊最近被發動的那張卡(「罠カードが発動した時、…その発動を無効にし」,票 09)。
+ACTIVATION_REF = "その発動"
+# 數量格(spec「數量」:支付 1000LP,段可無物件):「１０００LP」當受詞時不是物件。
+_AMOUNT_RE = re.compile("^(?P<digits>[０-９]+)(?P<unit>LP)$")
 _REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
 # 「選択したモンスター」:指回本區塊最近被取對象的同大類物件(舊式;新式用 そのモンスター)。
 _TARGET_REF_RE = re.compile(f"^{TARGET_REF}(?P<head>モンスター|カード)$")
@@ -443,6 +447,9 @@ class BlockState:
         if ref:
             obj_id = self.recent_of(ref.group("head"))
             return obj_id, phrase, (None if obj_id else REASON_REF)
+        if phrase == ACTIVATION_REF:
+            obj_id = self.recent_of("カード", action="發動")
+            return obj_id, phrase, (None if obj_id else REASON_REF)
         remainder = _REMAINDER_RE.match(phrase)
         if remainder:
             return self.remainder_object(phrase, remainder.group("head"),
@@ -643,6 +650,13 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     summoning = any("特殊召喚" in action_ancestors(a) for a in seg["actions"])
     inferred_side = (agent or "我方") if summoning else None
     count = floating_count(m.group("count")) if m.group("count") else None
+    amount = _AMOUNT_RE.match(m.group("objects"))
+    if amount:
+        # 「１０００LPを払って」:數量格,段無物件。
+        seg["amount"] = {"text": m.group("objects"),
+                         "value": int(amount.group("digits").translate(FULLWIDTH_DIGITS)),
+                         "unit": amount.group("unit")}
+        return
     for phrase in split_objects(m.group("objects")):
         obj_id, ref, reason = state.object_at(phrase, sentence_start)
         if obj_id is None:

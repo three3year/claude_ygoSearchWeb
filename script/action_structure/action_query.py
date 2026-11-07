@@ -613,7 +613,9 @@ def run_query(structures, cards, query):
                     matched.append(seg["id"])
                     if seg["kind"] == "被代替":
                         replaced_hits.add(seg["id"])
-                    if not all(is_generic(objects[l["object"]]) for l in lines):
+                    # 泛用 = 只靠泛用物件命中;沒有物件的段(支付 LP)不算泛用。
+                    if not lines or not all(is_generic(objects[l["object"]])
+                                            for l in lines):
                         generic = False
                     continue
                 if not segment_in_scope(seg, q):

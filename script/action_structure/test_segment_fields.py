@@ -188,5 +188,61 @@ class ModificationTest(unittest.TestCase):
                                     targeting=True))
 
 
+class BlockKindsAndSummonTest(unittest.TestCase):
+    """票 09 的句型:作為X素材的原因、句首的「１ターンに１度、」不記、「〜したターン、」條件段、
+    「罠カードとしても扱う」進大類、前提後的讀點有寫沒寫都還原得回。"""
+
+    def test_as_material_cause_round_trips_and_hits(self):
+        cards, structures = library(
+            "①：このカードがS素材として墓地へ送られた場合に発動できる。このカードを除外する。")
+        self.assertEqual(check_card(own(structures)), [])
+        self.assertIn(SELF, hits(cards, structures, actions=["送墓"], card=SELF,
+                                 include_condition=True, to_zones=["墓地"]))
+
+    def test_once_per_turn_at_the_sentence_start_is_omitted_text(self):
+        """「①：１ターンに１度、〜」與分歧引導句「１ターンに１度、以下の効果から〜」:次數限制不記、
+        進略過文本,段與引導句照常解析、整張通過反向檢查。"""
+        for text in ("①：１ターンに１度、このカードを破壊する。",
+                     "①：１ターンに１度、以下の効果から１つを選択して発動できる。\n"
+                     "●このカードを破壊する。\n●自分フィールドのモンスター１体を除外する。"):
+            with self.subTest(text=text):
+                cards, structures = library(text)
+                self.assertEqual(check_card(own(structures)), [])
+                self.assertIn(SELF, hits(cards, structures, actions=["破壞"], card=SELF))
+                self.assertEqual([o["reason"] for o in own(structures)["omitted"]], ["次數限制"])
+
+    def test_turn_clause_is_a_condition_segment_the_next_segment_refers_to(self):
+        """「このカードを発動したターン、〜」:發動是條件段(開關開才算),後面的段照常命中。"""
+        cards, structures = library(
+            "①：このカードを発動したターン、自分フィールドのモンスター１体を除外する。",
+            type=SPELL)
+        self.assertEqual(check_card(own(structures)), [])
+        self.assertNotIn(SELF, hits(cards, structures, actions=["發動"], card=SELF))
+        self.assertIn(SELF, hits(cards, structures, actions=["發動"], card=SELF,
+                                 include_condition=True))
+        self.assertIn(SELF, hits(cards, structures, actions=["除外"], from_zones=["場上"],
+                                 card=BLACK_MAGICIAN))
+
+    def test_treated_as_a_trap_card_counts_as_a_trap_for_queries(self):
+        """「このカードは罠カードとしても扱う」:卡片屬性表的大類列,代入「罠カード」物件時算陷阱。"""
+        sender = 10000109
+        cards = [card(SELF, name_ja="甲"), card(sender, name_ja="乙", type=SPELL)]
+        structures, _ = build_structures(cards, [
+            faq(SELF, "甲", "このカードは罠カードとしても扱う。\n①：このカードを破壊する。"),
+            faq(sender, "乙", "①：自分フィールドの罠カード１枚を墓地へ送る。")])
+        self.assertIn(sender, hits(cards, structures, actions=["送墓"], card=SELF))
+        self.assertNotIn(sender, hits(cards, structures, actions=["送墓"], card=BLACK_MAGICIAN))
+
+    def test_premise_pause_is_written_only_when_the_text_has_it(self):
+        """前提後的讀點有寫沒寫都有(票 05/08 留的 2 筆字面不符):照原文還原。"""
+        for text in ("①：相手フィールドにカードが存在しない状態でこのカードを発動した場合に発動できる。"
+                     "このカードを除外する。",
+                     "①：相手フィールドにカードが存在しない状態で、このカードを発動した場合に発動できる。"
+                     "このカードを除外する。"):
+            with self.subTest(text=text):
+                _, structures = library(text, type=SPELL)
+                self.assertEqual(check_card(own(structures)), [])
+
+
 if __name__ == "__main__":
     unittest.main()

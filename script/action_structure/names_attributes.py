@@ -40,13 +40,13 @@ TREAT_KINDS = {"罠カード": ("大類", "陷阱"), "魔法カード": ("大類
                "チューナー": ("卡片子類型", "協調")}
 _TREAT_RE = re.compile(
     "^(?P<subject>このカード(?:名|のカード名)?(?:は|が)、?)"
-    "(?P<scope>ルール上、?|(?P<zones>[^、「]+?)に存在する限り、?)"
+    "(?P<scope>ルール上、?|(?P<zones>[^、「]+?)に存在する限り、?)?"
     "(?P<prefix>カード名を|このカードのカード名は)?"
     "(?:(?P<names>「[^」]+」(?:(?:カード|モンスター)?、「[^」]+」)*)"
     "(?P<suffix>カード|モンスター)?"
     f"|(?P<kind>{'|'.join(TREAT_KINDS)}))"
     "として(?P<also>も)?扱う$")
-_SCOPE_RE = re.compile("^(?:ルール上、?|(?P<zones>[^、「]+?)に存在する限り、?)$")
+_SCOPE_RE = re.compile("^(?:ルール上、?|(?P<zones>[^、「]+?)に存在する限り、?)?$")
 _TREAT_KIND_TEXT = {value: text for text, value in TREAT_KINDS.items()}
 _WHERE_WORDS = (("EXデッキ", "額外牌組"), ("デッキ", "牌組"), ("手札", "手牌"),
                 ("フィールド上", "場上"), ("フィールドゾーン", "場地區"),
@@ -137,7 +137,7 @@ def parse_treat_as(sent):
         where = _parse_where(m.group("zones"))
         if where is None:
             return None
-    modified = {"subject": m.group("subject"), "scope": m.group("scope"),
+    modified = {"subject": m.group("subject"), "scope": m.group("scope") or "",
                 "where": where, "prefix": m.group("prefix"), "also": bool(m.group("also"))}
     if m.group("kind"):
         modified["attr"], modified["value"] = TREAT_KINDS[m.group("kind")]

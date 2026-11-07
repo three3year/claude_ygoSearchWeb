@@ -174,13 +174,18 @@ class CardView:
         tables = structure["attributes"] if structure and not structure["unparsed"] else None
         if tables:
             name_rows, archetype_rows = tables["name"], tables["archetype"]
+            category_rows = tables["category"]
         else:
             name_rows = [{"value": entry["name_ja"], "where": None}]
             archetype_rows = [{"value": code, "where": None}
                               for code in split_setcode(entry.get("setcode") or 0)]
+            category_rows = [{"value": name, "where": None}
+                             for name, bit in CATEGORY_BITS.items() if entry["type"] & bit]
         # 折疊與位置條件只算一次:只給條件的查詢會對幾千張卡反覆代入。
         self._names = [(fold_width(r["value"]), self._where(r)) for r in name_rows]
         self._codes = [(r["value"], self._where(r)) for r in archetype_rows]
+        # 大類也走卡片屬性表:「このカードは罠カードとしても扱う」的列(票 09)。
+        self._categories = [(r["value"], self._where(r)) for r in category_rows]
         self._structure = structure if tables else None
         self._text = None
 
@@ -219,6 +224,9 @@ class CardView:
 
     def setcodes(self, from_zones):
         return self._pick(self._codes, from_zones)
+
+    def categories(self, from_zones):
+        return self._pick(self._categories, from_zones)
 
 
 def _card_text(structure):
@@ -300,7 +308,7 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
     if op == "大類":
         if condition["value"] == "卡":
             return True
-        return bool(view.entry["type"] & CATEGORY_BITS[condition["value"]])
+        return condition["value"] in view.categories(from_zones)
     if op in ("位置", "控制方", "表示形式"):
         # 位置、控制方與表示形式不是卡的屬性:任何卡都代得進去(泛用原子)。
         return True

@@ -1128,5 +1128,43 @@ class SevenToolsTest(unittest.TestCase):
         self.assertEqual(check_card(structure), [])
 
 
+ODD_EYES_PENDULUM_DRAGON = 16178681  # オッドアイズ・ペンデュラム・ドラゴン(標準卡沒有靈擺卡,測 pen_effect 路徑)
+ODD_EYES_TEXT = "①：このカードが相手モンスターとの戦闘で相手に与える戦闘ダメージは倍になる。"
+ODD_EYES_PEN_EFFECT = (
+    "このカード名の①②のP効果はそれぞれ１ターンに１度しか使用できない。\n"
+    "①：自分のPモンスターの戦闘で発生する自分への戦闘ダメージを０にできる。\n"
+    "②：自分エンドフェイズに発動できる。このカードを破壊し、デッキから攻撃力１５００以下の"
+    "Pモンスター１体を手札に加える。")
+
+
+class OddEyesPendulumDragonTest(unittest.TestCase):
+    """靈擺效果取 pen_effect、區塊種類 靈擺效果(票 09):只斷言區塊種類的限定,不要求整張過反向檢查。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(ODD_EYES_PENDULUM_DRAGON, name_ja="オッドアイズ・ペンデュラム・ドラゴン",
+                          type=0x1000021, level=7, race=0x2000, attribute=0x20, scale=4)]
+        cls.faq = [faq(ODD_EYES_PENDULUM_DRAGON, "オッドアイズ・ペンデュラム・ドラゴン",
+                       ODD_EYES_TEXT, pen_effect=ODD_EYES_PEN_EFFECT)]
+        cls.structures, cls.report = build_structures(cls.cards, cls.faq)
+
+    def hits(self, **query):
+        result = run_query(self.structures, self.cards, query)
+        return [hit["id"] for hit in result["hits"]]
+
+    def test_pendulum_effect_destroying_itself_is_only_in_the_pendulum_block(self):
+        """P 效果②「このカードを破壊し」:限定靈擺效果區塊命中、限定編號效果區塊不命中;
+        靈擺效果的次數限制行也進略過文本。"""
+        self.assertIn(ODD_EYES_PENDULUM_DRAGON,
+                      self.hits(actions=["破壞"], card=ODD_EYES_PENDULUM_DRAGON,
+                                block_kinds=["靈擺效果"]))
+        self.assertNotIn(ODD_EYES_PENDULUM_DRAGON,
+                         self.hits(actions=["破壞"], card=ODD_EYES_PENDULUM_DRAGON,
+                                   block_kinds=["編號效果"]))
+        structure = self.structures[0]
+        self.assertEqual([(o["source"], o["reason"]) for o in structure["omitted"]],
+                         [("pen_effect", "次數限制")])
+
+
 if __name__ == "__main__":
     unittest.main()

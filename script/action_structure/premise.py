@@ -101,6 +101,10 @@ def split_premises(body, state, start, parse_zones, zone_literal=lambda phrase: 
         pos += length
         text_end = start + pos - (1 if body[pos - 1] == "、" else 0)
         if body.startswith("、", pos):
+            # 位置/存在原子後的讀點有寫沒寫都有(「状態で、」「状態で」),記進 form,模板照它寫(票 09)。
+            target = atom["arg"] if atom.get("op") == "非" else atom
+            if target.get("op") in ("位置", "存在"):
+                target["form"] += "、"
             pos += 1
     if not atoms:
         return None, start, start
@@ -206,19 +210,21 @@ def render_premise(premise, render_zones, render_object, followed=True):
         if op not in ("位置", "存在"):
             raise NoPremiseTemplate(f"前提原子無模板:{op}")
         verb = "存在しない" if negated else "存在する"
-        if atom.get("form") not in ("場合", "状態で"):
+        form = atom.get("form") or ""
+        if form.rstrip("、") not in ("場合", "状態で"):
             raise NoPremiseTemplate("前提形式無模板")
+        if last:
+            form = form.rstrip("、")   # 後面沒有子句時讀點不在原文範圍內
         if atom.get("elided"):
             # 分歧引導句的「存在しない場合」:物件與區域承前省略(segment_tree)。
             if not negated:
                 raise NoPremiseTemplate("省略的存在前提只能是否定")
-            pieces.append(verb + atom["form"] + ("" if last else "、"))
+            pieces.append(verb + form)
             continue
         obj = render_object(atom["object"])
         zones = render_zones(atom["zones"], atom.get("text"))
         if op == "位置" or atom.get("order") == "物件":
-            text = f"{obj}が{zones}に{verb}{atom.get('form', '')}"
+            pieces.append(f"{obj}が{zones}に{verb}{form}")
         else:
-            text = f"{zones}に{obj}が{verb}{atom.get('form', '')}"
-        pieces.append(text + ("" if last else "、"))
+            pieces.append(f"{zones}に{obj}が{verb}{form}")
     return "".join(pieces)

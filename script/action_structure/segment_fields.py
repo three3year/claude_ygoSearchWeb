@@ -34,12 +34,26 @@ CAUSE_FORMS = {
     "戦闘・効果で": ("戰鬥或效果", None), "戦闘・効果によって": ("戰鬥或效果", None),
     "戦闘または効果で": ("戰鬥或效果", None),
 }
-CAUSE_PATTERN = "|".join(sorted(map(re.escape, CAUSE_FORMS), key=len, reverse=True))
+# 作為X素材(票 09):「S素材として墓地へ送られた」→ {"kind": "作為素材", "text": 字面, "summon": 卡片子類型}
+# (「素材として」沒寫哪種召喚就沒有 summon)。
+CAUSE_MATERIAL = "作為素材"
+MATERIAL_FORMS = {
+    "融合素材として": "融合", "S素材として": "同步", "シンクロ素材として": "同步",
+    "X素材として": "超量", "エクシーズ素材として": "超量", "L素材として": "連結",
+    "リンク素材として": "連結", "素材として": None,
+}
+CAUSE_PATTERN = "|".join(sorted(map(re.escape, [*CAUSE_FORMS, *MATERIAL_FORMS]),
+                                key=len, reverse=True))
 REPLACEMENT_PREFIX = "代わりに"
 
 
 def parse_cause(text):
     """原因字面 → cause 格;不在閉集回 None。"""
+    if text in MATERIAL_FORMS:
+        cause = {"kind": CAUSE_MATERIAL, "text": text}
+        if MATERIAL_FORMS[text]:
+            cause["summon"] = MATERIAL_FORMS[text]
+        return cause
     if text not in CAUSE_FORMS:
         return None
     kind, side = CAUSE_FORMS[text]
@@ -53,10 +67,15 @@ def render_cause(cause):
     """cause 格 → 字面;字面與種類、方對不上(不在閉集)回 None。"""
     if not cause:
         return ""
-    expected = CAUSE_FORMS.get(cause.get("text"))
+    text = cause.get("text")
+    if cause.get("kind") == CAUSE_MATERIAL:
+        if text not in MATERIAL_FORMS or MATERIAL_FORMS[text] != cause.get("summon"):
+            return None
+        return text
+    expected = CAUSE_FORMS.get(text)
     if expected is None or expected != (cause.get("kind"), cause.get("side")):
         return None
-    return cause["text"]
+    return text
 
 
 # ── 極性 ─────────────────────────────────────────────────────

@@ -113,6 +113,7 @@ _ACTIVATION_RE = re.compile("^(?P<body>.*?)(?P<suffix>" + "|".join(ACTIVATION_SU
 # 次數限制字面(「１ターンに１度、」):spec 說不記,出現在句中時進略過文本(原因 次數限制),
 # 反向檢查比對時扣掉。
 INTERVAL_PATTERN = "(?:１ターンに|デュエル中に)[１-９]度、"
+_INTERVAL_RE = re.compile(INTERVAL_PATTERN)
 INTERVAL_REASON = "次數限制"
 # 原因(票 09 加):「「X」の効果で」= 某張卡的效果(物件);「融合召喚及び以下の方法で」= 召喚方式
 # (「以下の方法」指後面的 ● 列舉)。閉集字面(戦闘で…)在 segment_fields.CAUSE_FORMS。
@@ -987,6 +988,12 @@ def parse_sentence(state, start, end):
         _fill_clause(turn_seg, turn.group("cond"), "條件", state, start)
         start += turn.start("rest")
         body = turn.group("rest")
+    interval = _INTERVAL_RE.match(body)
+    if interval:
+        # 句首的「１ターンに１度、」(①：１ターンに１度、〜):次數限制不記,進略過文本。
+        state.omit(start, interval.group(), INTERVAL_REASON)
+        start += interval.end()
+        body = body[interval.end():]
     premise, premise_end, clause_start = split_premises(body, state, start,
                                                         parse_from, zone_literal)
     body = text[clause_start:start + len(body)]

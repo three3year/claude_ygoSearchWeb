@@ -25,8 +25,8 @@
 import re
 
 from premise import NoPremiseTemplate, render_premise, split_premises
-from segment_extract import (BlockState, parse_from, parse_sentence, sentences,
-                             zone_literal)
+from segment_extract import (INTERVAL_REASON, _INTERVAL_RE, BlockState, parse_from,
+                             parse_sentence, sentences, zone_literal)
 from structure_shape import (branch_node, embedded_node, new_block, segment_node,
                              unparsed)
 
@@ -149,6 +149,15 @@ def _split_headers(state, spans):
     return headers, plain
 
 
+def _strip_interval(state, pre, start):
+    """引導句開頭的「１ターンに１度、」(票 09):次數限制不記、進略過文本;回傳 (其餘前提字面, 起點)。"""
+    m = _INTERVAL_RE.match(pre)
+    if not m:
+        return pre, start
+    state.omit(start, m.group(), INTERVAL_REASON)
+    return pre[m.end():], start + m.end()
+
+
 def _parse_items(state, items):
     """● 列舉的每一支:各自一份狀態,支內句子成序列;回傳各支 {"premise", "items"}。"""
     text = state.block["text"]
@@ -214,6 +223,10 @@ def _branch(state, headers, branches):
         node = branch_node(None, branches=branches)
         node["unparsed"] = unparsed(REASON_BRANCH_MODE)
         return node
+    if len(headers) == 1:
+        kind, pre, form, start, join = headers[0]
+        pre, start = _strip_interval(state, pre, start)
+        headers = [(kind, pre, form, start, join)]
     if len(headers) == 1 and not headers[0][1]:
         _, _, form, _, join = headers[0]
         mode, chooser = _HEADER_FORMS[form]
@@ -261,6 +274,7 @@ def _header_premise(state, pre, start, previous):
             return None
         elided = {k: v for k, v in atom.items() if k != "order"}
         elided["elided"] = True
+        elided["form"] = "場合、" if pre.endswith("、") else "場合"
         return {"op": "非", "arg": elided}
     premise, _, clause_start = split_premises(pre, state, start, parse_from,
                                               zone_literal)

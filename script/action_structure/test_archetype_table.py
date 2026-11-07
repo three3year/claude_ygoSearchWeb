@@ -83,7 +83,7 @@ class ParseTest(unittest.TestCase):
             (0x1bc, "アザミナ"), (0x1e2, "ＡＮＧＥＬＥＣＨＹ")])
 
     def test_reading_and_slash_variants(self):
-        """「漢字（読み）」與「A／B」兩種寫法都登記,官方卡文用哪一半不固定(筆記 06)。"""
+        """「漢字（読み）」與「A／B」兩種寫法都登記,官方卡文用哪一半不固定(docs/data_sources.md)。"""
         self.assertEqual(name_variants("古代の機械（アンティーク・ギア）"),
                          ["古代の機械", "アンティーク・ギア"])
         self.assertEqual(name_variants("融合／フュージョン"), ["融合", "フュージョン"])

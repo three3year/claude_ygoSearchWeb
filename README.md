@@ -247,6 +247,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 靈擺卡填、`link_marker` 只在 Link 怪填。`setcode` 不在此列——系列碼是卡面上真的有的
 東西。建置報告會驗「大類是怪獸 ⟺ 有種族與屬性」這道不變式。
 
+其他資料來源(`faq_info.json`、setcode、`strings.conf`、官方文本的格式坑)查哪個檔,見 `docs/data_sources.md`。
+
 ## tag_cards.json 欄位
 
 一卡一物件,`id` + `clauses`(純通常怪獸為空陣列);穩定鍵為

@@ -111,7 +111,7 @@ def build_structures(cards, faq_entries, archetypes=None, built_at="",
     """卡片總表 + 官方 DB 文本 + 字段表 → (一卡一結構的列表, report)。
 
     `built_at` 與 `sources` 只寫進 report:產物不含時間,入版控後 git diff 才讀得出
-    改了什麼(筆記 03 第 6 點)。`boundary_patches` 是邊界補丁列表(`data/block_boundaries.json`),
+    改了什麼(README「動作搜尋的卡片結構」)。`boundary_patches` 是邊界補丁列表(`data/block_boundaries.json`),
     每筆的結果(生效 / 卡文已變動 / …)依狀態附卡號進 report["boundary_patches"]。
     """
     by_password = {}

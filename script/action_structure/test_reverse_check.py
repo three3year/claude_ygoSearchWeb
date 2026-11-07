@@ -34,7 +34,7 @@ class NormaliseTest(unittest.TestCase):
                          "魔法カード1枚を捨てて(A)")
 
     def test_circled_numbers_are_not_folded_to_digits(self):
-        """NFKC 會把 ① 折成 1(筆記 00 第 4 點),這裡不能:編號字元與數字要分得開。"""
+        """NFKC 會把 ① 折成 1(docs/data_sources.md),這裡不能:編號字元與數字要分得開。"""
         self.assertEqual(normalise("①：１枚"), "①:1枚")
         self.assertNotEqual(normalise("①"), normalise("1"))
 

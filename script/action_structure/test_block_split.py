@@ -21,7 +21,7 @@ KEPT_LINES = (
     "「ブラック・マジシャン」＋光・闇属性モンスター",
 )
 
-# 森羅の神芽 スプラウト 10753491 的官方 DB 文本與補足情報(筆記 02)。
+# 森羅の神芽 スプラウト 10753491 的官方 DB 文本與補足情報(data/sources/faq_info.json)。
 SPROUT_TEXT = (
     "このカードが特殊召喚に成功した時、自分のデッキの上からカードを２枚までめくる事ができる。"
     "めくったカードの中に植物族モンスターがあった場合、それらのモンスターを全て墓地へ送る。"
@@ -52,7 +52,7 @@ def texts(blocks):
 class SplitBlocksTest(unittest.TestCase):
 
     def test_numbered_blocks_split_on_marker_even_without_newline(self):
-        """①②接在同一行(筆記 01:3,422 張)也要切成兩個區塊。"""
+        """①②接在同一行(docs/data_sources.md:3,422 張)也要切成兩個區塊。"""
         blocks, _ = split_blocks("①：Aを破壊する。②：Bを除外する。")
         self.assertEqual([b["label"] for b in blocks], ["①", "②"])
         self.assertEqual(texts(blocks), ["①：Aを破壊する。", "②：Bを除外する。"])

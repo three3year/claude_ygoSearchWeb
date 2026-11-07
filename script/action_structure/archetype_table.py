@@ -5,7 +5,7 @@
 讀檔、寫檔、印報告在薄殼 `build_archetypes.py`;報告正文不含時間,同一輸入兩次相同。
 
 - 來源 strings.conf(`data/sources_vendored/strings.conf`,入版控)格式:`!setname <0x碼> <名稱>`,
-  名稱後若有 tab,tab 之後是註解;`#!setname` 是被註解掉的系列,不算(筆記 06)。
+  名稱後若有 tab,tab 之後是註解;`#!setname` 是被註解掉的系列,不算(docs/data_sources.md)。
 - 名稱的兩種寫法都登記:「漢字（読み）」(古代の機械（アンティーク・ギア）)與「A／B」
   (融合／フュージョン),官方卡文用哪一半不固定。名稱是全形英數、卡文是半形,
   比對一律先 `fold_width`。

@@ -26,7 +26,7 @@
 {"setcode":26,"hex":"0x1a","names_ja":["黒蠍"],"name_zh":"黑蠍","source":"strings.conf"},
 {"setcode":27,"hex":"0x1b","names_ja":["幻獣"],"name_zh":"幻獸","source":"strings.conf"},
 {"setcode":29,"hex":"0x1d","names_ja":["コアキメイル"],"name_zh":"核成","source":"strings.conf"},
-{"setcode":30,"hex":"0x1e","names_ja":["Ｃ","コクーン"],"name_zh":"繭狀體","source":"補丁"},
+{"setcode":30,"hex":"0x1e","names_ja":["Ｃ","コクーン"],"name_zh":"繭狀體","source":"strings.conf"},
 {"setcode":31,"hex":"0x1f","names_ja":["Ｎ","ネオスペーシアン"],"name_zh":"新空間俠","source":"strings.conf"},
 {"setcode":32,"hex":"0x20","names_ja":["紫炎"],"name_zh":"紫炎","source":"strings.conf"},
 {"setcode":33,"hex":"0x21","names_ja":["地縛"],"name_zh":"地縛","source":"strings.conf"},

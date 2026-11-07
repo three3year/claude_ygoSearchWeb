@@ -151,6 +151,19 @@ class ArchetypeConditionTest(unittest.TestCase):
         self.assertIn(Q_BM_FROM_GRAVE,
                       self.hits(actions=["特殊召喚"], card=BLACK_MAGICIAN))
 
+    def test_treat_as_line_after_a_material_line_is_still_recognised(self):
+        """素材行沒有句號,「〜として扱う」句要靠換行與它分開(票 09 修的票 04 漏洞):
+        那一句進略過文本、字段列照記。"""
+        cards = [card(SKY_STRIKER_LIKE, name_ja="甲", type=0x2000021),
+                 card(93920745, name_ja="ペンギン・ソルジャー", setcode=0x5a)]
+        structures, _ = build_structures(cards, [faq(
+            SKY_STRIKER_LIKE, "甲",
+            "闇属性モンスターを含むモンスター２体\nこのカード名はルール上「ペンギン」カードとしても扱う。\n"
+            "①：このカードを破壊する。")], archetypes=ARCHETYPES)
+        own = structures[0]
+        self.assertEqual([o["reason"] for o in own["omitted"]], ["視為(卡片屬性表)"])
+        self.assertIn(0x5a, [row["value"] for row in own["attributes"]["archetype"]])
+
     def test_rule_archetype_applies_anywhere(self):
         """「ルール上「ペンギン」カードとしても扱う」:沒有 setcode 的魔法卡從牌組也算ペンギン卡。"""
         self.assertIn(Q_PENGUIN_CARD,

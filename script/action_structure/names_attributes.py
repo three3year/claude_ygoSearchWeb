@@ -57,10 +57,11 @@ TREAT_PREDICATE = "として扱う"
 
 
 def _sentences(text):
-    """(偏移, 句子)列表:以「。」切、去掉編號「①：」與 ● 等開頭標記、頭尾空白。"""
+    """(偏移, 句子)列表:以「。」與換行切(素材行沒有句號,只靠換行與下一句分開)、
+    去掉編號「①：」與 ● 等開頭標記、頭尾空白。"""
     out = []
     pos = 0
-    for raw in text.split("。"):
+    for raw in re.split("[。\n]", text):
         start = pos
         pos += len(raw) + 1
         sent = raw

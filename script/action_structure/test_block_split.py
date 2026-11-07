@@ -98,6 +98,16 @@ class SplitBlocksTest(unittest.TestCase):
         self.assertEqual([(o["reason"], o["text"]) for o in omitted],
                          [("次數限制", "このカード名の①の効果は１ターンに１度しか使用できない。")])
 
+    def test_more_summon_condition_shapes(self):
+        """票 09 補進召喚條件句的句型(各取全庫真實句)。"""
+        for line in ("自分フィールドの上記カードをデッキに戻した場合のみ、EXデッキから特殊召喚できる（「融合」は必要としない）。",
+                     "このカードは自分フィールドの「No.38 希望魁竜タイタニック・ギャラクシー」の上に重ねてX召喚する事もできる。",
+                     "自分フィールドにモンスターが存在する場合、このカードは召喚・特殊召喚できない。",
+                     "レベル４がP召喚可能な場合にEXデッキの表側のこのカードはP召喚できる。"):
+            with self.subTest(line=line):
+                blocks, _ = split_blocks(line + "\n①：Aを破壊する。", category="怪獸")
+                self.assertEqual(blocks[0]["kind"], "召喚條件")
+
     def test_unnumbered_effect_sentence_in_a_new_style_preamble_is_still_unknown(self):
         """新式怪獸卡前言裡既非素材、召喚條件也非次數限制的句子:歸編號效果、標區塊種類判不出。"""
         blocks, _ = split_blocks("このカードの効果を発動するターン、自分は他の効果を発動できない。\n"

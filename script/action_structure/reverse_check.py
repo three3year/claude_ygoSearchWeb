@@ -22,6 +22,7 @@ import re
 from archetype_table import fold_width
 from attribute_atoms import is_param_atom, joiner, render_group, render_level
 from block_split import LABEL_WIDTH
+from report_common import card_order, safe_label
 from premise import render_premise, split_premise
 from condition_atoms import quoted_name, render_atom
 from names_attributes import TREAT_PREDICATE, render_treat_as
@@ -735,7 +736,7 @@ def check_structures(structures):
     segments = 0
     no_text = 0
     failures = []
-    for card in sorted(structures, key=lambda c: c["id"]):
+    for card in sorted(structures, key=lambda c: card_order(c["id"])):
         if card["unparsed"]:
             no_text += 1
             continue
@@ -760,7 +761,7 @@ def _group(failures, key):
 
 
 def _count_line(title, items, unit):
-    cards = sorted({f["card"] for f in items})
+    cards = sorted({f["card"] for f in items}, key=card_order)
     return f"{title}({len(items)} {unit} / {len(cards)} 張)", cards
 
 
@@ -780,7 +781,7 @@ def _reason_section(reason, items):
         return lines
     lines.append("各細項附全部卡號(依卡號),細項依段數多的在前。")
     lines.append("")
-    details = _group(items, lambda f: f["detail"])
+    details = _group(items, lambda f: safe_label(f["detail"]))
     for detail, group in sorted(details.items(), key=lambda kv: (-len(kv[1]), kv[0])):
         title, cards = _count_line(detail, group, unit)
         lines.append(f"- {title}:{', '.join(map(str, cards))}")

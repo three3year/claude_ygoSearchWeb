@@ -18,6 +18,7 @@
 from collections import Counter, defaultdict
 
 from names_attributes import SOURCE_DECLARATION, SOURCE_QUOTE
+from report_common import card_order, safe_label
 from structure_shape import (BLOCK_KINDS, OBJECT_SOURCES, POSITION_SOURCES,
                              SEGMENT_KINDS, iter_segments)
 
@@ -44,7 +45,7 @@ def _reason_bucket():
 
 
 def _add_reason(reasons, reason, cid):
-    bucket = reasons[reason]
+    bucket = reasons[safe_label(reason)]
     bucket["count"] += 1
     bucket["cards"].add(cid)
 
@@ -52,7 +53,7 @@ def _add_reason(reasons, reason, cid):
 def _finish_reasons(reasons, unit):
     """原因 → {單位數, 卡號(排序去重)};原因依名稱排序,報告才穩定。"""
     return {reason: {unit: bucket["count"],
-                     "cards": sorted(bucket["cards"])}
+                     "cards": sorted(bucket["cards"], key=card_order)}
             for reason, bucket in sorted(reasons.items())}
 
 
@@ -140,7 +141,7 @@ def build_coverage(structures):
     return {
         "cards": len(structures),
         "with_structure": len(structures) - len(no_text),
-        "no_official_text": sorted(no_text),
+        "no_official_text": sorted(no_text, key=card_order),
         "blocks": {"total": blocks_total, "parsed": blocks_parsed,
                    "unparsed": blocks_total - blocks_parsed,
                    "by_kind": _finish_by_kind(block_kinds, BLOCK_KINDS, "blocks"),
@@ -148,7 +149,7 @@ def build_coverage(structures):
         "segments": {"total": segs_total, "parsed": segs_parsed,
                      "unparsed": segs_total - segs_parsed - segs_unstructured,
                      "unstructured": segs_unstructured,
-                     "unstructured_cards": sorted(unstructured_cards),
+                     "unstructured_cards": sorted(unstructured_cards, key=card_order),
                      "by_kind": _finish_by_kind(seg_kinds, SEGMENT_KINDS,
                                                 "segments"),
                      "reasons": _finish_reasons(seg_reasons, "segments")},
@@ -166,8 +167,8 @@ def build_coverage(structures):
                     "unparsed": objects_unparsed,
                     "by_source": {s: obj_sources[s] for s in OBJECT_SOURCES},
                     "reasons": _finish_reasons(obj_reasons, "objects")},
-        "unknown_names": {name: sorted(cards)
-                          for name, cards in sorted(unknown_names.items())},
+        "unknown_names": {name: sorted(cards, key=card_order)
+                          for name, cards in sorted(unknown_names.items(), key=lambda kv: str(kv[0]))},
     }
 
 

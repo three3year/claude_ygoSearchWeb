@@ -156,7 +156,7 @@ class ReportTest(unittest.TestCase):
         ]
         return cards, entries
 
-    def test_report_counts_and_lists_every_card_per_reason(self):
+    def test_report_counts_per_reason(self):
         cards, entries = self.library()
         structures, _ = build_structures(cards, entries)
         md = render_report(check_structures(structures))
@@ -166,7 +166,6 @@ class ReportTest(unittest.TestCase):
         self.assertIn("| 有段外殘留的區塊 | 0 |", md)
         self.assertIn("| 無官方日文(不計) | 1 |", md)
         self.assertIn("### 無模板(3 段 / 3 張)", md)
-        self.assertIn("段解析不出:述語解析不出(3 段 / 3 張):2, 3, 4", md)
         self.assertIn("### 字面不符(1 段 / 1 張)", md)
         self.assertIn("`5` 戊 `b0.s2` 產生「デッキから闇属性モンスター１体を特殊召喚する」"
                       "原文「デッキから闇属性のモンスター１体を特殊召喚する」", md)
@@ -206,6 +205,51 @@ class CliTest(unittest.TestCase):
             self.assertEqual(first, second)
             self.assertNotIn(b"\r\n", first)
             self.assertIn("| 不通過 | 4 |".encode("utf-8"), first)
+
+    def test_cli_lists_every_card_per_reason_without_truncation_including_broken_values(self):
+        """「每類附全部卡號」列全部(CODING_STANDARDS):無模板 120 段、字面不符 4 段、段外殘留 3 筆
+        同時出現;產物裡有格式壞掉的值——卡號是字串、解析不出的原因是空字串/含換行/不是字串——
+        走 CLI 寫出的 md 仍把每張卡列出來、不截斷、不崩。"""
+        bounce = [card(80000000 + i, name_ja=f"彈{i}") for i in range(120)]
+        mismatch = [card(81000000 + i, name_ja=f"闇{i}", type=SPELL) for i in range(4)]
+        residue = [card(82000000 + i, name_ja=f"殘{i}") for i in range(3)]
+        cards = bounce + mismatch + residue
+        entries = ([faq(c["id"], c["name_ja"], "①：このカードをバウンスする。") for c in bounce]
+                   + [faq(c["id"], c["name_ja"], "①：デッキから闇属性のモンスター１体を特殊召喚する。")
+                      for c in mismatch]
+                   + [faq(c["id"], c["name_ja"], "①：このカードを破壊する。相手に５００ダメージを与える。")
+                      for c in residue])
+        structures, _ = build_structures(cards, entries)
+        by_id = {s["id"]: s for s in structures}
+        for cid in (82000000, 82000001, 82000002):
+            block = by_id[cid]["blocks"][0]
+            block["segments"] = block["segments"][:1]
+            block["tree"]["items"] = block["tree"]["items"][:1]
+        by_id[80000000]["blocks"][0]["segments"][0]["unparsed"] = {"reason": ""}
+        by_id[80000001]["blocks"][0]["segments"][0]["unparsed"] = {"reason": "原因\n換行"}
+        by_id[80000002]["blocks"][0]["segments"][0]["unparsed"] = {"reason": 123}
+        by_id[80000119]["id"] = "壞卡號"
+        with tempfile.TemporaryDirectory() as tmp:
+            product = os.path.join(tmp, "action_structure.json")
+            out = os.path.join(tmp, "reverse_check.md")
+            with open(product, "w", encoding="utf-8", newline="\n") as f:
+                f.write(serialize_structures(structures))
+            self.assertEqual(build_reverse_check.main(["--structures", product, "--out", out]), 0)
+            with open(out, encoding="utf-8") as f:
+                md = f.read()
+        self.assertIn("| 不通過 | 124 |", md)
+        self.assertIn("### 無模板(120 段 / 120 張)", md)
+        self.assertIn("### 字面不符(4 段 / 4 張)", md)
+        self.assertIn("### 段外殘留(3 筆 / 3 張)", md)
+        line = next(l for l in md.splitlines() if l.startswith("- 段解析不出:述語解析不出(117 段 / 117 張):"))
+        listed = line.split(":", 2)[2].split(", ")
+        self.assertEqual(listed, [str(c["id"]) for c in bounce[3:119]] + ["壞卡號"])
+        self.assertIn("- 段解析不出:(1 段 / 1 張):80000000", md)
+        self.assertIn("- (格式壞掉:'段解析不出:原因\\n換行')(1 段 / 1 張):80000001", md)
+        self.assertIn("- 段解析不出:123(1 段 / 1 張):80000002", md)
+        for entry in mismatch:
+            self.assertIn(f"- `{entry['id']}` {entry['name_ja']} `b0.s2` 產生「", md)
+        self.assertIn("- 相手に５００ダメージを与える(3 筆 / 3 張):82000000, 82000001, 82000002", md)
 
 
 if __name__ == "__main__":

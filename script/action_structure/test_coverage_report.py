@@ -11,7 +11,7 @@ import build_report
 from card_structure import build_structures, serialize_structures
 from coverage_report import build_coverage, render_coverage
 from test_card_structure import fixtures
-from test_golden import SINGULARITY_FIEND, card
+from test_golden import SINGULARITY_FIEND, card, faq
 
 
 class BuildCoverageTest(unittest.TestCase):
@@ -100,15 +100,14 @@ class BuildCoverageTest(unittest.TestCase):
 
 class RenderCoverageTest(unittest.TestCase):
 
-    def test_markdown_lists_every_card_id_without_truncation(self):
-        """「附卡號」要列全部:60 張無官方日文的卡,每個卡號都在報告裡。"""
-        cards = [card(90000000 + i, name_ja=f"無日文{i}") for i in range(60)]
-        structures, _ = build_structures(cards, [])
+    def test_none_reason_is_listed_as_a_broken_value(self):
+        """記憶體裡的結構(產物會把 None 省略掉,到不了 CLI):原因 None 不會讓報告排序崩掉,照 repr 列出。"""
+        cards = [card(1, name_ja="甲")]
+        structures, _ = build_structures(cards, [faq(1, "甲", "①：このカードをバウンスする。")])
+        segment = structures[0]["blocks"][0]["segments"][0]
+        segment["unparsed"] = {"reason": None}
         text = render_coverage(build_coverage(structures))
-        for entry in cards:
-            self.assertIn(str(entry["id"]), text)
-        self.assertIn("卡片總表 60 張", text)
-        self.assertIn("無官方日文 60 張", text)
+        self.assertIn("#### (格式壞掉:None)(1 段 / 1 張)", text)
 
     def test_markdown_has_no_timestamp_and_is_deterministic(self):
         cards, entries = fixtures()
@@ -158,6 +157,51 @@ class CliTest(unittest.TestCase):
             self.assertIn("20240828", text)
             self.assertIn("區塊種類判不出", text)
             self.assertIn("59400890", text)
+
+    def test_cli_lists_every_card_without_truncation_including_broken_values(self):
+        """「附卡號」列全部(CODING_STANDARDS):130 張無官方日文 + 兩類解析不出(區塊種類判不出、
+        段的述語解析不出)同時出現;產物裡還有格式壞掉的值——卡號是字串、原因是空字串、含換行、
+        不是字串——走 CLI 寫出的 md 仍把每張卡、每個原因都列出來、不截斷、不崩。"""
+        no_text = [card(90000000 + i, name_ja=f"無日文{i}") for i in range(130)]
+        bounce = [card(80000000 + i, name_ja=f"彈{i}") for i in range(12)]
+        unknown_block = [card(70000000 + i, name_ja=f"前言{i}") for i in range(3)]
+        cards = no_text + bounce + unknown_block
+        entries = ([faq(c["id"], c["name_ja"], "①：このカードをバウンスする。") for c in bounce]
+                   + [faq(c["id"], c["name_ja"],
+                          "このカードの効果を発動するターン、自分は特殊召喚できない。\n"
+                          "①：このカードを破壊する。") for c in unknown_block])
+        structures, _ = build_structures(cards, entries)
+        by_id = {s["id"]: s for s in structures}
+        broken = [by_id[80000000], by_id[80000001], by_id[80000002]]
+        broken[0]["blocks"][0]["segments"][0]["unparsed"] = {"reason": ""}
+        broken[1]["blocks"][0]["segments"][0]["unparsed"] = {"reason": "原因\n換行"}
+        broken[2]["blocks"][0]["segments"][0]["unparsed"] = {"reason": 123}
+        by_id[90000129]["id"] = "壞卡號"
+        with tempfile.TemporaryDirectory() as tmp:
+            structures_path, cards_path = self._write_inputs(tmp, cards, structures)
+            out_path = os.path.join(tmp, "coverage.md")
+            self.assertEqual(build_report.main(
+                ["--structures", structures_path, "--cards", cards_path,
+                 "--out", out_path]), 0)
+            with open(out_path, encoding="utf-8") as f:
+                text = f.read()
+        for entry in no_text[:-1]:
+            self.assertIn(f"- `{entry['id']}`", text)
+        self.assertIn("- `壞卡號`", text)
+        self.assertIn("## 卡片層:無官方日文(130 張)", text)
+        self.assertIn("#### 區塊種類判不出(3 區塊 / 3 張)", text)
+        for entry in unknown_block:
+            self.assertIn(f"- `{entry['id']}`", text)
+        self.assertIn("#### 述語解析不出(9 段 / 9 張)", text)
+        for entry in bounce[3:]:
+            self.assertIn(f"- `{entry['id']}`", text)
+        self.assertIn("#### (格式壞掉:'')(1 段 / 1 張)", text)
+        self.assertIn("#### (格式壞掉:'原因\\n換行')(1 段 / 1 張)", text)
+        self.assertIn("#### (格式壞掉:123)(1 段 / 1 張)", text)
+        # 前言區塊自己的段也解析不出(述語語尾不明),又是一類、附 3 張。
+        self.assertIn("#### 述語語尾不明(3 段 / 3 張)", text)
+        # 列出的卡號行數 = 130 張無官方日文 + 3 區塊 + 12 + 3 段原因,一張不少。
+        self.assertEqual(text.count("\n- `"), 130 + 3 + 12 + 3)
 
     def test_cli_fails_when_product_does_not_cover_card_list(self):
         """產物張數與卡片總表不符:報告的加總對不上,以非 0 結束、不寫檔。"""

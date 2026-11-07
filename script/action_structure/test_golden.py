@@ -1141,17 +1141,26 @@ class OddEyesPendulumDragonTest(unittest.TestCase):
         return [hit["id"] for hit in result["hits"]]
 
     def test_pendulum_effect_destroying_itself_is_only_in_the_pendulum_block(self):
-        """P 效果②「このカードを破壊し」:限定靈擺效果區塊命中、限定編號效果區塊不命中;
-        靈擺效果的次數限制行也進略過文本。"""
+        """P 效果②「このカードを破壊し」:限定靈擺效果區塊命中、限定編號效果區塊不命中。"""
         self.assertIn(ODD_EYES_PENDULUM_DRAGON,
                       self.hits(actions=["破壞"], card=ODD_EYES_PENDULUM_DRAGON,
                                 block_kinds=["靈擺效果"]))
         self.assertNotIn(ODD_EYES_PENDULUM_DRAGON,
                          self.hits(actions=["破壞"], card=ODD_EYES_PENDULUM_DRAGON,
                                    block_kinds=["編號效果"]))
-        structure = self.structures[0]
-        self.assertEqual([(o["source"], o["reason"]) for o in structure["omitted"]],
-                         [("pen_effect", "次數限制")])
+
+    def test_pendulum_limit_line_is_not_an_effect(self):
+        """靈擺效果的次數限制行「このカード名の①②のP効果はそれぞれ１ターンに１度しか使用できない」
+        不是效果:極性範圍含不能、段類別全開、限定靈擺效果區塊仍不命中「發動」,也不列未解析組;
+        反向檢查沒有段外殘留(那一行沒被靜默留在哪個區塊裡)。"""
+        result = run_query(self.structures, self.cards, {
+            "actions": ["發動"], "polarities": ["做", "不能", "不會", "可以", "只能", "必須"],
+            "kinds": ["條件", "代價", "效果", "被代替", "召喚手續", "限制", "修飾"],
+            "include_condition": True, "block_kinds": ["靈擺效果"]})
+        self.assertNotIn(ODD_EYES_PENDULUM_DRAGON, result["groups"]["全部"])
+        self.assertNotIn(ODD_EYES_PENDULUM_DRAGON, result["groups"]["未解析"])
+        self.assertEqual([f for f in check_card(self.structures[0])
+                          if f["reason"] == "段外殘留"], [])
 
 
 if __name__ == "__main__":

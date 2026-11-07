@@ -31,6 +31,7 @@
   多列總比漏列好。動作詞經同義表換成述語字面(「破壞」→「破壊」)再比。
 一張卡任一段命中就在命中組、不再列進未解析組;段類別、極性的篩選對未解析組同樣生效;
 區塊種類被篩掉的區塊,只有種類判不出(標解析不出)的才列,因為那才可能是靜默漏掉。
+未結構化的段(重複到停為止,spec 決定只寫第一輪)不是解析不出:不命中、也不列未解析組。
 
 判斷卡 X 能否當某物件(spec「條件式」):X 的卡名與字段來自它自己的卡片結構的卡片屬性表
 (官方卡名、setcode,加「〜として扱う」的列);帶位置條件的列只在該對象線的「從」落在
@@ -573,8 +574,9 @@ def replaced_by(matched, card):
 
 
 def segment_hit_lines(seg, card, q, judge, objects, names):
-    """段命中時回傳命中的對象線(可為空列表);不命中回 None。"""
-    if seg["unparsed"] or not segment_in_scope(seg, q):
+    """段命中時回傳命中的對象線(可為空列表);不命中回 None。
+    未結構化的段(重複到停為止)沒有動作詞,也不當空查詢的命中。"""
+    if seg["unparsed"] or seg["unstructured"] or not segment_in_scope(seg, q):
         return None
     if any(a not in segment_actions(seg) for a in q["actions"]):
         return None

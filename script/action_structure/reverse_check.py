@@ -13,6 +13,7 @@
 - 字面不符:產生得出日文,正規化後與原文不等;detail 附產生的日文與原文。
 - 段外殘留:區塊裡有段沒涵蓋、又不是固定接著詞(①：、。、、発動できる…)的文字。
   每段各自全等還不夠,整個區塊的字都要有人認——否則漏掉一整句也看不出來。
+- 未結構化:重複到停為止的那一句(段標 `unstructured`),不算通過也不算不通過,另列一類。
 
 正規化只做空白與全半形:自己寫,不用 NFKC(NFKC 會把 ① 折成 1,筆記 00 第 4 點)。
 """
@@ -38,6 +39,9 @@ from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION
 REASON_NO_TEMPLATE = "無模板"
 REASON_MISMATCH = "字面不符"
 REASON_RESIDUE = "段外殘留"
+# 重複到停為止的段(spec 故事 28):不算通過也不算不通過,報告另列一類、detail 固定。
+REASON_UNSTRUCTURED = "未結構化"
+DETAIL_REPEAT = "重複到停為止"
 
 # 簡單子句模板會寫的格;其餘格一有值就是「無模板」。
 TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polarity",
@@ -699,6 +703,11 @@ def check_card(card):
         self_id = (bindings.get(block["id"]) or {}).get("自己", "o0")
         holes = _holes(block, card)
         for seg in block["segments"]:
+            if seg["unstructured"]:
+                # 重複到停為止:不算通過也不算字面不符,另列一類(spec 故事 28)。
+                failures.append(_failure(card, block, seg["id"], REASON_UNSTRUCTURED,
+                                         DETAIL_REPEAT, None, seg["text"]))
+                continue
             try:
                 rendered = render_segment(seg, card, self_id=self_id)
             except NoTemplate as e:
@@ -732,13 +741,15 @@ def check_structures(structures):
             continue
         segments += sum(len(block["segments"]) for block in _all_blocks(card))
         failures.extend(check_card(card))
-    failed_segments = sum(1 for f in failures if f["segment"])
+    unstructured = sum(1 for f in failures if f["reason"] == REASON_UNSTRUCTURED)
+    failed_segments = sum(1 for f in failures
+                          if f["segment"] and f["reason"] != REASON_UNSTRUCTURED)
     residue_blocks = len({(f["card"], f["block"]) for f in failures
                           if f["reason"] == REASON_RESIDUE})
     return {"cards": len(structures), "no_official_text": no_text,
-            "segments": segments, "passed": segments - failed_segments,
-            "failed": failed_segments, "residue_blocks": residue_blocks,
-            "failures": failures}
+            "segments": segments, "passed": segments - failed_segments - unstructured,
+            "failed": failed_segments, "unstructured": unstructured,
+            "residue_blocks": residue_blocks, "failures": failures}
 
 
 def _group(failures, key):
@@ -786,7 +797,8 @@ def render_report(report):
         "重建結構後重跑即刷新。 -->",
         "",
         "每段由卡片結構套句型模板產生日文,正規化(空白、全半形)後與該段原文範圍全等才通過;"
-        "沒有模板的句型記「無模板」算不通過。判法在 script/action_structure/reverse_check.py。",
+        "沒有模板的句型記「無模板」算不通過;重複到停為止的段記「未結構化」,通過與不通過都不計。"
+        "判法在 script/action_structure/reverse_check.py。",
         "",
         "## 總覽",
         "",
@@ -797,13 +809,14 @@ def render_report(report):
         f"| 段 | {report['segments']} |",
         f"| 通過 | {report['passed']} |",
         f"| 不通過 | {report['failed']} |",
+        f"| 未結構化(不計) | {report['unstructured']} |",
         f"| 有段外殘留的區塊 | {report['residue_blocks']} |",
         "",
         "## 不通過",
         "",
     ]
     by_reason = _group(report["failures"], lambda f: f["reason"])
-    for reason in (REASON_NO_TEMPLATE, REASON_MISMATCH, REASON_RESIDUE):
+    for reason in (REASON_NO_TEMPLATE, REASON_MISMATCH, REASON_RESIDUE, REASON_UNSTRUCTURED):
         if reason in by_reason:
             lines.extend(_reason_section(reason, by_reason[reason]))
     if not report["failures"]:

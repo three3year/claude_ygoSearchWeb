@@ -17,7 +17,8 @@
 - 內嵌效果:「Xは以下の効果を得る」→ 內嵌效果節點,綁定 自己 = X 的物件,內容是一個區塊
   (● 列舉成「各自可以」的分歧);區塊內「このカード」指 X。區塊 id `<區塊id>e<偏移>`,
   段與物件 id 照它的 text 算偏移。
-- 「重複到停為止」(未結構化)尚未抽取。
+- 「重複到停為止」(「〜処理を繰り返す」「〜までこの効果を繰り返す」,`segment_extract.REPEAT_RE`):
+  那一句成一個沒有動作詞的段、標 `unstructured`(段與段樹節點都標),第一輪就是它前面的句子。
 
 反向檢查的模板:`tree_glue(block, ...)` 給出分歧引導句與內嵌效果引導句的字面,區塊原文
 扣掉各段後只能剩它們與固定接著詞。
@@ -109,7 +110,10 @@ def _parse_run(state, spans):
             join, start = "先後", start + 4
         for seg, seg_join in parse_sentence(state, start, end):
             state.block["segments"].append(seg)
-            nodes.append(segment_node(seg["id"], seg_join or join))
+            node = segment_node(seg["id"], seg_join or join)
+            if seg["unstructured"]:
+                node["unstructured"] = True   # 段樹也標,走樹的人不必翻段
+            nodes.append(node)
             join = None
     return nodes
 

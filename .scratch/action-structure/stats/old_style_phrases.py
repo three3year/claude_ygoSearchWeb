@@ -103,7 +103,7 @@ def measure(structures):
             totals["blocks"][1] += 0 if block["unparsed"] else 1
             for _, seg in iter_segments(block):
                 totals["segments"][0] += 1
-                parsed = 0 if seg["unparsed"] else 1
+                parsed = 0 if seg["unparsed"] or seg["unstructured"] else 1   # 未結構化不算解析出(與 coverage.md 同)
                 passed = 0 if (card["id"], seg["id"]) in failed else 1
                 totals["segments"][1] += parsed
                 for label, rx in compiled:

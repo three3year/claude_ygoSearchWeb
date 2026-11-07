@@ -139,6 +139,10 @@ MATERIAL_JOINER = "＋"
 TURN_TRIGGER = "ターン"
 _TURN_RE = re.compile("^(?P<cond>[^、]+?(?:した|に成功した))ターン、(?P<rest>.+)$")
 PREMISE_HAPPENED = "本回合發生過"
+# 重複到停為止(spec 故事 28、GLOSSARY「未結構化」):「「〜」処理を繰り返す」「〜までこの効果を
+# (最大で７回)繰り返す」「〜処理を〜の数だけ繰り返す」。要有「処理を」或「この効果を」才算,
+# 通常怪獸的故事文「攻撃を繰り返す」不是效果。句尾可帶「（最大４回）」。
+REPEAT_RE = re.compile("^(?=.*(?:処理|この効果)を).*繰り返す(?:（[^）]*）)?$")
 # 舊式的代價句:「(代價子句)る事で、(效果子句)」= 新式「(代價子句)て発動できる。(效果子句)」。
 # 代價子句以非過去形收尾(る/う/す)才算,「〜された事で」是條件意味、不切。
 _OLD_COST_RE = re.compile("^(?P<cost>.+?[るうす])" + COST_GLUE + "、?(?P<rest>.+)$")
@@ -967,6 +971,12 @@ def parse_sentence(state, start, end):
     treat = parse_treat_as(sent)
     if treat is not None:
         return [(_treat_as_segment(state, start, end, treat), None)]
+    if REPEAT_RE.match(sent):
+        # 重複到停為止(spec 故事 28):第一輪已由前面的句子(或「」裡的字面)寫出,這一句只標未結構化,
+        # 不抽動作詞、不更新位置;反向檢查與覆蓋報告各另列一類。
+        seg = _segment(state, "效果", start, end)
+        seg["unstructured"] = True
+        return [(seg, None)]
     act = _ACTIVATION_RE.match(sent)
     body = act.group("body") if act else sent
     turn_seg = None

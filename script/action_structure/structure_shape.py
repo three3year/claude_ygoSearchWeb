@@ -111,6 +111,7 @@ def new_segment(seg_id, kind, span, text, predicate=None, voice=None):
         "predicate": predicate,  # 原述語字面
         "voice": voice,          # 態
         "unparsed": None,
+        "unstructured": None,    # 未結構化:重複到停為止的那一句(spec 故事 28),只寫第一輪
     }
 
 

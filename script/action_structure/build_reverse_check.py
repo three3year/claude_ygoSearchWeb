@@ -44,7 +44,8 @@ def main(argv=None):
     print(f"執行時間 {now}")
     print(f"來源 {os.path.basename(args.structures)} digest={file_digest(args.structures)}")
     print(f"卡片 {report['cards']} 張、無官方日文 {report['no_official_text']} 張、"
-          f"段 {report['segments']}:通過 {report['passed']}、不通過 {report['failed']}")
+          f"段 {report['segments']}:通過 {report['passed']}、不通過 {report['failed']}、"
+          f"未結構化 {report['unstructured']}")
     by_reason = {}
     for failure in report["failures"]:
         by_reason[failure["reason"]] = by_reason.get(failure["reason"], 0) + 1

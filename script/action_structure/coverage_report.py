@@ -40,6 +40,12 @@ def _reason_bucket():
     return {"count": 0, "cards": set()}
 
 
+def _add_reason(reasons, reason, cid):
+    bucket = reasons[reason]
+    bucket["count"] += 1
+    bucket["cards"].add(cid)
+
+
 def _finish_reasons(reasons, unit):
     """原因 → {單位數, 卡號(排序去重)};原因依名稱排序,報告才穩定。"""
     return {reason: {unit: bucket["count"],
@@ -50,13 +56,15 @@ def _finish_reasons(reasons, unit):
 def _finish_by_kind(by_kind, kinds, unit):
     return {kind: {unit: by_kind[kind]["count"],
                    "parsed": by_kind[kind]["parsed"],
-                   "unparsed": by_kind[kind]["count"] - by_kind[kind]["parsed"],
+                   "unparsed": (by_kind[kind]["count"] - by_kind[kind]["parsed"]
+                                - by_kind[kind]["unstructured"]),
+                   "unstructured": by_kind[kind]["unstructured"],
                    "cards": len(by_kind[kind]["cards"])}
             for kind in kinds}
 
 
 def _kind_bucket():
-    return {"count": 0, "parsed": 0, "cards": set()}
+    return {"count": 0, "parsed": 0, "unstructured": 0, "cards": set()}
 
 
 def build_coverage(structures):
@@ -75,6 +83,7 @@ def build_coverage(structures):
     obj_reasons = defaultdict(_reason_bucket)
     objects_total = objects_unparsed = 0
     unknown_names = defaultdict(set)
+    unstructured_cards = set()
 
     for card in structures:
         cid = card["id"]
@@ -86,9 +95,7 @@ def build_coverage(structures):
             obj_sources[obj["source"]["kind"]] += 1
             if obj["unparsed"]:
                 objects_unparsed += 1
-                bucket = obj_reasons[obj["unparsed"]["reason"]]
-                bucket["count"] += 1
-                bucket["cards"].add(cid)
+                _add_reason(obj_reasons, obj["unparsed"].get("reason"), cid)
         for row in card["names"]:
             if row.get("unparsed"):
                 unknown_names[row["text"]].add(cid)
@@ -104,9 +111,12 @@ def build_coverage(structures):
                 kind["count"] += 1
                 kind["cards"].add(cid)
                 if seg["unparsed"]:
-                    bucket = seg_reasons[seg["unparsed"]["reason"]]
-                    bucket["count"] += 1
-                    bucket["cards"].add(cid)
+                    _add_reason(seg_reasons, seg["unparsed"].get("reason"), cid)
+                    continue
+                if seg["unstructured"]:
+                    # 重複到停為止:不算解析出也不算解析不出,各格不計。
+                    kind["unstructured"] += 1
+                    unstructured_cards.add(cid)
                     continue
                 kind["parsed"] += 1
                 for key, _ in SEGMENT_FIELDS:
@@ -121,6 +131,7 @@ def build_coverage(structures):
     blocks_parsed = sum(b["parsed"] for b in block_kinds.values())
     segs_total = sum(s["count"] for s in seg_kinds.values())
     segs_parsed = sum(s["parsed"] for s in seg_kinds.values())
+    segs_unstructured = sum(s["unstructured"] for s in seg_kinds.values())
     return {
         "cards": len(structures),
         "with_structure": len(structures) - len(no_text),
@@ -130,7 +141,9 @@ def build_coverage(structures):
                    "by_kind": _finish_by_kind(block_kinds, BLOCK_KINDS, "blocks"),
                    "reasons": _finish_reasons(block_reasons, "blocks")},
         "segments": {"total": segs_total, "parsed": segs_parsed,
-                     "unparsed": segs_total - segs_parsed,
+                     "unparsed": segs_total - segs_parsed - segs_unstructured,
+                     "unstructured": segs_unstructured,
+                     "unstructured_cards": sorted(unstructured_cards),
                      "by_kind": _finish_by_kind(seg_kinds, SEGMENT_KINDS,
                                                 "segments"),
                      "reasons": _finish_reasons(seg_reasons, "segments")},
@@ -157,9 +170,7 @@ def _count_block(block, cid, block_kinds, block_reasons):
     kind["count"] += 1
     kind["cards"].add(cid)
     if block["unparsed"]:
-        bucket = block_reasons[block["unparsed"]["reason"]]
-        bucket["count"] += 1
-        bucket["cards"].add(cid)
+        _add_reason(block_reasons, block["unparsed"].get("reason"), cid)
     else:
         kind["parsed"] += 1
 
@@ -167,9 +178,7 @@ def _count_block(block, cid, block_kinds, block_reasons):
 def _count_field(cell, value, cid):
     if _is_unparsed_cell(value):
         cell["unparsed"] += 1
-        bucket = cell["reasons"][value["reason"]]
-        bucket["count"] += 1
-        bucket["cards"].add(cid)
+        _add_reason(cell["reasons"], value["reason"], cid)
     elif value is None or value == [] or value == {}:
         cell["empty"] += 1
     else:
@@ -218,13 +227,13 @@ def render_coverage(cov):
         f"卡片總表 {_n(cov['cards'])} 張 = 有卡片結構 {_n(cov['with_structure'])} 張"
         f" + 無官方日文 {_n(len(cov['no_official_text']))} 張。",
         "",
-        "| 層次 | 總數 | 解析出 | 解析不出 |",
-        "|---|---|---|---|",
+        "| 層次 | 總數 | 解析出 | 解析不出 | 未結構化 |",
+        "|---|---|---|---|---|",
     ]
     for label, key in (("區塊", "blocks"), ("段", "segments"), ("物件", "objects")):
         node = cov[key]
         out.append(f"| {label} | {_n(node['total'])} | {_n(node['parsed'])} | "
-                   f"{_n(node['unparsed'])} |")
+                   f"{_n(node['unparsed'])} | {_n(node.get('unstructured', 0))} |")
     out += ["", "## 卡片層:無官方日文"
                 f"({_n(len(cov['no_official_text']))} 張)", "",
             "整張標未解析,原因「無官方日文」,不納入抽取(spec、ADR-0006)。", ""]
@@ -236,13 +245,19 @@ def render_coverage(cov):
                    f"{_n(row['unparsed'])} | {_n(row['cards'])} |")
     out += ["", "### 區塊解析不出的原因", ""]
     out += _reason_sections(cov["blocks"]["reasons"], "blocks", "區塊")
-    out += ["## 段", "", "| 段類別 | 段數 | 解析出 | 解析不出 | 張數 |",
-            "|---|---|---|---|---|"]
+    out += ["## 段", "", "| 段類別 | 段數 | 解析出 | 解析不出 | 未結構化 | 張數 |",
+            "|---|---|---|---|---|---|"]
     for kind, row in cov["segments"]["by_kind"].items():
         out.append(f"| {kind} | {_n(row['segments'])} | {_n(row['parsed'])} | "
-                   f"{_n(row['unparsed'])} | {_n(row['cards'])} |")
+                   f"{_n(row['unparsed'])} | {_n(row['unstructured'])} | {_n(row['cards'])} |")
     out += ["", "### 段解析不出的原因", ""]
     out += _reason_sections(cov["segments"]["reasons"], "segments", "段")
+    out += [f"### 未結構化的段(重複到停為止,{_n(cov['segments']['unstructured'])} 段 / "
+            f"{_n(len(cov['segments']['unstructured_cards']))} 張)", "",
+            "「〜処理を繰り返す」「〜までこの効果を繰り返す」那一句只寫第一輪、標 `unstructured`"
+            "(spec 故事 28);不算解析出也不算解析不出。", ""]
+    out += _card_lines(cov["segments"]["unstructured_cards"]) or ["(無)"]
+    out.append("")
     out += ["## 段的各格", "",
             f"對象是解析出的 {_n(cov['segments']['parsed'])} 段。", "",
             "| 格 | 有值 | 留空 | 解析不出 |", "|---|---|---|---|"]

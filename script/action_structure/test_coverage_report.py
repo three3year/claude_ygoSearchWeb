@@ -46,8 +46,9 @@ class BuildCoverageTest(unittest.TestCase):
 
     def test_segments_by_kind_and_unparsed_reasons_with_card_ids(self):
         segments = self.coverage["segments"]
-        self.assertEqual(segments["parsed"] + segments["unparsed"],
+        self.assertEqual(segments["parsed"] + segments["unparsed"] + segments["unstructured"],
                          segments["total"])
+        self.assertEqual(segments["unstructured"], 0)
         self.assertEqual(sum(k["segments"] for k in segments["by_kind"].values()),
                          segments["total"])
         # 特異点の悪魔:條件、代價、效果各一段,全部解析出。

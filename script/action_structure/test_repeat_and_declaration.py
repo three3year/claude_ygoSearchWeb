@@ -1,4 +1,4 @@
-"""spec 故事 28「重複到停為止」(未結構化):真實卡與合成卡。
+"""spec 故事 28「重複到停為止」(未結構化)與名稱表的「宣言」來源:真實卡與合成卡。
 
 官方 DB 文本逐字寫在測試裡(`data/sources/` 不入版控)。斷言寫在查詢層、反向檢查與報告上。
 """
@@ -8,7 +8,7 @@ from action_query import run_query
 from card_structure import build_structures, load_structures, serialize_structures
 from coverage_report import build_coverage, render_coverage
 from reverse_check import check_card, check_structures, render_report
-from test_golden import card, faq
+from test_golden import TRAP, card, faq
 
 VOLTESTER = 18585765  # ボルテスター:「さらに「〜」処理を繰り返す。」
 VOLTESTER_TEXT = (
@@ -128,6 +128,63 @@ class RepeatUntilStopTest(unittest.TestCase):
         loaded = load_structures(serialize_structures(self.structures))
         self.assertEqual(loaded, self.structures)
         self.assertEqual(serialize_structures(loaded), serialize_structures(self.structures))
+
+
+DEMON_DECLARATION = 22796548  # デーモンの宣告:「カード名を１つ宣言して発動できる」
+DEMON_DECLARATION_TEXT = (
+    "①：１ターンに１度、５００LPを払い、カード名を１つ宣言して発動できる。自分のデッキの一番上の"
+    "カードをめくり、宣言したカードだった場合、そのカードを手札に加える。違った場合、めくったカードを"
+    "墓地へ送る。")
+MIND_CRUSH = 15800838  # マインドクラッシュ
+MIND_CRUSH_TEXT = (
+    "①：カード名を１つ宣言して発動できる。宣言したカードが相手の手札にある場合、相手は手札の"
+    "そのカードを全て捨てる。宣言したカードが相手の手札に無い場合、自分の手札をランダムに１枚選んで"
+    "捨てる。")
+PLAIN = 98  # 沒有宣言的對照卡
+
+
+class DeclaredNameTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(DEMON_DECLARATION, name_ja="デーモンの宣告", type=0x20002, setcode=0x45),
+            card(MIND_CRUSH, name_ja="マインドクラッシュ", type=TRAP),
+            card(PLAIN, name_ja="乙"),
+        ]
+        cls.structures, _ = build_structures(cls.cards, [
+            faq(DEMON_DECLARATION, "デーモンの宣告", DEMON_DECLARATION_TEXT),
+            faq(MIND_CRUSH, "マインドクラッシュ", MIND_CRUSH_TEXT),
+            faq(PLAIN, "乙", "①：このカードを破壊する。"),
+        ])
+
+    def structure(self, cid):
+        return next(c for c in self.structures if c["id"] == cid)
+
+    def test_declaration_makes_one_name_row_with_empty_text(self):
+        """「カード名を１つ宣言して」:名稱表一列,來源「宣言」、字串留空、不算不認得;
+        多次宣言仍一列(マインドクラッシュ 的「宣言したカード」不是宣言句)。"""
+        for cid, offset in ((DEMON_DECLARATION, 19), (MIND_CRUSH, 2)):
+            with self.subTest(card=cid):
+                rows = [r for r in self.structure(cid)["names"] if r["source"] == "宣言"]
+                self.assertEqual([(r["id"], r["text"], r["unparsed"]) for r in rows],
+                                 [(f"n{offset}", "", None)])
+        self.assertEqual(self.structure(PLAIN)["names"], [])
+
+    def test_declared_name_is_not_an_unknown_name_and_is_counted(self):
+        """覆蓋報告:宣言列計進名稱表的來源計數,不進「不認得的「」名稱」。"""
+        cov = build_coverage(self.structures)
+        self.assertEqual(cov["names"], {"「」引用": 0, "宣言": 2})
+        self.assertEqual(cov["unknown_names"], {})
+        self.assertIn("名稱表:「」引用 0 列、宣言 2 列。", render_coverage(cov))
+
+    def test_queries_do_not_compare_declared_names(self):
+        """查詢不比宣言:指定任何卡查「加入手牌」都不會因為宣言列而命中或誤判;產物往返保留該列。"""
+        result = run_query(self.structures, self.cards,
+                           {"actions": ["加入手牌"], "card": PLAIN})
+        self.assertNotIn(DEMON_DECLARATION, result["groups"]["全部"])
+        loaded = load_structures(serialize_structures(self.structures))
+        self.assertEqual(loaded, self.structures)
 
 
 if __name__ == "__main__":

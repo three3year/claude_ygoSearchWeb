@@ -4,7 +4,8 @@
 名稱表(`card["names"]`):每個「」引用的名稱一列(同名只一列,id 取首次出現的偏移),
 來源「」引用;對得到卡名或字段的算認得,否則標 `unparsed`(原因「不認得的「」名稱」),
 覆蓋報告的「不認得的「」名稱」一節就讀這個。比對前雙方全半形折疊,表裡保留原文字面。
-宣言名稱(「カード名を１つ宣言して」)尚未抽取。
+宣言名稱(「カード名を１つ宣言して」「〜のカード名を１つ宣言する」):來源「宣言」,字串留空
+(宣言的卡名在遊戲中才決定),查詢不比它;後文「宣言したカード」的指回尚未抽取。
 
 卡片屬性表(`card["attributes"]`):每種屬性一張表,每列帶值與位置條件(`where`,None = 任何位置)。
 - 卡名表:官方卡名(任何位置);「<位置>に存在する限り(カード名を)「X」として扱う」
@@ -26,6 +27,10 @@ from structure_shape import (NoTemplate, ZONE_WORDS, attribute_row, name_row, un
 
 REASON_NAME_UNKNOWN = "不認得的「」名稱"
 SOURCE_QUOTE = "「」引用"
+SOURCE_DECLARATION = "宣言"
+# 宣言卡名的句型:「カード名を１つ宣言し(て)」「〜モンスターのカード名を１つ宣言する」;
+# 宣言種族/屬性/等級的不是名稱,不進名稱表。
+_DECLARATION_RE = re.compile("カード名を１つ宣言(?:し|する)")
 SOURCE_OFFICIAL_NAME = "官方卡名"
 SOURCE_CARD_LIST = "卡片總表"
 CATEGORY_BITS = (("怪獸", 0x1), ("魔法", 0x2), ("陷阱", 0x4))
@@ -108,6 +113,9 @@ def extract_names(card, texts, lookups):
         for m in _RANGE_RE.finditer(text or ""):
             for name in (m.group("lo"), m.group("hi")):
                 rows[name]["unparsed"] = None
+        # 宣言的卡名:字串留空、來源宣言;一張卡宣言幾次都只一列(同名只一列的規則)。
+        for m in _DECLARATION_RE.finditer(text or ""):
+            rows.setdefault("", name_row(f"{prefix}{m.start()}", "", SOURCE_DECLARATION))
     card["names"] = list(rows.values())
     return rows
 

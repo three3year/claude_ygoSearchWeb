@@ -17,8 +17,11 @@
 """
 from collections import Counter, defaultdict
 
+from names_attributes import SOURCE_DECLARATION, SOURCE_QUOTE
 from structure_shape import (BLOCK_KINDS, OBJECT_SOURCES, POSITION_SOURCES,
                              SEGMENT_KINDS, iter_segments)
+
+NAME_SOURCES = (SOURCE_QUOTE, SOURCE_DECLARATION)
 
 # 段的各格:鍵名 → 報告列名(spec「段」表的格;極性永遠有值,不列)。
 SEGMENT_FIELDS = (
@@ -83,6 +86,7 @@ def build_coverage(structures):
     obj_reasons = defaultdict(_reason_bucket)
     objects_total = objects_unparsed = 0
     unknown_names = defaultdict(set)
+    name_sources = Counter()
     unstructured_cards = set()
 
     for card in structures:
@@ -97,6 +101,7 @@ def build_coverage(structures):
                 objects_unparsed += 1
                 _add_reason(obj_reasons, obj["unparsed"].get("reason"), cid)
         for row in card["names"]:
+            name_sources[row["source"]] += 1
             if row.get("unparsed"):
                 unknown_names[row["text"]].add(cid)
         counted = set()
@@ -147,6 +152,7 @@ def build_coverage(structures):
                      "by_kind": _finish_by_kind(seg_kinds, SEGMENT_KINDS,
                                                 "segments"),
                      "reasons": _finish_reasons(seg_reasons, "segments")},
+        "names": {source: name_sources[source] for source in NAME_SOURCES},
         "fields": {key: {"filled": cell["filled"], "empty": cell["empty"],
                          "unparsed": cell["unparsed"],
                          "reasons": _finish_reasons(cell["reasons"], "segments")}
@@ -234,6 +240,8 @@ def render_coverage(cov):
         node = cov[key]
         out.append(f"| {label} | {_n(node['total'])} | {_n(node['parsed'])} | "
                    f"{_n(node['unparsed'])} | {_n(node.get('unstructured', 0))} |")
+    out += ["", "名稱表:" + "、".join(f"{source} {_n(count)} 列"
+                                     for source, count in cov["names"].items()) + "。"]
     out += ["", "## 卡片層:無官方日文"
                 f"({_n(len(cov['no_official_text']))} 張)", "",
             "整張標未解析,原因「無官方日文」,不納入抽取(spec、ADR-0006)。", ""]

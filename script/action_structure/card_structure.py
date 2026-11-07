@@ -35,9 +35,10 @@ import json
 
 from archetype_table import archetype_lookup, fold_width
 from block_split import CATEGORY_SPELL_TRAP, split_blocks
-from names_attributes import (SOURCE_OFFICIAL_NAME, extract_names,
+from names_attributes import (SOURCE_OFFICIAL_NAME, TREAT_PREDICATE, extract_names,
                               extract_treat_as, fill_from_card_list,
                               treat_as_sentences)
+from premise import GAME_STATE_PHASE
 from segment_tree import extract_block
 from structure_shape import (  # noqa: F401  形狀的詞與工廠從這裡再匯出
     ATTRIBUTE_TABLES, BLOCK_KINDS, BRANCH_MODES, JOINS, NO_OFFICIAL_TEXT,
@@ -233,10 +234,15 @@ def _hydrate_line(line):
 
 
 def _hydrate_condition(condition):
-    """條件式裡帶區域的原子(前提的位置、存在)把區域補齊;其餘原子原樣。"""
+    """條件式裡帶區域的原子(前提的位置、存在)把區域補齊;階段原子補方、字段原子補 setcode 列;
+    其餘原子原樣。"""
     if not isinstance(condition, dict):
         return condition
     out = dict(condition)
+    if out.get("op") == "遊戲狀態" and out.get("state") == GAME_STATE_PHASE:
+        out.setdefault("side", None)
+    if out.get("op") == "字段":
+        out.setdefault("setcodes", [])
     if "zones" in out:
         out["zones"] = _hydrate_zones(out["zones"])
     if "args" in out:
@@ -244,6 +250,25 @@ def _hydrate_condition(condition):
     if "arg" in out:
         out["arg"] = _hydrate_condition(out["arg"])
     return out
+
+
+def _hydrate_modified(seg):
+    """修飾段(「〜として扱う」)的被改屬性:格見 `names_attributes.parse_treat_as`;
+    大類/子類型那種沒有 items,不補 items 與尾綴。性質變更段的被改屬性沒有可省略的格,原樣。
+    補的格接在後面(setdefault),有值的格位置不動,再序列化才逐位元組相同。"""
+    modified = seg["modified"]
+    if not modified or seg["predicate"] != TREAT_PREDICATE:
+        return modified
+    modified = dict(modified)
+    for key, default in (("where", None), ("prefix", None), ("also", False)):
+        modified.setdefault(key, default)
+    if modified["where"]:
+        modified["where"] = _hydrate_zones(modified["where"])
+    if "items" in modified:
+        modified.setdefault("suffix", None)
+        modified["items"] = [{**item, "tail": item.get("tail")}
+                             for item in modified["items"]]
+    return modified
 
 
 def _hydrate_nodes(items):
@@ -254,7 +279,7 @@ def _hydrate_nodes(items):
         elif node["node"] == "分歧":
             node = _hydrate(node, branch_node(node.get("mode")))
             node["branches"] = [
-                {"premise": None, **branch,
+                {**branch, "premise": _hydrate_condition(branch.get("premise")),
                  "items": _hydrate_nodes(branch.get("items", []))}
                 for branch in node["branches"]]
         elif node["node"] == "內嵌效果":
@@ -277,6 +302,7 @@ def _hydrate_block(block):
                                         text[start:end]))
         seg["lines"] = [_hydrate_line(line) for line in seg["lines"]]
         seg["premise"] = _hydrate_condition(seg["premise"])
+        seg["modified"] = _hydrate_modified(seg)
         segments.append(seg)
     block["segments"] = segments
     block["tree"] = {**block["tree"],

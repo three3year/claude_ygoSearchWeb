@@ -10,9 +10,13 @@ import build_structure
 from action_query import run_query
 from card_structure import (build_structures, load_structures,
                             serialize_structures)
-from test_golden import (ARCHETYPES, SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT,
-                         SPELL, WHITE_FOREST_LISETTE, WHITE_FOREST_LISETTE_TEXT,
-                         card, faq)
+from reverse_check import check_card
+from test_golden import (ARCHETYPES, BLACK_MAGICIAN, DARK_MAGICIAN_OF_DESTRUCTION,
+                         DARK_MAGICIAN_OF_DESTRUCTION_TEXT, SINGULARITY_FIEND,
+                         SINGULARITY_FIEND_TEXT, SPELL, WHITE_FOREST_LISETTE,
+                         WHITE_FOREST_LISETTE_TEXT, card, faq)
+
+PHASE_PREMISE = 70000121  # 測試虛構:前提是階段(方省略)的卡
 
 OLD_STYLE_TEXT = (
     "このカードが特殊召喚に成功した時、自分のデッキの上からカードを２枚までめくる事"
@@ -93,6 +97,29 @@ class BuildStructuresTest(unittest.TestCase):
         loaded = load_structures(text)
         self.assertEqual(loaded, structures)
         self.assertEqual(serialize_structures(loaded), text)
+
+    def test_treat_as_and_phase_premise_survive_the_round_trip(self):
+        """修飾段的被改屬性(「フィールド・墓地に存在する限り「X」として扱う」的區域、prefix、also、尾綴)、
+        階段前提的方、分歧前提的區域:產物省略空格,讀回要補齊才相等,讀回後的反向檢查也要與建置時相同。
+        (票 12 在全庫產物上發現:讀回少了這些格,滅びの黒魔術師等 128 張的「視為」段反向檢查判無模板。)"""
+        cards = [card(DARK_MAGICIAN_OF_DESTRUCTION, name_ja="滅びの黒魔術師", type=0x61,
+                      level=8, race=0x2, attribute=0x20),
+                 card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7),
+                 card(PHASE_PREMISE, name_ja="階段前提テスト", type=SPELL)]
+        entries = [faq(DARK_MAGICIAN_OF_DESTRUCTION, "滅びの黒魔術師",
+                       DARK_MAGICIAN_OF_DESTRUCTION_TEXT),
+                   faq(PHASE_PREMISE, "階段前提テスト",
+                       "①：メインフェイズに発動できる。自分はデッキから１枚ドローする。")]
+        structures, _ = build_structures(cards, entries, archetypes=ARCHETYPES)
+        text = serialize_structures(structures)
+        loaded = load_structures(text)
+        self.assertEqual(loaded, structures)
+        self.assertEqual(serialize_structures(loaded), text)
+        for built, back in zip(structures, loaded):
+            with self.subTest(card=built["id"]):
+                self.assertEqual(check_card(back), check_card(built))
+        destruction = next(c for c in loaded if c["id"] == DARK_MAGICIAN_OF_DESTRUCTION)
+        self.assertEqual(check_card(destruction), [])
 
     def test_card_without_official_text_is_unparsed_with_reason(self):
         """沒有官方日文的卡:整張標未解析、原因「無官方日文」,查詢不會命中它。"""

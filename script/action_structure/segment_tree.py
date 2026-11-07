@@ -24,11 +24,12 @@
 """
 import re
 
-from premise import NoPremiseTemplate, render_premise, split_premises
-from segment_extract import (INTERVAL_REASON, _INTERVAL_RE, BlockState, parse_from,
+from block_split import body_start
+from premise import render_premise, split_premises
+from segment_extract import (INTERVAL_REASON, INTERVAL_RE, BlockState, parse_from,
                              parse_sentence, sentences, zone_literal)
-from structure_shape import (branch_node, embedded_node, new_block, segment_node,
-                             unparsed)
+from structure_shape import (NoTemplate, branch_node, embedded_node, new_block,
+                             segment_node, unparsed)
 
 # ● 分歧的引導句(閉集):「以下の効果」後的字面 → (方式, 選者)。模板由方式 + form 寫回。
 BRANCH_HEADERS = (
@@ -59,14 +60,12 @@ def extract_block(block, card, lookups=None, self_id="o0"):
     """就地把段、段樹寫進 block,物件寫進 card["objects"];lookups 見 card_structure.build_lookups。"""
     state = BlockState(block, card, lookups, self_id=self_id)
     text = block["text"]
-    body_start = 2 if block["label"] else 0
-    if text.startswith("また、", body_start):
-        body_start += 3
-    items = [m.end() for m in _ITEM_RE.finditer(text, body_start)]
+    start = body_start(block)
+    items = [m.end() for m in _ITEM_RE.finditer(text, start)]
     if not items:
-        block["tree"]["items"] = _parse_run(state, sentences(text, body_start))
+        block["tree"]["items"] = _parse_run(state, sentences(text, start))
         return block
-    head_spans = sentences(text, body_start, items[0] - 1)
+    head_spans = sentences(text, start, items[0] - 1)
     headers, plain = _split_headers(state, head_spans)
     nodes = _parse_run(state, plain)
     if headers and headers[-1][0] == "方法":
@@ -150,7 +149,7 @@ def _split_headers(state, spans):
 
 def _strip_interval(state, pre, start):
     """引導句開頭的「１ターンに１度、」(票 09):次數限制不記、進略過文本;回傳 (其餘前提字面, 起點)。"""
-    m = _INTERVAL_RE.match(pre)
+    m = INTERVAL_RE.match(pre)
     if not m:
         return pre, start
     state.omit(start, m.group(), INTERVAL_REASON)
@@ -335,10 +334,6 @@ def _embedded(state, subject, start, join, lookups):
     return node
 
 
-class NoTreeTemplate(Exception):
-    """分歧或內嵌效果的引導句寫不出字面:訊息是 detail。"""
-
-
 def embedded_bindings(card):
     """區塊 id → 內嵌效果的綁定(反向檢查渲染內嵌區塊的段時「このカード」要寫成綁定的物件)。"""
     found = {}
@@ -365,17 +360,17 @@ def tree_glue(block, render_premise_text, render_object):
     內嵌效果的「Xは以下の効果を得る」);長的在前,反向檢查從區塊殘留裡逐一扣掉。
     `render_premise_text(條件式) → 字面`、`render_object(物件id, 回指字面或 None) → 字面`
     由反向檢查提供。
-    節點的方式判不出就丟 NoTreeTemplate。"""
+    節點的方式判不出就丟 NoTemplate。"""
     pieces = []
     for node in iter_tree(block["tree"]["items"]):
         if node.get("unparsed"):
-            raise NoTreeTemplate(f"段樹無模板:{node['unparsed']['reason']}")
+            raise NoTemplate(f"段樹無模板:{node['unparsed']['reason']}")
         if node["node"] == "分歧":
             pieces.extend(_branch_headers(node, render_premise_text))
         elif node["node"] == "內嵌效果":
             binding = node.get("binding") or {}
             if "自己" not in binding:
-                raise NoTreeTemplate("內嵌效果無綁定")
+                raise NoTemplate("內嵌效果無綁定")
             pieces.append(render_object(binding["自己"], node.get("ref")) + EMBED_HEADER)
     return sorted(set(pieces), key=len, reverse=True)
 
@@ -387,10 +382,10 @@ def _branch_headers(node, render_premise_text):
         for branch in node["branches"]:
             if branch.get("premise") is None or len(branch["items"]) != 1 \
                     or branch["items"][0]["node"] != "分歧":
-                raise NoTreeTemplate("依前提的支無模板")
+                raise NoTemplate("依前提的支無模板")
             inner = branch["items"][0]
             if inner.get("unparsed"):
-                raise NoTreeTemplate(f"段樹無模板:{inner['unparsed']['reason']}")
+                raise NoTemplate(f"段樹無模板:{inner['unparsed']['reason']}")
             out.append(render_premise_text(branch["premise"])
                        + _header_text(inner))
         return out
@@ -405,14 +400,11 @@ def _header_text(node):
     form = node.get("form")
     expected = _HEADER_FORMS.get(form)
     if expected is None or expected != (node.get("mode"), node.get("chooser")):
-        raise NoTreeTemplate("分歧引導句無模板")
+        raise NoTemplate("分歧引導句無模板")
     return "以下の効果" + form
 
 
 def render_premise_prefix(premise, render_zones, render_object):
     """依前提各支的前提字面(後面接引導句,所以帶讀點)。"""
-    try:
-        return render_premise(premise, render_zones,
-                              lambda obj_id: render_object(obj_id, None), followed=True)
-    except NoPremiseTemplate as e:
-        raise NoTreeTemplate(str(e)) from None
+    return render_premise(premise, render_zones,
+                          lambda obj_id: render_object(obj_id, None), followed=True)

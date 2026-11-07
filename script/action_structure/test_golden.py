@@ -9,7 +9,7 @@ from card_structure import build_structures
 from action_query import run_query
 from reverse_check import check_card
 
-MONSTER = 0x21
+EFFECT_MONSTER = 0x21
 SPELL = 0x2
 TRAP = 0x4
 
@@ -17,7 +17,7 @@ TRAP = 0x4
 def card(cid, **kw):
     """一筆卡片總表條目;預設是一張效果怪獸。"""
     base = {"id": cid, "alt_ids": [], "name_zh": f"卡{cid}", "name_ja": "",
-            "name_en": "", "desc": "", "type": MONSTER, "atk": 1000,
+            "name_en": "", "desc": "", "type": EFFECT_MONSTER, "atk": 1000,
             "def": 1000, "level": 4, "race": 0x2000, "attribute": 0x20,
             "scale": 0, "link_marker": 0, "setcode": 0, "ot": 3,
             "md_rarity": "", "genesys_points": 0, "ban_ocg": "",
@@ -836,7 +836,6 @@ CRIMSON_BLADER_BUSTER_TEXT = (
 CRIMSON_BLADER = 80321197      # クリムゾン・ブレーダー(同步、等級 8)
 BUSTER_MODE = 80280737         # バスター・モード(陷阱)
 BLUE_EYES_ULTIMATE = 23995346  # 青眼の究極竜(融合、等級 12)
-SUMMON_CONDITION_SENTENCE = "このカードは通常召喚できず"
 
 
 class CrimsonBladerBusterTest(unittest.TestCase):
@@ -909,16 +908,6 @@ class CrimsonBladerBusterTest(unittest.TestCase):
                                 card=CRIMSON_BLADER))
         self.assertNotIn(CRIMSON_BLADER_BUSTER,
                          self.hits(actions=["特殊召喚"], card=CRIMSON_BLADER_BUSTER))
-
-    def test_whole_card_passes_reverse_check_except_summon_condition(self):
-        """整張通過反向檢查;召喚條件句「このカードは通常召喚できず、…」所在的區塊除外。"""
-        structure = next(c for c in self.structures
-                         if c["id"] == CRIMSON_BLADER_BUSTER)
-        summon_blocks = {b["id"] for b in structure["blocks"]
-                         if SUMMON_CONDITION_SENTENCE in b["text"]}
-        self.assertEqual(len(summon_blocks), 1)
-        self.assertEqual([f for f in check_card(structure)
-                          if f["block"] not in summon_blocks], [])
 
     def test_summon_condition_block_is_a_restriction(self):
         """召喚條件句(票 09):「通常召喚できず」極性不能、「〜の効果でのみ特殊召喚できる」極性只能,

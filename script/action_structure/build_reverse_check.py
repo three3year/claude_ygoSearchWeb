@@ -10,11 +10,11 @@
 """
 import argparse
 import datetime
-import hashlib
 import os
 import sys
 
 from card_structure import load_structures
+from digest import file_digest
 from reverse_check import check_structures, render_report
 
 ROOT = os.path.dirname(
@@ -23,14 +23,6 @@ DEFAULT_STRUCTURES = os.path.join(ROOT, "data", "action_structure.json")
 DEFAULT_OUT = os.path.join(ROOT, ".scratch", "action-structure", "report",
                            "reverse_check.md")
 
-
-def _digest(path):
-    """產物雜湊(sha256 前 16 hex):stdout 看得出報告是哪份結構跑出來的。"""
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()[:16]
 
 
 def main(argv=None):
@@ -50,7 +42,7 @@ def main(argv=None):
     report = check_structures(structures)
     now = datetime.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z")
     print(f"執行時間 {now}")
-    print(f"來源 {os.path.basename(args.structures)} digest={_digest(args.structures)}")
+    print(f"來源 {os.path.basename(args.structures)} digest={file_digest(args.structures)}")
     print(f"卡片 {report['cards']} 張、無官方日文 {report['no_official_text']} 張、"
           f"段 {report['segments']}:通過 {report['passed']}、不通過 {report['failed']}")
     by_reason = {}

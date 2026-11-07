@@ -10,7 +10,7 @@
 """
 import re
 
-from block_split import LIMIT_REASON, PATCH_APPLIED, split_blocks
+from block_split import LIMIT_REASON, split_blocks
 
 _WS_RE = re.compile(r"[\s　]+")
 EFFECT_KIND = "編號效果"

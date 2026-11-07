@@ -14,12 +14,12 @@
 """
 import argparse
 import datetime
-import hashlib
 import json
 import os
 import sys
 
 from card_structure import build_structures, serialize_structures
+from digest import file_digest
 
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -34,14 +34,6 @@ def _load(path):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
-
-def _digest(path):
-    """來源檔雜湊(sha256 前 16 hex):報告裡看得出結構是哪份輸入生出來的。"""
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()[:16]
 
 
 def print_report(report, file=None):
@@ -83,13 +75,13 @@ def main(argv=None):
         return 1
     built_at = datetime.datetime.now().astimezone().strftime(
         "%Y-%m-%dT%H:%M:%S%z")
-    sources = {os.path.basename(args.cards): _digest(args.cards),
-               os.path.basename(args.faq): _digest(args.faq),
-               os.path.basename(args.archetypes): _digest(args.archetypes)}
+    sources = {os.path.basename(args.cards): file_digest(args.cards),
+               os.path.basename(args.faq): file_digest(args.faq),
+               os.path.basename(args.archetypes): file_digest(args.archetypes)}
     patches = []
     if os.path.exists(args.boundaries):
         patches = _load(args.boundaries)
-        sources[os.path.basename(args.boundaries)] = _digest(args.boundaries)
+        sources[os.path.basename(args.boundaries)] = file_digest(args.boundaries)
     structures, report = build_structures(
         _load(args.cards), _load(args.faq), _load(args.archetypes),
         built_at=built_at, sources=sources, boundary_patches=patches)

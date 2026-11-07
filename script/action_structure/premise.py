@@ -26,7 +26,7 @@
 """
 import re
 
-from structure_shape import zone
+from structure_shape import NoTemplate
 
 GAME_STATE_TURN = "回合方"
 GAME_STATE_PHASE = "階段"
@@ -156,21 +156,17 @@ def split_premise(premise):
     return (leading[0] if len(leading) == 1 else {"op": "且", "args": leading}), existence
 
 
-class NoPremiseTemplate(Exception):
-    """前提原子寫不出字面:訊息是 detail。"""
-
-
 def render_game_state(atom, last):
     """遊戲狀態原子 → 字面;form 是「に」或「に、」,最後一個原子後面沒有子句時不寫讀點。"""
     state = atom.get("state")
     form = atom.get("form")
     if form not in ("に", "に、"):
-        raise NoPremiseTemplate("遊戲狀態形式無模板")
+        raise NoTemplate("遊戲狀態形式無模板")
     if last and form == "に、":
         form = "に"
     if state == GAME_STATE_TURN:
         if atom.get("value") not in ("我方", "對手"):
-            raise NoPremiseTemplate("回合方無模板")
+            raise NoTemplate("回合方無模板")
         return _SIDE_TEXT[atom["value"]] + "ターン" + form
     if state == GAME_STATE_DAMAGE_STEP:
         return "ダメージステップ" + form
@@ -178,9 +174,9 @@ def render_game_state(atom, last):
         word = _PHASE_TEXT.get(atom.get("value"))
         side = atom.get("side")
         if word is None or (side is not None and side not in _SIDE_TEXT):
-            raise NoPremiseTemplate("階段無模板")
+            raise NoTemplate("階段無模板")
         return (_SIDE_TEXT[side] if side else "") + word + form
-    raise NoPremiseTemplate(f"遊戲狀態無模板:{state}")
+    raise NoTemplate(f"遊戲狀態無模板:{state}")
 
 
 def render_premise(premise, render_zones, render_object, followed=True):
@@ -200,23 +196,23 @@ def render_premise(premise, render_zones, render_object, followed=True):
         if op == "本回合發生過":
             # 段引用(票 09):字面在被引用的條件段(「〜したターン」)上,這裡不寫。
             if not atom.get("segment"):
-                raise NoPremiseTemplate("段引用無模板:沒有段 id")
+                raise NoTemplate("段引用無模板:沒有段 id")
             continue
         negated = False
         if op == "非" and atom.get("arg", {}).get("op") == "存在":
             atom, negated, op = atom["arg"], True, "存在"
         if op not in ("位置", "存在"):
-            raise NoPremiseTemplate(f"前提原子無模板:{op}")
+            raise NoTemplate(f"前提原子無模板:{op}")
         verb = "存在しない" if negated else "存在する"
         form = atom.get("form") or ""
         if form.rstrip("、") not in ("場合", "状態で"):
-            raise NoPremiseTemplate("前提形式無模板")
+            raise NoTemplate("前提形式無模板")
         if last:
             form = form.rstrip("、")   # 後面沒有子句時讀點不在原文範圍內
         if atom.get("elided"):
             # 分歧引導句的「存在しない場合」:物件與區域承前省略(segment_tree)。
             if not negated:
-                raise NoPremiseTemplate("省略的存在前提只能是否定")
+                raise NoTemplate("省略的存在前提只能是否定")
             pieces.append(verb + form)
             continue
         obj = render_object(atom["object"])

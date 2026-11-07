@@ -14,7 +14,6 @@ setcode 格式錯)以非 0 結束、不寫檔。
 """
 import argparse
 import datetime
-import hashlib
 import json
 import os
 import ssl
@@ -23,6 +22,7 @@ import urllib.request
 
 from archetype_table import (build_archetypes, render_report,
                              parse_setnames, serialize_archetypes)
+from digest import file_digest
 
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -41,13 +41,6 @@ def _load_json(path):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
-
-def _digest(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()[:16]
 
 
 def fetch_strings(path):
@@ -94,7 +87,7 @@ def main(argv=None):
         "%Y-%m-%dT%H:%M:%S%z")
     print(f"建置時間 {built_at}")
     for path in (args.strings, args.cards, args.faq):
-        print(f"來源 {os.path.basename(path)} digest={_digest(path)}")
+        print(f"來源 {os.path.basename(path)} digest={file_digest(path)}")
     print(f"字段 {report['total']} 筆、配到中文名 {report['matched']}、"
           f"配不到 {len(report['unmatched'])}、候選不唯一 {len(report['ambiguous'])}、"
           f"套用補丁 {len(report['patches'])}")

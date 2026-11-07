@@ -12,12 +12,12 @@
 """
 import argparse
 import datetime
-import hashlib
 import json
 import os
 import sys
 
 from block_boundary_report import compare_boundaries, render_block_boundaries
+from digest import file_digest
 
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,13 +39,6 @@ def _load(path):
 def _load_optional(path):
     return _load(path) if os.path.exists(path) else []
 
-
-def _digest(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()[:16]
 
 
 def main(argv=None):
@@ -71,7 +64,7 @@ def main(argv=None):
     print(f"執行時間 {now}")
     for path in (args.faq, args.splits, args.consensus, args.boundaries):
         if os.path.exists(path):
-            print(f"來源 {os.path.basename(path)} digest={_digest(path)}")
+            print(f"來源 {os.path.basename(path)} digest={file_digest(path)}")
     print(f"共識集 {report['consensus_total']} 張、可比 {report['compared']} 張、"
           f"一致 {report['agree']}、不一致 {len(report['disagree'])}、"
           f"無共識 {len(report['no_consensus'])} 張")

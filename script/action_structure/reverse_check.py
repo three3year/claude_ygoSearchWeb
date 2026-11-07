@@ -18,21 +18,22 @@
 """
 import re
 
+from archetype_table import fold_width
 from attribute_atoms import is_param_atom, joiner, render_group, render_level
-from premise import NoPremiseTemplate, render_premise, split_premise
-from condition_atoms import render_atom
+from block_split import LABEL_WIDTH
+from premise import render_premise, split_premise
+from condition_atoms import quoted_name, render_atom
 from names_attributes import TREAT_PREDICATE, render_treat_as
-from segment_extract import (ACTION_PAST, ACTIVATION_REF, CAUSE_EFFECT_OF,
+from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, CAUSE_EFFECT_OF,
                              CAUSE_METHOD, EXIST_WORDS, FROM_PARTICLES,
-                             HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER,
-                             SIDE_WORDS, SUMMON_METHODS, ZONE_WORDS, parse_from)
-from segment_extract import _ACTION_REF_RE, _REF_RE, _TARGET_REF_RE
+                             HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
+                             SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
 from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
                             render_timing, resolve_polarity)
-from segment_tree import (NoTreeTemplate, embedded_bindings, render_premise_prefix,
-                          tree_glue)
-from synonyms import (ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION, parse_predicates,
-                      split_targeting)
+from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
+from structure_shape import DEFAULT_ZONE_WORD, NoTemplate
+from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION,
+                      merged_voice, parse_predicates, split_targeting)
 
 REASON_NO_TEMPLATE = "無模板"
 REASON_MISMATCH = "字面不符"
@@ -55,29 +56,24 @@ _PUNCT_RE = re.compile("[。、\n ]")
 _WS_RE = re.compile(r"[\s　]+")
 
 _SIDE_TEXT = {v: k for k, v in SIDE_WORDS.items()}
-_ZONE_TEXT = {name: word for word, name in ZONE_WORDS}
 _HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
 _HEAD_TEXT[("魔法", "陷阱")] = "魔法・罠カード"
 _SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}
-_FULLWIDTH_ASCII = {i: i - 0xFEE0 for i in range(0xFF01, 0xFF5F)}
 _TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 
 
 def normalise(text):
-    """去空白(含全形空白)、全形英數符號折成半形;①②③ 等編號字元保持原樣。"""
-    return _WS_RE.sub("", text).translate(_FULLWIDTH_ASCII)
-
-
-class NoTemplate(Exception):
-    """模板寫不出這一段:訊息是 detail(哪一格、什麼原因)。"""
+    """去空白(含全形空白)、全形英數符號折成半形(與名稱比對同一張折疊表 `fold_width`);
+    ①②③ 等編號字元保持原樣。"""
+    return fold_width(_WS_RE.sub("", text))
 
 
 def _quoted(atom, names):
-    """名稱原子 → 「X」:只從名稱表取字面(查詢側才會直接帶 text,結構裡不會)。"""
-    row = names.get(atom.get("name"))
-    if row is None:
+    """名稱原子 → 「X」;名稱列找不到就是無模板。"""
+    text = quoted_name(atom, names)
+    if text is None:
         raise NoTemplate("名稱原子引用的名稱列找不到")
-    return f"「{row['text']}」"
+    return text
 
 
 def _render_atom(atom, names):
@@ -285,7 +281,7 @@ def _render_ref(ref, obj, seg, card):
     """回指字面:その/それらの+頭名詞照字面;動作回指(「めくったカード」)的動詞必須是
     這一段之前最後一個作用在該物件上的動作詞的過去形;「選択したモンスター」必須指回
     先前被取對象的物件。"""
-    if _REF_RE.match(ref):
+    if REF_RE.match(ref):
         return ref
     if obj["source"]["kind"] == "自己" and ref == f"「{card['name_ja']}」":
         return ref   # 本卡以自己的卡名當主語(票 09)
@@ -294,11 +290,11 @@ def _render_ref(ref, obj, seg, card):
         if _last_action_on(obj["id"], seg, card) != "發動":
             raise NoTemplate("「その発動」回指的物件先前沒被發動")
         return ref
-    if _TARGET_REF_RE.match(ref):
+    if TARGET_REF_RE.match(ref):
         if not _targeted_earlier(obj["id"], seg, card):
             raise NoTemplate("「選択した」回指的物件先前沒被取對象")
         return ref
-    m = _ACTION_REF_RE.match(ref)
+    m = ACTION_REF_RE.match(ref)
     if m and m.group("past") in ACTION_PAST.values():
         action = _last_action_on(obj["id"], seg, card)
         if ACTION_PAST.get(action) != m.group("past"):
@@ -332,7 +328,7 @@ def _render_zones(zones):
             z.get("side_source") != "明寫" for z in zones)):
         raise NoTemplate("從的區域分屬兩方")
     try:
-        words = [_ZONE_TEXT[z["zone"]] for z in zones]
+        words = [DEFAULT_ZONE_WORD[z["zone"]] for z in zones]
     except KeyError as e:
         raise NoTemplate(f"區域無模板:{e.args[0]}") from None
     prefix = ""
@@ -392,14 +388,13 @@ def _render_predicate(seg, marker):
     if not seg["actions"]:
         raise NoTemplate("段無動作詞")
     parsed, _ = parse_predicates(rest)
-    if parsed is None or [p[0] for p in parsed] != seg["actions"]:
+    if parsed is None or [p.action for p in parsed] != seg["actions"]:
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
-    voices = {p[1] for p in parsed}
-    voice = voices.pop() if len(voices) == 1 else "混合"
     polarity, optional = resolve_polarity(parsed, marker)
-    if (voice, polarity, optional) != (seg["voice"], seg["polarity"], seg["optional"]):
+    if (merged_voice(parsed), polarity, optional) != (seg["voice"], seg["polarity"],
+                                                      seg["optional"]):
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
-    return prefix, rest, next((p[3] for p in parsed if p[3]), None)
+    return prefix, rest, next((p.to for p in parsed if p.to), None)
 
 
 def _render_cause(cause, seg, card, objects, names, self_id):
@@ -415,17 +410,7 @@ def _render_cause(cause, seg, card, objects, names, self_id):
                 or "及び".join(methods) + "で" != cause.get("text"):
             raise NoTemplate("原因無模板:召喚方式")
         return cause["text"]
-    text = render_cause(cause)
-    if text is None:
-        raise NoTemplate(f"原因無模板:{cause.get('kind')}")
-    return text
-
-
-def _render_timing(timing):
-    text = render_timing(timing)
-    if text is None:
-        raise NoTemplate(f"時機無模板:{timing.get('kind')}")
-    return text
+    return render_cause(cause)
 
 
 def _render_modify(seg, objects):
@@ -437,10 +422,7 @@ def _render_modify(seg, objects):
     mention = line["ref"]
     if obj is None or (obj["source"]["kind"] == "自己") != (mention == "このカードの"):
         raise NoTemplate("性質變更段的提及與物件不符")
-    text = render_modify(mention, seg["modified"], seg["duration"])
-    if text is None:
-        raise NoTemplate("被改的屬性無模板")
-    return text
+    return render_modify(mention, seg["modified"], seg["duration"])
 
 
 def _render_existence(seg, premise, card, objects):
@@ -470,14 +452,11 @@ def _render_premise_zones(zones, text):
 
 def _render_leading_premise(leading, seg, card, objects, names, followed, self_id="o0"):
     """句首的前提(位置、存在、遊戲狀態)→ 字面;區域與物件的字面規則借這裡的。"""
-    try:
-        return render_premise(
-            leading, _render_premise_zones,
-            lambda obj_id: _render_object(objects[obj_id], seg, card, names,
-                                          self_id=self_id),
-            followed=followed)
-    except NoPremiseTemplate as e:
-        raise NoTemplate(str(e)) from None
+    return render_premise(
+        leading, _render_premise_zones,
+        lambda obj_id: _render_object(objects[obj_id], seg, card, names,
+                                      self_id=self_id),
+        followed=followed)
 
 
 def _render_recipient(recipient, seg, card, objects):
@@ -505,10 +484,7 @@ def _render_treat_as(seg, names, objects, self_id):
             raise NoTemplate("修飾段引用的名稱列找不到或不認得")
         return row["text"]
 
-    text = render_treat_as(seg["modified"], name_text)
-    if text is None:
-        raise NoTemplate("被改的屬性無模板:視為")
-    return text
+    return render_treat_as(seg["modified"], name_text)
 
 
 def _render_materials(seg, card, names, objects, self_id):
@@ -611,7 +587,7 @@ def render_segment(seg, card, self_id="o0"):
         parts.append(targeting_text or "")
         if seg["cause"]:
             parts.append(_render_cause(seg["cause"], seg, card, objects, names, self_id))
-        parts.append(_render_timing(seg["timing"]))
+        parts.append(render_timing(seg["timing"]))
         if from_placement == "述語前":
             parts.append(from_text)
         if to_placement == "述語前":
@@ -641,19 +617,16 @@ def _tree_glue(block, card, names):
         if ref is None:
             return _render_object(objects[obj_id], None, card, names)
         # 引導句主語的回指(その/動作回指):字面照句型驗過就照寫,動作與先前的段對不對在段上驗。
-        m = _ACTION_REF_RE.match(ref)
-        if _REF_RE.match(ref) or (m and m.group("past") in ACTION_PAST.values()):
+        m = ACTION_REF_RE.match(ref)
+        if REF_RE.match(ref) or (m and m.group("past") in ACTION_PAST.values()):
             return ref
         raise NoTemplate(f"回指字面無模板:{ref}")
 
     def render_premise_text(premise):
         return render_premise_prefix(premise, _render_premise_zones, render_object)
 
-    try:
-        return [_PUNCT_RE.sub("", piece)
-                for piece in tree_glue(block, render_premise_text, render_object)]
-    except NoTreeTemplate as e:
-        raise NoTemplate(str(e)) from None
+    return [_PUNCT_RE.sub("", piece)
+            for piece in tree_glue(block, render_premise_text, render_object)]
 
 
 def _holes(block, card):
@@ -693,7 +666,7 @@ def _residue(block, glue, glue_failed=False, holes=()):
         if glue_failed and node.get("span"):
             cut.append((node["span"][0], node["span"][1], None))
     if block["label"]:
-        cut.append((0, 2, False))
+        cut.append((0, LABEL_WIDTH, False))   # 「①：」不是任何段的字
     cut.sort()
     pieces, pos, after = [], 0, False
     for start, end, triggered in cut:

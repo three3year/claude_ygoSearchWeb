@@ -22,8 +22,19 @@ import re
 
 from structure_shape import new_block, unparsed
 
-# 編號字元 ①..⑳ 後一律全形冒號(筆記 01)。
-_LABEL_RE = re.compile("[①-⑳]：")
+# 編號字元 ①..⑳ 後一律全形冒號(筆記 01);「①：」佔兩個字元,帶編號的區塊正文從這之後起算。
+LABEL_RE = re.compile("[①-⑳]：")
+LABEL_WIDTH = len("①：")
+# 區塊開頭的「また、」是接著詞,正文從它之後起算(反向檢查也把「また」當固定接著詞)。
+ALSO_PREFIX = "また、"
+
+
+def body_start(block):
+    """區塊正文(扣掉「①：」與開頭的「また、」)在區塊原文裡的起點。"""
+    start = LABEL_WIDTH if block["label"] else 0
+    if block["text"].startswith(ALSO_PREFIX, start):
+        start += len(ALSO_PREFIX)
+    return start
 # 次數限制前言:「このカード名の(①②の)効果は１ターンに１度しか使用できない」
 # 「このカード名のカードは１ターンに１枚しか発動できない」等;不記(spec)。
 _LIMIT_RE = re.compile(
@@ -68,10 +79,11 @@ _SUMMON_TAIL_RE = re.compile("(?:特殊召喚|召喚)(?:する|できる|する�
 
 # 效果句開頭:續前一區塊(不切)。「この(効果|方法)で〜に成功した時」是新效果,先於此判。
 _RESULT_CUT_RE = re.compile("^この(?:効果|方法)で(?:特殊召喚|召喚)に成功した(?:時|場合)")
+# 「この効果」涵蓋「この効果は/の/を/で/によって」,「その」涵蓋「その後」,所以不另列。
 _NO_CUT_RE = re.compile(
-    "^(?:選択した|この効果は|この効果の|このターン|その後|デッキから|手札から|その|それ"
-    "|この効果を(?:発動|適用)(?:する|した)|「[^」]*」のこの効果|ターン終了時まで|（|●|または"
-    "|さらに|この効果で|この方法で|お互い|この効果によって|次の(?:自分|相手)?ターン|この時"
+    "^(?:選択した|このターン|デッキから|手札から|その|それ"
+    "|「[^」]*」のこの効果|ターン終了時まで|（|●|または"
+    "|さらに|この方法で|お互い|次の(?:自分|相手)?ターン|この時"
     "|こうして|墓地へ送|墓地に送|破壊し|確認し|宣言し|残りの|めくっ|違った|当たっ|ハズレ"
     "|同一チェーン|発動後|また、この効果|[^、。]*?(?:なかった|だった)場合|(?:自分|相手)の出た目"
     "|この効果|このカードを発動(?:した|する)ターン"
@@ -87,7 +99,8 @@ _TRIGGER_OPEN_RE = re.compile(
     "^[^、。]*?(?:時|場合|限り|毎に|度に|際|ターン|フェイズ|ステップ)(?:、|に、|に|この|自分|相手)"
     "|^[^。]*?(?:時|場合|限り)(?:、|に、)")
 
-UNIT_MATERIAL, UNIT_SUMMON, UNIT_LIMIT, UNIT_EFFECT = "素材", "召喚條件", "次數限制", "效果"
+# 單位種類;「效果句」是切分單位(一句效果文),不是段類別的「效果」。
+UNIT_MATERIAL, UNIT_SUMMON, UNIT_LIMIT, UNIT_EFFECT = "素材", "召喚條件", "次數限制", "效果句"
 _UNIT_KIND = {UNIT_MATERIAL: "素材", UNIT_SUMMON: "召喚條件", UNIT_EFFECT: "編號效果"}
 _PRIORITY = (UNIT_EFFECT, UNIT_SUMMON, UNIT_MATERIAL, UNIT_LIMIT)
 
@@ -305,7 +318,7 @@ def _split_text(text, source, kind_numbered, prefix, supplement, patch,
                 patch_status, category):
     if not text:
         return [], []
-    labels = list(_LABEL_RE.finditer(text))
+    labels = list(LABEL_RE.finditer(text))
     kind_fixed = None if kind_numbered == "編號效果" else kind_numbered
     preamble_end = labels[0].start() if labels else len(text)
     blocks, omitted = _split_unnumbered(text, preamble_end, source, kind_fixed,

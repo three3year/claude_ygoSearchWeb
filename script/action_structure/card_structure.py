@@ -41,13 +41,10 @@ from names_attributes import (SOURCE_OFFICIAL_NAME, TREAT_PREDICATE, extract_nam
 from premise import GAME_STATE_PHASE
 from segment_tree import extract_block
 from structure_shape import (
-    ATTRIBUTE_TABLES, BLOCK_KINDS, BRANCH_MODES, JOINS, NO_OFFICIAL_TEXT,
-    OBJECT_KINDS, OBJECT_SOURCES, POLARITIES, POSITION_SOURCES, ROLES,
-    SEGMENT_KINDS, SIDES, TRIGGER_FORMS, ZONE_PARENT, ZONES, attribute_row,
-    branch_node,
-    embedded_node, iter_nodes, iter_segments, name_row, new_block, new_card,
-    new_line, new_object, new_segment, position, segment_node, self_object,
-    unparsed, zone)
+    ATTRIBUTE_TABLES, NO_OFFICIAL_TEXT, attribute_row, branch_node, embedded_node,
+    iter_nodes, iter_segments, name_row, new_block, new_card, new_line, new_object,
+    new_segment, position, segment_node, unparsed, zone)
+
 
 def build_card(entry, faq_entry, lookups, boundary_patch=None, patch_status=None):
     """一張卡:官方 DB 文本 → 名稱表、卡片屬性表 → 區塊 → 段 → 卡片結構。

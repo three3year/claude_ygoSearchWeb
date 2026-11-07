@@ -49,8 +49,8 @@ import re
 from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from condition_atoms import referenced_objects
-from segment_extract import PREDICATE_STEMS, action_ancestors
 from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
+from synonyms import PREDICATE_STEMS, action_ancestors
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
@@ -375,11 +375,14 @@ class _Judge:
             for alt in entry.get("alt_ids", ()):
                 self.by_id.setdefault(alt, entry)
         self.structure_by_id = {s["id"]: s for s in structures}
-        self.views = {}
-        self.exists_cache = {}
-        self.candidate_cache = {}
-        self.pool_cache = {}
-        self.objects_cache = {}
+        self.views: dict[int, CardView] = {}
+        # 只給條件的存在性:快取鍵(條件式、來源、名稱字面、從、卡號的 JSON)→ 有沒有實卡代得進去。
+        self.exists_cache: dict[str, bool] = {}
+        # (卡號, 物件 id) → 該物件的候選卡(卡片總表條目)。
+        self.candidate_cache: dict[tuple[int, str], list[dict]] = {}
+        # (卡號, 物件 id) → [(被引用物件 id, 候選卡列表)];None = 被引用物件找不到或解析不出。
+        self.pool_cache: dict[tuple[int, str], list[tuple[str, list[dict]]] | None] = {}
+        self.objects_cache: dict[int, dict[str, dict]] = {}
 
     def view(self, entry):
         if entry["id"] not in self.views:

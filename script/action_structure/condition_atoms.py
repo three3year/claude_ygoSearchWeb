@@ -19,7 +19,7 @@
 """
 import re
 
-from structure_shape import zone
+from structure_shape import DEFAULT_ZONE_WORD, zone
 
 # 「X」(１体)またはそのカード名が記された:名稱後可帶數量字面(「「ブラック・マジシャン」１体または
 # そのカード名が記されたカード１枚」,票 09),記在卡名原子的 count、模板放回。
@@ -27,11 +27,16 @@ _MENTION_OR_RE = re.compile(
     "^「(?P<name>[^「」]+)」(?P<count>[０-９]+(?:体|枚))?またはそのカード名が記された")
 _MENTION_RE = re.compile("^「(?P<name>[^「」]+)」のカード名が記された")
 _RANGE_RE = re.compile("^「(?P<lo>[^「」]+)」～「(?P<hi>[^「」]+)」のいずれかの")
-_ZONE_RE = re.compile("^(?P<side>自分|相手)?(?P<zone>EXデッキ|デッキ|手札|フィールド|墓地)の")
+# 名詞修飾的位置只認這五個區域的預設字面(「墓地のモンスター」「EXデッキの「No.」Xモンスター」);
+# 字面取自共用的區域字面表(structure_shape.ZONE_WORDS),子區域(デッキの上)與舊式「フィールド上」不在此列。
+_ZONE_NAMES = ("額外牌組", "牌組", "手牌", "場上", "墓地")
+_ZONE_NAME = {DEFAULT_ZONE_WORD[name]: name for name in _ZONE_NAMES}
+_ZONE_ALT = "|".join(_ZONE_NAME)
+_ZONE_RE = re.compile(f"^(?P<side>自分|相手)?(?P<zone>{_ZONE_ALT})の")
 # 曾被特殊召喚(票 08):「EXデッキから特殊召喚された」→ {"op": "曾被特殊召喚", "zones": [出發地]};
 # 查詢時從額外牌組特殊召喚的只有額外牌組的怪獸(融合/同步/超量/連結/靈擺)代得進去,其餘任何卡都算。
 _SUMMONED_FROM_RE = re.compile(
-    "^(?P<side>自分|相手)?の?(?P<zone>EXデッキ|デッキ|手札|フィールド|墓地)から特殊召喚された")
+    f"^(?P<side>自分|相手)?の?(?P<zone>{_ZONE_ALT})から特殊召喚された")
 SUBTYPE_LETTERS = (("融合", "融合"), ("儀式", "儀式"), ("S", "同步"), ("X", "超量"),
                    ("L", "連結"), ("P", "靈擺"))
 _SUBTYPE = "|".join(letter for letter, _ in SUBTYPE_LETTERS)
@@ -51,8 +56,6 @@ REASON_REF = "指回的物件找不到"
 
 _SIDE = {"自分": "我方", "相手": "對手"}
 _SIDE_TEXT = {v: k for k, v in _SIDE.items()}
-_ZONE_NAME = {"EXデッキ": "額外牌組", "デッキ": "牌組", "手札": "手牌",
-              "フィールド": "場上", "墓地": "墓地"}
 _ZONE_TEXT = {v: k for k, v in _ZONE_NAME.items()}
 _ATTR_NAME = dict(ATTR_WORDS)
 _ATTR_TEXT = {v: k for k, v in ATTR_WORDS}
@@ -152,7 +155,9 @@ def referenced_objects(condition):
     return found
 
 
-def _quoted(atom_or_id, names):
+def quoted_name(atom_or_id, names):
+    """名稱原子(或名稱列 id)→ 「X」:只從名稱表取字面(查詢側才會直接帶 text,結構裡不會);
+    名稱列找不到回 None。reverse_check 的名稱原子模板也用這一支。"""
     name_id = atom_or_id if isinstance(atom_or_id, str) else atom_or_id.get("name")
     row = names.get(name_id)
     return None if row is None else f"「{row['text']}」"
@@ -162,16 +167,16 @@ def render_atom(atom, names):
     """原子 → 修飾語字面;這裡沒模板的回 None(呼叫端記「無模板」)。"""
     op = atom.get("op")
     if op == "記載":
-        quoted = _quoted(atom, names)
+        quoted = quoted_name(atom, names)
         return None if quoted is None else quoted + "のカード名が記された"
     if op == "或" and _is_name_or_mention(atom):
-        quoted = _quoted(atom["args"][0], names)
+        quoted = quoted_name(atom["args"][0], names)
         count = atom["args"][0].get("count") or ""
         if quoted is None or not re.fullmatch("(?:[０-９]+(?:体|枚))?", count):
             return None
         return quoted + count + "またはそのカード名が記された"
     if op == "卡名範圍":
-        lo, hi = (_quoted(n, names) for n in atom["names"])
+        lo, hi = (quoted_name(n, names) for n in atom["names"])
         return None if lo is None or hi is None else f"{lo}～{hi}のいずれかの"
     if op in ("位置", "曾被特殊召喚"):
         # 條件式裡的區域不經 load_structures 補格,產物省略的 side 要用 get。

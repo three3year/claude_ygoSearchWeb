@@ -21,7 +21,8 @@
 import re
 
 from premise import PHASE_WORDS
-from synonyms import MODIFY_ACTION, MODIFY_PREDICATE
+from structure_shape import NoTemplate
+from synonyms import MODIFY_PREDICATE
 
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
 CAUSE_FORMS = {
@@ -63,17 +64,17 @@ def parse_cause(text):
 
 
 def render_cause(cause):
-    """cause 格 → 字面;字面與種類、方對不上(不在閉集)回 None。"""
+    """cause 格 → 字面;字面與種類、方對不上(不在閉集)丟 NoTemplate。"""
     if not cause:
         return ""
     text = cause.get("text")
     if cause.get("kind") == CAUSE_MATERIAL:
         if text not in MATERIAL_FORMS or MATERIAL_FORMS[text] != cause.get("summon"):
-            return None
+            raise NoTemplate(f"原因無模板:{cause.get('kind')}")
         return text
     expected = CAUSE_FORMS.get(text)
     if expected is None or expected != (cause.get("kind"), cause.get("side")):
-        return None
+        raise NoTemplate(f"原因無模板:{cause.get('kind')}")
     return text
 
 
@@ -85,10 +86,10 @@ PERMISSION_ACTIONS = ("直接攻擊",)
 def resolve_polarity(parsed, marker):
     """述語解析結果(parse_predicates 的列表)+ 物件助詞 → (極性, 可選)。
     「Xは〜できる」且動作詞是永續許可的(直接攻擊)→ 極性「可以」、不可選;其餘照語尾。"""
-    polarity = parsed[-1][2]
-    optional = True if any(p[4] for p in parsed) else None
+    polarity = parsed[-1].polarity
+    optional = True if any(p.optional for p in parsed) else None
     if (optional and marker == "は" and polarity == "做"
-            and all(p[0] in PERMISSION_ACTIONS for p in parsed)):
+            and all(p.action in PERMISSION_ACTIONS for p in parsed)):
         return "可以", None
     return polarity, optional
 
@@ -122,19 +123,21 @@ def implicit_delay():
 
 
 def render_timing(timing):
-    """timing 格 → 字面(沒有字面的延遲寫空字串);格與字面對不上回 None。"""
+    """timing 格 → 字面(沒有字面的延遲寫空字串);格與字面對不上丟 NoTemplate。"""
     if not timing:
         return ""
     if timing.get("kind") != DELAY:
-        return None
+        raise NoTemplate(f"時機無模板:{timing.get('kind')}")
     if "text" not in timing:
         return ""
     phase = _PHASE_TEXT.get(timing.get("phase"))
     side = timing.get("side")
-    if phase is None or (side is not None and side not in _SIDE_TEXT):
-        return None
-    text = (timing.get("turn") or "") + (_SIDE_TEXT[side] if side else "") + phase + "に"
-    return text if text == timing["text"] else None
+    text = None
+    if phase is not None and (side is None or side in _SIDE_TEXT):
+        text = (timing.get("turn") or "") + (_SIDE_TEXT[side] if side else "") + phase + "に"
+    if text != timing["text"]:
+        raise NoTemplate(f"時機無模板:{timing.get('kind')}")
+    return text
 
 
 def is_delayed(seg):
@@ -206,21 +209,18 @@ def mention_head(mention):
 
 
 def render_modify(mention, modified, duration):
-    """性質變更句模板:[提及][屬性]は[期間][值]になる;格與閉集對不上回 None。"""
+    """性質變更句模板:[提及][屬性]は[期間][值]になる;格與閉集對不上丟 NoTemplate
+    (期間由 `render_duration` 驗,它回 None 時也是這裡丟)。"""
     attr = _STAT_TEXT.get(modified.get("attr"))
-    if mention not in MENTION_FORMS or attr is None:
-        return None
     period = render_duration(duration)
-    if period is None:
-        return None
     form = modified.get("form")
+    value = None
     if form in ("倍", "半分"):
         base = modified.get("base") or ""
-        if not re.fullmatch(f"元々の(?:{_STAT_ALT})", base):
-            return None
-        value = f"{base}の{form}"
+        if re.fullmatch(f"元々の(?:{_STAT_ALT})", base):
+            value = f"{base}の{form}"
     elif form == "數值" and isinstance(modified.get("value"), int):
         value = str(modified["value"]).translate(_TO_FULLWIDTH_DIGITS)
-    else:
-        return None
+    if mention not in MENTION_FORMS or attr is None or period is None or value is None:
+        raise NoTemplate("被改的屬性無模板")
     return f"{mention}{attr}は{period}{value}{MODIFY_PREDICATE}"

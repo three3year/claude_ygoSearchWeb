@@ -20,7 +20,9 @@
 import re
 
 from archetype_table import fold_width, split_setcode
-from structure_shape import attribute_row, name_row, unparsed, zone
+from block_split import LABEL_RE, LABEL_WIDTH
+from structure_shape import (NoTemplate, ZONE_WORDS, attribute_row, name_row, unparsed,
+                             zone)
 
 REASON_NAME_UNKNOWN = "不認得的「」名稱"
 SOURCE_QUOTE = "「」引用"
@@ -38,21 +40,19 @@ _RANGE_RE = re.compile("「(?P<lo>[^「」]+)」～「(?P<hi>[^「」]+)」の�
 TREAT_KINDS = {"罠カード": ("大類", "陷阱"), "魔法カード": ("大類", "魔法"),
                "通常モンスター": ("卡片子類型", "通常"), "効果モンスター": ("卡片子類型", "效果"),
                "チューナー": ("卡片子類型", "協調")}
+# 範圍子式:ルール上(任何位置)或 <位置>に存在する限り(只在該位置),讀點有寫沒寫都有;
+# 整句比對與反向檢查驗 scope 字面共用。
+_SCOPE_PATTERN = "(?:ルール上、?|(?P<zones>[^、「]+?)に存在する限り、?)?"
 _TREAT_RE = re.compile(
     "^(?P<subject>このカード(?:名|のカード名)?(?:は|が)、?)"
-    "(?P<scope>ルール上、?|(?P<zones>[^、「]+?)に存在する限り、?)?"
+    f"(?P<scope>{_SCOPE_PATTERN})"
     "(?P<prefix>カード名を|このカードのカード名は)?"
     "(?:(?P<names>「[^」]+」(?:(?:カード|モンスター)?、「[^」]+」)*)"
     "(?P<suffix>カード|モンスター)?"
     f"|(?P<kind>{'|'.join(TREAT_KINDS)}))"
     "として(?P<also>も)?扱う$")
-_SCOPE_RE = re.compile("^(?:ルール上、?|(?P<zones>[^、「]+?)に存在する限り、?)?$")
+_SCOPE_RE = re.compile(f"^{_SCOPE_PATTERN}$")
 _TREAT_KIND_TEXT = {value: text for text, value in TREAT_KINDS.items()}
-_WHERE_WORDS = (("EXデッキ", "額外牌組"), ("デッキ", "牌組"), ("手札", "手牌"),
-                ("フィールド上", "場上"), ("フィールドゾーン", "場地區"),
-                ("フィールド", "場上"), ("墓地", "墓地"),
-                ("モンスターゾーン", "怪獸區"), ("魔法＆罠ゾーン", "魔陷區"),
-                ("ペンデュラムゾーン", "P區"))
 TREAT_PREDICATE = "として扱う"
 
 
@@ -68,9 +68,8 @@ def _sentences(text):
         offset = start
         while sent and sent[0] in "\n ●":
             sent, offset = sent[1:], offset + 1
-        m = re.match("^[①-⑳]：", sent)
-        if m:
-            sent, offset = sent[2:], offset + 2
+        if LABEL_RE.match(sent):
+            sent, offset = sent[LABEL_WIDTH:], offset + LABEL_WIDTH
         sent = sent.rstrip("\n ")
         if sent:
             out.append((offset, sent))
@@ -78,9 +77,10 @@ def _sentences(text):
 
 
 def _parse_where(phrase):
+    """「フィールド・墓地」→ 位置條件的區域列表(字面逐截對共用的區域字面表,認不得回 None)。"""
     zones = []
     for part in phrase.split("・"):
-        for word, name in _WHERE_WORDS:
+        for word, name in ZONE_WORDS:
             if part == word:
                 zones.append(zone(name))
                 break
@@ -157,7 +157,14 @@ def parse_treat_as(sent):
 
 def render_treat_as(modified, name_text):
     """修飾段的模板:主語 + 範圍 + [カード名を] + 「X」(尾綴)、… + 尾綴 + として(も)扱う;
-    `name_text(名稱 id) → 字面`。格與閉集對不上回 None。"""
+    `name_text(名稱 id) → 字面`。格與閉集對不上丟 NoTemplate。"""
+    text = _treat_as_text(modified, name_text)
+    if text is None:
+        raise NoTemplate("被改的屬性無模板:視為")
+    return text
+
+
+def _treat_as_text(modified, name_text):
     scope = _SCOPE_RE.match(modified.get("scope") or "")
     if scope is None:
         return None

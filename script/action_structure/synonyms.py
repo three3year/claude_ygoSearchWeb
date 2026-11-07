@@ -9,6 +9,19 @@
 各舊式用語在官方 DB 文本上的出現次數見 `.scratch/action-structure/report/old_style_phrases.md`
 (`stats/old_style_phrases.py` 可重跑)。
 """
+from typing import NamedTuple
+
+from structure_shape import VOICE_MIXED
+
+
+class Predicate(NamedTuple):
+    """一個述語拆回的格:動作詞、態、極性、述語本身寫明的終點、可選。"""
+    action: str
+    voice: str
+    polarity: str
+    to: str | None
+    optional: bool
+
 
 # ── 述語字面 → 動作詞;第三欄是述語本身寫明的終點(「墓地へ送る」「ゲームから除外する」)。
 # 同一動作詞多個字面時,長的、舊式的排前面(startswith 逐一試,「生け贄に捧げ」不能被更短的字面先吃掉)。
@@ -121,30 +134,30 @@ def split_targeting(pred):
 
 
 def parse_predicate(pred):
-    """述語字面 → (動作詞, 態, 極性, 寫明的終點, 可選) 或 (None, 原因)。
+    """述語字面 → (Predicate, None) 或 (None, 原因)。
     「のみ特殊召喚できる」「しか特殊召喚できない」→ 極性只能、不可選。"""
     for only in ONLY_PREFIXES:
         if pred.startswith(only):
             parsed, reason = parse_predicate(pred[len(only):])
             if parsed is None:
                 return None, reason
-            action, voice, polarity, to, optional = parsed
-            if (only, polarity, optional) not in (("のみ", "做", True), ("しか", "不能", False)):
+            if (only, parsed.polarity, parsed.optional) not in (
+                    ("のみ", "做", True), ("しか", "不能", False)):
                 return None, REASON_TAIL
-            return (action, voice, ONLY, to, False), None
+            return parsed._replace(polarity=ONLY, optional=False), None
     for stem, action, to in PREDICATE_STEMS:
         if pred.startswith(stem):
             tail = pred[len(stem):]
             if tail not in TAILS:
                 return None, REASON_TAIL
             voice, polarity, *optional = TAILS[tail]
-            return (action, voice, polarity, to, bool(optional and optional[0])), None
+            return Predicate(action, voice, polarity, to, bool(optional and optional[0])), None
     return None, REASON_PREDICATE
 
 
 def parse_predicates(pred):
     """て形串接的述語字面(めくられて墓地へ送られた)、連用形串接(無効にし破壊する)→
-    [parse_predicate 的結果] 或 (None, 原因)。單一述語也走這裡;串接時前面的語尾必須是
+    ([Predicate], None) 或 (None, 原因)。單一述語也走這裡;串接時前面的語尾必須是
     て/で 或連用形的「し」。"""
     parsed, reason = parse_predicate(pred)
     if parsed is not None:
@@ -159,8 +172,17 @@ def parse_predicates(pred):
                 following, reason = parse_predicates(rest[len(tail):])
                 if following is not None:
                     voice, polarity, *optional = TAILS[tail]
-                    head = (action, voice, polarity, to, bool(optional and optional[0]))
+                    head = Predicate(action, voice, polarity, to, bool(optional and optional[0]))
                     return [head] + following, None
         return None, REASON_TAIL
     return None, reason
+
+
+def merged_voice(parsed):
+    """串接的多個述語的態:全部相同就是那個態,不同是「混合」;沒有述語(取對象宣告)是 None。
+    抽取與反向檢查共用這一把尺。"""
+    voices = {p.voice for p in parsed}
+    if len(voices) == 1:
+        return voices.pop()
+    return VOICE_MIXED if voices else None
 

@@ -14,13 +14,13 @@
 """
 import argparse
 import datetime
-import hashlib
 import json
 import os
 import sys
 
 from card_structure import load_structures
 from coverage_report import build_coverage, render_coverage
+from digest import file_digest
 
 ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -29,14 +29,6 @@ DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_OUT = os.path.join(ROOT, ".scratch", "action-structure", "report",
                            "coverage.md")
 
-
-def _digest(path):
-    """來源檔雜湊(sha256 前 16 hex),與 build_structure.py 同一算法。"""
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()[:16]
 
 
 def main(argv=None):
@@ -57,7 +49,7 @@ def main(argv=None):
         "%Y-%m-%dT%H:%M:%S%z")
     print(f"產出時間 {built_at}")
     for path in (args.structures, args.cards):
-        print(f"來源 {os.path.basename(path)} digest={_digest(path)}")
+        print(f"來源 {os.path.basename(path)} digest={file_digest(path)}")
     print(f"卡片總表 {card_count} 張;產物 {coverage['cards']} 張 = 有卡片結構 "
           f"{coverage['with_structure']} + 無官方日文 {len(coverage['no_official_text'])}")
     if coverage["cards"] != card_count:

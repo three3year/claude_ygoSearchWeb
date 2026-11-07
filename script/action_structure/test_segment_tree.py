@@ -107,7 +107,7 @@ class BranchTest(unittest.TestCase):
                                       from_zones=["手牌"], card=BLACK_MAGICIAN))
         details = {f["detail"] for f in check_card(structures[0])}
         self.assertIn("段樹無模板:分歧方式判不出", details)
-        self.assertIn("段未解析:述語解析不出", details)
+        self.assertIn("段解析不出:述語解析不出", details)
 
     def test_after_join_on_header_and_elided_premise(self):
         """神風:「その後、以下の効果から１つを選んで適用できる」的引導句帶先後連接;

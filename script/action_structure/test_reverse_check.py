@@ -65,7 +65,7 @@ class TemplateTest(unittest.TestCase):
         structure = build_one(1, "甲", "①：このカードをバウンスする。")
         failures = check_card(structure)
         self.assertEqual([(f["reason"], f["detail"]) for f in failures],
-                         [("無模板", "段未解析:述語解析不出")])
+                         [("無模板", "段解析不出:述語解析不出")])
 
     def test_filled_slot_without_template_is_reported_by_slot_name(self):
         """段上多了一個還沒寫模板的格(票 09 前的數量格就是這樣):記「無模板」並指出是哪一格。"""
@@ -166,7 +166,7 @@ class ReportTest(unittest.TestCase):
         self.assertIn("| 有段外殘留的區塊 | 0 |", md)
         self.assertIn("| 無官方日文(不計) | 1 |", md)
         self.assertIn("### 無模板(3 段 / 3 張)", md)
-        self.assertIn("段未解析:述語解析不出(3 段 / 3 張):2, 3, 4", md)
+        self.assertIn("段解析不出:述語解析不出(3 段 / 3 張):2, 3, 4", md)
         self.assertIn("### 字面不符(1 段 / 1 張)", md)
         self.assertIn("`5` 戊 `b0.s2` 產生「デッキから闇属性モンスター１体を特殊召喚する」"
                       "原文「デッキから闇属性のモンスター１体を特殊召喚する」", md)

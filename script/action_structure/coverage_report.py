@@ -272,7 +272,7 @@ def render_coverage(cov):
     out += ["", "### 物件解析不出的原因", ""]
     out += _reason_sections(cov["objects"]["reasons"], "objects", "個")
     out += [f"## 不認得的「」名稱({_n(len(cov['unknown_names']))} 個)", "",
-            "名稱表裡對不到卡名、字段、宣言的「」名稱;該條件標未解析、建置照常通過"
+            "名稱表裡對不到卡名、字段、宣言的「」名稱;該條件標解析不出、建置照常通過"
             "(名稱表由票 04 接上,接點是名稱表列的 `unparsed`)。", ""]
     if cov["unknown_names"]:
         for name, cards in cov["unknown_names"].items():

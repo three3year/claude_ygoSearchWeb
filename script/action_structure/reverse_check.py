@@ -506,7 +506,7 @@ def render_segment(seg, card, self_id="o0"):
     取對象線只有兩種寫得出:這一段的述語帶取對象字面(每條線都標),或這一條線指回
     本區塊先前被取對象字面點名的物件(その/選択したモンスター)。"""
     if seg["unparsed"]:
-        raise NoTemplate(f"段未解析:{seg['unparsed']['reason']}")
+        raise NoTemplate(f"段解析不出:{seg['unparsed']['reason']}")
     if seg["kind"] not in TEMPLATE_KINDS:
         raise NoTemplate(f"段類別無模板:{seg['kind']}")
     for slot, value in seg.items():

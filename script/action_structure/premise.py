@@ -195,6 +195,11 @@ def render_premise(premise, render_zones, render_object, followed=True):
         if op == "遊戲狀態":
             pieces.append(render_game_state(atom, last))
             continue
+        if op == "本回合發生過":
+            # 段引用(票 09):字面在被引用的條件段(「〜したターン」)上,這裡不寫。
+            if not atom.get("segment"):
+                raise NoPremiseTemplate("段引用無模板:沒有段 id")
+            continue
         negated = False
         if op == "非" and atom.get("arg", {}).get("op") == "存在":
             atom, negated, op = atom["arg"], True, "存在"

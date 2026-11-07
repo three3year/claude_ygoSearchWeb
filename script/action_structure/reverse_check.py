@@ -21,9 +21,11 @@ import re
 from attribute_atoms import is_param_atom, joiner, render_group, render_level
 from premise import NoPremiseTemplate, render_premise, split_premise
 from condition_atoms import render_atom
-from segment_extract import (ACTION_PAST, ACTIVATION_REF, EXIST_WORDS,
-                             FROM_PARTICLES, HEAD_CATEGORY, HEAD_SUBTYPE,
-                             SIDE_WORDS, ZONE_WORDS, parse_from)
+from names_attributes import TREAT_PREDICATE, render_treat_as
+from segment_extract import (ACTION_PAST, ACTIVATION_REF, CAUSE_EFFECT_OF,
+                             CAUSE_METHOD, EXIST_WORDS, FROM_PARTICLES,
+                             HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER,
+                             SIDE_WORDS, SUMMON_METHODS, ZONE_WORDS, parse_from)
 from segment_extract import _ACTION_REF_RE, _REF_RE, _TARGET_REF_RE  # 回指字面的句型,與抽取端同一把尺
 from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
                             render_timing, resolve_polarity)
@@ -41,8 +43,9 @@ TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polar
                   "trigger", "span", "text", "predicate", "voice", "unparsed",
                   "optional", "cause", "premise", "timing", "duration", "modified",
                   "replaces", "amount"}
-# 被代替段是改了類別的條件段,模板同條件段(帶觸發形)。
-TEMPLATE_KINDS = ("條件", "代價", "效果", "被代替")
+# 被代替段是改了類別的條件段,模板同條件段(帶觸發形);召喚手續、限制(票 09)是召喚條件區塊裡
+# 改了類別的條件/效果段,模板同簡單子句(有觸發形就寫)。
+TEMPLATE_KINDS = ("條件", "代價", "效果", "被代替", "召喚手續", "限制", "修飾")
 # 區塊裡不屬於任何段的固定接著詞:發動句語尾(含舊式「発動する事ができる」,長的在前)、
 # 舊式代價句的「事で」、先後連接、區塊開頭的「また」。去掉標點後只能剩這些。
 # 分歧的「●」也是接著詞;段樹引導句另由 tree_glue 扣掉(票 06)。
@@ -285,6 +288,8 @@ def _render_ref(ref, obj, seg, card):
     先前被取對象的物件。"""
     if _REF_RE.match(ref):
         return ref
+    if obj["source"]["kind"] == "自己" and ref == f"「{card['name_ja']}」":
+        return ref   # 本卡以自己的卡名當主語(票 09)
     if ref == ACTIVATION_REF:
         # 「その発動」指回本區塊先前被發動的那張卡(票 09)。
         if _last_action_on(obj["id"], seg, card) != "發動":
@@ -398,7 +403,19 @@ def _render_predicate(seg, marker):
     return prefix, rest, next((p[3] for p in parsed if p[3]), None)
 
 
-def _render_cause(cause):
+def _render_cause(cause, seg, card, objects, names, self_id):
+    """原因:閉集字面(戦闘で…);「「X」の効果で」寫物件;召喚方式寫各方式以「及び」連接 + で。"""
+    if cause and cause.get("object") is not None:
+        obj = objects.get(cause["object"])
+        if obj is None or cause.get("kind") != "效果" or cause.get("text") != CAUSE_EFFECT_OF:
+            raise NoTemplate("原因無模板:效果的物件")
+        return _render_object(obj, seg, card, names, self_id=self_id) + CAUSE_EFFECT_OF
+    if cause and cause.get("kind") == CAUSE_METHOD:
+        methods = cause.get("methods") or []
+        if any(m not in SUMMON_METHODS for m in methods) \
+                or "及び".join(methods) + "で" != cause.get("text"):
+            raise NoTemplate("原因無模板:召喚方式")
+        return cause["text"]
     text = render_cause(cause)
     if text is None:
         raise NoTemplate(f"原因無模板:{cause.get('kind')}")
@@ -476,6 +493,34 @@ def _render_recipient(recipient, seg, card, objects):
     return _SIDE_TEXT[recipient] + "に"
 
 
+def _render_treat_as(seg, names, objects, self_id):
+    """修飾段(票 09):「〜として扱う」句由 names_attributes.render_treat_as 從被改的屬性拼回;
+    對象線只能是此卡、沒有動作詞。"""
+    if (seg["actions"] or seg["predicate"] != TREAT_PREDICATE or not seg["modified"]
+            or len(seg["lines"]) != 1 or seg["lines"][0]["object"] != self_id):
+        raise NoTemplate("修飾段的格不齊")
+
+    def name_text(name_id):
+        row = names.get(name_id)
+        if row is None or row["unparsed"]:
+            raise NoTemplate("修飾段引用的名稱列找不到或不認得")
+        return row["text"]
+
+    text = render_treat_as(seg["modified"], name_text)
+    if text is None:
+        raise NoTemplate("被改的屬性無模板:視為")
+    return text
+
+
+def _render_materials(seg, card, names, objects, self_id):
+    """素材行(票 09):每條角色「素材」的線寫物件全名,以「＋」連;沒有述語。"""
+    if seg["actions"] or seg["predicate"] or seg["kind"] != "召喚手續":
+        raise NoTemplate("素材段的格不齊")
+    return MATERIAL_JOINER.join(
+        _render_object(objects[line["object"]], seg, card, names, line, self_id=self_id)
+        for line in seg["lines"])
+
+
 def render_segment(seg, card, self_id="o0"):
     """簡單子句模板:[代わりに][前提][誰が][到に][從から|の|に存在する][物件][助詞][數量][取對象][原因][時機][形式][從から][到に][受方に]述語[觸發形]
     (物件前的「到に」只在助詞是「が」時;「從」只在物件前或述語前其中一處,照 placement;
@@ -494,6 +539,10 @@ def render_segment(seg, card, self_id="o0"):
             raise NoTemplate(f"格 {slot} 無模板")
     objects = {o["id"]: o for o in card["objects"]}
     names = {row["id"]: row for row in card["names"]}
+    if seg["kind"] == "修飾":
+        return _render_treat_as(seg, names, objects, self_id)
+    if seg["lines"] and all(line["role"] == "素材" for line in seg["lines"]):
+        return _render_materials(seg, card, names, objects, self_id)
     leading, existence = split_premise(seg["premise"])
     premise_only = (seg["kind"] == "條件" and leading is not None
                     and existence is None and not seg["actions"] and not seg["lines"])
@@ -519,10 +568,14 @@ def render_segment(seg, card, self_id="o0"):
             # 誰的助詞:條件子句是「相手が〜した時」,效果句是「自分は〜する」(全庫 66:0、31:1)。
             parts.append(_SIDE_TEXT[seg["agent"]] + (
                 "が" if seg["kind"] in ("條件", "被代替") else "は"))
-        markers = {line["marker"] or "を" for line in seg["lines"]} or {"を"}
-        if len(markers) != 1:
+        # 主語省略的線(票 09)不寫物件與助詞;其餘線的助詞要一致。
+        spoken = [line for line in seg["lines"] if not line.get("elided")]
+        if len(spoken) != len(seg["lines"]) and len(seg["lines"]) != 1:
+            raise NoTemplate("主語省略的段只能有一條線")
+        markers = {line["marker"] or "を" for line in spoken}
+        if len(markers) > 1:
             raise NoTemplate("對象線的助詞或數量不一致")
-        marker = markers.pop()
+        marker = markers.pop() if markers else None
         targeting_text, predicate, predicate_to = _render_predicate(seg, marker)
         words, counts = [], set()
         if seg["amount"]:
@@ -532,7 +585,8 @@ def render_segment(seg, card, self_id="o0"):
                 raise NoTemplate("數量無模板")
             words.append(str(seg["amount"]["value"]).translate(_TO_FULLWIDTH_DIGITS) + "LP")
             counts.add("")
-        for line in seg["lines"]:
+            marker = "を"
+        for line in spoken:
             if targeting_text and not line["targeting"]:
                 raise NoTemplate("取對象字面下有線沒標取對象")
             if line["targeting"] and not targeting_text and not (
@@ -543,7 +597,7 @@ def render_segment(seg, card, self_id="o0"):
             words.append(_render_object(objects[line["object"]], seg, card, names, line,
                                         self_id=self_id))
             counts.add(_render_count(line["count"]))
-        if len(counts) != 1:
+        if len(counts) > 1:
             raise NoTemplate("對象線的助詞或數量不一致")
         to_text, to_placement = _render_to(seg["lines"], predicate_to)
         from_text, from_placement = _render_from(seg["lines"])
@@ -552,10 +606,12 @@ def render_segment(seg, card, self_id="o0"):
             parts.append(to_text)
         if from_placement == "名詞前":
             parts.append(from_text)
-        parts.append("と".join(words) + marker)
-        parts.append(counts.pop())
+        if words:
+            parts.append("と".join(words) + marker)
+            parts.append(counts.pop())
         parts.append(targeting_text or "")
-        parts.append(_render_cause(seg["cause"]))
+        if seg["cause"]:
+            parts.append(_render_cause(seg["cause"], seg, card, objects, names, self_id))
         parts.append(_render_timing(seg["timing"]))
         if from_placement == "述語前":
             parts.append(from_text)
@@ -565,10 +621,10 @@ def render_segment(seg, card, self_id="o0"):
             parts.append(_render_recipient(seg["recipient"], seg, card, objects))
         parts.append(predicate)
         text = "".join(parts)
-    if seg["kind"] in ("條件", "被代替"):
-        if not seg["trigger"]:
-            raise NoTemplate("條件段無觸發形")
-        text += seg["trigger"]
+    if seg["kind"] in ("條件", "被代替") and not seg["trigger"]:
+        raise NoTemplate("條件段無觸發形")
+    if seg["trigger"]:
+        text += seg["trigger"]   # 召喚手續的「〜した場合」也帶觸發形(票 09)
     return prefix + text
 
 
@@ -602,12 +658,35 @@ def _tree_glue(block, card, names):
         raise NoTemplate(str(e)) from None
 
 
-def _residue(block, glue, glue_failed=False):
-    """區塊原文扣掉各段範圍、內嵌效果的區塊範圍與標點後剩下的片段;不是段樹引導句(`glue`)
-    也不是固定接著詞的就是殘留。引導句寫不出字面(`glue_failed`,已列無模板)時扣掉節點的
-    原文範圍,不重複列成殘留;寫得出時靠字面比對,引導句與原文不符就會留下來。"""
+def _holes(block, card):
+    """區塊裡不記的字面(句中的次數限制,票 09)的範圍,相對於區塊原文:段的比對與殘留都扣掉它。"""
+    start, end = block["span"]
+    return [(o["span"][0] - start, o["span"][1] - start) for o in card["omitted"]
+            if o["source"] == block["source"] and start <= o["span"][0] and o["span"][1] <= end]
+
+
+def _without_holes(text, span, holes):
+    """段的原文扣掉落在它範圍內的不記字面。"""
+    start, _ = span
+    out, pos = [], 0
+    for h_start, h_end in sorted(holes):
+        a, b = h_start - start, h_end - start
+        if a < 0 or b > len(text):
+            continue
+        out.append(text[pos:a])
+        pos = b
+    out.append(text[pos:])
+    return "".join(out)
+
+
+def _residue(block, glue, glue_failed=False, holes=()):
+    """區塊原文扣掉各段範圍、內嵌效果的區塊範圍、不記的字面(`holes`)與標點後剩下的片段;不是
+    段樹引導句(`glue`)也不是固定接著詞的就是殘留。引導句寫不出字面(`glue_failed`,已列無模板)
+    時扣掉節點的原文範圍,不重複列成殘留;寫得出時靠字面比對,引導句與原文不符就會留下來。"""
     text = block["text"]
-    cut = [(s["span"][0], s["span"][1], s["kind"]) for s in block["segments"]]
+    cut = [(s["span"][0], s["span"][1], bool(s["trigger"]) or s["kind"] in ("條件", "被代替"))
+           for s in block["segments"]]
+    cut.extend((a, b, False) for a, b in holes)
     for node in _iter_nodes(block["tree"]["items"]):
         if node.get("node") == "內嵌效果" and node.get("block"):
             inner = node["block"]
@@ -616,21 +695,21 @@ def _residue(block, glue, glue_failed=False):
         if glue_failed and node.get("span"):
             cut.append((node["span"][0], node["span"][1], None))
     if block["label"]:
-        cut.append((0, 2, None))  # 「①：」
+        cut.append((0, 2, False))  # 「①：」
     cut.sort()
-    pieces, pos, after = [], 0, None
-    for start, end, kind in cut:
+    pieces, pos, after = [], 0, False
+    for start, end, triggered in cut:
         if start > pos:
             pieces.append((after, text[pos:start]))
-        pos, after = max(pos, end), kind
+        pos, after = max(pos, end), triggered
     if pos < len(text):
         pieces.append((after, text[pos:]))
     residue = []
-    for kind, piece in pieces:
+    for triggered, piece in pieces:
         rest = _PUNCT_RE.sub("", piece)
-        # 條件段的範圍到觸發形為止,「場合に」「時に」的「に」留在段外(segment_extract
-        # 的 _TRIGGER_RE),只有緊接在條件段後面的「に」算接著詞。
-        if kind in ("條件", "被代替") and rest.startswith("に"):
+        # 帶觸發形的段(條件段、召喚手續的「〜した場合」)範圍到觸發形為止,「場合に」「時に」的
+        # 「に」留在段外(segment_extract 的 _TRIGGER_RE),只有緊接在它後面的「に」算接著詞。
+        if triggered and rest.startswith("に"):
             rest = rest[1:]
         for header in glue:
             rest = rest.replace(header, "")
@@ -647,6 +726,7 @@ def check_card(card):
     names = {row["id"]: row for row in card["names"]}
     for block in _all_blocks(card):
         self_id = (bindings.get(block["id"]) or {}).get("自己", "o0")
+        holes = _holes(block, card)
         for seg in block["segments"]:
             try:
                 rendered = render_segment(seg, card, self_id=self_id)
@@ -654,7 +734,8 @@ def check_card(card):
                 failures.append(_failure(card, block, seg["id"],
                                          REASON_NO_TEMPLATE, str(e)))
                 continue
-            if normalise(rendered) != normalise(seg["text"]):
+            original = _without_holes(seg["text"], seg["span"], holes)
+            if normalise(rendered) != normalise(original):
                 failures.append(_failure(card, block, seg["id"], REASON_MISMATCH,
                                          None, rendered, seg["text"]))
         glue, glue_failed = [], False
@@ -663,7 +744,7 @@ def check_card(card):
         except NoTemplate as e:
             failures.append(_failure(card, block, None, REASON_NO_TEMPLATE, str(e)))
             glue_failed = True
-        for piece in _residue(block, glue, glue_failed):
+        for piece in _residue(block, glue, glue_failed, holes):
             failures.append(_failure(card, block, None, REASON_RESIDUE,
                                      piece.strip("。、\n ")))
     return failures

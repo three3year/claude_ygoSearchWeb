@@ -43,6 +43,10 @@ _HEADER_RE = re.compile(
     "^(?P<pre>.*?)以下の効果(?P<form>"
     + "|".join(re.escape(form) for form, _, _ in BRANCH_HEADERS) + ")$")
 _EMBED_RE = re.compile("^(?P<subject>.+?)は以下の効果を得る$")
+# 召喚條件的 ● 列舉(票 09):「〜は(融合召喚及び)以下の方法でのみ特殊召喚できる」。引導句本身是
+# 限制段(極性只能,原因 召喚方式 含「以下の方法」),分歧節點記 `header` = 那個段的 id、方式 選1、
+# 選者 我方;● 各支是召喚手續。
+_METHOD_HEADER_RE = re.compile("以下の方法でのみ(?:EXデッキから)?特殊召喚できる$")
 _ELIDED_RE = re.compile("^存在しない場合、?")
 _ITEM_RE = re.compile("(?:^|\n)●")
 
@@ -66,6 +70,20 @@ def extract_block(block, card, lookups=None, self_id="o0"):
     head_spans = sentences(text, body_start, items[0] - 1)
     headers, plain = _split_headers(state, head_spans)
     nodes = _parse_run(state, plain)
+    if headers and headers[-1][0] == "方法":
+        # 召喚條件的 ● 列舉:引導句照一般句子解析成限制段(記在節點 header),● 各支是召喚手續。
+        for extra in headers[:-1]:
+            _parse_header_as_sentence(state, extra)
+        header_segs = _parse_header_as_sentence(state, headers[-1])
+        nodes.extend(segment_node(seg["id"], seg_join) for seg, seg_join in header_segs)
+        branches = _parse_items(state, items)
+        node = branch_node("選1", "我方", branches, headers[-1][4])
+        node["header"] = header_segs[-1][0]["id"] if header_segs else None
+        if not header_segs or header_segs[-1][0]["unparsed"]:
+            node["unparsed"] = unparsed(REASON_BRANCH_MODE)
+        nodes.append(node)
+        block["tree"]["items"] = nodes
+        return block
     if headers and headers[-1][0] == "內嵌":
         # 內嵌效果:● 列舉是內容區塊的事,外層不解析它們。主語解析不出就退回分歧路徑
         # (引導句照一般句子解析、分歧方式標解析不出),原文不會被靜默略過。
@@ -107,6 +125,8 @@ def _header_of(text):
     m = _EMBED_RE.match(text)
     if m:
         return "內嵌", m.group("subject"), None
+    if _METHOD_HEADER_RE.search(text):
+        return "方法", None, None
     return None
 
 
@@ -268,8 +288,10 @@ def _parse_header_as_sentence(state, header):
     text = state.block["text"]
     end = text.find("。", start)
     end = len(text) if end < 0 else end
-    for seg, _ in parse_sentence(state, start, end):
+    segs = parse_sentence(state, start, end)
+    for seg, _ in segs:
         state.block["segments"].append(seg)
+    return segs
 
 
 def _embedded(state, subject, start, join, lookups):
@@ -362,6 +384,8 @@ def _branch_headers(node, render_premise_text):
         return out
     if node.get("form") is None and mode == "各自可以":
         return []   # 內嵌效果裡的 ● 列舉:引導句在內嵌效果節點上
+    if node.get("header") and node.get("form") is None:
+        return []   # 召喚條件的 ● 列舉:引導句是限制段,段自己比對(票 09)
     return [_header_text(node)]
 
 

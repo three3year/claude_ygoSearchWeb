@@ -21,7 +21,10 @@ import re
 
 from structure_shape import zone
 
-_MENTION_OR_RE = re.compile("^「(?P<name>[^「」]+)」またはそのカード名が記された")
+# 「X」(１体)またはそのカード名が記された:名稱後可帶數量字面(「「ブラック・マジシャン」１体または
+# そのカード名が記されたカード１枚」,票 09),記在卡名原子的 count、模板放回。
+_MENTION_OR_RE = re.compile(
+    "^「(?P<name>[^「」]+)」(?P<count>[０-９]+(?:体|枚))?またはそのカード名が記された")
 _MENTION_RE = re.compile("^「(?P<name>[^「」]+)」のカード名が記された")
 _RANGE_RE = re.compile("^「(?P<lo>[^「」]+)」～「(?P<hi>[^「」]+)」のいずれかの")
 _ZONE_RE = re.compile("^(?P<side>自分|相手)?(?P<zone>EXデッキ|デッキ|手札|フィールド|墓地)の")
@@ -64,6 +67,8 @@ def parse_modifier(rest, state):
     if m:
         named, why = state.name_atom("卡名", m.group("name"))
         mention, _ = state.name_atom("記載", m.group("name"))
+        if named and m.group("count"):
+            named["count"] = m.group("count")
         atoms = [{"op": "或", "args": [named, mention]}] if named else []
         return atoms, why, m.end()
     m = _MENTION_RE.match(rest)
@@ -162,7 +167,10 @@ def render_atom(atom, names):
         return None if quoted is None else quoted + "のカード名が記された"
     if op == "或" and _is_name_or_mention(atom):
         quoted = _quoted(atom["args"][0], names)
-        return None if quoted is None else quoted + "またはそのカード名が記された"
+        count = atom["args"][0].get("count") or ""
+        if quoted is None or not re.fullmatch("(?:[０-９]+(?:体|枚))?", count):
+            return None
+        return quoted + count + "またはそのカード名が記された"
     if op == "卡名範圍":
         lo, hi = (_quoted(n, names) for n in atom["names"])
         return None if lo is None or hi is None else f"{lo}～{hi}のいずれかの"

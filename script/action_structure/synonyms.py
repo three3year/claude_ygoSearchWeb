@@ -106,6 +106,9 @@ COST_GLUE = "事で"
 
 REASON_PREDICATE = "述語解析不出"
 REASON_TAIL = "述語語尾不明"
+# 極性「只能」(票 09):述語前的「のみ〜できる」「しか〜できない」;字面留在原述語字面開頭。
+ONLY_PREFIXES = ("のみ", "しか")
+ONLY = "只能"
 
 
 def split_targeting(pred):
@@ -118,7 +121,17 @@ def split_targeting(pred):
 
 
 def parse_predicate(pred):
-    """述語字面 → (動作詞, 態, 極性, 寫明的終點, 可選) 或 (None, 原因)。"""
+    """述語字面 → (動作詞, 態, 極性, 寫明的終點, 可選) 或 (None, 原因)。
+    「のみ特殊召喚できる」「しか特殊召喚できない」→ 極性只能、不可選。"""
+    for only in ONLY_PREFIXES:
+        if pred.startswith(only):
+            parsed, reason = parse_predicate(pred[len(only):])
+            if parsed is None:
+                return None, reason
+            action, voice, polarity, to, optional = parsed
+            if (only, polarity, optional) not in (("のみ", "做", True), ("しか", "不能", False)):
+                return None, REASON_TAIL
+            return (action, voice, ONLY, to, False), None
     for stem, action, to in PREDICATE_STEMS:
         if pred.startswith(stem):
             tail = pred[len(stem):]

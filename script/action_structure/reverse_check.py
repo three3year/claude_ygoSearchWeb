@@ -28,11 +28,15 @@ from premise import render_premise, split_premise
 from condition_atoms import quoted_name, render_atom
 from names_attributes import TREAT_PREDICATE, render_treat_as
 from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, BATTLE_AGENT_MARKER,
-                             EACH_PREFIX, EACH_SUFFIX, FORMULA_COUNT_TAIL, PICK_RANDOM,
+                             EACH_PREFIX, EACH_SUFFIX, FORMULA_COUNT_TAILS, FORMULA_UPTO_TAIL,
+                             PICK_RANDOM,
                              RANDOM_PICK, ZONE_AS_OBJECT,
                              BATTLE_PARTNER_MARKER, BATTLE_TIMING_REF, CAUSE_EFFECT_OF,
                              CAUSE_METHOD, PREMISE_DONE, EXIST_WORDS, FROM_PARTICLES,
-                             ALL_PREFIX, HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
+                             ALL_PREFIX, HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER,
+                             MATERIAL_TIMES, REF_RE,
+                             MATERIAL_WORDS, OBJECT_COUNTER, OBJECT_MATERIAL,
+                             xyz_monster_condition,
                              SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
 from segment_fields import (MENTION_FORMS, OWNER_JOINER, OWNER_TEXT, REPLACEMENT_PREFIX,
                             is_clause_duration, render_cause, render_display, render_modify,
@@ -73,6 +77,7 @@ _HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
 _HEAD_TEXT[("魔法", "陷阱")] = "魔法・罠カード"
 _SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}
 _TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
+JOINER_WORDS = ("", "・", "の")
 
 
 def normalise(text):
@@ -156,7 +161,12 @@ def _render_modifiers(mods, names):
         text = render_group(atom) if atom.get("op") == "或" else _render_atom(atom, names)
         if text is None:
             raise NoTemplate("屬性比較無模板")
-        out.append(text + joiner(atom, mods[i + 1] if i + 1 < len(mods) else None))
+        # 實際寫法與預設不同時,抽取端把它記在 `joiner`(m2 票 11);只收「・」「の」與不寫。
+        written = atom.get("joiner")
+        if written is not None and written not in JOINER_WORDS:
+            raise NoTemplate("修飾語連接字無模板")
+        out.append(text + (written if written is not None
+                           else joiner(atom, mods[i + 1] if i + 1 < len(mods) else None)))
     return "".join(out)
 
 
@@ -183,13 +193,16 @@ def _render_condition(condition, names):
 
 
 def _render_count(count):
-    """數量字面:N体/N枚(まで)、全て;變數數量(算式,m2 票 09)只記字面、照寫;
+    """數量字面:N体/N枚/Nつ(まで)、全て;變數數量(算式,m2 票 09)只記字面、照寫,上限「〜の数まで」
+    帶 cmp ≤(m2 票 11);
     `each`(「それぞれ」「ずつ」)由數值拼回基本字面,再驗原文字面是它加上這兩個字。"""
     if not count:
         return ""
     if count.get("kind") == AMOUNT_FORMULA:
         text = count.get("text") or ""
-        if not text.rstrip("、").endswith(FORMULA_COUNT_TAIL):
+        bare = text.rstrip("、")
+        if (not bare.endswith(FORMULA_COUNT_TAILS)
+                or (count.get("cmp") == "≤") != bare.endswith(FORMULA_UPTO_TAIL)):
             raise NoTemplate("物件數量無模板")
         return text
     if count.get("cmp") == "全部":
@@ -273,6 +286,8 @@ def _render_object(obj, seg, card, names, line=None, with_count=True, self_id="o
         return "このカード"
     if obj["unparsed"]:
         raise NoTemplate(f"物件無模板:{obj['unparsed']['reason']}")
+    if obj["kind"] in (OBJECT_MATERIAL, OBJECT_COUNTER):
+        return _render_detach_object(obj, seg, card, names, self_id)
     kind = obj["source"]["kind"]
     if kind == "剩餘":
         return "残りの" + _head_of(obj)
@@ -289,6 +304,37 @@ def _render_object(obj, seg, card, names, line=None, with_count=True, self_id="o
     if with_count and obj["count"]:
         text += _render_count(obj["count"])
     return text
+
+
+def _render_detach_object(obj, seg, card, names, self_id):
+    """超量素材、計數器(m2 票 11):[所屬物件の]X素材|種類名。所屬物件照一般物件寫(回指字面在
+    `of_ref`);隱含的所屬卡(超量怪獸、沒有字面)不寫,它的位置由對象線的從寫出。
+    超量素材的名詞取 X素材/エクシーズ素材 閉集裡物件字面結尾的那個。"""
+    if (obj["source"]["kind"] != "新建" or obj["condition"] is not None or obj["count"]
+            or seg is None or not obj["span"] or obj["block"] != seg["id"].split(".")[0]
+            or not (seg["span"][0] <= obj["span"][0] and obj["span"][1] <= seg["span"][1])):
+        raise NoTemplate("去除對象無模板")
+    if obj["kind"] == OBJECT_COUNTER:
+        word = obj.get("counter") or ""
+        if not word.endswith("カウンター"):
+            raise NoTemplate("計數器種類無模板")
+    else:
+        word = next((w for w in MATERIAL_WORDS if (obj["text"] or "").endswith(w)), None)
+        if word is None:
+            raise NoTemplate("超量素材無模板")
+    owner_id = obj.get("of")
+    if owner_id is None:
+        if obj["kind"] == OBJECT_MATERIAL:
+            raise NoTemplate("超量素材沒有所屬卡")
+        return word
+    owner = next(o for o in card["objects"] if o["id"] == owner_id)
+    if owner["text"] is None:
+        if (owner["source"]["kind"] != "新建" or owner["condition"] != xyz_monster_condition()
+                or not owner["initial_position"]):
+            raise NoTemplate("隱含的所屬卡無模板")
+        return word
+    return _render_object(owner, seg, card, names, {"ref": obj.get("of_ref")},
+                          self_id=self_id) + "の" + word
 
 
 _POSITION_PARTICLES = FROM_PARTICLES + ("に", "へ")
@@ -586,12 +632,24 @@ def _render_treat_as(seg, names, objects, self_id):
 
 
 def _render_materials(seg, card, names, objects, self_id):
-    """素材行(票 09):每條角色「素材」的線寫物件全名,以「＋」連;沒有述語。"""
+    """素材行(票 09):每條角色「素材」的線寫物件全名(超量素材數「×N」接在後面,m2 票 11),以「＋」連;
+    沒有述語。"""
     if seg["actions"] or seg["predicate"] or seg["kind"] != "召喚手續":
         raise NoTemplate("素材段的格不齊")
     return MATERIAL_JOINER.join(
         _render_object(objects[line["object"]], seg, card, names, line, self_id=self_id)
+        + _render_material_times(line["count"])
         for line in seg["lines"])
+
+
+def _render_material_times(count):
+    """超量素材數「×N」(m2 票 11):對象線 count 單位 ×;沒有就是空字串。"""
+    if not count:
+        return ""
+    if (count.get("unit") != MATERIAL_TIMES or count.get("cmp") != "="
+            or not isinstance(count.get("value"), int)):
+        raise NoTemplate("素材數量無模板")
+    return MATERIAL_TIMES + str(count["value"]).translate(_TO_FULLWIDTH_DIGITS)
 
 
 def _render_damage(seg, card, objects, names, self_id, inner_duration):

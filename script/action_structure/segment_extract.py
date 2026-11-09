@@ -59,16 +59,21 @@
   「コントロールは」這幾個含を/は的名詞;「Xの表示形式を」的の是助詞;助詞後的讀點記進助詞字面;
   原因可帶物件(「Xとの戦闘では」「Xの効果を受けない」的 X);「それぞれ１ターンに１度だけ」記 per_turn;
   句型把「が」當助詞切錯而述語解不出時(「〜に１回ずつ攻撃が可能」),整句當主語省略的子句再試。
+- 去除(m2 票 11):對象是超量素材「(Xの)X素材」(`of` 所屬卡;沒寫時是隱含的新建超量怪獸,初始位置 = 從)
+  與計數器「(Xの)魔力カウンター」(`counter` 種類名);數量單位「つ」;舊式代價「〜く事で、」。
+  標準卡順手收的:「このカードを対象とする(Xの)効果が発動した」(物件條件 以此卡為對象)、超量素材行「×N」、
+  物件前的「〜の数まで、」、片假名子類型(リンク…)、修飾語連接字與預設不同時記 `joiner`。
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
 """
 import re
 
 import damage
 from archetype_table import fold_width
-from attribute_atoms import parse_modifier as parse_param_group
+from attribute_atoms import is_param_atom, joiner, parse_modifier as parse_param_group
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from clause_join import JOIN, split_continuative
-from condition_atoms import parse_modifier as parse_atom_modifier
+from condition_atoms import (TARGETING_THIS_FORMS, parse_modifier as parse_atom_modifier,
+                             targeting_this_atom)
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
 from premise import is_lasting, split_premises
 from segment_fields import (CAUSE_PATTERN, CLAUSE_DURATION_PATTERN, DISPLAY_PATTERN,
@@ -188,6 +193,8 @@ BLOCK_SUMMON, BLOCK_MATERIAL = "召喚條件", "素材"
 KIND_PROCEDURE, KIND_RESTRICTION, KIND_MODIFIER = "召喚手續", "限制", "修飾"
 ROLE_MATERIAL = "素材"
 MATERIAL_JOINER = "＋"
+MATERIAL_TIMES = "×"
+_MATERIAL_TIMES_RE = re.compile(f"^(?P<phrase>.+?)(?P<times>{MATERIAL_TIMES}(?P<digits>[０-９]+))$")
 # 「〜したターン、」(票 09):句首的動作子句 + ターン 是條件段(觸發形 ターン),後面的段的前提引用它
 # (`本回合發生過`);「相手ターンに」是遊戲狀態前提,不走這裡(前面要有 した/成功した)。
 TURN_TRIGGER = "ターン"
@@ -198,17 +205,23 @@ PREMISE_HAPPENED = "本回合發生過"
 # 通常怪獸的故事文「攻撃を繰り返す」不是效果。句尾可帶「（最大４回）」。
 REPEAT_RE = re.compile("^(?=.*(?:処理|この効果)を).*繰り返す(?:（[^）]*）)?$")
 # 舊式的代價句:「(代價子句)る事で、(效果子句)」= 新式「(代價子句)て発動できる。(效果子句)」。
-# 代價子句以非過去形收尾(る/う/す)才算,「〜された事で」是條件意味、不切。
-_OLD_COST_RE = re.compile("^(?P<cost>.+?[るうす])" + COST_GLUE + "、?(?P<rest>.+)$")
+# 代價子句以非過去形收尾(る/う/す/く;く 是「取り除く事で」,m2 票 11)才算,「〜された事で」是條件意味、不切。
+_OLD_COST_RE = re.compile("^(?P<cost>.+?[るうすく])" + COST_GLUE + "、?(?P<rest>.+)$")
 # 對象線的數量字面(m2 票 09 擴):N体/N枚(まで)、全て;「それぞれ」「ずつ」是每一份各 N(`each`);
 # 變數數量「任意の数だけ」記算式字面。寫在物件前的變數數量(「破壊した数だけ相手フィールドの
 # カードを」)與寫在述語前「從」之後的數量(「自分の墓地から１枚選んで」)另帶 placement。
 EACH_PREFIX, EACH_SUFFIX, FORMULA_COUNT_TAIL = "それぞれ", "ずつ", "数だけ"
-COUNT_PATTERN = (f"(?:{EACH_PREFIX})?[０-９]+(?:体|枚)(?:まで|{EACH_SUFFIX})?|全て"
+# 單位「つ」(m2 票 11):超量素材、計數器的「１つ」「２つまで」。
+COUNT_UNITS = "体|枚|つ"
+COUNT_PATTERN = (f"(?:{EACH_PREFIX})?[０-９]+(?:{COUNT_UNITS})(?:まで|{EACH_SUFFIX})?|全て"
                  f"|任意の{FORMULA_COUNT_TAIL}")
-_COUNT_RE = re.compile(f"^(?P<each>{EACH_PREFIX})?(?P<digits>[０-９]+)(?P<unit>体|枚)"
+_COUNT_RE = re.compile(f"^(?P<each>{EACH_PREFIX})?(?P<digits>[０-９]+)(?P<unit>{COUNT_UNITS})"
                        f"(?P<upto>まで)?(?P<per>{EACH_SUFFIX})?$")
-FRONT_COUNT_PATTERN = f"[^、を]+?{FORMULA_COUNT_TAIL}、?"
+# 物件前的變數數量另收上限「〜の数まで、」(m2 票 11:「自分フィールドの「＠イグニスター」モンスターの
+# 数まで、相手フィールドの〜を選んで破壊する」),算式帶 cmp ≤。
+FORMULA_UPTO_TAIL = "数まで"
+FORMULA_COUNT_TAILS = (FORMULA_COUNT_TAIL, FORMULA_UPTO_TAIL)
+FRONT_COUNT_PATTERN = f"[^、を]+?(?:{'|'.join(FORMULA_COUNT_TAILS)})、?"
 # 區域當物件時「從」的 placement:區域短語寫在物件的位置。
 ZONE_AS_OBJECT = "物件"
 # 「ランダムに」(m2 票 09):對象線 pick 隨機;沒寫是由選者選。
@@ -266,6 +279,13 @@ _CLAUSE_PATTERN = (
     # 述語裡的「しか」只能在開頭(「融合召喚でしか特殊召喚できない」);句中出現時回頭讓它當助詞。
     f"(?P<pred>(?:{ONLY_MARKER})?{_PRED_HEAD}(?:(?!{ONLY_MARKER})[^を])*)$")
 _CLAUSE_RE = re.compile(_CLAUSE_PATTERN)
+# 「このカードを対象とする(Xの)効果が発動した」(m2 票 11):物件是效果所屬的卡,修飾語「このカードを
+# 対象とする」含を,一般句型會把它切成物件「このカード」+ 述語;另開句型,沒寫 X 時助詞字面是「効果が」。
+_OBJECTS_GROUPS = "(?P<objects>(?:を含む|を持つ|または|[^を])+?)(?P<of_effect>の効果)?"
+_TARGETING_THIS_CLAUSE_RE = re.compile(_CLAUSE_PATTERN.replace(
+    _OBJECTS_GROUPS,
+    f"(?P<objects>(?:{'|'.join(TARGETING_THIS_FORMS)})(?:[^を、]+?)?)"
+    "(?P<of_effect>の効果|(?<=する)効果)", 1))
 # 助詞不是「が」時物件前那截不是到,而是物件修飾的一部分(相手フィールド上にセットされたカード):
 # 拿掉「到に」再比一次。
 _CLAUSE_NO_TO_FRONT_RE = re.compile(_CLAUSE_PATTERN.replace(_TO_FRONT, "", 1))
@@ -287,6 +307,20 @@ ACTIVATION_REF = "その発動"
 # 數量格(spec「數量」:支付 1000LP,段可無物件):「１０００LP」當受詞時不是物件。
 _AMOUNT_RE = re.compile("^(?P<digits>[０-９]+)(?P<unit>LP)$")
 _REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
+# 去除的對象(m2 票 11):超量素材「(Xの)X素材」、計數器「(Xの)魔力カウンター」;「の」前是所屬的物件
+# (`of`,このカード/そのモンスター…)。超量素材沒寫所屬卡時(「自分フィールドのX素材」的
+# 「自分フィールドの」是從),所屬卡是隱含的新建超量怪獸,初始位置 = 從;字面沒有它(`text` 是 None)。
+OBJECT_MATERIAL, OBJECT_COUNTER = "超量素材", "計數器"
+MATERIAL_WORDS = ("X素材", "エクシーズ素材")
+_MATERIAL_RE = re.compile(f"^(?:(?P<owner>.+)の)?(?P<word>{'|'.join(MATERIAL_WORDS)})$")
+_COUNTER_RE = re.compile("^(?:(?P<owner>.+)の)?(?P<counter>[^「」のをにがは、]*カウンター)$")
+
+
+def xyz_monster_condition():
+    """超量怪獸的條件式(與「Xモンスター」解析出的相同)。"""
+    return {"op": "且", "args": [
+        {"op": "屬性比較", "attr": "卡片子類型", "cmp": "=", "value": "超量"},
+        {"op": "大類", "value": "怪獸"}]}
 # 「選択したモンスター」:指回本區塊最近被取對象的同大類物件(舊式;新式用 そのモンスター)。
 TARGET_REF_RE = re.compile(f"^{TARGET_REF}(?P<head>モンスター|カード)$")
 # 動作回指可帶「この効果で」(この効果で除外したモンスター);字面整個記進對象線 ref(票 08)。
@@ -367,8 +401,10 @@ def floating_count(text, placement=None):
     寫在物件前或述語前的帶 `placement`(有值才寫)。"""
     if text == "全て":
         count = {"text": text, "cmp": "全部"}
-    elif text.rstrip("、").endswith(FORMULA_COUNT_TAIL):
+    elif text.rstrip("、").endswith(FORMULA_COUNT_TAILS):
         count = {"kind": AMOUNT_FORMULA, "text": text}
+        if text.rstrip("、").endswith(FORMULA_UPTO_TAIL):
+            count["cmp"] = "≤"
     else:
         m = _COUNT_RE.match(text)
         count = {"text": text, "value": int(m.group("digits").translate(FULLWIDTH_DIGITS)),
@@ -404,7 +440,8 @@ def parse_modifier(part):
 
 
 def split_objects(phrase):
-    """以「と」切物件,但「」裡的と、「X」と名のついた 的と(字段的舊式寫法)不算。"""
+    """以「と」切物件,但「」裡的と、「X」と名のついた 的と(字段的舊式寫法)、「このカードを対象とする」
+    的と(m2 票 11)不算。"""
     parts, depth, buf = [], 0, ""
     for i, ch in enumerate(phrase):
         if ch == "「":
@@ -412,7 +449,7 @@ def split_objects(phrase):
         elif ch == "」":
             depth -= 1
         if (ch == "と" and depth == 0
-                and not phrase.startswith(("と名のついた", "と同じ"), i)):
+                and not phrase.startswith(("と名のついた", "と同じ", "とする"), i)):
             parts.append(buf)
             buf = ""
         else:
@@ -519,27 +556,44 @@ class BlockState:
 
     def parse_modifiers(self, mods):
         """修飾語 → (原子列表, 原因):名稱類的句型逐個認,其餘以「・」切成一截截給
-        `parse_modifier`(種族、屬性、レベルN);認不得的那截以「解析不出」原子收尾。"""
+        `parse_modifier`(種族、屬性、レベルN);認不得的那截以「解析不出」原子收尾。
+        種族/屬性/等級原子與下一個修飾語之間實際寫的字(「・」「の」或沒有)與模板的預設寫法
+        (`attribute_atoms.joiner`)不同時,記進該原子的 `joiner`(m2 票 11:素材行「水属性レベル４」、
+        「ドラゴン族のシンクロモンスター」)。"""
         atoms, reason, rest = [], None, mods
+        dots, tails = [], []   # 每個原子字面前有沒有「・」;種族/屬性列舉字面結尾吃掉的「の」
+        dot = False
+
+        def add(new_atoms, tail=""):
+            nonlocal dot
+            atoms.extend(new_atoms)
+            dots.extend([dot] + [False] * (len(new_atoms) - 1))
+            tails.extend([tail] + [""] * (len(new_atoms) - 1))
+            dot = False
+
         while rest:
             # 種族/屬性的「・」列舉(含後面的「の」)整組先認:「ドラゴン族・鳥獣族」是或、
             # 「光・闇属性」逐截切會把「光」認不出。
             atom, length = parse_param_group(rest)
             if atom is not None:
-                atoms.append(atom)
+                literal = rest[:length]
+                dot = dot or literal.startswith("・")
+                add([atom], "の" if is_param_atom(atom) and literal.endswith("の") else "")
                 rest = rest[length:]
                 continue
             if rest.startswith("・"):  # 列舉後接的其他修飾語(植物族・レベル１)
+                dot = True
                 rest = rest[1:]
             for kind, pattern in _MOD_RES:
                 m = pattern.match(rest)
                 if m:
                     break
             else:
-                piece, _, remainder = rest.partition("・")
+                piece, sep, remainder = rest.partition("・")
                 atom = parse_modifier(piece)
                 if atom is not None:
-                    atoms.append(atom)
+                    add([atom])
+                    dot = bool(sep)
                     rest = remainder
                     continue
                 extra = parse_atom_modifier(rest, self)   # 票 07 的原子(condition_atoms)
@@ -550,7 +604,7 @@ class BlockState:
                 if not new_atoms:
                     atoms.append({"op": "解析不出", "text": rest})
                     return atoms, reason or why
-                atoms.extend(new_atoms)
+                add(new_atoms)
                 reason = reason or why
                 rest = rest[end:]
                 continue
@@ -567,9 +621,16 @@ class BlockState:
             if atom is None:
                 atoms.append({"op": "解析不出", "text": rest})
                 return atoms, reason or why
-            atoms.append(atom)
+            add([atom])
             reason = reason or why
             rest = rest[m.end():]
+        for i, atom in enumerate(atoms):
+            if not is_param_atom(atom):
+                continue
+            following = atoms[i + 1] if i + 1 < len(atoms) else None
+            written = tails[i] + ("・" if following is not None and dots[i + 1] else "")
+            if written != joiner(atom, following):
+                atom["joiner"] = written
         return atoms, reason
 
     def find(self, obj_id):
@@ -639,8 +700,11 @@ class BlockState:
         offset = self.block["text"].find(phrase, sentence_start)
         return offset if offset >= 0 else sentence_start
 
-    def object_at(self, phrase, sentence_start):
-        """物件短語 → (物件 id, 回指字面, 原因);回指字面 None = 本段首次出現。"""
+    def object_at(self, phrase, sentence_start, owner_from=None):
+        """物件短語 → (物件 id, 回指字面, 原因);回指字面 None = 本段首次出現。
+        `owner_from` 是寫在物件前的從 (字面, 區域):超量素材沒寫所屬卡時用它建隱含的所屬卡。"""
+        if _MATERIAL_RE.match(phrase) or _COUNTER_RE.match(phrase):
+            return self.detach_object(phrase, sentence_start, owner_from)
         if _SELF_RE.match(phrase):
             return self.self_id, None, None
         if phrase == f"「{self.card['name_ja']}」":
@@ -670,6 +734,13 @@ class BlockState:
     def new_object(self, phrase, sentence_start, source, initial_position=None):
         named = _NAMED_RE.match(phrase)
         m = named or _NOUN_RE.match(phrase)
+        if not m and phrase in TARGETING_THIS_FORMS:
+            # 「このカードを対象とする効果」的效果所屬的卡(m2 票 11):沒有頭名詞,條件只有這個原子。
+            offset = self._offset(phrase, sentence_start)
+            obj = new_object(f"{self.block['id']}.o{offset}", source, text=phrase,
+                             span=(offset, offset + len(phrase)), block=self.block["id"],
+                             condition=targeting_this_atom(self, phrase))
+            return self.add_object(obj), None, None
         if not m:
             return None, None, REASON_OBJECT
         if named:
@@ -702,6 +773,43 @@ class BlockState:
         if reason:
             obj["unparsed"] = unparsed(reason)
         return self.add_object(obj), None, None
+
+    def detach_object(self, phrase, sentence_start, owner_from=None):
+        """超量素材或計數器(m2 票 11)→ (物件 id, None, 原因):`of` 是所屬的物件(有寫才有,回指字面記
+        `of_ref`);超量素材沒寫所屬卡要靠 `owner_from` 建隱含的所屬卡,沒有就解析不出;
+        計數器另帶種類名 `counter`。這幾個鍵有值才寫(接在工廠的格後面)。"""
+        material = _MATERIAL_RE.match(phrase)
+        m = material or _COUNTER_RE.match(phrase)
+        of, of_ref = None, None
+        if m.group("owner"):
+            of, of_ref, reason = self.object_at(m.group("owner"), sentence_start)
+            if of is None:
+                return None, None, reason
+        elif material:
+            if owner_from is None:
+                return None, None, REASON_OBJECT
+            of = self.implicit_owner(*owner_from, sentence_start)
+        offset = self._offset(phrase, sentence_start)
+        obj = new_object(f"{self.block['id']}.o{offset}", {"kind": "新建"},
+                         text=phrase, span=(offset, offset + len(phrase)),
+                         block=self.block["id"],
+                         kind=OBJECT_MATERIAL if material else OBJECT_COUNTER)
+        if not material:
+            obj["counter"] = m.group("counter")
+        if of is not None:
+            obj["of"] = of
+        if of_ref is not None:
+            obj["of_ref"] = of_ref
+        return self.add_object(obj), None, None
+
+    def implicit_owner(self, from_phrase, zones, sentence_start):
+        """超量素材隱含的所屬卡:新建的超量怪獸,初始位置 = 寫在物件前的從;id 取從的字面位置。"""
+        offset = self._offset(from_phrase, sentence_start)
+        obj = new_object(f"{self.block['id']}.o{offset}", {"kind": "新建"},
+                         block=self.block["id"], condition=xyz_monster_condition(),
+                         initial_position=[dict(z) for z in zones])
+        self.card["objects"].append(obj)
+        return obj["id"]
 
     def zone_object(self, phrase, sentence_start):
         """區域當物件(「自分の手札を１枚選んで捨てる」,m2 票 09):新建、沒有條件的卡(條件同頭名詞
@@ -814,7 +922,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     if battle:
         _fill_battle(seg, battle, state, sentence_start)
         return
-    m = _CLAUSE_RE.match(clause_text)
+    m = _TARGETING_THIS_CLAUSE_RE.match(clause_text) or _CLAUSE_RE.match(clause_text)
     if m and m.group("to_front") and m.group("marker") != "が":
         m = _CLAUSE_NO_TO_FRONT_RE.match(clause_text)
     if m and m.group("marker") != "の" and parse_cause(m.group("objects") + m.group("marker")):
@@ -960,7 +1068,9 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         elif zone_object:
             obj_id, ref = state.zone_object(phrase, sentence_start), None
         else:
-            obj_id, ref, reason = state.object_at(phrase, sentence_start)
+            owner_from = ((g("from"), from_zones)
+                          if g("from") and from_placement == "名詞前" else None)
+            obj_id, ref, reason = state.object_at(phrase, sentence_start, owner_from)
             if obj_id is None:
                 seg["unparsed"] = unparsed(reason)
                 return
@@ -1340,12 +1450,20 @@ def _material_segment(state, start, end):
     seg = _segment(state, KIND_PROCEDURE, start, end)
     phrase_start = start
     for phrase in seg["text"].split(MATERIAL_JOINER):
+        times = _MATERIAL_TIMES_RE.match(phrase)
+        count = None
+        if times:
+            # 超量素材「レベル４モンスター×２」(m2 票 11):素材數記在對象線 count,單位 ×。
+            phrase = times.group("phrase")
+            count = {"text": times.group("times"), "unit": MATERIAL_TIMES,
+                     "value": int(times.group("digits").translate(FULLWIDTH_DIGITS)), "cmp": "="}
         obj_id, ref, reason = state.object_at(phrase, phrase_start)
         if obj_id is None:
             seg["unparsed"] = unparsed(reason)
             return seg
-        seg["lines"].append(new_line(obj_id, ROLE_MATERIAL, ref=ref))
-        phrase_start += len(phrase) + len(MATERIAL_JOINER)
+        seg["lines"].append(new_line(obj_id, ROLE_MATERIAL, ref=ref, count=count))
+        written = phrase + (times.group("times") if times else "")
+        phrase_start += len(written) + len(MATERIAL_JOINER)
     return seg
 
 

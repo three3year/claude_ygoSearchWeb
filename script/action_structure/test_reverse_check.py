@@ -248,8 +248,9 @@ class ReportTest(unittest.TestCase):
             faq(2, "乙", "①：このカードをバウンスする。"),
             faq(3, "丙", "①：このカードをバウンスする。②：このカードを破壊する。"),
             faq(4, "丁", "①：このカードをバウンスする。"),
-            # 「闇属性のモンスター」的「の」模板不寫(attribute_atoms):字面不符的固定例。
-            faq(5, "戊", "①：デッキから闇属性のモンスター１体を特殊召喚する。"),
+            # 效果句的誰模板一律寫「自分は」(助詞不記):字面不符的固定例。原本的「闇属性のモンスター」
+            # 在 m2 票 11 之後記下修飾語的連接字「の」,寫得回原文了。
+            faq(5, "戊", "①：自分がデッキから闇属性モンスター１体を特殊召喚する。"),
         ]
         return cards, entries
 
@@ -264,8 +265,8 @@ class ReportTest(unittest.TestCase):
         self.assertIn("| 無官方日文(不計) | 1 |", md)
         self.assertIn("### 無模板(3 段 / 3 張)", md)
         self.assertIn("### 字面不符(1 段 / 1 張)", md)
-        self.assertIn("`5` 戊 `b0.s2` 產生「デッキから闇属性モンスター１体を特殊召喚する」"
-                      "原文「デッキから闇属性のモンスター１体を特殊召喚する」", md)
+        self.assertIn("`5` 戊 `b0.s2` 產生「自分はデッキから闇属性モンスター１体を特殊召喚する」"
+                      "原文「自分がデッキから闇属性モンスター１体を特殊召喚する」", md)
         self.assertIn("<!-- 由 script/action_structure/build_reverse_check.py 產生", md)
 
     def test_same_input_renders_identical_report(self):
@@ -312,7 +313,7 @@ class CliTest(unittest.TestCase):
         residue = [card(82000000 + i, name_ja=f"殘{i}") for i in range(3)]
         cards = bounce + mismatch + residue
         entries = ([faq(c["id"], c["name_ja"], "①：このカードをバウンスする。") for c in bounce]
-                   + [faq(c["id"], c["name_ja"], "①：デッキから闇属性のモンスター１体を特殊召喚する。")
+                   + [faq(c["id"], c["name_ja"], "①：自分がデッキから闇属性モンスター１体を特殊召喚する。")
                       for c in mismatch]
                    + [faq(c["id"], c["name_ja"], "①：このカードを破壊する。相手に５００ダメージを与える。")
                       for c in residue])

@@ -51,7 +51,7 @@ import re
 
 from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
-from condition_atoms import EQUIPPED, SAME_CARD, referenced_objects
+from condition_atoms import EQUIPPED, SAME_CARD, TARGETING_THIS, referenced_objects
 from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
 from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 
@@ -323,8 +323,8 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
     if op == SAME_CARD:
         # 「このカード以外の」的那一張實體(m2 票 09):代入的是卡,同名的另一張也算,所以永遠不是它。
         return False
-    if op == EQUIPPED:
-        # 被裝備者(m2 票 08)是狀態,任何卡都代得進去;但不是泛用原子。
+    if op in (EQUIPPED, TARGETING_THIS):
+        # 被裝備者(m2 票 08)、以此卡為對象(m2 票 11)是狀態,任何卡都代得進去;但不是泛用原子。
         return True
     if op == "曾被特殊召喚":
         # 從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。
@@ -405,7 +405,8 @@ class _Judge:
         return self.views[entry["id"]]
 
     def card_fits(self, entry, obj, owner, names, from_zones):
-        if obj["unparsed"]:
+        if obj["unparsed"] or obj["kind"] != "卡":
+            # 超量素材、計數器(m2 票 11)不是卡,沒有卡代得進去。
             return False
         if obj["source"]["kind"] == "自己":
             return entry["id"] == owner["id"] or entry["id"] in owner.get(

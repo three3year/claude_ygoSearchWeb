@@ -71,7 +71,8 @@ class ParallelPortArmorTest(unittest.TestCase):
         self.assertNotIn("戦闘では破壊されない", texts)
         reasons = {f["reason"] for f in check_card(card_)
                    if f["segment"] is not None}
-        self.assertEqual(reasons, {REASON_NO_TEMPLATE})
+        # m2 票 11 收了「リンクモンスター」之後整張通過,剩下的原因只可能是無模板。
+        self.assertLessEqual(reasons, {REASON_NO_TEMPLATE})
 
 
 class ShapeSplitTest(unittest.TestCase):

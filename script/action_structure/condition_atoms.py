@@ -11,7 +11,8 @@
 - 位置:EXデッキの、自分フィールドの → {"op": "位置", "zones": [...]};判斷代入時任何卡都算
   (位置不是卡的屬性),泛用物件的定義把它當泛用原子。
 - 卡片子類型:「No.」Xモンスター、Sモンスター 的 X/S/L/P/融合/儀式 →
-  {"op": "屬性比較", "attr": "卡片子類型", "cmp": "=", "value": "超量"}。
+  {"op": "屬性比較", "attr": "卡片子類型", "cmp": "=", "value": "超量"};片假名全寫(リンク、シンクロ、
+  エクシーズ,m2 票 11)值同字母,另帶 `text` 記字面。
 - 屬性比較(引用):種族か属性が見せたモンスターと同じで、→ 或(種族 = 物件.種族, 屬性 = 物件.屬性);
   そのモンスターのランクと同じ数値のレベルを持つ → 等級 = 物件.階級。
   引用 {"object": 物件 id, "attr": 屬性名, "text": 指回的字面};`form` 記句型(同じで / 同じ数值)
@@ -23,6 +24,8 @@
   "object": 此卡的物件 id, "text": "このカード"}};代入的是卡而不是那一張實體,任何卡都代得進去
   (同名的另一張也算),但不是泛用原子(泛用物件的定義不變)。
 - 位置的非預設區域字面(m2 票 09):「エクストラデッキの」= 額外牌組,原子另帶 `text`(區域字面),模板照它寫。
+- 以此卡為對象(m2 票 11):「このカードを対象とする(Xの)効果」→ {"op": "以此卡為對象", "object": 此卡的
+  物件 id, "text": 字面};效果所屬的卡的狀態,代入時任何卡都算、不是泛用原子。
 - 被裝備者(m2 票 08):緊接頭名詞的「装備」(装備モンスター)、「このカードを装備した」、
   「このカードの効果でこのカードを装備した」→ {"op": "被裝備者", "equip": 裝備卡物件, "text": 字面};
   裝備卡是「このカード」指的物件(內嵌效果裡是綁定的物件)。被裝備是狀態不是卡的屬性:代入時任何卡
@@ -56,7 +59,10 @@ _SUMMONED_FROM_RE = re.compile(
 SUBTYPE_LETTERS = (("融合", "融合"), ("儀式", "儀式"), ("S", "同步"), ("X", "超量"),
                    ("L", "連結"), ("P", "靈擺"),
                    ("通常", "通常"))   # m2 票 04:「「ホール」通常罠カード」「通常モンスター」
-_SUBTYPE = "|".join(letter for letter, _ in SUBTYPE_LETTERS)
+# 片假名全寫(m2 票 11:「自分の墓地からリンクモンスター１体を選んで」):值同字母,原子另帶 text 記字面。
+SUBTYPE_WORDS = (("リンク", "連結"), ("シンクロ", "同步"), ("エクシーズ", "超量"))
+_SUBTYPE = "|".join([word for word, _ in SUBTYPE_WORDS]
+                    + [letter for letter, _ in SUBTYPE_LETTERS])
 _ARCHETYPE_SUBTYPE_RE = re.compile(f"^「(?P<name>[^「」]+)」(?P<sub>{_SUBTYPE})$")
 _SUBTYPE_RE = re.compile(f"^(?P<sub>{_SUBTYPE})$")
 # 表示形式(表側、裏側是狀態,不是卡的屬性;spec「區域」;票 06):閉集,值就是字面。
@@ -79,11 +85,17 @@ EQUIPPED = "被裝備者"
 EQUIPPED_FORMS = ("装備", "このカードを装備した", "このカードの効果でこのカードを装備した")
 _EQUIPPED_RE = re.compile("^(?:" + "|".join(sorted(EQUIPPED_FORMS, key=len, reverse=True))
                           + ")$")
+# 以此卡為對象(m2 票 11):「このカードを対象とする(Xの)効果が発動した時」的效果所屬的卡;
+# 對象是「このカード」指的物件(內嵌效果裡是綁定的物件)。是發動中效果的狀態,代入時任何卡都算,
+# 不是泛用原子。
+TARGETING_THIS = "以此卡為對象"
+TARGETING_THIS_FORMS = ("このカードを対象とする",)
+_TARGETING_THIS_RE = re.compile("^(?:" + "|".join(TARGETING_THIS_FORMS) + ")")
 _SIDE_TEXT = {v: k for k, v in _SIDE.items()}
 _ZONE_TEXT = {v: k for k, v in _ZONE_NAME.items()}
 _ATTR_NAME = dict(ATTR_WORDS)
 _ATTR_TEXT = {v: k for k, v in ATTR_WORDS}
-_SUBTYPE_NAME = dict(SUBTYPE_LETTERS)
+_SUBTYPE_NAME = dict(SUBTYPE_LETTERS + SUBTYPE_WORDS)
 _SUBTYPE_TEXT = {v: k for k, v in SUBTYPE_LETTERS}
 
 
@@ -131,6 +143,9 @@ def parse_modifier(rest, state):
     if m:
         return ([{"op": "控制方", "value": _SIDE[m.group("side")], "text": m.group()}],
                 None, m.end())
+    m = _TARGETING_THIS_RE.match(rest)
+    if m:
+        return [targeting_this_atom(state, m.group())], None, m.end()
     m = _EQUIPPED_RE.match(rest)
     if m:
         return ([{"op": EQUIPPED, "equip": state.self_id, "text": m.group()}], None, m.end())
@@ -168,9 +183,17 @@ def parse_modifier(rest, state):
     return None
 
 
+def targeting_this_atom(state, text):
+    """「このカードを対象とする」→ 以此卡為對象原子。"""
+    return {"op": TARGETING_THIS, "object": state.self_id, "text": text}
+
+
 def _subtype_atom(letter):
-    return {"op": "屬性比較", "attr": "卡片子類型", "cmp": "=",
+    atom = {"op": "屬性比較", "attr": "卡片子類型", "cmp": "=",
             "value": _SUBTYPE_NAME[letter]}
+    if letter in dict(SUBTYPE_WORDS):
+        atom["text"] = letter
+    return atom
 
 
 def _compare(attr, obj_id, ref_attr, ref_text, form):
@@ -241,6 +264,9 @@ def render_atom(atom, names):
     if op == "控制方":
         m = _CONTROLLER_RE.fullmatch(atom.get("text") or "")
         return atom["text"] if m and _SIDE[m.group("side")] == atom.get("value") else None
+    if op == TARGETING_THIS:
+        ok = atom.get("text") in TARGETING_THIS_FORMS and atom.get("object")
+        return atom["text"] if ok else None
     if op == EQUIPPED:
         return atom["text"] if atom.get("text") in EQUIPPED_FORMS and atom.get("equip") else None
     if op == "屬性比較":
@@ -254,6 +280,8 @@ def _render_compare(atoms):
     """屬性比較:卡片子類型 = X 寫成字母;引用的兩種句型照 form 放回。"""
     first = atoms[0]
     if first.get("attr") == "卡片子類型" and len(atoms) == 1:
+        if "text" in first:
+            return first["text"] if (first["text"], first.get("value")) in SUBTYPE_WORDS else None
         return _SUBTYPE_TEXT.get(first.get("value"))
     ref = first.get("ref")
     if ref is None or any(a.get("ref", {}).get("text") != ref["text"]

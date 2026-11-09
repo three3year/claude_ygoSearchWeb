@@ -28,7 +28,8 @@
 import re
 
 from premise import PHASE_WORDS
-from structure_shape import DURATION_KINDS, NoTemplate, placement_form
+from structure_shape import (DISPLAY_WORD, DURATION_KINDS, NoTemplate, display_value,
+                             placement_form)
 from synonyms import ATTACK_FAMILY, MODIFY_PREDICATE, ONLY, ONLY_MARKER
 
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
@@ -55,6 +56,8 @@ CAUSE_FORMS = {
     "戦闘またはカードの効果によって": ("戰鬥或效果", None),
     "戦闘・効果で": ("戰鬥或效果", None), "戦闘・効果によって": ("戰鬥或效果", None),
     "戦闘または効果で": ("戰鬥或效果", None),
+    # m2 票 05:ガスタ・ファルコ「戦闘以外によって墓地へ送られた時」。
+    "戦闘以外によって": ("戰鬥以外", None), "戦闘以外で": ("戰鬥以外", None),
 }
 # 作為X素材(票 09):「S素材として墓地へ送られた」→ {"kind": "作為素材", "text": 字面, "summon": 卡片子類型}
 # (「素材として」沒寫哪種召喚就沒有 summon)。
@@ -207,30 +210,54 @@ def is_delayed(seg):
 
 
 # 到的放置形式(對象線 `to.form`,`structure_shape.placement_form`):字面閉集。
-# treat 的字面可帶讀點(「装備魔法カード扱いで、」),種類照去掉讀點的字面查。
-TREAT_FORMS = {"装備魔法カード扱いで": "裝備卡", "装備カード扱いで": "裝備卡"}
+# treat 的字面可帶讀點(「装備魔法カード扱いで、」),種類照去掉讀點的字面查;寫在區域前。
+TREAT_FORMS = {"装備魔法カード扱いで": "裝備卡", "装備カード扱いで": "裝備卡",
+               "永続魔法カード扱いで": "永續魔法", "永続罠カード扱いで": "永續陷阱",
+               "魔法カード扱いで": "魔法"}
 ORDER_FORMS = ("好きな順番で",)
-TREAT_PATTERN = "(?:" + "|".join(map(re.escape, TREAT_FORMS)) + ")、?"
+TREAT_PATTERN = ("(?:" + "|".join(map(re.escape, sorted(TREAT_FORMS, key=len, reverse=True)))
+                 + ")、?")
 ORDER_PATTERN = "|".join(map(re.escape, ORDER_FORMS))
+# 放置形式的表示形式寫在述語前:「表側表示で」「表側攻撃表示か裏側守備表示で」(二選一,m2 票 05)。
+DISPLAY_PATTERN = f"{DISPLAY_WORD}(?:か{DISPLAY_WORD})?で"
+_DISPLAY_RE = re.compile(f"^(?P<a>{DISPLAY_WORD})(?:か(?P<b>{DISPLAY_WORD}))?で$")
 
 
-def parse_placement_form(treat_text=None, order_text=None):
-    """放置形式字面 → placement_form;兩個都沒寫回 None。"""
-    if not treat_text and not order_text:
+def parse_display(text):
+    """「表側攻撃表示か裏側守備表示で」→ {"text", "alternatives": [{"face", "position"}...]}。"""
+    m = _DISPLAY_RE.match(text)
+    words = [w for w in (m.group("a"), m.group("b")) if w]
+    return {"text": text, "alternatives": [display_value(w) for w in words]}
+
+
+def parse_placement_form(treat_text=None, order_text=None, display_literal=None):
+    """放置形式字面 → placement_form;一個都沒寫回 None。"""
+    if not treat_text and not order_text and not display_literal:
         return None
     treat = ({"text": treat_text, "kind": TREAT_FORMS[treat_text.rstrip("、")]}
              if treat_text else None)
     order = {"text": order_text} if order_text else None
-    return placement_form(treat=treat, order=order)
+    display = parse_display(display_literal) if display_literal else None
+    return placement_form(treat=treat, display=display, order=order)
+
+
+def render_display(form):
+    """placement_form 的 display → 寫在述語前的字面(照 text 原樣寫,但 text 要能拆回同一組
+    alternatives);沒有 display 回空字串。"""
+    display = (form or {}).get("display")
+    if not display:
+        return ""
+    text = display.get("text") or ""
+    if not _DISPLAY_RE.match(text) or parse_display(text) != display:
+        raise NoTemplate("放置形式無模板:display")
+    return text
 
 
 def render_placement_form(form):
-    """placement_form → 寫在區域前的字面(treat、order 照字面);treat 的字面與種類對不上、
-    或有表示形式(display 還沒有模板)丟 NoTemplate。"""
+    """placement_form → 寫在區域前的字面(treat、order 照字面);treat 的字面與種類對不上丟
+    NoTemplate。display 寫在述語前,另由 `render_display` 寫。"""
     if not form:
         return ""
-    if form.get("display"):
-        raise NoTemplate("放置形式無模板:display")
     text = ""
     treat = form.get("treat")
     if treat:

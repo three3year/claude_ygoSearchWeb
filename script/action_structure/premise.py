@@ -4,7 +4,9 @@
 (「このカードが手札に存在する場合」「相手ターンに」),所以在觸發形切分**之前**先剝掉,
 否則「〜に存在する場合」會被當成條件段。規則是句型層級的:
 
-- 位置:「Xが<區域>に存在する(場合|状態で|限り|時)、」X 是このカード或任何物件短語。此卡 →
+- 位置:「Xが<區域>に存在する(場合|状態で|限り|時)、」X 是このカード或任何物件短語。
+  「存在する」前可寫表示形式(「表側表示で存在する」),原子帶選填 `face`(表側/裏側)、
+  `position`(攻擊/守備),只記有寫的一半(m2 票 05)。此卡 →
   `位置` 原子並把物件0 在本區塊的目前位置設成該區域(後續段的「從」繼承、不算推得);
   其他物件 → 新建物件(初始位置 = 該區域)加 `存在` 原子。
 - 存在:「<區域>にXが存在する(場合|状態で|限り|時)、」→ 新建物件 + `存在` 原子;
@@ -26,7 +28,7 @@
 """
 import re
 
-from structure_shape import NoTemplate
+from structure_shape import DISPLAY_WORD, NoTemplate, display_value, display_word
 
 GAME_STATE_TURN = "回合方"
 GAME_STATE_PHASE = "階段"
@@ -51,17 +53,20 @@ _GAME_STATE_RE = re.compile(
 KAGIRI = "限り"
 PREMISE_FORMS = ("場合", "状態で", KAGIRI, "時")
 _FORM = f"(?P<form>場合|状態で|{KAGIRI}|時(?=、|に|$))"
+# 「存在する」前可寫表示形式(m2 票 05):「表側表示で存在する時」→ 原子帶選填 face、position。
+_DISPLAY = f"(?:(?P<display>{DISPLAY_WORD})で)?"
 # 「Xが<區域>に存在する場合、」:X 不含讀點;區域短語交給 parse_zones 認,認不得就不是前提。
 # m2 票 04:物件後的助詞也可以是「は」(「このカードはモンスターゾーンに存在する限り、〜を受けない」):
 # 這時 X 也是後面主語省略的子句的主語(`state.subject`),原子帶 `particle`。
 _OBJECT_FIRST_RE = re.compile(
     # 「」裡的字與「または」的「は」不是助詞。
     "^(?P<obj>(?:「[^「」]*」|[^、「」])+?)(?P<particle>が|(?<!また)は)"
-    "(?P<zones>[^、]+?)に存在(?P<neg>し)?(?:する|ない)"
-    + _FORM)
+    "(?P<zones>[^、]+?)に" + _DISPLAY
+    + "存在(?P<neg>し)?(?:する|ない)" + _FORM)
 # 「<區域>にXが存在する場合、」。
 _ZONE_FIRST_RE = re.compile(
-    "^(?P<zones>[^、]+?)に(?P<obj>[^、]+?)が存在(?P<neg>し)?(?:する|ない)" + _FORM)
+    "^(?P<zones>[^、]+?)に(?P<obj>[^、]+?)が" + _DISPLAY
+    + "存在(?P<neg>し)?(?:する|ない)" + _FORM)
 
 
 def parse_game_state(text):
@@ -130,7 +135,12 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
         zones = parse_zones(m.group("zones"))
         if zones is None:
             continue
-        obj_id, ref, _ = state.object_at(m.group("obj"), offset)
+        if m.group("obj") == f"「{state.card['name_ja']}」":
+            # 前提裡的本卡卡名是另一張同名卡(「自分フィールド上に「古代の歯車」が表側表示で
+            # 存在する時、手札からこのカードを〜」,m2 票 05),不是物件0。
+            obj_id, ref, _ = state.new_object(m.group("obj"), offset, {"kind": "新建"})
+        else:
+            obj_id, ref, _ = state.object_at(m.group("obj"), offset)
         if obj_id is None:
             continue
         if obj_id == state.self_id and not m.group("neg"):
@@ -142,6 +152,9 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
         if topic:
             atom["particle"] = "は"
             state.subject = obj_id
+        if m.group("display"):
+            # 表示形式只記有寫的一半(「表側表示」只有 face)。
+            atom.update({k: v for k, v in display_value(m.group("display")).items() if v})
         if ref is not None:
             # 物件是回指(「この効果で特殊召喚したモンスターが〜に存在する限り」,m2 票 03):
             # 回指字面記在原子上,模板照它寫。
@@ -244,6 +257,8 @@ def render_premise(premise, render_zones, render_object, followed=True):
             continue
         obj = render_object(atom["object"], atom.get("ref"))
         zones = render_zones(atom["zones"], atom.get("text"))
+        if atom.get("face") or atom.get("position"):
+            verb = display_word(atom.get("face"), atom.get("position")) + "で" + verb
         if op == "位置" or atom.get("order") == "物件":
             particle = atom.get("particle", "が")
             if particle not in ("が", "は"):

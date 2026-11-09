@@ -67,15 +67,16 @@ from clause_join import JOIN, split_continuative
 from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
 from premise import is_lasting, split_premises
-from segment_fields import (CAUSE_PATTERN, DURATION_TURN, ORDER_PATTERN, OWNER_JOINER,
-                            OWNER_PATTERN, OWNER_TEXT, PER_TURN_PATTERN,
+from segment_fields import (CAUSE_PATTERN, DISPLAY_PATTERN, DURATION_TURN, ORDER_PATTERN,
+                            OWNER_JOINER, OWNER_PATTERN, OWNER_TEXT, PER_TURN_PATTERN,
                             REPLACEMENT_PREFIX,
                             TIMING_PATTERN, TREAT_PATTERN, implicit_delay, is_delayed,
                             inherited_duration, lasting, mention_head, parse_cause,
                             find_battle_duration, parse_leading_duration, parse_modify,
                             parse_per_turn,
                             parse_placement_form, parse_timing, resolve_polarity)
-from structure_shape import (BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, ZONE_WORDS, new_line, new_object,
+from structure_shape import (BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, DISPLAY_WORD, ZONE_WORDS,
+                             new_line, new_object,
                              new_segment, position, unparsed, zone)
 from synonyms import (
     ACTION_PAST, ACTIVATION_SUFFIXES, ATTACK_PREFIX_PATTERN, COST_GLUE, MODIFY_ACTION,
@@ -90,6 +91,8 @@ INFERENCE_TABLE = {
     "捨棄": ("手牌", "墓地"),
     "特殊召喚": (None, "場上"),
     "裝備": (None, "魔陷區"),
+    "放置": (None, "魔陷區"),     # m2 票 05
+    "覆蓋": (None, "魔陷區"),
 }
 # 區域字面表在 structure_shape.ZONE_WORDS(三處共用)。
 # 場上系區域:沒寫方時不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
@@ -192,13 +195,15 @@ REPEAT_RE = re.compile("^(?=.*(?:処理|この効果)を).*繰り返す(?:（[^�
 _OLD_COST_RE = re.compile("^(?P<cost>.+?[るうす])" + COST_GLUE + "、?(?P<rest>.+)$")
 # 物件前的「到に」:主語形「自分フィールドにモンスターが特殊召喚された」(助詞が時才有);
 # 後接「存在する」的是舊式從的助詞(フィールド上に存在するモンスター),不是到。
-_TO_FRONT = f"(?:(?P<to_front>{_ZONE_PHRASE})に(?!存在する))?"
+_TO_FRONT = f"(?:(?P<to_front>{_ZONE_PHRASE})に(?!(?:{DISPLAY_WORD}で)?存在する))?"
 _CLAUSE_PATTERN = (
     "^(?:(?P<agent>自分|相手)(?:が|は))?"
     f"{_TO_FRONT}"
     # 物件前的「從」:「EXデッキから特殊召喚されたモンスター」的「から」是修飾語(曾被特殊召喚),
     # 不是這一段的從;「自分フィールドの、「A」または「B」が」的讀點記進從的字面(票 08)。
-    f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)})"
+    # 舊式「フィールド上に表側表示で存在するX」(m2 票 05):表示形式記在從的放置形式。
+    f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)}"
+    f"|に(?P<from_display>{DISPLAY_WORD})で存在する)"
     "(?P<from_pause>、)?(?!特殊召喚され))?"
     # 物件短語裡的「を含む」(カード名に「X」を含む)、「を持つ」(…と同じ数値のレベルを持つ)
     # 不是受詞助詞;述語裡沒有を,所以切錯時會回頭把「を含む」吃進物件短語。
@@ -227,6 +232,8 @@ _CLAUSE_PATTERN = (
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?:(?P<recipient>自分|相手|{_RECIPIENT_REF})に)?"
+    # 到的表示形式(m2 票 05):「〜に表側表示で置く」「表側攻撃表示か裏側守備表示で特殊召喚する」。
+    f"(?P<display>{DISPLAY_PATTERN})?"
     # 述語裡的「しか」只能在開頭(「融合召喚でしか特殊召喚できない」);句中出現時回頭讓它當助詞。
     f"(?P<pred>(?:{ONLY_MARKER})?{_PRED_HEAD}(?:(?!{ONLY_MARKER})[^を])*)$")
 _CLAUSE_RE = re.compile(_CLAUSE_PATTERN)
@@ -278,6 +285,7 @@ REASON_MODS = "物件修飾解析不出"
 REASON_REF = "指回的物件找不到"
 REASON_ACTIVATION = "發動句解析不出"
 REASON_CAUSE = "原因解析不出"
+REASON_DISPLAY = "表示形式沒有到"
 
 
 def parse_from(phrase):
@@ -874,6 +882,10 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                          "value": int(amount.group("digits").translate(FULLWIDTH_DIGITS)),
                          "unit": amount.group("unit")}
         return
+    if g("display") and not (to_zones or written_to or inferred_to):
+        # 表示形式記在到上;沒有到(明寫、述語自帶、推得都沒有)就沒地方放(m2 票 05)。
+        seg["unparsed"] = unparsed(REASON_DISPLAY)
+        return
     phrases = [None] if elided else split_objects(g("objects"))
     for phrase in phrases:
         if phrase is None:
@@ -899,7 +911,10 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         elif marker.rstrip("、") == "は" and len(phrases) == 1:
             state.subject = obj_id
         if from_zones is not None:
-            line["from"] = position(from_zones, "明寫", text=from_text)
+            line["from"] = position(
+                from_zones, "明寫", text=from_text,
+                form=g("from_display") and parse_placement_form(
+                    display_literal=g("from_display") + "で"))
             if from_placement == "述語前":
                 line["from"]["placement"] = from_placement
             if obj["source"]["kind"] == "新建" and obj["initial_position"] is None:
@@ -913,14 +928,15 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                 side = "我方" if inferred_from == "手牌" else None
                 line["from"] = position([zone(inferred_from, side, side and "預設")],
                                         "推得", inferred=True)
-        form = parse_placement_form(g("treat"), g("order"))  # 每條線各一份,不共用
+        # 放置形式每條線各一份,不共用。
+        form = parse_placement_form(g("treat"), g("order"), g("display"))
         if to_zones is not None:
             line["to"] = position(to_zones, "明寫", text=to_text,
                                   form=form)
             if to_front:
                 line["to"]["placement"] = "名詞前"
         elif written_to:
-            line["to"] = position([zone(written_to, None)], "明寫")
+            line["to"] = position([zone(written_to, None)], "明寫", form=form)
         elif inferred_to:
             line["to"] = position([zone(inferred_to, inferred_side,
                                         inferred_side and "預設")], "推得",

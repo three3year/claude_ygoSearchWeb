@@ -55,6 +55,7 @@
 """
 import re
 
+import damage
 from archetype_table import fold_width
 from attribute_atoms import parse_modifier as parse_param_group
 from attribute_words import ATTRIBUTE_JA, RACE_JA
@@ -62,7 +63,7 @@ from clause_join import JOIN, split_continuative
 from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
 from premise import is_lasting, split_premises
-from segment_fields import (CAUSE_PATTERN, ORDER_PATTERN, REPLACEMENT_PREFIX,
+from segment_fields import (CAUSE_PATTERN, DURATION_TURN, ORDER_PATTERN, REPLACEMENT_PREFIX,
                             TIMING_PATTERN, TREAT_PATTERN, implicit_delay, is_delayed,
                             inherited_duration, lasting, mention_head, parse_cause,
                             parse_leading_duration, parse_modify,
@@ -670,6 +671,8 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     if exist:
         _fill_existence(seg, exist, state, sentence_start)
         return
+    if _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing):
+        return
     m = _CLAUSE_RE.match(clause_text)
     if m and m.group("to_front") and m.group("marker") != "が":
         m = _CLAUSE_NO_TO_FRONT_RE.match(clause_text)
@@ -701,6 +704,10 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     seg["predicate"] = (targeting or "") + pred
     if parsed is None and pred:
         seg["unparsed"] = unparsed(reason)
+        return
+    if parsed and any(p.action == damage.RECOVER_ACTION for p in parsed):
+        # 回復的受方是玩家,只走 damage 的句型;一般子句(「回復した場合」主語省略)不把卡當受事。
+        seg["unparsed"] = unparsed(REASON_CLAUSE)
         return
     if parsed is None:
         # 發動句的取對象宣告(「Xを選択して発動できる」):沒有動作詞,只把物件標成取對象。
@@ -830,6 +837,92 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
             state.recent.append(obj_id)
         state.acted.setdefault(obj_id, []).extend(seg["actions"])
     _update_positions(seg, state)
+
+
+def _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing=None):
+    """傷害、回復與傷害值變更的句型(m2 票 06,`damage`)→ 填格回 True;不是這些句型回 False。
+    玩家主語/受方進 `agent`/`recipient`、不建物件;物件主語(「このカードが」)是角色施事的對象線。"""
+    found = damage.match_clause(clause_text)
+    if found is None:
+        return False
+    form, m = found
+    g = m.groupdict().get
+    pred = g("pred") or damage.MODIFY_DAMAGE_PREDICATE
+    seg["predicate"], seg["voice"] = pred, "主動"
+    if form == damage.MODIFY or pred == damage.NEGATED_RECEIVE:
+        seg["actions"] = [MODIFY_ACTION]
+        seg["modified"] = (damage.parse_value(g("value")) if form == damage.MODIFY
+                           else damage.parse_value("０"))
+        if g("limit"):
+            seg["modified"]["limit"] = damage.parse_limit(g("limit"))
+    else:
+        parsed, reason = parse_predicates(
+            (damage.DAMAGE_OBJECT if form != damage.RECOVER else "") + pred)
+        if parsed is None:
+            seg["unparsed"] = unparsed(reason)
+            return True
+        seg["actions"] = [p.action for p in parsed]
+        seg["voice"] = merged_voice(parsed)
+        seg["polarity"], seg["optional"] = resolve_polarity(parsed, None)
+    if g("recipient"):
+        seg["recipient"] = damage.player(g("recipient"), g("recipient_tail") or "に")
+    elif g("recipient_pre"):
+        seg["recipient"] = damage.player(g("recipient_pre"), "に", damage.PLACEMENT_BEFORE_NOUN)
+    noun = g("noun") or damage.PLAIN_NOUN
+    cause = damage.noun_cause(noun) if g("noun") else None
+    verbal = g("cause") or g("cause_pre")
+    if verbal:
+        if cause is not None:
+            seg["unparsed"] = unparsed(REASON_CAUSE)   # 動詞型與名詞型原因同時寫,不猜
+            return True
+        cause, reason = state.cause_at(verbal, sentence_start)
+        if cause is None:
+            seg["unparsed"] = unparsed(reason)
+            return True
+        if g("cause_pre"):
+            cause["placement"] = damage.CAUSE_BEFORE_SUBJECT
+    if g("source_that") or g("source_object"):
+        if cause is None:
+            seg["unparsed"] = unparsed(REASON_CAUSE)
+            return True
+        source = {"text": g("source_that") or g("source_tail")}
+        if g("source_object"):
+            obj_id, ref, reason = state.object_at(g("source_object"), sentence_start)
+            if obj_id is None:
+                seg["unparsed"] = unparsed(reason)
+                return True
+            source["object"] = obj_id
+            if ref:
+                source["ref"] = ref
+        cause["source"] = source
+    seg["cause"] = cause
+    if g("amount_pre") and g("amount"):
+        seg["unparsed"] = unparsed(REASON_CLAUSE)   # 「その枚数分だけ〜３００ポイント」兩截數量,不猜
+        return True
+    amount_text = g("amount_pre") or g("amount")
+    if amount_text:
+        seg["amount"] = damage.parse_amount(amount_text, noun)
+        if seg["amount"] is None:
+            seg["unparsed"] = unparsed(REASON_CLAUSE)
+            return True
+    if g("duration"):
+        seg["duration"] = {"kind": DURATION_TURN, "text": g("duration")}
+    if inherited_timing:
+        seg["timing"] = _same_timing(inherited_timing)
+    elif state.delayed and kind == "效果":
+        seg["timing"] = implicit_delay()
+    subject = g("subject")
+    if subject in SIDE_WORDS and g("subject_marker"):
+        seg["agent"] = SIDE_WORDS[subject]
+    elif subject:
+        obj_id, ref, reason = state.object_at(subject, sentence_start)
+        if obj_id is None:
+            seg["unparsed"] = unparsed(reason)
+            return True
+        seg["lines"] = [new_line(obj_id, "施事", marker=g("subject_marker"), ref=ref)]
+        if obj_id != state.self_id and obj_id not in state.recent:
+            state.recent.append(obj_id)
+    return True
 
 
 def _update_positions(seg, state):

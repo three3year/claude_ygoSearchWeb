@@ -2,6 +2,8 @@
 
 - 原因(`cause`):「戦闘で」「効果で」「相手の効果で」「戦闘・効果で」→ `{"kind": 戰鬥|效果|戰鬥或效果,
   "text": 字面, "side": 我方/對手(效果含誰的,有寫才有)}`;字面只認閉集 `CAUSE_FORMS`,模板照字面寫。
+  m2 票 04:帶「は」的字面(効果では、戦闘及び効果では…)、誰的效果(`OWNER_FORMS`、`OWNER_PATTERN`)。
+- 每回合次數(`per_turn`,m2 票 04):抗性的「(それぞれ)１ターンに１度だけ」→ {"value", "text"}。
 - 極性(`polarity`):述語語尾給的極性(`segment_extract.TAILS`)之外,「Xは〜できる」(助詞は)是
   永續的許可(直接攻撃できる)→ 極性「可以」、不是可選的動作;「Xを〜できる」仍是可選的「做」
   (票 10 的決定)。`resolve_polarity` 是抽取與反向檢查共用的一把尺。
@@ -27,13 +29,23 @@ import re
 
 from premise import PHASE_WORDS
 from structure_shape import DURATION_KINDS, NoTemplate, placement_form
-from synonyms import MODIFY_PREDICATE, ONLY, ONLY_MARKER
+from synonyms import ATTACK_FAMILY, MODIFY_PREDICATE, ONLY, ONLY_MARKER
 
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
 CAUSE_FORMS = {
     "戦闘によって": ("戰鬥", None), "戦闘で": ("戰鬥", None),
-    # 「〜ならず、戦闘では破壊されない」的主語省略右半(里程碑二票 02);其餘「では」字面歸票 04。
+    # 「〜ならず、戦闘では破壊されない」的主語省略右半(里程碑二票 02)。
     "戦闘では": ("戰鬥", None),
+    # m2 票 04:帶「は」的寫法(では、によっては)與「その戦闘で」。
+    "その戦闘で": ("戰鬥", None), "その戦闘では": ("戰鬥", None),
+    "戦闘によっては": ("戰鬥", None),
+    "効果では": ("效果", None), "カードの効果では": ("效果", None),
+    "効果によっては": ("效果", None), "カードの効果によっては": ("效果", None),
+    "自分の効果では": ("效果", "我方"), "相手の効果では": ("效果", "對手"),
+    "相手の効果によっては": ("效果", "對手"),
+    "相手のカードの効果では": ("效果", "對手"), "相手のカードの効果によっては": ("效果", "對手"),
+    "戦闘・効果では": ("戰鬥或效果", None), "戦闘及び効果では": ("戰鬥或效果", None),
+    "戦闘及び効果で": ("戰鬥或效果", None), "戦闘または効果では": ("戰鬥或效果", None),
     "カードの効果によって": ("效果", None), "効果によって": ("效果", None),
     "カードの効果で": ("效果", None), "効果で": ("效果", None),
     "自分の効果で": ("效果", "我方"), "相手の効果で": ("效果", "對手"),
@@ -51,6 +63,14 @@ MATERIAL_FORMS = {
 }
 CAUSE_PATTERN = "|".join(sorted(map(re.escape, [*CAUSE_FORMS, *MATERIAL_FORMS]),
                                 key=len, reverse=True))
+# 誰的效果(m2 票 04):「〜の効果を受けない」「〜の効果の対象にならない」的「〜の」是原因,
+# 「効果を受け」「効果の対象に」留在述語。方的字面閉集記 side;其餘是物件短語(「A及びB」多個),
+# 原因記 {"kind": 效果, "text": "の", "objects": [...]}(`segment_extract.BlockState.cause_at`)。
+OWNER_FORMS = {"相手の": "對手", "自分の": "我方", "カードの": None,
+               "相手のカードの": "對手", "自分のカードの": "我方"}
+OWNER_TEXT = "の"
+OWNER_PATTERN = "(?:「[^「」]*」|[^を、「」])+?の(?=効果を受け|効果の対象に)"
+OWNER_JOINER = "及び"
 REPLACEMENT_PREFIX = "代わりに"
 
 
@@ -61,9 +81,12 @@ def parse_cause(text):
         if MATERIAL_FORMS[text]:
             cause["summon"] = MATERIAL_FORMS[text]
         return cause
-    if text not in CAUSE_FORMS:
+    if text in OWNER_FORMS:
+        kind, side = "效果", OWNER_FORMS[text]
+    elif text not in CAUSE_FORMS:
         return None
-    kind, side = CAUSE_FORMS[text]
+    else:
+        kind, side = CAUSE_FORMS[text]
     cause = {"kind": kind, "text": text}
     if side:
         cause["side"] = side
@@ -79,7 +102,8 @@ def render_cause(cause):
         if text not in MATERIAL_FORMS or MATERIAL_FORMS[text] != cause.get("summon"):
             raise NoTemplate(f"原因無模板:{cause.get('kind')}")
         return text
-    expected = CAUSE_FORMS.get(text)
+    expected = (("效果", OWNER_FORMS[text]) if text in OWNER_FORMS
+                else CAUSE_FORMS.get(text))
     if expected is None or expected != (cause.get("kind"), cause.get("side")):
         raise NoTemplate(f"原因無模板:{cause.get('kind')}")
     return text
@@ -87,21 +111,46 @@ def render_cause(cause):
 
 # 永續許可的動作詞:「Xは直接攻撃できる」是卡在場上時一直成立的許可,不是一次做的動作;
 # 「このカードは手札から特殊召喚できる」仍是可選的做(票 05/11 的斷言),所以只認不移動卡的動作。
-PERMISSION_ACTIONS = ("直接攻擊",)
+# m2 票 04 擴成攻擊家族(攻擊、直接攻擊、多次攻擊、全體攻擊;spec「永續許可擴到攻擊家族」)。
+PERMISSION_ACTIONS = ATTACK_FAMILY
 
 
 def resolve_polarity(parsed, marker):
     """述語解析結果(parse_predicates 的列表)+ 物件助詞 → (極性, 可選)。
-    「Xは〜できる」且動作詞是永續許可的(直接攻擊)→ 極性「可以」、不可選;
+    「Xは〜できる」且動作詞是永續許可的(攻擊家族)→ 極性「可以」、不可選;主語省略的子句
+    (助詞 None:「相手フィールド上の全てのモンスターに１回ずつ攻撃が可能」)主語是「Xは」的 X 或此卡,
+    同「は」;助詞後的讀點(「Xは、」)不影響。
     「Xしか〜できない」(助詞しか,m2 票 03)→ 極性「只能」,同述語開頭的「しか」;其餘照語尾。"""
     polarity = parsed[-1].polarity
     optional = True if any(p.optional for p in parsed) else None
+    marker = marker.rstrip("、") if marker else marker
     if marker == ONLY_MARKER and polarity == "不能" and not optional:
         return ONLY, None
-    if (optional and marker == "は" and polarity == "做"
+    if (optional and marker in ("は", None) and polarity == "做"
             and all(p.action in PERMISSION_ACTIONS for p in parsed)):
         return "可以", None
     return polarity, optional
+
+
+# 抗性的每回合次數(m2 票 04,段的 `per_turn`):「(それぞれ)１ターンに１度だけ」;查詢先不比。
+PER_TURN_PATTERN = "(?:それぞれ)?１ターンに[１-９]度だけ"
+_PER_TURN_RE = re.compile("^(?:それぞれ)?１ターンに(?P<n>[１-９])度だけ$")
+
+
+def parse_per_turn(text):
+    """「１ターンに１度だけ」→ {"value", "text"}。"""
+    m = _PER_TURN_RE.match(text)
+    return {"value": int(m.group("n").translate(_FULLWIDTH_DIGITS)), "text": text}
+
+
+def render_per_turn(per_turn):
+    """per_turn 格 → 字面;字面與次數對不上丟 NoTemplate。"""
+    if not per_turn:
+        return ""
+    m = _PER_TURN_RE.match(per_turn.get("text") or "")
+    if not m or int(m.group("n").translate(_FULLWIDTH_DIGITS)) != per_turn.get("value"):
+        raise NoTemplate("每回合次數無模板")
+    return per_turn["text"]
 
 
 _PHASE_ALT = "|".join(w for w, _ in PHASE_WORDS)

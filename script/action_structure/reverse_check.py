@@ -20,7 +20,7 @@
 import re
 
 from archetype_table import fold_width
-from attribute_atoms import is_param_atom, joiner, render_group, render_level
+from attribute_atoms import EXCEPT, is_param_atom, joiner, render_group, render_level
 from block_split import LABEL_WIDTH
 from report_common import card_order, safe_label
 from premise import render_premise, split_premise
@@ -30,13 +30,15 @@ from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, CAUSE_EFFECT_OF,
                              CAUSE_METHOD, EXIST_WORDS, FROM_PARTICLES,
                              HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
                              SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
-from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
-                            render_placement_form, render_timing, resolve_polarity,
+from segment_fields import (OWNER_JOINER, OWNER_TEXT, REPLACEMENT_PREFIX, render_cause,
+                            render_modify,
+                            render_per_turn, render_placement_form, render_timing,
+                            resolve_polarity,
                             split_duration)
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
 from structure_shape import DEFAULT_ZONE_WORD, NoTemplate
 from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION,
-                      merged_voice, parse_predicates, split_targeting)
+                      attack_times, merged_voice, parse_predicates, split_targeting)
 
 REASON_NO_TEMPLATE = "無模板"
 REASON_MISMATCH = "字面不符"
@@ -49,7 +51,7 @@ DETAIL_REPEAT = "重複到停為止"
 TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polarity",
                   "trigger", "span", "text", "predicate", "voice", "unparsed",
                   "optional", "cause", "premise", "timing", "duration", "modified",
-                  "replaces", "amount"}
+                  "replaces", "amount", "times", "per_turn"}
 # 被代替段是改了類別的條件段,模板同條件段(帶觸發形);召喚手續、限制(票 09)是召喚條件區塊裡
 # 改了類別的條件/效果段,模板同簡單子句(有觸發形就寫)。
 TEMPLATE_KINDS = ("條件", "代價", "效果", "被代替", "召喚手續", "限制", "修飾")
@@ -97,6 +99,13 @@ def _render_atom(atom, names):
         return _quoted(atom, names) + (form or "")
     if op == "非" and atom.get("arg", {}).get("op") == "卡名":
         return _quoted(atom["arg"], names) + "以外の"
+    if op == "非" and is_param_atom(atom.get("arg", {})):
+        # 種族/屬性(列舉)以外的(m2 票 04:水属性以外のモンスター)。
+        arg = atom["arg"]
+        text = render_group(arg) if arg.get("op") == "或" else _render_atom(arg, names)
+        if text is None:
+            raise NoTemplate("屬性比較無模板")
+        return text + EXCEPT
     if op == "卡名包含":
         return "カード名に" + _quoted(atom, names) + "を含む"
     level = render_level(atom)   # レベル１、レベル４以下、レベル５以上
@@ -402,11 +411,24 @@ def _render_predicate(seg, marker):
     if (merged_voice(parsed), polarity, optional) != (seg["voice"], seg["polarity"],
                                                       seg["optional"]):
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
+    if attack_times(rest) != seg["times"]:
+        # 多次攻擊的次數(m2 票 04)寫在原述語字面裡,格要與字面一致。
+        raise NoTemplate("攻擊次數與述語字面不一致")
     return prefix, rest, next((p.to for p in parsed if p.to), None)
 
 
 def _render_cause(cause, seg, card, objects, names, self_id):
-    """原因:閉集字面(戦闘で…);「「X」の効果で」寫物件;召喚方式寫各方式以「及び」連接 + で。"""
+    """原因:閉集字面(戦闘で…);「「X」の効果で」寫物件;召喚方式寫各方式以「及び」連接 + で;
+    帶 `objects` 的(m2 票 04)寫各物件以「及び」連接 + 字面(「との戦闘では」「の」)。"""
+    if cause and cause.get("objects"):
+        expected = {"戰鬥": ("との戦闘では", "との戦闘で", "との戦闘によって"),
+                    "效果": (OWNER_TEXT,)}.get(cause.get("kind"), ())
+        if (cause.get("text") not in expected
+                or any(o not in objects for o in cause["objects"])
+                or (cause["kind"] == "戰鬥" and len(cause["objects"]) != 1)):
+            raise NoTemplate("原因無模板:物件")
+        return OWNER_JOINER.join(_render_object(objects[o], seg, card, names, self_id=self_id)
+                                 for o in cause["objects"]) + cause["text"]
     if cause and cause.get("object") is not None:
         obj = objects.get(cause["object"])
         if obj is None or cause.get("kind") != "效果" or cause.get("text") != CAUSE_EFFECT_OF:
@@ -596,6 +618,7 @@ def render_segment(seg, card, self_id="o0"):
         if words:
             parts.append("と".join(words) + marker)
             parts.append(counts.pop())
+        parts.append(render_per_turn(seg["per_turn"]))
         parts.append(targeting_text or "")
         if seg["cause"]:
             parts.append(_render_cause(seg["cause"], seg, card, objects, names, self_id))

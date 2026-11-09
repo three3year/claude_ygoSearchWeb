@@ -38,7 +38,8 @@ _ZONE_RE = re.compile(f"^(?P<side>自分|相手)?(?P<zone>{_ZONE_ALT})の")
 _SUMMONED_FROM_RE = re.compile(
     f"^(?P<side>自分|相手)?の?(?P<zone>{_ZONE_ALT})から特殊召喚された")
 SUBTYPE_LETTERS = (("融合", "融合"), ("儀式", "儀式"), ("S", "同步"), ("X", "超量"),
-                   ("L", "連結"), ("P", "靈擺"))
+                   ("L", "連結"), ("P", "靈擺"),
+                   ("通常", "通常"))   # m2 票 04:「「ホール」通常罠カード」「通常モンスター」
 _SUBTYPE = "|".join(letter for letter, _ in SUBTYPE_LETTERS)
 _ARCHETYPE_SUBTYPE_RE = re.compile(f"^「(?P<name>[^「」]+)」(?P<sub>{_SUBTYPE})$")
 _SUBTYPE_RE = re.compile(f"^(?P<sub>{_SUBTYPE})$")
@@ -53,6 +54,9 @@ _SAME_AS_RE = re.compile(
 _SAME_VALUE_RE = re.compile(
     f"^(?P<ref>{_REF})の(?P<rattr>{_ATTR})と同じ数値の(?P<attr>{_ATTR})を持つ")
 REASON_REF = "指回的物件找不到"
+# 控制方(m2 票 04):頭名詞前緊接的「相手」「自分」(相手モンスター、自分モンスター)→
+# {"op": "控制方", "value": 對手|我方};只在它是整串修飾語時才算(「相手の」是位置/方的寫法)。
+_CONTROL_RE = re.compile("^(?P<side>自分|相手)$")
 
 _SIDE = {"自分": "我方", "相手": "對手"}
 _SIDE_TEXT = {v: k for k, v in _SIDE.items()}
@@ -108,6 +112,9 @@ def parse_modifier(rest, state):
     m = _FACE_RE.match(rest)
     if m:
         return [{"op": "表示形式", "value": m.group("face")}], None, m.end()
+    m = _CONTROL_RE.match(rest)
+    if m:
+        return [{"op": "控制方", "value": _SIDE[m.group("side")]}], None, m.end()
     m = _SAME_AS_RE.match(rest)
     if m:
         obj_id = state.resolve_reference(m.group("ref"))
@@ -188,6 +195,8 @@ def render_atom(atom, names):
         return prefix + ("の" if op == "位置" else "から特殊召喚された")
     if op == "表示形式":
         return atom.get("value") if atom.get("value") in FACE_WORDS else None
+    if op == "控制方":
+        return _SIDE_TEXT.get(atom.get("value"))
     if op == "屬性比較":
         return _render_compare([atom])
     if op == "或" and all(a.get("op") == "屬性比較" for a in atom.get("args", ())):

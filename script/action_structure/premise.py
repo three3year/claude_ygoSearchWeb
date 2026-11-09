@@ -52,8 +52,13 @@ KAGIRI = "限り"
 PREMISE_FORMS = ("場合", "状態で", KAGIRI, "時")
 _FORM = f"(?P<form>場合|状態で|{KAGIRI}|時(?=、|に|$))"
 # 「Xが<區域>に存在する場合、」:X 不含讀點;區域短語交給 parse_zones 認,認不得就不是前提。
+# m2 票 04:物件後的助詞也可以是「は」(「このカードはモンスターゾーンに存在する限り、〜を受けない」):
+# 這時 X 也是後面主語省略的子句的主語(`state.subject`),原子帶 `particle`。
 _OBJECT_FIRST_RE = re.compile(
-    "^(?P<obj>[^、]+?)が(?P<zones>[^、]+?)に存在(?P<neg>し)?(?:する|ない)" + _FORM)
+    # 「」裡的字與「または」的「は」不是助詞。
+    "^(?P<obj>(?:「[^「」]*」|[^、「」])+?)(?P<particle>が|(?<!また)は)"
+    "(?P<zones>[^、]+?)に存在(?P<neg>し)?(?:する|ない)"
+    + _FORM)
 # 「<區域>にXが存在する場合、」。
 _ZONE_FIRST_RE = re.compile(
     "^(?P<zones>[^、]+?)に(?P<obj>[^、]+?)が存在(?P<neg>し)?(?:する|ない)" + _FORM)
@@ -119,6 +124,9 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
         m = pattern.match(text)
         if not m:
             continue
+        topic = m.groupdict().get("particle") == "は"
+        if topic and m.group("neg"):
+            continue
         zones = parse_zones(m.group("zones"))
         if zones is None:
             continue
@@ -131,6 +139,9 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
         else:
             atom = {"op": "存在", "object": obj_id, "zones": zones,
                     "form": m.group("form"), "order": first}
+        if topic:
+            atom["particle"] = "は"
+            state.subject = obj_id
         if ref is not None:
             # 物件是回指(「この効果で特殊召喚したモンスターが〜に存在する限り」,m2 票 03):
             # 回指字面記在原子上,模板照它寫。
@@ -234,7 +245,10 @@ def render_premise(premise, render_zones, render_object, followed=True):
         obj = render_object(atom["object"], atom.get("ref"))
         zones = render_zones(atom["zones"], atom.get("text"))
         if op == "位置" or atom.get("order") == "物件":
-            pieces.append(f"{obj}が{zones}に{verb}{form}")
+            particle = atom.get("particle", "が")
+            if particle not in ("が", "は"):
+                raise NoTemplate("前提的助詞無模板")
+            pieces.append(f"{obj}{particle}{zones}に{verb}{form}")
         else:
             pieces.append(f"{zones}に{obj}が{verb}{form}")
     return "".join(pieces)

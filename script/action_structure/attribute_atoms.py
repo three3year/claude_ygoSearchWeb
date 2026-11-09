@@ -34,19 +34,23 @@ def _or(atoms):
     return atoms[0] if len(atoms) == 1 else {"op": "或", "args": atoms}
 
 
+EXCEPT = "以外の"
+
+
 def parse_modifier(text):
     """開頭的種族/屬性修飾語(含「・」列舉與後面的「の」)→ (原子, 字面長度);
-    不是就回 (None, 0)。前面的「・」(種族接屬性的連接)也一併吃掉。"""
+    不是就回 (None, 0)。前面的「・」(種族接屬性的連接)也一併吃掉。
+    後接「以外の」(水属性以外のモンスター,m2 票 04)→ 非(原子)。"""
     skip = 1 if text.startswith("・") else 0
     rest = text[skip:]
-    m = _RACES_RE.match(rest)
-    if m:
-        atoms = [_atom("種族", w) for w in m.group("words").split("・")]
-        return _or(atoms), skip + m.end()
-    m = _ATTRS_RE.match(rest)
-    if m:
-        atoms = [_atom("屬性", w) for w in m.group("words").split("・")]
-        return _or(atoms), skip + m.end()
+    for pattern, attr in ((_RACES_RE, "種族"), (_ATTRS_RE, "屬性")):
+        m = pattern.match(rest)
+        if not m:
+            continue
+        atom = _or([_atom(attr, w) for w in m.group("words").split("・")])
+        if not m.group("no") and rest.startswith(EXCEPT, m.end()):
+            return {"op": "非", "arg": atom}, skip + m.end() + len(EXCEPT)
+        return atom, skip + m.end()
     m = _LEVEL_RE.match(rest)
     if m:
         # 「レベル１の」沒有這種寫法,等級相等時不吃「の」(留給後面的修飾語判)。
@@ -103,5 +107,8 @@ def joiner(atom, following):
     if following.get("op") == "屬性比較" and following.get("attr") == "卡片子類型":
         # 「ドラゴン族・闇属性Sモンスター」字母緊接,不寫「の」;「サイバース族の儀式モンスター」
         # 「恐竜族の融合モンスター」是整個詞,寫「の」。
+        # 「ドラゴン族の通常モンスター」(m2 票 04)同;但「レベル４通常モンスター」緊接(官方 11:3)。
+        if following.get("value") == "通常":
+            return "" if atom.get("attr") == "等級" else "の"
         return "の" if following.get("value") in ("融合", "儀式") else ""
     return "の"

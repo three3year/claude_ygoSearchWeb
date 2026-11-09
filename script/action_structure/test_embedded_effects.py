@@ -248,5 +248,40 @@ class FullArmoredXyzTest(unittest.TestCase):
         self.assertEqual(load_structures(text), self.structures)
 
 
+SLEEPY_MAIDEN = 57541158   # 海晶乙女スリーピーメイデン
+SLEEPY_MAIDEN_TEXT = (
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。"
+    "①：自分フィールドの「マリンセス」カード１枚を対象として発動できる。"
+    "このカードを手札から特殊召喚し、このカードは以下の効果を得る。"
+    "●このカードがモンスターゾーンに存在する限り、対象のカードは相手の効果では破壊されない。"
+    "②：墓地のこのカードを除外し、自分フィールドの「マリンセス」リンクモンスター１体を対象として"
+    "発動できる。自分の墓地から「マリンセス」リンクモンスター１体を選び、装備カード扱いとして"
+    "対象のモンスターに装備する。")
+
+
+class LeadingClauseBeforeHeaderTest(unittest.TestCase):
+    """引導句前的連用形子句(「このカードを手札から特殊召喚し、このカードは以下の効果を得る」):
+    前一截照一般句子解析,內嵌效果的主語是「このカード」,● 緊接句號也認。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(SLEEPY_MAIDEN, name_ja="海晶乙女スリーピーメイデン", type=0x21,
+                          level=5, race=0x1000000, attribute=0x2, atk=500, **{"def": 2500},
+                          setcode=0x12b)]
+        cls.structures = build(cls.cards, [faq(SLEEPY_MAIDEN, "海晶乙女スリーピーメイデン",
+                                               SLEEPY_MAIDEN_TEXT)])
+        cls.structure = own(cls.structures, SLEEPY_MAIDEN)
+
+    def test_special_summon_before_header_hits(self):
+        segs = hit_segments(self.structures, self.cards, SLEEPY_MAIDEN,
+                            actions=["特殊召喚"], from_zones=["手牌"])
+        self.assertEqual([s["text"] for s in segs], ["このカードを手札から特殊召喚し"])
+
+    def test_embedded_binds_this_card(self):
+        node, = embedded_of(self.structure)
+        self.assertEqual(node["binding"], {"自己": "o0"})
+        self.assertEqual(node["join"], "同時")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -43,7 +43,7 @@ from segment_tree import extract_block
 from structure_shape import (
     ATTRIBUTE_TABLES, NO_OFFICIAL_TEXT, attribute_row, branch_node, embedded_node,
     iter_nodes, iter_segments, name_row, new_block, new_card, new_line, new_object,
-    new_segment, position, segment_node, unparsed, zone)
+    new_segment, placement_form, position, segment_node, unparsed, zone)
 
 
 def build_card(entry, faq_entry, lookups, boundary_patch=None, patch_status=None):
@@ -212,6 +212,8 @@ def _hydrate_position(pos):
         return None
     pos = _hydrate(pos, position([], None))
     pos["zones"] = _hydrate_zones(pos["zones"])
+    if pos["form"]:
+        pos["form"] = _hydrate(pos["form"], placement_form())
     return pos
 
 

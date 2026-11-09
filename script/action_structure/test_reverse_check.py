@@ -13,8 +13,9 @@ import build_reverse_check
 from card_structure import build_structures, serialize_structures
 from reverse_check import (check_card, check_structures, normalise,
                            render_report)
-from test_golden import (SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT, SPELL,
-                         card, faq)
+from test_golden import (BRANCH_ARCHETYPES, DRAGON_RAVINE, KAMIKAZE_DRAGUNITY,
+                         KAMIKAZE_DRAGUNITY_TEXT, SINGULARITY_FIEND,
+                         SINGULARITY_FIEND_TEXT, SPELL, SPROUT, SPROUT_TEXT, card, faq)
 
 
 def build_one(cid, name_ja, text):
@@ -133,6 +134,68 @@ class TemplateTest(unittest.TestCase):
         cards = [card(20240828, name_ja="デコピン", type=SPELL)]
         structures, _ = build_structures(cards, [])
         self.assertEqual(check_card(structures[0]), [])
+
+
+def lines_with_form(structure):
+    return [line for block in structure["blocks"] for seg in block["segments"]
+            for line in seg["lines"] if line["to"] and line["to"]["form"]]
+
+
+class PlacementFormTest(unittest.TestCase):
+    """到的放置形式三槽 `{treat, display, order}`(m2 票 01):各槽寫回固定位置。"""
+
+    def test_order_slot_is_written_before_the_destination(self):
+        structure = build_one(SPROUT, "森羅の神芽 スプラウト", SPROUT_TEXT)
+        [line] = lines_with_form(structure)
+        line["to"]["form"]["order"]["text"] = "好きな順に"
+        self.assertEqual([(f["reason"], f["rendered"]) for f in check_card(structure)],
+                         [("字面不符", "残りのカードは好きな順にデッキの一番下に戻す")])
+
+    def kamikaze_dragunity(self):
+        cards = [card(KAMIKAZE_DRAGUNITY, name_ja="神風のドラグニティ", type=0x80002,
+                      setcode=0x29),
+                 card(DRAGON_RAVINE, name_ja="竜の渓谷", type=0x80002, setcode=0x29)]
+        structures, _ = build_structures(
+            cards, [faq(KAMIKAZE_DRAGUNITY, "神風のドラグニティ", KAMIKAZE_DRAGUNITY_TEXT)],
+            archetypes=BRANCH_ARCHETYPES)
+        return structures[0]
+
+    def test_treat_slot_is_written_before_the_inferred_destination(self):
+        """「〜を装備魔法カード扱いで、〜に装備できる」:到是推得的,只寫 treat 的字面。"""
+        structure = self.kamikaze_dragunity()
+        self.assertEqual(check_card(structure), [])
+        [line] = lines_with_form(structure)
+        line["to"]["form"]["treat"]["text"] = "装備カード扱いで、"
+        self.assertEqual(
+            [(f["reason"], f["rendered"]) for f in check_card(structure)],
+            [("字面不符", "デッキからドラゴン族の「ドラグニティ」モンスター１体を"
+                          "装備カード扱いで、この効果で特殊召喚したモンスターに装備できる")])
+
+    def test_treat_kind_must_agree_with_its_literal(self):
+        structure = self.kamikaze_dragunity()
+        [line] = lines_with_form(structure)
+        line["to"]["form"]["treat"]["kind"] = "永續魔法"
+        self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
+                         [("無模板", "放置形式無模板:永續魔法")])
+
+
+class ModifiedAttrTest(unittest.TestCase):
+    """性質變更段的 `modified.attr` 是清單(m2 票 01);模板目前只寫一項。"""
+
+    TEXT = "①：このカードの攻撃力はターン終了時まで０になる。"
+
+    def test_single_attr_is_written_back(self):
+        structure = build_one(1, "甲", self.TEXT)
+        self.assertEqual(check_card(structure), [])
+        segment(structure)["modified"]["attr"] = ["守備力"]
+        self.assertEqual([(f["reason"], f["rendered"]) for f in check_card(structure)],
+                         [("字面不符", "このカードの守備力はターン終了時まで０になる")])
+
+    def test_two_attrs_have_no_template_yet(self):
+        structure = build_one(1, "甲", self.TEXT)
+        segment(structure)["modified"]["attr"] = ["攻擊力", "守備力"]
+        self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
+                         [("無模板", "被改的屬性無模板")])
 
 
 class ReportTest(unittest.TestCase):

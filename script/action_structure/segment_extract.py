@@ -55,7 +55,7 @@ import re
 from archetype_table import fold_width
 from attribute_atoms import parse_modifier as parse_param_group
 from attribute_words import ATTRIBUTE_JA, RACE_JA
-from clause_join import JOIN, JOIN_TAILS, split_continuative
+from clause_join import JOIN, split_continuative
 from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
 from premise import split_premises
@@ -66,7 +66,7 @@ from structure_shape import (DEFAULT_ZONE_WORD, ZONE_WORDS, new_line, new_object
                              new_segment, position, unparsed, zone)
 from synonyms import (
     ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION, MODIFY_PREDICATE,
-    PREDICATE_STEMS, TAILS, TARGET_REF, TARGETING_PREFIXES, action_ancestors,
+    TARGET_REF, TARGETING_PREFIXES, action_ancestors,
     merged_voice, parse_predicates)
 
 # 推得表:動作詞 → (沒寫「從」時的出發地, 沒寫「到」時的終點)。
@@ -124,6 +124,9 @@ _SUBJECTLESS_RE = re.compile(
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
     "(?P<pred>[^を]+)$")
+TOPIC_UNKNOWN = object()   # 前一截解析不出、又沒有認得出的「Xは」:主語省略的子句判不了主語
+# 句首的「Xは」(「「A」または「B」は」的「または」屬於 X)。
+_TOPIC_RE = re.compile("^(?P<topic>(?:または|[^をがは、])+?)は")
 _TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)に?、?(?P<rest>.*)$")
 # 舊式的條件句:觸發形後一定有「、」才算,免得「終了時に」這類句中的時被當觸發。
 _OLD_TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)(?:に)?、(?P<rest>.+)$")
@@ -333,6 +336,21 @@ class BlockState:
         self.acted = {}       # 物件 id → 本區塊對它做過的動作詞(動作回指「〜したモンスター」用;票 06)
         self.self_id = self_id  # 「このカード」指誰:內嵌效果裡綁定成被賦予效果的物件(票 06)
         self.subject = None   # 本句「Xは」的物件:後面主語省略的子句(「〜できず、〜できる」)沿用(票 09)
+        # 前一截解析不出(里程碑二票 02):它句首「Xは」的(字面, 句起點),右半主語省略時才建它的
+        # 物件;沒有「Xは」是 TOPIC_UNKNOWN。
+        self.topic = None
+
+    def elided_subject(self):
+        """主語省略的子句的物件:本句「Xは」的物件,沒有就是此卡;前一截解析不出時是它的「Xは」,
+        它沒有「Xは」或認不出物件就判不了(None),不退回此卡。"""
+        if self.subject is None and self.topic is not None:
+            if self.topic is TOPIC_UNKNOWN:
+                return None
+            phrase, sentence_start = self.topic
+            self.subject, _, _ = self.object_at(phrase, sentence_start)
+            self.topic = None if self.subject else TOPIC_UNKNOWN
+            return self.subject
+        return self.subject or self.self_id
 
     def omit(self, offset, text, reason):
         """句中不記的字面(次數限制)進整卡的略過文本;範圍相對於來源文本。"""
@@ -634,13 +652,19 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     m = _CLAUSE_RE.match(clause_text)
     if m and m.group("to_front") and m.group("marker") != "が":
         m = _CLAUSE_NO_TO_FRONT_RE.match(clause_text)
+    if m and parse_cause(m.group("objects") + m.group("marker")):
+        # 「戦闘では破壊されない」:「戦闘で」+「は」是原因字面,不是物件 + 助詞;主語省略。
+        m = None
     elided = None
     if not m or not (m.group("pred") or m.group("targeting")):
         m = _SUBJECTLESS_RE.match(clause_text)
         if not m or not m.group("pred"):
             seg["unparsed"] = unparsed(REASON_CLAUSE)
             return
-        elided = state.subject or state.self_id
+        elided = state.elided_subject()
+        if elided is None:
+            seg["unparsed"] = unparsed(REASON_REF)
+            return
     g = m.groupdict().get
     pred, to_phrase, targeting = g("pred"), g("to"), g("targeting")
     to_front = g("to_front")
@@ -859,7 +883,7 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
         # 效果子句接在「事で、」後面,它的段範圍從自己起算(前提已在代價段上)。
         start += len(clause) - len(cost.group("rest"))
         clause, seg_start = cost.group("rest"), None
-    for i, (offset, piece) in enumerate(split_continuative(clause, _joinable)):
+    for i, (offset, piece) in enumerate(split_continuative(clause)):
         piece_start = start + offset
         seg = _segment(state, "效果", seg_start if (i == 0 and seg_start is not None)
                        else piece_start, piece_start + len(piece))
@@ -867,28 +891,20 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
             seg["replaces"] = replaces
         _fill_effect(seg, piece, "效果", state, piece_start,
                      segs[-1][0]["timing"] if i else None)
+        _hold_topic(seg, piece, state, piece_start)
         segs.append((seg, JOIN if i else None))
     return segs
 
 
-def _joinable(clause):
-    """「、」前面那截是完整的簡單子句、述語語尾是連用形(戻り、戻し、加え)才在那裡切。"""
-    m = _CLAUSE_RE.match(clause)
-    if not m or not m.group("pred"):
-        return False
-    pred = m.group("pred")
-    if m.group("to") and _predicate_tail(m.group("to") + m.group("to_particle") + pred) is not None:
-        pred = m.group("to") + m.group("to_particle") + pred
-    tail = _predicate_tail(pred)
-    return tail is not None and tail in JOIN_TAILS
-
-
-def _predicate_tail(pred):
-    """述語字面的語尾(同義表的字幹之後);不是同義表的述語回 None。"""
-    for stem, _, _ in PREDICATE_STEMS:
-        if pred.startswith(stem) and pred[len(stem):] in TAILS:
-            return pred[len(stem):]
-    return None
+def _hold_topic(seg, piece, state, piece_start):
+    """左半解不出時,它句首的「Xは」仍是後面主語省略的子句的主語(「装備モンスターは相手の効果の
+    対象にならず、戦闘では破壊されない」);物件等用到時才建(`BlockState.elided_subject`)。"""
+    if not seg["unparsed"]:
+        return
+    m = _TOPIC_RE.match(piece)
+    state.subject = None
+    state.topic = ((m.group("topic"), piece_start) if m and not parse_cause(m.group())
+                   else TOPIC_UNKNOWN)
 
 
 def _same_timing(timing):
@@ -964,7 +980,7 @@ def parse_sentence(state, start, end):
     被代替、後面的段記代替誰(「代わりに」留在它的範圍內)。"""
     text = state.block["text"]
     sent = text[start:end]
-    state.subject = None
+    state.subject = state.topic = None
     summon_block = state.block["kind"] == BLOCK_SUMMON
     if state.block["kind"] == BLOCK_MATERIAL:
         return [(_material_segment(state, start, end), None)]
@@ -1026,13 +1042,14 @@ def parse_sentence(state, start, end):
     elif rest:
         # 代價子句也可連用形串接(「〜を墓地へ送り、〜を対象として発動できる」,票 06):
         # 最後一截要以て形收尾才算代價。
-        pieces = split_continuative(rest, _joinable)
+        pieces = split_continuative(rest)
         for i, (offset, piece) in enumerate(pieces):
             piece_start = rest_start + offset
             seg = _segment(state, "代價", seg_start if i == 0 else piece_start,
                            piece_start + len(piece))
             if i < len(pieces) - 1 or piece.endswith(("て", "で")):
                 _fill_clause(seg, piece, "代價", state, piece_start)
+                _hold_topic(seg, piece, state, piece_start)
             else:
                 seg["unparsed"] = unparsed(REASON_ACTIVATION)
             segs.append((seg, JOIN if i else None))

@@ -216,6 +216,12 @@ class DamageModifyTest(unittest.TestCase):
                               include_condition=True)
         self.assertNotIn("①", [self.block_label(YUBEL, s) for s in damage])
 
+    def test_yubel_is_not_unparsed_for_damage(self):
+        """m2 票 07 驗收第一條後半:查「傷害」時ユベル不在未解析組(② 的效果段命中傷害)。"""
+        result = run_query(self.structures, self.cards, {"actions": ["傷害"]})
+        self.assertNotIn(YUBEL, result["groups"]["未解析"])
+        self.assertIn(YUBEL, result["groups"]["全部"])
+
     def test_odd_eyes_doubles_battle_damage(self):
         """四天の龍 オッドアイズ:「倍になる」「性質變更,屬性傷害」命中、「傷害」不命中。"""
         self.assertEqual([s["modified"]["form"] for s in self.modify_hits(ODD_EYES)], ["倍"])

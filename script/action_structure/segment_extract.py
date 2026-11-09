@@ -66,9 +66,9 @@ from premise import is_lasting, split_premises
 from segment_fields import (CAUSE_PATTERN, DURATION_TURN, ORDER_PATTERN, REPLACEMENT_PREFIX,
                             TIMING_PATTERN, TREAT_PATTERN, implicit_delay, is_delayed,
                             inherited_duration, lasting, mention_head, parse_cause,
-                            parse_leading_duration, parse_modify,
+                            find_battle_duration, parse_leading_duration, parse_modify,
                             parse_placement_form, parse_timing, resolve_polarity)
-from structure_shape import (DEFAULT_ZONE_WORD, ZONE_WORDS, new_line, new_object,
+from structure_shape import (BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, ZONE_WORDS, new_line, new_object,
                              new_segment, position, unparsed, zone)
 from synonyms import (
     ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION, MODIFY_PREDICATE, ONLY_MARKER,
@@ -144,9 +144,19 @@ _SUBJECTLESS_RE = re.compile(
 TOPIC_UNKNOWN = object()   # 前一截解析不出、又沒有認得出的「Xは」:主語省略的子句判不了主語
 # 句首的「Xは」(「「A」または「B」は」的「または」屬於 X)。
 _TOPIC_RE = re.compile("^(?P<topic>(?:または|[^をがは、])+?)は")
-_TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)に?、?(?P<rest>.*)$")
+# 觸發形:戰鬥時點(m2 票 07)排在「時」前面,「〜戦闘を行うダメージ計算時」的觸發形是整個時點字面;
+# 後接「(、)または」的是「A時點、またはB時」兩個觸發的或,維持切在後面的「時」(同改前)。
+_TRIGGERS = f"(?:{'|'.join(BATTLE_TRIGGERS)})(?!、?または)|時|場合|際"
+_TRIGGER_RE = re.compile(f"^(?P<cond>.+?)(?P<trig>{_TRIGGERS})に?、?(?P<rest>.*)$")
+# 發動句裡單獨的戰鬥時點(m2 票 07):「そのダメージ計算前に発動する」「ダメージ計算時に、〜て発動できる」
+# 開一個沒有動作詞的條件段;「その」指回同一句前一個條件段(前提 段已執行)。後面要接「に」「、」或句尾,
+# 「ダメージステップ終了時まで」不是。
+BATTLE_TIMING_REF = "その"
+_BATTLE_TIMING_RE = re.compile(
+    f"^(?P<ref>{BATTLE_TIMING_REF})?(?P<trig>{'|'.join(BATTLE_TRIGGERS)})(?=に|、|$)に?、?(?P<rest>.*)$")
+PREMISE_DONE = "段已執行"
 # 舊式的條件句:觸發形後一定有「、」才算,免得「終了時に」這類句中的時被當觸發。
-_OLD_TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合|際)(?:に)?、(?P<rest>.+)$")
+_OLD_TRIGGER_RE = re.compile(f"^(?P<cond>.+?)(?P<trig>{_TRIGGERS})(?:に)?、(?P<rest>.+)$")
 # 召喚條件區塊的召喚手續句(票 09):「〜をリリースした場合に特殊召喚できる」「〜を除外した場合のみ
 # EXデッキから特殊召喚できる」,觸發形後可接「に」、「、」或直接接「のみ」。
 _SUMMON_TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合)(?:に、|に|、)?(?P<rest>.+)$")
@@ -206,6 +216,13 @@ _CLAUSE_RE = re.compile(_CLAUSE_PATTERN)
 _CLAUSE_NO_TO_FRONT_RE = re.compile(_CLAUSE_PATTERN.replace(_TO_FRONT, "", 1))
 _EXIST_RE = re.compile(
     "^(?P<container>.+?)の中に(?P<objects>.+?)が(?P<pred>" + "|".join(EXIST_WORDS) + ")$")
+# 戰鬥子句(m2 票 07):述語「戦闘を行う」含「を」,一般句型的述語槽吃不到,另開句型。
+# 施事寫在前、受事(「Yと」)可省;物件短語裡沒有讀點(「自分のモンスターが、〜と」不收)。
+BATTLE_AGENT_MARKER, BATTLE_PARTNER_MARKER = "が", "と"
+BATTLE_PREDICATE = "戦闘を行"
+_BATTLE_RE = re.compile(
+    f"^(?P<agent>[^、]+?){BATTLE_AGENT_MARKER}"
+    f"(?:(?P<partner>[^、]+?){BATTLE_PARTNER_MARKER})?(?P<pred>{BATTLE_PREDICATE}[^を、]*)$")
 _FROM_RE = re.compile("^(?:(?P<side>自分か相手|自分|相手)の?)?(?P<zones>.+)$")
 _SELF_RE = re.compile("^このカード$")
 REF_RE = re.compile("^(?P<ref>その|それらの)(?P<head>モンスター|カード)$")
@@ -662,6 +679,32 @@ def _fill_existence(seg, m, state, sentence_start):
     seg["premise"] = {"op": "存在", "object": subset_id, "in": container_id}
 
 
+def _fill_battle(seg, m, state, sentence_start):
+    """戰鬥子句「Xが(Yと)戦闘を行う」:X 是施事(助詞 が)、Y 是受事(助詞 と),兩者都是物件;
+    戰鬥不移動卡片,線沒有從/到(m2 票 07)。"""
+    parsed, reason = parse_predicates(m.group("pred"))
+    seg["predicate"] = m.group("pred")
+    if parsed is None:
+        seg["unparsed"] = unparsed(reason)
+        return
+    seg["actions"] = [p.action for p in parsed]
+    seg["voice"] = merged_voice(parsed)
+    seg["polarity"], seg["optional"] = resolve_polarity(parsed, BATTLE_AGENT_MARKER)
+    mentions = [(m.group("agent"), "施事", BATTLE_AGENT_MARKER)]
+    if m.group("partner"):
+        mentions.append((m.group("partner"), "受事", BATTLE_PARTNER_MARKER))
+    for phrase, role, marker in mentions:
+        obj_id, ref, reason = state.object_at(phrase, sentence_start)
+        if obj_id is None:
+            seg["lines"] = []
+            seg["unparsed"] = unparsed(reason)
+            return
+        seg["lines"].append(new_line(obj_id, role, marker=marker, ref=ref))
+        if obj_id != state.self_id and obj_id not in state.recent:
+            state.recent.append(obj_id)
+        state.acted.setdefault(obj_id, []).extend(seg["actions"])
+
+
 def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing=None):
     """把簡單子句解析進段;失敗就在段上標原因。`inherited_timing` 是連用形串接(同時)的前一段的
     時機:「次のスタンバイフェイズに戻り、その攻撃力は〜になる」的第二段同一時點。
@@ -672,6 +715,10 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         _fill_existence(seg, exist, state, sentence_start)
         return
     if _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing):
+        return
+    battle = _BATTLE_RE.match(clause_text)
+    if battle:
+        _fill_battle(seg, battle, state, sentence_start)
         return
     m = _CLAUSE_RE.match(clause_text)
     if m and m.group("to_front") and m.group("marker") != "が":
@@ -975,6 +1022,20 @@ def _condition_and_rest(state, seg_start, clause_start, body, trig, segs, kind="
     return rest, clause_start + body.rfind(rest) if rest else None
 
 
+def _battle_timing(state, body, body_start, seg_start, segs):
+    """發動句子句開頭的戰鬥時點 → 條件段(觸發形是時點字面、沒有動作詞),append 進 segs;
+    回傳 (剩下的子句, 它的起點),不是就回 None。「その」沒有同一句的前一個條件段可指時不認。"""
+    m = _BATTLE_TIMING_RE.match(body)
+    if not m or (m.group("ref") and not segs):
+        return None
+    seg = _segment(state, "條件", seg_start, body_start + m.end("trig"))
+    seg["trigger"] = m.group("trig")
+    if m.group("ref"):
+        seg["premise"] = {"op": PREMISE_DONE, "segment": segs[-1]["id"]}
+    segs.append(seg)
+    return m.group("rest"), body_start + m.start("rest")
+
+
 def _attach_premise(seg, premise):
     """前提寫進段;段已有前提(存在前提的條件段)時依字面順序組成「且」。"""
     if seg["premise"] is None:
@@ -1031,6 +1092,8 @@ def _fill_effect(seg, clause, kind, state, clause_start, inherited_timing=None):
     """效果子句:性質變更句(「その攻撃力は〜倍になる」)走它的句型,其餘是簡單子句。"""
     modify = parse_modify(clause)
     if modify is None:
+        # 該戰鬥(m2 票 07):子句其餘部分解不出也記期間。
+        seg["duration"] = find_battle_duration(clause)
         _fill_clause(seg, clause, kind, state, clause_start, inherited_timing)
         return
     mention, modified, duration = modify
@@ -1154,18 +1217,26 @@ def parse_sentence(state, start, end):
     segs = []
     trigger_re = _TRIGGER_RE if act else (_SUMMON_TRIGGER_RE if summon_block
                                          else _OLD_TRIGGER_RE)
-    trig = trigger_re.match(body)
     rest, rest_start, seg_start = body, clause_start, seg_from
+    # 發動句開頭就是戰鬥時點(「ダメージ計算時に発動できる」)要先認,否則「時」會切在時點中間。
+    timing = _battle_timing(state, body, clause_start, seg_from, segs) if act else None
+    trig = None if timing else trigger_re.match(body)
     replaced = trig is not None and trig.group("rest").startswith(REPLACEMENT_PREFIX)
     if trig:
-        # 序列中段(區塊已有段)出現條件段:之後的段算延遲(リビングデッドの呼び声);
-        # 召喚條件區塊的「〜した場合に特殊召喚できる」是召喚手續,不是延遲。
-        if state.block["segments"] and not summon_block:
-            state.delayed = True
         rest, rest_start = _condition_and_rest(state, seg_from, clause_start, body,
                                                trig, segs,
                                                "被代替" if replaced else "條件")
         seg_start = rest_start
+        # 「〜場合、そのダメージ計算前に発動する」:條件段後面再接戰鬥時點。
+        timing = (_battle_timing(state, rest, rest_start, rest_start, segs)
+                  if act and rest else None)
+    if timing:
+        rest, rest_start = timing
+        seg_start = rest_start
+    if segs and state.block["segments"] and not summon_block:
+        # 序列中段(區塊已有段)出現條件段:之後的段算延遲(リビングデッドの呼び声);
+        # 召喚條件區塊的「〜した場合に特殊召喚できる」是召喚手續,不是延遲。
+        state.delayed = True
     segs = [(seg, None) for seg in segs]
     if rest and not act:
         if replaced:

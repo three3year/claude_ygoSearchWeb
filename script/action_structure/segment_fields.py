@@ -253,15 +253,29 @@ def split_duration(duration):
 
 DURATION_THIS_TURN = ("そのターンの終了時まで", "ターン終了時まで", "このターンの終了時まで")
 _DURATION_RE = re.compile("^(?P<text>.+?まで)")
+# 該戰鬥(m2 票 07):「(その)ダメージ計算時のみ」「ダメージステップの間」「ダメージステップ時のみ」,
+# 字面可帶讀點;句中出現,寫在性質變更句的期間槽([屬性]は[期間][值]になる)。
+DURATION_BATTLE = "該戰鬥"
+BATTLE_DURATION_PATTERN = "(?:その)?(?:ダメージ計算時のみ|ダメージステップの間|ダメージステップ時のみ)、?"
+_BATTLE_DURATION_RE = re.compile(BATTLE_DURATION_PATTERN)
 
 
 def parse_duration(text):
-    """「〜まで」→ duration 格;本回合的字面是閉集,其餘是「到X為止」。"""
+    """「〜まで」→ duration 格;本回合的字面是閉集,其餘是「到X為止」;戰鬥時點的字面是該戰鬥。"""
     if text in DURATION_THIS_TURN:
         return {"kind": "本回合", "text": text}
     if text.endswith("まで"):
         return {"kind": "到X為止", "text": text}
+    if _BATTLE_DURATION_RE.fullmatch(text):
+        return {"kind": DURATION_BATTLE, "text": text}
     return None
+
+
+def find_battle_duration(clause):
+    """子句裡任何位置的該戰鬥字面 → duration 格;沒有回 None。子句其餘部分解不解得出都記
+    (「攻撃力はそのダメージ計算時のみ３０００アップする」的增減是票 08)。"""
+    m = _BATTLE_DURATION_RE.search(clause)
+    return {"kind": DURATION_BATTLE, "text": m.group()} if m else None
 
 
 def render_duration(duration):
@@ -272,6 +286,8 @@ def render_duration(duration):
         return text if text in DURATION_THIS_TURN else None
     if duration.get("kind") == "到X為止":
         return text if text and text.endswith("まで") else None
+    if duration.get("kind") == DURATION_BATTLE:
+        return text if text and _BATTLE_DURATION_RE.fullmatch(text) else None
     return None
 
 
@@ -287,7 +303,7 @@ _FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789"
 _TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 _MODIFY_RE = re.compile(
     f"^(?P<mention>{_MENTION_ALT})(?P<attr>{_STAT_ALT})は"
-    "(?P<duration>[^、]+?まで)?"
+    f"(?P<duration>[^、]+?まで|{BATTLE_DURATION_PATTERN})?"
     f"(?:(?P<base>元々の(?:{_STAT_ALT}))の(?P<form>倍|半分)|(?P<value>[０-９]+)){MODIFY_PREDICATE}$")
 
 

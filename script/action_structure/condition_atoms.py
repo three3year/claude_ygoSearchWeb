@@ -16,6 +16,9 @@
   そのモンスターのランクと同じ数値のレベルを持つ → 等級 = 物件.階級。
   引用 {"object": 物件 id, "attr": 屬性名, "text": 指回的字面};`form` 記句型(同じで / 同じ数值)
   讓模板放回原字面。指回的物件由 `BlockState.resolve_reference` 解。
+- 控制方(m2 票 07):修飾語開頭的「自分の」「相手の」(自分の「EM」モンスター、相手の表側表示モンスター),
+  或緊接頭名詞的「相手」「自分」(相手モンスター)→ {"op": "控制方", "value": 我方|對手, "text": 字面};
+  「自分フィールドの」是位置,不在此列。代入時任何卡都算(泛用原子)。
 """
 import re
 
@@ -55,6 +58,7 @@ _SAME_VALUE_RE = re.compile(
 REASON_REF = "指回的物件找不到"
 
 _SIDE = {"自分": "我方", "相手": "對手"}
+_CONTROLLER_RE = re.compile("^(?P<side>自分|相手)(?:の|$)")
 _SIDE_TEXT = {v: k for k, v in _SIDE.items()}
 _ZONE_TEXT = {v: k for k, v in _ZONE_NAME.items()}
 _ATTR_NAME = dict(ATTR_WORDS)
@@ -95,6 +99,10 @@ def parse_modifier(rest, state):
     if m:
         side = _SIDE.get(m.group("side"))
         return ([{"op": "位置", "zones": [zone(_ZONE_NAME[m.group("zone")], side)]}],
+                None, m.end())
+    m = _CONTROLLER_RE.match(rest)
+    if m:
+        return ([{"op": "控制方", "value": _SIDE[m.group("side")], "text": m.group()}],
                 None, m.end())
     m = _ARCHETYPE_SUBTYPE_RE.match(rest)
     if m:
@@ -188,6 +196,9 @@ def render_atom(atom, names):
         return prefix + ("の" if op == "位置" else "から特殊召喚された")
     if op == "表示形式":
         return atom.get("value") if atom.get("value") in FACE_WORDS else None
+    if op == "控制方":
+        m = _CONTROLLER_RE.fullmatch(atom.get("text") or "")
+        return atom["text"] if m and _SIDE[m.group("side")] == atom.get("value") else None
     if op == "屬性比較":
         return _render_compare([atom])
     if op == "或" and all(a.get("op") == "屬性比較" for a in atom.get("args", ())):

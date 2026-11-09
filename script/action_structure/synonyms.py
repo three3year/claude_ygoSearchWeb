@@ -55,6 +55,9 @@ PREDICATE_STEMS = (
     ("ダメージを与え", "傷害", None),
     ("ダメージを受け", "傷害", None),
     ("回復", "回復", None),
+    # m2 票 07:「Xと戦闘を行う」;語尾「う」不在 TAILS(加了會影響所有字幹),終止形整串收。
+    ("戦闘を行う", "戰鬥", None),
+    ("戦闘を行", "戰鬥", None),
 )
 MODIFY_ACTION = "性質變更"
 MODIFY_PREDICATE = "になる"

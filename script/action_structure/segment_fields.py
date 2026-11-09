@@ -2,6 +2,8 @@
 
 - 原因(`cause`):「戦闘で」「効果で」「相手の効果で」「戦闘・効果で」→ `{"kind": 戰鬥|效果|戰鬥或效果,
   "text": 字面, "side": 我方/對手(效果含誰的,有寫才有)}`;字面只認閉集 `CAUSE_FORMS`,模板照字面寫。
+  m2 票 04:帶「は」的字面(効果では、戦闘及び効果では…)、誰的效果(`OWNER_FORMS`、`OWNER_PATTERN`)。
+- 每回合次數(`per_turn`,m2 票 04):抗性的「(それぞれ)１ターンに１度だけ」→ {"value", "text"}。
 - 極性(`polarity`):述語語尾給的極性(`segment_extract.TAILS`)之外,「Xは〜できる」(助詞は)是
   永續的許可(直接攻撃できる)→ 極性「可以」、不是可選的動作;「Xを〜できる」仍是可選的「做」
   (票 10 的決定)。`resolve_polarity` 是抽取與反向檢查共用的一把尺。
@@ -15,27 +17,42 @@
   このターン、/この効果の発動後、ターン終了時まで/このカード・この効果を発動するターン、)→ 本回合
   (帶 range),套到同一句的每個段、字面只在第一段,模板寫在段的最前面(`split_duration`)。
 - 被改的屬性(`modified`):性質變更句「その攻撃力はそのターンの終了時まで元々の攻撃力の倍になる」
-  「このカードの攻撃力は０になる」→ 動作詞「性質變更」、`{"attr": [攻擊力|守備力], "form": 倍|半分|數值,
-  "base": 「元々の攻撃力」(倍/半分時), "value": 整數(數值時)}`(attr 是清單,值域與 form 的增/減、
-  選填 limit `{"cmp", "text"}` 見 `structure_shape.MODIFY_ATTRS`/`MODIFY_FORMS`,目前只抽出這兩種);對象線的 `ref` 記提及的字面
+  「このカードの攻撃力は０になる」→ 動作詞「性質變更」、`{"attr": [屬性…], "form": 倍|半分|數值,
+  "base": 「元々の攻撃力」(倍/半分時), "value": 整數(數值時)}`(attr 是清單,值域與選填 limit
+  `{"cmp", "text"}` 見 `structure_shape.MODIFY_ATTRS`/`MODIFY_FORMS`);對象線的 `ref` 記提及的字面
   (「その」「このカードの」「そのモンスターの」)。後續段要讀改後的屬性時,往前找同區塊作用在同一物件
-  上的性質變更段即可(段上就有 `modified`),不另存狀態。
+  上的性質變更段即可(段上就有 `modified`),不另存狀態。m2 票 08:增減「〜は３００アップ/ダウンする」
+  → form 增/減、value 差量(整數)或算式字面 `{"kind": "算式", "text"}`(寫在主語前的「〜だけ、」另帶
+  `placement` 主語前),舊式「Nポイント」記 `unit`;攻守同時是 attr 兩項(「・」);attr 加等級、屬性、
+  種族、卡名(「レベルは４になる」「レベルはそのモンスターと同じになる」= 數值、value 算式);主語是
+  「[區域の][全ての]物件短語の」(區域記對象線的從、「全ての」記對象線的數量);「攻撃力は、」的讀點
+  記進對象線的助詞字面。期間只照字面抽,沒寫不推斷。
 - 代替(`replaces`):「〜場合、代わりに〜」的條件段改標「被代替」,後面的段記 `replaces` = 被代替段 id,
   段的範圍含「代わりに」;模板在段前寫「代わりに」。
 """
 import re
 
 from premise import PHASE_WORDS
-from structure_shape import (DURATION_KINDS, PLACEMENT_DISPLAY_WORD,
-                             NoTemplate, display_value,
+from structure_shape import (AMOUNT_FORMULA, DISPLAY_WORD, DURATION_KINDS,
+                             PLACEMENT_DISPLAY_WORD, NoTemplate, display_value,
                              placement_form)
-from synonyms import MODIFY_PREDICATE, ONLY, ONLY_MARKER
+from synonyms import ATTACK_FAMILY, MODIFY_PREDICATE, ONLY, ONLY_MARKER
 
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
 CAUSE_FORMS = {
     "戦闘によって": ("戰鬥", None), "戦闘で": ("戰鬥", None),
-    # 「〜ならず、戦闘では破壊されない」的主語省略右半(里程碑二票 02);其餘「では」字面歸票 04。
+    # 「〜ならず、戦闘では破壊されない」的主語省略右半(里程碑二票 02)。
     "戦闘では": ("戰鬥", None),
+    # m2 票 04:帶「は」的寫法(では、によっては)與「その戦闘で」。
+    "その戦闘で": ("戰鬥", None), "その戦闘では": ("戰鬥", None),
+    "戦闘によっては": ("戰鬥", None),
+    "効果では": ("效果", None), "カードの効果では": ("效果", None),
+    "効果によっては": ("效果", None), "カードの効果によっては": ("效果", None),
+    "自分の効果では": ("效果", "我方"), "相手の効果では": ("效果", "對手"),
+    "相手の効果によっては": ("效果", "對手"),
+    "相手のカードの効果では": ("效果", "對手"), "相手のカードの効果によっては": ("效果", "對手"),
+    "戦闘・効果では": ("戰鬥或效果", None), "戦闘及び効果では": ("戰鬥或效果", None),
+    "戦闘及び効果で": ("戰鬥或效果", None), "戦闘または効果では": ("戰鬥或效果", None),
     "カードの効果によって": ("效果", None), "効果によって": ("效果", None),
     "カードの効果で": ("效果", None), "効果で": ("效果", None),
     "自分の効果で": ("效果", "我方"), "相手の効果で": ("效果", "對手"),
@@ -58,6 +75,14 @@ MATERIAL_FORMS = {
 }
 CAUSE_PATTERN = "|".join(sorted(map(re.escape, [*CAUSE_FORMS, *MATERIAL_FORMS]),
                                 key=len, reverse=True))
+# 誰的效果(m2 票 04):「〜の効果を受けない」「〜の効果の対象にならない」的「〜の」是原因,
+# 「効果を受け」「効果の対象に」留在述語。方的字面閉集記 side;其餘是物件短語(「A及びB」多個),
+# 原因記 {"kind": 效果, "text": "の", "objects": [...]}(`segment_extract.BlockState.cause_at`)。
+OWNER_FORMS = {"相手の": "對手", "自分の": "我方", "カードの": None,
+               "相手のカードの": "對手", "自分のカードの": "我方"}
+OWNER_TEXT = "の"
+OWNER_PATTERN = "(?:「[^「」]*」|[^を、「」])+?の(?=効果を受け|効果の対象に)"
+OWNER_JOINER = "及び"
 REPLACEMENT_PREFIX = "代わりに"
 
 
@@ -68,9 +93,12 @@ def parse_cause(text):
         if MATERIAL_FORMS[text]:
             cause["summon"] = MATERIAL_FORMS[text]
         return cause
-    if text not in CAUSE_FORMS:
+    if text in OWNER_FORMS:
+        kind, side = "效果", OWNER_FORMS[text]
+    elif text not in CAUSE_FORMS:
         return None
-    kind, side = CAUSE_FORMS[text]
+    else:
+        kind, side = CAUSE_FORMS[text]
     cause = {"kind": kind, "text": text}
     if side:
         cause["side"] = side
@@ -86,7 +114,8 @@ def render_cause(cause):
         if text not in MATERIAL_FORMS or MATERIAL_FORMS[text] != cause.get("summon"):
             raise NoTemplate(f"原因無模板:{cause.get('kind')}")
         return text
-    expected = CAUSE_FORMS.get(text)
+    expected = (("效果", OWNER_FORMS[text]) if text in OWNER_FORMS
+                else CAUSE_FORMS.get(text))
     if expected is None or expected != (cause.get("kind"), cause.get("side")):
         raise NoTemplate(f"原因無模板:{cause.get('kind')}")
     return text
@@ -94,21 +123,46 @@ def render_cause(cause):
 
 # 永續許可的動作詞:「Xは直接攻撃できる」是卡在場上時一直成立的許可,不是一次做的動作;
 # 「このカードは手札から特殊召喚できる」仍是可選的做(票 05/11 的斷言),所以只認不移動卡的動作。
-PERMISSION_ACTIONS = ("直接攻擊",)
+# m2 票 04 擴成攻擊家族(攻擊、直接攻擊、多次攻擊、全體攻擊;spec「永續許可擴到攻擊家族」)。
+PERMISSION_ACTIONS = ATTACK_FAMILY
 
 
 def resolve_polarity(parsed, marker):
     """述語解析結果(parse_predicates 的列表)+ 物件助詞 → (極性, 可選)。
-    「Xは〜できる」且動作詞是永續許可的(直接攻擊)→ 極性「可以」、不可選;
+    「Xは〜できる」且動作詞是永續許可的(攻擊家族)→ 極性「可以」、不可選;主語省略的子句
+    (助詞 None:「相手フィールド上の全てのモンスターに１回ずつ攻撃が可能」)主語是「Xは」的 X 或此卡,
+    同「は」;助詞後的讀點(「Xは、」)不影響。
     「Xしか〜できない」(助詞しか,m2 票 03)→ 極性「只能」,同述語開頭的「しか」;其餘照語尾。"""
     polarity = parsed[-1].polarity
     optional = True if any(p.optional for p in parsed) else None
+    marker = marker.rstrip("、") if marker else marker
     if marker == ONLY_MARKER and polarity == "不能" and not optional:
         return ONLY, None
-    if (optional and marker == "は" and polarity == "做"
+    if (optional and marker in ("は", None) and polarity == "做"
             and all(p.action in PERMISSION_ACTIONS for p in parsed)):
         return "可以", None
     return polarity, optional
+
+
+# 抗性的每回合次數(m2 票 04,段的 `per_turn`):「(それぞれ)１ターンに１度だけ」;查詢先不比。
+PER_TURN_PATTERN = "(?:それぞれ)?１ターンに[１-９]度だけ"
+_PER_TURN_RE = re.compile("^(?:それぞれ)?１ターンに(?P<n>[１-９])度だけ$")
+
+
+def parse_per_turn(text):
+    """「１ターンに１度だけ」→ {"value", "text"}。"""
+    m = _PER_TURN_RE.match(text)
+    return {"value": int(m.group("n").translate(_FULLWIDTH_DIGITS)), "text": text}
+
+
+def render_per_turn(per_turn):
+    """per_turn 格 → 字面;字面與次數對不上丟 NoTemplate。"""
+    if not per_turn:
+        return ""
+    m = _PER_TURN_RE.match(per_turn.get("text") or "")
+    if not m or int(m.group("n").translate(_FULLWIDTH_DIGITS)) != per_turn.get("value"):
+        raise NoTemplate("每回合次數無模板")
+    return per_turn["text"]
 
 
 _PHASE_ALT = "|".join(w for w, _ in PHASE_WORDS)
@@ -164,6 +218,7 @@ def is_delayed(seg):
 # 到的放置形式(對象線 `to.form`,`structure_shape.placement_form`):字面閉集。
 # treat 的字面可帶讀點(「装備魔法カード扱いで、」),種類照去掉讀點的字面查;寫在區域前。
 TREAT_FORMS = {"装備魔法カード扱いで": "裝備卡", "装備カード扱いで": "裝備卡",
+               "装備カード扱いとして": "裝備卡",
                "永続魔法カード扱いで": "永續魔法", "永続罠カード扱いで": "永續陷阱",
                "魔法カード扱いで": "魔法"}
 ORDER_FORMS = ("好きな順番で",)
@@ -174,6 +229,13 @@ ORDER_PATTERN = "|".join(map(re.escape, ORDER_FORMS))
 DISPLAY_PATTERN = f"{PLACEMENT_DISPLAY_WORD}(?:か{PLACEMENT_DISPLAY_WORD})?で"
 _DISPLAY_RE = re.compile(
     f"^(?P<a>{PLACEMENT_DISPLAY_WORD})(?:か(?P<b>{PLACEMENT_DISPLAY_WORD}))?で$")
+
+
+def _treat_kind(text):
+    """treat 字面 → 種類:去掉讀點與增減前綴(「攻撃力３００アップの」,m2 票 08)再查閉集。"""
+    delta = parse_treat_delta(text)
+    base = text[len(delta[0]) + 1:] if delta else text
+    return TREAT_FORMS.get(base.rstrip("、"))
 
 
 def parse_display(text):
@@ -187,7 +249,7 @@ def parse_placement_form(treat_text=None, order_text=None, display_literal=None)
     """放置形式字面 → placement_form;一個都沒寫回 None。"""
     if not treat_text and not order_text and not display_literal:
         return None
-    treat = ({"text": treat_text, "kind": TREAT_FORMS[treat_text.rstrip("、")]}
+    treat = ({"text": treat_text, "kind": _treat_kind(treat_text)}
              if treat_text else None)
     order = {"text": order_text} if order_text else None
     display = parse_display(display_literal) if display_literal else None
@@ -214,7 +276,7 @@ def render_placement_form(form):
     text = ""
     treat = form.get("treat")
     if treat:
-        if TREAT_FORMS.get((treat.get("text") or "").rstrip("、")) != treat.get("kind"):
+        if _treat_kind(treat.get("text") or "") != treat.get("kind"):
             raise NoTemplate(f"放置形式無模板:{treat.get('kind')}")
         text += treat["text"]
     if form.get("order"):
@@ -284,8 +346,10 @@ DURATION_THIS_TURN = ("そのターンの終了時まで", "ターン終了時�
 _DURATION_RE = re.compile("^(?P<text>.+?まで)")
 # 該戰鬥(m2 票 07):「(その)ダメージ計算時のみ」「ダメージステップの間」「ダメージステップ時のみ」,
 # 字面可帶讀點;句中出現,寫在性質變更句的期間槽([屬性]は[期間][值]になる)。
+# m2 票 08:前面可帶「(相手)モンスターに攻撃する」(攻擊時才增減)。
 DURATION_BATTLE = "該戰鬥"
-BATTLE_DURATION_PATTERN = "(?:その)?(?:ダメージ計算時のみ|ダメージステップの間|ダメージステップ時のみ)、?"
+BATTLE_DURATION_PATTERN = ("(?:その|(?:相手)?モンスターに攻撃する)?"
+                           "(?:ダメージ計算時のみ|ダメージステップの間|ダメージステップ時のみ)、?")
 _BATTLE_DURATION_RE = re.compile(BATTLE_DURATION_PATTERN)
 
 
@@ -300,13 +364,17 @@ def is_clause_duration(duration):
     """簡單子句模板寫得出的句中期間:字面在閉集裡、種類與字面對得上。"""
     text = (duration or {}).get("text") or ""
     return bool(_CLAUSE_DURATION_RE.match(text)) and duration == parse_duration(text)
+def _bare(text):
+    """期間字面去掉句中的讀點(「ターン終了時まで、」)。"""
+    return text[:-1] if text.endswith("、") else text
 
 
 def parse_duration(text):
-    """「〜まで」→ duration 格;本回合的字面是閉集,其餘是「到X為止」;戰鬥時點的字面是該戰鬥。"""
-    if text in DURATION_THIS_TURN:
+    """「〜まで」→ duration 格;本回合的字面是閉集,其餘是「到X為止」;戰鬥時點的字面是該戰鬥。
+    字面可帶讀點(m2 票 08:「攻撃力・守備力はターン終了時まで、〜分ダウンする」)。"""
+    if _bare(text) in DURATION_THIS_TURN:
         return {"kind": "本回合", "text": text}
-    if text.endswith("まで"):
+    if _bare(text).endswith("まで"):
         return {"kind": "到X為止", "text": text}
     if _BATTLE_DURATION_RE.fullmatch(text):
         return {"kind": DURATION_BATTLE, "text": text}
@@ -325,44 +393,96 @@ def render_duration(duration):
         return ""
     text = duration.get("text")
     if duration.get("kind") == "本回合":
-        return text if text in DURATION_THIS_TURN else None
+        return text if text and _bare(text) in DURATION_THIS_TURN else None
     if duration.get("kind") == "到X為止":
-        return text if text and text.endswith("まで") else None
+        return text if text and _bare(text).endswith("まで") else None
     if duration.get("kind") == DURATION_BATTLE:
         return text if text and _BATTLE_DURATION_RE.fullmatch(text) else None
     return None
 
 
-STAT_WORDS = (("攻撃力", "攻擊力"), ("守備力", "守備力"))
+STAT_WORDS = (("攻撃力", "攻擊力"), ("守備力", "守備力"), ("レベル", "等級"),
+              ("属性", "屬性"), ("種族", "種族"), ("カード名", "卡名"))
 _STAT_NAME = dict(STAT_WORDS)
 _STAT_TEXT = {v: k for k, v in STAT_WORDS}
 _STAT_ALT = "|".join(w for w, _ in STAT_WORDS)
+# 被改的屬性可以「・」列舉(攻守同時:「攻撃力・守備力」),attr 清單照字面順序。
+STAT_JOINER = "・"
+_ATTRS = f"(?:{_STAT_ALT})(?:{STAT_JOINER}(?:{_STAT_ALT}))*"
+# 倍/半分的基準只有攻守(「元々の攻撃力の倍」)。
+_BASE_ALT = "元々の(?:攻撃力|守備力)"
 # 提及的字面:「その攻撃力」的その是回指(物件是最近的物件),「このカードの」是物件0。
+# 其餘主語是「物件短語 + の」(m2 票 08),物件照一般規則解析(`segment_extract._modify_subject`)。
 MENTION_FORMS = ("その", "それらの", "このカードの", "そのモンスターの", "そのカードの",
                  "それらのモンスターの", "それらのカードの")
-_MENTION_ALT = "|".join(MENTION_FORMS)
+# 屬性後的助詞:「攻撃力は、」的讀點記進對象線的助詞字面(同「自分フィールドの、」記進從的字面)。
+MODIFY_MARKERS = ("は", "は、")
+# 增減(m2 票 08):述語字面 アップ/ダウン + する/し(連用形串接);差量的單位只有舊式「ポイント」。
+DELTA_WORDS = {"アップ": "增", "ダウン": "減"}
+_DELTA_TEXT = {v: k for k, v in DELTA_WORDS.items()}
+DELTA_TAILS = ("する", "し")
+DELTA_UNIT = "ポイント"
+# 「Nになる」的目標值可以是引用其他值的算式字面「そのモンスターと同じ」。
+SAME_AS = "と同じ"
 _FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
 _TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
+# 差量寫在主語前(「その差分×５００だけこのカードの攻撃力はアップする」):算式字面以「だけ」收尾,
+# 可帶讀點;value 另記 placement 主語前。
+LEADING_FORMULA = "主語前"
 _MODIFY_RE = re.compile(
-    f"^(?P<mention>{_MENTION_ALT})(?P<attr>{_STAT_ALT})は"
-    f"(?P<duration>[^、]+?まで|{BATTLE_DURATION_PATTERN})?"
-    f"(?:(?P<base>元々の(?:{_STAT_ALT}))の(?P<form>倍|半分)|(?P<value>[０-９]+)){MODIFY_PREDICATE}$")
+    "^(?P<lead>[^、]+?だけ、?)?"
+    f"(?P<subject>その|[^、]+?の)(?P<attr>{_ATTRS})(?P<marker>は、?)"
+    f"(?P<duration>[^、]+?まで、?|{BATTLE_DURATION_PATTERN})?"
+    "(?:"
+    f"(?:(?P<base>{_BASE_ALT})の(?P<form>倍|半分)|(?P<value>[０-９]+)|(?P<same>[^、]+?{SAME_AS}))"
+    f"{MODIFY_PREDICATE}"
+    f"|(?:(?P<delta>[０-９]+)(?P<unit>{DELTA_UNIT})?|(?P<formula>[^、]+?))?"
+    f"(?P<direction>{'|'.join(DELTA_WORDS)})(?P<tail>{'|'.join(DELTA_TAILS)})"
+    ")$")
+
+
+def _attrs(text):
+    return [_STAT_NAME[word] for word in text.split(STAT_JOINER)]
 
 
 def parse_modify(clause):
-    """性質變更句 → (提及字面, modified 格, duration 格或 None);不是就回 None。"""
+    """性質變更句 → {"subject": 主語字面(含の), "marker": は|は、, "modified", "duration", "predicate"};
+    不是就回 None。「Nになる」是數值(目標值;「〜と同じになる」是算式字面)、倍、半分;
+    「Nアップ/ダウンする」是增/減,`value` 是差量(整數)或算式字面 `{"kind": "算式", "text"}`,
+    沒寫數值時沒有 value;舊式「Nポイント」另記 `unit`。"""
     m = _MODIFY_RE.match(clause)
     if not m:
         return None
-    modified = {"attr": [_STAT_NAME[m.group("attr")]]}
-    if m.group("form"):
-        modified["form"] = m.group("form")
-        modified["base"] = m.group("base")
+    modified = {"attr": _attrs(m.group("attr"))}
+    if m.group("direction"):
+        modified["form"] = DELTA_WORDS[m.group("direction")]
+        if m.group("delta"):
+            modified["value"] = int(m.group("delta").translate(_FULLWIDTH_DIGITS))
+            if m.group("unit"):
+                modified["unit"] = m.group("unit")
+        elif m.group("formula"):
+            modified["value"] = {"kind": AMOUNT_FORMULA, "text": m.group("formula")}
+        if m.group("lead"):
+            if "value" in modified:
+                return None
+            modified["value"] = {"kind": AMOUNT_FORMULA, "text": m.group("lead"),
+                                 "placement": LEADING_FORMULA}
+        predicate = m.group("direction") + m.group("tail")
     else:
-        modified["form"] = "數值"
-        modified["value"] = int(m.group("value").translate(_FULLWIDTH_DIGITS))
+        if m.group("form"):
+            modified["form"] = m.group("form")
+            modified["base"] = m.group("base")
+        else:
+            modified["form"] = "數值"
+            modified["value"] = (
+                int(m.group("value").translate(_FULLWIDTH_DIGITS)) if m.group("value")
+                else {"kind": AMOUNT_FORMULA, "text": m.group("same")})
+        if m.group("lead"):
+            return None
+        predicate = MODIFY_PREDICATE
     duration = parse_duration(m.group("duration")) if m.group("duration") else None
-    return m.group("mention"), modified, duration
+    return {"subject": m.group("subject"), "marker": m.group("marker"),
+            "modified": modified, "duration": duration, "predicate": predicate}
 
 
 def mention_head(mention):
@@ -373,20 +493,91 @@ def mention_head(mention):
     return "モンスター" if "モンスター" in mention else "カード"
 
 
-def render_modify(mention, modified, duration):
-    """性質變更句模板:[提及][屬性]は[期間][值]になる;格與閉集對不上丟 NoTemplate
-    (期間由 `render_duration` 驗,它回 None 時也是這裡丟)。attr 清單目前只認一項。"""
+def render_attrs(modified):
+    """attr 清單 → 「攻撃力・守備力」;清單空或有閉集外的值丟 NoTemplate。"""
     attrs = modified.get("attr") or []
-    attr = _STAT_TEXT.get(attrs[0]) if len(attrs) == 1 else None
-    period = render_duration(duration)
-    form = modified.get("form")
-    value = None
+    if not attrs or any(a not in _STAT_TEXT for a in attrs):
+        raise NoTemplate("被改的屬性無模板")
+    return STAT_JOINER.join(_STAT_TEXT[a] for a in attrs)
+
+
+def render_change(modified, predicate):
+    """被改的值與述語 → 「３００ダウンする」「元々の攻撃力の倍になる」「そのモンスターと同じになる」;
+    form、value、unit、述語字面對不上丟 NoTemplate。"""
+    form, value = modified.get("form"), modified.get("value")
+    if modified.get("limit") or (modified.get("unit") and form not in DELTA_WORDS.values()):
+        raise NoTemplate("被改的屬性無模板")
+    if form in DELTA_WORDS.values():
+        word = _DELTA_TEXT[form]
+        if not predicate or not predicate.startswith(word) \
+                or predicate[len(word):] not in DELTA_TAILS:
+            raise NoTemplate("增減的述語無模板")
+        return _render_value(value, modified.get("unit"), allow_none=True) + predicate
+    if predicate != MODIFY_PREDICATE:
+        raise NoTemplate("被改的屬性無模板")
     if form in ("倍", "半分"):
         base = modified.get("base") or ""
-        if re.fullmatch(f"元々の(?:{_STAT_ALT})", base):
-            value = f"{base}の{form}"
-    elif form == "數值" and isinstance(modified.get("value"), int):
-        value = str(modified["value"]).translate(_TO_FULLWIDTH_DIGITS)
-    if mention not in MENTION_FORMS or attr is None or period is None or value is None:
+        if not re.fullmatch(_BASE_ALT, base):
+            raise NoTemplate("被改的屬性無模板")
+        return f"{base}の{form}{predicate}"
+    if form == "數值":
+        if isinstance(value, dict) and not (value.get("text") or "").endswith(SAME_AS):
+            raise NoTemplate("被改的屬性無模板")
+        return _render_value(value, None, allow_none=False) + predicate
+    raise NoTemplate("被改的屬性無模板")
+
+
+def _render_value(value, unit, allow_none):
+    if value is None and allow_none:
+        return ""
+    if isinstance(value, int) and unit in (None, DELTA_UNIT):
+        return str(value).translate(_TO_FULLWIDTH_DIGITS) + (unit or "")
+    if isinstance(value, dict) and value.get("kind") == AMOUNT_FORMULA and value.get("text") \
+            and unit is None:
+        return value["text"]
+    raise NoTemplate("被改的屬性無模板")
+
+
+def render_modify(subject, marker, modified, duration, predicate):
+    """性質變更句模板:[主語の][屬性]は[、][期間][值]述語(になる|アップする|ダウンする…);
+    格與閉集對不上丟 NoTemplate(期間由 `render_duration` 驗,它回 None 時也是這裡丟)。"""
+    period = render_duration(duration)
+    if marker not in MODIFY_MARKERS or period is None:
         raise NoTemplate("被改的屬性無模板")
-    return f"{mention}{attr}は{period}{value}{MODIFY_PREDICATE}"
+    value = modified.get("value")
+    if isinstance(value, dict) and value.get("placement") is not None:
+        text = value.get("text") or ""
+        if value["placement"] != LEADING_FORMULA or not _bare(text).endswith("だけ")                 or modified.get("form") not in DELTA_WORDS.values():
+            raise NoTemplate("被改的屬性無模板")
+        rest = {k: v for k, v in modified.items() if k != "value"}
+        return f"{text}{subject}{render_attrs(rest)}{marker}{period}{render_change(rest, predicate)}"
+    return f"{subject}{render_attrs(modified)}{marker}{period}{render_change(modified, predicate)}"
+
+
+# 「攻撃力・守備力３００アップの装備カード扱いで」(m2 票 08):放置形式 treat 字面前的增減,
+# 拆出一段衍生的性質變更段(`derived_from`),它的範圍是「攻撃力・守備力３００アップ」。
+TREAT_DELTA_PATTERN = (f"{_ATTRS}[０-９]+(?:{DELTA_UNIT})?(?:{'|'.join(DELTA_WORDS)})の")
+_TREAT_DELTA_RE = re.compile(
+    f"^(?P<attr>{_ATTRS})(?P<delta>[０-９]+)(?P<unit>{DELTA_UNIT})?"
+    f"(?P<direction>{'|'.join(DELTA_WORDS)})の")
+
+
+def parse_treat_delta(treat_text):
+    """treat 字面 → (增減字面, modified, 述語字面)或 None(沒有增減前綴)。"""
+    m = _TREAT_DELTA_RE.match(treat_text or "")
+    if not m:
+        return None
+    modified = {"attr": _attrs(m.group("attr")), "form": DELTA_WORDS[m.group("direction")],
+                "value": int(m.group("delta").translate(_FULLWIDTH_DIGITS))}
+    if m.group("unit"):
+        modified["unit"] = m.group("unit")
+    return m.group()[:-1], modified, m.group("direction")
+
+
+def render_treat_delta(modified, predicate):
+    """衍生段模板:[屬性][差量]アップ(述語字面只有 アップ/ダウン,不帶語尾)。"""
+    if predicate not in DELTA_WORDS or DELTA_WORDS[predicate] != modified.get("form") \
+            or not isinstance(modified.get("value"), int):
+        raise NoTemplate("衍生的性質變更段無模板")
+    return render_attrs(modified) + _render_value(modified["value"], modified.get("unit"),
+                                                  allow_none=False) + predicate

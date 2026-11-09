@@ -157,6 +157,9 @@ def new_segment(seg_id, kind, span, text, predicate=None, voice=None):
         "amount": None,      # 數量(段可無物件,例:支付 1000LP;算式 {"kind": "算式", "text"})
         "optional": None,    # 可選
         "replaces": None,    # 代替誰(段 id)
+        "times": None,       # 多次攻擊的次數 {"value", "text"}(m2 票 04;字面在原述語字面裡)
+        "per_turn": None,    # 抗性的每回合次數 {"value", "text"}(m2 票 04:「１ターンに１度だけ」)
+        "derived_from": None,  # 衍生自哪一段(段 id;「Nアップの装備カード扱いで」的性質變更段,m2 票 08)
         "span": list(span),  # 原文範圍(相對於區塊 text)
         "text": text,
         "predicate": predicate,  # 原述語字面

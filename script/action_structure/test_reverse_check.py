@@ -180,7 +180,7 @@ class PlacementFormTest(unittest.TestCase):
 
 
 class ModifiedAttrTest(unittest.TestCase):
-    """性質變更段的 `modified.attr` 是清單(m2 票 01);模板目前只寫一項。"""
+    """性質變更段的 `modified.attr` 是清單(m2 票 01);多項以「・」寫回(m2 票 08)。"""
 
     TEXT = "①：このカードの攻撃力はターン終了時まで０になる。"
 
@@ -191,11 +191,45 @@ class ModifiedAttrTest(unittest.TestCase):
         self.assertEqual([(f["reason"], f["rendered"]) for f in check_card(structure)],
                          [("字面不符", "このカードの守備力はターン終了時まで０になる")])
 
-    def test_two_attrs_have_no_template_yet(self):
+    def test_two_attrs_are_joined_with_a_middle_dot(self):
         structure = build_one(1, "甲", self.TEXT)
         segment(structure)["modified"]["attr"] = ["攻擊力", "守備力"]
+        self.assertEqual([(f["reason"], f["rendered"]) for f in check_card(structure)],
+                         [("字面不符", "このカードの攻撃力・守備力はターン終了時まで０になる")])
+
+    def test_attr_outside_the_closed_set_has_no_template(self):
+        structure = build_one(1, "甲", self.TEXT)
+        segment(structure)["modified"]["attr"] = ["攻擊力", "階級"]
         self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
                          [("無模板", "被改的屬性無模板")])
+
+
+class ResistanceSlotTest(unittest.TestCase):
+    """m2 票 04 的新格:`times` 由原述語字面驗、`per_turn` 照字面寫回、原因的物件寫回。"""
+
+    def test_times_must_agree_with_the_predicate_literal(self):
+        structure = build_one(10000401, "甲", "このカードは１度のバトルフェイズ中に２回攻撃できる。")
+        self.assertEqual(check_card(structure), [])
+        segment(structure)["times"]["value"] = 3
+        self.assertEqual([f["detail"] for f in check_card(structure)],
+                         ["攻擊次數與述語字面不一致"])
+
+    def test_per_turn_is_written_after_the_particle(self):
+        structure = build_one(10000402, "甲",
+                              "このカードはそれぞれ１ターンに１度だけ戦闘では破壊されない。")
+        self.assertEqual(check_card(structure), [])
+        segment(structure)["per_turn"]["value"] = 2
+        self.assertEqual([f["detail"] for f in check_card(structure)], ["每回合次數無模板"])
+
+    def test_battle_opponent_in_cause_is_written_back(self):
+        structure = build_one(10000403, "甲",
+                              "このカードは闇属性モンスターとの戦闘では破壊されない。")
+        self.assertEqual(check_card(structure), [])
+        cause = segment(structure)["cause"]
+        opponent = next(o for o in structure["objects"] if o["id"] == cause["objects"][0])
+        opponent["condition"]["args"][0]["value"] = "光"
+        self.assertEqual([(f["reason"], f["rendered"]) for f in check_card(structure)],
+                         [("字面不符", "このカードは光属性モンスターとの戦闘では破壊されない")])
 
 
 class ReportTest(unittest.TestCase):

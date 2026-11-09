@@ -21,7 +21,7 @@ import re
 
 import damage
 from archetype_table import fold_width
-from attribute_atoms import is_param_atom, joiner, render_group, render_level
+from attribute_atoms import EXCEPT, is_param_atom, joiner, render_group, render_level
 from block_split import LABEL_WIDTH
 from report_common import card_order, safe_label
 from premise import render_premise, split_premise
@@ -32,16 +32,18 @@ from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, BATTLE_AGENT_MARKER,
                              RANDOM_PICK, ZONE_AS_OBJECT,
                              BATTLE_PARTNER_MARKER, BATTLE_TIMING_REF, CAUSE_EFFECT_OF,
                              CAUSE_METHOD, PREMISE_DONE, EXIST_WORDS, FROM_PARTICLES,
-                             HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
+                             ALL_PREFIX, HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
                              SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
-from segment_fields import (REPLACEMENT_PREFIX, is_clause_duration, render_cause,
-                            render_display, render_modify,
-                            render_placement_form, render_timing, resolve_polarity,
+from segment_fields import (MENTION_FORMS, OWNER_JOINER, OWNER_TEXT, REPLACEMENT_PREFIX,
+                            is_clause_duration, render_cause, render_display, render_modify,
+                            render_per_turn, render_placement_form, render_timing,
+                            render_treat_delta, resolve_polarity,
                             split_duration)
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
 from structure_shape import AMOUNT_FORMULA, BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, NoTemplate
 from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION,
-                      merged_voice, parse_predicates, split_select, split_targeting)
+                      attack_times, merged_voice, parse_predicates, split_select,
+                      split_targeting)
 
 REASON_NO_TEMPLATE = "無模板"
 REASON_MISMATCH = "字面不符"
@@ -54,7 +56,7 @@ DETAIL_REPEAT = "重複到停為止"
 TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polarity",
                   "trigger", "span", "text", "predicate", "voice", "unparsed",
                   "optional", "cause", "premise", "timing", "duration", "modified",
-                  "replaces", "amount"}
+                  "replaces", "amount", "times", "per_turn", "derived_from"}
 # 被代替段是改了類別的條件段,模板同條件段(帶觸發形);召喚手續、限制(票 09)是召喚條件區塊裡
 # 改了類別的條件/效果段,模板同簡單子句(有觸發形就寫)。
 TEMPLATE_KINDS = ("條件", "代價", "效果", "被代替", "召喚手續", "限制", "修飾")
@@ -102,6 +104,13 @@ def _render_atom(atom, names):
         return _quoted(atom, names) + (form or "")
     if op == "非" and atom.get("arg", {}).get("op") == "卡名":
         return _quoted(atom["arg"], names) + "以外の"
+    if op == "非" and is_param_atom(atom.get("arg", {})):
+        # 種族/屬性(列舉)以外的(m2 票 04:水属性以外のモンスター)。
+        arg = atom["arg"]
+        text = render_group(arg) if arg.get("op") == "或" else _render_atom(arg, names)
+        if text is None:
+            raise NoTemplate("屬性比較無模板")
+        return text + EXCEPT
     if op == "卡名包含":
         return "カード名に" + _quoted(atom, names) + "を含む"
     level = render_level(atom)   # レベル１、レベル４以下、レベル５以上
@@ -333,8 +342,8 @@ def _render_zone_text(pos, particle):
     text = pos.get("text")
     display = render_display(pos.get("form")) if particle == "から" else ""
     if text:
-        # 「自分フィールドの、」「、自分の手札から」的讀點是字面的一部分,驗區域時先去掉。
-        bare = text.strip("、")   # 「、自分の手札・墓地から」(物件後帶讀點的從,m2 票 09)
+        # 「自分フィールドの、」的讀點是字面的一部分,驗區域時先去掉。
+        bare = text[:-1] if text.endswith("、") else text
         # 從的表示形式(「フィールド上に表側表示で存在する」,m2 票 05)夾在助詞中間。
         particles = (f"に{display}存在する",) if display else _POSITION_PARTICLES
         phrase = next((bare[:-len(p)] for p in particles
@@ -444,11 +453,24 @@ def _render_predicate(seg, marker):
     if (merged_voice(parsed), polarity, optional) != (seg["voice"], seg["polarity"],
                                                       seg["optional"]):
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
+    if attack_times(rest) != seg["times"]:
+        # 多次攻擊的次數(m2 票 04)寫在原述語字面裡,格要與字面一致。
+        raise NoTemplate("攻擊次數與述語字面不一致")
     return prefix, select, rest, next((p.to for p in parsed if p.to), None)
 
 
 def _render_cause(cause, seg, card, objects, names, self_id):
-    """原因:閉集字面(戦闘で…);「「X」の効果で」寫物件;召喚方式寫各方式以「及び」連接 + で。"""
+    """原因:閉集字面(戦闘で…);「「X」の効果で」寫物件;召喚方式寫各方式以「及び」連接 + で;
+    帶 `objects` 的(m2 票 04)寫各物件以「及び」連接 + 字面(「との戦闘では」「の」)。"""
+    if cause and cause.get("objects"):
+        expected = {"戰鬥": ("との戦闘では", "との戦闘で", "との戦闘によって"),
+                    "效果": (OWNER_TEXT,)}.get(cause.get("kind"), ())
+        if (cause.get("text") not in expected
+                or any(o not in objects for o in cause["objects"])
+                or (cause["kind"] == "戰鬥" and len(cause["objects"]) != 1)):
+            raise NoTemplate("原因無模板:物件")
+        return OWNER_JOINER.join(_render_object(objects[o], seg, card, names, self_id=self_id)
+                                 for o in cause["objects"]) + cause["text"]
     if cause and cause.get("object") is not None:
         obj = objects.get(cause["object"])
         if obj is None or cause.get("kind") != "效果" or cause.get("text") != CAUSE_EFFECT_OF:
@@ -463,16 +485,41 @@ def _render_cause(cause, seg, card, objects, names, self_id):
     return render_cause(cause)
 
 
-def _render_modify(seg, objects):
-    """性質變更句:[提及][屬性]は[期間][值]になる;提及字面在對象線的 ref(物件0 是「このカードの」)。"""
+def _render_modify(seg, card, objects, names, self_id):
+    """性質變更句:[主語][屬性]は[期間][值]述語;主語是回指字面(對象線的 ref,物件0 是「このカードの」),
+    或「[從の][全ての]物件の」(m2 票 08)。"""
     if len(seg["lines"]) != 1 or seg["actions"] != [MODIFY_ACTION] or not seg["modified"]:
         raise NoTemplate("性質變更段的格不齊")
     line = seg["lines"][0]
     obj = objects.get(line["object"])
+    if obj is None or line["role"] != "受事" or line["to"]:
+        raise NoTemplate("性質變更段的格不齊")
     mention = line["ref"]
-    if obj is None or (obj["source"]["kind"] == "自己") != (mention == "このカードの"):
-        raise NoTemplate("性質變更段的提及與物件不符")
-    return render_modify(mention, seg["modified"], split_duration(seg["duration"])[1])
+    if mention in MENTION_FORMS:
+        if (line["object"] == self_id) != (mention == "このカードの") or line["from"] \
+                or line["count"]:
+            raise NoTemplate("性質變更段的提及與物件不符")
+        subject = mention
+    else:
+        count = line["count"]
+        if count and count != {"text": ALL_PREFIX, "cmp": "全部"}:
+            raise NoTemplate("性質變更段的數量無模板")
+        from_text, _ = _render_from([line])
+        subject = (from_text + (ALL_PREFIX if count else "")
+                   + _render_object(obj, seg, card, names, line, self_id=self_id) + "の")
+    return render_modify(subject, line["marker"], seg["modified"],
+                         split_duration(seg["duration"])[1], seg["predicate"])
+
+
+def _render_derived(seg):
+    """衍生的性質變更段(m2 票 08,「攻撃力３００アップの装備カード扱いで」):不另寫一句,
+    只寫回它在 treat 字面裡的範圍「[屬性][差量]アップ」;其餘格要空。"""
+    if (seg["actions"] != [MODIFY_ACTION] or not seg["modified"] or len(seg["lines"]) != 1
+            or seg["lines"][0]["role"] != "受事" or seg["lines"][0]["ref"]
+            or any(seg[slot] for slot in ("agent", "recipient", "cause", "duration", "timing",
+                                          "trigger", "premise", "amount", "replaces"))):
+        raise NoTemplate("衍生的性質變更段的格不齊")
+    return render_treat_delta(seg["modified"], seg["predicate"])
 
 
 def _render_existence(seg, premise, card, objects):
@@ -679,6 +726,8 @@ def render_segment(seg, card, self_id="o0"):
             raise NoTemplate(f"格 {slot} 無模板")
     objects = {o["id"]: o for o in card["objects"]}
     names = {row["id"]: row for row in card["names"]}
+    if seg["derived_from"] is not None:
+        return _render_derived(seg)
     if seg["kind"] == "修飾":
         return _render_treat_as(seg, names, objects, self_id)
     if seg["lines"] and all(line["role"] == "素材" for line in seg["lines"]):
@@ -722,7 +771,7 @@ def render_segment(seg, card, self_id="o0"):
     elif damage_segment:
         text = _render_damage(seg, card, objects, names, self_id, inner_duration)
     elif seg["actions"] == [MODIFY_ACTION]:
-        text = _render_modify(seg, objects)
+        text = _render_modify(seg, card, objects, names, self_id)
     elif any(line["role"] == "施事" for line in seg["lines"]):
         text = _render_battle(seg, card, objects, names, self_id)
     else:
@@ -786,6 +835,7 @@ def render_segment(seg, card, self_id="o0"):
         parts.append(RANDOM_PICK if pick else "")
         if count_placement is None:
             parts.append(count_text)
+        parts.append(render_per_turn(seg["per_turn"]))
         parts.append(targeting_text or "")
         if seg["cause"]:
             parts.append(_render_cause(seg["cause"], seg, card, objects, names, self_id))

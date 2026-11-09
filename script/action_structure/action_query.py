@@ -51,9 +51,9 @@ import re
 
 from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
-from condition_atoms import SAME_CARD, referenced_objects
+from condition_atoms import EQUIPPED, SAME_CARD, referenced_objects
 from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
-from synonyms import PREDICATE_STEMS, action_ancestors
+from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
@@ -61,7 +61,9 @@ GENERIC_ATOMS = ("大類", "位置", "控制方", "表示形式")
 MODIFIED_KEYS = ("attr", "form", "value")
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
-                "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000}
+                "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10}
+# 魔陷的子類型位元(速攻、永續、裝備、場地、反擊、儀式):一個都沒有的是「通常」(m2 票 04)。
+SPELL_TRAP_SUBTYPE_BITS = 0x10000 | 0x20000 | 0x40000 | 0x80000 | 0x100000 | 0x80
 EXTRA_DECK_BITS = (SUBTYPE_BITS["融合"] | SUBTYPE_BITS["同步"] | SUBTYPE_BITS["超量"]
                    | SUBTYPE_BITS["連結"] | SUBTYPE_BITS["靈擺"])
 COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
@@ -77,6 +79,8 @@ def card_attr(entry, attr):
     等級與階級、連結值同存在 `level` 欄,照 type 位元分開。"""
     kind = entry["type"]
     if not kind & 0x1:
+        if attr == "卡片子類型":
+            return set() if kind & SPELL_TRAP_SUBTYPE_BITS else {"通常"}
         return None
     if attr == "等級":
         return None if kind & (SUBTYPE_BITS["超量"] | SUBTYPE_BITS["連結"]) else entry["level"]
@@ -319,6 +323,9 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
     if op == SAME_CARD:
         # 「このカード以外の」的那一張實體(m2 票 09):代入的是卡,同名的另一張也算,所以永遠不是它。
         return False
+    if op == EQUIPPED:
+        # 被裝備者(m2 票 08)是狀態,任何卡都代得進去;但不是泛用原子。
+        return True
     if op == "曾被特殊召喚":
         # 從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。
         if any(z["zone"] == "額外牌組" for z in condition.get("zones", ())):
@@ -539,7 +546,14 @@ def literal_has_actions(text, literals):
     查詢沒給動作詞時沒有字面可比,不算。"""
     if not literals:
         return False
-    return all(any(stem in text for stem in stems) for stems in literals)
+    return all(any(_has_stem(stem, text) for stem in stems) for stems in literals)
+
+
+def _has_stem(stem, text):
+    """字面含述語字幹;字幹落在別的詞裡(「攻撃」在「攻撃力」「攻撃表示」裡)不算。"""
+    for word in STEM_FALSE_FRIENDS.get(stem, ()):
+        text = text.replace(word, "")
+    return stem in text
 
 
 def incomplete_reason(seg, objects):

@@ -60,14 +60,14 @@ class ParallelPortArmorTest(unittest.TestCase):
                         card=PARALLEL_PORT_ARMOR)
         self.assertNotIn(PARALLEL_PORT_ARMOR, hits)
 
-    def test_first_half_alone_is_unparsed(self):
-        """前半「装備モンスターは相手の効果の対象にならず」自成一段、標解析不出(取對象尚未加入);
-        右半寫得回原文,不出現字面不符或段外殘留。"""
+    def test_both_halves_pass_reverse_check(self):
+        """前半「装備モンスターは相手の効果の対象にならず」自成一段(取對象 m2 票 04、
+        被裝備者 m2 票 08 之後解析得出);兩半都寫得回原文,不出現字面不符或段外殘留。"""
         card_ = own(self.structures, PARALLEL_PORT_ARMOR)
         failing = {f["segment"] for f in check_card(card_)}
         texts = {seg["text"] for block in card_["blocks"] for seg in block["segments"]
                  if seg["id"] in failing}
-        self.assertIn("装備モンスターは相手の効果の対象にならず", texts)
+        self.assertNotIn("装備モンスターは相手の効果の対象にならず", texts)
         self.assertNotIn("戦闘では破壊されない", texts)
         reasons = {f["reason"] for f in check_card(card_)
                    if f["segment"] is not None}

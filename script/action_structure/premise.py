@@ -56,8 +56,12 @@ _FORM = f"(?P<form>場合|状態で|{KAGIRI}|時(?=、|に|$))"
 # 「存在する」前可寫表示形式(m2 票 05):「表側表示で存在する時」→ 原子帶選填 face、position。
 _DISPLAY = f"(?:(?P<display>{DISPLAY_WORD})で)?"
 # 「Xが<區域>に存在する場合、」:X 不含讀點;區域短語交給 parse_zones 認,認不得就不是前提。
+# m2 票 04:物件後的助詞也可以是「は」(「このカードはモンスターゾーンに存在する限り、〜を受けない」):
+# 這時 X 也是後面主語省略的子句的主語(`state.subject`),原子帶 `particle`。
 _OBJECT_FIRST_RE = re.compile(
-    "^(?P<obj>[^、]+?)が(?P<zones>[^、]+?)に" + _DISPLAY
+    # 「」裡的字與「または」的「は」不是助詞。
+    "^(?P<obj>(?:「[^「」]*」|[^、「」])+?)(?P<particle>が|(?<!また)は)"
+    "(?P<zones>[^、]+?)に" + _DISPLAY
     + "存在(?P<neg>し)?(?:する|ない)" + _FORM)
 # 「<區域>にXが存在する場合、」。
 _ZONE_FIRST_RE = re.compile(
@@ -125,6 +129,9 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
         m = pattern.match(text)
         if not m:
             continue
+        topic = m.groupdict().get("particle") == "は"
+        if topic and m.group("neg"):
+            continue
         zones = parse_zones(m.group("zones"))
         if zones is None:
             continue
@@ -142,6 +149,9 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
         else:
             atom = {"op": "存在", "object": obj_id, "zones": zones,
                     "form": m.group("form"), "order": first}
+        if topic:
+            atom["particle"] = "は"
+            state.subject = obj_id
         if m.group("display"):
             # 表示形式只記有寫的一半(「表側表示」只有 face)。
             atom.update({k: v for k, v in display_value(m.group("display")).items() if v})
@@ -250,7 +260,10 @@ def render_premise(premise, render_zones, render_object, followed=True):
         if atom.get("face") or atom.get("position"):
             verb = display_word(atom.get("face"), atom.get("position")) + "で" + verb
         if op == "位置" or atom.get("order") == "物件":
-            pieces.append(f"{obj}が{zones}に{verb}{form}")
+            particle = atom.get("particle", "が")
+            if particle not in ("が", "は"):
+                raise NoTemplate("前提的助詞無模板")
+            pieces.append(f"{obj}{particle}{zones}に{verb}{form}")
         else:
             pieces.append(f"{zones}に{obj}が{verb}{form}")
     return "".join(pieces)

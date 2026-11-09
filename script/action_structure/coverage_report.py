@@ -31,7 +31,8 @@ SEGMENT_FIELDS = (
     ("recipient", "受方"), ("cause", "原因"), ("duration", "期間"),
     ("timing", "時機"), ("trigger", "觸發形"), ("premise", "前提"),
     ("modified", "被改的屬性"), ("amount", "數量"), ("optional", "可選"),
-    ("replaces", "代替誰"), ("predicate", "原述語字面"), ("voice", "態"),
+    ("replaces", "代替誰"), ("times", "攻擊次數"), ("per_turn", "每回合次數"),
+    ("predicate", "原述語字面"), ("voice", "態"),
 )
 POSITION_EMPTY = "留空"
 

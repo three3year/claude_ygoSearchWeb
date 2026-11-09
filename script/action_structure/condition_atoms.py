@@ -23,6 +23,10 @@
   "object": 此卡的物件 id, "text": "このカード"}};代入的是卡而不是那一張實體,任何卡都代得進去
   (同名的另一張也算),但不是泛用原子(泛用物件的定義不變)。
 - 位置的非預設區域字面(m2 票 09):「エクストラデッキの」= 額外牌組,原子另帶 `text`(區域字面),模板照它寫。
+- 被裝備者(m2 票 08):緊接頭名詞的「装備」(装備モンスター)、「このカードを装備した」、
+  「このカードの効果でこのカードを装備した」→ {"op": "被裝備者", "equip": 裝備卡物件, "text": 字面};
+  裝備卡是「このカード」指的物件(內嵌效果裡是綁定的物件)。被裝備是狀態不是卡的屬性:代入時任何卡
+  都算,但不是泛用原子(spec 泛用判定不變)。
 """
 import re
 
@@ -50,7 +54,8 @@ SAME_CARD = "同一張"
 _SUMMONED_FROM_RE = re.compile(
     f"^(?P<side>自分|相手)?の?(?P<zone>{_ZONE_ALT})から特殊召喚された")
 SUBTYPE_LETTERS = (("融合", "融合"), ("儀式", "儀式"), ("S", "同步"), ("X", "超量"),
-                   ("L", "連結"), ("P", "靈擺"))
+                   ("L", "連結"), ("P", "靈擺"),
+                   ("通常", "通常"))   # m2 票 04:「「ホール」通常罠カード」「通常モンスター」
 _SUBTYPE = "|".join(letter for letter, _ in SUBTYPE_LETTERS)
 _ARCHETYPE_SUBTYPE_RE = re.compile(f"^「(?P<name>[^「」]+)」(?P<sub>{_SUBTYPE})$")
 _SUBTYPE_RE = re.compile(f"^(?P<sub>{_SUBTYPE})$")
@@ -69,6 +74,11 @@ REASON_REF = "指回的物件找不到"
 
 _SIDE = {"自分": "我方", "相手": "對手"}
 _CONTROLLER_RE = re.compile("^(?P<side>自分|相手)(?:の|$)")
+# 被裝備者(m2 票 08):緊接頭名詞的修飾語字面閉集;裝備卡是「このカード」(內嵌效果裡是綁定的物件)。
+EQUIPPED = "被裝備者"
+EQUIPPED_FORMS = ("装備", "このカードを装備した", "このカードの効果でこのカードを装備した")
+_EQUIPPED_RE = re.compile("^(?:" + "|".join(sorted(EQUIPPED_FORMS, key=len, reverse=True))
+                          + ")$")
 _SIDE_TEXT = {v: k for k, v in _SIDE.items()}
 _ZONE_TEXT = {v: k for k, v in _ZONE_NAME.items()}
 _ATTR_NAME = dict(ATTR_WORDS)
@@ -121,6 +131,9 @@ def parse_modifier(rest, state):
     if m:
         return ([{"op": "控制方", "value": _SIDE[m.group("side")], "text": m.group()}],
                 None, m.end())
+    m = _EQUIPPED_RE.match(rest)
+    if m:
+        return ([{"op": EQUIPPED, "equip": state.self_id, "text": m.group()}], None, m.end())
     m = _ARCHETYPE_SUBTYPE_RE.match(rest)
     if m:
         atom, why = state.name_atom("字段", m.group("name"))
@@ -228,6 +241,8 @@ def render_atom(atom, names):
     if op == "控制方":
         m = _CONTROLLER_RE.fullmatch(atom.get("text") or "")
         return atom["text"] if m and _SIDE[m.group("side")] == atom.get("value") else None
+    if op == EQUIPPED:
+        return atom["text"] if atom.get("text") in EQUIPPED_FORMS and atom.get("equip") else None
     if op == "屬性比較":
         return _render_compare([atom])
     if op == "或" and all(a.get("op") == "屬性比較" for a in atom.get("args", ())):

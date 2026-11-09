@@ -17,6 +17,8 @@
                     命中的被代替段在 hit 的 "replaced_by"(被代替段 id → 做代替的段 id)指出做代替的段
   polarities        極性範圍(預設只算「做」;不能、不會、可以、只能、必須要指定才算)
   generic_only      只查泛用組(票 07)
+  modified          被改的屬性(m2 票 06):{"attr", "form", "value"} 任一子集,比段的 `modified`;
+                    attr 比「段的 attr 清單含它」(「性質變更,屬性傷害,數值 0」= 全部防傷害段)
 
 結果:{"hits": [{"id", "segments", "group", "replaced_by"(有命中被代替段才有)}],
       "groups": {"特定", "泛用", "全部", "未解析"}(各組是卡片密碼列表;未解析組的張數 = 長度),
@@ -56,6 +58,7 @@ from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
 GENERIC_ATOMS = ("大類", "位置", "控制方", "表示形式")
+MODIFIED_KEYS = ("attr", "form", "value")
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
                 "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10}
@@ -487,7 +490,7 @@ def _normalise(query):
          "condition": None, "targeting": False, "kinds": None,
          "block_kinds": None, "include_condition": False,
          "include_inferred": False, "replacement": False,
-         "polarities": ("做",), "generic_only": False}
+         "polarities": ("做",), "generic_only": False, "modified": None}
     unknown = set(query) - set(q)
     if unknown:
         raise KeyError(f"查詢有不認得的欄位: {sorted(unknown)}")
@@ -507,6 +510,8 @@ def _normalise(query):
     else:
         kinds.discard("被代替")
     q["allowed_kinds"] = kinds
+    if q["modified"] is not None and set(q["modified"]) - set(MODIFIED_KEYS):
+        raise KeyError(f"modified 有不認得的鍵: {sorted(set(q['modified']) - set(MODIFIED_KEYS))}")
     q["line_constrained"] = any((q["from_zones"], q["to_zones"],
                                  q["card"] is not None,
                                  q["condition"] is not None, q["targeting"]))
@@ -584,12 +589,29 @@ def replaced_by(matched, card):
     return found
 
 
+def modified_matches(want, have):
+    """查詢的 modified(attr/form/value 任一子集)對段的被改屬性:attr 看段的清單含不含它
+    (修飾段的 attr 是單值),其餘相等。"""
+    if not have:
+        return False
+    for key, value in want.items():
+        if key == "attr":
+            attrs = have.get("attr")
+            if value not in (attrs if isinstance(attrs, list) else [attrs]):
+                return False
+        elif have.get(key) != value:
+            return False
+    return True
+
+
 def segment_hit_lines(seg, card, q, judge, objects, names):
     """段命中時回傳命中的對象線(可為空列表);不命中回 None。
     未結構化的段(重複到停為止)沒有動作詞,也不當空查詢的命中。"""
     if seg["unparsed"] or seg["unstructured"] or not segment_in_scope(seg, q):
         return None
     if any(a not in segment_actions(seg) for a in q["actions"]):
+        return None
+    if q["modified"] is not None and not modified_matches(q["modified"], seg["modified"]):
         return None
     if not q["line_constrained"]:
         return list(seg["lines"])

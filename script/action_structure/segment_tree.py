@@ -3,8 +3,8 @@
 句子層級的規則在 `segment_extract.parse_sentence`(條件/代價/效果段、「〜し、〜」的同時連接);
 這裡管句子以上的結構(spec「段樹」):
 
-- 序列:句子依序成節點;「その後、」開頭的句子與前一節點連接為「先後」,同一句裡
-  「〜し、〜」切出的子句以「同時」連接。
+- 序列:句子依序成節點;「その後、」開頭的句子與前一節點連接為「先後」,「さらに、」開頭的
+  (m2 票 06)連接為「同時」,同一句裡「〜し、〜」切出的子句以「同時」連接。
 - 分歧:● 列舉一律是分歧、不切區塊。● 前的引導句決定方式(閉集 `BRANCH_HEADERS`):
   「以下の効果から１つを選択して発動できる」= 選1(選者我方)、「以下の効果をそれぞれ適用できる」
   = 各自可以;引導句帶前提的(「自分の墓地に「X」が存在する場合、〜それぞれ適用できる。
@@ -26,6 +26,7 @@
 import re
 
 from block_split import body_start
+from clause_join import JOIN
 from premise import render_premise, split_premises
 from segment_extract import (INTERVAL_REASON, INTERVAL_RE, BlockState, parse_from,
                              parse_sentence, sentences, zone_literal)
@@ -55,6 +56,9 @@ _ITEM_RE = re.compile("(?:^|\n)●")
 REASON_BRANCH_MODE = "分歧方式判不出"
 REASON_BRANCH_PREMISE = "分歧前提解析不出"
 EMBED_HEADER = "は以下の効果を得る"
+# 句首的接著詞 → 與前一節點的連接:「その後、」先後;「さらに、」同時(追加處理與前面同時進行,
+# m2 票 06)。反向檢查把兩者都當固定接著詞(`reverse_check.GLUE`)。
+SENTENCE_JOINS = (("その後、", "先後"), ("さらに、", JOIN))
 
 
 def extract_block(block, card, lookups=None, self_id="o0"):
@@ -102,12 +106,14 @@ def extract_block(block, card, lookups=None, self_id="o0"):
 
 
 def _parse_run(state, spans):
-    """一串句子 → 段節點(「その後、」是先後連接);段寫進區塊的扁平列表。"""
+    """一串句子 → 段節點(「その後、」是先後連接、「さらに、」是同時連接);段寫進區塊的扁平列表。"""
     nodes = []
     for start, end in spans:
         join = None
-        if state.block["text"].startswith("その後、", start):
-            join, start = "先後", start + 4
+        for word, sentence_join in SENTENCE_JOINS:
+            if state.block["text"].startswith(word, start):
+                join, start = sentence_join, start + len(word)
+                break
         for seg, seg_join in parse_sentence(state, start, end):
             state.block["segments"].append(seg)
             node = segment_node(seg["id"], seg_join or join)

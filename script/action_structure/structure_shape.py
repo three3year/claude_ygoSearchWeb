@@ -215,6 +215,30 @@ def embedded_node(binding, block, join=None):
             "join": join}
 
 
+_SWAPPED_SIDE = {"我方": "對手", "對手": "我方"}
+# 方的值落在哪些鍵(m2 票 12):區域與階段原子的 side、段的 agent/recipient(玩家字串)、
+# 控制方原子與回合方遊戲狀態原子的 value。
+_SIDE_KEYS = ("side", "agent", "recipient")
+
+
+def swap_sides(value):
+    """內嵌效果綁定「我方 = 對手」(效果被換掉,m2 票 12):把一個段或物件裡所有的方對調後回傳新的
+    (深複製);對調兩次等於原值,反向檢查用同一個函式對調回去。"""
+    if isinstance(value, list):
+        return [swap_sides(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    out = {key: swap_sides(item) for key, item in value.items()}
+    for key in _SIDE_KEYS:
+        if isinstance(out.get(key), str) and out[key] in _SWAPPED_SIDE:
+            out[key] = _SWAPPED_SIDE[out[key]]
+    side_valued = out.get("op") == "控制方" or (
+        out.get("op") == "遊戲狀態" and out.get("state") == "回合方")
+    if side_valued and out.get("value") in _SWAPPED_SIDE:
+        out["value"] = _SWAPPED_SIDE[out["value"]]
+    return out
+
+
 def attribute_row(value, where=None, source=None, span=None, text=None):
     """卡片屬性表的一列:值、位置條件(None = 任何位置)、來源、原文範圍與字面。"""
     return {"value": value, "where": where, "source": source,

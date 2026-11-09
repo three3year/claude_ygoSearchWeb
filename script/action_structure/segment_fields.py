@@ -231,10 +231,18 @@ _DISPLAY_RE = re.compile(
     f"^(?P<a>{PLACEMENT_DISPLAY_WORD})(?:か(?P<b>{PLACEMENT_DISPLAY_WORD}))?で$")
 
 
+# 「以下の効果を持つ装備魔法カード扱いで」(m2 票 12):被當成裝備卡的物件帶後面 ● 列舉的效果
+# (`segment_tree` 在裝備段後接內嵌效果節點);前綴屬於 treat 字面。
+EFFECT_HOLDER_PREFIX = "以下の効果を持つ"
+
+
 def _treat_kind(text):
-    """treat 字面 → 種類:去掉讀點與增減前綴(「攻撃力３００アップの」,m2 票 08)再查閉集。"""
+    """treat 字面 → 種類:去掉讀點與增減前綴(「攻撃力３００アップの」,m2 票 08)、
+    「以下の効果を持つ」(m2 票 12)再查閉集。"""
     delta = parse_treat_delta(text)
     base = text[len(delta[0]) + 1:] if delta else text
+    if base.startswith(EFFECT_HOLDER_PREFIX):
+        base = base[len(EFFECT_HOLDER_PREFIX):]
     return TREAT_FORMS.get(base.rstrip("、"))
 
 

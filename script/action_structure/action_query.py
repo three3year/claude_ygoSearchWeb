@@ -51,7 +51,7 @@ import re
 
 from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
-from condition_atoms import referenced_objects
+from condition_atoms import EQUIPPED, referenced_objects
 from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
 from synonyms import PREDICATE_STEMS, action_ancestors
 
@@ -315,6 +315,9 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
         return condition["value"] in view.categories(from_zones)
     if op in ("位置", "控制方", "表示形式"):
         # 位置、控制方與表示形式不是卡的屬性:任何卡都代得進去(泛用原子)。
+        return True
+    if op == EQUIPPED:
+        # 被裝備者(m2 票 08)是狀態,任何卡都代得進去;但不是泛用原子。
         return True
     if op == "曾被特殊召喚":
         # 從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。

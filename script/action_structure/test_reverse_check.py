@@ -180,7 +180,7 @@ class PlacementFormTest(unittest.TestCase):
 
 
 class ModifiedAttrTest(unittest.TestCase):
-    """性質變更段的 `modified.attr` 是清單(m2 票 01);模板目前只寫一項。"""
+    """性質變更段的 `modified.attr` 是清單(m2 票 01);多項以「・」寫回(m2 票 08)。"""
 
     TEXT = "①：このカードの攻撃力はターン終了時まで０になる。"
 
@@ -191,9 +191,15 @@ class ModifiedAttrTest(unittest.TestCase):
         self.assertEqual([(f["reason"], f["rendered"]) for f in check_card(structure)],
                          [("字面不符", "このカードの守備力はターン終了時まで０になる")])
 
-    def test_two_attrs_have_no_template_yet(self):
+    def test_two_attrs_are_joined_with_a_middle_dot(self):
         structure = build_one(1, "甲", self.TEXT)
         segment(structure)["modified"]["attr"] = ["攻擊力", "守備力"]
+        self.assertEqual([(f["reason"], f["rendered"]) for f in check_card(structure)],
+                         [("字面不符", "このカードの攻撃力・守備力はターン終了時まで０になる")])
+
+    def test_attr_outside_the_closed_set_has_no_template(self):
+        structure = build_one(1, "甲", self.TEXT)
+        segment(structure)["modified"]["attr"] = ["攻擊力", "階級"]
         self.assertEqual([(f["reason"], f["detail"]) for f in check_card(structure)],
                          [("無模板", "被改的屬性無模板")])
 

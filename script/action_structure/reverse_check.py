@@ -30,10 +30,11 @@ from names_attributes import TREAT_PREDICATE, render_treat_as
 from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, BATTLE_AGENT_MARKER,
                              BATTLE_PARTNER_MARKER, BATTLE_TIMING_REF, CAUSE_EFFECT_OF,
                              CAUSE_METHOD, PREMISE_DONE, EXIST_WORDS, FROM_PARTICLES,
-                             HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
+                             ALL_PREFIX, HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
                              SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
-from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
-                            render_placement_form, render_timing, resolve_polarity,
+from segment_fields import (MENTION_FORMS, REPLACEMENT_PREFIX, render_cause, render_modify,
+                            render_placement_form, render_timing, render_treat_delta,
+                            resolve_polarity,
                             split_duration)
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
 from structure_shape import BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, NoTemplate
@@ -51,7 +52,7 @@ DETAIL_REPEAT = "重複到停為止"
 TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polarity",
                   "trigger", "span", "text", "predicate", "voice", "unparsed",
                   "optional", "cause", "premise", "timing", "duration", "modified",
-                  "replaces", "amount"}
+                  "replaces", "amount", "derived_from"}
 # 被代替段是改了類別的條件段,模板同條件段(帶觸發形);召喚手續、限制(票 09)是召喚條件區塊裡
 # 改了類別的條件/效果段,模板同簡單子句(有觸發形就寫)。
 TEMPLATE_KINDS = ("條件", "代價", "效果", "被代替", "召喚手續", "限制", "修飾")
@@ -423,16 +424,41 @@ def _render_cause(cause, seg, card, objects, names, self_id):
     return render_cause(cause)
 
 
-def _render_modify(seg, objects):
-    """性質變更句:[提及][屬性]は[期間][值]になる;提及字面在對象線的 ref(物件0 是「このカードの」)。"""
+def _render_modify(seg, card, objects, names, self_id):
+    """性質變更句:[主語][屬性]は[期間][值]述語;主語是回指字面(對象線的 ref,物件0 是「このカードの」),
+    或「[從の][全ての]物件の」(m2 票 08)。"""
     if len(seg["lines"]) != 1 or seg["actions"] != [MODIFY_ACTION] or not seg["modified"]:
         raise NoTemplate("性質變更段的格不齊")
     line = seg["lines"][0]
     obj = objects.get(line["object"])
+    if obj is None or line["role"] != "受事" or line["to"]:
+        raise NoTemplate("性質變更段的格不齊")
     mention = line["ref"]
-    if obj is None or (obj["source"]["kind"] == "自己") != (mention == "このカードの"):
-        raise NoTemplate("性質變更段的提及與物件不符")
-    return render_modify(mention, seg["modified"], split_duration(seg["duration"])[1])
+    if mention in MENTION_FORMS:
+        if (line["object"] == self_id) != (mention == "このカードの") or line["from"] \
+                or line["count"]:
+            raise NoTemplate("性質變更段的提及與物件不符")
+        subject = mention
+    else:
+        count = line["count"]
+        if count and count != {"text": ALL_PREFIX, "cmp": "全部"}:
+            raise NoTemplate("性質變更段的數量無模板")
+        from_text, _ = _render_from([line])
+        subject = (from_text + (ALL_PREFIX if count else "")
+                   + _render_object(obj, seg, card, names, line, self_id=self_id) + "の")
+    return render_modify(subject, line["marker"], seg["modified"],
+                         split_duration(seg["duration"])[1], seg["predicate"])
+
+
+def _render_derived(seg):
+    """衍生的性質變更段(m2 票 08,「攻撃力３００アップの装備カード扱いで」):不另寫一句,
+    只寫回它在 treat 字面裡的範圍「[屬性][差量]アップ」;其餘格要空。"""
+    if (seg["actions"] != [MODIFY_ACTION] or not seg["modified"] or len(seg["lines"]) != 1
+            or seg["lines"][0]["role"] != "受事" or seg["lines"][0]["ref"]
+            or any(seg[slot] for slot in ("agent", "recipient", "cause", "duration", "timing",
+                                          "trigger", "premise", "amount", "replaces"))):
+        raise NoTemplate("衍生的性質變更段的格不齊")
+    return render_treat_delta(seg["modified"], seg["predicate"])
 
 
 def _render_existence(seg, premise, card, objects):
@@ -637,6 +663,8 @@ def render_segment(seg, card, self_id="o0"):
             raise NoTemplate(f"格 {slot} 無模板")
     objects = {o["id"]: o for o in card["objects"]}
     names = {row["id"]: row for row in card["names"]}
+    if seg["derived_from"] is not None:
+        return _render_derived(seg)
     if seg["kind"] == "修飾":
         return _render_treat_as(seg, names, objects, self_id)
     if seg["lines"] and all(line["role"] == "素材" for line in seg["lines"]):
@@ -672,7 +700,7 @@ def render_segment(seg, card, self_id="o0"):
     elif damage_segment:
         text = _render_damage(seg, card, objects, names, self_id, inner_duration)
     elif seg["actions"] == [MODIFY_ACTION]:
-        text = _render_modify(seg, objects)
+        text = _render_modify(seg, card, objects, names, self_id)
     elif any(line["role"] == "施事" for line in seg["lines"]):
         text = _render_battle(seg, card, objects, names, self_id)
     else:

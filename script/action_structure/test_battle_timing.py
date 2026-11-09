@@ -164,9 +164,11 @@ class LilyTest(unittest.TestCase):
         self.assertEqual(failures_on(self.structure, segs[0]), [])
 
     def test_boost_lasts_for_that_battle(self):
-        """增減本身(「３０００アップする」)留給票 08,段仍解析不出,期間已抽出。"""
-        boost = segment_with(self.structure, "そのダメージ計算時のみ")
+        """增減本身(「３０００アップする」)由 m2 票 08 解析成性質變更,期間仍是該戰鬥。"""
+        boost, = hit_segments(self.structures, self.cards, LILY, actions=["性質變更"],
+                              modified={"attr": "攻擊力", "form": "增", "value": 3000})
         self.assertEqual(boost["duration"], {"kind": "該戰鬥", "text": "そのダメージ計算時のみ"})
+        self.assertEqual(failures_on(self.structure, boost), [])
 
 
 class PowerCodeTalkerTest(unittest.TestCase):

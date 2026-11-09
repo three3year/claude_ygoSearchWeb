@@ -64,8 +64,9 @@ from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
 from premise import is_lasting, split_premises
 from segment_fields import (CAUSE_PATTERN, DURATION_TURN, ORDER_PATTERN, REPLACEMENT_PREFIX,
-                            TIMING_PATTERN, TREAT_PATTERN, implicit_delay, is_delayed,
-                            inherited_duration, lasting, mention_head, parse_cause,
+                            TIMING_PATTERN, TREAT_DELTA_PATTERN, TREAT_PATTERN, implicit_delay,
+                            is_delayed, parse_treat_delta,
+                            MENTION_FORMS, inherited_duration, lasting, mention_head, parse_cause,
                             find_battle_duration, parse_leading_duration, parse_modify,
                             parse_placement_form, parse_timing, resolve_polarity)
 from structure_shape import (BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, ZONE_WORDS, new_line, new_object,
@@ -203,7 +204,8 @@ _CLAUSE_PATTERN = (
     f"(?P<timing>{TIMING_PATTERN})?"
     # 到的放置形式(segment_fields.parse_placement_form):順序「好きな順番で」;
     # 卡片種類視同「装備魔法カード扱いで、」是裝備時到的形式(到本身推得)。
-    f"(?:(?P<treat>{TREAT_PATTERN})|(?P<order>{ORDER_PATTERN}))?"
+    # 「攻撃力３００アップの装備カード扱いで」的增減前綴屬於 treat 字面,另拆一段衍生段(m2 票 08)。
+    f"(?:(?P<treat>(?:{TREAT_DELTA_PATTERN})?{TREAT_PATTERN})|(?P<order>{ORDER_PATTERN}))?"
     # 「從」也可寫在物件後(XをデッキからYに加える);受方(相手に見せて)緊接述語前。
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
@@ -1069,7 +1071,30 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
                      segs[-1][0]["timing"] if i else None)
         _hold_topic(seg, piece, state, piece_start)
         segs.append((seg, JOIN if i else None))
+        derived = _derived_modify(seg, state)
+        if derived is not None:
+            segs.append((derived, JOIN))
     return segs
+
+
+def _derived_modify(seg, state):
+    """「攻撃力３００アップの装備カード扱いで〜に装備する」的裝備段 → 衍生的性質變更段(m2 票 08):
+    範圍是 treat 字面裡的「攻撃力３００アップ」、記 `derived_from` = 裝備段、對象線是裝備的對象
+    (裝備段的受方物件);與裝備段同時。沒有增減前綴、或受方不是物件時回 None。"""
+    recipient = seg["recipient"]
+    if seg["unparsed"] or not isinstance(recipient, dict) or "object" not in recipient:
+        return None
+    treats = [((line["to"] or {}).get("form") or {}).get("treat") for line in seg["lines"]]
+    delta = next((parse_treat_delta(t["text"]) for t in treats if t), None)
+    if delta is None:
+        return None
+    literal, modified, predicate = delta
+    start = seg["span"][0] + seg["text"].index(literal)
+    derived = _segment(state, "效果", start, start + len(literal))
+    derived.update(actions=[MODIFY_ACTION], predicate=predicate, voice="主動",
+                   modified=modified, derived_from=seg["id"],
+                   lines=[new_line(recipient["object"], "受事")])
+    return derived
 
 
 def _hold_topic(seg, piece, state, piece_start):
@@ -1096,21 +1121,60 @@ def _fill_effect(seg, clause, kind, state, clause_start, inherited_timing=None):
         seg["duration"] = find_battle_duration(clause)
         _fill_clause(seg, clause, kind, state, clause_start, inherited_timing)
         return
-    mention, modified, duration = modify
-    head = mention_head(mention)
-    obj_id = "o0" if head is None else state.recent_of(head)
-    if obj_id is None:
-        seg["unparsed"] = unparsed(REASON_REF)
+    line, reason = _modify_subject(modify["subject"], modify["marker"], state, clause_start)
+    if line is None:
+        seg["unparsed"] = unparsed(reason)
         return
     seg["actions"] = [MODIFY_ACTION]
-    seg["predicate"], seg["voice"] = MODIFY_PREDICATE, "主動"
-    seg["modified"], seg["duration"] = modified, duration
+    seg["predicate"], seg["voice"] = modify["predicate"], "主動"
+    seg["modified"] = modify["modified"]
+    # 該戰鬥(m2 票 07)可能已由句子層先寫;句型抽出的期間優先,沒有才留原值。
+    seg["duration"] = modify["duration"] or seg["duration"]
     if inherited_timing:
         seg["timing"] = _same_timing(inherited_timing)
     elif state.delayed:
         seg["timing"] = implicit_delay()
-    seg["lines"] = [new_line(obj_id, "受事", marker="は", ref=mention,
-                             targeting=(obj_id in state.targeted and not is_delayed(seg)))]
+    line["targeting"] = line["object"] in state.targeted and not is_delayed(seg)
+    seg["lines"] = [line]
+
+
+# 性質變更句的主語(m2 票 08):「[區域の][全ての]物件短語の」;區域照簡單子句記成對象線的從,
+# 「全ての」記成對象線的數量(屬於這次提及)。
+_MODIFY_SUBJECT_RE = re.compile(
+    f"^(?:(?P<from>{_ZONE_PHRASE})の)?(?P<all>全ての)?(?P<phrase>.+)の$")
+ALL_PREFIX = "全ての"
+
+
+def _modify_subject(subject, marker, state, sentence_start):
+    """性質變更句的主語 → (對象線, None) 或 (None, 原因)。回指字面(その、このカードの、
+    そのモンスターの…)照舊記在 `ref`;其餘是「物件短語 + の」,物件照一般規則解析。"""
+    if subject in MENTION_FORMS:
+        head = mention_head(subject)
+        obj_id = state.self_id if head is None else state.recent_of(head)
+        if obj_id is None:
+            return None, REASON_REF
+        return new_line(obj_id, "受事", marker=marker, ref=subject), None
+    m = _MODIFY_SUBJECT_RE.match(subject)
+    if not m:
+        return None, REASON_OBJECT
+    from_zones = parse_from(m.group("from")) if m.group("from") else None
+    phrase = m.group("phrase")
+    if m.group("from") and from_zones is None:
+        # 不是區域字面(「このカードのリンク先の」):整截當物件短語。
+        phrase = subject[:-1]
+        if m.group("all"):
+            return None, REASON_OBJECT
+    obj_id, ref, reason = state.object_at(phrase, sentence_start)
+    if obj_id is None:
+        return None, reason
+    count = {"text": ALL_PREFIX, "cmp": "全部"} if m.group("all") else None
+    line = new_line(obj_id, "受事", marker=marker, ref=ref, count=count)
+    if from_zones is not None:
+        line["from"] = position(from_zones, "明寫", text=m.group("from") + "の")
+        obj = state.find(obj_id)
+        if obj["source"]["kind"] == "新建" and obj["initial_position"] is None:
+            obj["initial_position"] = list(from_zones)
+    return line, None
 
 
 def _material_segment(state, start, end):

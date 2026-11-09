@@ -19,6 +19,10 @@
 - 控制方(m2 票 07):修飾語開頭的「自分の」「相手の」(自分の「EM」モンスター、相手の表側表示モンスター),
   或緊接頭名詞的「相手」「自分」(相手モンスター)→ {"op": "控制方", "value": 我方|對手, "text": 字面};
   「自分フィールドの」是位置,不在此列。代入時任何卡都算(泛用原子)。
+- 被裝備者(m2 票 08):緊接頭名詞的「装備」(装備モンスター)、「このカードを装備した」、
+  「このカードの効果でこのカードを装備した」→ {"op": "被裝備者", "equip": 裝備卡物件, "text": 字面};
+  裝備卡是「このカード」指的物件(內嵌效果裡是綁定的物件)。被裝備是狀態不是卡的屬性:代入時任何卡
+  都算,但不是泛用原子(spec 泛用判定不變)。
 """
 import re
 
@@ -59,6 +63,11 @@ REASON_REF = "指回的物件找不到"
 
 _SIDE = {"自分": "我方", "相手": "對手"}
 _CONTROLLER_RE = re.compile("^(?P<side>自分|相手)(?:の|$)")
+# 被裝備者(m2 票 08):緊接頭名詞的修飾語字面閉集;裝備卡是「このカード」(內嵌效果裡是綁定的物件)。
+EQUIPPED = "被裝備者"
+EQUIPPED_FORMS = ("装備", "このカードを装備した", "このカードの効果でこのカードを装備した")
+_EQUIPPED_RE = re.compile("^(?:" + "|".join(sorted(EQUIPPED_FORMS, key=len, reverse=True))
+                          + ")$")
 _SIDE_TEXT = {v: k for k, v in _SIDE.items()}
 _ZONE_TEXT = {v: k for k, v in _ZONE_NAME.items()}
 _ATTR_NAME = dict(ATTR_WORDS)
@@ -104,6 +113,9 @@ def parse_modifier(rest, state):
     if m:
         return ([{"op": "控制方", "value": _SIDE[m.group("side")], "text": m.group()}],
                 None, m.end())
+    m = _EQUIPPED_RE.match(rest)
+    if m:
+        return ([{"op": EQUIPPED, "equip": state.self_id, "text": m.group()}], None, m.end())
     m = _ARCHETYPE_SUBTYPE_RE.match(rest)
     if m:
         atom, why = state.name_atom("字段", m.group("name"))
@@ -199,6 +211,8 @@ def render_atom(atom, names):
     if op == "控制方":
         m = _CONTROLLER_RE.fullmatch(atom.get("text") or "")
         return atom["text"] if m and _SIDE[m.group("side")] == atom.get("value") else None
+    if op == EQUIPPED:
+        return atom["text"] if atom.get("text") in EQUIPPED_FORMS and atom.get("equip") else None
     if op == "屬性比較":
         return _render_compare([atom])
     if op == "或" and all(a.get("op") == "屬性比較" for a in atom.get("args", ())):

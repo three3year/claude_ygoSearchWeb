@@ -23,6 +23,10 @@
   "object": 此卡的物件 id, "text": "このカード"}};代入的是卡而不是那一張實體,任何卡都代得進去
   (同名的另一張也算),但不是泛用原子(泛用物件的定義不變)。
 - 位置的非預設區域字面(m2 票 09):「エクストラデッキの」= 額外牌組,原子另帶 `text`(區域字面),模板照它寫。
+- 位置的區域列舉(m2 票 12):「フィールド（表側表示）・墓地の」→ 位置原子多個區域,「（表側表示）」記在
+  那個區域的 `face`;原子帶 `text`(區域字面),模板驗過與區域一致後照它寫。
+- 回指物件以外(m2 票 12):「そのモンスター以外の、」→ 非(同一張 指回的物件),同此卡以外;
+  後接讀點時 非 原子帶 `text`(含讀點的整個字面)。
 - 被裝備者(m2 票 08):緊接頭名詞的「装備」(装備モンスター)、「このカードを装備した」、
   「このカードの効果でこのカードを装備した」→ {"op": "被裝備者", "equip": 裝備卡物件, "text": 字面};
   裝備卡是「このカード」指的物件(內嵌效果裡是綁定的物件)。被裝備是狀態不是卡的屬性:代入時任何卡
@@ -47,7 +51,14 @@ _ZONE_LITERALS = {"エクストラデッキ": "額外牌組"}
 _ZONE_ALT = "|".join(_ZONE_NAME)
 _POSITION_ZONE_ALT = "|".join(list(_ZONE_LITERALS) + list(_ZONE_NAME))
 _ZONE_RE = re.compile(f"^(?P<side>自分|相手)?(?P<zone>{_POSITION_ZONE_ALT})の")
-_NOT_SELF_RE = re.compile("^(?P<text>このカード)以外の")
+_NOT_SELF_RE = re.compile("^(?P<text>このカード|その(?:モンスター|カード))以外の(?P<pause>、)?")
+SELF_TEXT = "このカード"
+# 區域列舉(m2 票 12):「フィールド（表側表示）・墓地」;單一區域只在帶「（表側表示）」時走這裡。
+FACE_UP_NOTE = "（表側表示）"
+_ZONE_ITEM = f"(?:{_POSITION_ZONE_ALT})(?:{FACE_UP_NOTE})?"
+_ZONE_LIST_RE = re.compile(
+    f"^(?P<text>(?P<side>自分|相手)?(?:{_ZONE_ITEM}(?:・{_ZONE_ITEM})+"
+    f"|(?:{_POSITION_ZONE_ALT}){FACE_UP_NOTE}))の")
 SAME_CARD = "同一張"
 # 曾被特殊召喚(票 08):「EXデッキから特殊召喚された」→ {"op": "曾被特殊召喚", "zones": [出發地]};
 # 查詢時從額外牌組特殊召喚的只有額外牌組的怪獸(融合/同步/超量/連結/靈擺)代得進去,其餘任何卡都算。
@@ -117,8 +128,18 @@ def parse_modifier(rest, state):
                   "zones": [zone(_ZONE_NAME[m.group("zone")], side)]}], None, m.end())
     m = _NOT_SELF_RE.match(rest)
     if m:
-        return ([{"op": "非", "arg": {"op": SAME_CARD, "object": state.self_id,
-                                      "text": m.group("text")}}], None, m.end())
+        text = m.group("text")
+        obj_id = state.self_id if text == SELF_TEXT else state.resolve_reference(text)
+        if obj_id is None:
+            return [], REASON_REF, m.end()
+        atom = {"op": "非", "arg": {"op": SAME_CARD, "object": obj_id, "text": text}}
+        if m.group("pause"):
+            atom["text"] = m.group()
+        return [atom], None, m.end()
+    m = _ZONE_LIST_RE.match(rest)
+    if m:
+        return ([{"op": "位置", "zones": parse_zone_list(m.group("text")),
+                  "text": m.group("text")}], None, m.end())
     m = _ZONE_RE.match(rest)
     if m:
         side = _SIDE.get(m.group("side"))
@@ -166,6 +187,23 @@ def parse_modifier(rest, state):
         return [_compare(_ATTR_NAME[m.group("attr")], obj_id,
                          _ATTR_NAME[m.group("rattr")], m.group("ref"), "同じ数値")], None, m.end()
     return None
+
+
+def parse_zone_list(text):
+    """區域列舉字面(「自分フィールド（表側表示）・墓地」)→ 區域列表;「（表側表示）」記在該區域的 face。"""
+    m = re.match("^(?P<side>自分|相手)?(?P<rest>.*)$", text)
+    side = _SIDE.get(m.group("side"))
+    zones = []
+    for item in m.group("rest").split("・"):
+        word = item.removesuffix(FACE_UP_NOTE)
+        name = _ZONE_LITERALS.get(word) or _ZONE_NAME.get(word)
+        if name is None:
+            return None
+        entry = zone(name, side)
+        if word != item:
+            entry["face"] = "表側"
+        zones.append(entry)
+    return zones
 
 
 def _subtype_atom(letter):
@@ -219,6 +257,11 @@ def render_atom(atom, names):
     if op == "卡名範圍":
         lo, hi = (quoted_name(n, names) for n in atom["names"])
         return None if lo is None or hi is None else f"{lo}～{hi}のいずれかの"
+    if op == "位置" and _ZONE_LIST_RE.match((atom.get("text") or "") + "の"):
+        # 區域列舉(m2 票 12):字面要拆得回同一組區域。
+        zones = [{**zone(z["zone"], z.get("side")), **({"face": z["face"]} if z.get("face") else {})}
+                 for z in atom["zones"]]
+        return atom["text"] + "の" if parse_zone_list(atom["text"]) == zones else None
     if op in ("位置", "曾被特殊召喚"):
         # 條件式裡的區域不經 load_structures 補格,產物省略的 side 要用 get。
         zones = atom["zones"]
@@ -237,7 +280,10 @@ def render_atom(atom, names):
         return atom.get("text", value)
     if op == "非" and atom.get("arg", {}).get("op") == SAME_CARD:
         text = atom["arg"].get("text")
-        return text + "以外の" if text and _NOT_SELF_RE.match(text + "以外の") else None
+        if not text or not _NOT_SELF_RE.match(text + "以外の"):
+            return None
+        literal = atom.get("text") or text + "以外の"
+        return literal if literal in (text + "以外の", text + "以外の、") else None
     if op == "控制方":
         m = _CONTROLLER_RE.fullmatch(atom.get("text") or "")
         return atom["text"] if m and _SIDE[m.group("side")] == atom.get("value") else None

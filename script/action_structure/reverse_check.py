@@ -924,6 +924,10 @@ def _residue(block, glue, glue_failed=False, holes=()):
                         inner["span"][1] - block["span"][0], None))
         if glue_failed and node.get("span"):
             cut.append((node["span"][0], node["span"][1], None))
+        if glue_failed and node.get("node") == "分歧":
+            # 依值分支型內嵌效果的 ● 標籤(m2 票 12)。
+            cut.extend((b["label"][0], b["label"][1], None) for b in node["branches"]
+                       if b.get("label"))
     if block["label"]:
         cut.append((0, LABEL_WIDTH, False))   # 「①：」不是任何段的字
     cut.sort()

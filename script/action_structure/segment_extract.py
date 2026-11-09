@@ -72,6 +72,7 @@ from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
 from premise import is_lasting, split_premises
 from segment_fields import (CAUSE_PATTERN, CLAUSE_DURATION_PATTERN, DISPLAY_PATTERN,
+                            EFFECT_HOLDER_PREFIX,
                             DURATION_TURN, ORDER_PATTERN,
                             OWNER_JOINER, OWNER_PATTERN, OWNER_TEXT, PER_TURN_PATTERN,
                             REPLACEMENT_PREFIX,
@@ -86,7 +87,8 @@ from structure_shape import (AMOUNT_FORMULA, BATTLE_TRIGGERS, DEFAULT_ZONE_WORD,
                              new_segment, position, unparsed, zone)
 from synonyms import (
     ACTION_PAST, ACTIVATION_SUFFIXES, ATTACK_PREFIX_PATTERN, COST_GLUE, MODIFY_ACTION,
-    MODIFY_PREDICATE, ONLY_MARKER, PREDICATE_NOUN_PATTERN, SELECT_PREFIX, TARGET_REF,
+    MODIFY_PREDICATE, ONLY_MARKER, PREDICATE_NOUN_PATTERN, SELECT_PREFIX, SUMMON_NOUNS,
+    TARGET_REF,
     TARGETING_PREFIXES, action_ancestors, attack_times,
     merged_voice, parse_predicates)
 
@@ -123,7 +125,7 @@ _ZONE_PHRASE = (f"(?:(?:自分か相手|自分|相手|持ち主)の?)?(?:{_ZONE_
                 f"(?:[・か](?:{_ZONE_WORDS_ALT}))*")
 # 受方可以是物件的回指(「この効果で特殊召喚したモンスターに装備できる」,票 06)。
 _RECIPIENT_REF = ("(?:この効果で)?(?:その|それらの|" + "|".join(ACTION_PAST.values())
-                  + ")(?:モンスター|カード)")
+                  + f")(?:モンスター|カード)|{TARGET_REF}(?:モンスター|カード)")
 _ACTIVATION_RE = re.compile("^(?P<body>.*?)(?P<suffix>" + "|".join(ACTIVATION_SUFFIXES) + ")$")
 # 次數限制字面(「１ターンに１度、」):spec 說不記,出現在句中時進略過文本(原因 次數限制),
 # 反向檢查比對時扣掉。
@@ -171,7 +173,9 @@ _TOPIC_RE = re.compile("^(?P<topic>(?:または|[^をがは、])+?)は")
 # 觸發形:戰鬥時點(m2 票 07)排在「時」前面,「〜戦闘を行うダメージ計算時」的觸發形是整個時點字面;
 # 後接「(、)または」的是「A時點、またはB時」兩個觸發的或,維持切在後面的「時」(同改前)。
 _TRIGGERS = f"(?:{'|'.join(BATTLE_TRIGGERS)})(?!、?または)|時|場合|際"
-_TRIGGER_RE = re.compile(f"^(?P<cond>.+?)(?P<trig>{_TRIGGERS})に?、?(?P<rest>.*)$")
+# 條件子句不在「」中間結束(m2 票 12):「「時械神」モンスター」的「時」不是觸發形。
+_COND = "(?P<cond>(?:「[^「」]*」|[^「」])+?)"
+_TRIGGER_RE = re.compile(f"^{_COND}(?P<trig>{_TRIGGERS})に?、?(?P<rest>.*)$")
 # 發動句裡單獨的戰鬥時點(m2 票 07):「そのダメージ計算前に発動する」「ダメージ計算時に、〜て発動できる」
 # 開一個沒有動作詞的條件段;「その」指回同一句前一個條件段(前提 段已執行)。後面要接「に」「、」或句尾,
 # 「ダメージステップ終了時まで」不是。
@@ -180,10 +184,10 @@ _BATTLE_TIMING_RE = re.compile(
     f"^(?P<ref>{BATTLE_TIMING_REF})?(?P<trig>{'|'.join(BATTLE_TRIGGERS)})(?=に|、|$)に?、?(?P<rest>.*)$")
 PREMISE_DONE = "段已執行"
 # 舊式的條件句:觸發形後一定有「、」才算,免得「終了時に」這類句中的時被當觸發。
-_OLD_TRIGGER_RE = re.compile(f"^(?P<cond>.+?)(?P<trig>{_TRIGGERS})(?:に)?、(?P<rest>.+)$")
+_OLD_TRIGGER_RE = re.compile(f"^{_COND}(?P<trig>{_TRIGGERS})(?:に)?、(?P<rest>.+)$")
 # 召喚條件區塊的召喚手續句(票 09):「〜をリリースした場合に特殊召喚できる」「〜を除外した場合のみ
 # EXデッキから特殊召喚できる」,觸發形後可接「に」、「、」或直接接「のみ」。
-_SUMMON_TRIGGER_RE = re.compile("^(?P<cond>.+?)(?P<trig>時|場合)(?:に、|に|、)?(?P<rest>.+)$")
+_SUMMON_TRIGGER_RE = re.compile(f"^{_COND}(?P<trig>時|場合)(?:に、|に|、)?(?P<rest>.+)$")
 BLOCK_SUMMON, BLOCK_MATERIAL = "召喚條件", "素材"
 KIND_PROCEDURE, KIND_RESTRICTION, KIND_MODIFIER = "召喚手續", "限制", "修飾"
 ROLE_MATERIAL = "素材"
@@ -235,7 +239,9 @@ _CLAUSE_PATTERN = (
     # 「〜の効果でしか」「メインフェイズにしか」「手札からしか」的しか接在原因/時機/從後,不是助詞。
     "(?P<objects>(?:を含む|を持つ|または|[^を])+?)(?P<of_effect>の効果)?"
     # 「Xの表示形式を変更」「Xのコントロールは変更」:X 是物件、助詞「の」(m2 票 04)。
-    f"(?P<marker>を|が|は|(?<!で)(?<!に)(?<!から){ONLY_MARKER}|の(?=表示形式|コントロール))"
+    # 「Xモンスター１体のX召喚を行う」(m2 票 12):X 是物件、助詞「の」。
+    f"(?P<marker>を|が|は|(?<!で)(?<!に)(?<!から){ONLY_MARKER}"
+    f"|の(?=表示形式|コントロール|(?:{'|'.join(SUMMON_NOUNS)})行))"
     # 助詞後的讀點(「水属性モンスターは、〜」)記進助詞字面。
     "(?P<marker_pause>、)?"
     f"(?P<pick>{RANDOM_PICK})?"
@@ -251,7 +257,8 @@ _CLAUSE_PATTERN = (
     # 到的放置形式(segment_fields.parse_placement_form):順序「好きな順番で」;
     # 卡片種類視同「装備魔法カード扱いで、」是裝備時到的形式(到本身推得)。
     # 「攻撃力３００アップの装備カード扱いで」的增減前綴屬於 treat 字面,另拆一段衍生段(m2 票 08)。
-    f"(?:(?P<treat>(?:{TREAT_DELTA_PATTERN})?{TREAT_PATTERN})|(?P<order>{ORDER_PATTERN}))?"
+    f"(?:(?P<treat>(?:{TREAT_DELTA_PATTERN}|{EFFECT_HOLDER_PREFIX})?{TREAT_PATTERN})"
+    f"|(?P<order>{ORDER_PATTERN}))?"
     # 「從」也可寫在物件後(XをデッキからYに加える);受方(相手に見せて)緊接述語前。
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?P<count2>{COUNT_PATTERN})?"
@@ -289,6 +296,7 @@ _AMOUNT_RE = re.compile("^(?P<digits>[０-９]+)(?P<unit>LP)$")
 _REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
 # 「選択したモンスター」:指回本區塊最近被取對象的同大類物件(舊式;新式用 そのモンスター)。
 TARGET_REF_RE = re.compile(f"^{TARGET_REF}(?P<head>モンスター|カード)$")
+TARGET_OF = "対象の"
 # 動作回指可帶「この効果で」(この効果で除外したモンスター);字面整個記進對象線 ref(票 08)。
 ACTION_REF_RE = re.compile("^(?:この効果で)?(?P<past>.+?)(?P<head>モンスター|カード)$")
 _NOUN_RE = re.compile(
@@ -661,7 +669,10 @@ class BlockState:
         target_ref = TARGET_REF_RE.match(phrase)
         if target_ref:
             obj_id = self.recent_of(target_ref.group("head"), among=self.targeted)
-            return obj_id, phrase, (None if obj_id else REASON_REF)
+            if obj_id is not None or not phrase.startswith(TARGET_OF):
+                return obj_id, phrase, (None if obj_id else REASON_REF)
+            # 「対象のモンスター」本區塊沒有被取對象的物件(取對象在卡片發動區塊):照改前當新建物件,
+            # 修飾語「対象の」解析不出(m2 票 12)。
         if self.is_action_reference(phrase):
             obj_id = self.action_reference(phrase)
             return obj_id, phrase, (None if obj_id else REASON_REF)

@@ -26,8 +26,9 @@
 import re
 
 from block_split import body_start
-from clause_join import JOIN
+from clause_join import JOIN, split_continuative
 from premise import render_premise, split_premises
+from segment_fields import EFFECT_HOLDER_PREFIX
 from segment_extract import (INTERVAL_REASON, INTERVAL_RE, BlockState, parse_from,
                              parse_sentence, sentences, zone_literal)
 from structure_shape import (DISPLAY_WORD, NoTemplate, branch_node, display_value,
@@ -56,6 +57,8 @@ _ELIDED_RE = re.compile("^存在しない場合、?")
 # ● 列舉:行首,或緊接句號(官方文本有些不換行:「〜を得る。●攻撃表示：」,m2 票 12)。
 _ITEM_RE = re.compile("(?:^|\n|(?<=。))●")
 
+# 「以下の効果を持つ装備魔法カード扱いで〜に装備する」的引導句(m2 票 12)。
+EQUIP_HEADER = "裝備"
 REASON_BRANCH_MODE = "分歧方式判不出"
 REASON_BRANCH_PREMISE = "分歧前提解析不出"
 EMBED_TAIL = "以下の効果を得る"
@@ -91,12 +94,41 @@ def extract_block(block, card, lookups=None, self_id="o0"):
         nodes.append(node)
         block["tree"]["items"] = nodes
         return block
+    if headers and headers[-1][0] == EQUIP_HEADER:
+        # 「以下の効果を持つ装備カード扱いで〜に装備する」(m2 票 12):引導句是裝備段,之後接內嵌效果
+        # 節點,綁定 自己 = 被當成裝備卡的物件;節點記 `header` = 裝備段 id。裝備段解析不出時 ● 列舉
+        # 照分歧路徑(方式標解析不出)。
+        for extra in headers[:-1]:
+            _parse_header_as_sentence(state, extra)
+        header_segs = _parse_header_as_sentence(state, headers[-1])
+        nodes.extend(segment_node(seg["id"], seg_join or (headers[-1][4] if i == 0 else None))
+                     for i, (seg, seg_join) in enumerate(header_segs))
+        holder = _equip_holder(header_segs)
+        if holder is not None:
+            seg, obj_id = holder
+            node = _embedded_content(state, obj_id, headers[-1][3], JOIN, lookups)
+            node["header"] = seg["id"]
+            nodes.append(node)
+            block["tree"]["items"] = nodes
+            return block
+        nodes.append(_branch(state, [], _parse_items(state, items)))
+        block["tree"]["items"] = nodes
+        return block
     if headers and headers[-1][0] == "內嵌":
         # 內嵌效果:● 列舉是內容區塊的事,外層不解析它們。主語解析不出就退回分歧路徑
         # (引導句照一般句子解析、分歧方式標解析不出),原文不會被靜默略過。
         for extra in headers[:-1]:
             _parse_header_as_sentence(state, extra)
         _, subject, by, start, join = headers[-1]
+        end = text.find("。", start)
+        end = len(text) if end < 0 else end
+        subject_start = end - len(subject + "は" + (f"{by}によって" if by else "") + EMBED_TAIL)
+        if subject_start > start:
+            # 引導句前的連用形子句(「このカードを手札から特殊召喚し、」):一般段,內嵌效果與它同時。
+            for i, (seg, seg_join) in enumerate(parse_sentence(state, start, subject_start - 1)):
+                state.block["segments"].append(seg)
+                nodes.append(segment_node(seg["id"], seg_join or (join if i == 0 else None)))
+            start, join = subject_start, JOIN
         node = _embedded(state, subject, start, join, lookups, by)
         if node is not None:
             nodes.append(node)
@@ -190,9 +222,18 @@ def _header_of(text):
         return "分歧", m.group("pre"), m.group("form")
     m = _EMBED_RE.match(text)
     if m:
+        if "、" in m.group("subject"):
+            # 「このカードを手札から特殊召喚し、このカードは以下の効果を得る」(m2 票 12):連用形切開後
+            # 最後一截才是引導句,前面照一般句子解析(`extract_block`)。
+            pieces = split_continuative(text)
+            last = _EMBED_RE.match(pieces[-1][1]) if len(pieces) > 1 else None
+            if last and "、" not in last.group("subject"):
+                m = last
         return "內嵌", m.group("subject"), m.group("by")
     if _METHOD_HEADER_RE.search(text):
         return "方法", None, None
+    if EFFECT_HOLDER_PREFIX in text:
+        return EQUIP_HEADER, None, None
     return None
 
 
@@ -382,6 +423,19 @@ def _embedded(state, subject, start, join, lookups, by=None):
     if obj_id is None:
         _parse_header_as_sentence(state, (None, None, None, start, None))
         return None
+    node = _embedded_content(state, obj_id, start, join, lookups, by)
+    if by is not None:
+        node["by"] = by
+    text = state.block["text"]
+    end = text.find("。", start)
+    node["span"] = [start, len(text) if end < 0 else end]  # 引導句的原文範圍(殘留檢查扣掉它)
+    if ref is not None:
+        node["ref"] = ref   # 主語的回指字面(「この効果で特殊召喚したモンスター」),模板照它寫
+    return node
+
+
+def _embedded_content(state, obj_id, start, join, lookups, by=None):
+    """引導句後的 ● 列舉 → 內嵌效果節點(綁定 自己 = obj_id);內容區塊從 start 後第一個 ● 起到區塊尾。"""
     text = state.block["text"]
     first = text.find("●", start)
     inner = new_block(f"{state.block['id']}e{first}", "編號效果", None,
@@ -398,14 +452,20 @@ def _embedded(state, subject, start, join, lookups, by=None):
             and inner_items[0].get("unparsed", {}).get("reason") == REASON_BRANCH_MODE:
         inner_items[0].pop("unparsed")
         inner_items[0]["mode"] = "各自可以"
-    node = embedded_node({"自己": obj_id}, inner, join)
-    if by is not None:
-        node["by"] = by
-    end = text.find("。", start)
-    node["span"] = [start, len(text) if end < 0 else end]  # 引導句的原文範圍(殘留檢查扣掉它)
-    if ref is not None:
-        node["ref"] = ref   # 主語的回指字面(「この効果で特殊召喚したモンスター」),模板照它寫
-    return node
+    return embedded_node({"自己": obj_id}, inner, join)
+
+
+def _equip_holder(segs):
+    """「以下の効果を持つ装備魔法カード扱いで〜に装備する」的裝備段 → (段, 被當成裝備卡的物件);
+    沒有這種段回 None。"""
+    for seg, _ in segs:
+        if seg["unparsed"]:
+            continue
+        for line in seg["lines"]:
+            treat = ((line["to"] or {}).get("form") or {}).get("treat") or {}
+            if (treat.get("text") or "").startswith(EFFECT_HOLDER_PREFIX):
+                return seg, line["object"]
+    return None
 
 
 # ● 的標籤(m2 票 12):「●攻撃表示：」;依值是表示形式時標籤是表示形式字面 → 前提原子
@@ -432,16 +492,18 @@ def _extract_labelled(block, card, lookups, self_id, by):
     state = BlockState(block, card, lookups, self_id=self_id)
     text = block["text"]
     items = [m.end() for m in _ITEM_RE.finditer(text)]
-    bounds, premises = [], []
+    bounds, premises, labels = [], [], []
     for i, start in enumerate(items):
         end = items[i + 1] - 1 if i + 1 < len(items) else len(text)
         label = _LABEL_RE.match(text, start)
         premises.append(label and _label_premise(label.group("label"), by, self_id))
+        labels.append([start, label.end()] if label else None)
         bounds.append((label.end() if label else start, end))
     runs = [lambda s=start, e=end: _parse_run(state, sentences(text, s, e))
             for start, end in bounds]
-    branches = [{"premise": premise, "items": nodes}
-                for premise, nodes in zip(premises, fork_state(state, runs))]
+    # 每支記標籤的原文範圍 `label`:標籤寫不出時反向檢查扣掉它、只列無模板(不重複列成殘留)。
+    branches = [{"premise": premise, "items": nodes, "label": label}
+                for premise, nodes, label in zip(premises, fork_state(state, runs), labels)]
     node = branch_node("依前提", None, branches)
     node["form"] = LABEL_FORM
     if None in premises:
@@ -494,6 +556,13 @@ def tree_glue(block, render_premise_text, render_object):
             binding = node.get("binding") or {}
             if "自己" not in binding:
                 raise NoTemplate("內嵌效果無綁定")
+            if node.get("header"):
+                # 裝備段當引導句(m2 票 12):字面在段上;綁定要是那個段被當成裝備卡的物件。
+                holder = _equip_holder([(seg, None) for seg in block["segments"]
+                                        if seg["id"] == node["header"]])
+                if holder is None or holder[1] != binding["自己"]:
+                    raise NoTemplate("內嵌效果的裝備段無模板")
+                continue
             if node.get("form") == REPLACED_CLOSE:
                 # 效果被換掉:內容區塊在引號裡,引導句的字面是引號前後兩截。
                 if node.get("ref") not in REPLACED_SUBJECTS \

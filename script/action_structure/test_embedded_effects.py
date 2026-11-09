@@ -180,5 +180,73 @@ class DScannanTest(unittest.TestCase):
         self.assertEqual(load_structures(text), self.structures)
 
 
+FULL_ARMORED_XYZ = 39733924   # フル・アーマード・エクシーズ
+FULL_ARMORED_XYZ_TEXT = (
+    "①：フィールドにXモンスターが存在する場合に発動できる。Xモンスター１体のX召喚を行う。\n"
+    "②：墓地のこのカードを除外し、自分フィールドのXモンスター１体を対象として発動できる。"
+    "そのモンスター以外の、自分のフィールド（表側表示）・墓地のXモンスター１体を以下の効果を持つ"
+    "装備魔法カード扱いで対象のモンスターに装備する。\n"
+    "●装備モンスターの攻撃力は、このカードの攻撃力分アップする。\n"
+    "●装備モンスターが戦闘・効果で破壊される場合、代わりにこのカードを破壊する。")
+
+
+class FullArmoredXyzTest(unittest.TestCase):
+    """フル・アーマード・エクシーズ 39733924 ②:「以下の効果を持つ装備魔法カード扱いで〜に装備する」→
+    裝備段之後接內嵌效果節點,綁定 自己 = 被當成裝備卡的物件;內容裡的「このカード」「装備モンスター」
+    都相對於它。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(FULL_ARMORED_XYZ, name_ja="フル・アーマード・エクシーズ", type=0x4)]
+        cls.structures = build(cls.cards, [faq(FULL_ARMORED_XYZ, "フル・アーマード・エクシーズ",
+                                               FULL_ARMORED_XYZ_TEXT)])
+        cls.structure = own(cls.structures, FULL_ARMORED_XYZ)
+        cls.objects = {o["id"]: o for o in cls.structure["objects"]}
+
+    def equip_segment(self):
+        segs = hit_segments(self.structures, self.cards, FULL_ARMORED_XYZ, actions=["裝備"])
+        self.assertEqual(len(segs), 1)
+        return segs[0]
+
+    def bound(self):
+        node, = embedded_of(self.structure)
+        return node["binding"]["自己"]
+
+    def test_equip_hits_with_treat(self):
+        line, = self.equip_segment()["lines"]
+        self.assertEqual(line["to"]["form"]["treat"],
+                         {"text": "以下の効果を持つ装備魔法カード扱いで", "kind": "裝備卡"})
+
+    def test_embedded_node_binds_the_equipped_card(self):
+        line, = self.equip_segment()["lines"]
+        self.assertEqual(self.bound(), line["object"])
+        self.assertNotEqual(self.bound(), "o0")
+
+    def test_attack_up_is_embedded_and_on_the_equipped_monster(self):
+        segs = hit_segments(self.structures, self.cards, FULL_ARMORED_XYZ, actions=["性質變更"],
+                            modified={"attr": "攻擊力", "form": "增"})
+        self.assertEqual(len(segs), 1)
+        seg = segs[0]
+        self.assertIn("e", seg["id"].split(".")[0])
+        subject = self.objects[seg["lines"][0]["object"]]
+        self.assertIn({"op": "被裝備者", "equip": self.bound(), "text": "装備"},
+                      subject["condition"]["args"])
+        self.assertEqual(seg["modified"]["value"], {"kind": "算式", "text": "このカードの攻撃力分"})
+
+    def test_replacement_destroys_the_equipped_card(self):
+        segs = hit_segments(self.structures, self.cards, FULL_ARMORED_XYZ, actions=["破壞"],
+                            replacement=True)
+        destroyed = [s for s in segs if s["replaces"]]
+        self.assertEqual(len(destroyed), 1)
+        self.assertEqual(destroyed[0]["lines"][0]["object"], self.bound())
+
+    def test_whole_card_passes_reverse_check(self):
+        self.assertEqual(check_card(self.structure), [])
+
+    def test_round_trip(self):
+        text = serialize_structures(self.structures)
+        self.assertEqual(load_structures(text), self.structures)
+
+
 if __name__ == "__main__":
     unittest.main()

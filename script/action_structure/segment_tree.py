@@ -17,6 +17,8 @@
 - 內嵌效果:「Xは以下の効果を得る」→ 內嵌效果節點,綁定 自己 = X 的物件,內容是一個區塊
   (● 列舉成「各自可以」的分歧);區塊內「このカード」指 X。區塊 id `<區塊id>e<偏移>`,
   段與物件 id 照它的 text 算偏移。
+- 引用他卡效果(m2 票 13):「この効果は、その罠カード発動時の効果と同じになる」型的句子(前面可有連用形
+  子句)成沒有內容區塊的內嵌效果節點,規則在 `effect_reference`。
 - 「重複到停為止」(「〜処理を繰り返す」「〜までこの効果を繰り返す」,`segment_extract.REPEAT_RE`):
   那一句成一個沒有動作詞的段、標 `unstructured`(段與段樹節點都標),第一輪就是它前面的句子。
 
@@ -27,6 +29,7 @@ import re
 
 from block_split import body_start
 from clause_join import JOIN, split_continuative
+from effect_reference import is_reference, match_reference, reference_node, render_reference
 from premise import render_premise, split_premises
 from segment_fields import EFFECT_HOLDER_PREFIX
 from segment_extract import (INTERVAL_REASON, INTERVAL_RE, BlockState, parse_from,
@@ -154,6 +157,12 @@ def _parse_run(state, spans):
         replaced = _replaced_effect(state, start, end)
         if replaced is not None:
             end = replaced["prefix_end"]
+        referenced = match_reference(state.block["text"][start:end])
+        sentence_end = end
+        if referenced is not None:
+            # 引用他卡效果(m2 票 13):引用子句成引用節點;前面的連用形子句照一般句子解析。
+            ref_start = start + referenced["start"]
+            end = ref_start - 1 if referenced["start"] else start
         for seg, seg_join in parse_sentence(state, start, end) if end > start else ():
             state.block["segments"].append(seg)
             node = segment_node(seg["id"], seg_join or join)
@@ -161,6 +170,9 @@ def _parse_run(state, spans):
                 node["unstructured"] = True   # 段樹也標,走樹的人不必翻段
             nodes.append(node)
             join = None
+        if referenced is not None:
+            nodes.append(reference_node(state, referenced, ref_start, sentence_end,
+                                        JOIN if end > start else join))
         if replaced is not None:
             # 前面有一截(「〜に戻し、」)時與它同時,整句只有這一截時接句首的連接。
             nodes.append(_replaced_node(state, replaced, JOIN if end > start else join))
@@ -552,6 +564,9 @@ def tree_glue(block, render_premise_text, render_object):
             raise NoTemplate(f"段樹無模板:{node['unparsed']['reason']}")
         if node["node"] == "分歧":
             pieces.extend(_branch_headers(node, render_premise_text))
+        elif is_reference(node):
+            # 引用他卡效果(m2 票 13):沒有內容區塊,只寫引導句。
+            pieces.append(render_reference(node, render_object))
         elif node["node"] == "內嵌效果":
             binding = node.get("binding") or {}
             if "自己" not in binding:

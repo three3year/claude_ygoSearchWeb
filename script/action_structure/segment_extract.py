@@ -468,6 +468,35 @@ def floating_count(text, placement=None):
     return count
 
 
+# 名詞短語的「か」列舉(m2 票 13):或 節點帶 form「か」,模板以「か」連各截(「または」是卡名的或)。
+OR_FORM = "か"
+
+
+def split_alternatives(mods, head):
+    """物件短語的修飾語裡,頂層(「」外)的「か」左邊是完整名詞短語(帶頭名詞、沒有數量)時才算列舉:
+    回傳各截名詞短語(最後一截接回頭名詞);不是列舉回 None(「自分か相手の」是方,不在此列)。"""
+    pieces, depth, last = [], 0, 0
+    for i, ch in enumerate(mods):
+        if ch == "「":
+            depth += 1
+        elif ch == "」":
+            depth -= 1
+        elif ch == OR_FORM and depth == 0:
+            left = _NOUN_RE.match(mods[last:i])
+            if left and not left.group("count"):
+                pieces.append(mods[last:i])
+                last = i + 1
+    if not pieces:
+        return None
+    return pieces + [mods[last:] + head]
+
+
+def _noun_condition(atoms, head):
+    """修飾語原子 + 頭名詞 → 條件式;且 的順序 = 字面順序(修飾語在前、大類頭名詞在後),反向檢查照此組回。"""
+    condition = category_condition(head)
+    return {"op": "且", "args": atoms + [condition]} if atoms else condition
+
+
 def category_condition(head):
     if head in HEAD_SUBTYPE:
         category, subtype = HEAD_SUBTYPE[head]
@@ -842,12 +871,20 @@ class BlockState:
                 condition = {"op": "解析不出", "text": phrase}
             else:
                 condition = atoms[0] if len(atoms) == 1 else {"op": "或", "args": atoms}
+        elif split_alternatives(m.group("mods"), m.group("head")):
+            # 「「ホール」通常罠カードか「落とし穴」通常罠カード」(m2 票 13):每截都是帶頭名詞的名詞短語,
+            # 條件 = 或(各截的條件),`form`「か」讓模板以「か」連回;數量在最後一截(整個物件的數量)。
+            atoms, reason, alternatives = [], None, []
+            for piece in split_alternatives(m.group("mods"), m.group("head")):
+                piece_m = _NOUN_RE.match(piece)
+                piece_atoms, why = self.parse_modifiers(piece_m.group("mods"))
+                alternatives.append(_noun_condition(piece_atoms, piece_m.group("head")))
+                atoms.extend(piece_atoms)
+                reason = reason or why
+            condition = {"op": "或", "args": alternatives, "form": OR_FORM}
         else:
             atoms, reason = self.parse_modifiers(m.group("mods"))
-            condition = category_condition(m.group("head"))
-            if atoms:
-                # 且 的順序 = 字面順序(修飾語在前、大類頭名詞在後),反向檢查照此組回。
-                condition = {"op": "且", "args": atoms + [condition]}
+            condition = _noun_condition(atoms, m.group("head"))
             # 名詞修飾的位置(「墓地のモンスター」「EXデッキの「No.」Xモンスター」)就是
             # 物件的初始位置:後續段「從」沒寫時由此繼承(spec「初始位置」;票 06)。
             if initial_position is None:
@@ -949,6 +986,13 @@ def _category_of(condition):
             found = _category_of(arg)
             if found:
                 return found
+    if condition.get("op") == "或" and all(a.get("op") == "大類" for a in condition["args"]):
+        # 頭名詞「魔法・罠カード」(m2 票 13:「その魔法・罠カード」指得回它)。
+        return tuple(a["value"] for a in condition["args"])
+    if condition.get("op") == "或" and condition.get("form") == OR_FORM:
+        # 名詞短語的「か」列舉(m2 票 13):各截大類相同才有大類(「その罠カード」指得回它)。
+        found = {_category_of(arg) for arg in condition["args"]}
+        return found.pop() if len(found) == 1 else None
     return None
 
 

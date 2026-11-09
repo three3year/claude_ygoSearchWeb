@@ -23,6 +23,7 @@
   tree        段樹:{"items": [節點]};節點 = {"node": "段", "segment", "join"}
               | {"node": "分歧", "mode", "chooser", "branches": [{"premise", "items"}], "join"}
               | {"node": "內嵌效果", "binding", "block", "join"}
+              | 引用節點(m2 票 13):內嵌效果節點 block None、帶 ref/form/subject(`effect_reference`)
               join = 同時 / 先後 / None;"unstructured": True 標「未結構化」
   unparsed
 
@@ -33,8 +34,10 @@
 """
 import json
 
+from action_query import resolve_references
 from archetype_table import archetype_lookup, fold_width
 from block_split import CATEGORY_SPELL_TRAP, split_blocks
+from effect_reference import reference
 from names_attributes import (SOURCE_OFFICIAL_NAME, TREAT_PREDICATE, extract_names,
                               extract_treat_as, fill_from_card_list,
                               treat_as_sentences)
@@ -133,6 +136,8 @@ def build_structures(cards, faq_entries, archetypes=None, built_at="",
                                      patches.get(entry["id"]), status))
         for result in status.values():
             patch_report.setdefault(result, []).append(entry["id"])
+    # 第二輪(m2 票 13):引用節點的候選卡要看全庫的卡片屬性表,逐卡建完才求得出。
+    resolve_references(structures, cards)
     report = {
         "built_at": built_at,
         "sources": sources or {},
@@ -288,6 +293,9 @@ def _hydrate_nodes(items):
                 for branch in node["branches"]]
         elif node["node"] == "內嵌效果":
             node = _hydrate(node, embedded_node(None, None))
+            if isinstance(node.get("ref"), dict):
+                # 引用節點(m2 票 13):被引用物件、回指字面、候選卡可能省略。
+                node["ref"] = _hydrate(node["ref"], reference(None, None, None))
             if node["block"]:
                 node["block"] = _hydrate_block(node["block"])
         out.append(node)

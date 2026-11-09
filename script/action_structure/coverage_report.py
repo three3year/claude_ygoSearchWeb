@@ -18,6 +18,7 @@
 """
 from collections import Counter, defaultdict
 
+from effect_reference import card_references, reference_cycles
 from names_attributes import SOURCE_DECLARATION, SOURCE_QUOTE
 from report_common import card_order, safe_label
 from structure_shape import (BLOCK_KINDS, OBJECT_SOURCES, POSITION_SOURCES,
@@ -176,7 +177,32 @@ def build_coverage(structures):
                           for name, cards in sorted(unknown_names.items(), key=lambda kv: str(kv[0]))},
         "omitted": {reason: {"spans": bucket["count"], "cards": len(bucket["cards"])}
                     for reason, bucket in sorted(omitted.items())},
+        "references": _references(structures),
     }
+
+
+def _references(structures):
+    """引用節點(m2 票 13):總數、解析出、泛用的卡、解析不出(引用其他效果)的卡、引用循環。"""
+    total = resolved = 0
+    generic, unparsed_cards = set(), set()
+    for card in structures:
+        if card["unparsed"]:
+            continue
+        for node in card_references(card):
+            total += 1
+            if node.get("unparsed"):
+                unparsed_cards.add(card["id"])
+                continue
+            resolved += 1
+            if node.get("any"):
+                generic.add(card["id"])
+    names = {card["id"]: card["name_ja"] for card in structures}
+    cycles = reference_cycles(structures)
+    return {"total": total, "resolved": resolved,
+            "generic": sorted(generic, key=card_order),
+            "unparsed": sorted(unparsed_cards, key=card_order),
+            "cycles": cycles,
+            "names": {cid: names[cid] for cycle in cycles for cid in cycle}}
 
 
 def _count_block(block, cid, block_kinds, block_reasons):
@@ -320,5 +346,23 @@ def render_coverage(cov):
         out.append(f"| {reason} | {_n(row['spans'])} | {_n(row['cards'])} |")
     if not cov["omitted"]:
         out.append("| (無) | 0 | 0 |")
+    out.append("")
+    refs = cov["references"]
+    out += ["## 引用其他效果", "",
+            "複製他卡效果的句子(「この効果は、その罠カード発動時の効果と同じになる」)成引用節點"
+            f"(m2 票 13):共 {_n(refs['total'])} 個,被引用物件解析出 {_n(refs['resolved'])} 個;"
+            "被引用物件是泛用物件的只在查詢的泛用引用開關開時展開。", "",
+            f"### 被引用物件是泛用物件({_n(len(refs['generic']))} 張)", ""]
+    out += _card_lines(refs["generic"]) or ["(無)"]
+    out += ["", f"### 被引用物件解析不出({_n(len(refs['unparsed']))} 張)", "",
+            "節點標解析不出、原因「引用其他效果」,不進任何查詢的經引用組。", ""]
+    out += _card_lines(refs["unparsed"]) or ["(無)"]
+    out += ["", f"## 引用循環({_n(len(refs['cycles']))} 個)", "",
+            "引用展開到底時互相引用的卡(強連通分量;只看解析出、非泛用的引用節點,被引用卡指定的部分"
+            "裡也有引用節點才算一條邊)。查詢展開走到走過的卡就停。", ""]
+    for cycle in refs["cycles"]:
+        out.append("- " + "、".join(f"`{cid}` {refs['names'][cid]}" for cid in cycle))
+    if not refs["cycles"]:
+        out.append("(無)")
     out.append("")
     return "\n".join(out)

@@ -28,7 +28,7 @@ from report_common import card_order, safe_label
 from premise import render_premise, split_premise
 from condition_atoms import quoted_name, render_atom
 from names_attributes import TREAT_PREDICATE, render_treat_as
-from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, BATTLE_AGENT_MARKER,
+from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, OR_FORM, BATTLE_AGENT_MARKER,
                              CAUSE_EXCLUDE, COUNT_AFTER_OBJECT, EXCLUDE_METHOD_TAIL,
                              AGENT_PLAYER_WORDS, PLAYER_REF_HEAD, agent_particle,
                              EACH_PREFIX, EACH_SUFFIX, FORMULA_COUNT_TAILS, FORMULA_UPTO_TAIL,
@@ -179,6 +179,9 @@ def _render_condition(condition, names):
     單獨的卡名 = 「X」。"""
     if condition is None:
         raise NoTemplate("物件條件無模板:空")
+    if condition.get("op") == "或" and condition.get("form") == OR_FORM:
+        # 名詞短語的「か」列舉(m2 票 13):各截各自寫成名詞短語。
+        return OR_FORM.join(_render_condition(arg, names) for arg in condition["args"])
     head = _render_head(condition)
     if head:
         return head

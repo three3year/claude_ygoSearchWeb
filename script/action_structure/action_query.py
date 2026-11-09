@@ -20,9 +20,16 @@
   modified          被改的屬性(m2 票 06):{"attr", "form", "value"} 任一子集,比段的 `modified`;
                     attr 比「段的 attr 清單含它」(「性質變更,屬性傷害,數值 0」= 全部防傷害段)
 
-結果:{"hits": [{"id", "segments", "group", "replaced_by"(有命中被代替段才有)}],
-      "groups": {"特定", "泛用", "全部", "未解析"}(各組是卡片密碼列表;未解析組的張數 = 長度),
+  generic_reference 泛用引用開關(m2 票 13,預設關):開時被引用物件是泛用物件的引用節點也展開
+
+結果:{"hits": [{"id", "segments", "group", "replaced_by"(有命中被代替段才有),
+                "via"、"mark"(經引用組才有)}],
+      "groups": {"特定", "泛用", "全部", "經引用", "未解析"}(各組是卡片密碼列表;未解析組的張數 = 長度;
+                全部 = 特定 + 泛用,不含經引用),
       "unparsed": [{"id", "reason", "segments": [{"segment", "reason", "text"}]}]}
+
+經引用組(m2 票 13,GLOSSARY「經引用」):直接沒命中、但引用節點的候選卡在節點指定的部分命中的卡;
+hit 的 `segments` 是空的,`via` 列經由的卡與它的命中段(展開到底,遇到循環就停)。
 
 未解析組(spec「解析不出的段怎麼呈現」):不靜默略過。兩種來源:
 - 整張無官方日文的卡:任何查詢都列,`reason` = 無官方日文、`segments` 為空。
@@ -51,6 +58,7 @@ import re
 
 from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
+from effect_reference import card_references, iter_references, selected_blocks
 from condition_atoms import EQUIPPED, SAME_CARD, TARGETING_THIS, referenced_objects
 from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
 from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
@@ -80,7 +88,10 @@ def card_attr(entry, attr):
     kind = entry["type"]
     if not kind & 0x1:
         if attr == "卡片子類型":
-            return set() if kind & SPELL_TRAP_SUBTYPE_BITS else {"通常"}
+            # 儀式魔法(m2 票 13:「儀式魔法カード」的候選卡);其餘魔陷子類型的條件原子還沒有值。
+            if kind & SPELL_TRAP_SUBTYPE_BITS:
+                return {"儀式"} if kind & SUBTYPE_BITS["儀式"] else set()
+            return {"通常"}
         return None
     if attr == "等級":
         return None if kind & (SUBTYPE_BITS["超量"] | SUBTYPE_BITS["連結"]) else entry["level"]
@@ -497,7 +508,8 @@ def _normalise(query):
          "condition": None, "targeting": False, "kinds": None,
          "block_kinds": None, "include_condition": False,
          "include_inferred": False, "replacement": False,
-         "polarities": ("做",), "generic_only": False, "modified": None}
+         "polarities": ("做",), "generic_only": False, "modified": None,
+         "generic_reference": False}
     unknown = set(query) - set(q)
     if unknown:
         raise KeyError(f"查詢有不認得的欄位: {sorted(unknown)}")
@@ -640,29 +652,30 @@ def segment_hit_lines(seg, card, q, judge, objects, names):
 
 
 def run_query(structures, cards, query):
-    """全庫結構 + 卡片總表 + 查詢 → 命中結果;一張卡任一分支、任一段命中即命中。"""
+    """全庫結構 + 卡片總表 + 查詢 → 命中結果;一張卡任一分支、任一段命中即命中。
+    直接沒命中的卡,引用節點指定的被引用卡部分命中時進「經引用」組(m2 票 13)。"""
     q = _normalise(query)
     judge = _Judge(cards, structures, q)
     literals = action_literals(q["actions"])
-    hits, unparsed = [], []
+    direct, block_hits, incomplete_of = {}, {}, {}
     for card in structures:
         if card["unparsed"]:
-            unparsed.append({"id": card["id"],
-                             "reason": card["unparsed"]["reason"],
-                             "segments": []})
             continue
         objects = _objects_by_id(card)
         names = {row["id"]: row for row in card["names"]}
         matched, generic, incomplete, replaced_hits = [], True, [], set()
+        per_block = block_hits[card["id"]] = {}
         for block in card["blocks"]:
-            # 區塊種類被篩掉:種類判不出的區塊才可能是靜默漏掉,列進未解析組。
+            # 區塊種類被篩掉:種類判不出的區塊才可能是靜默漏掉,列進未解析組。被篩掉的區塊仍記它
+            # 命中的段:別張卡引用到這張卡時,被引用的部分不看區塊種類。
             skipped = q["block_kinds"] and block["kind"] not in q["block_kinds"]
-            if skipped and not block["unparsed"]:
-                continue
             for _, seg in iter_segments(block):
-                lines = None if skipped else segment_hit_lines(
-                    seg, card, q, judge, objects, names)
+                lines = segment_hit_lines(seg, card, q, judge, objects, names)
                 if lines is not None:
+                    per_block.setdefault(block["id"], []).append(seg["id"])
+                if skipped and not block["unparsed"]:
+                    continue
+                if lines is not None and not skipped:
                     matched.append(seg["id"])
                     if seg["kind"] == "被代替":
                         replaced_hits.add(seg["id"])
@@ -679,18 +692,114 @@ def run_query(structures, cards, query):
                     incomplete.append({"segment": seg["id"], "reason": reason,
                                        "text": seg["text"]})
         if matched:
-            group = "泛用" if generic else "特定"
-            if q["generic_only"] and group != "泛用":
-                continue
-            hit = {"id": card["id"], "segments": matched, "group": group}
+            hit = {"id": card["id"], "segments": matched,
+                   "group": "泛用" if generic else "特定"}
             if replaced_hits:
                 hit["replaced_by"] = replaced_by(replaced_hits, card)
-            hits.append(hit)
+            direct[card["id"]] = hit
         elif incomplete:
+            incomplete_of[card["id"]] = incomplete
+    expand = _Expansion(structures, block_hits, q)
+    hits, unparsed = [], []
+    for card in structures:
+        if card["unparsed"]:
+            unparsed.append({"id": card["id"],
+                             "reason": card["unparsed"]["reason"],
+                             "segments": []})
+            continue
+        hit = direct.get(card["id"])
+        if hit is None:
+            hit = expand.hit(card)
+        if hit is not None:
+            if q["generic_only"] and hit["group"] != "泛用":
+                continue
+            hits.append(hit)
+        elif card["id"] in incomplete_of:
             unparsed.append({"id": card["id"], "reason": None,
-                             "segments": incomplete})
+                             "segments": incomplete_of[card["id"]]})
     groups = {"特定": [h["id"] for h in hits if h["group"] == "特定"],
               "泛用": [h["id"] for h in hits if h["group"] == "泛用"],
-              "全部": [h["id"] for h in hits],
+              "全部": [h["id"] for h in hits if h["group"] != VIA_GROUP],
+              VIA_GROUP: [h["id"] for h in hits if h["group"] == VIA_GROUP],
               "未解析": [u["id"] for u in unparsed]}
     return {"hits": hits, "groups": groups, "unparsed": unparsed}
+
+
+VIA_GROUP = "經引用"
+VIA_GENERIC = "經泛用引用"
+
+
+class _Expansion:
+    """經引用的展開(m2 票 13):引用節點的候選卡在 `effect` 指定的部分有命中段就算,沒有就往那部分裡的
+    引用節點再展開(展開到底);走過的卡不再走(遇到循環就停)。泛用引用節點(`any`)只在開關開時展開。"""
+
+    def __init__(self, structures, block_hits, q):
+        self.by_id = {card["id"]: card for card in structures}
+        self.block_hits = block_hits
+        self.q = q
+
+    def hit(self, card):
+        """直接沒命中的卡 → 經引用組的 hit,或 None。經由的全是泛用引用節點時標「經泛用引用」。"""
+        blocks = [b for b in card["blocks"]
+                  if not self.q["block_kinds"] or b["kind"] in self.q["block_kinds"]]
+        via = self.via(blocks, {card["id"]})
+        if not via:
+            return None
+        hit = {"id": card["id"], "segments": [], "group": VIA_GROUP, "via": via}
+        if all(entry.get("generic") for entry in via):
+            hit["mark"] = VIA_GENERIC
+        return hit
+
+    def via(self, blocks, visiting):
+        """區塊裡的引用節點經由的卡:[{"id", "segments"(該卡指定部分的命中段), "via"(再往下展開的,
+        有才寫), "generic"(經泛用引用節點,有才寫)}];同一張卡只列一次。"""
+        out, seen = [], set()
+        for block in blocks:
+            for node in iter_references(block):
+                if node.get("unparsed") or (node.get("any") and not self.q["generic_reference"]):
+                    continue
+                for cid in node["ref"]["candidates"]:
+                    target = self.by_id.get(cid)
+                    if cid in visiting or cid in seen or target is None or target["unparsed"]:
+                        continue
+                    entry = self.entry(target, node["ref"]["effect"], visiting)
+                    if entry is None:
+                        continue
+                    if node.get("any"):
+                        entry["generic"] = True
+                    seen.add(cid)
+                    out.append(entry)
+        return out
+
+    def entry(self, target, effect, visiting):
+        part = selected_blocks(target, effect)
+        hits = self.block_hits.get(target["id"], {})
+        segments = [seg_id for block in part for seg_id in hits.get(block["id"], ())]
+        if segments:
+            return {"id": target["id"], "segments": segments}
+        nested = self.via(part, visiting | {target["id"]})
+        if nested:
+            return {"id": target["id"], "segments": [], "via": nested}
+        return None
+
+
+def resolve_references(structures, cards):
+    """建置第二輪(m2 票 13):每個解析出的引用節點求被引用物件的候選卡(卡片總表裡滿足它條件式的卡,
+    排序的卡號),被引用物件是泛用物件時節點記 `any`。就地改結構。"""
+    judge = _Judge(cards, structures, _normalise({}))
+    for card in structures:
+        if card["unparsed"]:
+            continue
+        nodes = card_references(card)
+        if not nodes:
+            continue
+        objects = _objects_by_id(card)
+        names = {row["id"]: row for row in card["names"]}
+        for node in nodes:
+            if node.get("unparsed"):
+                continue
+            obj = objects[node["ref"]["object"]]
+            if is_generic(obj):
+                node["any"] = True
+            node["ref"]["candidates"] = sorted(
+                {entry["id"] for entry in judge.candidates(card, obj, names)})

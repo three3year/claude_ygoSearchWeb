@@ -45,7 +45,8 @@ _ZONE_RE = re.compile(f"^(?P<side>自分|相手)?(?P<zone>{_ZONE_ALT})の")
 _SUMMONED_FROM_RE = re.compile(
     f"^(?P<side>自分|相手)?の?(?P<zone>{_ZONE_ALT})から特殊召喚された")
 SUBTYPE_LETTERS = (("融合", "融合"), ("儀式", "儀式"), ("S", "同步"), ("X", "超量"),
-                   ("L", "連結"), ("P", "靈擺"))
+                   ("L", "連結"), ("P", "靈擺"),
+                   ("通常", "通常"))   # m2 票 04:「「ホール」通常罠カード」「通常モンスター」
 _SUBTYPE = "|".join(letter for letter, _ in SUBTYPE_LETTERS)
 _ARCHETYPE_SUBTYPE_RE = re.compile(f"^「(?P<name>[^「」]+)」(?P<sub>{_SUBTYPE})$")
 _SUBTYPE_RE = re.compile(f"^(?P<sub>{_SUBTYPE})$")

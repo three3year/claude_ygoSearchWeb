@@ -6,9 +6,13 @@
 - 機制不同分開:捨てる ≠ 墓地へ送る、時 ≠ 場合、取對象 ≠ 選擇。
 - 舊式「〜体を選択して」是取對象(標在對象線 `targeting`),不是動作詞「選擇」;新式「を対象として」同一機制。
 - 原述語字面保留在段的 `predicate`,合併或拆開動作詞只改這裡的表、不重抽。
+- 抗性與限制(m2 票 04)用既有動作詞加極性:受到效果影響、攻擊家族(攻擊 > 直接攻擊、多次攻擊、
+  全體攻擊;次數與「全てに１回ずつ」寫在述語「攻撃」前,`attack_times`)、選為攻擊對象、取對象
+  (只有非「做」的語尾)、作為素材、變更表示形式、變更控制權;「無効化」= 無效。
 各舊式用語在官方 DB 文本上的出現次數見 `.scratch/action-structure/report/old_style_phrases.md`
 (`stats/old_style_phrases.py` 可重跑)。
 """
+import re
 from typing import NamedTuple
 
 from structure_shape import VOICE_MIXED
@@ -45,6 +49,22 @@ PREDICATE_STEMS = (
     ("戻", "返回", None),
     ("発動", "發動", None),            # 効果を発動(卡片發動句的 発動できる 在句型層先剝掉)
     ("直接攻撃", "直接攻擊", None),
+    ("効果を受け", "受到效果影響", None),   # m2 票 04:「〜の効果を受けない」(原因帶誰的效果)
+    ("効果の対象に", "取對象", None),       # m2 票 04:只在非「做」(〜の対象にならない)
+    # m2 票 04:作為素材(「シンクロ素材にできない」;哪種召喚的素材留在原述語字面)。
+    ("融合素材に", "作為素材", None), ("シンクロ素材に", "作為素材", None),
+    ("S素材に", "作為素材", None), ("エクシーズ素材に", "作為素材", None),
+    ("X素材に", "作為素材", None), ("リンク素材に", "作為素材", None),
+    ("L素材に", "作為素材", None), ("素材に", "作為素材", None),
+    # m2 票 04:「(Xの)表示形式を変更できない」「(Xの)コントロールは変更できない」。
+    ("表示形式を変更", "變更表示形式", None), ("表示形式は変更", "變更表示形式", None),
+    ("コントロールを変更", "變更控制權", None), ("コントロールは変更", "變更控制權", None),
+    # m2 票 04:攻擊家族。長的字面在前(「攻撃対象に選択」「攻撃宣言」不能被「攻撃」先吃掉);
+    # 「攻撃をする」的を是述語的一部分(句型層 `PREDICATE_NOUNS`)。
+    ("攻撃対象に選択", "選為攻擊對象", None),
+    ("攻撃宣言", "攻擊", None),
+    ("攻撃を", "攻擊", None),
+    ("攻撃", "攻擊", None),
     ("になる", "性質變更", None),       # 性質變更句「〜攻撃力は〜になる」(票 08,segment_fields)
     # m2 票 08:增減「〜攻撃力は３００アップする」(句型在 segment_fields;一般子句的受詞是屬性名詞,
     # 物件解析不出);未解析組的字面比對也用這兩個字幹。
@@ -52,6 +72,7 @@ PREDICATE_STEMS = (
     ("ダウン", "性質變更", None),
     ("装備", "裝備", None),             # 票 06:〜を装備魔法カード扱いで〜に装備できる
     ("払", "支付", None),               # 票 09:１０００LPを払って(段無物件,數量格)
+    ("無効化", "無效", None),           # m2 票 04:「無効化されない」併進無效
     ("無効に", "無效", None),           # 票 09:その発動を無効にし破壊する(し 串接)
     ("通常召喚", "通常召喚", None),     # 票 09:召喚條件句「このカードは通常召喚できない」
     # m2 票 06:傷害(与える/受ける 同一詞)、回復。「ダメージを」接在字幹裡:一般子句的述語不含を,
@@ -62,7 +83,14 @@ PREDICATE_STEMS = (
     # m2 票 07:「Xと戦闘を行う」;語尾「う」不在 TAILS(加了會影響所有字幹),終止形整串收。
     ("戦闘を行う", "戰鬥", None),
     ("戦闘を行", "戰鬥", None),
+    # m2 票 05:「置」單字當字幹會讓未解析組比中「位置」「配置」,所以連語尾一起寫。
+    ("置く", "放置", None),
+    ("置き", "放置", None),             # 連用形串接「〜に表側表示で置き、」
+    ("置い", "放置", None),             # 置いて、置いた
+    ("セット", "覆蓋", None),
 )
+# 字幹出現在別的詞裡、不是那個動作的字面(查詢未解析組比字面時扣掉;m2 票 04)。
+STEM_FALSE_FRIENDS = {"攻撃": ("攻撃力", "攻撃表示", "攻撃対象")}
 MODIFY_ACTION = "性質變更"
 MODIFY_PREDICATE = "になる"
 # 動作回指(「めくったカード」「特殊召喚したモンスター」)用的過去形。
@@ -72,11 +100,17 @@ ACTION_PAST = {"翻開": "めくった", "特殊召喚": "特殊召喚した", "
                "融合召喚": "融合召喚した", "S召喚": "S召喚した", "X召喚": "X召喚した",
                "L召喚": "L召喚した", "展示": "見せた", "發動": "発動した",
                "裝備": "装備した", "支付": "払った", "無效": "無効にした",
-               "通常召喚": "通常召喚した"}
+               "通常召喚": "通常召喚した", "放置": "置いた", "覆蓋": "セットした"}
 # 下位詞:S、X、L、融合召喚是特殊召喚的下位(spec「動作詞」),查「特殊召喚」要含它們;
 # 推得表與角色也照上位詞算(票 07)。
 ACTION_PARENT = {"融合召喚": "特殊召喚", "S召喚": "特殊召喚", "X召喚": "特殊召喚",
-                 "L召喚": "特殊召喚"}
+                 "L召喚": "特殊召喚",
+                 # m2 票 04:攻擊 > 直接攻擊、多次攻擊、全體攻擊(spec「攻擊系只做兩層夠嗎?」)
+                 "直接攻擊": "攻擊", "多次攻擊": "攻擊", "全體攻擊": "攻擊"}
+ATTACK = "攻擊"
+MULTIPLE_ATTACK = "多次攻擊"
+ALL_ATTACK = "全體攻擊"
+ATTACK_FAMILY = (ATTACK, "直接攻擊", MULTIPLE_ATTACK, ALL_ATTACK)
 
 
 def action_ancestors(action):
@@ -115,6 +149,11 @@ TAILS = {
     "しない": ("主動", "不會"), "されない": ("被動", "不會"),
     "られない": ("被動", "不會"),
     "なければならない": ("主動", "必須"),    # 舊式儀式卡「生け贄に捧げなければならない」
+    "が可能": ("主動", "做", True),
+    # m2 票 04:「効果を受けない/受けず」「効果の対象にならない/ならず」
+    "ない": ("主動", "不會"), "ず": ("主動", "不會"),
+    "ならない": ("主動", "不會"), "ならず": ("主動", "不會"),
+    "されず": ("被動", "不會"), "られず": ("被動", "不會"),   # 「効果では破壊されず、〜」          # 舊式「攻撃が可能」「特殊召喚が可能」= できる(m2 票 04)
 }
 _TAILS_LONGEST_FIRST = sorted(TAILS, key=len, reverse=True)
 
@@ -139,6 +178,35 @@ ONLY = "只能"
 ONLY_MARKER = "しか"
 
 
+# 攻擊的下位詞寫在述語「攻撃」前面的字面(m2 票 04,閉集):次數 → 多次攻擊(段的 `times`,
+# 「もう１度」是第二次攻擊,記 2);「相手モンスター全てに１回ずつ」→ 全體攻擊。字面留在原述語字面裡,
+# 反向檢查照 `attack_times` 驗段的 `times`。
+TIMES_PATTERN = ("(?:１度のバトルフェイズ中に|そのターンのバトルフェイズ中に|バトルフェイズ中に?"
+                 "|１ターンに)?(?P<n>[２-９])回|もう１度(?:だけ)?(?:続けて)?")
+ALL_ATTACK_PATTERN = ("(?:相手モンスター全てに|相手フィールド(?:上に存在する|上の|の)全ての"
+                      "モンスターに)１回ずつ")
+_ATTACK_PREFIX_RE = re.compile(
+    f"^(?:(?P<times>{TIMES_PATTERN})|(?P<all>{ALL_ATTACK_PATTERN}))(?=攻撃)")
+# 給句型正規式嵌進述語槽用(不帶具名群組)。
+ATTACK_PREFIX_PATTERN = re.sub(r"\(\?P<\w+>", "(?:",
+                               f"(?:{TIMES_PATTERN}|{ALL_ATTACK_PATTERN})(?=攻撃)")
+# 述語本身含「を/は」的動作(m2 票 04):句型的述語槽不收「を」,這幾個「名詞+を/は」字面例外,
+# 寫在述語開頭(攻撃をする、効果を受けない、表示形式を変更、コントロールは変更)。
+PREDICATE_NOUNS = ("攻撃を", "効果を", "表示形式を", "表示形式は", "コントロールを",
+                   "コントロールは")
+PREDICATE_NOUN_PATTERN = "|".join(PREDICATE_NOUNS)
+_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
+
+
+def attack_times(pred):
+    """原述語字面開頭的攻擊次數 → `times` 格 {"value", "text"};沒有回 None。"""
+    m = _ATTACK_PREFIX_RE.match(pred or "")
+    if not m or not m.group("times"):
+        return None
+    value = int(m.group("n").translate(_FULLWIDTH_DIGITS)) if m.group("n") else 2
+    return {"value": value, "text": m.group("times")}
+
+
 def split_targeting(pred):
     """述語字面 → (取對象字面或 None, 其餘述語)。「選択して破壊する」→ ("選択して", "破壊する");
     單獨的「選択して」(發動句的取對象宣告)→ ("選択して", "")。"""
@@ -160,6 +228,15 @@ def parse_predicate(pred):
                     ("のみ", "做", True), ("しか", "不能", False)):
                 return None, REASON_TAIL
             return parsed._replace(polarity=ONLY, optional=False), None
+    prefix = _ATTACK_PREFIX_RE.match(pred)
+    if prefix:
+        parsed, reason = parse_predicate(pred[prefix.end():])
+        if parsed is None:
+            return None, reason
+        if parsed.action != ATTACK:
+            return None, REASON_TAIL
+        return parsed._replace(
+            action=MULTIPLE_ATTACK if prefix.group("times") else ALL_ATTACK), None
     for stem, action, to in PREDICATE_STEMS:
         if pred.startswith(stem):
             tail = pred[len(stem):]

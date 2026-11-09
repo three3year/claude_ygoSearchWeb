@@ -51,6 +51,10 @@
 - 上游切分(m2 票 03):整句是場上唯一或次數限制句(`OMITTED_SENTENCES`)的進略過文本、不產生段;
   句首時間狀語(このターン、/この効果の発動後、ターン終了時まで/〜を発動するターン、)剝成期間、
   套到整句的段;前提「〜限り、」整句的段期間持續;「Xしか〜できない」的しか是助詞、極性只能。
+- 抗性/限制(m2 票 04):述語槽開頭可帶攻擊次數/全體與「攻撃を」「効果を」「表示形式を」
+  「コントロールは」這幾個含を/は的名詞;「Xの表示形式を」的の是助詞;助詞後的讀點記進助詞字面;
+  原因可帶物件(「Xとの戦闘では」「Xの効果を受けない」的 X);「それぞれ１ターンに１度だけ」記 per_turn;
+  句型把「が」當助詞切錯而述語解不出時(「〜に１回ずつ攻撃が可能」),整句當主語省略的子句再試。
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
 """
 import re
@@ -63,17 +67,22 @@ from clause_join import JOIN, split_continuative
 from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
 from premise import is_lasting, split_premises
-from segment_fields import (CAUSE_PATTERN, DURATION_TURN, ORDER_PATTERN, REPLACEMENT_PREFIX,
+from segment_fields import (CAUSE_PATTERN, DISPLAY_PATTERN, DURATION_TURN, ORDER_PATTERN,
+                            OWNER_JOINER, OWNER_PATTERN, OWNER_TEXT, PER_TURN_PATTERN,
+                            REPLACEMENT_PREFIX,
                             TIMING_PATTERN, TREAT_DELTA_PATTERN, TREAT_PATTERN, implicit_delay,
                             is_delayed, parse_treat_delta,
                             MENTION_FORMS, inherited_duration, lasting, mention_head, parse_cause,
                             find_battle_duration, parse_leading_duration, parse_modify,
+                            parse_per_turn,
                             parse_placement_form, parse_timing, resolve_polarity)
-from structure_shape import (BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, ZONE_WORDS, new_line, new_object,
+from structure_shape import (BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, DISPLAY_WORD, ZONE_WORDS,
+                             new_line, new_object,
                              new_segment, position, unparsed, zone)
 from synonyms import (
-    ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION, MODIFY_PREDICATE, ONLY_MARKER,
-    TARGET_REF, TARGETING_PREFIXES, action_ancestors,
+    ACTION_PAST, ACTIVATION_SUFFIXES, ATTACK_PREFIX_PATTERN, COST_GLUE, MODIFY_ACTION,
+    MODIFY_PREDICATE, ONLY_MARKER, PREDICATE_NOUN_PATTERN, TARGET_REF, TARGETING_PREFIXES,
+    action_ancestors, attack_times,
     merged_voice, parse_predicates)
 
 # 推得表:動作詞 → (沒寫「從」時的出發地, 沒寫「到」時的終點)。
@@ -83,6 +92,8 @@ INFERENCE_TABLE = {
     "捨棄": ("手牌", "墓地"),
     "特殊召喚": (None, "場上"),
     "裝備": (None, "魔陷區"),
+    "放置": (None, "魔陷區"),     # m2 票 05
+    "覆蓋": (None, "魔陷區"),
 }
 # 區域字面表在 structure_shape.ZONE_WORDS(三處共用)。
 # 場上系區域:沒寫方時不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
@@ -129,19 +140,25 @@ OMITTED_SENTENCES = ((_UNIQUE_RE, UNIQUE_REASON), (_LIMIT_SENTENCE_RE, INTERVAL_
 _NAMED_CAUSE = "「[^「」]+」の効果で"
 SUMMON_METHODS = ("融合召喚", "S召喚", "X召喚", "L召喚", "儀式召喚", "P召喚", "以下の方法")
 _METHOD_CAUSE = (f"(?:{'|'.join(SUMMON_METHODS)})(?:及び(?:{'|'.join(SUMMON_METHODS)}))*で")
-_CAUSE_ALT = f"{CAUSE_PATTERN}|{_NAMED_CAUSE}|{_METHOD_CAUSE}"
+# 「Xとの戦闘では」(m2 票 04):戰鬥的對手是物件。「〜の(効果を受けない)」:誰的效果(OWNER_PATTERN)。
+_BATTLE_CAUSE = "(?:「[^「」]*」|[^を、「」])+?との(?:戦闘では|戦闘で|戦闘によって)"
+_BATTLE_CAUSE_RE = re.compile("^(?P<phrase>.+?)との(?P<tail>戦闘では|戦闘で|戦闘によって)$")
+_CAUSE_ALT = f"{CAUSE_PATTERN}|{_NAMED_CAUSE}|{_METHOD_CAUSE}|{_BATTLE_CAUSE}|{OWNER_PATTERN}"
 _NAMED_CAUSE_RE = re.compile(f"^(?P<name>「[^「」]+」)の効果で$")
 _METHOD_CAUSE_RE = re.compile(f"^{_METHOD_CAUSE}$")
 CAUSE_EFFECT_OF = "の効果で"
 CAUSE_METHOD = "召喚方式"
 # 主語省略的子句(「〜できず、「X」の効果でのみ特殊召喚できる」「〜した場合にEXデッキから特殊召喚できる」):
 # 沒有物件與助詞,主語是前一個「は」子句的物件或このカード,對象線標 elided。
+# 述語槽開頭可帶攻擊次數/全體(「２回攻撃」「相手モンスター全てに１回ずつ攻撃」)與含「を/は」的
+# 名詞(攻撃を、効果を、表示形式を、コントロールは;m2 票 04),其餘不收「を」。
+_PRED_HEAD = f"(?:{ATTACK_PREFIX_PATTERN})?(?:{PREDICATE_NOUN_PATTERN})?"
 _SUBJECTLESS_RE = re.compile(
     f"^(?P<cause>{_CAUSE_ALT})?"
     f"(?P<timing>{TIMING_PATTERN})?"
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
-    "(?P<pred>[^を]+)$")
+    f"(?P<pred>{_PRED_HEAD}[^を]+)$")
 TOPIC_UNKNOWN = object()   # 前一截解析不出、又沒有認得出的「Xは」:主語省略的子句判不了主語
 # 句首的「Xは」(「「A」または「B」は」的「または」屬於 X)。
 _TOPIC_RE = re.compile("^(?P<topic>(?:または|[^をがは、])+?)は")
@@ -179,13 +196,15 @@ REPEAT_RE = re.compile("^(?=.*(?:処理|この効果)を).*繰り返す(?:（[^�
 _OLD_COST_RE = re.compile("^(?P<cost>.+?[るうす])" + COST_GLUE + "、?(?P<rest>.+)$")
 # 物件前的「到に」:主語形「自分フィールドにモンスターが特殊召喚された」(助詞が時才有);
 # 後接「存在する」的是舊式從的助詞(フィールド上に存在するモンスター),不是到。
-_TO_FRONT = f"(?:(?P<to_front>{_ZONE_PHRASE})に(?!存在する))?"
+_TO_FRONT = f"(?:(?P<to_front>{_ZONE_PHRASE})に(?!(?:{DISPLAY_WORD}で)?存在する))?"
 _CLAUSE_PATTERN = (
     "^(?:(?P<agent>自分|相手)(?:が|は))?"
     f"{_TO_FRONT}"
     # 物件前的「從」:「EXデッキから特殊召喚されたモンスター」的「から」是修飾語(曾被特殊召喚),
     # 不是這一段的從;「自分フィールドの、「A」または「B」が」的讀點記進從的字面(票 08)。
-    f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)})"
+    # 舊式「フィールド上に表側表示で存在するX」(m2 票 05):表示形式記在從的放置形式。
+    f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)}"
+    f"|に(?P<from_display>{DISPLAY_WORD})で存在する)"
     "(?P<from_pause>、)?(?!特殊召喚され))?"
     # 物件短語裡的「を含む」(カード名に「X」を含む)、「を持つ」(…と同じ数値のレベルを持つ)
     # 不是受詞助詞;述語裡沒有を,所以切錯時會回頭把「を含む」吃進物件短語。
@@ -194,10 +213,15 @@ _CLAUSE_PATTERN = (
     # 「Xしか〜できない」(m2 票 03):「しか」緊接物件時當助詞,極性只能(`resolve_polarity`);
     # 「〜の効果でしか」「メインフェイズにしか」「手札からしか」的しか接在原因/時機/從後,不是助詞。
     "(?P<objects>(?:を含む|を持つ|または|[^を])+?)(?P<of_effect>の効果)?"
-    f"(?P<marker>を|が|は|(?<!で)(?<!に)(?<!から){ONLY_MARKER})"
+    # 「Xの表示形式を変更」「Xのコントロールは変更」:X 是物件、助詞「の」(m2 票 04)。
+    f"(?P<marker>を|が|は|(?<!で)(?<!に)(?<!から){ONLY_MARKER}|の(?=表示形式|コントロール))"
+    # 助詞後的讀點(「水属性モンスターは、〜」)記進助詞字面。
+    "(?P<marker_pause>、)?"
     "(?P<count>[０-９]+(?:体|枚)(?:まで)?|全て)?"
     # 次數限制不記(spec):「「X」は１ターンに１度、〜でのみ特殊召喚できる」的這截進略過文本。
     f"(?P<interval>{INTERVAL_PATTERN})?"
+    # 抗性的每回合次數「それぞれ１ターンに１度だけ」(m2 票 04):段的 per_turn。
+    f"(?P<per_turn>{PER_TURN_PATTERN})?"
     # 取對象字面(舊式 選択して、新式 対象として):單獨出現(述語空)是發動句的取對象宣告。
     f"(?P<targeting>{'|'.join(TARGETING_PREFIXES)})?"
     f"(?P<cause>{_CAUSE_ALT})?"
@@ -210,8 +234,10 @@ _CLAUSE_PATTERN = (
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?:(?P<recipient>自分|相手|{_RECIPIENT_REF})に)?"
+    # 到的表示形式(m2 票 05):「〜に表側表示で置く」「表側攻撃表示か裏側守備表示で特殊召喚する」。
+    f"(?P<display>{DISPLAY_PATTERN})?"
     # 述語裡的「しか」只能在開頭(「融合召喚でしか特殊召喚できない」);句中出現時回頭讓它當助詞。
-    f"(?P<pred>(?:{ONLY_MARKER})?(?:(?!{ONLY_MARKER})[^を])*)$")
+    f"(?P<pred>(?:{ONLY_MARKER})?{_PRED_HEAD}(?:(?!{ONLY_MARKER})[^を])*)$")
 _CLAUSE_RE = re.compile(_CLAUSE_PATTERN)
 # 助詞不是「が」時物件前那截不是到,而是物件修飾的一部分(相手フィールド上にセットされたカード):
 # 拿掉「到に」再比一次。
@@ -261,6 +287,7 @@ REASON_MODS = "物件修飾解析不出"
 REASON_REF = "指回的物件找不到"
 REASON_ACTIVATION = "發動句解析不出"
 REASON_CAUSE = "原因解析不出"
+REASON_DISPLAY = "表示形式沒有到"
 
 
 def parse_from(phrase):
@@ -402,7 +429,8 @@ class BlockState:
 
     def cause_at(self, text, sentence_start):
         """原因字面 → (cause 格, 原因):閉集字面(戦闘で…)、「「X」の効果で」(物件)、
-        「融合召喚及び以下の方法で」(召喚方式)。"""
+        「融合召喚及び以下の方法で」(召喚方式);m2 票 04 加「Xとの戦闘では」(戰鬥的對手)與
+        「Xの(効果を受けない)」(誰的效果,「A及びB」多個),物件記在 `objects`。"""
         cause = parse_cause(text)
         if cause is not None:
             return cause, None
@@ -415,6 +443,23 @@ class BlockState:
         if _METHOD_CAUSE_RE.match(text):
             return {"kind": CAUSE_METHOD, "text": text,
                     "methods": text[:-1].split("及び")}, None
+        battle = _BATTLE_CAUSE_RE.match(text)
+        if battle:
+            # 「水属性以外のモンスターとの戦闘では」:戰鬥,對手是物件(m2 票 04)。
+            obj_id, _, reason = self.object_at(battle.group("phrase"), sentence_start)
+            if obj_id is None:
+                return None, reason
+            return {"kind": "戰鬥", "text": "との" + battle.group("tail"),
+                    "objects": [obj_id]}, None
+        if text.endswith(OWNER_TEXT):
+            # 誰的效果(「「ホール」通常罠カード及び「落とし穴」通常罠カードの」,m2 票 04)。
+            objects = []
+            for phrase in text[:-len(OWNER_TEXT)].split(OWNER_JOINER):
+                obj_id, _, reason = self.object_at(phrase, sentence_start)
+                if obj_id is None:
+                    return None, reason
+                objects.append(obj_id)
+            return {"kind": "效果", "text": OWNER_TEXT, "objects": objects}, None
         return None, REASON_CAUSE
 
     def name_atom(self, op, name, form=None):
@@ -725,7 +770,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     m = _CLAUSE_RE.match(clause_text)
     if m and m.group("to_front") and m.group("marker") != "が":
         m = _CLAUSE_NO_TO_FRONT_RE.match(clause_text)
-    if m and parse_cause(m.group("objects") + m.group("marker")):
+    if m and m.group("marker") != "の" and parse_cause(m.group("objects") + m.group("marker")):
         # 「戦闘では破壊されない」:「戦闘で」+「は」是原因字面,不是物件 + 助詞;主語省略。
         m = None
     elided = None
@@ -738,17 +783,23 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         if elided is None:
             seg["unparsed"] = unparsed(REASON_REF)
             return
+        pred, to_phrase, parsed, reason = _clause_predicate(m)
+    else:
+        pred, to_phrase, parsed, reason = _clause_predicate(m)
+        whole = _SUBJECTLESS_RE.match(clause_text) if parsed is None and pred else None
+        if whole and whole.group("pred"):
+            # 句型把述語前的「が」當助詞切錯時(「〜に１回ずつ攻撃が可能」):整句當主語省略的子句
+            # 述語解析得出才改用它(m2 票 04)。
+            retry = _clause_predicate(whole)
+            if retry[2] is not None:
+                elided = state.elided_subject()
+                if elided is None:
+                    seg["unparsed"] = unparsed(REASON_REF)
+                    return
+                m, (pred, to_phrase, parsed, reason) = whole, retry
     g = m.groupdict().get
-    pred, to_phrase, targeting = g("pred"), g("to"), g("targeting")
+    targeting = g("targeting")
     to_front = g("to_front")
-    parsed = None
-    if to_phrase:
-        # 「墓地へ送る」「手札に加える」的到在述語裡:先試整串當述語。
-        parsed, _ = parse_predicates(to_phrase + g("to_particle") + pred)
-        if parsed is not None:
-            pred, to_phrase = to_phrase + g("to_particle") + pred, None
-    if parsed is None and pred:
-        parsed, reason = parse_predicates(pred)
     # 原述語字面含取對象字面(「選択して破壊する」);反向檢查以 split_targeting 拆回。
     seg["predicate"] = (targeting or "") + pred
     if parsed is None and pred:
@@ -763,7 +814,8 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         parsed = []
     seg["actions"] = [p.action for p in parsed]
     seg["voice"] = merged_voice(parsed)
-    marker = None if elided else (g("of_effect") or "") + g("marker")
+    marker = None if elided else (g("of_effect") or "") + g("marker") + (g("marker_pause") or "")
+    seg["times"] = attack_times(pred)
     if parsed:
         seg["polarity"], seg["optional"] = resolve_polarity(parsed, marker)
     written_to = next((p.to for p in reversed(parsed) if p.to), None)
@@ -783,6 +835,8 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         if seg["cause"] is None:
             seg["unparsed"] = unparsed(reason)
             return
+    if g("per_turn"):
+        seg["per_turn"] = parse_per_turn(g("per_turn"))
     if g("interval"):
         state.omit(m.start("interval") + sentence_start, g("interval"), INTERVAL_REASON)
     if g("timing"):
@@ -830,6 +884,10 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                          "value": int(amount.group("digits").translate(FULLWIDTH_DIGITS)),
                          "unit": amount.group("unit")}
         return
+    if g("display") and not (to_zones or written_to or inferred_to):
+        # 表示形式記在到上;沒有到(明寫、述語自帶、推得都沒有)就沒地方放(m2 票 05)。
+        seg["unparsed"] = unparsed(REASON_DISPLAY)
+        return
     phrases = [None] if elided else split_objects(g("objects"))
     for phrase in phrases:
         if phrase is None:
@@ -852,10 +910,13 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                         marker=marker, ref=ref, count=count)
         if phrase is None:
             line["elided"] = True
-        elif marker == "は" and len(phrases) == 1:
+        elif marker.rstrip("、") == "は" and len(phrases) == 1:
             state.subject = obj_id
         if from_zones is not None:
-            line["from"] = position(from_zones, "明寫", text=from_text)
+            line["from"] = position(
+                from_zones, "明寫", text=from_text,
+                form=g("from_display") and parse_placement_form(
+                    display_literal=g("from_display") + "で"))
             if from_placement == "述語前":
                 line["from"]["placement"] = from_placement
             if obj["source"]["kind"] == "新建" and obj["initial_position"] is None:
@@ -869,14 +930,15 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                 side = "我方" if inferred_from == "手牌" else None
                 line["from"] = position([zone(inferred_from, side, side and "預設")],
                                         "推得", inferred=True)
-        form = parse_placement_form(g("treat"), g("order"))  # 每條線各一份,不共用
+        # 放置形式每條線各一份,不共用。
+        form = parse_placement_form(g("treat"), g("order"), g("display"))
         if to_zones is not None:
             line["to"] = position(to_zones, "明寫", text=to_text,
                                   form=form)
             if to_front:
                 line["to"]["placement"] = "名詞前"
         elif written_to:
-            line["to"] = position([zone(written_to, None)], "明寫")
+            line["to"] = position([zone(written_to, None)], "明寫", form=form)
         elif inferred_to:
             line["to"] = position([zone(inferred_to, inferred_side,
                                         inferred_side and "預設")], "推得",
@@ -886,6 +948,20 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
             state.recent.append(obj_id)
         state.acted.setdefault(obj_id, []).extend(seg["actions"])
     _update_positions(seg, state)
+
+
+def _clause_predicate(m):
+    """句型比對結果 → (述語字面, 到的短語, 解析結果或 None, 原因);「墓地へ送る」「手札に加える」的
+    到在述語裡:先試整串當述語。"""
+    g = m.groupdict().get
+    pred, to_phrase, parsed, reason = g("pred"), g("to"), None, None
+    if to_phrase:
+        parsed, _ = parse_predicates(to_phrase + g("to_particle") + pred)
+        if parsed is not None:
+            pred, to_phrase = to_phrase + g("to_particle") + pred, None
+    if parsed is None and pred:
+        parsed, reason = parse_predicates(pred)
+    return pred, to_phrase, parsed, reason
 
 
 def _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing=None):

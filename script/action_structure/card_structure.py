@@ -214,6 +214,12 @@ def _hydrate_position(pos):
     pos["zones"] = _hydrate_zones(pos["zones"])
     if pos["form"]:
         pos["form"] = _hydrate(pos["form"], placement_form())
+        if pos["form"]["display"]:
+            # 表示形式各項沒寫的一半(None)被省略,補回(m2 票 05)。
+            display = dict(pos["form"]["display"])
+            display["alternatives"] = [_hydrate(a, {"face": None, "position": None})
+                                       for a in display["alternatives"]]
+            pos["form"]["display"] = display
     return pos
 
 

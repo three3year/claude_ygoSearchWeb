@@ -21,7 +21,7 @@ import re
 
 import damage
 from archetype_table import fold_width
-from attribute_atoms import is_param_atom, joiner, render_group, render_level
+from attribute_atoms import EXCEPT, is_param_atom, joiner, render_group, render_level
 from block_split import LABEL_WIDTH
 from report_common import card_order, safe_label
 from premise import render_premise, split_premise
@@ -32,14 +32,15 @@ from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, BATTLE_AGENT_MARKER,
                              CAUSE_METHOD, PREMISE_DONE, EXIST_WORDS, FROM_PARTICLES,
                              ALL_PREFIX, HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
                              SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
-from segment_fields import (MENTION_FORMS, REPLACEMENT_PREFIX, render_cause, render_modify,
+from segment_fields import (MENTION_FORMS, OWNER_JOINER, OWNER_TEXT, REPLACEMENT_PREFIX,
+                            render_cause, render_display, render_modify, render_per_turn,
                             render_placement_form, render_timing, render_treat_delta,
                             resolve_polarity,
                             split_duration)
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
 from structure_shape import BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, NoTemplate
 from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION,
-                      merged_voice, parse_predicates, split_targeting)
+                      attack_times, merged_voice, parse_predicates, split_targeting)
 
 REASON_NO_TEMPLATE = "無模板"
 REASON_MISMATCH = "字面不符"
@@ -52,7 +53,7 @@ DETAIL_REPEAT = "重複到停為止"
 TEMPLATE_SLOTS = {"id", "kind", "actions", "lines", "agent", "recipient", "polarity",
                   "trigger", "span", "text", "predicate", "voice", "unparsed",
                   "optional", "cause", "premise", "timing", "duration", "modified",
-                  "replaces", "amount", "derived_from"}
+                  "replaces", "amount", "times", "per_turn", "derived_from"}
 # 被代替段是改了類別的條件段,模板同條件段(帶觸發形);召喚手續、限制(票 09)是召喚條件區塊裡
 # 改了類別的條件/效果段,模板同簡單子句(有觸發形就寫)。
 TEMPLATE_KINDS = ("條件", "代價", "效果", "被代替", "召喚手續", "限制", "修飾")
@@ -100,6 +101,13 @@ def _render_atom(atom, names):
         return _quoted(atom, names) + (form or "")
     if op == "非" and atom.get("arg", {}).get("op") == "卡名":
         return _quoted(atom["arg"], names) + "以外の"
+    if op == "非" and is_param_atom(atom.get("arg", {})):
+        # 種族/屬性(列舉)以外的(m2 票 04:水属性以外のモンスター)。
+        arg = atom["arg"]
+        text = render_group(arg) if arg.get("op") == "或" else _render_atom(arg, names)
+        if text is None:
+            raise NoTemplate("屬性比較無模板")
+        return text + EXCEPT
     if op == "卡名包含":
         return "カード名に" + _quoted(atom, names) + "を含む"
     level = render_level(atom)   # レベル１、レベル４以下、レベル５以上
@@ -316,14 +324,19 @@ def _render_zone_text(pos, particle):
     """明寫的從/到:有含助詞的原文字面且與區域一致就照字面寫;否則由區域拼回、接上預設助詞。"""
     zones = pos["zones"]
     text = pos.get("text")
+    display = render_display(pos.get("form")) if particle == "から" else ""
     if text:
         # 「自分フィールドの、」的讀點是字面的一部分,驗區域時先去掉。
         bare = text[:-1] if text.endswith("、") else text
-        phrase = next((bare[:-len(p)] for p in _POSITION_PARTICLES
+        # 從的表示形式(「フィールド上に表側表示で存在する」,m2 票 05)夾在助詞中間。
+        particles = (f"に{display}存在する",) if display else _POSITION_PARTICLES
+        phrase = next((bare[:-len(p)] for p in particles
                        if bare.endswith(p)), None)
         if phrase is None or parse_from(phrase) != zones:
             raise NoTemplate("從/到的字面與區域不一致")
         return text
+    if display:
+        raise NoTemplate("從的表示形式沒有字面")
     return _render_zones(zones) + particle
 
 
@@ -362,27 +375,28 @@ def _render_from(lines):
 
 
 def _render_to(lines, predicate_to):
-    """明寫、不在述語裡的「到」(「デッキの一番下に」),可帶放置形式(「好きな順番で」,
-    `render_placement_form` 寫在區域前)→ (字面, 寫在物件前還是述語前):
-    「自分フィールドにモンスターが特殊召喚された」的到在物件前(placement 名詞前),其餘在述語前。"""
+    """明寫、不在述語裡的「到」(「デッキの一番下に」)與到的放置形式 →
+    (形式字面, 區域字面, 區域寫在物件前還是述語前, 表示形式字面)。
+    「自分フィールドにモンスターが特殊召喚された」的到在物件前(placement 名詞前),其餘在述語前。
+    形式字面(treat、order,`render_placement_form`)照句型槽寫在述語前的「從」之前(「魔法カード扱いで
+    手札から魔法＆罠ゾーンにセットできる」);到是推得或在述語裡時只寫形式(「装備魔法カード扱いで、
+    〜に装備できる」,票 06)。表示形式(m2 票 05)不論到怎麼來都寫在述語前,由呼叫端接在述語前。"""
+    displays = {render_display(line["to"].get("form")) for line in lines if line["to"]}
+    forms = {render_placement_form(line["to"].get("form")) for line in lines if line["to"]}
+    if len(displays) > 1 or len(forms) > 1:
+        raise NoTemplate("對象線的到不一致")
+    display = displays.pop() if displays else ""
+    form = forms.pop() if forms else ""
     written = [line["to"] for line in lines
                if line["to"] and line["to"]["source"] == "明寫"]
     if not written or predicate_to:
-        if any(w.get("form") for w in written):
+        if form and predicate_to:
             raise NoTemplate("到的形式無模板")
-        # 到是推得的但形式明寫(「装備魔法カード扱いで、〜に装備できる」,票 06):只寫形式。
-        forms = {render_placement_form(line["to"].get("form")) or None
-                 for line in lines if line["to"]}
-        if len(forms) == 1 and None not in forms:
-            return forms.pop(), "述語前"
-        if len(forms) > 1:
-            raise NoTemplate("對象線的到不一致")
-        return "", "述語前"
+        return form, "", "述語前", display
     if len(written) != len(lines) or any(w != written[0] for w in written):
         raise NoTemplate("對象線的到不一致")
-    return (render_placement_form(written[0].get("form"))
-            + _render_zone_text(written[0], "に"),
-            written[0].get("placement") or "述語前")
+    return (form, _render_zone_text(written[0], "に"),
+            written[0].get("placement") or "述語前", display)
 
 
 def _render_predicate(seg, marker):
@@ -405,11 +419,24 @@ def _render_predicate(seg, marker):
     if (merged_voice(parsed), polarity, optional) != (seg["voice"], seg["polarity"],
                                                       seg["optional"]):
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
+    if attack_times(rest) != seg["times"]:
+        # 多次攻擊的次數(m2 票 04)寫在原述語字面裡,格要與字面一致。
+        raise NoTemplate("攻擊次數與述語字面不一致")
     return prefix, rest, next((p.to for p in parsed if p.to), None)
 
 
 def _render_cause(cause, seg, card, objects, names, self_id):
-    """原因:閉集字面(戦闘で…);「「X」の効果で」寫物件;召喚方式寫各方式以「及び」連接 + で。"""
+    """原因:閉集字面(戦闘で…);「「X」の効果で」寫物件;召喚方式寫各方式以「及び」連接 + で;
+    帶 `objects` 的(m2 票 04)寫各物件以「及び」連接 + 字面(「との戦闘では」「の」)。"""
+    if cause and cause.get("objects"):
+        expected = {"戰鬥": ("との戦闘では", "との戦闘で", "との戦闘によって"),
+                    "效果": (OWNER_TEXT,)}.get(cause.get("kind"), ())
+        if (cause.get("text") not in expected
+                or any(o not in objects for o in cause["objects"])
+                or (cause["kind"] == "戰鬥" and len(cause["objects"]) != 1)):
+            raise NoTemplate("原因無模板:物件")
+        return OWNER_JOINER.join(_render_object(objects[o], seg, card, names, self_id=self_id)
+                                 for o in cause["objects"]) + cause["text"]
     if cause and cause.get("object") is not None:
         obj = objects.get(cause["object"])
         if obj is None or cause.get("kind") != "效果" or cause.get("text") != CAUSE_EFFECT_OF:
@@ -646,7 +673,7 @@ def _is_segment_done(premise):
 
 
 def render_segment(seg, card, self_id="o0"):
-    """簡單子句模板:[句首期間][前提][代わりに][誰が][到に][從から|の|に存在する][物件][助詞][數量][取對象][原因][時機][形式][從から][到に][受方に]述語[觸發形]
+    """簡單子句模板:[句首期間][前提][代わりに][誰が][到に][從から|の|に存在する][物件][助詞][數量][取對象][原因][時機][形式][從から][到に][受方に][表示形式]述語[觸發形]
     (物件前的「到に」只在助詞是「が」時;「從」只在物件前或述語前其中一處,照 placement;
     「代わりに」在做代替的段前;時機只寫有字面的延遲;被代替段同條件段帶觸發形);
     存在前提、性質變更句另有模板;只有前提的條件段寫前提。`self_id` 是「このカード」指的物件
@@ -742,7 +769,7 @@ def render_segment(seg, card, self_id="o0"):
             counts.add(_render_count(line["count"]))
         if len(counts) > 1:
             raise NoTemplate("對象線的助詞或數量不一致")
-        to_text, to_placement = _render_to(seg["lines"], predicate_to)
+        to_form, to_text, to_placement, display = _render_to(seg["lines"], predicate_to)
         from_text, from_placement = _render_from(seg["lines"])
         # 物件前的到(自分フィールドにモンスターが特殊召喚された)照 placement 放回。
         if to_placement == "名詞前":
@@ -752,16 +779,19 @@ def render_segment(seg, card, self_id="o0"):
         if words:
             parts.append("と".join(words) + marker)
             parts.append(counts.pop())
+        parts.append(render_per_turn(seg["per_turn"]))
         parts.append(targeting_text or "")
         if seg["cause"]:
             parts.append(_render_cause(seg["cause"], seg, card, objects, names, self_id))
         parts.append(render_timing(seg["timing"]))
+        parts.append(to_form)
         if from_placement == "述語前":
             parts.append(from_text)
         if to_placement == "述語前":
             parts.append(to_text)
         if seg["recipient"] is not None:
             parts.append(_render_recipient(seg["recipient"], seg, card, objects))
+        parts.append(display)
         parts.append(predicate)
         text = "".join(parts)
     if seg["kind"] in ("條件", "被代替") and not seg["trigger"]:

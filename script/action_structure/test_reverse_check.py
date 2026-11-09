@@ -204,6 +204,34 @@ class ModifiedAttrTest(unittest.TestCase):
                          [("無模板", "被改的屬性無模板")])
 
 
+class ResistanceSlotTest(unittest.TestCase):
+    """m2 票 04 的新格:`times` 由原述語字面驗、`per_turn` 照字面寫回、原因的物件寫回。"""
+
+    def test_times_must_agree_with_the_predicate_literal(self):
+        structure = build_one(10000401, "甲", "このカードは１度のバトルフェイズ中に２回攻撃できる。")
+        self.assertEqual(check_card(structure), [])
+        segment(structure)["times"]["value"] = 3
+        self.assertEqual([f["detail"] for f in check_card(structure)],
+                         ["攻擊次數與述語字面不一致"])
+
+    def test_per_turn_is_written_after_the_particle(self):
+        structure = build_one(10000402, "甲",
+                              "このカードはそれぞれ１ターンに１度だけ戦闘では破壊されない。")
+        self.assertEqual(check_card(structure), [])
+        segment(structure)["per_turn"]["value"] = 2
+        self.assertEqual([f["detail"] for f in check_card(structure)], ["每回合次數無模板"])
+
+    def test_battle_opponent_in_cause_is_written_back(self):
+        structure = build_one(10000403, "甲",
+                              "このカードは闇属性モンスターとの戦闘では破壊されない。")
+        self.assertEqual(check_card(structure), [])
+        cause = segment(structure)["cause"]
+        opponent = next(o for o in structure["objects"] if o["id"] == cause["objects"][0])
+        opponent["condition"]["args"][0]["value"] = "光"
+        self.assertEqual([(f["reason"], f["rendered"]) for f in check_card(structure)],
+                         [("字面不符", "このカードは光属性モンスターとの戦闘では破壊されない")])
+
+
 class ReportTest(unittest.TestCase):
     """全庫報告:通過段數、不通過依原因分類、附全部卡號;同一輸入兩次產出相同。"""
 

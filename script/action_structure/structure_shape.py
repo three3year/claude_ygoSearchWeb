@@ -49,6 +49,15 @@ ZONE_PARENT = {"牌組頂": "牌組", "牌組底": "牌組", "怪獸區": "場�
 PLACEMENT_TREAT_KINDS = ("裝備卡", "永續魔法", "永續陷阱", "魔法")
 FACES = ("表側", "裏側")
 BATTLE_POSITIONS = ("攻擊", "守備")
+# 表示形式字面 ↔ (表裏, 攻守)(m2 票 05);沒寫的一半是 None。長的在前,「守備表示」不能先吃掉
+# 「裏側守備表示」的尾巴。到的放置形式 display、前提的位置/存在原子、從的表示形式共用這張表。
+DISPLAY_WORDS = (("表側攻撃表示", "表側", "攻擊"), ("表側守備表示", "表側", "守備"),
+                 ("裏側守備表示", "裏側", "守備"), ("表側表示", "表側", None),
+                 ("裏側表示", "裏側", None), ("攻撃表示", None, "攻擊"),
+                 ("守備表示", None, "守備"))
+DISPLAY_WORD = "(?:" + "|".join(w for w, _, _ in DISPLAY_WORDS) + ")"
+_DISPLAY_VALUE = {w: {"face": f, "position": p} for w, f, p in DISPLAY_WORDS}
+_DISPLAY_TEXT = {(f, p): w for w, f, p in DISPLAY_WORDS}
 # 性質變更段的 `modified`:attr 是清單(攻守同時改時兩項);form 是改法;limit 是門檻 {"cmp", "text"}。
 MODIFY_ATTRS = ("攻擊力", "守備力", "等級", "屬性", "種族", "卡名", "傷害")
 MODIFY_FORMS = ("倍", "半分", "數值", "增", "減")
@@ -92,6 +101,19 @@ def position(zones, source, inferred=False, text=None, form=None):
             "text": text, "form": form}
 
 
+def display_value(word):
+    """表示形式字面(不含「で」)→ {"face", "position"}。"""
+    return dict(_DISPLAY_VALUE[word])
+
+
+def display_word(face, position):
+    """(表裏, 攻守) → 表示形式字面;沒有這種寫法丟 NoTemplate。"""
+    word = _DISPLAY_TEXT.get((face, position))
+    if word is None:
+        raise NoTemplate(f"表示形式無模板:{face}{position}")
+    return word
+
+
 def placement_form(treat=None, display=None, order=None):
     """到的放置形式,三個具名槽(沒寫的槽是 None):
     `treat` 卡片種類視同 {"text", "kind"}(「装備魔法カード扱いで、」,kind 見 PLACEMENT_TREAT_KINDS);
@@ -129,6 +151,8 @@ def new_segment(seg_id, kind, span, text, predicate=None, voice=None):
         "amount": None,      # 數量(段可無物件,例:支付 1000LP;算式 {"kind": "算式", "text"})
         "optional": None,    # 可選
         "replaces": None,    # 代替誰(段 id)
+        "times": None,       # 多次攻擊的次數 {"value", "text"}(m2 票 04;字面在原述語字面裡)
+        "per_turn": None,    # 抗性的每回合次數 {"value", "text"}(m2 票 04:「１ターンに１度だけ」)
         "derived_from": None,  # 衍生自哪一段(段 id;「Nアップの装備カード扱いで」的性質變更段,m2 票 08)
         "span": list(span),  # 原文範圍(相對於區塊 text)
         "text": text,

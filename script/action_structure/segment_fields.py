@@ -26,7 +26,8 @@
 import re
 
 from premise import PHASE_WORDS
-from structure_shape import (DISPLAY_WORD, DURATION_KINDS, NoTemplate, display_value,
+from structure_shape import (DURATION_KINDS, PLACEMENT_DISPLAY_WORD,
+                             NoTemplate, display_value,
                              placement_form)
 from synonyms import MODIFY_PREDICATE, ONLY, ONLY_MARKER
 
@@ -170,8 +171,9 @@ TREAT_PATTERN = ("(?:" + "|".join(map(re.escape, sorted(TREAT_FORMS, key=len, re
                  + ")、?")
 ORDER_PATTERN = "|".join(map(re.escape, ORDER_FORMS))
 # 放置形式的表示形式寫在述語前:「表側表示で」「表側攻撃表示か裏側守備表示で」(二選一,m2 票 05)。
-DISPLAY_PATTERN = f"{DISPLAY_WORD}(?:か{DISPLAY_WORD})?で"
-_DISPLAY_RE = re.compile(f"^(?P<a>{DISPLAY_WORD})(?:か(?P<b>{DISPLAY_WORD}))?で$")
+DISPLAY_PATTERN = f"{PLACEMENT_DISPLAY_WORD}(?:か{PLACEMENT_DISPLAY_WORD})?で"
+_DISPLAY_RE = re.compile(
+    f"^(?P<a>{PLACEMENT_DISPLAY_WORD})(?:か(?P<b>{PLACEMENT_DISPLAY_WORD}))?で$")
 
 
 def parse_display(text):
@@ -285,6 +287,19 @@ _DURATION_RE = re.compile("^(?P<text>.+?まで)")
 DURATION_BATTLE = "該戰鬥"
 BATTLE_DURATION_PATTERN = "(?:その)?(?:ダメージ計算時のみ|ダメージステップの間|ダメージステップ時のみ)、?"
 _BATTLE_DURATION_RE = re.compile(BATTLE_DURATION_PATTERN)
+
+
+# 簡單子句述語前的期間(m2 票 09):「エンドフェイズまで表側で除外する」「次のスタンバイフェイズまで
+# 除外する」;模板寫在述語前(到之前)。只收階段與「ターン終了時」的「〜まで」。
+CLAUSE_DURATION_PATTERN = (f"(?:次のターンの|次の)?(?:自分|相手)?(?:{_PHASE_ALT})まで"
+                           "|(?:その)?ターン終了時まで")
+_CLAUSE_DURATION_RE = re.compile(f"^(?:{CLAUSE_DURATION_PATTERN})$")
+
+
+def is_clause_duration(duration):
+    """簡單子句模板寫得出的句中期間:字面在閉集裡、種類與字面對得上。"""
+    text = (duration or {}).get("text") or ""
+    return bool(_CLAUSE_DURATION_RE.match(text)) and duration == parse_duration(text)
 
 
 def parse_duration(text):

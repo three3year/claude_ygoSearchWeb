@@ -16,7 +16,7 @@ ROLES = ("施事", "受事", "被召喚", "素材")
 POSITION_SOURCES = ("明寫", "繼承", "推得")
 JOINS = ("同時", "先後")
 BRANCH_MODES = ("選1", "各自可以", "依前提")
-SIDES = ("我方", "對手", "任一方", "雙方各自")
+SIDES = ("我方", "對手", "任一方", "雙方各自", "持有者")   # 持有者:「持ち主の」(m2 票 09)
 OBJECT_KINDS = ("卡", "玩家", "計數器", "格位", "宣言值")
 OBJECT_SOURCES = ("自己", "新建", "子集", "剩餘", "聯集")
 VOICE_ACTIVE, VOICE_PASSIVE, VOICE_MIXED = "主動", "被動", "混合"
@@ -56,7 +56,12 @@ DISPLAY_WORDS = (("表側攻撃表示", "表側", "攻擊"), ("表側守備表�
                  ("裏側表示", "裏側", None), ("攻撃表示", None, "攻擊"),
                  ("守備表示", None, "守備"))
 DISPLAY_WORD = "(?:" + "|".join(w for w, _, _ in DISPLAY_WORDS) + ")"
-_DISPLAY_VALUE = {w: {"face": f, "position": p} for w, f, p in DISPLAY_WORDS}
+# 到的表示形式另收省略「表示」的寫法(「エンドフェイズまで表側で除外できる」「裏側で除外する」,
+# m2 票 09),值同 表側表示/裏側表示;前提與從不收(由值拼回字面時用上面的完整寫法)。
+SHORT_DISPLAY_WORDS = (("表側", "表側", None), ("裏側", "裏側", None))
+PLACEMENT_DISPLAY_WORD = "(?:" + "|".join(
+    w for w, _, _ in DISPLAY_WORDS + SHORT_DISPLAY_WORDS) + ")"
+_DISPLAY_VALUE = {w: {"face": f, "position": p} for w, f, p in DISPLAY_WORDS + SHORT_DISPLAY_WORDS}
 _DISPLAY_TEXT = {(f, p): w for w, f, p in DISPLAY_WORDS}
 # 性質變更段的 `modified`:attr 是清單(攻守同時改時兩項);form 是改法;limit 是門檻 {"cmp", "text"}。
 MODIFY_ATTRS = ("攻擊力", "守備力", "等級", "屬性", "種族", "卡名", "傷害")
@@ -123,13 +128,14 @@ def placement_form(treat=None, display=None, order=None):
 
 
 def new_line(obj_id, role, targeting=False, from_=None, to=None, marker=None,
-             ref=None, count=None):
+             ref=None, count=None, pick=None):
     """對象線:物件、取對象標記、角色、從、到;另記這一次提及的字面:`marker` 是助詞
     (を/が/は,None = を),`ref` 是回指字面(None = 本段首次出現;「そのモンスター」
     「それらのカード」「めくったカード」),`count` 是助詞後的數量(「を全て」「を２枚まで」,
-    屬於這次提及、不屬於物件)。"""
+    屬於這次提及、不屬於物件);`pick` 是怎麼選(「ランダムに」→ 隨機,None = 由選者選;m2 票 09)。"""
     return {"object": obj_id, "targeting": targeting, "role": role,
-            "from": from_, "to": to, "marker": marker, "ref": ref, "count": count}
+            "from": from_, "to": to, "marker": marker, "ref": ref, "count": count,
+            "pick": pick}
 
 
 def new_segment(seg_id, kind, span, text, predicate=None, voice=None):

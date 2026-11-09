@@ -48,6 +48,9 @@
   再查推得表;推得值與繼承自推得值的標 inferred,查詢開關開才算。
   區域的方沒寫(「墓地から」)照慣例歸我方但記 side_source 預設,場上系沒寫方不預設(任一方的
   場上);明寫「自分の」記明寫,反向檢查沒有字面時只在明寫才寫出來。
+- 上游切分(m2 票 03):整句是場上唯一或次數限制句(`OMITTED_SENTENCES`)的進略過文本、不產生段;
+  句首時間狀語(このターン、/この効果の発動後、ターン終了時まで/〜を発動するターン、)剝成期間、
+  套到整句的段;前提「〜限り、」整句的段期間持續;「Xしか〜できない」的しか是助詞、極性只能。
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
 """
 import re
@@ -58,15 +61,16 @@ from attribute_words import ATTRIBUTE_JA, RACE_JA
 from clause_join import JOIN, JOIN_TAILS, split_continuative
 from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
-from premise import split_premises
+from premise import is_lasting, split_premises
 from segment_fields import (CAUSE_PATTERN, ORDER_PATTERN, REPLACEMENT_PREFIX,
                             TIMING_PATTERN, TREAT_PATTERN, implicit_delay, is_delayed,
-                            mention_head, parse_cause, parse_modify,
+                            inherited_duration, lasting, mention_head, parse_cause,
+                            parse_leading_duration, parse_modify,
                             parse_placement_form, parse_timing, resolve_polarity)
 from structure_shape import (DEFAULT_ZONE_WORD, ZONE_WORDS, new_line, new_object,
                              new_segment, position, unparsed, zone)
 from synonyms import (
-    ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION, MODIFY_PREDICATE,
+    ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION, MODIFY_PREDICATE, ONLY_MARKER,
     PREDICATE_STEMS, TAILS, TARGET_REF, TARGETING_PREFIXES, action_ancestors,
     merged_voice, parse_predicates)
 
@@ -107,6 +111,17 @@ _ACTIVATION_RE = re.compile("^(?P<body>.*?)(?P<suffix>" + "|".join(ACTIVATION_SU
 INTERVAL_PATTERN = "(?:１ターンに|デュエル中に)[１-９]度、"
 INTERVAL_RE = re.compile(INTERVAL_PATTERN)
 INTERVAL_REASON = "次數限制"
+# 整句不記、進略過文本的句子(m2 票 03):場上唯一「Xは自分フィールドに１体しか表側表示で存在
+# できない」;次數限制「この効果は１ターンに１度しか使用できない」型(區塊切分只在它自成一句、
+# 沒被補足情報的『』引用黏進效果區塊時才略過,黏進去的由這裡收)。
+UNIQUE_REASON = "場上唯一"
+_UNIQUE_RE = re.compile(
+    "^[^、。]+?は、?(?:自分フィールド上|自分フィールド|フィールド上|フィールド|自分のモンスターゾーン)"
+    "に１(?:体|枚)しか表側表示で存在できない$")
+_LIMIT_SENTENCE_RE = re.compile(
+    "^(?:「[^「」]+」の|このカード名の)?(?:この)?効果は(?:お互いに)?"
+    "(?:１ターンに|デュエル中に)[１-９]度しか(?:使用|適用)できない$")
+OMITTED_SENTENCES = ((_UNIQUE_RE, UNIQUE_REASON), (_LIMIT_SENTENCE_RE, INTERVAL_REASON))
 # 原因(票 09 加):「「X」の効果で」= 某張卡的效果(物件);「融合召喚及び以下の方法で」= 召喚方式
 # (「以下の方法」指後面的 ● 列舉)。閉集字面(戦闘で…)在 segment_fields.CAUSE_FORMS。
 _NAMED_CAUSE = "「[^「」]+」の効果で"
@@ -161,7 +176,10 @@ _CLAUSE_PATTERN = (
     # 不是受詞助詞;述語裡沒有を,所以切錯時會回頭把「を含む」吃進物件短語。
     # 「Xの効果を発動」:物件是 X,「の効果」記進對象線的助詞字面;「「A」または「B」が」的
     # 「または」整個屬於物件短語,裡面的「は」不是助詞(票 08)。
-    "(?P<objects>(?:を含む|を持つ|または|[^を])+?)(?P<of_effect>の効果)?(?P<marker>を|が|は)"
+    # 「Xしか〜できない」(m2 票 03):「しか」緊接物件時當助詞,極性只能(`resolve_polarity`);
+    # 「〜の効果でしか」「メインフェイズにしか」「手札からしか」的しか接在原因/時機/從後,不是助詞。
+    "(?P<objects>(?:を含む|を持つ|または|[^を])+?)(?P<of_effect>の効果)?"
+    f"(?P<marker>を|が|は|(?<!で)(?<!に)(?<!から){ONLY_MARKER})"
     "(?P<count>[０-９]+(?:体|枚)(?:まで)?|全て)?"
     # 次數限制不記(spec):「「X」は１ターンに１度、〜でのみ特殊召喚できる」的這截進略過文本。
     f"(?P<interval>{INTERVAL_PATTERN})?"
@@ -176,7 +194,8 @@ _CLAUSE_PATTERN = (
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?:(?P<recipient>自分|相手|{_RECIPIENT_REF})に)?"
-    "(?P<pred>[^を]*)$")
+    # 述語裡的「しか」只能在開頭(「融合召喚でしか特殊召喚できない」);句中出現時回頭讓它當助詞。
+    f"(?P<pred>(?:{ONLY_MARKER})?(?:(?!{ONLY_MARKER})[^を])*)$")
 _CLAUSE_RE = re.compile(_CLAUSE_PATTERN)
 # 助詞不是「が」時物件前那截不是到,而是物件修飾的一部分(相手フィールド上にセットされたカード):
 # 拿掉「到に」再比一次。
@@ -960,6 +979,13 @@ def _treat_as_segment(state, start, end, treat):
     return seg
 
 
+def _apply_duration(segs, duration):
+    """句子層的期間套到這一句的每個段;段自己已有期間(性質變更句的「〜まで」)的不覆蓋。"""
+    for seg, _ in segs:
+        if seg["duration"] is None:
+            seg["duration"] = dict(duration)
+
+
 def parse_sentence(state, start, end):
     """一句 → [(段, 與前一段的連接)](發動句可產生條件段 + 代價段;舊式條件句產生條件段 + 效果段;
     舊式代價句產生代價段 + 效果段;連用形串接的效果句、代價子句切成多段、連接「同時」)。
@@ -974,6 +1000,10 @@ def parse_sentence(state, start, end):
     treat = parse_treat_as(sent)
     if treat is not None:
         return [(_treat_as_segment(state, start, end, treat), None)]
+    for pattern, reason in OMITTED_SENTENCES:
+        if pattern.match(sent):
+            state.omit(start, sent, reason)
+            return []
     if REPEAT_RE.match(sent):
         # 重複到停為止(spec 故事 28):第一輪已由前面的句子(或「」裡的字面)寫出,這一句只標未結構化,
         # 不抽動作詞、不更新位置;反向檢查與覆蓋報告各另列一類。
@@ -997,25 +1027,33 @@ def parse_sentence(state, start, end):
         state.omit(start, interval.group(), INTERVAL_REASON)
         start += interval.end()
         body = body[interval.end():]
+    # 句首時間狀語(m2 票 03):剝成期間、字面留在第一段的範圍內(不是略過文本)。
+    seg_from = start
+    lead, lead_length = parse_leading_duration(body)
+    if lead is not None:
+        start += lead_length
+        body = body[lead_length:]
     premise, premise_end, clause_start = split_premises(body, state, start,
                                                         parse_from, zone_literal)
     body = text[clause_start:start + len(body)]
     if act and premise and body in ("", "に"):
-        seg = _segment(state, "條件", start, premise_end)
+        seg = _segment(state, "條件", seg_from, premise_end)
         seg["premise"] = premise
+        if lead is not None:
+            seg["duration"] = lead
         return [(seg, None)]
     segs = []
     trigger_re = _TRIGGER_RE if act else (_SUMMON_TRIGGER_RE if summon_block
                                          else _OLD_TRIGGER_RE)
     trig = trigger_re.match(body)
-    rest, rest_start, seg_start = body, clause_start, start
+    rest, rest_start, seg_start = body, clause_start, seg_from
     replaced = trig is not None and trig.group("rest").startswith(REPLACEMENT_PREFIX)
     if trig:
         # 序列中段(區塊已有段)出現條件段:之後的段算延遲(リビングデッドの呼び声);
         # 召喚條件區塊的「〜した場合に特殊召喚できる」是召喚手續,不是延遲。
         if state.block["segments"] and not summon_block:
             state.delayed = True
-        rest, rest_start = _condition_and_rest(state, start, clause_start, body,
+        rest, rest_start = _condition_and_rest(state, seg_from, clause_start, body,
                                                trig, segs,
                                                "被代替" if replaced else "條件")
         seg_start = rest_start
@@ -1041,6 +1079,13 @@ def parse_sentence(state, start, end):
             segs.append((seg, JOIN if i else None))
     if premise and segs:
         _attach_premise(segs[0][0], premise)
+    if lead is not None:
+        # 句首時間狀語套到這一句的每個段,字面只在第一段。
+        _apply_duration(segs[:1], lead)
+        _apply_duration(segs[1:], inherited_duration(lead))
+    if is_lasting(premise):
+        # 「〜限り、」:字面留在前提的 form,整句的段期間是持續(m2 票 03)。
+        _apply_duration(segs, lasting())
     if turn_seg is not None:
         if segs:
             _attach_premise(segs[0][0], {"op": PREMISE_HAPPENED, "segment": turn_seg["id"]})

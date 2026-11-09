@@ -98,6 +98,32 @@ class BuildCoverageTest(unittest.TestCase):
         self.assertIn("- 「ブラック・マジシャン」(1 張):`59400890`", text)
 
 
+class OmittedCoverageTest(unittest.TestCase):
+    """略過文本(m2 票 03):依原因計處數與張數,報告列一節。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cards = [card(1, name_ja="甲"), card(2, name_ja="乙"), card(3, name_ja="丙")]
+        entries = [
+            faq(1, "甲", "このカード名の効果は１ターンに１度しか使用できない。\n"
+                         "①：「甲」は自分フィールドに１体しか表側表示で存在できない。"),
+            faq(2, "乙", "①：「乙」はフィールドに１体しか表側表示で存在できない。"),
+            faq(3, "丙", "①：このカードを破壊する。"),
+        ]
+        structures, _ = build_structures(cards, entries)
+        cls.coverage = build_coverage(structures)
+
+    def test_omitted_counted_by_reason_with_cards(self):
+        self.assertEqual(self.coverage["omitted"]["場上唯一"], {"spans": 2, "cards": 2})
+        self.assertEqual(self.coverage["omitted"]["次數限制"], {"spans": 1, "cards": 1})
+
+    def test_report_lists_omitted_reasons(self):
+        text = render_coverage(self.coverage)
+        self.assertIn("## 略過文本", text)
+        self.assertIn("| 場上唯一 | 2 | 2 |", text)
+        self.assertIn("| 次數限制 | 1 | 1 |", text)
+
+
 class RenderCoverageTest(unittest.TestCase):
 
     def test_none_reason_is_listed_as_a_broken_value(self):

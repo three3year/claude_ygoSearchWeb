@@ -411,4 +411,4 @@ def _header_text(node):
 def render_premise_prefix(premise, render_zones, render_object):
     """依前提各支的前提字面(後面接引導句,所以帶讀點)。"""
     return render_premise(premise, render_zones,
-                          lambda obj_id: render_object(obj_id, None), followed=True)
+                          render_object, followed=True)

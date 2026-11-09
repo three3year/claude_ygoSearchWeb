@@ -13,6 +13,7 @@
   (`{"reason"}` 形的格)依原因附卡號。對象線的從/到另依來源(明寫、繼承、推得、留空)計。
 - 物件:依來源計;解析不出依原因附卡號。
 - 不認得的「」名稱:名稱表列裡帶 `unparsed` 的。
+- 略過文本(m2 票 03):依原因計處數與張數(次數限制遍及大半新式卡,只列張數不附卡號)。
 卡號列表一律排序去重,「附卡號」列全部、不截斷。
 """
 from collections import Counter, defaultdict
@@ -89,12 +90,15 @@ def build_coverage(structures):
     unknown_names = defaultdict(set)
     name_sources = Counter()
     unstructured_cards = set()
+    omitted = defaultdict(_reason_bucket)
 
     for card in structures:
         cid = card["id"]
         if card["unparsed"]:
             no_text.append(cid)
             continue
+        for item in card["omitted"]:
+            _add_reason(omitted, item.get("reason"), cid)
         for obj in card["objects"]:
             objects_total += 1
             obj_sources[obj["source"]["kind"]] += 1
@@ -169,6 +173,8 @@ def build_coverage(structures):
                     "reasons": _finish_reasons(obj_reasons, "objects")},
         "unknown_names": {name: sorted(cards, key=card_order)
                           for name, cards in sorted(unknown_names.items(), key=lambda kv: str(kv[0]))},
+        "omitted": {reason: {"spans": bucket["count"], "cards": len(bucket["cards"])}
+                    for reason, bucket in sorted(omitted.items())},
     }
 
 
@@ -304,5 +310,14 @@ def render_coverage(cov):
                        + "、".join(f"`{cid}`" for cid in cards))
     else:
         out.append("(無)")
+    out.append("")
+    out += ["## 略過文本", "",
+            "不進動作搜尋的字面(次數限制、場上唯一、視為…),依原因計處數與張數;"
+            "反向檢查比對時扣掉它們。", "",
+            "| 原因 | 處數 | 張數 |", "|---|---|---|"]
+    for reason, row in cov["omitted"].items():
+        out.append(f"| {reason} | {_n(row['spans'])} | {_n(row['cards'])} |")
+    if not cov["omitted"]:
+        out.append("| (無) | 0 | 0 |")
     out.append("")
     return "\n".join(out)

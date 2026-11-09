@@ -210,7 +210,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/card_structure.py` | 建置管線(純函式):總表 + 官方 DB 文本 + 字段表 → 卡片結構 + 報告;序列化與讀回 |
 | `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用分組、未解析組 |
 | `script/action_structure/build_structure.py` | 建置 CLI 薄殼(讀檔 → 寫 data/action_structure.json → 印報告) |
-| `script/action_structure/coverage_report.py` | 覆蓋報告(純函式):全庫結構 → 依區塊種類、段類別、各格、物件計數,依原因附卡號 → markdown |
+| `script/action_structure/coverage_report.py` | 覆蓋報告(純函式):全庫結構 → 依區塊種類、段類別、各格、物件計數,依原因附卡號;略過文本依原因計處數與張數 → markdown |
 | `script/action_structure/build_report.py` | 覆蓋報告 CLI 薄殼(讀產物與總表 → 寫 .scratch/action-structure/report/coverage.md) |
 | `script/action_structure/reverse_check.py` | 反向檢查(純函式):結構 → 句型模板 → 日文,與原文比對;`check_card` 給標準卡驗收 |
 | `script/action_structure/build_reverse_check.py` | 反向檢查 CLI 薄殼(讀產物 → 寫 .scratch/action-structure/report/reverse_check.md) |

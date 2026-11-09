@@ -4,10 +4,10 @@
 (「このカードが手札に存在する場合」「相手ターンに」),所以在觸發形切分**之前**先剝掉,
 否則「〜に存在する場合」會被當成條件段。規則是句型層級的:
 
-- 位置:「Xが<區域>に存在する(場合|状態で)、」X 是このカード或任何物件短語。此卡 →
+- 位置:「Xが<區域>に存在する(場合|状態で|限り|時)、」X 是このカード或任何物件短語。此卡 →
   `位置` 原子並把物件0 在本區塊的目前位置設成該區域(後續段的「從」繼承、不算推得);
   其他物件 → 新建物件(初始位置 = 該區域)加 `存在` 原子。
-- 存在:「<區域>にXが存在する(場合|状態で)、」→ 新建物件 + `存在` 原子;
+- 存在:「<區域>にXが存在する(場合|状態で|限り|時)、」→ 新建物件 + `存在` 原子;
   「〜が存在しない場合、」→ 非(存在)。前提裡關於物件的條件就在那個物件上(同一物件,
   後文「そのモンスター」指回它),這就是「併進該物件條件」。
 - 遊戲狀態:「相手ターンに」「自分メインフェイズに」「自分・相手のバトルフェイズに」
@@ -46,14 +46,17 @@ _GAME_STATE_RE = re.compile(
     "^(?P<side>自分・相手の|自分|相手)?"
     "(?P<what>ターン|" + "|".join(w for w, _ in PHASE_WORDS) + "|ダメージステップ)"
     "(?P<form>に、?)")
+# 位置/存在原子的形式(m2 票 03 加「限り」「時」):「限り」是持續的前提(段的期間記持續,
+# `KAGIRI`);「時」只在後面接讀點、「に」或句尾時才是前提(「存在する時の」是名詞修飾)。
+KAGIRI = "限り"
+PREMISE_FORMS = ("場合", "状態で", KAGIRI, "時")
+_FORM = f"(?P<form>場合|状態で|{KAGIRI}|時(?=、|に|$))"
 # 「Xが<區域>に存在する場合、」:X 不含讀點;區域短語交給 parse_zones 認,認不得就不是前提。
 _OBJECT_FIRST_RE = re.compile(
-    "^(?P<obj>[^、]+?)が(?P<zones>[^、]+?)に存在(?P<neg>し)?(?:する|ない)"
-    "(?P<form>場合|状態で)")
+    "^(?P<obj>[^、]+?)が(?P<zones>[^、]+?)に存在(?P<neg>し)?(?:する|ない)" + _FORM)
 # 「<區域>にXが存在する場合、」。
 _ZONE_FIRST_RE = re.compile(
-    "^(?P<zones>[^、]+?)に(?P<obj>[^、]+?)が存在(?P<neg>し)?(?:する|ない)"
-    "(?P<form>場合|状態で)")
+    "^(?P<zones>[^、]+?)に(?P<obj>[^、]+?)が存在(?P<neg>し)?(?:する|ない)" + _FORM)
 
 
 def parse_game_state(text):
@@ -119,7 +122,7 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
         zones = parse_zones(m.group("zones"))
         if zones is None:
             continue
-        obj_id, _, _ = state.object_at(m.group("obj"), offset)
+        obj_id, ref, _ = state.object_at(m.group("obj"), offset)
         if obj_id is None:
             continue
         if obj_id == state.self_id and not m.group("neg"):
@@ -128,6 +131,10 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
         else:
             atom = {"op": "存在", "object": obj_id, "zones": zones,
                     "form": m.group("form"), "order": first}
+        if ref is not None:
+            # 物件是回指(「この効果で特殊召喚したモンスターが〜に存在する限り」,m2 票 03):
+            # 回指字面記在原子上,模板照它寫。
+            atom["ref"] = ref
         literal = zone_literal(m.group("zones"))
         if literal is not None:
             atom["text"] = literal
@@ -141,6 +148,15 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
                                        "inferred": False}
         return atom, m.end()
     return None, 0
+
+
+def is_lasting(premise):
+    """前提裡有「〜限り」的位置/存在原子:整句的段期間是持續(m2 票 03)。"""
+    if premise is None:
+        return False
+    atoms = premise["args"] if premise.get("op") == "且" else [premise]
+    return any((a["arg"] if a.get("op") == "非" else a).get("form", "").startswith(KAGIRI)
+               for a in atoms)
 
 
 def split_premise(premise):
@@ -181,7 +197,7 @@ def render_game_state(atom, last):
 
 def render_premise(premise, render_zones, render_object, followed=True):
     """前提條件式 → 日文。`render_zones(區域列表, 原文字面或 None) → 字面`、
-    `render_object(物件id) → 字面`
+    `render_object(物件id, 回指字面或 None) → 字面`
     由反向檢查提供(位置與物件的字面規則在那裡,前提只負責排列)。
     位置/存在原子後面接讀點(`、`)——除非它是最後一個且後面沒有子句(`followed`);
     遊戲狀態原子照它的 form(「に」或「に、」)寫,同樣的例外。"""
@@ -205,7 +221,7 @@ def render_premise(premise, render_zones, render_object, followed=True):
             raise NoTemplate(f"前提原子無模板:{op}")
         verb = "存在しない" if negated else "存在する"
         form = atom.get("form") or ""
-        if form.rstrip("、") not in ("場合", "状態で"):
+        if form.rstrip("、") not in PREMISE_FORMS:
             raise NoTemplate("前提形式無模板")
         if last:
             form = form.rstrip("、")   # 後面沒有子句時讀點不在原文範圍內
@@ -215,7 +231,7 @@ def render_premise(premise, render_zones, render_object, followed=True):
                 raise NoTemplate("省略的存在前提只能是否定")
             pieces.append(verb + form)
             continue
-        obj = render_object(atom["object"])
+        obj = render_object(atom["object"], atom.get("ref"))
         zones = render_zones(atom["zones"], atom.get("text"))
         if op == "位置" or atom.get("order") == "物件":
             pieces.append(f"{obj}が{zones}に{verb}{form}")

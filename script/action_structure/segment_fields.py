@@ -10,7 +10,10 @@
   序列中段出現條件段之後的段也算延遲,但沒有字面:`{"kind": "延遲"}`。延遲段不標取對象(spec)。
 - 期間(`duration`):「そのターンの終了時まで」「ターン終了時まで」→ `{"kind": "本回合", "text"}`;
   其他「〜まで」→ `{"kind": "到X為止", "text"}`。形狀允許出現在任何段、本回合可帶選填 `range`
-  (整回合/發動後,`structure_shape.DURATION_RANGES`);目前只從性質變更句抽出。
+  (整回合/發動後,`structure_shape.DURATION_RANGES`)。句中的「〜まで」只從性質變更句抽出;
+  m2 票 03 加句子層的兩種:「〜限り、」前提 → 持續(沒有字面);句首時間狀語(`LEADING_DURATIONS`:
+  このターン、/この効果の発動後、ターン終了時まで/このカード・この効果を発動するターン、)→ 本回合
+  (帶 range),套到同一句的每個段、字面只在第一段,模板寫在段的最前面(`split_duration`)。
 - 被改的屬性(`modified`):性質變更句「その攻撃力はそのターンの終了時まで元々の攻撃力の倍になる」
   「このカードの攻撃力は０になる」→ 動作詞「性質變更」、`{"attr": [攻擊力|守備力], "form": 倍|半分|數值,
   "base": 「元々の攻撃力」(倍/半分時), "value": 整數(數值時)}`(attr 是清單,值域與 form 的增/減、
@@ -23,8 +26,8 @@
 import re
 
 from premise import PHASE_WORDS
-from structure_shape import NoTemplate, placement_form
-from synonyms import MODIFY_PREDICATE
+from structure_shape import DURATION_KINDS, NoTemplate, placement_form
+from synonyms import MODIFY_PREDICATE, ONLY, ONLY_MARKER
 
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
 CAUSE_FORMS = {
@@ -87,9 +90,12 @@ PERMISSION_ACTIONS = ("直接攻擊",)
 
 def resolve_polarity(parsed, marker):
     """述語解析結果(parse_predicates 的列表)+ 物件助詞 → (極性, 可選)。
-    「Xは〜できる」且動作詞是永續許可的(直接攻擊)→ 極性「可以」、不可選;其餘照語尾。"""
+    「Xは〜できる」且動作詞是永續許可的(直接攻擊)→ 極性「可以」、不可選;
+    「Xしか〜できない」(助詞しか,m2 票 03)→ 極性「只能」,同述語開頭的「しか」;其餘照語尾。"""
     polarity = parsed[-1].polarity
     optional = True if any(p.optional for p in parsed) else None
+    if marker == ONLY_MARKER and polarity == "不能" and not optional:
+        return ONLY, None
     if (optional and marker == "は" and polarity == "做"
             and all(p.action in PERMISSION_ACTIONS for p in parsed)):
         return "可以", None
@@ -180,6 +186,64 @@ def render_placement_form(form):
     if form.get("order"):
         text += form["order"]["text"]
     return text
+
+
+DURATION_LASTING = "持續"
+DURATION_TURN = "本回合"
+
+
+def lasting():
+    """「〜限り、」前提給的期間:持續,沒有字面(字面在前提的 form)。"""
+    return {"kind": DURATION_LASTING}
+
+
+# 句首時間狀語(m2 票 03):字面閉集 → range(None = 沒有 range)。期間都是本回合;誓約
+# 「このカードを発動するターン、」是整回合(發動前後都算),「この効果の發動後、」是發動後。
+# 字面含讀點,反向檢查原樣寫在段的最前面。
+LEADING_DURATIONS = {
+    "このターン、": None,
+    "この効果の発動後、ターン終了時まで、": "發動後",
+    "この効果の発動後、ターン終了時まで": "發動後",
+    "このカードを発動するターン、": "整回合",
+    "この効果を発動するターン、": "整回合",
+}
+_LEADING_DURATION_RE = re.compile(
+    "^(?:" + "|".join(map(re.escape, sorted(LEADING_DURATIONS, key=len, reverse=True))) + ")")
+
+
+def parse_leading_duration(text):
+    """句首時間狀語 → (duration 格, 字面長度);不是就回 (None, 0)。"""
+    m = _LEADING_DURATION_RE.match(text)
+    if not m:
+        return None, 0
+    duration = {"kind": DURATION_TURN, "text": m.group()}
+    if LEADING_DURATIONS[m.group()]:
+        duration["range"] = LEADING_DURATIONS[m.group()]
+    return duration, m.end()
+
+
+def inherited_duration(duration):
+    """同一句後面的段:期間照抄、字面只在第一段。"""
+    return {k: v for k, v in duration.items() if k != "text"}
+
+
+def split_duration(duration):
+    """段的期間 → (寫在段最前面的句首字面, 留給性質變更句模板的句中期間或 None)。
+    句首字面要與種類、range 對得上;沒有字面的期間(持續、同句後段承襲的)不寫;
+    其餘有字面的是句中的「〜まで」,只有性質變更句模板寫得出。"""
+    if not duration:
+        return "", None
+    text = duration.get("text")
+    if text is None:
+        if duration.get("kind") not in DURATION_KINDS:
+            raise NoTemplate(f"期間無模板:{duration.get('kind')}")
+        return "", None
+    if text in LEADING_DURATIONS:
+        if (duration.get("kind"), duration.get("range")) != (DURATION_TURN,
+                                                              LEADING_DURATIONS[text]):
+            raise NoTemplate(f"期間無模板:{duration.get('kind')}")
+        return text, None
+    return "", duration
 
 
 DURATION_THIS_TURN = ("そのターンの終了時まで", "ターン終了時まで", "このターンの終了時まで")

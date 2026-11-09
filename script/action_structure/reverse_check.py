@@ -31,7 +31,8 @@ from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, CAUSE_EFFECT_OF,
                              HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
                              SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
 from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
-                            render_placement_form, render_timing, resolve_polarity)
+                            render_placement_form, render_timing, resolve_polarity,
+                            split_duration)
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
 from structure_shape import DEFAULT_ZONE_WORD, NoTemplate
 from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION,
@@ -429,7 +430,7 @@ def _render_modify(seg, objects):
     mention = line["ref"]
     if obj is None or (obj["source"]["kind"] == "自己") != (mention == "このカードの"):
         raise NoTemplate("性質變更段的提及與物件不符")
-    return render_modify(mention, seg["modified"], seg["duration"])
+    return render_modify(mention, seg["modified"], split_duration(seg["duration"])[1])
 
 
 def _render_existence(seg, premise, card, objects):
@@ -461,8 +462,9 @@ def _render_leading_premise(leading, seg, card, objects, names, followed, self_i
     """句首的前提(位置、存在、遊戲狀態)→ 字面;區域與物件的字面規則借這裡的。"""
     return render_premise(
         leading, _render_premise_zones,
-        lambda obj_id: _render_object(objects[obj_id], seg, card, names,
-                                      self_id=self_id),
+        lambda obj_id, ref: _render_object(objects[obj_id], seg, card, names,
+                                           {"ref": ref} if ref else None,
+                                           self_id=self_id),
         followed=followed)
 
 
@@ -504,7 +506,7 @@ def _render_materials(seg, card, names, objects, self_id):
 
 
 def render_segment(seg, card, self_id="o0"):
-    """簡單子句模板:[代わりに][前提][誰が][到に][從から|の|に存在する][物件][助詞][數量][取對象][原因][時機][形式][從から][到に][受方に]述語[觸發形]
+    """簡單子句模板:[句首期間][前提][代わりに][誰が][到に][從から|の|に存在する][物件][助詞][數量][取對象][原因][時機][形式][從から][到に][受方に]述語[觸發形]
     (物件前的「到に」只在助詞是「が」時;「從」只在物件前或述語前其中一處,照 placement;
     「代わりに」在做代替的段前;時機只寫有字面的延遲;被代替段同條件段帶觸發形);
     存在前提、性質變更句另有模板;只有前提的條件段寫前提。`self_id` 是「このカード」指的物件
@@ -528,10 +530,13 @@ def render_segment(seg, card, self_id="o0"):
     leading, existence = split_premise(seg["premise"])
     premise_only = (seg["kind"] == "條件" and leading is not None
                     and existence is None and not seg["actions"] and not seg["lines"])
-    prefix = ""
+    # 句首時間狀語(m2 票 03)寫在前提之前;句中的「〜まで」只有性質變更句模板寫得出。
+    prefix, inner_duration = split_duration(seg["duration"])
+    if inner_duration is not None and seg["actions"] != [MODIFY_ACTION]:
+        raise NoTemplate("期間無模板:句中")
     if leading is not None:
-        prefix = _render_leading_premise(leading, seg, card, objects, names,
-                                         followed=not premise_only, self_id=self_id)
+        prefix += _render_leading_premise(leading, seg, card, objects, names,
+                                          followed=not premise_only, self_id=self_id)
     if premise_only:
         return prefix
     if not seg["lines"] and not seg["amount"]:

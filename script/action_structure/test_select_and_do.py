@@ -201,6 +201,17 @@ class SaffiraTest(unittest.TestCase):
         self.assertEqual(len(segs), 3)
         self.assertEqual([s["id"] for s in segs if s["id"] in failed], [])
 
+    def test_draw_branch_writes_back(self):
+        """m2 票 10 重驗:● 第一支「自分はデッキから２枚ドローし、その後手札を１枚選んで捨てる」
+        的抽牌段命中、誰我方、張數 2,抽牌與捨棄兩段都寫回。"""
+        draw_seg, = hit_segments(self.structures, self.cards, SAFFIRA, actions=["抽牌"],
+                                 from_zones=["牌組"])
+        self.assertEqual((draw_seg["agent"], draw_seg["lines"][0]["count"]["value"]), ("我方", 2))
+        discard, = hit_segments(self.structures, self.cards, SAFFIRA, actions=["捨棄"],
+                                from_zones=[{"zone": "手牌", "side": "我方"}])
+        failed = {f["segment"] for f in check_card(own(self.structures, SAFFIRA))}
+        self.assertEqual({draw_seg["id"], discard["id"]} & failed, set())
+
     def test_round_trip(self):
         text = serialize_structures(self.structures)
         self.assertEqual(load_structures(text), self.structures)

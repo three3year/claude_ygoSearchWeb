@@ -232,6 +232,24 @@ class ResistanceSlotTest(unittest.TestCase):
                          [("字面不符", "このカードは光属性モンスターとの戦闘では破壊されない")])
 
 
+MISMATCH_TEXT = "①：デッキから闇属性モンスター１体を特殊召喚する。"
+
+
+def build_with_mismatch(cards, entries, mismatch_ids):
+    """建置後把指定卡物件的屬性改成光:結構說光属性、原文寫闇属性 → 字面不符的固定例。
+    m2 票 11 之後全庫沒有自然的字面不符(原本的「闇属性のモンスター」記下連接字後寫得回原文),
+    所以照本檔其他測試的做法改結構。"""
+    structures, _ = build_structures(cards, entries)
+    for structure in structures:
+        if structure["id"] not in mismatch_ids:
+            continue
+        for obj in structure["objects"]:
+            for atom in (obj["condition"] or {}).get("args", []):
+                if atom.get("attr") == "屬性":
+                    atom["value"] = "光"
+    return structures
+
+
 class ReportTest(unittest.TestCase):
     """全庫報告:通過段數、不通過依原因分類、附全部卡號;同一輸入兩次產出相同。"""
 
@@ -248,15 +266,13 @@ class ReportTest(unittest.TestCase):
             faq(2, "乙", "①：このカードをバウンスする。"),
             faq(3, "丙", "①：このカードをバウンスする。②：このカードを破壊する。"),
             faq(4, "丁", "①：このカードをバウンスする。"),
-            # 效果句的誰模板一律寫「自分は」(助詞不記):字面不符的固定例。原本的「闇属性のモンスター」
-            # 在 m2 票 11 之後記下修飾語的連接字「の」,寫得回原文了。
-            faq(5, "戊", "①：自分がデッキから闇属性モンスター１体を特殊召喚する。"),
+            faq(5, "戊", MISMATCH_TEXT),   # 建置後改成光属性(build_with_mismatch)
         ]
         return cards, entries
 
     def test_report_counts_per_reason(self):
         cards, entries = self.library()
-        structures, _ = build_structures(cards, entries)
+        structures = build_with_mismatch(cards, entries, {5})
         md = render_report(check_structures(structures))
         self.assertIn("| 段 | 8 |", md)
         self.assertIn("| 通過 | 4 |", md)
@@ -265,14 +281,14 @@ class ReportTest(unittest.TestCase):
         self.assertIn("| 無官方日文(不計) | 1 |", md)
         self.assertIn("### 無模板(3 段 / 3 張)", md)
         self.assertIn("### 字面不符(1 段 / 1 張)", md)
-        self.assertIn("`5` 戊 `b0.s2` 產生「自分はデッキから闇属性モンスター１体を特殊召喚する」"
-                      "原文「自分がデッキから闇属性モンスター１体を特殊召喚する」", md)
+        self.assertIn("`5` 戊 `b0.s2` 產生「デッキから光属性モンスター１体を特殊召喚する」"
+                      "原文「デッキから闇属性モンスター１体を特殊召喚する」", md)
         self.assertIn("<!-- 由 script/action_structure/build_reverse_check.py 產生", md)
 
     def test_same_input_renders_identical_report(self):
         cards, entries = self.library()
-        first, _ = build_structures(cards, entries)
-        second, _ = build_structures(list(reversed(cards)), list(reversed(entries)))
+        first = build_with_mismatch(cards, entries, {5})
+        second = build_with_mismatch(list(reversed(cards)), list(reversed(entries)), {5})
         self.assertEqual(render_report(check_structures(first)).encode("utf-8"),
                          render_report(check_structures(second)).encode("utf-8"))
 
@@ -287,7 +303,7 @@ class CliTest(unittest.TestCase):
 
     def test_cli_writes_identical_report_twice(self):
         cards, entries = ReportTest.library()
-        structures, _ = build_structures(cards, entries)
+        structures = build_with_mismatch(cards, entries, {5})
         with tempfile.TemporaryDirectory() as tmp:
             product = os.path.join(tmp, "action_structure.json")
             out = os.path.join(tmp, "report", "reverse_check.md")
@@ -313,11 +329,10 @@ class CliTest(unittest.TestCase):
         residue = [card(82000000 + i, name_ja=f"殘{i}") for i in range(3)]
         cards = bounce + mismatch + residue
         entries = ([faq(c["id"], c["name_ja"], "①：このカードをバウンスする。") for c in bounce]
-                   + [faq(c["id"], c["name_ja"], "①：自分がデッキから闇属性モンスター１体を特殊召喚する。")
-                      for c in mismatch]
+                   + [faq(c["id"], c["name_ja"], MISMATCH_TEXT) for c in mismatch]
                    + [faq(c["id"], c["name_ja"], "①：このカードを破壊する。相手に５００ダメージを与える。")
                       for c in residue])
-        structures, _ = build_structures(cards, entries)
+        structures = build_with_mismatch(cards, entries, {c["id"] for c in mismatch})
         by_id = {s["id"]: s for s in structures}
         for cid in (82000000, 82000001, 82000002):
             block = by_id[cid]["blocks"][0]

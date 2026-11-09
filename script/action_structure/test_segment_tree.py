@@ -93,10 +93,9 @@ class BranchTest(unittest.TestCase):
             "●自分はデッキから１枚ドローする。")
         self.assertIn(TEST_CARD, hits(structures, cards, actions=["加入手牌"],
                                       from_zones=["牌組"], card=GREEDY_POT))
-        failures = check_card(structures[0])
-        # 第二支的「ドローする」還沒有動作詞,只有它不過;引導句與第一支都過。
-        self.assertEqual([(f["segment"], f["reason"]) for f in failures],
-                         [("b0.s70", "無模板")])
+        # 第二支的「ドローする」是抽牌(m2 票 10);引導句與兩支都過。
+        self.assertIn(TEST_CARD, hits(structures, cards, actions=["抽牌"]))
+        self.assertEqual(check_card(structures[0]), [])
 
     def test_unknown_header_leaves_branch_mode_unparsed_but_nothing_silent(self):
         """引導句認不得(「以下の効果を適用する」):分歧方式標解析不出、引導句仍解析成段,

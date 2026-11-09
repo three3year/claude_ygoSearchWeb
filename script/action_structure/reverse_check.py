@@ -20,6 +20,7 @@
 import re
 
 import damage
+import draw
 from archetype_table import fold_width
 from attribute_atoms import EXCEPT, is_param_atom, joiner, render_group, render_level
 from block_split import LABEL_WIDTH
@@ -28,6 +29,8 @@ from premise import render_premise, split_premise
 from condition_atoms import quoted_name, render_atom
 from names_attributes import TREAT_PREDICATE, render_treat_as
 from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, BATTLE_AGENT_MARKER,
+                             CAUSE_EXCLUDE, COUNT_AFTER_OBJECT, EXCLUDE_METHOD_TAIL,
+                             AGENT_PLAYER_WORDS, PLAYER_REF_HEAD, agent_particle,
                              EACH_PREFIX, EACH_SUFFIX, FORMULA_COUNT_TAILS, FORMULA_UPTO_TAIL,
                              PICK_RANDOM,
                              RANDOM_PICK, ZONE_AS_OBJECT,
@@ -523,6 +526,14 @@ def _render_cause(cause, seg, card, objects, names, self_id):
         if obj is None or cause.get("kind") != "效果" or cause.get("text") != CAUSE_EFFECT_OF:
             raise NoTemplate("原因無模板:效果的物件")
         return _render_object(obj, seg, card, names, self_id=self_id) + CAUSE_EFFECT_OF
+    if cause and cause.get("kind") == CAUSE_EXCLUDE:
+        # 「ドロー以外の方法で」(m2 票 10):字面的 X 要拆回 exclude 的動作詞。
+        text = cause.get("text") or ""
+        parsed, _ = (parse_predicates(text[:-len(EXCLUDE_METHOD_TAIL)])
+                     if text.endswith(EXCLUDE_METHOD_TAIL) else (None, None))
+        if parsed is None or [p.action for p in parsed] != cause.get("exclude"):
+            raise NoTemplate("原因無模板:方法")
+        return text
     if cause and cause.get("kind") == CAUSE_METHOD:
         methods = cause.get("methods") or []
         if any(m not in SUMMON_METHODS for m in methods) \
@@ -712,10 +723,9 @@ def _render_damage(seg, card, objects, names, self_id, inner_duration):
             parts.append(_render_object(objects[line["object"]], seg, card, names, line,
                                         self_id=self_id) + line["marker"])
         if seg["agent"] is not None:
-            if seg["lines"] or seg["agent"] not in _SIDE_TEXT:
+            if seg["lines"]:
                 raise NoTemplate(f"誰無模板:{seg['agent']}")
-            parts.append(_SIDE_TEXT[seg["agent"]] + (
-                "が" if seg["kind"] in ("條件", "被代替") else "は"))
+            parts.append(_render_agent(seg["agent"], seg, card))
         if cause_first or seg["modified"]:
             raise NoTemplate("傷害段的格不齊")
         recipient = (damage.render_recipient(seg["recipient"], damage.DEAL_TAILS)
@@ -759,6 +769,112 @@ def _render_battle(seg, card, objects, names, self_id):
     return "".join(_render_object(objects[line["object"]], seg, card, names, line,
                                   self_id=self_id) + line["marker"]
                    for line in lines) + predicate
+
+
+def _last_segment_doing(action, seg, card):
+    """同一區塊裡、這一段之前最後一個做過該動作詞的段 id(「ドローしたプレイヤー」的回指,m2 票 10)。"""
+    block_id = seg["id"].split(".")[0]
+    for block in _all_blocks(card):
+        if block["id"] != block_id:
+            continue
+        found = None
+        for other in block["segments"]:
+            if other["id"] == seg["id"]:
+                break
+            if action in other["actions"]:
+                found = other["id"]
+        return found
+    return None
+
+
+_PLAYER_SIDES = {"我方": "自分", "對手": "相手", "雙方各自": "お互い"}
+_AGENT_TEXT_RE = re.compile("^(?P<word>" + "|".join(AGENT_PLAYER_WORDS)
+                            + ")(?P<marker>が|は|(?<=お互い)に)、?$")
+
+
+def _render_agent(agent, seg, card):
+    """誰(m2 票 10 擴):方的字串寫預設接法(條件段「相手が」、其餘「自分は」);玩家字面
+    `{"side", "text"}` 驗過玩家字與方一致再照字面;動作回指 `{"ref", "segment"}` 要指回這一段之前
+    最後一個做過那個動作的段,接法是預設的。"""
+    particle = agent_particle(seg["kind"])
+    if isinstance(agent, dict) and "ref" in agent:
+        ref = agent["ref"] or ""
+        past = ref[:-len(PLAYER_REF_HEAD)] if ref.endswith(PLAYER_REF_HEAD) else None
+        action = next((a for a, p in ACTION_PAST.items() if p == past), None)
+        if action is None or agent.get("segment") != _last_segment_doing(action, seg, card):
+            raise NoTemplate("誰的動作回指與先前的段不符")
+        return ref + particle
+    if isinstance(agent, dict):
+        m = _AGENT_TEXT_RE.match(agent.get("text") or "")
+        if not m or AGENT_PLAYER_WORDS[m.group("word")] != agent.get("side"):
+            raise NoTemplate(f"誰無模板:{agent}")
+        return agent["text"]
+    if agent not in _PLAYER_SIDES:
+        raise NoTemplate(f"誰無模板:{agent}")
+    return _PLAYER_SIDES[agent] + particle
+
+
+_DRAWN_CONDITION = {"op": "大類", "value": "卡"}
+
+
+def _is_draw_segment(seg, objects):
+    """抽牌段(m2 票 10):動作詞只有抽牌、一條線指向新建的「カード」物件(有寫或沒寫)。"""
+    if seg["actions"] != [draw.DRAW_ACTION] or len(seg["lines"]) != 1:
+        return False
+    line = seg["lines"][0]
+    obj = objects.get(line["object"])
+    return (obj is not None and obj["source"] == {"kind": "新建"}
+            and obj["condition"] == _DRAWN_CONDITION and line["ref"] is None
+            and line["marker"] in (None, draw.DRAWN_MARKER))
+
+
+def _render_draw(seg, card, objects, names):
+    """抽牌子句:[算式(主語前)][誰][それぞれ][原因][算式(名詞前)][從から][カードを][N枚][通常の]述語。
+    物件沒寫時(助詞 None)物件不能有字面;從是明寫或推得的牌組、到是推得的手牌。"""
+    line = seg["lines"][0]
+    obj = objects[line["object"]]
+    if (line["role"] != "受事" or line["targeting"] or line.get("pick") or line.get("elided")
+            or obj["count"] or obj["unparsed"]
+            or any(seg[slot] for slot in ("recipient", "amount", "modified", "per_turn", "times"))
+            or render_timing(seg["timing"])):
+        raise NoTemplate("抽牌段的格無模板")
+    to = line["to"]
+    if not to or to["source"] != "推得" or [z["zone"] for z in to["zones"]] != ["手牌"]:
+        raise NoTemplate("抽牌段的到無模板")
+    from_ = line["from"]
+    if from_ and from_["source"] == "明寫" and not from_.get("placement"):
+        from_text = _render_zone_text(from_, "から")
+    elif from_ and from_["source"] == "推得" and [z["zone"] for z in from_["zones"]] == ["牌組"]:
+        from_text = ""
+    else:
+        raise NoTemplate("抽牌段的從無模板")
+    if line["marker"] is None:
+        if obj["text"] is not None or obj["span"] is not None:
+            raise NoTemplate("抽牌段的物件無模板")
+        object_text = ""
+    else:
+        object_text = _render_object(obj, seg, card, names, line, with_count=False) + line["marker"]
+    try:
+        count_text, count_placement = draw.render_count(line["count"])
+    except ValueError as e:
+        raise NoTemplate(str(e)) from None
+    each = draw.EACH_WORD if (line["count"] or {}).get("each") else ""
+    cause, rule = "", ""
+    if draw.is_rule_cause(seg["cause"]):
+        rule = draw.RULE_TEXT
+    elif seg["cause"]:
+        cause = _render_cause(seg["cause"], seg, card, objects, names, "o0")
+    targeting, select, predicate, predicate_to = _render_predicate(seg, None)
+    if targeting or select or predicate_to:
+        raise NoTemplate("抽牌段的述語無模板")
+    agent = _render_agent(seg["agent"], seg, card) if seg["agent"] is not None else ""
+    return "".join([
+        count_text if count_placement == draw.PLACEMENT_BEFORE_SUBJECT else "",
+        agent, each, cause,
+        count_text if count_placement == draw.PLACEMENT_BEFORE_NOUN else "",
+        from_text, object_text,
+        count_text if count_placement is None else "",
+        rule, predicate])
 
 
 def _is_segment_done(premise):
@@ -833,14 +949,19 @@ def render_segment(seg, card, self_id="o0"):
         text = _render_modify(seg, card, objects, names, self_id)
     elif any(line["role"] == "施事" for line in seg["lines"]):
         text = _render_battle(seg, card, objects, names, self_id)
+    elif _is_draw_segment(seg, objects):
+        if clause_duration is not None:
+            raise NoTemplate("期間無模板:句中")
+        text = _render_draw(seg, card, objects, names)
     else:
         parts = []
         if seg["agent"] is not None:
-            if seg["agent"] not in _SIDE_TEXT:
-                raise NoTemplate(f"誰無模板:{seg['agent']}")
-            # 誰的助詞:條件子句是「相手が〜した時」,效果句是「自分は〜する」(全庫 66:0、31:1)。
-            parts.append(_SIDE_TEXT[seg["agent"]] + (
-                "が" if seg["kind"] in ("條件", "被代替") else "は"))
+            parts.append(_render_agent(seg["agent"], seg, card))
+        cause_front = bool(seg["cause"]) and seg["cause"].get("placement") == "名詞前"
+        if cause_front:
+            # 寫在主語後、物件前的方法原因(「相手がドロー以外の方法でデッキから〜」,m2 票 10)。
+            parts.append(_render_cause({k: v for k, v in seg["cause"].items() if k != "placement"},
+                                       seg, card, objects, names, self_id))
         # 主語省略的線(票 09)不寫物件與助詞;其餘線的助詞要一致。
         spoken = [line for line in seg["lines"] if not line.get("elided")]
         if len(spoken) != len(seg["lines"]) and len(seg["lines"]) != 1:
@@ -889,6 +1010,11 @@ def render_segment(seg, card, self_id="o0"):
             parts.append(count_text)   # 物件前的變數數量(「破壊した数だけ相手フィールドの〜」)
         if from_placement == "名詞前":
             parts.append(from_text)
+        if count_placement == COUNT_AFTER_OBJECT:
+            # 回指後接數量(「そのカード１枚を」,m2 票 10):只有一條線時寫在物件與助詞之間。
+            if len(words) != 1:
+                raise NoTemplate("對象線的助詞或數量不一致")
+            words[0] += count_text
         if words:
             parts.append("と".join(words) + marker)
         parts.append(RANDOM_PICK if pick else "")
@@ -896,7 +1022,7 @@ def render_segment(seg, card, self_id="o0"):
             parts.append(count_text)
         parts.append(render_per_turn(seg["per_turn"]))
         parts.append(targeting_text or "")
-        if seg["cause"]:
+        if seg["cause"] and not cause_front:
             parts.append(_render_cause(seg["cause"], seg, card, objects, names, self_id))
         parts.append(render_timing(seg["timing"]))
         parts.append(to_form)

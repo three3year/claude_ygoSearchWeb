@@ -63,11 +63,16 @@
   與計數器「(Xの)魔力カウンター」(`counter` 種類名);數量單位「つ」;舊式代價「〜く事で、」。
   標準卡順手收的:「このカードを対象とする(Xの)効果が発動した」(物件條件 以此卡為對象)、超量素材行「×N」、
   物件前的「〜の数まで、」、片假名子類型(リンク…)、修飾語連接字與預設不同時記 `joiner`。
+- 抽牌(m2 票 10,`draw`):「[誰]デッキから[カードを]N枚ドローする」另開句型,抽到的卡是新建物件(「カードを」
+  沒寫時沒有字面)、張數在對象線、從牌組到手牌(推得);誰可為「お互いは」與指回抽牌段的「ドローしたプレイヤーは」
+  (`agent` {ref, segment});原因加規則(通常の)與方法(「ドロー以外の方法で」,exclude);「自身の手札」的方是自身;
+  回指後接數量(「そのカード１枚を」)記在對象線。
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
 """
 import re
 
 import damage
+import draw
 from archetype_table import fold_width
 from attribute_atoms import is_param_atom, joiner, parse_modifier as parse_param_group
 from attribute_words import ATTRIBUTE_JA, RACE_JA
@@ -106,6 +111,7 @@ INFERENCE_TABLE = {
     "裝備": (None, "魔陷區"),
     "放置": (None, "魔陷區"),     # m2 票 05
     "覆蓋": (None, "魔陷區"),
+    "抽牌": ("牌組", "手牌"),     # m2 票 10
 }
 # 區域字面表在 structure_shape.ZONE_WORDS(三處共用)。
 # 場上系區域:沒寫方時不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
@@ -119,14 +125,17 @@ HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
 _HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE), key=len,
                          reverse=True))
 # 「持ち主の手札に戻す」的持ち主(m2 票 09):值持有者,靜態判不了是哪一方,查詢指定我方/對手時不命中。
-SIDE_WORDS = {"自分": "我方", "相手": "對手", "自分か相手": "任一方", "持ち主": "持有者"}
+# m2 票 10:「お互いは」(誰,雙方各自);「自身の手札」的自身 = 這一段的誰那一方(「ドローしたプレイヤーは
+# 自身の手札を」),同持有者靜態判不了,查詢指定我方/對手時不命中。
+SIDE_WORDS = {"自分": "我方", "相手": "對手", "自分か相手": "任一方", "持ち主": "持有者",
+              "お互い": "雙方各自", "自身": "自身"}
 EXIST_WORDS = ("あった", "ある", "存在する", "存在した")
 FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
 
 _ZONE_WORDS_ALT = "|".join(w for w, _ in ZONE_WORDS)
 # 區域短語:[自分の|相手の|自分か相手の]區域(・區域|か區域)*;「・」與「か」都是列舉
 # (自分の手札・フィールド、自分のフィールドか墓地),字面由從/到的 text 還原(票 06)。
-_ZONE_PHRASE = (f"(?:(?:自分か相手|自分|相手|持ち主)の?)?(?:{_ZONE_WORDS_ALT})"
+_ZONE_PHRASE = (f"(?:(?:自分か相手|自分|相手|持ち主|自身)の?)?(?:{_ZONE_WORDS_ALT})"
                 f"(?:[・か](?:{_ZONE_WORDS_ALT}))*")
 # 受方可以是物件的回指(「この効果で特殊召喚したモンスターに装備できる」,票 06)。
 _RECIPIENT_REF = ("(?:この効果で)?(?:その|それらの|" + "|".join(ACTION_PAST.values())
@@ -156,7 +165,13 @@ _METHOD_CAUSE = (f"(?:{'|'.join(SUMMON_METHODS)})(?:及び(?:{'|'.join(SUMMON_ME
 # 「Xとの戦闘では」(m2 票 04):戰鬥的對手是物件。「〜の(効果を受けない)」:誰的效果(OWNER_PATTERN)。
 _BATTLE_CAUSE = "(?:「[^「」]*」|[^を、「」])+?との(?:戦闘では|戦闘で|戦闘によって)"
 _BATTLE_CAUSE_RE = re.compile("^(?P<phrase>.+?)との(?P<tail>戦闘では|戦闘で|戦闘によって)$")
-_CAUSE_ALT = f"{CAUSE_PATTERN}|{_NAMED_CAUSE}|{_METHOD_CAUSE}|{_BATTLE_CAUSE}|{OWNER_PATTERN}"
+# 「ドロー以外の方法で手札に加わった」(m2 票 10):原因是方法,`exclude` 記被排除的動作詞;
+# 「X以外の」的 X 是同義表的述語字幹(目前只收ドロー,全庫 33 處)。
+EXCLUDE_METHOD_TAIL = "以外の方法で"
+EXCLUDE_METHOD_PATTERN = f"ドロー{EXCLUDE_METHOD_TAIL}"
+CAUSE_EXCLUDE = "方法"
+_CAUSE_ALT = (f"{CAUSE_PATTERN}|{_NAMED_CAUSE}|{_METHOD_CAUSE}|{_BATTLE_CAUSE}|{OWNER_PATTERN}"
+              f"|{EXCLUDE_METHOD_PATTERN}")
 _NAMED_CAUSE_RE = re.compile(f"^(?P<name>「[^「」]+」)の効果で$")
 _METHOD_CAUSE_RE = re.compile(f"^{_METHOD_CAUSE}$")
 CAUSE_EFFECT_OF = "の効果で"
@@ -234,8 +249,22 @@ PICK_RANDOM = "隨機"
 # 物件前的「到に」:主語形「自分フィールドにモンスターが特殊召喚された」(助詞が時才有);
 # 後接「存在する」的是舊式從的助詞(フィールド上に存在するモンスター),不是到。
 _TO_FRONT = f"(?:(?P<to_front>{_ZONE_PHRASE})に(?!(?:{DISPLAY_WORD}で)?存在する))?"
+# 誰(m2 票 10 擴):玩家字面「自分/相手/お互い」與動作回指「ドローしたプレイヤー」(指回本區塊最近做過
+# 那個動作的段);助詞 が/は(「お互いに」也是誰),後面可帶讀點。
+PLAYER_REF_HEAD = "プレイヤー"
+# 誰的玩家字面 → 方;「お互いのプレイヤー」「相手プレイヤー」不是預設寫法,記成 {"side", "text"}。
+AGENT_PLAYER_WORDS = {"お互いのプレイヤー": "雙方各自", "相手プレイヤー": "對手",
+                      "自分": "我方", "相手": "對手", "お互い": "雙方各自"}
+AGENT_PATTERN = ("|".join(AGENT_PLAYER_WORDS) + "|(?:"
+                 + "|".join(sorted(ACTION_PAST.values(), key=len, reverse=True))
+                 + f"){PLAYER_REF_HEAD}")
+_AGENT = (f"(?:(?P<agent>{AGENT_PATTERN})(?P<agent_marker>が|は|(?<=お互い)に)"
+          "(?P<agent_pause>、)?)?")
+_DRAW_RE = draw.clause_pattern(AGENT_PATTERN)
 _CLAUSE_PATTERN = (
-    "^(?:(?P<agent>自分|相手)(?:が|は))?"
+    f"^{_AGENT}"
+    # 寫在主語後、物件前的方法原因(「相手がドロー以外の方法でデッキからモンスターを手札に加えた」)。
+    f"(?P<cause_front>{EXCLUDE_METHOD_PATTERN})?"
     f"{_TO_FRONT}"
     f"(?P<count_front>{FRONT_COUNT_PATTERN})?"
     # 物件前的「從」:「EXデッキから特殊召喚されたモンスター」的「から」是修飾語(曾被特殊召喚),
@@ -305,10 +334,13 @@ BATTLE_PREDICATE = "戦闘を行"
 _BATTLE_RE = re.compile(
     f"^(?P<agent>[^、]+?){BATTLE_AGENT_MARKER}"
     f"(?:(?P<partner>[^、]+?){BATTLE_PARTNER_MARKER})?(?P<pred>{BATTLE_PREDICATE}[^を、]*)$")
-_FROM_RE = re.compile("^(?:(?P<side>自分か相手|自分|相手|持ち主)の?)?(?P<zones>.+)$")
+_FROM_RE = re.compile("^(?:(?P<side>自分か相手|自分|相手|持ち主|自身)の?)?(?P<zones>.+)$")
 _ZONE_PHRASE_RE = re.compile(f"^{_ZONE_PHRASE}$")
 _SELF_RE = re.compile("^このカード$")
 REF_RE = re.compile("^(?P<ref>その|それらの)(?P<head>モンスター|カード)$")
+# 回指後接數量(「そのカード１枚を相手に見せて」,m2 票 10):數量屬於這次提及,記在對象線、placement 物件後。
+_REF_COUNT_RE = re.compile("^(?P<phrase>(?:その|それらの)(?:モンスター|カード))(?P<count>[０-９]+(?:体|枚))$")
+COUNT_AFTER_OBJECT = "物件後"
 # 「その発動」:指回本區塊最近被發動的那張卡(「罠カードが発動した時、…その発動を無効にし」,票 09)。
 ACTIVATION_REF = "その発動"
 # 數量格(spec「數量」:支付 1000LP,段可無物件):「１０００LP」當受詞時不是物件。
@@ -358,6 +390,18 @@ REASON_REF = "指回的物件找不到"
 REASON_ACTIVATION = "發動句解析不出"
 REASON_CAUSE = "原因解析不出"
 REASON_DISPLAY = "表示形式沒有到"
+
+
+def agent_particle(kind):
+    """誰的預設接法:條件子句是「相手が〜した時」,效果句是「自分は〜する」(全庫 66:0、31:1)。"""
+    return "が" if kind in ("條件", "被代替") else "は"
+
+
+def agent_side(agent):
+    """agent 格 → 方(字串或玩家字面的 side);動作回指沒有靜態的方,回 None。"""
+    if isinstance(agent, dict):
+        return agent.get("side")
+    return agent
 
 
 def parse_from(phrase):
@@ -490,6 +534,32 @@ class BlockState:
         # 前一截解析不出(里程碑二票 02):它句首「Xは」的(字面, 句起點),右半主語省略時才建它的
         # 物件;沒有「Xは」是 TOPIC_UNKNOWN。
         self.topic = None
+        # 動作詞 → 本區塊最近做過它的段 id(「ドローしたプレイヤーは」的 agent 回指,m2 票 10)。
+        self.action_segments = {}
+
+    def note_actions(self, seg):
+        """段解析完後記下它做過的動作詞,給之後的「〜したプレイヤー」指回。"""
+        for action in seg["actions"]:
+            self.action_segments[action] = seg["id"]
+
+    def agent_of(self, word, marker, pause, kind):
+        """誰的字面 → (agent 格, 原因)。玩家字面寫成預設接法(條件段「相手が」、其餘「自分は」)時
+        是方的字串;其他接法(「お互いに」「自分は、」)記 `{"side", "text"}`(同受方的玩家字面);
+        「ドローしたプレイヤー」記 `{"ref", "segment"}`,接法要是預設的。"""
+        text = word + marker + (pause or "")
+        if word not in AGENT_PLAYER_WORDS:
+            past = word[:-len(PLAYER_REF_HEAD)]
+            action = next(a for a, p in ACTION_PAST.items() if p == past)
+            seg_id = self.action_segments.get(action)
+            if seg_id is None:
+                return None, REASON_REF
+            if marker + (pause or "") != agent_particle(kind):
+                return None, REASON_CLAUSE
+            return {"ref": word, "segment": seg_id}, None
+        side = AGENT_PLAYER_WORDS[word]
+        if text == word + agent_particle(kind) and SIDE_WORDS.get(word) == side:
+            return side, None
+        return {"side": side, "text": text}, None
 
     def elided_subject(self):
         """主語省略的子句的物件:本句「Xは」的物件,沒有就是此卡;前一截解析不出時是它的「Xは」,
@@ -517,6 +587,13 @@ class BlockState:
         cause = parse_cause(text)
         if cause is not None:
             return cause, None
+        if text.endswith(EXCLUDE_METHOD_TAIL):
+            # 「ドロー以外の方法で」(m2 票 10):X 是述語字幹,拆回動作詞記進 exclude。
+            parsed, reason = parse_predicates(text[:-len(EXCLUDE_METHOD_TAIL)])
+            if parsed is None:
+                return None, REASON_CAUSE
+            return {"kind": CAUSE_EXCLUDE, "exclude": [p.action for p in parsed],
+                    "text": text}, None
         named = _NAMED_CAUSE_RE.match(text)
         if named:
             obj_id, _, reason = self.object_at(named.group("name"), sentence_start)
@@ -933,6 +1010,10 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     if battle:
         _fill_battle(seg, battle, state, sentence_start)
         return
+    drawing = _DRAW_RE.match(clause_text)
+    if drawing:
+        _fill_draw(seg, drawing, kind, state, sentence_start, inherited_timing)
+        return
     m = _TARGETING_THIS_CLAUSE_RE.match(clause_text) or _CLAUSE_RE.match(clause_text)
     if m and m.group("to_front") and m.group("marker") != "が":
         m = _CLAUSE_NO_TO_FRONT_RE.match(clause_text)
@@ -986,7 +1067,12 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     if parsed:
         seg["polarity"], seg["optional"] = resolve_polarity(parsed, marker)
     written_to = next((p.to for p in reversed(parsed) if p.to), None)
-    agent = SIDE_WORDS.get(g("agent")) if g("agent") else None
+    agent = None
+    if g("agent"):
+        agent, reason = state.agent_of(g("agent"), g("agent_marker"), g("agent_pause"), kind)
+        if agent is None:
+            seg["unparsed"] = unparsed(reason)
+            return
     seg["agent"] = agent
     if g("recipient") in SIDE_WORDS:
         seg["recipient"] = SIDE_WORDS[g("recipient")]
@@ -997,11 +1083,16 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
             seg["unparsed"] = unparsed(reason)
             return
         seg["recipient"] = {"object": obj_id, "ref": ref}
-    if g("cause"):
-        seg["cause"], reason = state.cause_at(g("cause"), sentence_start)
+    if g("cause") and g("cause_front"):
+        seg["unparsed"] = unparsed(REASON_CAUSE)   # 兩處原因,不猜
+        return
+    if g("cause") or g("cause_front"):
+        seg["cause"], reason = state.cause_at(g("cause") or g("cause_front"), sentence_start)
         if seg["cause"] is None:
             seg["unparsed"] = unparsed(reason)
             return
+        if g("cause_front"):
+            seg["cause"]["placement"] = "名詞前"
     if g("per_turn"):
         seg["per_turn"] = parse_per_turn(g("per_turn"))
     if g("interval"):
@@ -1047,7 +1138,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
              if a in INFERENCE_TABLE), (None, None))
     # 推得的場上/墓地歸誰:特殊召喚(含下位詞)到施事者的場上;其餘不知道就不標方。
     summoning = any("特殊召喚" in action_ancestors(a) for a in seg["actions"])
-    inferred_side = (agent or "我方") if summoning else None
+    inferred_side = (agent_side(agent) or "我方") if summoning else None
     written_counts = [(g(group), placement) for group, placement in
                       (("count", None), ("count2", "述語前"), ("count_front", "名詞前"))
                       if g(group)]
@@ -1074,6 +1165,15 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         # 區域當物件(m2 票 09):區域短語就是「從」,寫在物件的位置。
         from_zones, from_text, from_placement = zone_object, phrases[0], ZONE_AS_OBJECT
     for phrase in phrases:
+        ref_count = _REF_COUNT_RE.match(phrase or "")
+        if ref_count and (count is not None or len(phrases) > 1 or state.object_at(
+                ref_count.group("phrase"), sentence_start)[0] is None):
+            # 只認單一物件、助詞後沒有數量、指得回東西的;其餘照舊整串當新建物件(「その」標修飾
+            # 解析不出),不改既有結果。
+            ref_count = None
+        if ref_count:
+            phrase = ref_count.group("phrase")
+            count = floating_count(ref_count.group("count"), COUNT_AFTER_OBJECT)
         if phrase is None:
             obj_id, ref = elided, None
         elif zone_object:
@@ -1138,6 +1238,68 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
             state.recent.append(obj_id)
         state.acted.setdefault(obj_id, []).extend(seg["actions"])
     _update_positions(seg, state)
+    state.note_actions(seg)
+
+
+def _fill_draw(seg, m, kind, state, sentence_start, inherited_timing=None):
+    """抽牌子句(m2 票 10,`draw`):抽到的卡是新建物件(「カードを」沒寫時物件沒有字面)、張數在對象線、
+    從牌組(明寫或推得)到手牌(推得);玩家主語進 `agent`。"""
+    g = m.groupdict().get
+    parsed, reason = parse_predicates(g("pred"))
+    seg["predicate"] = g("pred")
+    if parsed is None or [p.action for p in parsed] != [draw.DRAW_ACTION]:
+        seg["unparsed"] = unparsed(reason or REASON_CLAUSE)
+        return
+    seg["actions"] = [draw.DRAW_ACTION]
+    seg["voice"] = merged_voice(parsed)
+    seg["polarity"], seg["optional"] = resolve_polarity(parsed, None)
+    if g("agent"):
+        seg["agent"], reason = state.agent_of(g("agent"), g("agent_marker"),
+                                              g("agent_pause"), kind)
+        if seg["agent"] is None:
+            seg["unparsed"] = unparsed(reason)
+            return
+    count, ambiguous = draw.parse_count(g("count"), g("count_front"), g("count_lead"), g("each"))
+    if ambiguous or (g("each") and count is None):
+        seg["unparsed"] = unparsed(REASON_CLAUSE)   # 張數寫了兩處、或「それぞれ」沒有張數,不猜
+        return
+    if g("cause") and g("rule"):
+        seg["unparsed"] = unparsed(REASON_CAUSE)
+        return
+    if g("cause"):
+        seg["cause"], reason = state.cause_at(g("cause"), sentence_start)
+        if seg["cause"] is None:
+            seg["unparsed"] = unparsed(reason)
+            return
+    elif g("rule"):
+        seg["cause"] = draw.rule_cause()
+    if inherited_timing:
+        seg["timing"] = _same_timing(inherited_timing)
+    elif state.delayed and kind == "效果":
+        seg["timing"] = implicit_delay()
+    if g("object"):
+        obj_id, _, _ = state.new_object(g("object"), sentence_start, {"kind": "新建"})
+    else:
+        # 沒寫「カードを」:物件沒有字面與範圍,id 取述語的偏移(穩定、不與其他物件重複)。
+        offset = state._offset(g("pred"), sentence_start)
+        obj_id = state.add_object(new_object(
+            f"{state.block['id']}.o{offset}", {"kind": "新建"}, block=state.block["id"],
+            condition=category_condition(draw.DRAWN_OBJECT)))
+    if g("from"):
+        from_ = position(parse_from(g("from")), "明寫", text=g("from") + "から")
+        state.find(obj_id)["initial_position"] = list(from_["zones"])
+    else:
+        from_ = position([zone(INFERENCE_TABLE[draw.DRAW_ACTION][0], None)], "推得",
+                         inferred=True)
+    line = new_line(obj_id, "受事", marker=draw.DRAWN_MARKER if g("object") else None,
+                    count=count)
+    line["from"] = from_
+    line["to"] = position([zone(INFERENCE_TABLE[draw.DRAW_ACTION][1], None)], "推得",
+                          inferred=True)
+    seg["lines"] = [line]
+    state.acted.setdefault(obj_id, []).extend(seg["actions"])
+    _update_positions(seg, state)
+    state.note_actions(seg)
 
 
 def _clause_predicate(m):

@@ -40,7 +40,8 @@ from segment_fields import (MENTION_FORMS, OWNER_JOINER, OWNER_TEXT, REPLACEMENT
                             render_treat_delta, resolve_polarity,
                             split_duration)
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
-from structure_shape import AMOUNT_FORMULA, BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, NoTemplate
+from structure_shape import (AMOUNT_FORMULA, BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, NoTemplate,
+                             swap_sides)
 from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION,
                       attack_times, merged_voice, parse_predicates, split_select,
                       split_targeting)
@@ -954,16 +955,24 @@ def check_card(card):
     bindings = embedded_bindings(card)
     names = {row["id"]: row for row in card["names"]}
     for block in _all_blocks(card):
-        self_id = (bindings.get(block["id"]) or {}).get("自己", "o0")
+        binding = bindings.get(block["id"]) or {}
+        self_id = binding.get("自己", "o0")
         holes = _holes(block, card)
+        view = card
+        if binding.get("我方") == "對手":
+            # 效果被換掉(m2 票 12):內容區塊存的是對調過的方,依綁定對調回去再寫回原文的視角。
+            view = {**card, "objects": [swap_sides(o) if o["block"] == block["id"] else o
+                                        for o in card["objects"]]}
         for seg in block["segments"]:
+            if view is not card:
+                seg = swap_sides(seg)
             if seg["unstructured"]:
                 # 重複到停為止:不算通過也不算字面不符,另列一類(spec 故事 28)。
                 failures.append(_failure(card, block, seg["id"], REASON_UNSTRUCTURED,
                                          DETAIL_REPEAT, None, seg["text"]))
                 continue
             try:
-                rendered = render_segment(seg, card, self_id=self_id)
+                rendered = render_segment(seg, view, self_id=self_id)
             except NoTemplate as e:
                 failures.append(_failure(card, block, seg["id"],
                                          REASON_NO_TEMPLATE, str(e)))

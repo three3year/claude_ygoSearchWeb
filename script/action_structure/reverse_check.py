@@ -26,15 +26,16 @@ from report_common import card_order, safe_label
 from premise import render_premise, split_premise
 from condition_atoms import quoted_name, render_atom
 from names_attributes import TREAT_PREDICATE, render_treat_as
-from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, CAUSE_EFFECT_OF,
-                             CAUSE_METHOD, EXIST_WORDS, FROM_PARTICLES,
+from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, BATTLE_AGENT_MARKER,
+                             BATTLE_PARTNER_MARKER, BATTLE_TIMING_REF, CAUSE_EFFECT_OF,
+                             CAUSE_METHOD, PREMISE_DONE, EXIST_WORDS, FROM_PARTICLES,
                              HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
                              SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
 from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
                             render_placement_form, render_timing, resolve_polarity,
                             split_duration)
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
-from structure_shape import DEFAULT_ZONE_WORD, NoTemplate
+from structure_shape import BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, NoTemplate
 from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION,
                       merged_voice, parse_predicates, split_targeting)
 
@@ -505,6 +506,29 @@ def _render_materials(seg, card, names, objects, self_id):
         for line in seg["lines"])
 
 
+def _render_battle(seg, card, objects, names, self_id):
+    """戰鬥子句(m2 票 07):[施事]が[受事と]述語;施事一條、受事至多一條,線不帶從/到/取對象/數量,
+    段不帶誰、受方、原因、時機、數量。"""
+    lines = seg["lines"]
+    roles = [(line["role"], line["marker"]) for line in lines]
+    if roles not in ([("施事", BATTLE_AGENT_MARKER)],
+                     [("施事", BATTLE_AGENT_MARKER), ("受事", BATTLE_PARTNER_MARKER)]):
+        raise NoTemplate("戰鬥的對象線無模板")
+    if (any(line["from"] or line["to"] or line["targeting"] or line["count"] for line in lines)
+            or any(seg[slot] for slot in ("agent", "recipient", "cause", "timing", "amount"))):
+        raise NoTemplate("戰鬥段的格無模板")
+    _, predicate, _ = _render_predicate(seg, BATTLE_AGENT_MARKER)
+    return "".join(_render_object(objects[line["object"]], seg, card, names, line,
+                                  self_id=self_id) + line["marker"]
+                   for line in lines) + predicate
+
+
+def _is_segment_done(premise):
+    """前提 段已執行(戰鬥時點的「その」,指回同一句前一個條件段)。"""
+    return (premise is not None and set(premise) == {"op", "segment"}
+            and premise["op"] == PREMISE_DONE and bool(premise["segment"]))
+
+
 def render_segment(seg, card, self_id="o0"):
     """簡單子句模板:[句首期間][前提][代わりに][誰が][到に][從から|の|に存在する][物件][助詞][數量][取對象][原因][時機][形式][從から][到に][受方に]述語[觸發形]
     (物件前的「到に」只在助詞是「が」時;「從」只在物件前或述語前其中一處,照 placement;
@@ -534,6 +558,15 @@ def render_segment(seg, card, self_id="o0"):
     prefix, inner_duration = split_duration(seg["duration"])
     if inner_duration is not None and seg["actions"] != [MODIFY_ACTION]:
         raise NoTemplate("期間無模板:句中")
+    if (seg["kind"] == "條件" and seg["trigger"] in BATTLE_TRIGGERS
+            and not seg["actions"] and not seg["lines"]):
+        # 只有戰鬥時點的條件段(m2 票 07):[前提][その]觸發形;「その」是前提 段已執行。
+        if _is_segment_done(seg["premise"]):
+            return prefix + BATTLE_TIMING_REF + seg["trigger"]
+        if leading is not None:
+            prefix += _render_leading_premise(leading, seg, card, objects, names,
+                                              followed=True, self_id=self_id)
+        return prefix + seg["trigger"]
     if leading is not None:
         prefix += _render_leading_premise(leading, seg, card, objects, names,
                                           followed=not premise_only, self_id=self_id)
@@ -547,6 +580,8 @@ def render_segment(seg, card, self_id="o0"):
         text = _render_existence(seg, existence, card, objects)
     elif seg["actions"] == [MODIFY_ACTION]:
         text = _render_modify(seg, objects)
+    elif any(line["role"] == "施事" for line in seg["lines"]):
+        text = _render_battle(seg, card, objects, names, self_id)
     else:
         parts = []
         if seg["agent"] is not None:

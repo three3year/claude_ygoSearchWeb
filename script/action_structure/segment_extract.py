@@ -59,9 +59,10 @@ from clause_join import JOIN, JOIN_TAILS, split_continuative
 from condition_atoms import parse_modifier as parse_atom_modifier
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
 from premise import split_premises
-from segment_fields import (CAUSE_PATTERN, REPLACEMENT_PREFIX, TIMING_PATTERN,
-                            implicit_delay, is_delayed, mention_head, parse_cause,
-                            parse_modify, parse_timing, resolve_polarity)
+from segment_fields import (CAUSE_PATTERN, ORDER_PATTERN, REPLACEMENT_PREFIX,
+                            TIMING_PATTERN, TREAT_PATTERN, implicit_delay, is_delayed,
+                            mention_head, parse_cause, parse_modify,
+                            parse_placement_form, parse_timing, resolve_polarity)
 from structure_shape import (DEFAULT_ZONE_WORD, ZONE_WORDS, new_line, new_object,
                              new_segment, position, unparsed, zone)
 from synonyms import (
@@ -168,8 +169,9 @@ _CLAUSE_PATTERN = (
     f"(?P<targeting>{'|'.join(TARGETING_PREFIXES)})?"
     f"(?P<cause>{_CAUSE_ALT})?"
     f"(?P<timing>{TIMING_PATTERN})?"
-    # 到的放置形式:「好きな順番で」;「装備魔法カード扱いで、」是裝備時到的形式(到本身推得)。
-    "(?P<form>好きな順番で|装備(?:魔法)?カード扱いで、?)?"
+    # 到的放置形式(segment_fields.parse_placement_form):順序「好きな順番で」;
+    # 卡片種類視同「装備魔法カード扱いで、」是裝備時到的形式(到本身推得)。
+    f"(?:(?P<treat>{TREAT_PATTERN})|(?P<order>{ORDER_PATTERN}))?"
     # 「從」也可寫在物件後(XをデッキからYに加える);受方(相手に見せて)緊接述語前。
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
@@ -768,9 +770,10 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                 side = "我方" if inferred_from == "手牌" else None
                 line["from"] = position([zone(inferred_from, side, side and "預設")],
                                         "推得", inferred=True)
+        form = parse_placement_form(g("treat"), g("order"))  # 每條線各一份,不共用
         if to_zones is not None:
             line["to"] = position(to_zones, "明寫", text=to_text,
-                                  form=g("form"))
+                                  form=form)
             if to_front:
                 line["to"]["placement"] = "名詞前"
         elif written_to:
@@ -778,7 +781,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         elif inferred_to:
             line["to"] = position([zone(inferred_to, inferred_side,
                                         inferred_side and "預設")], "推得",
-                                  inferred=True, form=g("form"))
+                                  inferred=True, form=form)
         seg["lines"].append(line)
         if obj_id != state.self_id and obj_id not in state.recent:
             state.recent.append(obj_id)

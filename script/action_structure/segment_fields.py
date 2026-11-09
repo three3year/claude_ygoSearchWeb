@@ -9,10 +9,12 @@
   `{"kind": "延遲", "text": 字面, "phase": 階段, "turn": 次の/このターンの, "side": 方}`;
   序列中段出現條件段之後的段也算延遲,但沒有字面:`{"kind": "延遲"}`。延遲段不標取對象(spec)。
 - 期間(`duration`):「そのターンの終了時まで」「ターン終了時まで」→ `{"kind": "本回合", "text"}`;
-  其他「〜まで」→ `{"kind": "到X為止", "text"}`。目前只出現在性質變更句。
+  其他「〜まで」→ `{"kind": "到X為止", "text"}`。形狀允許出現在任何段、本回合可帶選填 `range`
+  (整回合/發動後,`structure_shape.DURATION_RANGES`);目前只從性質變更句抽出。
 - 被改的屬性(`modified`):性質變更句「その攻撃力はそのターンの終了時まで元々の攻撃力の倍になる」
-  「このカードの攻撃力は０になる」→ 動作詞「性質變更」、`{"attr": 攻擊力|守備力, "form": 倍|半分|數值,
-  "base": 「元々の攻撃力」(倍/半分時), "value": 整數(數值時)}`;對象線的 `ref` 記提及的字面
+  「このカードの攻撃力は０になる」→ 動作詞「性質變更」、`{"attr": [攻擊力|守備力], "form": 倍|半分|數值,
+  "base": 「元々の攻撃力」(倍/半分時), "value": 整數(數值時)}`(attr 是清單,值域與 form 的增/減、
+  選填 limit `{"cmp", "text"}` 見 `structure_shape.MODIFY_ATTRS`/`MODIFY_FORMS`,目前只抽出這兩種);對象線的 `ref` 記提及的字面
   (「その」「このカードの」「そのモンスターの」)。後續段要讀改後的屬性時,往前找同區塊作用在同一物件
   上的性質變更段即可(段上就有 `modified`),不另存狀態。
 - 代替(`replaces`):「〜場合、代わりに〜」的條件段改標「被代替」,後面的段記 `replaces` = 被代替段 id,
@@ -21,7 +23,7 @@
 import re
 
 from premise import PHASE_WORDS
-from structure_shape import NoTemplate
+from structure_shape import NoTemplate, placement_form
 from synonyms import MODIFY_PREDICATE
 
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
@@ -144,6 +146,42 @@ def is_delayed(seg):
     return bool(seg.get("timing")) and seg["timing"].get("kind") == DELAY
 
 
+# 到的放置形式(對象線 `to.form`,`structure_shape.placement_form`):字面閉集。
+# treat 的字面可帶讀點(「装備魔法カード扱いで、」),種類照去掉讀點的字面查。
+TREAT_FORMS = {"装備魔法カード扱いで": "裝備卡", "装備カード扱いで": "裝備卡"}
+ORDER_FORMS = ("好きな順番で",)
+TREAT_PATTERN = "(?:" + "|".join(map(re.escape, TREAT_FORMS)) + ")、?"
+ORDER_PATTERN = "|".join(map(re.escape, ORDER_FORMS))
+
+
+def parse_placement_form(treat_text=None, order_text=None):
+    """放置形式字面 → placement_form;兩個都沒寫回 None。"""
+    if not treat_text and not order_text:
+        return None
+    treat = ({"text": treat_text, "kind": TREAT_FORMS[treat_text.rstrip("、")]}
+             if treat_text else None)
+    order = {"text": order_text} if order_text else None
+    return placement_form(treat=treat, order=order)
+
+
+def render_placement_form(form):
+    """placement_form → 寫在區域前的字面(treat、order 照字面);treat 的字面與種類對不上、
+    或有表示形式(display 還沒有模板)丟 NoTemplate。"""
+    if not form:
+        return ""
+    if form.get("display"):
+        raise NoTemplate("放置形式無模板:display")
+    text = ""
+    treat = form.get("treat")
+    if treat:
+        if TREAT_FORMS.get((treat.get("text") or "").rstrip("、")) != treat.get("kind"):
+            raise NoTemplate(f"放置形式無模板:{treat.get('kind')}")
+        text += treat["text"]
+    if form.get("order"):
+        text += form["order"]["text"]
+    return text
+
+
 DURATION_THIS_TURN = ("そのターンの終了時まで", "ターン終了時まで", "このターンの終了時まで")
 _DURATION_RE = re.compile("^(?P<text>.+?まで)")
 
@@ -189,7 +227,7 @@ def parse_modify(clause):
     m = _MODIFY_RE.match(clause)
     if not m:
         return None
-    modified = {"attr": _STAT_NAME[m.group("attr")]}
+    modified = {"attr": [_STAT_NAME[m.group("attr")]]}
     if m.group("form"):
         modified["form"] = m.group("form")
         modified["base"] = m.group("base")
@@ -210,8 +248,9 @@ def mention_head(mention):
 
 def render_modify(mention, modified, duration):
     """性質變更句模板:[提及][屬性]は[期間][值]になる;格與閉集對不上丟 NoTemplate
-    (期間由 `render_duration` 驗,它回 None 時也是這裡丟)。"""
-    attr = _STAT_TEXT.get(modified.get("attr"))
+    (期間由 `render_duration` 驗,它回 None 時也是這裡丟)。attr 清單目前只認一項。"""
+    attrs = modified.get("attr") or []
+    attr = _STAT_TEXT.get(attrs[0]) if len(attrs) == 1 else None
     period = render_duration(duration)
     form = modified.get("form")
     value = None

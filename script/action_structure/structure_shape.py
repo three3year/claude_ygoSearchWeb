@@ -42,6 +42,18 @@ PHASES = ("抽牌階段", "準備階段", "主要階段", "主要階段1", "主�
 ZONE_PARENT = {"牌組頂": "牌組", "牌組底": "牌組", "怪獸區": "場上",
                "魔陷區": "場上", "P區": "場上", "場地區": "場上",
                "EX怪獸區": "場上"}
+# 到的放置形式三槽(`placement_form`):treat 的卡片種類視同、display 的表示形式值域。
+PLACEMENT_TREAT_KINDS = ("裝備卡", "永續魔法", "永續陷阱", "魔法")
+FACES = ("表側", "裏側")
+BATTLE_POSITIONS = ("攻擊", "守備")
+# 性質變更段的 `modified`:attr 是清單(攻守同時改時兩項);form 是改法;limit 是門檻 {"cmp", "text"}。
+MODIFY_ATTRS = ("攻擊力", "守備力", "等級", "屬性", "種族", "卡名", "傷害")
+MODIFY_FORMS = ("倍", "半分", "數值", "增", "減")
+# 段的 `duration`(任何段都可有):{"kind", "text", "range"(選填,只配本回合)}。
+DURATION_KINDS = ("本回合", "到X為止", "持續", "該戰鬥")
+DURATION_RANGES = ("整回合", "發動後")
+# 段的 `amount`:固定值 {"text", "value", "unit", "cmp"(選填)};算式 {"kind": "算式", "text", "cmp"(選填)}。
+AMOUNT_FORMULA = "算式"
 ATTRIBUTE_TABLES = ("name", "archetype", "attribute", "race", "level",
                     "category")
 
@@ -69,12 +81,20 @@ def position(zones, source, inferred=False, text=None, form=None):
     查詢預設不算、開關開才算(spec:推得的終點預設不算命中)。
     `text` 是明寫時含助詞的原文字面(「自分のデッキの上から」「墓地の」「デッキの一番下に」,
     反向檢查據此還原、解析時驗過與 zones 一致);
-    `form` 是到的放置形式(「好きな順番で」、表側守備表示…,spec「到可帶表示形式」)。
+    `form` 是到的放置形式 `placement_form(...)`,沒有任何一槽時是 None。
     明寫的「到」寫在物件前(自分フィールドにXが特殊召喚された)時另帶 `placement`: 名詞前(票 05);
     明寫的「從」寫在物件後(XをデッキからYに加える)時另帶 `placement`: 述語前(票 07),
     模板據此放回原位;寫在物件前(預設)不帶。"""
     return {"zones": list(zones), "source": source, "inferred": inferred,
             "text": text, "form": form}
+
+
+def placement_form(treat=None, display=None, order=None):
+    """到的放置形式,三個具名槽(沒寫的槽是 None):
+    `treat` 卡片種類視同 {"text", "kind"}(「装備魔法カード扱いで、」,kind 見 PLACEMENT_TREAT_KINDS);
+    `display` 表示形式 {"text", "alternatives": [{"face", "position"}]}(單值一項、「X表示かY表示で」兩項);
+    `order` 順序 {"text"}(「好きな順番で」)。反向檢查依槽寫回固定位置。"""
+    return {"treat": treat, "display": display, "order": order}
 
 
 def new_line(obj_id, role, targeting=False, from_=None, to=None, marker=None,
@@ -98,12 +118,12 @@ def new_segment(seg_id, kind, span, text, predicate=None, voice=None):
         "recipient": None,   # 受方
         "cause": None,       # 原因
         "polarity": "做",    # 極性
-        "duration": None,    # 期間
+        "duration": None,    # 期間(任何段;本回合可帶 range)
         "timing": None,      # 時機
         "trigger": None,     # 觸發形(僅條件段)
         "premise": None,     # 前提(條件式)
-        "modified": None,    # 被改的屬性
-        "amount": None,      # 數量(段可無物件,例:支付 1000LP)
+        "modified": None,    # 被改的屬性(性質變更:attr 是清單)
+        "amount": None,      # 數量(段可無物件,例:支付 1000LP;算式 {"kind": "算式", "text"})
         "optional": None,    # 可選
         "replaces": None,    # 代替誰(段 id)
         "span": list(span),  # 原文範圍(相對於區塊 text)

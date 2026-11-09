@@ -31,7 +31,7 @@ from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, CAUSE_EFFECT_OF,
                              HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER, REF_RE,
                              SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
 from segment_fields import (REPLACEMENT_PREFIX, render_cause, render_modify,
-                            render_timing, resolve_polarity)
+                            render_placement_form, render_timing, resolve_polarity)
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
 from structure_shape import DEFAULT_ZONE_WORD, NoTemplate
 from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION,
@@ -358,16 +358,17 @@ def _render_from(lines):
 
 
 def _render_to(lines, predicate_to):
-    """明寫、不在述語裡的「到」(「デッキの一番下に」),可帶放置形式(「好きな順番で」)
-    → (字面, 寫在物件前還是述語前):「自分フィールドにモンスターが特殊召喚された」的到在
-    物件前(placement 名詞前),其餘在述語前。"""
+    """明寫、不在述語裡的「到」(「デッキの一番下に」),可帶放置形式(「好きな順番で」,
+    `render_placement_form` 寫在區域前)→ (字面, 寫在物件前還是述語前):
+    「自分フィールドにモンスターが特殊召喚された」的到在物件前(placement 名詞前),其餘在述語前。"""
     written = [line["to"] for line in lines
                if line["to"] and line["to"]["source"] == "明寫"]
     if not written or predicate_to:
         if any(w.get("form") for w in written):
             raise NoTemplate("到的形式無模板")
         # 到是推得的但形式明寫(「装備魔法カード扱いで、〜に装備できる」,票 06):只寫形式。
-        forms = {line["to"].get("form") for line in lines if line["to"]}
+        forms = {render_placement_form(line["to"].get("form")) or None
+                 for line in lines if line["to"]}
         if len(forms) == 1 and None not in forms:
             return forms.pop(), "述語前"
         if len(forms) > 1:
@@ -375,7 +376,8 @@ def _render_to(lines, predicate_to):
         return "", "述語前"
     if len(written) != len(lines) or any(w != written[0] for w in written):
         raise NoTemplate("對象線的到不一致")
-    return ((written[0].get("form") or "") + _render_zone_text(written[0], "に"),
+    return (render_placement_form(written[0].get("form"))
+            + _render_zone_text(written[0], "に"),
             written[0].get("placement") or "述語前")
 
 

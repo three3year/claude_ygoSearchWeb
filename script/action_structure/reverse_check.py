@@ -86,7 +86,7 @@ def _render_leading_premise(leading, seg, card, objects, names, followed, self_i
         lambda obj_id, ref: render_object(objects[obj_id], seg, card, names,
                                           {"ref": ref} if ref else None,
                                           self_id=self_id),
-        followed=followed)
+        followed=followed, count_of=lambda obj_id: objects[obj_id]["count"])
 
 
 def _is_segment_done(premise):
@@ -264,7 +264,8 @@ def _tree_glue(block, card, names):
         raise NoTemplate(f"回指字面無模板:{ref}")
 
     def render_premise_text(premise):
-        return render_premise_prefix(premise, render_premise_zones, render_tree_object)
+        return render_premise_prefix(premise, render_premise_zones, render_tree_object,
+                                     lambda obj_id: objects[obj_id]["count"])
 
     return [_PUNCT_RE.sub("", piece)
             for piece in tree_glue(block, render_premise_text, render_tree_object)]

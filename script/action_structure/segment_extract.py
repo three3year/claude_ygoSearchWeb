@@ -7,6 +7,7 @@
   條件段帶觸發形;代價子句以て形結尾才算代價。前提(`premise` 模組:「〜に存在する場合、」
   「相手ターンに」)先剝掉、寫進第一個段的前提格(段的範圍從前提起算);整句只有前提的
   (「自分メインフェイズに発動できる」)開一個沒有動作詞的條件段放它;效果句開頭的前提同樣。
+  效果句的前提後面是接著詞「さらに」時(m3 票 12),前提也自成一個只有前提的條件段、接著詞留在段外。
 - 舊式的「(條件子句)(時|場合|際)、(效果子句)」(沒有発動できる)→ 條件段 + 效果段。
 - 舊式的「(代價子句)る事で、(效果子句)」(= 新式「〜て発動できる。〜」)→ 代價段 + 效果段。
 - 效果子句以「代わりに」開頭的是代替(票 08):條件段改標「被代替」(不更新位置)、效果段記 `replaces`。
@@ -430,12 +431,21 @@ def parse_sentence(state, start, end, activation_lead=False):
         if lead is not None:
             seg["duration"] = lead
         return _after_turn_segments(turn_seg, points, [(seg, None)])
+    carrier = None
+    also = _ALSO_RE.match(body)
+    if (premise and also and body[also.end():] and not (act or summon_block or is_lasting(premise))
+            and points is None and turn_seg is None and lead is None):
+        # 效果句的前提後面是接著詞「さらに」(「〜存在する場合、さらに〜できる」,m3 票 12):接著詞照舊留在
+        # 段外,前提自成一個只有前提的條件段(同整句只有前提的發動句),後面的子句照一般效果句解析。
+        carrier = segment_at(state, "條件", seg_from, premise_end)
+        carrier["premise"], premise = premise, None
+        seg_from = clause_start
     segs = []
     trigger_re = _TRIGGER_RE if act else (_SUMMON_TRIGGER_RE if summon_block
                                          else _OLD_TRIGGER_RE)
     rest, rest_start, seg_start = body, clause_start, seg_from
     timing = _battle_timing(state, body, clause_start, seg_from, segs) if act else None
-    trig = None if timing else trigger_re.match(body)
+    trig = None if timing or carrier else trigger_re.match(body)
     # 「Xはフィールド上から離れた場合、ゲームから除外される」(m3 票 10):沒有「代わりに」的代替。
     replaced = trig is not None and (
         trig.group("rest").startswith(REPLACEMENT_PREFIX)
@@ -481,6 +491,8 @@ def parse_sentence(state, start, end, activation_lead=False):
     if is_lasting(premise):
         _apply_duration(segs, lasting())
     segs = _after_turn_segments(turn_seg, points, segs)
+    if carrier is not None:
+        segs = [(carrier, None)] + segs
     if summon_block:
         # 召喚條件區塊的段類別(spec):做的是召喚手續(含「〜した場合」的手續子句),
         # 不能/只能/必須的是限制。

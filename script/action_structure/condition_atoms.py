@@ -89,7 +89,9 @@ SUBTYPE_WORDS = (("リンク", "連結"), ("シンクロ", "同步"), ("エク�
                  ("リバース効果", "反轉"))   # 舊式「リバース効果モンスター」
 _SUBTYPE = "|".join([word for word, _ in SUBTYPE_WORDS]
                     + [letter for letter, _ in SUBTYPE_LETTERS])
-_ARCHETYPE_SUBTYPE_RE = re.compile(f"^「(?P<name>[^「」]+)」(?P<sub>{_SUBTYPE})$")
+# 字段後的子類型可以是「・」列舉(「「トリックスター」融合・Lモンスター」,m3 票 12):字段 且 或(子類型…)。
+_ARCHETYPE_SUBTYPE_RE = re.compile(
+    f"^「(?P<name>[^「」]+)」(?P<sub>(?:{_SUBTYPE})(?:・(?:{_SUBTYPE}))*)$")
 _SUBTYPE_RE = re.compile(f"^(?P<sub>{_SUBTYPE})$")
 # 子類型的「・」列舉(「融合・S・X・Lモンスター」)是或:一張卡符合其中一種就算。
 _SUBTYPE_LIST_RE = re.compile(f"^(?:{_SUBTYPE})(?:・(?:{_SUBTYPE}))+$")
@@ -189,7 +191,9 @@ def parse_modifier(rest, state):
         atom, why = state.name_atom("字段", m.group("name"))
         if atom is None:
             return [], why, m.end()
-        return [atom, _subtype_atom(m.group("sub"))], why, m.end()
+        subtypes = [_subtype_atom(word) for word in m.group("sub").split("・")]
+        return ([atom, subtypes[0] if len(subtypes) == 1 else {"op": "或", "args": subtypes}],
+                why, m.end())
     m = _SUBTYPE_RE.match(rest)
     if m:
         return [_subtype_atom(m.group("sub"))], None, m.end()

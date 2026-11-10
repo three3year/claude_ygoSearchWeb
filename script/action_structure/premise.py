@@ -18,6 +18,9 @@
   是同一個 op、以 `in` 分辨;它是那個條件段的本體,`split_premise` 把它與句首前提分開。
 - 段引用:`{"op": "本回合發生過", "segment": 段id}`(「〜したターン、」的條件段,由
   `segment_extract` 建、字面在被引用的段上);`{"op": "段已執行", "segment": 段id}` 只有形狀、尚未抽取。
+- 時點「〜したターンの〈階段〉に」(m3 票 11,抽取在 `turn_phase`):`本回合發生過` 帶 `form: "の"`,
+  後接階段原子(`form` 另可為「時に」「時」);時點列舉是 `{"op": "或", "form": "及び、", "args": [且(…)…]}`,
+  模板只在段裡寫最後一支,前面各支的字面在段外(`timepoint_glue`)。
 
 位置/存在原子的區域照方的來源還原;區域字面不是預設寫法(舊式「フィールド上」,票 11)時
 原子另帶 `text`(區域短語原文,不含「に」),模板照它寫。
@@ -39,6 +42,13 @@ PHASE_WORDS = (("メインフェイズ１", "主要階段1"), ("メインフェ�
                ("エンドフェイズ", "結束階段"), ("スタンバイフェイズ", "準備階段"),
                ("ドローフェイズ", "抽牌階段"))
 SIDE_PREFIX = {"自分": "我方", "相手": "對手", "自分・相手の": "任一方"}
+# 遊戲狀態原子的 form(後面的助詞,帶不帶讀點都照原文記)。「時に」「時」只出現在
+# 「〜したターンの〈階段〉時(に)」(舊式;`turn_phase`),句首的遊戲狀態前提只認「に」。
+GAME_STATE_FORMS = ("に", "に、", "時に", "時に、", "時", "時、")
+# 「〜したターンの〈階段〉に」(m3 票 11,`turn_phase`):`本回合發生過` 原子接到階段原子的字面,
+# 與時點列舉(或)的連接字。
+TURN_OF = "の"
+TIMEPOINT_OR_FORMS = ("及び、", "及び")
 _PHASE_TEXT = {value: word for word, value in PHASE_WORDS}
 _SIDE_TEXT = {value: word for word, value in SIDE_PREFIX.items()}
 
@@ -196,10 +206,10 @@ def render_game_state(atom, last):
     """遊戲狀態原子 → 字面;form 是「に」或「に、」,最後一個原子後面沒有子句時不寫讀點。"""
     state = atom.get("state")
     form = atom.get("form")
-    if form not in ("に", "に、"):
+    if form not in GAME_STATE_FORMS:
         raise NoTemplate("遊戲狀態形式無模板")
-    if last and form == "に、":
-        form = "に"
+    if last:
+        form = form.rstrip("、")
     if state == GAME_STATE_TURN:
         if atom.get("value") not in ("我方", "對手"):
             raise NoTemplate("回合方無模板")
@@ -230,9 +240,16 @@ def render_premise(premise, render_zones, render_object, followed=True):
             pieces.append(render_game_state(atom, last))
             continue
         if op == "本回合發生過":
-            # 段引用(票 09):字面在被引用的條件段(「〜したターン」)上,這裡不寫。
+            # 段引用(票 09):字面在被引用的條件段(「〜したターン」)上,這裡不寫;
+            # 「〜したターンの〈階段〉に」(m3 票 11)只寫接到階段的「の」。
             if not atom.get("segment"):
                 raise NoTemplate("段引用無模板:沒有段 id")
+            if atom.get("form") not in (None, TURN_OF):
+                raise NoTemplate("段引用形式無模板")
+            pieces.append(atom.get("form") or "")
+            continue
+        if op == "或":
+            pieces.append(_render_last_timepoint(atom, last))
             continue
         negated = False
         if op == "非" and atom.get("arg", {}).get("op") == "存在":
@@ -263,3 +280,42 @@ def render_premise(premise, render_zones, render_object, followed=True):
         else:
             pieces.append(f"{zones}に{obj}が{verb}{form}")
     return "".join(pieces)
+
+
+def _timepoints(atom):
+    """時點列舉的或 → 各支的 (本回合發生過原子, 階段原子);形狀不是時點列舉就丟 NoTemplate。"""
+    pairs = []
+    for arg in atom.get("args") or ():
+        happened, phase = arg.get("args", (None, None)) if arg.get("op") == "且" and len(
+            arg.get("args", ())) == 2 else (None, None)
+        if (happened is None or happened.get("op") != "本回合發生過" or not happened.get("segment")
+                or happened.get("form") != TURN_OF or phase.get("op") != "遊戲狀態"
+                or phase.get("state") != GAME_STATE_PHASE):
+            raise NoTemplate("前提的或無模板:不是時點列舉")
+        pairs.append((happened, phase))
+    if len(pairs) < 2 or atom.get("form") not in TIMEPOINT_OR_FORMS:
+        raise NoTemplate("前提的或無模板:不是時點列舉")
+    return pairs
+
+
+def _render_last_timepoint(atom, last):
+    """時點列舉的或:最後一支的「の〈階段〉に」寫在這一段裡,前面各支的字面在段外(`timepoint_glue`)。"""
+    _, phase = _timepoints(atom)[-1]
+    return TURN_OF + render_game_state(phase, last)
+
+
+def timepoint_glue(premise):
+    """前提裡時點列舉前面各支的段外字面(「の〈階段〉及び、」,夾在兩個「〜したターン」條件段之間);
+    反向檢查從區塊殘留裡扣掉。沒有時點列舉回空列表。"""
+    if premise is None:
+        return []
+    pieces = []
+    for atom in premise["args"] if premise.get("op") == "且" else [premise]:
+        if atom.get("op") != "或":
+            continue
+        for _, phase in _timepoints(atom)[:-1]:
+            # 助詞只寫在最後一支後:前面各支寫階段字面,不寫 form。
+            word = render_game_state(phase, last=True)
+            pieces.append(TURN_OF + word[:len(word) - len(phase["form"].rstrip("、"))]
+                          + atom["form"])
+    return pieces

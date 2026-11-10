@@ -36,7 +36,7 @@ from archetype_table import fold_width
 from block_split import LABEL_WIDTH
 from block_state import ACTION_REF_RE, REF_RE
 from object_render import render_object
-from premise import render_premise, split_premise
+from premise import render_premise, split_premise, timepoint_glue
 from report_common import card_order, safe_label
 from segment_extract import BATTLE_TIMING_REF, PREMISE_DONE
 from segment_fields import REPLACEMENT_PREFIX, is_clause_duration, split_duration
@@ -260,6 +260,18 @@ def _tree_glue(block, card, names):
             for piece in tree_glue(block, render_premise_text, render_tree_object)]
 
 
+def _timepoint_glue(block):
+    """段的前提裡時點列舉前面各支的字面(「の〈階段〉及び、」,在段外),去掉標點後供殘留比對。
+    前提無模板的段自己已列無模板,這裡略過。"""
+    pieces = []
+    for seg in block["segments"]:
+        try:
+            pieces.extend(_PUNCT_RE.sub("", piece) for piece in timepoint_glue(seg["premise"]))
+        except NoTemplate:
+            continue
+    return pieces
+
+
 def _holes(block, card):
     """區塊裡不記的字面(句中的次數限制,票 09)的範圍,相對於區塊原文:段的比對與殘留都扣掉它。"""
     start, end = block["span"]
@@ -361,6 +373,7 @@ def check_card(card):
         except NoTemplate as e:
             failures.append(_failure(card, block, None, REASON_NO_TEMPLATE, str(e)))
             glue_failed = True
+        glue = glue + _timepoint_glue(block)
         for piece in _residue(block, glue, glue_failed, holes):
             failures.append(_failure(card, block, None, REASON_RESIDUE,
                                      piece.strip("。、\n ")))

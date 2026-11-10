@@ -119,6 +119,8 @@ PREDICATE_STEMS = (
     ("P召喚", "P召喚", None), ("ペンデュラム召喚", "P召喚", None),
     ("リンク召喚", "L召喚", None), ("シンクロ召喚", "S召喚", None),
     ("エクシーズ召喚", "X召喚", None),
+    # 舊式儀式怪獸的召喚手續「「X」により降臨」(m3 票 11):降臨 = 儀式召喚。
+    ("降臨", "儀式召喚", None),
 )
 _STEMS_LONGEST_FIRST = sorted(PREDICATE_STEMS, key=lambda row: len(row[0]), reverse=True)
 # 字幹出現在別的詞裡、不是那個動作的字面(查詢未解析組比字面時扣掉)。

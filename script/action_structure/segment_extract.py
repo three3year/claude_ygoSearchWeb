@@ -10,6 +10,8 @@
 - 舊式的「(條件子句)(時|場合|際)、(效果子句)」(沒有発動できる)→ 條件段 + 效果段。
 - 舊式的「(代價子句)る事で、(效果子句)」(= 新式「〜て発動できる。〜」)→ 代價段 + 效果段。
 - 效果子句以「代わりに」開頭的是代替(票 08):條件段改標「被代替」(不更新位置)、效果段記 `replaces`。
+- 離場(m3 票 10,`leave_field`):「Xがフィールドから離れた時に Yは破壊される」(觸發形後沒有讀點)在觸發形切成
+  條件段加效果段;「Xは、フィールドから離れた場合に除外される」照代替記(被代替段加做代替的段,沒有「代わりに」)。
 - 其他句子是效果段;連用形串接(「〜に戻り、その攻撃力は〜になる」「〜手札に加え、〜に戻す」)切成
   多段、連接「同時」、後段與前段同一時機(`clause_join`);性質變更句「その攻撃力は〜倍になる」
   走 `segment_fields.parse_modify`。極性由述語語尾判(できない → 不能…);「〜を…できる」是可選的
@@ -37,6 +39,7 @@ import clause_front
 import damage
 import draw
 import existence_clause
+import leave_field
 import material_line
 import material_summon
 import simple_clause
@@ -274,12 +277,29 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
             piece = piece[also.end():]
             if i == 0:
                 seg_start = None
-        seg = segment_at(state, "效果", seg_start if (i == 0 and seg_start is not None)
-                         else piece_start, piece_start + len(piece))
-        if replaces:
-            seg["replaces"] = replaces
-        ctx = ClauseContext(seg, state, piece_start,
-                            segs[-1][0]["timing"] if i and not then else None)
+        first_start = seg_start if (i == 0 and seg_start is not None) else piece_start
+        piece_replaces, same_time = replaces, bool(i and not then)
+        leave = leave_field.split_clause(state, piece)
+        if leave is not None:
+            # 離場子句後面直接接另一截(m3 票 10):「Xがフィールドから離れた時に Yは破壊される」是條件段加效果段,
+            # 「Xは、フィールドから離れた場合に除外される」照代替記(被代替段加做代替的段)。
+            left = segment_at(state, leave.kind, first_start,
+                              piece_start + len(leave.cond) + len(leave.trigger))
+            left["trigger"] = leave.trigger
+            fill_clause(ClauseContext(left, state, piece_start), leave.cond)
+            _hold_topic(left, leave.cond, state, piece_start)
+            if (state.block["segments"] or segs) and state.block["kind"] != BLOCK_SUMMON:
+                state.delayed = True   # 序列中段出現條件段之後的段算延遲(同 `parse_sentence`)
+            segs.append((left, join))
+            piece_start += leave.rest_start
+            piece = piece[leave.rest_start:]
+            first_start, join, same_time = piece_start, None, False
+            if leave.replaced:
+                piece_replaces = left["id"]
+        seg = segment_at(state, "效果", first_start, piece_start + len(piece))
+        if piece_replaces:
+            seg["replaces"] = piece_replaces
+        ctx = ClauseContext(seg, state, piece_start, segs[-1][0]["timing"] if same_time else None)
         _fill_effect(ctx, piece)
         if ctx.split_at is not None:
             # 「Xを融合素材とし、Yを融合召喚する」的 X 解不出(m3 票 09):不併段,照連用形串接切成兩段——
@@ -416,7 +436,10 @@ def parse_sentence(state, start, end, activation_lead=False):
     rest, rest_start, seg_start = body, clause_start, seg_from
     timing = _battle_timing(state, body, clause_start, seg_from, segs) if act else None
     trig = None if timing else trigger_re.match(body)
-    replaced = trig is not None and trig.group("rest").startswith(REPLACEMENT_PREFIX)
+    # 「Xはフィールド上から離れた場合、ゲームから除外される」(m3 票 10):沒有「代わりに」的代替。
+    replaced = trig is not None and (
+        trig.group("rest").startswith(REPLACEMENT_PREFIX)
+        or (not act and leave_field.is_self_restriction(*trig.group("cond", "trig", "rest"))))
     if trig:
         rest, rest_start = _condition_and_rest(state, seg_from, clause_start, body,
                                                trig, segs,
@@ -431,7 +454,7 @@ def parse_sentence(state, start, end, activation_lead=False):
         state.delayed = True
     segs = [(seg, None) for seg in segs]
     if rest and not act:
-        if replaced:
+        if replaced and rest.startswith(REPLACEMENT_PREFIX):
             rest_start += len(REPLACEMENT_PREFIX)
             rest = rest[len(REPLACEMENT_PREFIX):]
         segs += _cost_and_effect(state, rest, rest_start, seg_start,

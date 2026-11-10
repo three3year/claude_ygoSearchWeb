@@ -208,6 +208,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/material_summon.py`、`xyz_material.py` | 素材的句型(m3 票 09):素材寫在召喚的句子裡(召喚段帶角色 素材 的線);簡單子句裡「誰的素材」那一格(成為超量素材的到、作為素材的受方) |
 | `script/action_structure/object_boundary.py`、`clause_front.py` | 物件切點(物件短語前面吞進來的前文從哪裡切)與切出去的子句前文(交給前提、期間、時機、誰/主語、原因的規則;抽取與句型模板成對) |
 | `script/action_structure/turn_phase.py` | 時點「Xした/されたターンの〈階段〉に」(可列舉)的抽取:動作子句成條件段,階段成後面那一段的前提;模板在 `premise.py` |
+| `script/action_structure/leave_field.py` | 離場的兩個句型(m3 票 10):連動「Xがフィールドから離れた時に Yは破壊される」(條件段加效果段)、自我限制「Xは、フィールドから離れた場合に除外される」(照代替記:被代替段加做代替的段);切點與做代替的段的模板成對 |
 | `script/action_structure/block_state.py` | 區塊抽取時的工作狀態 `BlockState`(物件短語 → 物件、目前位置、主語)、推得表、位置自動規則、各句型共用的子句 context |
 | `script/action_structure/noun_phrase.py`、`zone_phrase.py`、`quantity.py`、`agent_phrase.py`、`cause_phrase.py`、`predicate_literal.py` | 子句各格的字面(名詞短語 ↔ 條件式、區域、數量、誰、原因、原述語字面):抽取與句型模板成對 |
 | `script/action_structure/anaphora.py`、`state_atoms.py` | 物件短語「指誰」的寫法:帶修飾語的回指、帶狀態的此卡(字面規則),與「他の」、召喚方式等狀態原子(抽取與句型模板成對) |

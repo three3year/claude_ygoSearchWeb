@@ -8,7 +8,7 @@
                     (查詢側的原子不帶名稱表,直接寫值:{"op": "字段", "setcodes": [...]}、
                     {"op": "卡名"|"卡名包含"|"記載", "text": ...}、{"op": "卡名範圍", "texts": [A, B]}、
                     {"op": "屬性比較", "attr", "cmp", "value"})
-  targeting         True 時只算有標取對象的線
+  targeting         True 時只算有標取對象的線;受方是被取對象的物件(裝備對象)的段也算
   kinds             段類別範圍(預設 效果、代價、召喚手續)
   block_kinds       區塊種類範圍(預設全部)
   include_condition 條件段開關(預設關)
@@ -684,10 +684,12 @@ def segment_hit_lines(seg, card, q, judge, objects, names):
     if not q["line_constrained"]:
         return list(seg["lines"])
     hit = []
+    # 受方是被取對象的物件(裝備對象,m3 票 07)時,這一段算有取對象:被裝備上去的卡那條線照常比其餘條件。
+    recipient_targeted = isinstance(seg["recipient"], dict) and seg["recipient"].get("targeting")
     for line in seg["lines"]:
         if _is_doer(line, seg):
             continue
-        if q["targeting"] and not line["targeting"]:
+        if q["targeting"] and not (line["targeting"] or recipient_targeted):
             continue
         if q["from_zones"] and not zones_match(q["from_zones"], line["from"],
                                                q["include_inferred"]):

@@ -157,6 +157,8 @@ _LIMIT_SENTENCE_RE = re.compile(
     "^(?:「[^「」]+」の|このカード名の)?(?:この)?効果は(?:お互いに)?"
     "(?:１ターンに|デュエル中に)[１-９]度しか(?:使用|適用)できない$")
 OMITTED_SENTENCES = ((_UNIQUE_RE, UNIQUE_REASON), (_LIMIT_SENTENCE_RE, INTERVAL_REASON))
+# 同一句次數限制寫成句尾括號注記(「〜発動できる（このカード名のこの効果は１ターンに１度しか使用できない）」)。
+_LIMIT_NOTE_RE = re.compile("（(?P<note>[^（）]+)）$")
 # 原因(票 09 加):「「X」の効果で」= 某張卡的效果(物件);「融合召喚及び以下の方法で」= 召喚方式
 # (「以下の方法」指後面的 ● 列舉)。閉集字面(戦闘で…)在 segment_fields.CAUSE_FORMS。
 _NAMED_CAUSE = "「[^「」]+」の効果で"
@@ -1701,6 +1703,11 @@ def parse_sentence(state, start, end):
         if pattern.match(sent):
             state.omit(start, sent, reason)
             return []
+    note = _LIMIT_NOTE_RE.search(sent)
+    if note and _LIMIT_SENTENCE_RE.match(note.group("note")):
+        state.omit(start + note.start(), note.group(), INTERVAL_REASON)
+        end = start + note.start()
+        sent = text[start:end]
     if REPEAT_RE.match(sent):
         # 重複到停為止(spec 故事 28):第一輪已由前面的句子(或「」裡的字面)寫出,這一句只標未結構化,
         # 不抽動作詞、不更新位置;反向檢查與覆蓋報告各另列一類。

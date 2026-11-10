@@ -222,6 +222,18 @@ class OmittedTextTest(unittest.TestCase):
             listed += [s for h in result["hits"] for s in h["segments"]]
             self.assertFalse([s for s in listed if s.startswith(first["id"] + ".")])
 
+    def test_parenthesized_limit_after_activation_is_omitted(self):
+        """括號版次數限制「〜発動できる（このカード名のこの効果は１ターンに１度しか使用できない）」:
+        括號進略過文本(原因次數限制),發動句照常解析成代價段,整張通過反向檢查。"""
+        cards, structures = build(
+            SELF, "甲", "①：８００LPを払って発動できる（このカード名のこの効果は"
+                        "１ターンに１度しか使用できない）。このカードを破壊する。")
+        structure = structures[0]
+        self.assertIn(("（このカード名のこの効果は１ターンに１度しか使用できない）", "次數限制"),
+                      omitted_reasons(structure))
+        self.assertIn(SELF, hits(cards, structures, actions=["支付"], kinds=["代價"]))
+        self.assertEqual(check_card(structure), [])
+
     def test_summon_reactor_limit_sentence_inside_a_block_is_omitted(self):
         """サモン・リアクター・AI:補足情報的『』引用讓「この効果は１ターンに１度しか使用
         できない」留在效果區塊裡;句子層把它收進略過文本(原因次數限制)。"""

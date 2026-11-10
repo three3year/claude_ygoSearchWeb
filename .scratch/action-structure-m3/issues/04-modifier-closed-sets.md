@@ -32,7 +32,7 @@
 
 ### 實作紀錄(2026-11-10,分支 as/04)
 
-測試 `script/action_structure/test_modifier_closed_sets.py`(37 個,接縫一查詢判斷、接縫二反向檢查);全部測試 667 個全綠(已併進整合分支 0cf3ee3,含票 09)。兩次建置逐位元組相同;覆蓋報告與反向檢查報告跑得出來。
+測試 `script/action_structure/test_modifier_closed_sets.py`(37 個,接縫一查詢判斷、接縫二反向檢查);全部測試 667 個全綠(已併進整合分支 c9b0906,含票 09)。兩次建置逐位元組相同;覆蓋報告與反向檢查報告跑得出來。
 
 新模組 `position_atoms.py`(連體子句寫的位置與表示形式,抽取與模板成對);其餘是既有的表加列:`condition_atoms`(子類型、位置的區域字面、控制方、曾被特殊召喚)、`attribute_atoms`(數值屬性)、`noun_phrase`(「〜以外の」、「または」、頭名詞)、`structure_shape`(區域字面、物件種類)、`action_query`(子類型位元、攻守、效果物件的代入)。
 
@@ -82,7 +82,7 @@
 
 ### 前後數字
 
-全庫合計(`passdump.py` + `regress.py`;前 = 整合分支 0cf3ee3(含票 09)的程式重建的產物,後 = as/04 併進 0cf3ee3 之後):
+全庫合計(`passdump.py` + `regress.py`;前 = 整合分支 c9b0906(含票 09)的程式與產物,後 = as/04 併進 c9b0906 之後):
 
 | 項目 | 前 | 後 |
 |---|---|---|

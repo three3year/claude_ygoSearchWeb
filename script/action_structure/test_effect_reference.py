@@ -182,6 +182,29 @@ class HoshiaiTest(unittest.TestCase):
         self.assertEqual(failures, [])
 
 
+PARTLESS_RITUAL = 10001301   # 合成儀式魔法:原文沒有「儀式召喚」,判不出含儀式召喚的區塊
+PARTLESS_RITUAL_TEXT = "①：相手フィールドのカード１枚を対象として発動できる。そのカードを破壊する。"
+
+
+class PartNotFoundTest(unittest.TestCase):
+    """被引用卡上找不到卡文指定的部分(星逢の天河 引用含儀式召喚的區塊,被引用的儀式魔法沒有)時,
+    判不出就看整張(spec「引用他卡效果怎麼記、怎麼查?」)。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(HOSHIAI, name_ja="星逢の天河", type=NORMAL_TRAP),
+                     card(PARTLESS_RITUAL, name_ja="甲", type=RITUAL_SPELL)]
+        cls.structures = build(cls.cards, [
+            faq(HOSHIAI, "星逢の天河", HOSHIAI_TEXT),
+            faq(PARTLESS_RITUAL, "甲", PARTLESS_RITUAL_TEXT)])
+
+    def test_whole_card_is_looked_at(self):
+        result = run_query(self.structures, self.cards, {"actions": ["破壞"]})
+        self.assertIn(HOSHIAI, result["groups"]["經引用"])
+        self.assertEqual([entry["id"] for entry in hit_of(result, HOSHIAI)["via"]],
+                         [PARTLESS_RITUAL])
+
+
 SHASMATIS = 4965193   # 極征竜－シャスマティス
 SHASMATIS_TEXT = (
     "ドラゴン族レベル７モンスター×２\n"

@@ -141,9 +141,13 @@ def card_references(card):
 def selected_blocks(card, effect):
     """被引用卡上 `effect` 指定的部分(頂層區塊):
     卡片發動 = card_text 的 ① 區塊(新式魔陷的卡片發動效果),沒有編號就是卡片發動區塊(舊式整段);
-    含動作 = 原文含該動作詞述語字面的區塊;代價 = 有代價段做該動作、對象是此卡的區塊;整張 = 全部。"""
+    含動作 = 原文含該動作詞述語字面的區塊;代價 = 有代價段做該動作、對象是此卡的區塊;整張 = 全部。
+    被引用卡上找不到指定的部分時判不出,看整張(spec)。"""
+    return _part_blocks(card["blocks"], effect) or list(card["blocks"])
+
+
+def _part_blocks(blocks, effect):
     part = effect.get("part")
-    blocks = card["blocks"]
     if part == PART_ACTIVATION:
         first = [b for b in blocks if b["source"] == "card_text" and b["label"] == "①"]
         return first or [b for b in blocks if b["kind"] == KIND_ACTIVATION]

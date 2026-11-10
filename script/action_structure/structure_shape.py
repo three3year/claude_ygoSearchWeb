@@ -92,6 +92,15 @@ def unparsed(reason):
     return {"reason": reason}
 
 
+def zone_names(name):
+    """一個區域與它的全部上位區域:線上寫「牌組頂」,查「牌組」也要對得上;「怪獸區」也在「場上」。"""
+    names = [name]
+    while name in ZONE_PARENT:
+        name = ZONE_PARENT[name]
+        names.append(name)
+    return names
+
+
 def zone(name, side=None, side_source=None):
     """區域 + 方 + 方的來源(明寫/預設;None = 沒有方)。反向檢查只在明寫時寫「自分の」。"""
     return {"zone": name, "side": side, "side_source": side_source}

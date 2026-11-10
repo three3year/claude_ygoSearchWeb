@@ -4,6 +4,8 @@
 認不得修飾語時交給 `parse_modifier`,`noun_phrase` 的原子模板沒模板時交給 `render_atom`;
 加一個原子只改這裡。原子的查詢判斷在 `action_query.eval_condition`;狀態原子(不是卡的屬性、
 指定卡代入時不看卡片參數的)的代入規則是 `action_query.STATE_ATOMS` 那張表。
+和「指誰」有關的原子(他の、召喚方式、只修飾此卡的狀態;m3 票 05)在 `state_atoms`,這裡的 `parse_modifier`、
+`render_atom` 先問它。
 
 - 記載(名稱):「X」のカード名が記された → {"op": "記載", "name": 名稱列 id};
   「X」またはそのカード名が記された → 或(卡名∋X, 記載 X)。查詢時掃卡文含「X」(含括號)。
@@ -38,6 +40,7 @@
 """
 import re
 
+import state_atoms
 from structure_shape import DEFAULT_ZONE_WORD, zone
 
 # 「X」(１体)またはそのカード名が記された:名稱後可帶數量字面(「「ブラック・マジシャン」１体または
@@ -61,7 +64,7 @@ _ZONE_ITEM = f"(?:{_POSITION_ZONE_ALT})(?:{FACE_UP_NOTE})?"
 _ZONE_LIST_RE = re.compile(
     f"^(?P<text>(?P<side>自分|相手)?(?:{_ZONE_ITEM}(?:・{_ZONE_ITEM})+"
     f"|(?:{_POSITION_ZONE_ALT}){FACE_UP_NOTE}))の")
-SAME_CARD = "同一張"
+SAME_CARD = state_atoms.SAME_CARD
 # 曾被特殊召喚(票 08):「EXデッキから特殊召喚された」→ {"op": "曾被特殊召喚", "zones": [出發地]};
 # 查詢時從額外牌組特殊召喚的只有額外牌組的怪獸(融合/同步/超量/連結/靈擺)代得進去,其餘任何卡都算。
 _SUMMONED_FROM_RE = re.compile(
@@ -107,6 +110,9 @@ _SUBTYPE_TEXT = {v: k for k, v in SUBTYPE_LETTERS}
 def parse_modifier(rest, state):
     """修飾語開頭認得的原子 → (原子列表, 原因, 吃掉的長度);認不得回 None。
     原子列表為空時表示名稱或引用對不到(原因帶著),呼叫端把那截標解析不出。"""
+    pointing = state_atoms.parse_modifier(rest, state)   # 他の、召喚方式…(m3 票 05)
+    if pointing is not None:
+        return pointing
     m = _MENTION_OR_RE.match(rest)
     if m:
         named, why = state.name_atom("卡名", m.group("name"))
@@ -261,6 +267,9 @@ def quoted_name(atom_or_id, names):
 
 def render_atom(atom, names):
     """原子 → 修飾語字面;這裡沒模板的回 None(呼叫端記「無模板」)。"""
+    pointing = state_atoms.render_atom(atom)   # 他の、召喚方式…(m3 票 05)
+    if pointing is not None:
+        return pointing
     op = atom.get("op")
     if op == "記載":
         quoted = quoted_name(atom, names)

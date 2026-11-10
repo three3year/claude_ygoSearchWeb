@@ -2,12 +2,15 @@
 
 此卡寫「このカード」;本段首次出現的寫全名(條件式 → 名詞短語在 `noun_phrase.render_condition`,
 加數量);回指照對象線的回指字面(`render_ref`,驗過與先前的段相符);超量素材、計數器另有寫法。
+帶狀態的此卡(母體是此卡的子集,m3 票 05)寫「〈狀態〉このカード」;帶修飾語的回指(「その相手モンスター」)
+照字面,修飾語要是 `anaphora.restating_atoms` 認得的重述。
 抽取端是 `block_state.BlockState.object_at`。
 """
 
+from anaphora import SELF_TAIL, restated_reference
 from block_state import (ACTION_REF_RE, ACTIVATION_REF, MATERIAL_WORDS, OBJECT_COUNTER,
                          OBJECT_MATERIAL, REF_RE, TARGET_REF_RE, xyz_monster_condition)
-from noun_phrase import render_condition
+from noun_phrase import render_condition, render_modifiers
 from quantity import render_count
 from segment_history import last_action_on, targeted_earlier
 from structure_shape import NoTemplate
@@ -57,6 +60,11 @@ def render_object(obj, seg, card, names, line=None, with_count=True, self_id="o0
         start, end = seg["span"]
         defined_here = (obj["span"] and obj["block"] == seg["id"].split(".")[0]
                         and start <= obj["span"][0] and obj["span"][1] <= end)
+    if kind == "子集" and obj["source"].get("of") == self_id:
+        # 帶狀態的此卡(m3 票 05):〈狀態〉このカード;每次提及各建一個,只在提到它的那一段寫得出。
+        if not defined_here or obj["count"]:
+            raise NoTemplate("帶狀態的此卡無模板")
+        return render_modifiers(obj["condition"], names) + SELF_TAIL
     if not defined_here:
         return "その" + _head_of(obj)
     text = render_condition(obj["condition"], names)
@@ -118,5 +126,12 @@ def render_ref(ref, obj, seg, card):
         action = last_action_on(obj["id"], seg, card)
         if ACTION_PAST.get(action) != m.group("past"):
             raise NoTemplate("動作回指與先前的動作不符")
+        return ref
+    restated = restated_reference(ref)
+    if restated:
+        # 帶修飾語的回指(「その相手モンスター」「対象の墓地のモンスター」,m3 票 05):修飾語照
+        # `anaphora.restating_atoms` 認得全才寫;指向被取對象物件的要先前真的被取對象。
+        if restated.targeted and not targeted_earlier(obj["id"], seg, card):
+            raise NoTemplate("「対象の」回指的物件先前沒被取對象")
         return ref
     raise NoTemplate(f"回指字面無模板:{ref}")

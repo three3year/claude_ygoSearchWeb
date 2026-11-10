@@ -209,6 +209,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/turn_phase.py` | 時點「Xした/されたターンの〈階段〉に」(可列舉)的抽取:動作子句成條件段,階段成後面那一段的前提;模板在 `premise.py` |
 | `script/action_structure/block_state.py` | 區塊抽取時的工作狀態 `BlockState`(物件短語 → 物件、目前位置、主語)、推得表、位置自動規則、各句型共用的子句 context |
 | `script/action_structure/noun_phrase.py`、`zone_phrase.py`、`quantity.py`、`agent_phrase.py`、`cause_phrase.py`、`predicate_literal.py` | 子句各格的字面(名詞短語 ↔ 條件式、區域、數量、誰、原因、原述語字面):抽取與句型模板成對 |
+| `script/action_structure/anaphora.py`、`state_atoms.py` | 物件短語「指誰」的寫法:帶修飾語的回指、帶狀態的此卡(字面規則),與「他の」、召喚方式等狀態原子(抽取與句型模板成對) |
 | `script/action_structure/synonyms.py` | 同義表:述語字面 → 動作詞、語尾 → 態與極性、下位詞 |
 | `script/action_structure/archetype_table.py` | 字段表(純函式):strings.conf 的 `!setname` + 補丁 + 中文「」引用配對 → 字段列;setcode 比對規則 |
 | `script/action_structure/build_archetypes.py` | 字段表 CLI 薄殼(讀 strings.conf、補丁、總表、官方 DB 文本 → 寫 data/archetypes.json 與報告;`--fetch` 下載上游) |

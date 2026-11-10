@@ -83,11 +83,12 @@ def replaced_leave(seg, card):
     return replaced
 
 
-def render_destination(seg, card, objects, names, self_id):
+def render_destination(t):
     """做代替的段(去處)的模板:沒有「代わりに」,只有主語省略的子句本體(「除外される」「デッキの一番下に戻る」)。
     省略的主語要是被代替段裡離場的那個物件;這個句型沒有寫前提、期間的位置(前提與句首期間的字面都在
     被代替段上,這一段只能有沒有字面的期間:承襲的本回合、「〜限り、」的持續)。"""
-    replaced = replaced_leave(seg, card)
+    seg = t.seg
+    replaced = replaced_leave(seg, t.card)
     if replaced["trigger"] != RESTRICTION_TRIGGER or replaced["unparsed"]:
         raise NoTemplate("離場的去處無模板:被代替段")
     if seg["premise"] is not None or split_duration(seg["duration"]) != ("", None):
@@ -96,4 +97,4 @@ def render_destination(seg, card, objects, names, self_id):
     if (len(leaving) != 1 or len(seg["lines"]) != 1 or not seg["lines"][0].get("elided")
             or seg["lines"][0]["object"] != leaving[0]):
         raise NoTemplate("離場的去處無模板:主語不是離場的物件")
-    return simple_clause.render_clause(seg, card, objects, names, self_id, None)
+    return simple_clause.render_clause(t._replace(inner_duration=None))

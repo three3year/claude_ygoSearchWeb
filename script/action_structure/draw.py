@@ -198,9 +198,11 @@ def is_draw_segment(seg, objects):
             and line["marker"] in (None, DRAWN_MARKER))
 
 
-def render_clause(seg, card, objects, names):
+def render_clause(t):
     """抽牌子句:[算式(主語前)][誰][それぞれ][原因][算式(名詞前)][從から][カードを][N枚][通常の]述語。
-    物件沒寫時(助詞 None)物件不能有字面;從是明寫或推得的牌組、到是推得的手牌。"""
+    物件沒寫時(助詞 None)物件不能有字面;從是明寫或推得的牌組、到是推得的手牌。
+    不看 `t.self_id`:裡面的「このカード」一律照物件0 寫。"""
+    seg, card, objects, names = t.seg, t.card, t.objects, t.names
     line = seg["lines"][0]
     obj = objects[line["object"]]
     if (line["role"] != "受事" or line["targeting"] or line.get("pick") or line.get("elided")

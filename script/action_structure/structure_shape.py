@@ -3,6 +3,7 @@
 形狀說明見 `card_structure.py` 的模組 docstring。獨立成一檔是因為抽取
 (`block_split`、`segment_extract`)與建置管線都要用,放在管線裡會互相 import。
 """
+from typing import NamedTuple
 
 BLOCK_KINDS = ("素材", "召喚條件", "卡片發動", "靈擺效果", "編號效果")
 SEGMENT_KINDS = ("條件", "代價", "效果", "被代替", "召喚手續", "限制", "修飾")
@@ -94,6 +95,19 @@ class NoTemplate(Exception):
     """句型模板寫不出這一格、這一段或這個段樹節點:訊息是反向檢查報告的 detail
     (哪一格、什麼原因)。前提、段樹、段的各格與反向檢查本體共用這一個例外,
     寫不出一律丟它、不回 None(回 None 只留給「不是我管的原子」那種分派)。"""
+
+
+class TemplateInput(NamedTuple):
+    """句型模板拿得到的東西:段、卡片結構、物件表與名稱表(id → 列)、「このカード」指的物件;
+    子句模板另有存在前提原子與句中期間(`segment_fields.split_duration` 的後半)。各句型模組的模板
+    (`render_clause` 等)都只吃這一包,反向檢查的分流表直接掛模板函式。"""
+    seg: dict
+    card: dict
+    objects: dict
+    names: dict
+    self_id: str
+    existence: dict | None = None
+    inner_duration: dict | None = None
 
 
 def unparsed(reason):

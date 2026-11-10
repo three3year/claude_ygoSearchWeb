@@ -373,12 +373,14 @@ def fill_clause(ctx, clause_text):
     return True
 
 
-def render_clause(seg, card, objects, names, self_id, inner_duration):
+def render_clause(t):
     """傷害、回復、傷害值變更段的模板:
     給予 [主語][原因][算式だけ][受方に(名詞前)][數量]名詞を[受方に]与え〜;
     受到 [原因(主語前)][受方は|が][原因][門檻][數量]名詞を受け〜(受けない 是數值 0 的變更);
     變更 [このターン][來源][受方への|が受ける|に与える]名詞は(０|倍|半分)になる;
     回復 受方は數量回復〜 / 算式だけ受方のLPを回復〜 / 受方のLPが回復〜。"""
+    seg, card, objects, names, self_id = t.seg, t.card, t.objects, t.names, t.self_id
+    inner_duration = t.inner_duration
     predicate = seg["predicate"] or ""
     verbal, cause_first, noun = split_cause(seg["cause"])
     source = ""

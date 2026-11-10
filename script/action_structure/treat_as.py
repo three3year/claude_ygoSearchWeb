@@ -31,9 +31,10 @@ def treat_as_segment(state, start, end, treat):
     return seg
 
 
-def render_treat_as_segment(seg, names, objects, self_id):
+def render_treat_as_segment(t):
     """修飾段:「〜として扱う」句由 names_attributes.render_treat_as 從被改的屬性拼回;
     對象線只能是此卡、沒有動作詞。"""
+    seg, names, self_id = t.seg, t.names, t.self_id
     if (seg["actions"] or seg["predicate"] != TREAT_PREDICATE or not seg["modified"]
             or len(seg["lines"]) != 1 or seg["lines"][0]["object"] != self_id):
         raise NoTemplate("修飾段的格不齊")

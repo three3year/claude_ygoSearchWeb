@@ -124,9 +124,10 @@ def derived_segment(seg, state):
     return derived
 
 
-def render_clause(seg, card, objects, names, self_id, inner_duration):
-    """性質變更句:[主語][屬性]は[期間][值]述語(期間是段的句中期間,由反向檢查的分流表交進來);主語是回指字面(對象線的 ref,物件0 是「このカードの」),
-    或「[從の][全ての]物件の」。"""
+def render_clause(t):
+    """性質變更句:[主語][屬性]は[期間][值]述語(期間是段的句中期間 `t.inner_duration`);
+    主語是回指字面(對象線的 ref,物件0 是「このカードの」),或「[從の][全ての]物件の」。"""
+    seg, card, objects, names, self_id = t.seg, t.card, t.objects, t.names, t.self_id
     if len(seg["lines"]) != 1 or seg["actions"] != [MODIFY_ACTION] or not seg["modified"]:
         raise NoTemplate("性質變更段的格不齊")
     line = seg["lines"][0]
@@ -147,12 +148,13 @@ def render_clause(seg, card, objects, names, self_id, inner_duration):
         subject = (from_text + (ALL_PREFIX if count else "")
                    + render_object(obj, seg, card, names, line, self_id=self_id) + "の")
     return render_modify(subject, line["marker"], seg["modified"],
-                         inner_duration, seg["predicate"])
+                         t.inner_duration, seg["predicate"])
 
 
-def render_derived(seg):
+def render_derived(t):
     """衍生的性質變更段(「攻撃力３００アップの装備カード扱いで」):不另寫一句,
     只寫回它在 treat 字面裡的範圍「[屬性][差量]アップ」;其餘格要空。"""
+    seg = t.seg
     if (seg["actions"] != [MODIFY_ACTION] or not seg["modified"] or len(seg["lines"]) != 1
             or seg["lines"][0]["role"] != "受事" or seg["lines"][0]["ref"]
             or any(seg[slot] for slot in ("agent", "recipient", "cause", "duration", "timing",

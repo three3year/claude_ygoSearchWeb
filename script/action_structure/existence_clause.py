@@ -37,8 +37,10 @@ def fill_clause(ctx, clause_text):
     return True
 
 
-def render_clause(seg, premise, card, objects):
-    """存在前提(帶容器 `in`):「(容器回指)の中に(子集全名)が(あった)」。"""
+def render_clause(t):
+    """存在前提(帶容器 `in`):「(容器回指)の中に(子集全名)が(あった)」。
+    不看 `t.self_id`:裡面的「このカード」一律照物件0 寫。"""
+    seg, premise, card, objects, names = t.seg, t.existence, t.card, t.objects, t.names
     if premise.get("op") != "存在" or seg["actions"] or seg["kind"] != "條件":
         raise NoTemplate(f"前提無模板:{premise.get('op')}")
     if seg["predicate"] not in EXIST_WORDS:
@@ -47,7 +49,6 @@ def render_clause(seg, premise, card, objects):
     if container is None or premise.get("object") not in objects:
         raise NoTemplate("存在前提缺容器或子集")
     inner = objects[premise["object"]]
-    names = {row["id"]: row for row in card["names"]}
     return (render_object(objects[container["object"]], seg, card, names, container)
             + "の中に" + render_object(inner, seg, card, names, with_count=False)
             + "が" + seg["predicate"])

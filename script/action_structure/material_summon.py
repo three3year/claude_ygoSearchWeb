@@ -155,9 +155,10 @@ def _render_materials(materials, seg, card, objects, names, self_id):
     return from_text + "と".join(words) + markers.pop()
 
 
-def render_clause(seg, card, objects, names, self_id, clause_duration):
+def render_clause(t):
     """召喚段帶素材線的模板:素材那一截 + 素材字面,插在其餘子句(簡單子句模板)的前面;
     被召喚的線排在素材線前面時(「このカードが X を素材として〜」)插在主語後面。"""
+    seg, card, objects, names, self_id = t.seg, t.card, t.objects, t.names, t.self_id
     materials = [line for line in seg["lines"] if line["role"] == ROLE_MATERIAL]
     others = [line for line in seg["lines"] if line["role"] != ROLE_MATERIAL]
     cause = seg["cause"] or {}
@@ -168,12 +169,11 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     material_text = _render_materials(materials, seg, card, objects, names, self_id) + literal
     if not others:
         if any(seg[slot] for slot in ("agent", "recipient", "timing", "amount", "times",
-                                      "per_turn")) or clause_duration:
+                                      "per_turn")) or t.inner_duration:
             raise NoTemplate("只寫素材的召喚段有模板不寫的格")
         check_predicate(seg, parse_predicates(seg["predicate"] or "")[0])
         return material_text + seg["predicate"]
-    rest = simple_clause.render_clause({**seg, "lines": others, "cause": None}, card, objects,
-                                       names, self_id, clause_duration)
+    rest = simple_clause.render_clause(t._replace(seg={**seg, "lines": others, "cause": None}))
     if seg["lines"][0]["role"] == ROLE_MATERIAL:
         return material_text + rest
     subject = others[0]

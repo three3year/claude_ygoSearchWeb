@@ -659,12 +659,13 @@ def _render_recipient(recipient, seg, card, objects, names, self_id):
     return SIDE_TEXT[recipient] + "に"
 
 
-def render_clause(seg, card, objects, names, self_id, clause_duration):
+def render_clause(t):
     """簡單子句模板:[誰が][到に][數量(名詞前)][從から|の|に存在する][物件|區域][助詞][ランダムに][數量][取對象][原因][時機][形式][從から][數量(述語前)][選んで][期間][到に][受方に][表示形式]述語
     (物件前的「到に」只在助詞是「が」時;「從」只在物件前或述語前其中一處,照 placement;
-    時機只寫有字面的延遲;`clause_duration` 是驗過的述語前期間或 None)。
+    時機只寫有字面的延遲;期間是段的句中期間 `t.inner_duration`,反向檢查驗過是述語前寫得出的字面)。
     取對象線只有兩種寫得出:這一段的述語帶取對象字面(每條線都標),或這一條線指回
     本區塊先前被取對象字面點名的物件(その/選択したモンスター)。"""
+    seg, card, objects, names, self_id = t.seg, t.card, t.objects, t.names, t.self_id
     parts = []
     timing_front = front_timing(seg["timing"])
     if timing_front:
@@ -775,7 +776,7 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     if count_placement == "述語前":
         parts.append(count_text)
     parts.append(select_text or "")
-    parts.append(clause_duration["text"] if clause_duration else "")
+    parts.append(t.inner_duration["text"] if t.inner_duration else "")
     if to_placement == "述語前":
         parts.append(to_text)
     parts.append(recipient_text)

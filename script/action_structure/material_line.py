@@ -39,9 +39,10 @@ def material_segment(state, start, end):
     return seg
 
 
-def render_line(seg, card, names, objects, self_id):
+def render_line(t):
     """素材行:每條角色「素材」的線寫物件全名(超量素材數「×N」接在後面),以「＋」連;
     沒有述語。"""
+    seg, card, objects, names, self_id = t.seg, t.card, t.objects, t.names, t.self_id
     if seg["actions"] or seg["predicate"] or seg["kind"] != "召喚手續":
         raise NoTemplate("素材段的格不齊")
     return MATERIAL_JOINER.join(

@@ -60,9 +60,10 @@ def is_battle_segment(seg):
             and any(line["role"] == "施事" for line in seg["lines"]))
 
 
-def render_clause(seg, card, objects, names, self_id):
+def render_clause(t):
     """戰鬥子句:[施事]が[受事と]述語;施事一條、受事至多一條,線不帶從/到/取對象/數量,
     段不帶誰、受方、原因、時機、數量。"""
+    seg, card, objects, names, self_id = t.seg, t.card, t.objects, t.names, t.self_id
     lines = seg["lines"]
     roles = [(line["role"], line["marker"]) for line in lines]
     if roles not in ([("施事", BATTLE_AGENT_MARKER)],

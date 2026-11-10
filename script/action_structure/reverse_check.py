@@ -34,6 +34,7 @@ import material_line
 import material_summon
 import simple_clause
 import stat_modify
+import treat_as
 from archetype_table import fold_width
 from block_split import LABEL_WIDTH
 from block_state import ACTION_REF_RE, REF_RE
@@ -44,9 +45,8 @@ from segment_extract import BATTLE_TIMING_REF, PREMISE_DONE
 from segment_fields import REPLACEMENT_PREFIX, is_clause_duration, split_duration
 from segment_history import all_blocks
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
-from structure_shape import BATTLE_TRIGGERS, NoTemplate, iter_nodes, swap_sides
+from structure_shape import BATTLE_TRIGGERS, NoTemplate, TemplateInput, iter_nodes, swap_sides
 from synonyms import ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION
-from treat_as import render_treat_as_segment
 from zone_phrase import render_premise_zones
 
 REASON_NO_TEMPLATE = "無模板"
@@ -101,74 +101,45 @@ INNER_BEFORE_PREDICATE = "述語前"   # 簡單子句的「エンドフェイズ
 INNER_NONE = "不收"                 # 這個句型沒有寫期間的位置:段有句中期間就是無模板
 
 
-class TemplateInput(NamedTuple):
-    """模板拿得到的東西:段、卡片結構、物件表與名稱表(id → 列)、「このカード」指的物件;
-    子句模板另有存在前提原子與句中期間。"""
-    seg: dict
-    card: dict
-    objects: dict
-    names: dict
-    self_id: str
-    existence: dict | None = None
-    inner_duration: dict | None = None
-
-
 class SegmentTemplate(NamedTuple):
-    """分流表的一列:模板名、這一段歸不歸它(`applies`)、怎麼寫(`render`)、句中期間的去向。"""
+    """分流表的一列:模板名、這一段歸不歸它(`applies`)、怎麼寫(`render`,各句型模組的模板,吃
+    `structure_shape.TemplateInput`)、句中期間的去向(`inner_route`)。"""
     name: str
     applies: Callable[[TemplateInput], bool]
     render: Callable[[TemplateInput], str]
-    inner_duration: str = INNER_NONE
+    inner_route: str = INNER_NONE
 
 
 # 整段模板:整段的字面由模板自己寫,不套句首期間、前提、「代わりに」與觸發形。依序試。
 WHOLE_TEMPLATES = (
     SegmentTemplate("衍生的性質變更", lambda t: t.seg["derived_from"] is not None,
-                    lambda t: stat_modify.render_derived(t.seg)),
-    SegmentTemplate("修飾", lambda t: t.seg["kind"] == "修飾",
-                    lambda t: render_treat_as_segment(t.seg, t.names, t.objects, t.self_id)),
+                    stat_modify.render_derived),
+    SegmentTemplate("修飾", lambda t: t.seg["kind"] == "修飾", treat_as.render_treat_as_segment),
     SegmentTemplate("素材行",
                     lambda t: bool(t.seg["lines"]) and not t.seg["actions"]
                     and all(line["role"] == "素材" for line in t.seg["lines"]),
-                    lambda t: material_line.render_line(t.seg, t.card, t.names, t.objects,
-                                                        t.self_id)),
+                    material_line.render_line),
     # 「(Xは、)フィールドから離れた場合に除外される」的去處:做代替的段,但文面沒有「代わりに」。
     SegmentTemplate("離場的去處", lambda t: leave_field.replaced_leave(t.seg, t.card) is not None,
-                    lambda t: leave_field.render_destination(t.seg, t.card, t.objects, t.names,
-                                                             t.self_id)),
+                    leave_field.render_destination),
 )
 # 子句模板:寫段的子句本體,前後由 `render_segment` 套上句首期間、前提、「代わりに」與觸發形。
 # 依序試、第一個適用的負責寫(最後一列永遠適用);加一種句型的模板 = 在它前面加一列。
-# 存在前提與抽牌的模板不吃 `self_id`:裡面的「このカード」一律照物件0 寫。
 SIMPLE_TEMPLATE = "簡單子句"
 CLAUSE_TEMPLATES = (
-    SegmentTemplate("存在前提", lambda t: t.existence is not None,
-                    lambda t: existence_clause.render_clause(t.seg, t.existence, t.card,
-                                                             t.objects)),
+    SegmentTemplate("存在前提", lambda t: t.existence is not None, existence_clause.render_clause),
     SegmentTemplate("傷害值變更",
                     lambda t: damage.is_damage_segment(t.seg) and t.seg["actions"] == [MODIFY_ACTION],
-                    lambda t: damage.render_clause(t.seg, t.card, t.objects, t.names, t.self_id,
-                                                   t.inner_duration),
-                    INNER_OWN),
-    SegmentTemplate("傷害與回復", lambda t: damage.is_damage_segment(t.seg),
-                    lambda t: damage.render_clause(t.seg, t.card, t.objects, t.names, t.self_id,
-                                                   t.inner_duration)),
+                    damage.render_clause, INNER_OWN),
+    SegmentTemplate("傷害與回復", lambda t: damage.is_damage_segment(t.seg), damage.render_clause),
     SegmentTemplate("性質變更", lambda t: t.seg["actions"] == [MODIFY_ACTION],
-                    lambda t: stat_modify.render_clause(t.seg, t.card, t.objects, t.names,
-                                                        t.self_id, t.inner_duration),
-                    INNER_OWN),
+                    stat_modify.render_clause, INNER_OWN),
     SegmentTemplate("戰鬥", lambda t: battle_clause.is_battle_segment(t.seg),
-                    lambda t: battle_clause.render_clause(t.seg, t.card, t.objects, t.names,
-                                                          t.self_id)),
-    SegmentTemplate("抽牌", lambda t: draw.is_draw_segment(t.seg, t.objects),
-                    lambda t: draw.render_clause(t.seg, t.card, t.objects, t.names)),
+                    battle_clause.render_clause),
+    SegmentTemplate("抽牌", lambda t: draw.is_draw_segment(t.seg, t.objects), draw.render_clause),
     SegmentTemplate("召喚段帶素材線", lambda t: material_summon.is_material_summon(t.seg),
-                    lambda t: material_summon.render_clause(t.seg, t.card, t.objects, t.names,
-                                                            t.self_id, t.inner_duration),
-                    INNER_BEFORE_PREDICATE),
-    SegmentTemplate(SIMPLE_TEMPLATE, lambda t: True,
-                    lambda t: simple_clause.render_clause(t.seg, t.card, t.objects, t.names,
-                                                          t.self_id, t.inner_duration),
+                    material_summon.render_clause, INNER_BEFORE_PREDICATE),
+    SegmentTemplate(SIMPLE_TEMPLATE, lambda t: True, simple_clause.render_clause,
                     INNER_BEFORE_PREDICATE),
 )
 
@@ -213,7 +184,7 @@ def render_segment(seg, card, self_id="o0"):
     template = _first_template(CLAUSE_TEMPLATES, t)
     if placement == clause_front.PLACEMENT_AFTER_SUBJECT and template.name != SIMPLE_TEMPLATE:
         raise NoTemplate("期間無模板:主語後")
-    if (inner_duration is not None and template.inner_duration != INNER_OWN
+    if (inner_duration is not None and template.inner_route != INNER_OWN
             and not is_clause_duration(inner_duration)):
         raise NoTemplate("期間無模板:句中")
     if (seg["kind"] == "條件" and seg["trigger"] in BATTLE_TRIGGERS
@@ -234,7 +205,7 @@ def render_segment(seg, card, self_id="o0"):
         raise NoTemplate("段無對象線")
     if seg["replaces"]:
         prefix += REPLACEMENT_PREFIX   # 做代替的段:「代わりに」在段的範圍內
-    if inner_duration is not None and template.inner_duration == INNER_NONE:
+    if inner_duration is not None and template.inner_route == INNER_NONE:
         raise NoTemplate("期間無模板:句中")
     text = template.render(t)
     if seg["kind"] in ("條件", "被代替") and not seg["trigger"]:

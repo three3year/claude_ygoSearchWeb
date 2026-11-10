@@ -1304,7 +1304,8 @@ def _fill_draw(seg, m, kind, state, sentence_start, inherited_timing=None):
             f"{state.block['id']}.o{offset}", {"kind": "新建"}, block=state.block["id"],
             condition=category_condition(draw.DRAWN_OBJECT)))
     if g("from"):
-        from_ = position(parse_from(g("from")), "明寫", text=g("from") + "から")
+        from_ = position(draw.drawer_deck(parse_from(g("from")), agent_side(seg["agent"])),
+                         "明寫", text=g("from") + "から")
         state.find(obj_id)["initial_position"] = list(from_["zones"])
     else:
         from_ = position([zone(INFERENCE_TABLE[draw.DRAW_ACTION][0], None)], "推得",

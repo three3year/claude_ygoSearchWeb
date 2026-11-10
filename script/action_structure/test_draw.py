@@ -176,23 +176,35 @@ FIRE_SOUL = 95026693       # ファイヤー・ソウル
 _LITERAL_KEYS = {"id", "span", "text", "block", "marker", "object"}
 
 
+def _sideless(zones):
+    return [{k: v for k, v in z.items() if k != "side"} for z in zones]
+
+
 def draw_shape(cid, name, text):
+    """抽牌段的結構去掉字面、誰、張數與牌組的方;另回誰、張數、牌組的方、反向檢查通過與否
+    與查「抽牌,從對手的牌組」命中與否。"""
     cards = [card(cid, name_ja=name, type=SPELL)]
     structures = build(cards, [faq(cid, name, text)])
     seg, = hit_segments(structures, cards, cid, actions=["抽牌"])
     line, = seg["lines"]
     obj = next(o for o in own(structures, cid)["objects"] if o["id"] == line["object"])
+    deck_side = {z["side"] for z in line["from"]["zones"]}
+    line = {**line, "from": {**line["from"], "zones": _sideless(line["from"]["zones"])}}
+    obj = {**obj, "initial_position": _sideless(obj["initial_position"])}
     shape = ({k: v for k, v in seg.items() if k not in _LITERAL_KEYS | {"lines", "agent"}},
              {k: v for k, v in line.items() if k not in _LITERAL_KEYS | {"count"}},
              {k: v for k, v in obj.items() if k not in _LITERAL_KEYS})
     passes = not [f for f in check_card(own(structures, cid)) if f["segment"] == seg["id"]]
-    return shape, seg["agent"], line["count"]["value"], passes
+    from_opponent_deck = bool(hit_segments(
+        structures, cards, cid, actions=["抽牌"], from_zones=[{"zone": "牌組", "side": "對手"}]))
+    return shape, seg["agent"], line["count"]["value"], deck_side, passes, from_opponent_deck
 
 
 class DrawObjectWrittenOrNotTest(unittest.TestCase):
-    """「カードを」有沒有寫,抽牌段結構相同,只差誰與張數。"""
+    """「カードを」有沒有寫,抽牌段結構相同,只差誰、張數與牌組的方(沒寫方的牌組是抽牌者的,
+    「相手はデッキから」是對手的牌組;站主 2026-11-10)。"""
 
-    def test_same_structure_differing_only_in_agent_and_count(self):
+    def test_same_structure_differing_only_in_agent_count_and_deck_side(self):
         kaiju = draw_shape(
             KAIJU_CAPTURE, "壊獣捕獲大作戦",
             "「壊獣捕獲大作戦」の②の効果は１ターンに１度しか使用できない。"
@@ -206,9 +218,8 @@ class DrawObjectWrittenOrNotTest(unittest.TestCase):
             "ゲームから除外し、除外したモンスターの攻撃力の半分のダメージを相手ライフに与える。"
             "このカードを発動するターン、自分は攻撃宣言できない。")
         self.assertEqual(kaiju[0], fire[0])
-        self.assertEqual((kaiju[1], kaiju[2]), ("我方", 2))
-        self.assertEqual((fire[1], fire[2]), ("對手", 1))
-        self.assertEqual((kaiju[3], fire[3]), (True, True))
+        self.assertEqual(kaiju[1:], ("我方", 2, {"我方"}, True, False))
+        self.assertEqual(fire[1:], ("對手", 1, {"對手"}, True, True))
 
 
 SELF = 10001001   # 本檔的合成卡(10001001 起)

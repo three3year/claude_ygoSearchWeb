@@ -67,6 +67,20 @@ def parse_count(fixed, front, lead, each):
     return count, False
 
 
+def drawer_deck(zones, drawer):
+    """沒寫方的牌組(「デッキから」)是抽牌者的:「相手はデッキから」是對手的牌組、「お互いは」是雙方各自
+    (站主 2026-11-10)。抽牌者靜態判不了(動作回指)或沒寫(預設我方)時照區域預設。"""
+    if drawer is None:
+        return zones
+    return [{**z, "side": drawer} if z["side_source"] == "預設" else z for z in zones]
+
+
+def undo_drawer_deck(zones, drawer):
+    """`drawer_deck` 的反向(反向檢查由字面拼回區域時比對用):抽牌者的牌組換回區域預設的我方。"""
+    return [{**z, "side": "我方"} if z["side_source"] == "預設" and z["side"] == drawer else z
+            for z in zones]
+
+
 def rule_cause():
     return {"kind": CAUSE_RULE, "text": RULE_TEXT}
 

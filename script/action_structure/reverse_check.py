@@ -30,7 +30,7 @@ from condition_atoms import quoted_name, render_atom
 from names_attributes import TREAT_PREDICATE, render_treat_as
 from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, OR_FORM, BATTLE_AGENT_MARKER,
                              CAUSE_EXCLUDE, COUNT_AFTER_OBJECT, EXCLUDE_METHOD_TAIL,
-                             AGENT_PLAYER_WORDS, PLAYER_REF_HEAD, agent_particle,
+                             AGENT_PLAYER_WORDS, PLAYER_REF_HEAD, agent_particle, agent_side,
                              EACH_PREFIX, EACH_SUFFIX, FORMULA_COUNT_TAILS, FORMULA_UPTO_TAIL,
                              PICK_RANDOM,
                              RANDOM_PICK, ZONE_AS_OBJECT,
@@ -837,7 +837,9 @@ def _render_draw(seg, card, objects, names):
         raise NoTemplate("抽牌段的到無模板")
     from_ = line["from"]
     if from_ and from_["source"] == "明寫" and not from_.get("placement"):
-        from_text = _render_zone_text(from_, "から")
+        drawer = agent_side(seg["agent"])
+        from_text = _render_zone_text(
+            {**from_, "zones": draw.undo_drawer_deck(from_["zones"], drawer)}, "から")
     elif from_ and from_["source"] == "推得" and [z["zone"] for z in from_["zones"]] == ["牌組"]:
         from_text = ""
     else:

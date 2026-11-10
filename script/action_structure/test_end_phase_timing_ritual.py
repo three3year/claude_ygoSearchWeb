@@ -280,11 +280,11 @@ class TgWerewolfTest(unittest.TestCase):
 
 
 OLD_STYLE = 10001101        # 合成卡:舊式「エンドフェイズ時」與列舉的一般規則
-FAIRY = 10001102
+FAIRY = 10001102            # 合成卡:光屬性怪獸
 
 
 def synthetic(text):
-    cards = [card(OLD_STYLE, name_ja="甲"), card(FAIRY, name_ja="乙", race=0x4)]
+    cards = [card(OLD_STYLE, name_ja="甲"), card(FAIRY, name_ja="乙", race=0x4, attribute=0x10)]
     return cards, build(cards, [faq(OLD_STYLE, "甲", text)])
 
 
@@ -330,6 +330,18 @@ class TurnPhaseFormsTest(unittest.TestCase):
             self.assertIn(OLD_STYLE, hits(cards, structures, actions=[action],
                                           include_condition=True))
             self.assertNotIn(OLD_STYLE, hits(cards, structures, actions=[action]))
+
+    def test_later_timepoint_keeps_its_own_leading_premise(self):
+        """第二個時點帶自己的句首前提(サフィラ ① 的句型,前提換成已收的「〜状態で、」):
+        前提掛在那個時點的條件段上,整張通過。"""
+        cards, structures = synthetic(
+            "①：このカードが儀式召喚したターンのエンドフェイズ及び、このカードがモンスターゾーンに"
+            "存在する状態で、手札・デッキから光属性モンスターが墓地へ送られたターンのエンドフェイズに、"
+            "以下の効果から１つを選択して発動できる。\n●このカードを破壊する。\n●このカードを除外する。")
+        self.assertEqual(check_card(own(structures, OLD_STYLE)), [])
+        query = dict(actions=["送墓"], from_zones=["牌組"], include_condition=True)
+        self.assertIn(OLD_STYLE, hits(cards, structures, card=FAIRY, **query))
+        self.assertNotIn(OLD_STYLE, hits(cards, structures, card=OLD_STYLE, **query))
 
     def test_condition_position_flows_into_the_branches(self):
         """引導句的時點發生在各支之前:條件段的到(墓地)是各支的從。"""

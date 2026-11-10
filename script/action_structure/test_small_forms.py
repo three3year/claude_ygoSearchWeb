@@ -147,5 +147,53 @@ class BracketedLimitNoteTest(unittest.TestCase):
         self.assertEqual(omitted(own(structures, SELF)), [])
 
 
+MASTER_GIG = 16191953   # マスター・ジーグ
+MASTER_GIG_TEXT = (
+    "１０００ライフポイントを払って発動する。自分フィールド上に表側表示で存在するサイキック族モンスターの"
+    "数だけ、相手フィールド上に存在するモンスターを破壊する。この効果は１ターンに１度しか使用できない。")
+
+
+class LifePointPaymentTest(unittest.TestCase):
+    """支付的數量單位「ライフポイント」(舊式全寫)= 「LP」。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(MASTER_GIG, name_ja="マスター・ジーグ", level=8, race=0x100000,
+                          attribute=0x1, atk=2600)]
+        cls.structures = build(cls.cards, [faq(MASTER_GIG, "マスター・ジーグ", MASTER_GIG_TEXT)])
+
+    def test_master_gig_pay_hits_the_cost_written_in_full(self):
+        seg, = hit_segments(self.structures, self.cards, MASTER_GIG, actions=["支付"])
+        self.assertEqual((seg["kind"], seg["text"]), ("代價", "１０００ライフポイントを払って"))
+        self.assertEqual((seg["amount"]["value"], seg["amount"]["unit"]), (1000, "ライフポイント"))
+        self.assertEqual(seg["lines"], [])
+
+    def test_master_gig_pay_is_not_a_destroy_cost(self):
+        segs = hit_segments(self.structures, self.cards, MASTER_GIG, actions=["破壞"],
+                            kinds=["代價"])
+        self.assertEqual(segs, [])
+
+    def test_master_gig_whole_card_passes_reverse_check(self):
+        self.assertEqual(check_card(own(self.structures, MASTER_GIG)), [])
+
+    def test_unit_written_in_full_and_short_have_the_same_structure(self):
+        shapes = []
+        for unit in ("LP", "ライフポイント"):
+            cards, structures = library(f"①：５００{unit}を払って発動できる。このカードを破壊する。")
+            seg, = hit_segments(structures, cards, SELF, actions=["支付"])
+            self.assertEqual(check_card(own(structures, SELF)), [])
+            self.assertEqual(seg["amount"]["unit"], unit)
+            shapes.append({k: v for k, v in seg.items() if k not in ("span", "text", "amount")}
+                          | {"value": seg["amount"]["value"]})
+        self.assertEqual(shapes[0], shapes[1])
+
+    def test_formula_amount_stays_unparsed(self):
+        """「１００の倍數のライフポイントを払って」是算式,這輪不收:不命中、列進未解析組。"""
+        cards, structures = library(
+            "①：１００の倍数のライフポイントを払って発動できる。このカードを破壊する。")
+        result = run_query(structures, cards, {"actions": ["支付"]})
+        self.assertEqual((result["groups"]["全部"], result["groups"]["未解析"]), ([], [SELF]))
+
+
 if __name__ == "__main__":
     unittest.main()

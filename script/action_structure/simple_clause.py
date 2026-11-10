@@ -144,7 +144,9 @@ _CLAUSE_NO_TO_FRONT_RE = re.compile(_CLAUSE_PATTERN.replace(_TO_FRONT, "", 1))
 _REF_COUNT_RE = re.compile("^(?P<phrase>(?:その|それらの)(?:モンスター|カード))(?P<count>[０-９]+(?:体|枚))$")
 COUNT_AFTER_OBJECT = "物件後"
 # 數量格(spec「數量」:支付 1000LP,段可無物件):「１０００LP」當受詞時不是物件。
-_AMOUNT_RE = re.compile("^(?P<digits>[０-９]+)(?P<unit>LP)$")
+# 單位閉集:「LP」與舊式全寫「ライフポイント」(m3 票 02),單位字面留在數量格的 `unit`。
+AMOUNT_UNITS = ("LP", "ライフポイント")
+_AMOUNT_RE = re.compile(f"^(?P<digits>[０-９]+)(?P<unit>{'|'.join(AMOUNT_UNITS)})$")
 REASON_FROM = "從解析不出"
 REASON_TO = "到解析不出"
 REASON_DISPLAY = "表示形式沒有到"
@@ -502,10 +504,11 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     words, counts, picks = [], set(), set()
     if seg["amount"]:
         # 數量格(「１０００LPを払って」):段無物件,數量當受詞寫。
-        if seg["lines"] or seg["amount"].get("unit") != "LP" \
+        if seg["lines"] or seg["amount"].get("unit") not in AMOUNT_UNITS \
                 or not isinstance(seg["amount"].get("value"), int):
             raise NoTemplate("數量無模板")
-        words.append(str(seg["amount"]["value"]).translate(TO_FULLWIDTH_DIGITS) + "LP")
+        words.append(str(seg["amount"]["value"]).translate(TO_FULLWIDTH_DIGITS)
+                     + seg["amount"]["unit"])
         counts.add(("", None))
         marker = "を"
     for line in spoken:

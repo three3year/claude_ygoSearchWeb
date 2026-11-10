@@ -179,7 +179,10 @@ def fill_clause(ctx, clause_text):
 
 def _fill_after_front(ctx, clause_text, cut, fill_body):
     """子句在 `cut` 切成前文與本體:前文交給 `clause_front`,本體交給 `fill_body(ctx, 本體)`。
-    前文認不得時本體照常解析,最後才把段標成解析不出(本體自己解析不出時留它的原因)。"""
+    前文認不得時本體照常解析,最後才把段標成解析不出(本體自己解析不出時留它的原因)。
+    前文填好的誰、原因不會被本體的句型蓋掉:簡單子句、抽牌再填同一格會標「同一格寫了兩處」
+    (`agent_phrase.fill_agent`、`cause_phrase.fill_cause`);傷害與回復接不到本體——切點後面剩下的要像個
+    物件短語(`simple_clause.swallowed_front`),而那些句型助詞前是「ダメージ」「LP」或玩家字面。"""
     seg = ctx.seg
     front = clause_text[:cut]
     if not clause_front.fill_front(ctx, front) and _FROM_FRONT_RE.search(front) \

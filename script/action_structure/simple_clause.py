@@ -51,11 +51,11 @@ import draw
 import same_different
 import xyz_material
 
-from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
+from agent_phrase import AGENT_PATTERN, agent_side, fill_agent, render_agent
 from block_state import (INFERENCE_TABLE, INTERVAL_PATTERN, INTERVAL_REASON, OBJECT_COUNTER,
                          update_positions)
-from cause_phrase import (CAUSE_ALT, EXCLUDE_METHOD_PATTERN, parse_cause_phrase,
-                          render_cause_phrase, summoned_by)
+from cause_phrase import (CAUSE_ALT, EXCLUDE_METHOD_PATTERN, fill_cause, render_cause_phrase,
+                          summoned_by)
 from clause_front import (PLACEMENT_AFTER_SUBJECT, front_duration, front_timing,
                           render_front_duration, render_front_timing, subject_line)
 from condition_atoms import TARGETING_THIS_FORMS
@@ -357,16 +357,12 @@ def fill_clause(ctx, clause_text):
     # 述語本身寫明的出發地(「フィールドから離れた」)。
     written_from = next((PREDICATE_FROM[p.action] for p in parsed if p.action in PREDICATE_FROM),
                         None)
-    agent = seg["agent"]
     if g("agent"):
-        if agent is not None:
-            seg["unparsed"] = unparsed(REASON_TWICE)
-            return
-        agent, reason = parse_agent(state, g("agent"), g("agent_marker"), g("agent_pause"), kind)
-        if agent is None:
+        reason = fill_agent(seg, state, g("agent"), g("agent_marker"), g("agent_pause"), kind)
+        if reason:
             seg["unparsed"] = unparsed(reason)
             return
-    seg["agent"] = agent
+    agent = seg["agent"]
     if g("recipient") in SIDE_WORDS:
         seg["recipient"] = SIDE_WORDS[g("recipient")]
     elif g("recipient"):
@@ -380,13 +376,13 @@ def fill_clause(ctx, clause_text):
         # 「Xを対象とし、このカードを装備魔法カード扱いで装備する」:沒寫出來的裝備對象
         # 是左半宣告的物件;模板不寫字面。
         seg["recipient"] = {"object": state.declared_object(), "ref": None, "elided": True}
-    if (g("cause") and g("cause_front")) or (seg["cause"] and (g("cause") or g("cause_front"))):
+    if g("cause") and g("cause_front"):
         seg["unparsed"] = unparsed(REASON_TWICE)
         return
     if g("cause") or g("cause_front"):
-        seg["cause"], reason = parse_cause_phrase(state, g("cause") or g("cause_front"),
-                                                  sentence_start, seg["actions"])
-        if seg["cause"] is None:
+        reason = fill_cause(seg, state, g("cause") or g("cause_front"), sentence_start,
+                            seg["actions"], "名詞前" if g("cause_front") else None)
+        if reason:
             seg["unparsed"] = unparsed(reason)
             return
         if elided and seg["cause"].get("segment"):
@@ -395,8 +391,6 @@ def fill_clause(ctx, clause_text):
             if elided is None:
                 seg["unparsed"] = unparsed(REASON_REF)
                 return
-        if g("cause_front"):
-            seg["cause"]["placement"] = "名詞前"
     if g("per_turn"):
         seg["per_turn"] = parse_per_turn(g("per_turn"))
     if g("interval"):

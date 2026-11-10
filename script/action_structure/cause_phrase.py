@@ -16,7 +16,7 @@ from object_render import render_object
 from segment_fields import (CAUSE_MATERIAL, CAUSE_PATTERN, MATERIAL_FORMS, OWNER_JOINER,
                             OWNER_PATTERN, OWNER_TEXT, parse_cause, render_cause)
 from segment_history import segments_before
-from structure_shape import REASON_REF, NoTemplate
+from structure_shape import REASON_REF, REASON_TWICE, NoTemplate
 from synonyms import action_ancestors, is_summon, parse_predicates
 
 
@@ -103,6 +103,22 @@ def summoned_by(source):
     if len(source["lines"]) != 1 or not all(is_summon(a) for a in source["actions"]):
         return None
     return source["lines"][0]["object"]
+
+
+def fill_cause(seg, state, text, sentence_start, actions=(), placement=None):
+    """原因字面 → 寫進段的 `cause`(`placement` 有給就記在原因上);回傳解析不出的原因(寫好了回 None)。
+    段上已經有原因(子句前文 `clause_front` 先填的)又再寫一次 → `REASON_TWICE`,不猜哪一處算數。
+    簡單子句、抽牌、子句前文填帶字面的原因都走這裡;傷害名詞(「戦闘ダメージ」)與抽牌的「通常の」是
+    那兩個句型自己組的名詞型原因,不走這裡。"""
+    if seg["cause"] is not None:
+        return REASON_TWICE
+    cause, reason = parse_cause_phrase(state, text, sentence_start, actions)
+    if cause is None:
+        return reason
+    if placement:
+        cause["placement"] = placement
+    seg["cause"] = cause
+    return None
 
 
 def parse_cause_phrase(state, text, sentence_start, actions=()):

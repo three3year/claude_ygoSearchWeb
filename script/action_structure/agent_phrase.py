@@ -2,14 +2,14 @@
 
 - 字面:玩家字面 `AGENT_PLAYER_WORDS` 與動作回指「ドローしたプレイヤー」;`AGENT_PATTERN` 給句型用。
 - 抽取:`parse_agent`(玩家字面寫成預設接法時是方的字串,其他接法記 `{"side", "text"}`,
-  動作回指記 `{"ref", "segment"}`)。
+  動作回指記 `{"ref", "segment"}`);寫進段的 `agent` 一律走 `fill_agent`(同一格寫了兩處就不猜)。
 - 模板:`render_agent`。預設接法 `agent_particle`(條件子句「が」、其餘「は」)兩邊共用。
 """
 
 import re
 
 from segment_history import last_segment_doing
-from structure_shape import REASON_CLAUSE, REASON_REF, NoTemplate
+from structure_shape import REASON_CLAUSE, REASON_REF, REASON_TWICE, NoTemplate
 from synonyms import ACTION_PAST
 from zone_phrase import SIDE_WORDS
 
@@ -57,6 +57,19 @@ def parse_agent(state, word, marker, pause, kind):
     if text == word + agent_particle(kind) and SIDE_WORDS.get(word) == side:
         return side, None
     return {"side": side, "text": text}, None
+
+
+def fill_agent(seg, state, word, marker, pause, kind):
+    """誰的字面 → 寫進段的 `agent`;回傳解析不出的原因(寫好了回 None,這時段的格不動)。
+    段上已經有誰(子句前文 `clause_front` 先填的)又再寫一次 → `REASON_TWICE`,不猜哪一處算數。
+    簡單子句、抽牌、子句前文填誰都走這裡。"""
+    if seg["agent"] is not None:
+        return REASON_TWICE
+    agent, reason = parse_agent(state, word, marker, pause, kind)
+    if agent is None:
+        return reason
+    seg["agent"] = agent
+    return None
 
 
 def render_agent(agent, seg, card):

@@ -6,15 +6,15 @@
   只記算式字面 `{"kind": "算式", "text"}`,寫在主語前的帶 `placement: 主語前`、寫在主語後
   「從」前的帶 `placement: 名詞前`。「お互いはそれぞれ」的「それぞれ」是每人各 N 張,記 `each`。
 - 從牌組(「デッキから」明寫,沒寫照推得表)到手牌(推得)。
-- 誰:「自分は/相手は/お互いは」進 `agent`(`agent_phrase.parse_agent`)。
+- 誰:「自分は/相手は/お互いは」進 `agent`(`agent_phrase.fill_agent`)。
 - 原因:「通常のドロー」= `{"kind": "規則", "text": "通常の"}`,寫在述語前;「効果で」照既有閉集。
 - 「ドローフェイズ」是階段字面,不是抽牌(述語字面排除它)。
 """
 import re
 
-from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
+from agent_phrase import AGENT_PATTERN, agent_side, fill_agent, render_agent
 from block_state import INFERENCE_TABLE, update_positions
-from cause_phrase import parse_cause_phrase, render_cause_phrase
+from cause_phrase import fill_cause, render_cause_phrase
 from noun_phrase import category_condition
 from object_render import render_object
 from predicate_literal import render_predicate
@@ -143,9 +143,8 @@ def fill_clause(ctx, clause_text):
     seg["voice"] = merged_voice(parsed)
     seg["polarity"], seg["optional"] = resolve_polarity(parsed, None)
     if g("agent"):
-        seg["agent"], reason = parse_agent(state, g("agent"), g("agent_marker"),
-                                           g("agent_pause"), ctx.kind)
-        if seg["agent"] is None:
+        reason = fill_agent(seg, state, g("agent"), g("agent_marker"), g("agent_pause"), ctx.kind)
+        if reason:
             seg["unparsed"] = unparsed(reason)
             return True
     count, ambiguous = parse_count(g("count"), g("count_front"), g("count_lead"), g("each"))
@@ -156,8 +155,8 @@ def fill_clause(ctx, clause_text):
         seg["unparsed"] = unparsed(REASON_CLAUSE)
         return True
     if g("cause"):
-        seg["cause"], reason = parse_cause_phrase(state, g("cause"), sentence_start)
-        if seg["cause"] is None:
+        reason = fill_cause(seg, state, g("cause"), sentence_start)
+        if reason:
             seg["unparsed"] = unparsed(reason)
             return True
     elif g("rule"):

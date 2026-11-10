@@ -17,9 +17,9 @@
 """
 import re
 
-from agent_phrase import AGENT_PATTERN, parse_agent
+from agent_phrase import AGENT_PATTERN, fill_agent
 from block_state import INTERVAL_REASON, INTERVAL_SCOPE, INTERVAL_TIMES
-from cause_phrase import CAUSE_ALT, parse_cause_phrase
+from cause_phrase import CAUSE_ALT, fill_cause
 from object_boundary import REASON_FRONT
 from premise import PHASE_WORDS, parse_game_state
 from segment_fields import (BATTLE_DURATION_PATTERN, CLAUSE_DURATION_PATTERN, DELAY, parse_duration,
@@ -119,8 +119,8 @@ def fill_front(ctx, front):
             seg["timing"] = {**parse_timing(m.group().rstrip("、")), "text": m.group(),
                              "placement": PLACEMENT_FRONT}
         elif kind == "誰":
-            seg["agent"], reason = parse_agent(state, m.group("word"), m.group("marker"),
-                                               m.group("pause"), ctx.kind)
+            reason = fill_agent(seg, state, m.group("word"), m.group("marker"), m.group("pause"),
+                                ctx.kind)
         elif kind == "主語":
             obj_id, ref, reason = state.object_at(m.group("phrase"), start)
             if obj_id is not None:
@@ -131,9 +131,7 @@ def fill_front(ctx, front):
                 if m.group("marker") == "は":
                     state.subject = obj_id
         elif kind == "原因":
-            seg["cause"], reason = parse_cause_phrase(state, m.group(), start)
-            if seg["cause"] is not None:
-                seg["cause"]["placement"] = "名詞前"
+            reason = fill_cause(seg, state, m.group(), start, placement="名詞前")
         if reason:
             seg["unparsed"] = unparsed(reason)
             return False

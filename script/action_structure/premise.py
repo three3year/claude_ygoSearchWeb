@@ -93,7 +93,7 @@ def parse_game_state(text):
 
 def split_premises(body, state, start, parse_zones, zone_literal=lambda phrase: None):
     """發動句主體開頭的前提 → (條件式或 None, 前提字面結束偏移, 子句開始偏移)。
-    `state` 是 segment_extract.BlockState(要寫位置、建物件);`parse_zones` 是區域短語
+    `state` 是 block_state.BlockState(要寫位置、建物件);`parse_zones` 是區域短語
     的解析函式(「自分の手札・フィールド」→ 區域列表,認不得回 None);`zone_literal` 回傳
     區域短語要不要留原文字面(不是預設寫法時回該短語,否則 None)。
     偏移相對於區塊原文,`start` 是 body 在區塊裡的位置。"""

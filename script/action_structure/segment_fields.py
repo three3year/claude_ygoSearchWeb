@@ -4,7 +4,7 @@
   "text": 字面, "side": 我方/對手(效果含誰的,有寫才有)}`;字面只認閉集 `CAUSE_FORMS`,模板照字面寫。
   帶「は」的字面(効果では、戦闘及び効果では…)、誰的效果(`OWNER_FORMS`、`OWNER_PATTERN`)。
 - 每回合次數(`per_turn`):抗性的「(それぞれ)１ターンに１度だけ」→ {"value", "text"}。
-- 極性(`polarity`):述語語尾給的極性(`segment_extract.TAILS`)之外,「Xは〜できる」(助詞は)是
+- 極性(`polarity`):述語語尾給的極性(`synonyms.TAILS`)之外,「Xは〜できる」(助詞は)是
   永續的許可(直接攻撃できる)→ 極性「可以」、不是可選的動作;「Xを〜できる」仍是可選的「做」
   (票 10 的決定)。`resolve_polarity` 是抽取與反向檢查共用的一把尺。
 - 時機(`timing`):「次のスタンバイフェイズに」「このターンのエンドフェイズに」→
@@ -77,7 +77,7 @@ CAUSE_PATTERN = "|".join(sorted(map(re.escape, [*CAUSE_FORMS, *MATERIAL_FORMS]),
                                 key=len, reverse=True))
 # 誰的效果:「〜の効果を受けない」「〜の効果の対象にならない」的「〜の」是原因,
 # 「効果を受け」「効果の対象に」留在述語。方的字面閉集記 side;其餘是物件短語(「A及びB」多個),
-# 原因記 {"kind": 效果, "text": "の", "objects": [...]}(`segment_extract.BlockState.cause_at`)。
+# 原因記 {"kind": 效果, "text": "の", "objects": [...]}(`cause_phrase.parse_cause_phrase`)。
 OWNER_FORMS = {"相手の": "對手", "自分の": "我方", "カードの": None,
                "相手のカードの": "對手", "自分のカードの": "我方"}
 OWNER_TEXT = "の"
@@ -412,7 +412,7 @@ _ATTRS = f"(?:{_STAT_ALT})(?:{STAT_JOINER}(?:{_STAT_ALT}))*"
 # 倍/半分的基準只有攻守(「元々の攻撃力の倍」)。
 _BASE_ALT = "元々の(?:攻撃力|守備力)"
 # 提及的字面:「その攻撃力」的その是回指(物件是最近的物件),「このカードの」是物件0。
-# 其餘主語是「物件短語 + の」,物件照一般規則解析(`segment_extract._modify_subject`)。
+# 其餘主語是「物件短語 + の」,物件照一般規則解析(`stat_modify._modify_subject`)。
 MENTION_FORMS = ("その", "それらの", "このカードの", "そのモンスターの", "そのカードの",
                  "それらのモンスターの", "それらのカードの")
 # 屬性後的助詞:「攻撃力は、」的讀點記進對象線的助詞字面(同「自分フィールドの、」記進從的字面)。

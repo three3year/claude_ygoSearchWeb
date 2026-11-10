@@ -1,7 +1,7 @@
 """條件式原子(票 07):記載、卡名範圍、屬性比較(引用)、位置、卡片子類型的抽取與句型模板。
 
-放獨立模組是為了把一個原子的「抽取」與「模板」放在一起:`segment_extract.parse_modifiers`
-認不得修飾語時交給 `parse_modifier`,`reverse_check._render_atom` 沒模板時交給 `render_atom`;
+放獨立模組是為了把一個原子的「抽取」與「模板」放在一起:`noun_phrase.parse_modifiers`
+認不得修飾語時交給 `parse_modifier`,`noun_phrase` 的原子模板沒模板時交給 `render_atom`;
 加一個原子只改這裡。原子的查詢判斷在 `action_query.eval_condition`。
 
 - 記載(名稱):「X」のカード名が記された → {"op": "記載", "name": 名稱列 id};
@@ -252,7 +252,7 @@ def referenced_objects(condition):
 
 def quoted_name(atom_or_id, names):
     """名稱原子(或名稱列 id)→ 「X」:只從名稱表取字面(查詢側才會直接帶 text,結構裡不會);
-    名稱列找不到回 None。reverse_check 的名稱原子模板也用這一支。"""
+    名稱列找不到回 None。noun_phrase 的名稱原子模板也用這一支。"""
     name_id = atom_or_id if isinstance(atom_or_id, str) else atom_or_id.get("name")
     row = names.get(name_id)
     return None if row is None else f"「{row['text']}」"

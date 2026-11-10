@@ -1,4 +1,4 @@
-"""傷害與回復:句型與模板成對放在一起(抽取的填格在 `segment_extract._fill_damage`)。
+"""傷害與回復:句型、填格(`fill_clause`)與句型模板(`render_clause`)成對放在一起。
 
 - 動作詞傷害:「与える」「受ける」同一個動作詞,`recipient` 是受傷的一方、`predicate` 留字面
   (「与えた」「受ける」);動作詞回復(「回復する」)形狀同傷害。
@@ -22,13 +22,19 @@
 """
 import re
 
-from segment_fields import CAUSE_PATTERN, CAUSE_FORMS, render_cause
-from structure_shape import AMOUNT_FORMULA, NoTemplate
+from agent_phrase import render_agent
+from block_state import REASON_CLAUSE, REASON_TWICE
+from cause_phrase import REASON_CAUSE, parse_cause_phrase
+from object_render import render_object
+from predicate_literal import check_predicate
+from segment_fields import CAUSE_PATTERN, DURATION_TURN, render_cause, resolve_polarity
+from structure_shape import AMOUNT_FORMULA, NoTemplate, new_line, unparsed
+from synonyms import DAMAGE_OBJECT, MODIFY_ACTION, merged_voice, parse_predicates
+from zone_phrase import SIDE_WORDS
 
 DAMAGE_ACTION = "傷害"
 RECOVER_ACTION = "回復"
 DAMAGE_ATTR = "傷害"
-DAMAGE_OBJECT = "ダメージを"
 DEAL_STEM, RECEIVE_STEM, RECOVER_STEM = "与え", "受け", "回復"
 NEGATED_RECEIVE = "受けない"
 MODIFY_DAMAGE_PREDICATE = "になる"
@@ -275,3 +281,171 @@ def render_limit(limit):
     if parse_limit(limit.get("text") or "") != limit:
         raise NoTemplate("門檻無模板")
     return limit["text"]
+
+
+def parse_damage_predicates(pred, recover):
+    """傷害、回復句型的原述語字面(「与えた」「受ける」「回復する」)→ 同義表的查表結果。
+    傷害的字幹在同義表裡連受詞「ダメージを」一起寫,句型卻把它切在述語外(見 `synonyms.DAMAGE_OBJECT`):
+    查表前在這裡接回去,抽取(`fill_clause`)與模板(`render_clause`)都走這一支。回復的字幹不帶受詞。"""
+    return parse_predicates(pred if recover else DAMAGE_OBJECT + pred)
+
+
+def fill_clause(ctx, clause_text):
+    """傷害、回復與傷害值變更的句型(`damage`)→ 填格回 True;不是這些句型回 False。
+    玩家主語/受方進 `agent`/`recipient`、不建物件;物件主語(「このカードが」)是角色施事的對象線。"""
+    seg, state, sentence_start = ctx.seg, ctx.state, ctx.sentence_start
+    found = match_clause(clause_text)
+    if found is None:
+        return False
+    form, m = found
+    g = m.groupdict().get
+    pred = g("pred") or MODIFY_DAMAGE_PREDICATE
+    seg["predicate"], seg["voice"] = pred, "主動"
+    if form == MODIFY or pred == NEGATED_RECEIVE:
+        seg["actions"] = [MODIFY_ACTION]
+        seg["modified"] = (parse_value(g("value")) if form == MODIFY
+                           else parse_value("０"))
+        if g("limit"):
+            seg["modified"]["limit"] = parse_limit(g("limit"))
+    else:
+        parsed, reason = parse_damage_predicates(pred, recover=form == RECOVER)
+        if parsed is None:
+            seg["unparsed"] = unparsed(reason)
+            return True
+        seg["actions"] = [p.action for p in parsed]
+        seg["voice"] = merged_voice(parsed)
+        seg["polarity"], seg["optional"] = resolve_polarity(parsed, None)
+    if g("recipient"):
+        seg["recipient"] = player(g("recipient"), g("recipient_tail") or "に")
+    elif g("recipient_pre"):
+        seg["recipient"] = player(g("recipient_pre"), "に", PLACEMENT_BEFORE_NOUN)
+    noun = g("noun") or PLAIN_NOUN
+    cause = noun_cause(noun) if g("noun") else None
+    verbal = g("cause") or g("cause_pre")
+    if verbal:
+        if cause is not None:
+            seg["unparsed"] = unparsed(REASON_TWICE)
+            return True
+        cause, reason = parse_cause_phrase(state, verbal, sentence_start)
+        if cause is None:
+            seg["unparsed"] = unparsed(reason)
+            return True
+        if g("cause_pre"):
+            cause["placement"] = CAUSE_BEFORE_SUBJECT
+    if g("source_that") or g("source_object"):
+        if cause is None:
+            seg["unparsed"] = unparsed(REASON_CAUSE)
+            return True
+        source = {"text": g("source_that") or g("source_tail")}
+        if g("source_object"):
+            obj_id, ref, reason = state.object_at(g("source_object"), sentence_start)
+            if obj_id is None:
+                seg["unparsed"] = unparsed(reason)
+                return True
+            source["object"] = obj_id
+            if ref:
+                source["ref"] = ref
+        cause["source"] = source
+    seg["cause"] = cause
+    if g("amount_pre") and g("amount"):
+        seg["unparsed"] = unparsed(REASON_TWICE)
+        return True
+    amount_text = g("amount_pre") or g("amount")
+    if amount_text:
+        seg["amount"] = parse_amount(amount_text, noun)
+        if seg["amount"] is None:
+            seg["unparsed"] = unparsed(REASON_CLAUSE)
+            return True
+    if g("duration"):
+        seg["duration"] = {"kind": DURATION_TURN, "text": g("duration")}
+    ctx.inherit_timing()
+    subject = g("subject")
+    if subject in SIDE_WORDS and g("subject_marker"):
+        seg["agent"] = SIDE_WORDS[subject]
+    elif subject:
+        obj_id, ref, reason = state.object_at(subject, sentence_start)
+        if obj_id is None:
+            seg["unparsed"] = unparsed(reason)
+            return True
+        seg["lines"] = [new_line(obj_id, "施事", marker=g("subject_marker"), ref=ref)]
+        if obj_id != state.self_id and obj_id not in state.recent:
+            state.recent.append(obj_id)
+    return True
+
+
+def render_clause(seg, card, objects, names, self_id, inner_duration):
+    """傷害、回復、傷害值變更段(`damage`):
+    給予 [主語][原因][算式だけ][受方に(名詞前)][數量]名詞を[受方に]与え〜;
+    受到 [原因(主語前)][受方は|が][原因][門檻][數量]名詞を受け〜(受けない 是數值 0 的變更);
+    變更 [このターン][來源][受方への|が受ける|に与える]名詞は(０|倍|半分)になる;
+    回復 受方は數量回復〜 / 算式だけ受方のLPを回復〜 / 受方のLPが回復〜。"""
+    predicate = seg["predicate"] or ""
+    verbal, cause_first, noun = split_cause(seg["cause"])
+    source = ""
+    if seg["cause"] and seg["cause"].get("source"):
+        source = render_source(
+            seg["cause"]["source"],
+            lambda obj_id, ref: render_object(objects[obj_id], seg, card, names,
+                                               {"ref": ref} if ref else None,
+                                               self_id=self_id))
+    if seg["actions"] == [MODIFY_ACTION]:
+        tail = render_modified(seg["modified"], predicate)
+        if seg["lines"] or seg["agent"]:
+            raise NoTemplate("傷害值變更段不該有對象線")
+        if tail is not None:
+            period = ""
+            if inner_duration is not None:
+                if inner_duration != {"kind": "本回合", "text": DURATION_THIS_TURN}:
+                    raise NoTemplate("期間無模板:句中")
+                period = inner_duration["text"]
+            if verbal or seg["amount"] or seg["modified"].get("limit"):
+                raise NoTemplate("傷害值變更段的格不齊")
+            recipient = (render_recipient(seg["recipient"], MODIFY_TAILS)
+                         if seg["recipient"] is not None else "")
+            return period + source + recipient + noun + "は" + tail
+        if inner_duration is not None or source:
+            raise NoTemplate("傷害值變更段的格不齊")
+    elif seg["actions"] == [RECOVER_ACTION]:
+        check_predicate(seg, parse_damage_predicates(predicate, recover=True)[0])
+        if seg["lines"] or verbal or noun != PLAIN_NOUN or seg["agent"] or source:
+            raise NoTemplate("回復段的格不齊")
+        recipient = render_recipient(seg["recipient"], RECOVER_TAILS)
+        amount = seg["amount"]
+        if recipient.endswith("は") and amount:
+            return recipient + render_lp_amount(amount) + predicate
+        if (recipient.endswith("を") and amount and amount.get("kind") == "算式"
+                and amount.get("text", "").endswith("だけ")):
+            return amount["text"] + recipient + predicate
+        if recipient.endswith("が") and not amount:
+            return recipient + predicate
+        raise NoTemplate("回復段的格不齊")
+    else:
+        check_predicate(seg, parse_damage_predicates(predicate, recover=False)[0])
+    if source:
+        raise NoTemplate("傷害來源無模板")
+    before_recipient, noun_phrase = render_amount(seg["amount"], noun)
+    if predicate.startswith(DEAL_STEM):
+        parts = []
+        for line in seg["lines"]:
+            if line["role"] != "施事" or line["marker"] not in ("が", "は"):
+                raise NoTemplate(f"角色無模板:{line['role']}")
+            parts.append(render_object(objects[line["object"]], seg, card, names, line,
+                                        self_id=self_id) + line["marker"])
+        if seg["agent"] is not None:
+            if seg["lines"]:
+                raise NoTemplate(f"誰無模板:{seg['agent']}")
+            parts.append(render_agent(seg["agent"], seg, card))
+        if cause_first or seg["modified"]:
+            raise NoTemplate("傷害段的格不齊")
+        recipient = (render_recipient(seg["recipient"], DEAL_TAILS)
+                     if seg["recipient"] is not None else "")
+        front = bool(recipient) and seg["recipient"].get("placement") == PLACEMENT_BEFORE_NOUN
+        parts += [verbal, before_recipient, recipient if front else "", noun_phrase, "を",
+                  "" if front else recipient, predicate]
+        return "".join(parts)
+    if seg["lines"] or seg["agent"] or before_recipient:
+        raise NoTemplate("傷害段的格不齊")
+    recipient = render_recipient(seg["recipient"], RECEIVE_TAILS)
+    limit = render_limit((seg["modified"] or {}).get("limit"))
+    return ((verbal if cause_first else "") + recipient + ("" if cause_first else verbal)
+            + limit + noun_phrase + "を" + predicate)

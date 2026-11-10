@@ -7,10 +7,31 @@
   在這裡;名詞短語的修飾語與頭名詞在 `noun_phrase`。
 - 推得表 `INFERENCE_TABLE` 與位置自動規則 `update_positions`;`segment_at` 由區塊原文的範圍開一個段。
 - 各模組共用的解析不出原因(`REASON_CLAUSE`、`REASON_OBJECT`、`REASON_REF`、`REASON_TWICE`…)。
+- `ClauseContext`:各句型的 `fill_clause` 共用的參數(段、區塊狀態、句子起點、承襲的時機)。
 誰、原因、區域、數量各自的字面在 `agent_phrase`、`cause_phrase`、`zone_phrase`、`quantity`。
+
+規則:
+- 物件:このカード = 物件0;その/それらの モンスター|カード 指回本區塊最近的同大類物件
+  (從條件段指回來的不標取對象;回指字面記在對象線 `ref`);「めくったカード」這類動作回指
+  也指回;助詞後的數量(「を全て」「を２枚まで」)記在對象線 `count`,屬於這次提及;「残りのX」是
+  剩餘物件(容器 − 最近的子集);其餘是新建物件,頭名詞給大類、數量給數量,修飾語從左到右認:
+  「X」以外の = 非(卡名∋X);「X」と名のついた、緊接頭名詞的「X」= 字段(依字段表換成 setcode);
+  カード名に「X」を含む = 卡名包含;「X」１体 = 卡名∋X;種族、屬性、レベルN = 屬性比較
+  (「・」列舉的種族/屬性是「或」,種族接屬性是「且」,`attribute_atoms`);頭名詞 チューナー =
+  怪獸 且 子類型 協調。認不得的修飾語整截標「解析不出」;「X」對不到卡名與字段的,
+  物件標「不認得的「」名稱」。
+- 位置:處理完一段把「到」寫回物件目前位置;「從」沒寫先繼承目前位置(沒動過就是初始位置),
+  再查推得表;推得值與繼承自推得值的標 inferred,查詢開關開才算。
+  區域的方沒寫(「墓地から」)照慣例歸我方但記 side_source 預設,場上系沒寫方不預設(任一方的
+  場上);明寫「自分の」記明寫,反向檢查沒有字面時只在明寫才寫出來。
+- 去除:對象是超量素材「(Xの)X素材」(`of` 所屬卡;沒寫時是隱含的新建超量怪獸,初始位置 = 從)
+  與計數器「(Xの)魔力カウンター」(`counter` 種類名);數量單位「つ」;舊式代價「〜く事で、」。
+  另收:「このカードを対象とする(Xの)効果が発動した」(物件條件 以此卡為對象)、超量素材行「×N」、
+  物件前的「〜の数まで、」、片假名子類型(リンク…)、修飾語連接字與預設不同時記 `joiner`。
 """
 
 import re
+from dataclasses import dataclass
 from typing import NamedTuple
 
 from archetype_table import fold_width
@@ -19,6 +40,7 @@ from names_attributes import REASON_NAME_UNKNOWN
 from noun_phrase import (HEAD_CATEGORY, NOUN_RE, OR_FORM, category_condition, category_of,
                          noun_condition, parse_modifiers, split_alternatives)
 from quantity import parse_count
+from segment_fields import implicit_delay
 from structure_shape import new_object, new_segment, unparsed
 from synonyms import ACTION_PAST, TARGET_REF
 
@@ -405,3 +427,26 @@ def segment_at(state, kind, start, end):
     text = state.block["text"]
     return new_segment(f"{state.block['id']}.s{start}", kind, (start, end),
                        text[start:end])
+
+
+@dataclass
+class ClauseContext:
+    """一個子句填格時共用的參數:要填的段、區塊狀態、子句所在句子的起點(新建物件的 id、略過文本的
+    範圍從它起算)、連用形串接(同時)的前一段的時機。各句型的 `fill_clause(ctx, 子句)` 都吃這一包。"""
+    seg: dict
+    state: BlockState
+    sentence_start: int
+    inherited_timing: dict | None = None
+
+    @property
+    def kind(self):
+        """填格當下段的類別(條件/代價/效果);召喚條件區塊的召喚手續、限制是整句解析完才改寫的。"""
+        return self.seg["kind"]
+
+    def inherit_timing(self):
+        """沒寫時機的段:連用形串接(同時)的後一段與前一段同一時點(時機照抄、字面只在前一段);
+        延遲序列裡的效果段是隱含的延遲。"""
+        if self.inherited_timing:
+            self.seg["timing"] = {k: v for k, v in self.inherited_timing.items() if k != "text"}
+        elif self.state.delayed and self.kind == "效果":
+            self.seg["timing"] = implicit_delay()

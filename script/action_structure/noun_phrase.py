@@ -12,7 +12,7 @@
 import re
 
 from attribute_atoms import (EXCEPT, is_param_atom, joiner, parse_modifier as parse_param_group,
-                             render_group, render_level)
+                             render_group, render_number)
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from condition_atoms import parse_modifier as parse_atom_modifier, quoted_name, render_atom
 from structure_shape import NoTemplate
@@ -219,9 +219,9 @@ def _render_atom(atom, names):
         return text + EXCEPT
     if op == "卡名包含":
         return "カード名に" + _quoted(atom, names) + "を含む"
-    level = render_level(atom)   # レベル１、レベル４以下、レベル５以上
-    if level is not None:
-        return level
+    number = render_number(atom)   # レベル１、レベル４以下、攻撃力１５００以下
+    if number is not None:
+        return number
     if op == "屬性比較" and atom.get("cmp") == "=":
         if atom["attr"] == "種族":
             return atom["value"]

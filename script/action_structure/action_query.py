@@ -71,11 +71,16 @@ MODIFIED_KEYS = ("attr", "form", "value")
 SYMMETRIC_ACTION = "戰鬥"
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
-                "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10}
-# 魔陷的子類型位元(速攻、永續、裝備、場地、反擊、儀式):一個都沒有的是「通常」。
-SPELL_TRAP_SUBTYPE_BITS = 0x10000 | 0x20000 | 0x40000 | 0x80000 | 0x100000 | 0x80
+                "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10,
+                "效果": 0x20, "反轉": 0x200000, "二重": 0x800, "靈魂": 0x200,
+                "聯合": 0x400, "卡通": 0x400000}
+# 魔陷的子類型位元(與怪獸是不同值域:0x80 在怪獸、魔法都是儀式,其餘只在魔陷有意義);
+# 一個都沒有的是「通常」。
+SPELL_TRAP_SUBTYPE_BITS = {"速攻": 0x10000, "永續": 0x20000, "裝備": 0x40000, "場地": 0x80000,
+                           "反擊": 0x100000, "儀式": 0x80}
 EXTRA_DECK_BITS = (SUBTYPE_BITS["融合"] | SUBTYPE_BITS["同步"] | SUBTYPE_BITS["超量"]
                    | SUBTYPE_BITS["連結"] | SUBTYPE_BITS["靈擺"])
+STAT_FIELDS = {"攻擊力": "atk", "守備力": "def"}
 COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
                "≤": operator.le, ">": operator.gt, "<": operator.lt}
 REASON_REF_MISSING = "引用的物件找不到"
@@ -123,19 +128,24 @@ GENERIC_ATOMS = ("大類",) + tuple(op for op, rule in STATE_ATOMS.items() if ru
 
 
 def card_attr(entry, attr):
-    """代入的卡在卡片總表的屬性值;沒有這個值(魔陷的種族、非超量怪獸的階級)回 None。
+    """代入的卡在卡片總表的屬性值;沒有這個值(魔陷的種族、非超量怪獸的階級、「？」的攻擊力)回 None。
     等級與階級、連結值同存在 `level` 欄,照 type 位元分開。"""
     kind = entry["type"]
     if not kind & 0x1:
         if attr == "卡片子類型":
-            if kind & SPELL_TRAP_SUBTYPE_BITS:
-                return {"儀式"} if kind & SUBTYPE_BITS["儀式"] else set()
-            return {"通常"}
+            return {name for name, bit in SPELL_TRAP_SUBTYPE_BITS.items()
+                    if kind & bit} or {"通常"}
         return None
     if attr == "等級":
         return None if kind & (SUBTYPE_BITS["超量"] | SUBTYPE_BITS["連結"]) else entry["level"]
     if attr == "階級":
         return entry["level"] if kind & SUBTYPE_BITS["超量"] else None
+    if attr == "連結值":
+        return entry["level"] if kind & SUBTYPE_BITS["連結"] else None
+    if attr in STAT_FIELDS:
+        # 攻擊力、守備力「？」在卡片總表記負數,沒有數值可比;連結怪獸沒有守備力(None)。
+        value = entry[STAT_FIELDS[attr]]
+        return None if value is None or value < 0 else value
     if attr == "種族":
         return entry["race"]
     if attr == "屬性":

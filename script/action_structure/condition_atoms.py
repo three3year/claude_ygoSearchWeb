@@ -68,12 +68,20 @@ _SUMMONED_FROM_RE = re.compile(
     f"^(?P<side>自分|相手)?の?(?P<zone>{_ZONE_ALT})から特殊召喚された")
 SUBTYPE_LETTERS = (("融合", "融合"), ("儀式", "儀式"), ("S", "同步"), ("X", "超量"),
                    ("L", "連結"), ("P", "靈擺"),
-                   ("通常", "通常"))   # 「「ホール」通常罠カード」「通常モンスター」
-SUBTYPE_WORDS = (("リンク", "連結"), ("シンクロ", "同步"), ("エクシーズ", "超量"))
+                   ("通常", "通常"),   # 「「ホール」通常罠カード」「通常モンスター」
+                   # m3 票 04:怪獸的 効果〜リバース,魔陷的 永続〜カウンター(值域同 script/web/vocab.py)。
+                   ("効果", "效果"), ("デュアル", "二重"), ("スピリット", "靈魂"),
+                   ("トゥーン", "卡通"), ("ユニオン", "聯合"), ("リバース", "反轉"),
+                   ("永続", "永續"), ("速攻", "速攻"), ("フィールド", "場地"),
+                   ("カウンター", "反擊"))
+SUBTYPE_WORDS = (("リンク", "連結"), ("シンクロ", "同步"), ("エクシーズ", "超量"),
+                 ("リバース効果", "反轉"))   # 舊式「リバース効果モンスター」
 _SUBTYPE = "|".join([word for word, _ in SUBTYPE_WORDS]
                     + [letter for letter, _ in SUBTYPE_LETTERS])
 _ARCHETYPE_SUBTYPE_RE = re.compile(f"^「(?P<name>[^「」]+)」(?P<sub>{_SUBTYPE})$")
 _SUBTYPE_RE = re.compile(f"^(?P<sub>{_SUBTYPE})$")
+# 子類型的「・」列舉(「融合・S・X・Lモンスター」)是或:一張卡符合其中一種就算。
+_SUBTYPE_LIST_RE = re.compile(f"^(?:{_SUBTYPE})(?:・(?:{_SUBTYPE}))+$")
 # 表示形式(表側、裏側是狀態,不是卡的屬性;spec「區域」;票 06):閉集,值就是字面。
 FACE_WORDS = ("表側攻撃表示", "表側守備表示", "裏側守備表示", "表側表示", "裏側表示")
 # 後接「の」的(「エクストラデッキの表側表示の「X」モンスター」)原子另帶 text(含「の」)。
@@ -173,6 +181,10 @@ def parse_modifier(rest, state):
     m = _SUBTYPE_RE.match(rest)
     if m:
         return [_subtype_atom(m.group("sub"))], None, m.end()
+    m = _SUBTYPE_LIST_RE.match(rest)
+    if m:
+        return ([{"op": "或", "args": [_subtype_atom(word) for word in rest.split("・")]}],
+                None, m.end())
     m = _FACE_RE.match(rest)
     if m:
         atom = {"op": "表示形式", "value": m.group("face")}
@@ -316,12 +328,11 @@ def render_atom(atom, names):
 
 
 def _render_compare(atoms):
-    """屬性比較:卡片子類型 = X 寫成字母;引用的兩種句型照 form 放回。"""
+    """屬性比較:卡片子類型 = X 寫成字母(多個是「・」列舉);引用的兩種句型照 form 放回。"""
     first = atoms[0]
-    if first.get("attr") == "卡片子類型" and len(atoms) == 1:
-        if "text" in first:
-            return first["text"] if (first["text"], first.get("value")) in SUBTYPE_WORDS else None
-        return _SUBTYPE_TEXT.get(first.get("value"))
+    if all(a.get("attr") == "卡片子類型" and "ref" not in a for a in atoms):
+        words = [_subtype_text(a) for a in atoms]
+        return None if None in words else "・".join(words)
     ref = first.get("ref")
     if ref is None or any(a.get("ref", {}).get("text") != ref["text"]
                           or a.get("form") != first.get("form") for a in atoms):
@@ -334,6 +345,14 @@ def _render_compare(atoms):
         return (ref["text"] + "の" + _ATTR_TEXT[ref["attr"]] + "と同じ数値の"
                 + _ATTR_TEXT[first["attr"]] + "を持つ")
     return None
+
+
+def _subtype_text(atom):
+    if atom.get("cmp") != "=":
+        return None
+    if "text" in atom:
+        return atom["text"] if (atom["text"], atom.get("value")) in SUBTYPE_WORDS else None
+    return _SUBTYPE_TEXT.get(atom.get("value"))
 
 
 def _is_name_or_mention(atom):

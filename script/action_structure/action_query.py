@@ -613,8 +613,9 @@ class _Judge:
             if obj["unparsed"]:
                 return False
             if is_this_card(obj, self.objects_of(owner)):
-                # 此卡只有這張卡自己代得進去:看它自己滿不滿足查詢條件。不走下面的快取——
-                # 此卡的條件式與來源每張卡都一樣,鍵分不出是哪張卡。
+                # 此卡只有這張卡自己代得進去:「存在一張實卡」就是「它自己滿不滿足查詢條件」,直接判。
+                # 不走下面的存在性快取:那個快取是讓條件式相同的物件共用一次總表掃描,鍵不帶卡號
+                # (此卡的條件式與來源每張卡都一樣);讓鍵帶卡號等於每張卡各掃一次總表,答案仍只看它自己。
                 entry = self.by_id.get(owner["id"])
                 return (entry is not None
                         and eval_condition(q["condition"], self.view(entry)) is True

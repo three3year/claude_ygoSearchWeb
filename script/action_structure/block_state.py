@@ -287,6 +287,35 @@ class BlockState:
             return obj_id, phrase, (None if obj_id else REASON_REF)
         return self.new_object(phrase, sentence_start, {"kind": "新建"})
 
+    def names_object(self, phrase):
+        """字面像不像物件短語(只看、不建物件):以頭名詞收尾(修飾語認不認得不管),或是
+        `parses_cleanly` 認得的那幾種(此卡、回指、只有卡名);超量素材、計數器看所屬的物件。"""
+        detach = _MATERIAL_RE.match(phrase) or _COUNTER_RE.match(phrase)
+        if detach:
+            return not detach.group("owner") or self.names_object(detach.group("owner"))
+        return bool(NOUN_RE.match(phrase)) or self.parses_cleanly(phrase)
+
+    def parses_cleanly(self, phrase):
+        """物件短語照現有規則認不認得全(只看、不建物件):此卡、回指、超量素材、計數器、只有卡名的
+        都算認得;名詞短語要修飾語沒有「解析不出」的那截。物件切點(`object_boundary`)只在這裡
+        回 False 時才去找吞進來的前文。"""
+        detach = _MATERIAL_RE.match(phrase) or _COUNTER_RE.match(phrase)
+        if detach:
+            return not detach.group("owner") or self.parses_cleanly(detach.group("owner"))
+        if (_SELF_RE.match(phrase) or phrase == f"「{self.card['name_ja']}」"
+                or REF_RE.match(phrase) or phrase == ACTIVATION_REF or _REMAINDER_RE.match(phrase)
+                or TARGET_REF_RE.match(phrase) or self.is_action_reference(phrase)
+                or _NAMED_RE.match(phrase) or phrase in TARGETING_THIS_FORMS):
+            return True
+        m = NOUN_RE.match(phrase)
+        if not m:
+            return False
+        pieces = split_alternatives(m.group("mods"), m.group("head"))
+        mods = ([NOUN_RE.match(piece).group("mods") for piece in pieces] if pieces
+                else [m.group("mods")])
+        return not any(atom.get("op") == "解析不出"
+                       for piece in mods for atom in parse_modifiers(self, piece)[0])
+
     def new_object(self, phrase, sentence_start, source, initial_position=None):
         named = _NAMED_RE.match(phrase)
         m = named or NOUN_RE.match(phrase)
@@ -447,6 +476,7 @@ class ClauseContext:
         """沒寫時機的段:連用形串接(同時)的後一段與前一段同一時點(時機照抄、字面只在前一段);
         延遲序列裡的效果段是隱含的延遲。"""
         if self.inherited_timing:
-            self.seg["timing"] = {k: v for k, v in self.inherited_timing.items() if k != "text"}
+            self.seg["timing"] = {k: v for k, v in self.inherited_timing.items()
+                                  if k not in ("text", "placement")}
         elif self.state.delayed and self.kind == "效果":
             self.seg["timing"] = implicit_delay()

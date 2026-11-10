@@ -29,8 +29,10 @@
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
 """
 import re
+from dataclasses import replace
 
 import battle_clause
+import clause_front
 import damage
 import draw
 import existence_clause
@@ -41,13 +43,14 @@ from block_state import (ClauseContext, INTERVAL_RE, INTERVAL_REASON, KIND_PROCE
                          KIND_RESTRICTION, segment_at)
 from clause_join import JOIN, split_continuative
 from names_attributes import parse_treat_as
+from object_boundary import REASON_FRONT
 from premise import is_lasting, split_premises
 from segment_fields import (REPLACEMENT_PREFIX, find_battle_duration, inherited_duration, lasting,
                             parse_cause, parse_leading_duration)
 from structure_shape import BATTLE_TRIGGERS, unparsed
 from synonyms import ACTIVATION_SUFFIXES, COST_GLUE
 from treat_as import treat_as_segment
-from zone_phrase import parse_from, zone_literal
+from zone_phrase import ZONE_PHRASE, parse_from, zone_literal
 
 
 _ACTIVATION_RE = re.compile("^(?P<body>.*?)(?P<suffix>" + "|".join(ACTIVATION_SUFFIXES) + ")$")
@@ -127,14 +130,35 @@ def sentences(text, body_start, end=None):
 # 都不是就當簡單子句。加一種句型 = 加一個模組(`fill_clause(ctx, 子句) -> bool`)再排進這張表。
 CLAUSE_FORMS = (existence_clause.fill_clause, damage.fill_clause, battle_clause.fill_clause,
                 draw.fill_clause)
+_FROM_FRONT_RE = re.compile("から、?$")
+_ZONE_FROM_RE = re.compile(f"(?P<zones>{ZONE_PHRASE})から、?$")
 
 
 def fill_clause(ctx, clause_text):
-    """子句 → 填進 `ctx.seg`;失敗就在段上標原因。"""
+    """子句 → 填進 `ctx.seg`;失敗就在段上標原因。
+    簡單子句的物件槽往前吞進了前文時(物件切點,`simple_clause.swallowed_front`):前文交給
+    `clause_front`,子句本體從切點起重新照各句型解析;前文認不得的,本體照常解析(物件、位置、
+    後文的回指都接得上),但這一段標解析不出。"""
     for fill in CLAUSE_FORMS:
         if fill(ctx, clause_text):
             return
-    simple_clause.fill_clause(ctx, clause_text)
+    cut = simple_clause.swallowed_front(ctx.state, clause_text)
+    # 前文尾端認得的「區域から」是子句本體的「從」(「このターンのエンドフェイズに、デッキから〜」),還給本體。
+    given_back = _ZONE_FROM_RE.search(clause_text[:cut])
+    if given_back and parse_from(given_back.group("zones")):
+        cut = given_back.start()
+    if not cut:
+        simple_clause.fill_clause(ctx, clause_text)
+        return
+    seg = ctx.seg
+    front = clause_text[:cut]
+    if not clause_front.fill_front(ctx, front) and _FROM_FRONT_RE.search(front) \
+            and seg["unparsed"]["reason"] == REASON_FRONT:
+        # 前文以「〜から」收尾:物件前的「從」,區域短語認不得(「自分のエクストラデッキから」「その中から」)。
+        seg["unparsed"] = unparsed(simple_clause.REASON_FROM)
+    front_failure, seg["unparsed"] = seg["unparsed"], None
+    fill_clause(replace(ctx, sentence_start=ctx.sentence_start + cut), clause_text[cut:])
+    seg["unparsed"] = seg["unparsed"] or front_failure
 
 
 def _fill_effect(ctx, clause):
@@ -202,6 +226,14 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
             piece_start += then.end()
             piece = piece[then.end():]
             join = SEQUENCE_JOIN
+        # 子句開頭的「さらに」是接著詞(同句首的「さらに、」),留在段外;段的範圍前面還有前提時不剝
+        # (接著詞會落在段的中間)。
+        also = _ALSO_RE.match(piece) if (i or seg_start in (None, piece_start)) else None
+        if also and piece[also.end():]:
+            piece_start += also.end()
+            piece = piece[also.end():]
+            if i == 0:
+                seg_start = None
         seg = segment_at(state, "效果", seg_start if (i == 0 and seg_start is not None)
                          else piece_start, piece_start + len(piece))
         if replaces:
@@ -218,6 +250,7 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
 
 SEQUENCE_JOIN = "先後"
 _THEN_RE = re.compile("^その後、?")
+_ALSO_RE = re.compile("^さらに、?")
 
 
 def _hold_topic(seg, piece, state, piece_start):

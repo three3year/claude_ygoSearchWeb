@@ -67,7 +67,7 @@ EMBED_TAIL = "以下の効果を得る"
 EMBED_HEADER = "は" + EMBED_TAIL
 # 句首的接著詞 → 與前一節點的連接:「その後、」先後;「さらに、」同時(追加處理與前面同時進行)。
 # 反向檢查把兩者都當固定接著詞(`reverse_check.GLUE`)。
-SENTENCE_JOINS = (("その後、", "先後"), ("さらに、", JOIN))
+SENTENCE_JOINS = (("その後、", "先後"), ("さらに、", JOIN), ("さらに", JOIN))
 
 
 def extract_block(block, card, lookups=None, self_id="o0"):
@@ -270,13 +270,22 @@ def _strip_interval(state, pre, start):
 def _parse_items(state, items):
     """● 列舉的每一支:各自一份狀態,支內句子成序列;回傳各支 {"premise", "items"}。"""
     text = state.block["text"]
-    bounds = []
+    bounds, labels = [], []
     for i, start in enumerate(items):
         end = items[i + 1] - 1 if i + 1 < len(items) else len(text)
-        bounds.append((start, end))
+        # 「●２体以上：」「●自分：」:● 後到「：」是依值分歧的標籤,不屬於後面的句子(m3 票 03)。
+        label = _LABEL_RE.match(text, start, end)
+        labels.append([start, label.end()] if label else None)
+        bounds.append((label.end() if label else start, end))
     runs = [lambda s=start, e=end: _parse_run(state, sentences(text, s, e))
             for start, end in bounds]
-    return [{"premise": None, "items": nodes} for nodes in fork_state(state, runs)]
+    branches = []
+    for nodes, label in zip(fork_state(state, runs), labels):
+        branch = {"premise": None, "items": nodes}
+        if label:
+            branch["label"] = label
+        branches.append(branch)
+    return branches
 
 
 def fork_state(state, runs):
@@ -327,7 +336,15 @@ def _union_positions(state, base, branches):
 
 
 def _branch(state, headers, branches):
-    """引導句 + 各支 → 分歧節點。"""
+    """引導句 + 各支 → 分歧節點。各支帶標籤(「●２体以上：」)的是依值分歧:標籤的值現在只認得內嵌效果的
+    表示形式(`_extract_labelled`),這裡的一律前提解析不出;引導句照一般句子解析。"""
+    if any(branch.get("label") for branch in branches):
+        for header in headers:
+            _parse_header_as_sentence(state, header)
+        node = branch_node("依前提", None, branches, headers[0][4] if headers else None)
+        node["form"] = LABEL_FORM
+        node["unparsed"] = unparsed(REASON_BRANCH_PREMISE)
+        return node
     if not headers:
         node = branch_node(None, branches=branches)
         node["unparsed"] = unparsed(REASON_BRANCH_MODE)

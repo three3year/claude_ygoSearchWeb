@@ -53,6 +53,13 @@ def fill_clause(ctx, clause_text):
     return True
 
 
+def is_battle_segment(seg):
+    """這一段是不是戰鬥子句(述語是「戦闘を行う」、有施事線);簡單子句的主語線也是角色施事,
+    所以要看述語。"""
+    return ((seg["predicate"] or "").startswith(BATTLE_PREDICATE)
+            and any(line["role"] == "施事" for line in seg["lines"]))
+
+
 def render_clause(seg, card, objects, names, self_id):
     """戰鬥子句:[施事]が[受事と]述語;施事一條、受事至多一條,線不帶從/到/取對象/數量,
     段不帶誰、受方、原因、時機、數量。"""

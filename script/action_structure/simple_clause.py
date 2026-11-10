@@ -35,7 +35,10 @@ from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
 from block_state import (INFERENCE_TABLE, INTERVAL_PATTERN, INTERVAL_REASON, OBJECT_COUNTER,
                          REASON_CLAUSE, REASON_REF, REASON_TWICE, update_positions)
 from cause_phrase import CAUSE_ALT, EXCLUDE_METHOD_PATTERN, parse_cause_phrase, render_cause_phrase
+from clause_front import (PLACEMENT_AFTER_SUBJECT, front_duration, front_timing,
+                          render_front_duration, render_front_timing, subject_line)
 from condition_atoms import TARGETING_THIS_FORMS
+from object_boundary import find_cut
 from object_render import render_object, render_ref
 from predicate_literal import join_predicate_literal, render_predicate
 from quantity import (COUNT_PATTERN, FRONT_COUNT_PATTERN, FULLWIDTH_DIGITS, TO_FULLWIDTH_DIGITS,
@@ -69,6 +72,7 @@ _SUBJECTLESS_RE = re.compile(
     f"(?:(?P<to>{ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?P<pred>{_PRED_HEAD}[^を]+)$")
 ZONE_AS_OBJECT = "物件"
+OBJECT_PAUSE = "、"
 RANDOM_PICK = "ランダムに"
 PICK_RANDOM = "隨機"
 # 物件前的「到に」:主語形「自分フィールドにモンスターが特殊召喚された」(助詞が時才有);
@@ -189,19 +193,45 @@ def _clause_predicate(m):
     return pred, to_phrase, parsed, reason
 
 
-def fill_clause(ctx, clause_text):
-    """把簡單子句解析進段;失敗就在段上標原因。`ctx.inherited_timing` 是連用形串接(同時)的前一段的
-    時機:「次のスタンバイフェイズに戻り、その攻撃力は〜になる」的第二段同一時點。
-    主語省略的子句(「〜できず、「X」の効果でのみ特殊召喚できる」「〜場合にEXデッキから特殊召喚できる」)
-    的物件是本句「Xは」的物件或このカード,對象線標 `elided`(票 09)。"""
-    seg, state, sentence_start = ctx.seg, ctx.state, ctx.sentence_start
-    kind = ctx.kind
+def _match_clause(clause_text):
+    """簡單子句的句型比對(物件 + 助詞 + 述語);不是這個句型回 None。"""
     m = _TARGETING_THIS_CLAUSE_RE.match(clause_text) or _CLAUSE_RE.match(clause_text)
     if m and m.group("to_front") and m.group("marker") != "が":
         m = _CLAUSE_NO_TO_FRONT_RE.match(clause_text)
     if m and m.group("marker") != "の" and parse_cause(m.group("objects") + m.group("marker")):
         # 「戦闘では破壊されない」:「戦闘で」+「は」是原因字面,不是物件 + 助詞;主語省略。
         m = None
+    return m
+
+
+def swallowed_front(state, clause_text):
+    """句型的物件槽往前吞進了多少不屬於物件的字面(從子句開頭起算的字數;0 = 沒有)。
+    物件短語照現有規則認得全就不找(`BlockState.parses_cleanly`);切點在 `object_boundary.find_cut`。"""
+    m = _match_clause(clause_text)
+    if not m or not (m.group("pred") or m.group("targeting") or m.group("select")):
+        return 0
+    phrases = split_objects(m.group("objects"))
+    if not phrases or state.parses_cleanly(phrases[0]):
+        return 0
+    cut = find_cut(phrases[0])
+    # 切完剩下的要像個受詞(有頭名詞的物件短語、此卡、回指、超量素材…,或當受詞的區域、數量);
+    # 「以下の効果から１つ」這種本來就不是物件的不切。
+    rest = phrases[0][cut:]
+    if not cut or not (state.names_object(rest) or _AMOUNT_RE.match(rest)
+                       or (ZONE_PHRASE_RE.match(rest) and parse_from(rest))):
+        return 0
+    return m.start("objects") + cut
+
+
+def fill_clause(ctx, clause_text):
+    """把簡單子句解析進段;失敗就在段上標原因。`ctx.inherited_timing` 是連用形串接(同時)的前一段的
+    時機:「次のスタンバイフェイズに戻り、その攻撃力は〜になる」的第二段同一時點。
+    主語省略的子句(「〜できず、「X」の効果でのみ特殊召喚できる」「〜場合にEXデッキから特殊召喚できる」)
+    的物件是本句「Xは」的物件或このカード,對象線標 `elided`(票 09)。
+    段上可能已有子句前文填好的格(`clause_front`:誰、原因、時機、主語的對象線),同一格兩處都寫就不猜。"""
+    seg, state, sentence_start = ctx.seg, ctx.state, ctx.sentence_start
+    kind = ctx.kind
+    m = _match_clause(clause_text)
     elided = None
     if not m or not (m.group("pred") or m.group("targeting") or m.group("select")):
         m = _SUBJECTLESS_RE.match(clause_text)
@@ -246,8 +276,11 @@ def fill_clause(ctx, clause_text):
     if parsed:
         seg["polarity"], seg["optional"] = resolve_polarity(parsed, marker)
     written_to = next((p.to for p in reversed(parsed) if p.to), None)
-    agent = None
+    agent = seg["agent"]
     if g("agent"):
+        if agent is not None:
+            seg["unparsed"] = unparsed(REASON_TWICE)
+            return
         agent, reason = parse_agent(state, g("agent"), g("agent_marker"), g("agent_pause"), kind)
         if agent is None:
             seg["unparsed"] = unparsed(reason)
@@ -262,7 +295,7 @@ def fill_clause(ctx, clause_text):
             seg["unparsed"] = unparsed(reason)
             return
         seg["recipient"] = {"object": obj_id, "ref": ref}
-    if g("cause") and g("cause_front"):
+    if (g("cause") and g("cause_front")) or (seg["cause"] and (g("cause") or g("cause_front"))):
         seg["unparsed"] = unparsed(REASON_TWICE)
         return
     if g("cause") or g("cause_front"):
@@ -282,8 +315,11 @@ def fill_clause(ctx, clause_text):
             return
         seg["duration"] = parse_duration(g("duration"))
     if g("timing"):
+        if seg["timing"] is not None:
+            seg["unparsed"] = unparsed(REASON_TWICE)
+            return
         seg["timing"] = parse_timing(g("timing"))
-    else:
+    elif seg["timing"] is None:
         ctx.inherit_timing()
     # 延遲段(次のスタンバイフェイズに、序列中段的條件段之後)指回被點名物件的線不標取對象。
     targetable = kind == "效果" and not is_delayed(seg)
@@ -340,6 +376,10 @@ def fill_clause(ctx, clause_text):
     if zone_object:
         from_zones, from_text, from_placement = zone_object, phrases[0], ZONE_AS_OBJECT
     for phrase in phrases:
+        # 「Aと、B」:「と」後的讀點記在後一條線(`lead`),不屬於 B 的物件短語。
+        lead = OBJECT_PAUSE if (phrase or "").startswith(OBJECT_PAUSE) else None
+        if lead:
+            phrase = phrase[len(lead):]
         ref_count = _REF_COUNT_RE.match(phrase or "")
         if ref_count and (count is not None or len(phrases) > 1 or state.object_at(
                 ref_count.group("phrase"), sentence_start)[0] is None):
@@ -371,6 +411,8 @@ def fill_clause(ctx, clause_text):
                         marker=marker, ref=ref, count=count)
         if g("pick"):
             line["pick"] = PICK_RANDOM
+        if lead:
+            line["lead"] = lead
         if phrase is None:
             line["elided"] = True
         elif marker.rstrip("、") == "は" and len(phrases) == 1:
@@ -484,15 +526,30 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     取對象線只有兩種寫得出:這一段的述語帶取對象字面(每條線都標),或這一條線指回
     本區塊先前被取對象字面點名的物件(その/選択したモンスター)。"""
     parts = []
+    timing_front = front_timing(seg["timing"])
+    if timing_front:
+        parts.append(render_front_timing(seg["timing"]))
     if seg["agent"] is not None:
         parts.append(render_agent(seg["agent"], seg, card))
+    # 主語的對象線(角色施事:「このカードが戦闘によって相手モンスターを破壊した」的このカード)寫在
+    # 誰的位置,助詞照線上記的;其餘的線才是物件槽的線。
+    subject = subject_line(seg)
+    lines = [line for line in seg["lines"] if line is not subject]
+    if subject is not None:
+        parts.append(render_object(objects[subject["object"]], seg, card, names, subject,
+                                   self_id=self_id) + subject["marker"])
+    if front_duration(seg["duration"]) == PLACEMENT_AFTER_SUBJECT:
+        # 寫在誰/主語後的期間(「相手はダメージステップ終了時まで魔法・罠カードを発動できない」)。
+        if subject is None and seg["agent"] is None:
+            raise NoTemplate("期間無模板:主語後")
+        parts.append(render_front_duration(seg["duration"]))
     cause_front = bool(seg["cause"]) and seg["cause"].get("placement") == "名詞前"
     if cause_front:
         parts.append(render_cause_phrase({k: v for k, v in seg["cause"].items() if k != "placement"},
                                          seg, card, objects, names, self_id))
     # 主語省略的線(票 09)不寫物件與助詞;其餘線的助詞要一致。
-    spoken = [line for line in seg["lines"] if not line.get("elided")]
-    if len(spoken) != len(seg["lines"]) and len(seg["lines"]) != 1:
+    spoken = [line for line in lines if not line.get("elided")]
+    if len(spoken) != len(lines) and len(lines) != 1:
         raise NoTemplate("主語省略的段只能有一條線")
     markers = {line["marker"] or "を" for line in spoken}
     if len(markers) > 1:
@@ -502,7 +559,7 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     words, counts, picks = [], set(), set()
     if seg["amount"]:
         # 數量格(「１０００LPを払って」):段無物件,數量當受詞寫。
-        if seg["lines"] or seg["amount"].get("unit") != "LP" \
+        if lines or seg["amount"].get("unit") != "LP" \
                 or not isinstance(seg["amount"].get("value"), int):
             raise NoTemplate("數量無模板")
         words.append(str(seg["amount"]["value"]).translate(TO_FULLWIDTH_DIGITS) + "LP")
@@ -521,6 +578,10 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
         else:
             words.append(render_object(objects[line["object"]], seg, card, names, line,
                                        self_id=self_id))
+        if line.get("lead"):
+            if line["lead"] != OBJECT_PAUSE or len(words) < 2:
+                raise NoTemplate("對象線前的讀點無模板")
+            words[-1] = line["lead"] + words[-1]
         counts.add((render_count(line["count"]), (line["count"] or {}).get("placement")))
         picks.add(line.get("pick"))
     if len(counts) > 1 or len(picks) > 1:
@@ -529,8 +590,8 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     pick = picks.pop() if picks else None
     if pick not in (None, PICK_RANDOM):
         raise NoTemplate(f"選法無模板:{pick}")
-    to_form, to_text, to_placement, display = _render_to(seg["lines"], predicate_to)
-    from_text, from_placement = render_from(seg["lines"])
+    to_form, to_text, to_placement, display = _render_to(lines, predicate_to)
+    from_text, from_placement = render_from(lines)
     # 物件前的到(自分フィールドにモンスターが特殊召喚された)照 placement 放回。
     if to_placement == "名詞前":
         parts.append(to_text)
@@ -551,7 +612,8 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     parts.append(targeting_text or "")
     if seg["cause"] and not cause_front:
         parts.append(render_cause_phrase(seg["cause"], seg, card, objects, names, self_id))
-    parts.append(render_timing(seg["timing"]))
+    if not timing_front:
+        parts.append(render_timing(seg["timing"]))
     parts.append(to_form)
     if from_placement == "述語前":
         parts.append(from_text)

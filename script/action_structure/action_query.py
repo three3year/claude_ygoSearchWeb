@@ -67,6 +67,8 @@ from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
 MODIFIED_KEYS = ("attr", "form", "value")
+# 雙方對等的動作詞:施事線與受事線一樣當被比的物件(`_is_doer`)。
+SYMMETRIC_ACTION = "戰鬥"
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
                 "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10}
@@ -662,6 +664,14 @@ def modified_matches(want, have):
     return True
 
 
+def _is_doer(line, seg):
+    """做動作的主語線(「このカードが戦闘によって相手モンスターを破壊した」的このカード):查詢指定的
+    卡、物件條件、從/到比的是被作用的物件,段裡另有受詞時主語不比。戰鬥的雙方對等(「Xが Yと 戦闘を
+    行う」),施事照比;只有主語的段(「このカードが相手に戦闘ダメージを与えた」)也照比。"""
+    return (line["role"] == "施事" and SYMMETRIC_ACTION not in seg["actions"]
+            and any(other["role"] != "施事" for other in seg["lines"]))
+
+
 def segment_hit_lines(seg, card, q, judge, objects, names):
     """段命中時回傳命中的對象線(可為空列表);不命中回 None。
     未結構化的段(重複到停為止)沒有動作詞,也不當空查詢的命中。"""
@@ -675,6 +685,8 @@ def segment_hit_lines(seg, card, q, judge, objects, names):
         return list(seg["lines"])
     hit = []
     for line in seg["lines"]:
+        if _is_doer(line, seg):
+            continue
         if q["targeting"] and not line["targeting"]:
             continue
         if q["from_zones"] and not zones_match(q["from_zones"], line["from"],

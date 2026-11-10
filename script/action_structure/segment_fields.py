@@ -224,10 +224,12 @@ ORDER_FORMS = ("好きな順番で",)
 TREAT_PATTERN = ("(?:" + "|".join(map(re.escape, sorted(TREAT_FORMS, key=len, reverse=True)))
                  + ")、?")
 ORDER_PATTERN = "|".join(map(re.escape, ORDER_FORMS))
-# 放置形式的表示形式寫在述語前:「表側表示で」「表側攻撃表示か裏側守備表示で」(二選一)。
-DISPLAY_PATTERN = f"{PLACEMENT_DISPLAY_WORD}(?:か{PLACEMENT_DISPLAY_WORD})?で"
+# 放置形式的表示形式寫在述語前:「表側表示で」「表側攻撃表示か裏側守備表示で」(二選一;
+# 「表側守備表示または裏側守備表示で」同,m3 票 04)。
+_DISPLAY_OR = "(?:か|または)"
+DISPLAY_PATTERN = f"{PLACEMENT_DISPLAY_WORD}(?:{_DISPLAY_OR}{PLACEMENT_DISPLAY_WORD})?で"
 _DISPLAY_RE = re.compile(
-    f"^(?P<a>{PLACEMENT_DISPLAY_WORD})(?:か(?P<b>{PLACEMENT_DISPLAY_WORD}))?で$")
+    f"^(?P<a>{PLACEMENT_DISPLAY_WORD})(?:{_DISPLAY_OR}(?P<b>{PLACEMENT_DISPLAY_WORD}))?で$")
 
 
 # 「以下の効果を持つ装備魔法カード扱いで」:被當成裝備卡的物件帶後面 ● 列舉的效果

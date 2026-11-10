@@ -357,8 +357,17 @@ class DarkDimensionWarriorTest(_Golden):
         self.assertIn(DARK_DIMENSION_WARRIOR, self.hits(targeting=True, from_zones=[mine]))
         self.assertNotIn(DARK_DIMENSION_WARRIOR, self.hits(targeting=True, from_zones=[theirs]))
 
-    def test_the_targeting_declaration_writes_back_to_its_text(self):
-        self.assertWritesBack(DARK_DIMENSION_WARRIOR, "除外されている自分の闇属性モンスター１体を対象として")
+    def test_special_summon_from_banished_judges_the_target(self):
+        """「そのモンスターを表側守備表示または裏側守備表示で特殊召喚する」:查「特殊召喚,從除外」只看取對象,
+        闇屬性怪獸命中;非闇屬性怪獸判得了、不命中,不落進未解析組。"""
+        query = dict(actions=["特殊召喚"], targeting=True, from_zones=["除外"])
+        self.assertIn(DARK_DIMENSION_WARRIOR, self.hits(card=KURIBOH, **query))
+        self.assertJudgedMiss(DARK_DIMENSION_WARRIOR, card=LUSTER_DRAGON, **query)
+
+    def test_segments_write_back_to_their_text(self):
+        for text in ("除外されている自分の闇属性モンスター１体を対象として",
+                     "そのモンスターを表側守備表示または裏側守備表示で特殊召喚する"):
+            self.assertWritesBack(DARK_DIMENSION_WARRIOR, text)
 
 
 LURKING_G = 25137581
@@ -551,6 +560,7 @@ class EnumerationTest(_Golden):
         self.assertIn(TOO_DEEP_GRAVE, self.hits(targeting=True, card=KURIBOH))
         self.assertNotIn(TOO_DEEP_GRAVE, self.hits(targeting=True, card=POT_OF_GREED))
         self.assertWritesBack(TOO_DEEP_GRAVE, "自分または相手の墓地のモンスター１体を対象として")
+        self.assertWholeCardPasses(TOO_DEEP_GRAVE)
 
 
 if __name__ == "__main__":

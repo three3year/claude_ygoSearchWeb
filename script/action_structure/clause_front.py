@@ -89,8 +89,8 @@ def _scan(front):
 
 
 def fill_front(ctx, front):
-    """前文 → 填進段的格;認得回 True。認不得(或同一格已有值)回 False 並在段上標原因
-    (`REASON_FRONT`;主語、誰、原因自己的規則解析不出時是它們的原因),這時段的格不動。"""
+    """前文 → 填進段的格;認得回 True。認不得(或同一格已有值)回 False 並在段上標 `REASON_FRONT`,
+    這時段的格不動;字面認得、但主語、誰、原因照各自的規則解析不出時標它們的原因(排在前面的格已填)。"""
     seg, state = ctx.seg, ctx.state
     found = _scan(front)
     kinds = {kind for kind, _, _ in found or ()}
@@ -138,7 +138,8 @@ def fill_front(ctx, front):
             seg["unparsed"] = unparsed(reason)
             return False
     if atoms:
-        merged = atoms + ([seg["premise"]] if seg["premise"] else [])
+        own = seg["premise"]
+        merged = atoms + (own["args"] if own and own.get("op") == "且" else [own] if own else [])
         seg["premise"] = merged[0] if len(merged) == 1 else {"op": "且", "args": merged}
     return True
 

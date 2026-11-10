@@ -36,12 +36,17 @@
 - 「〜召喚に成功した」(m3 票 08):「モンスターの特殊召喚に成功」的「の」是助詞、「墓地からの特殊召喚に成功」的
   「からの」是從;「この効果で特殊召喚に成功した」主語省略時,被召喚的是原因指向的那一段召喚的物件
   (`cause_phrase.summoned_by`)。對象線的角色照召喚系的根算(`synonyms.is_summon`)。
+- 素材(m3 票 09):述語前多一格「誰的素材」(`xyz_material.OWNER_SLOT`)——「XをYの下に重ねてX素材とする」
+  「XをYのX素材とする」是 成為超量素材,線的到是 Y 的超量素材物件;「XをYのL素材とする場合」是 作為素材,
+  Y 記在受方。「Xも融合素材とする事ができる」的「も」是助詞。素材寫在召喚句裡的(「Xを素材としてS召喚する」)
+  不走這裡,在 `material_summon`。
 """
 
 import re
 
 import damage
 import draw
+import xyz_material
 
 from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
 from block_state import (INFERENCE_TABLE, INTERVAL_PATTERN, INTERVAL_REASON, OBJECT_COUNTER,
@@ -65,8 +70,8 @@ from segment_history import declared_earlier, targeted_earlier
 from structure_shape import DISPLAY_WORD, NoTemplate, new_line, position, unparsed, zone
 from synonyms import (ACTION_PAST, ATTACK_PREFIX_PATTERN, ONLY_MARKER, PREDICATE_NOUN_PATTERN,
                       SELECT_PREFIX, SUMMON_NOUNS, SUMMON_SUCCESS_AHEAD, TARGETING_PATTERN,
-                      TARGET_REF, action_ancestors, attack_times, is_summon, merged_voice,
-                      parse_predicates)
+                      TARGET_REF, XYZ_ATTACH_ACTION, action_ancestors, attack_times, is_summon,
+                      merged_voice, parse_material_predicates, parse_predicates)
 from zone_phrase import (FROM_PARTICLES, SIDE_TEXT, SIDE_WORDS, ZONE_PHRASE, ZONE_PHRASE_RE,
                          parse_from, render_zone_text)
 
@@ -92,6 +97,8 @@ _SUBJECTLESS_RE = re.compile(
     f"(?P<display>{DISPLAY_PATTERN})?"
     f"(?P<pred>{_PRED_HEAD}[^を]+)$")
 ZONE_AS_OBJECT = "物件"
+# 後面(隔著數量)是「〜素材と/に」的述語的位置:「も」當助詞只在這裡認(m3 票 09)。
+ALSO_MATERIAL_AHEAD = "(?=[^を、]*?素材(?:と|に))"
 OBJECT_PAUSE = "、"
 RANDOM_PICK = "ランダムに"
 PICK_RANDOM = "隨機"
@@ -124,7 +131,9 @@ _CLAUSE_PATTERN = (
     f"(?P<marker>を|が|は|(?<!で)(?<!に)(?<!から){ONLY_MARKER}"
     f"|の(?=表示形式|コントロール|(?:{'|'.join(SUMMON_NOUNS)})行)"
     # 「モンスターの特殊召喚に成功した」「このカードの召喚に成功した」:物件 + 助詞「の」(m3 票 08)。
-    f"|の{SUMMON_SUCCESS_AHEAD})"
+    f"|の{SUMMON_SUCCESS_AHEAD}"
+    # 「デッキのモンスターも(１体まで)融合素材とする事ができる」:助詞「も」只在後面是素材的述語時認(m3 票 09)。
+    f"|も{ALSO_MATERIAL_AHEAD})"
     # 助詞後的讀點(「水属性モンスターは、〜」)記進助詞字面。
     "(?P<marker_pause>、)?"
     f"(?P<pick>{RANDOM_PICK})?"
@@ -151,6 +160,8 @@ _CLAUSE_PATTERN = (
     f"(?P<duration>{CLAUSE_DURATION_PATTERN})?"
     f"(?:(?P<to>{ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?:(?P<recipient>自分|相手|{_RECIPIENT_REF})に)?"
+    # 誰的素材(m3 票 09):「そのモンスターの下に(重ねてX素材とする)」「このカードの(X素材とする)」。
+    f"{xyz_material.OWNER_SLOT}"
     # 到的表示形式:「〜に表側表示で置く」「表側攻撃表示か裏側守備表示で特殊召喚する」。
     f"(?P<display>{DISPLAY_PATTERN})?"
     # 述語裡的「しか」只能在開頭(「融合召喚でしか特殊召喚できない」);句中出現時回頭讓它當助詞。
@@ -240,7 +251,9 @@ def _clause_predicate(m):
         if parsed is not None:
             pred, to_phrase = to_phrase + g("to_particle") + pred, None
     if parsed is None and pred:
-        parsed, reason = parse_predicates(pred)
+        # 述語前寫了「Yの」(「このカードのX素材とする」)時,所屬的「の」接回去再查同義表。
+        parsed, reason = parse_material_predicates(
+            pred, xyz_material.is_owned(g("material_owner"), g("under")))
     return pred, to_phrase, parsed, reason
 
 
@@ -315,6 +328,8 @@ def fill_clause(ctx, clause_text):
     g = m.groupdict().get
     targeting = g("targeting")
     to_front = g("to_front")
+    if xyz_material.attaches_without_owner(parsed, pred, kind):
+        parsed, reason = parse_material_predicates(pred, True)
     seg["predicate"] = join_predicate_literal(targeting, g("select"), pred)
     if parsed is None and pred:
         seg["unparsed"] = unparsed(reason)
@@ -440,6 +455,20 @@ def fill_clause(ctx, clause_text):
     if g("display") and not (to_zones or written_to or inferred_to):
         seg["unparsed"] = unparsed(REASON_DISPLAY)
         return
+    attached, owner_new = None, []
+    if g("material_owner") or g("under") or XYZ_ATTACH_ACTION in seg["actions"]:
+        # 誰的素材(m3 票 09):成為超量素材的到是 Y 的超量素材物件;作為素材的 Y 記在受方。
+        if to_text:
+            seg["unparsed"] = unparsed(REASON_TWICE)
+            return
+        known = list(state.recent)
+        attached = xyz_material.fill_owner(seg, state, g("material_owner"), g("under"),
+                                           sentence_start + m.start("pred"), sentence_start)
+        if seg["unparsed"]:
+            return
+        # 所屬(Y)是這一句才建的物件時,寫在它前面的 X 的回指(「そのカードを…XモンスターのX素材とする」)
+        # 不能指到它:解 X 的時候先拿掉,解完照原文順序放回去。
+        owner_new = [i for i in state.recent if i not in known]
     phrases = [None] if elided else split_objects(g("objects"))
     zone_object = (not elided and from_text is None and len(phrases) == 1
                    and (g("of_effect") or "") + g("marker") == "を"
@@ -466,7 +495,9 @@ def fill_clause(ctx, clause_text):
         else:
             owner_from = ((g("from"), from_zones)
                           if g("from") and from_placement == "名詞前" else None)
+            state.recent = [i for i in state.recent if i not in owner_new]
             obj_id, ref, reason = state.object_at(phrase, sentence_start, owner_from)
+            state.recent.extend(owner_new)
             if obj_id is None:
                 seg["unparsed"] = unparsed(reason)
                 return
@@ -513,7 +544,9 @@ def fill_clause(ctx, clause_text):
                 line["from"] = position([zone(inferred_from, side, side and "預設")],
                                         "推得", inferred=True)
         form = parse_placement_form(g("treat"), g("order"), g("display"))
-        if to_zones is not None:
+        if attached is not None:
+            line["to"] = attached()
+        elif to_zones is not None:
             line["to"] = position(to_zones, "明寫", text=to_text,
                                   form=form)
             if to_front:
@@ -586,9 +619,12 @@ def _render_to(lines, predicate_to):
             written[0].get("placement") or "述語前", display)
 
 
-def _render_recipient(recipient, seg, card, objects):
-    """受方:我方/對手寫「自分に/相手に」;物件的回指(裝備的對象,票 06)照回指字面。"""
+def _render_recipient(recipient, seg, card, objects, names, self_id):
+    """受方:我方/對手寫「自分に/相手に」;物件的回指(裝備的對象,票 06)照回指字面;
+    作為素材的受方(要召喚的怪獸,m3 票 09)寫物件 +「の」。"""
     if isinstance(recipient, dict):
+        if recipient.get("particle"):
+            return xyz_material.render_recipient_of(recipient, seg, card, objects, names, self_id)
         obj = objects.get(recipient.get("object"))
         if obj is not None and recipient.get("elided"):
             # 沒寫出來的裝備對象(m3 票 07):要是本區塊先前的宣告段點名過的物件。
@@ -639,7 +675,15 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     if len(markers) > 1:
         raise NoTemplate("對象線的助詞或數量不一致")
     marker = markers.pop() if markers else None
-    targeting_text, select_text, predicate, predicate_to = render_predicate(seg, marker)
+    # 誰的素材(m3 票 09):成為超量素材的所屬格,或作為素材的受方「Yの」;兩者都寫在述語前。
+    owner_text = xyz_material.render_owner(seg, lines, card, objects, names, self_id)
+    recipient_text = ""
+    if seg["recipient"] is not None:
+        recipient_text = _render_recipient(seg["recipient"], seg, card, objects, names, self_id)
+    attached = any(map(xyz_material.is_attached, lines))
+    owned = xyz_material.is_owned(attached or recipient_text.endswith(xyz_material.RECIPIENT_OF),
+                                  owner_text.endswith(xyz_material.STACK_UNDER))
+    targeting_text, select_text, predicate, predicate_to = render_predicate(seg, marker, owned)
     words, counts, picks = [], set(), set()
     if seg["amount"]:
         # 數量格(「１０００LPを払って」):段無物件,數量當受詞寫。
@@ -677,7 +721,10 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     pick = picks.pop() if picks else None
     if pick not in (None, PICK_RANDOM):
         raise NoTemplate(f"選法無模板:{pick}")
-    to_form, to_text, to_placement, display = _render_to(lines, predicate_to)
+    if attached:
+        to_form, to_text, to_placement, display = "", "", "述語前", ""
+    else:
+        to_form, to_text, to_placement, display = _render_to(lines, predicate_to)
     from_text, from_placement = render_from(lines)
     # 物件前的到(自分フィールドにモンスターが特殊召喚された)照 placement 放回。
     if to_placement == "名詞前":
@@ -710,8 +757,8 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     parts.append(clause_duration["text"] if clause_duration else "")
     if to_placement == "述語前":
         parts.append(to_text)
-    if seg["recipient"] is not None:
-        parts.append(_render_recipient(seg["recipient"], seg, card, objects))
+    parts.append(recipient_text)
+    parts.append(owner_text)
     parts.append(display)
     parts.append(predicate)
     return "".join(parts)

@@ -47,7 +47,7 @@ from noun_phrase import (HEAD_CATEGORY, NOUN_RE, OR_FORM, category_condition, ca
 from quantity import parse_count
 from segment_fields import implicit_delay
 from structure_shape import new_object, new_segment, unparsed
-from synonyms import ACTION_PAST, TARGET_REF
+from synonyms import ACTION_PAST, TARGET_REF, XYZ_MATERIAL_WORDS, is_summon
 
 
 # 推得表:動作詞 → (沒寫「從」時的出發地, 沒寫「到」時的終點)。
@@ -76,7 +76,7 @@ _REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
 # (`of`,このカード/そのモンスター…)。超量素材沒寫所屬卡時(「自分フィールドのX素材」的
 # 「自分フィールドの」是從),所屬卡是隱含的新建超量怪獸,初始位置 = 從;字面沒有它(`text` 是 None)。
 OBJECT_MATERIAL, OBJECT_COUNTER = "超量素材", "計數器"
-MATERIAL_WORDS = ("X素材", "エクシーズ素材")
+MATERIAL_WORDS = XYZ_MATERIAL_WORDS
 _MATERIAL_RE = re.compile(f"^(?:(?P<owner>.+)の)?(?P<word>{'|'.join(MATERIAL_WORDS)})$")
 _COUNTER_RE = re.compile("^(?:(?P<owner>.+)の)?(?P<counter>[^「」のをにがは、]*カウンター)$")
 # 「選択したモンスター」:指回本區塊最近被取對象的同大類物件(舊式;新式用 そのモンスター)。
@@ -139,15 +139,22 @@ class BlockState:
         # 本句左半的宣告(「Xを選択し、」「Xを対象とし、」)點名的物件:右半省略的物件指回它(m3 票 07)。
         self.declared = None
         self.last_segment_of_action = {}
+        # 本句前面的效果段剛特殊召喚出來的物件:「〜を特殊召喚し、このカードを下に重ねてX素材とする」沒寫的
+        # 所屬卡是它(m3 票 09)。
+        self.last_summoned = None
 
     def note_actions(self, seg):
         """段解析完後記下它做過的動作詞,給之後的「〜したプレイヤー」指回。"""
         for action in seg["actions"]:
             self.last_segment_of_action[action] = seg["id"]
+        summoned = summoned_object(seg)
+        if summoned is not None:
+            self.last_summoned = summoned
 
     def start_sentence(self):
-        """新的一句:主語、前一截的「Xは」與左半宣告的物件都歸零。"""
+        """新的一句:主語、前一截的「Xは」、左半宣告的物件與剛召喚出來的物件都歸零。"""
         self.subject, self.topic, self.declared = None, Topic(TOPIC_NONE), None
+        self.last_summoned = None
 
     def declare(self, obj_ids):
         """沒有動作詞的宣告子句(取對象宣告、選擇)點名了這些物件:同一句後面省略的物件指回它。
@@ -446,6 +453,23 @@ class BlockState:
             obj["of_ref"] = of_ref
         return self.add_object(obj), None, None
 
+    def held_material(self, holder_phrase, material_phrase, sentence_start):
+        """「Xが「Y」をX素材としている」的超量素材物件(m3 票 09)→ 物件 id,X 或 Y 認不出物件回 None。
+        Y 照一般的名詞短語解析,解出的條件式與數量留在物件上;物件種類改成超量素材、所屬 `of` = X
+        (X 是回指時字面記 `of_ref`)。超量素材物件可以帶條件式只有這一種寫法,去除的對象(`detach_object`)沒有。"""
+        holder_id, holder_ref, _ = self.object_at(holder_phrase, sentence_start)
+        if holder_id is None:
+            return None
+        material_id, _, _ = self.new_object(material_phrase, sentence_start, {"kind": "新建"})
+        if material_id is None:
+            return None
+        material = self.find(material_id)
+        material["kind"] = OBJECT_MATERIAL
+        material["of"] = holder_id
+        if holder_ref is not None:
+            material["of_ref"] = holder_ref
+        return material_id
+
     def implicit_owner(self, from_phrase, zones, sentence_start):
         """超量素材隱含的所屬卡:新建的超量怪獸,初始位置 = 寫在物件前的從;id 取從的字面位置。"""
         offset = self.offset_of(from_phrase, sentence_start)
@@ -495,6 +519,16 @@ class BlockState:
         return self.add_object(obj), None, None
 
 
+def summoned_object(seg):
+    """效果段做了召喚、只有一條被召喚的線時,被叫出來的那個物件;其餘回 None。
+    抽取(`BlockState.last_summoned`)與模板(沒寫所屬卡的「下に重ねてX素材とする」)共用這一把尺。"""
+    if (seg["kind"] != "效果" or seg["polarity"] != "做" or seg["unparsed"] or not seg["actions"]
+            or not all(is_summon(a) for a in seg["actions"]) or len(seg["lines"]) != 1
+            or seg["lines"][0]["role"] != "被召喚"):
+        return None
+    return seg["lines"][0]["object"]
+
+
 def update_positions(seg, state):
     """位置自動規則:極性「做」的條件/代價/效果/召喚手續段,把「到」寫回目前位置。"""
     if seg["polarity"] != "做" or seg["kind"] not in ("條件", "代價", "效果",
@@ -524,6 +558,9 @@ class ClauseContext:
     state: BlockState
     sentence_start: int
     inherited_timing: dict | None = None
+    # 句型的回話:這個子句其實該在這個位置(相對於子句)切成兩段——左半已標解析不出,右半請呼叫端另成一段
+    # (`material_summon`:「Xを融合素材とし、〜」的 X 解不出時)。只有效果子句的串接(`_cost_and_effect`)理會。
+    split_at: int | None = None
 
     @property
     def kind(self):

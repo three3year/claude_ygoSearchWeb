@@ -72,6 +72,7 @@ MATERIAL_FORMS = {
     "融合素材として": "融合", "S素材として": "同步", "シンクロ素材として": "同步",
     "X素材として": "超量", "エクシーズ素材として": "超量", "L素材として": "連結",
     "リンク素材として": "連結", "素材として": None,
+    "シンクロ召喚の素材として": "同步",   # 舊式寫全「召喚の」(m3 票 09)
 }
 CAUSE_PATTERN = "|".join(sorted(map(re.escape, [*CAUSE_FORMS, *MATERIAL_FORMS]),
                                 key=len, reverse=True))

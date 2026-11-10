@@ -17,6 +17,9 @@
   字面留在原述語字面的開頭(「選択して破壊する」);述語空的(「Xを選択して発動できる」)是
   發動句的取對象宣告,代價段、沒有動作詞。之後效果段裡指回被點名物件的線(そのモンスター、
   舊式 選択したモンスター)也標取對象。「選択」不是動作詞。
+  連用形的「Xを選択し、」「Xを対象とし、」(m3 票 07)是連用形串接左半的取對象宣告:同一句後面省略的
+  物件、沒寫出來的裝備對象(段的受方)指回它;出發地是牌組、手牌的「選択し」是選擇,不標取對象
+  (`is_private_selection`)。
 - 「選んで」:不另成段,字面留在原述語字面開頭、不標取對象;區域當物件(「自分の手札を
   １枚選んで捨てる」)新建沒有條件的卡物件、從 = 那個區域;對象線加 pick(ランダムに)、count 的
   each(それぞれ/ずつ)與算式(任意の数だけ、〜した数だけ);到的方可為持有者(持ち主の);述語前的
@@ -65,12 +68,9 @@ _PRED_HEAD = f"(?:{ATTACK_PREFIX_PATTERN})?(?:{PREDICATE_NOUN_PATTERN})?"
 _SUBJECTLESS_RE = re.compile(
     f"^(?P<cause>{CAUSE_ALT})?"
     f"(?P<timing>{TIMING_PATTERN})?"
-    # 物件省略時述語前照樣可寫的格(m3 票 07:「Xを選択し、表側攻撃表示で特殊召喚する」
-    # 「〜エンドフェイズ時までゲームから除外する」):槽的順序同簡單子句助詞後的那一段。
-    f"(?P<treat>{TREAT_PATTERN})?"
     f"(?:(?P<from2>{ZONE_PHRASE})から)?"
-    f"(?P<duration>{CLAUSE_DURATION_PATTERN})?"
     f"(?:(?P<to>{ZONE_PHRASE})(?P<to_particle>に|へ))?"
+    # 物件省略時到的表示形式照樣寫在述語前(m3 票 07:「Xを選択し、表側攻撃表示で特殊召喚する」)。
     f"(?P<display>{DISPLAY_PATTERN})?"
     f"(?P<pred>{_PRED_HEAD}[^を]+)$")
 ZONE_AS_OBJECT = "物件"
@@ -358,13 +358,13 @@ def fill_clause(ctx, clause_text):
     if g("display") and not (to_zones or written_to or inferred_to):
         seg["unparsed"] = unparsed(REASON_DISPLAY)
         return
-    marks_targeting = bool(targeting) and not is_private_selection(targeting, from_zones)
     phrases = [None] if elided else split_objects(g("objects"))
     zone_object = (not elided and from_text is None and len(phrases) == 1
                    and (g("of_effect") or "") + g("marker") == "を"
                    and ZONE_PHRASE_RE.match(phrases[0]) and parse_from(phrases[0]))
     if zone_object:
         from_zones, from_text, from_placement = zone_object, phrases[0], ZONE_AS_OBJECT
+    marks_targeting = bool(targeting) and not is_private_selection(targeting, from_zones)
     for phrase in phrases:
         ref_count = _REF_COUNT_RE.match(phrase or "")
         if ref_count and (count is not None or len(phrases) > 1 or state.object_at(

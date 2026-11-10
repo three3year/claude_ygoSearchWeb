@@ -70,6 +70,72 @@ class LimitReverseTest(unittest.TestCase):
         self.assertEqual(segment_failures(self.structures, LIMIT_REVERSE, summon), [])
 
 
+SPELL_RECYCLING = 29228529   # 魔法再生
+SPELL_RECYCLING_TEXT = (
+    "手札の魔法カードを２枚墓地に送る。自分の墓地から魔法カードを１枚選択し、手札に加える。")
+BATTERY_ARCHETYPES = ARCHETYPES + [
+    {"setcode": 0x28, "hex": "0x28", "names_ja": ["電池メン"], "name_zh": "電池人",
+     "source": "strings.conf"},
+]
+PORTABLE_BATTERY = 61840587   # 携帯型バッテリー
+PORTABLE_BATTERY_TEXT = (
+    "自分の墓地の「電池メン」と名のついたモンスター２体を選択し、表側攻撃表示で特殊召喚する。"
+    "このカードがフィールド上から離れた時、そのモンスターを全て破壊する。"
+    "そのモンスターが全てフィールド上から離れた時、このカードを破壊する。")
+
+
+class SpellRecyclingTest(unittest.TestCase):
+    """魔法再生 29228529:「自分の墓地から魔法カードを１枚選択し、手札に加える」——墓地的卡是取對象,
+    右半只剩述語。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(SPELL_RECYCLING, name_ja="魔法再生", type=TRAP)]
+        cls.structures, _ = build_structures(
+            cls.cards, [faq(SPELL_RECYCLING, "魔法再生", SPELL_RECYCLING_TEXT)],
+            archetypes=ARCHETYPES)
+
+    def test_add_to_hand_from_graveyard_hits_with_targeting(self):
+        added, = hit_segments(self.structures, self.cards, SPELL_RECYCLING,
+                              actions=["加入手牌"], from_zones=["墓地"], targeting=True)
+        self.assertEqual(added["text"], "手札に加える")
+        declared, = hit_segments(self.structures, self.cards, SPELL_RECYCLING, actions=[],
+                                 from_zones=["墓地"], targeting=True)[:1]
+        self.assertEqual(declared["text"], "自分の墓地から魔法カードを１枚選択し")
+        self.assertEqual([line["object"] for line in added["lines"]],
+                         [line["object"] for line in declared["lines"]])
+
+    def test_whole_card_passes_reverse_check(self):
+        self.assertEqual(check_card(own(self.structures, SPELL_RECYCLING)), [])
+
+
+class PortableBatteryTest(unittest.TestCase):
+    """携帯型バッテリー 61840587:「〜モンスター２体を選択し、」數量照字面記。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(PORTABLE_BATTERY, name_ja="携帯型バッテリー", type=CONTINUOUS_TRAP)]
+        cls.structures, _ = build_structures(
+            cls.cards, [faq(PORTABLE_BATTERY, "携帯型バッテリー", PORTABLE_BATTERY_TEXT)],
+            archetypes=BATTERY_ARCHETYPES)
+
+    def test_two_monsters_are_targeted_and_summoned(self):
+        summon, = hit_segments(self.structures, self.cards, PORTABLE_BATTERY,
+                               actions=["特殊召喚"], from_zones=["墓地"], targeting=True)
+        line, = summon["lines"]
+        target = next(o for o in own(self.structures, PORTABLE_BATTERY)["objects"]
+                      if o["id"] == line["object"])
+        self.assertEqual((target["count"]["value"], target["count"]["text"]), (2, "２体"))
+
+    def test_both_halves_write_back(self):
+        segs = hit_segments(self.structures, self.cards, PORTABLE_BATTERY,
+                            from_zones=["墓地"], targeting=True)[:2]
+        self.assertEqual([seg["text"] for seg in segs],
+                         ["自分の墓地の「電池メン」と名のついたモンスター２体を選択し",
+                          "表側攻撃表示で特殊召喚する"])
+        self.assertEqual(segment_failures(self.structures, PORTABLE_BATTERY, segs), [])
+
+
 FROG_ARCHETYPES = ARCHETYPES + [
     {"setcode": 0x12, "hex": "0x12", "names_ja": ["ガエル"], "name_zh": "青蛙",
      "source": "strings.conf"},
@@ -112,10 +178,8 @@ class SubstitoadTest(unittest.TestCase):
         self.assertEqual(hit_segments(self.structures, self.cards, SUBSTITOAD,
                                       from_zones=["牌組"], targeting=True), [])
 
-    def test_both_halves_write_back(self):
-        segs = hit_segments(self.structures, self.cards, SUBSTITOAD, from_zones=["牌組"])
-        self.assertEqual(len(segs), 2)
-        self.assertEqual(segment_failures(self.structures, SUBSTITOAD, segs), [])
+    def test_whole_card_passes_reverse_check(self):
+        self.assertEqual(check_card(own(self.structures, SUBSTITOAD)), [])
 
 
 EMISSARY = 75043725   # 冥界の使者
@@ -226,6 +290,26 @@ class EquipAfterTargetingTest(unittest.TestCase):
         for cid in (CRUSH_WYVERN, VALKYRIE_CHARIOT):
             with self.subTest(card=cid):
                 self.assertEqual(segment_failures(self.structures, cid, self.halves(cid)), [])
+
+
+POWER_CONVERGENCE = 7565547   # 力の集約
+POWER_CONVERGENCE_TEXT = (
+    "フィールド上に表側表示で存在するモンスター１体を選択して発動する。"
+    "フィールド上に存在する全ての装備カードを選択したモンスターに装備する。"
+    "対象が正しくない装備カードは破壊する。")
+
+
+class TargetReferenceIsNotADeclarationTest(unittest.TestCase):
+    """力の集約 7565547:「選択したモンスターに装備する」的「選択した」是回指,不是連用形的取對象字面。"""
+
+    def test_equip_to_the_selected_monster_hits_with_targeting(self):
+        cards = [card(POWER_CONVERGENCE, name_ja="力の集約", type=TRAP)]
+        structures, _ = build_structures(
+            cards, [faq(POWER_CONVERGENCE, "力の集約", POWER_CONVERGENCE_TEXT)],
+            archetypes=ARCHETYPES)
+        equip, = hit_segments(structures, cards, POWER_CONVERGENCE, actions=["裝備"],
+                              targeting=True)
+        self.assertEqual(equip["recipient"]["ref"], "選択したモンスター")
 
 
 BRANCH_ARCHETYPES = ARCHETYPES + [

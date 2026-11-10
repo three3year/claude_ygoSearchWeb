@@ -24,34 +24,28 @@ import draw
 from archetype_table import fold_width
 from attribute_atoms import EXCEPT, is_param_atom, joiner, render_group, render_level
 from block_split import LABEL_WIDTH
-from report_common import card_order, safe_label
-from premise import render_premise, split_premise
 from condition_atoms import quoted_name, render_atom
 from names_attributes import TREAT_PREDICATE, render_treat_as
-from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, OR_FORM, BATTLE_AGENT_MARKER,
-                             CAUSE_EXCLUDE, COUNT_AFTER_OBJECT, EXCLUDE_METHOD_TAIL,
-                             AGENT_PLAYER_WORDS, PLAYER_REF_HEAD, agent_particle, agent_side,
-                             EACH_PREFIX, EACH_SUFFIX, FORMULA_COUNT_TAILS, FORMULA_UPTO_TAIL,
-                             PICK_RANDOM,
-                             RANDOM_PICK, ZONE_AS_OBJECT,
-                             BATTLE_PARTNER_MARKER, BATTLE_TIMING_REF, CAUSE_EFFECT_OF,
-                             CAUSE_METHOD, PREMISE_DONE, EXIST_WORDS, FROM_PARTICLES,
-                             ALL_PREFIX, HEAD_CATEGORY, HEAD_SUBTYPE, MATERIAL_JOINER,
-                             MATERIAL_TIMES, REF_RE,
-                             MATERIAL_WORDS, OBJECT_COUNTER, OBJECT_MATERIAL,
-                             xyz_monster_condition,
-                             SIDE_WORDS, SUMMON_METHODS, TARGET_REF_RE, parse_from)
+from premise import render_premise, split_premise
+from quantity import TO_FULLWIDTH_DIGITS, render_count
+from report_common import card_order, safe_label
+from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, AGENT_PLAYER_WORDS, ALL_PREFIX,
+                             BATTLE_AGENT_MARKER, BATTLE_PARTNER_MARKER, BATTLE_TIMING_REF,
+                             CAUSE_EFFECT_OF, CAUSE_EXCLUDE, CAUSE_METHOD, COUNT_AFTER_OBJECT,
+                             EXCLUDE_METHOD_TAIL, EXIST_WORDS, HEAD_CATEGORY, HEAD_SUBTYPE,
+                             MATERIAL_JOINER, MATERIAL_TIMES, MATERIAL_WORDS, OBJECT_COUNTER,
+                             OBJECT_MATERIAL, OR_FORM, PICK_RANDOM, PLAYER_REF_HEAD, PREMISE_DONE,
+                             RANDOM_PICK, REF_RE, SUMMON_METHODS, TARGET_REF_RE, ZONE_AS_OBJECT,
+                             agent_particle, agent_side, xyz_monster_condition)
 from segment_fields import (MENTION_FORMS, OWNER_JOINER, OWNER_TEXT, REPLACEMENT_PREFIX,
                             is_clause_duration, render_cause, render_display, render_modify,
                             render_per_turn, render_placement_form, render_timing,
-                            render_treat_delta, resolve_polarity,
-                            split_duration)
+                            render_treat_delta, resolve_polarity, split_duration)
 from segment_tree import embedded_bindings, render_premise_prefix, tree_glue
-from structure_shape import (AMOUNT_FORMULA, BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, NoTemplate,
-                             swap_sides)
-from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION,
-                      attack_times, merged_voice, parse_predicates, split_select,
-                      split_targeting)
+from structure_shape import BATTLE_TRIGGERS, NoTemplate, swap_sides
+from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, COST_GLUE, MODIFY_ACTION, attack_times,
+                      merged_voice, parse_predicates, split_select, split_targeting)
+from zone_phrase import SIDE_TEXT, parse_from, render_premise_zones, render_zone_text
 
 REASON_NO_TEMPLATE = "無模板"
 REASON_MISMATCH = "字面不符"
@@ -76,11 +70,9 @@ _GLUE_RE = re.compile("|".join(GLUE))
 _PUNCT_RE = re.compile("[。、\n ]")
 _WS_RE = re.compile(r"[\s　]+")
 
-_SIDE_TEXT = {v: k for k, v in SIDE_WORDS.items()}
 _HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
 _HEAD_TEXT[("魔法", "陷阱")] = "魔法・罠カード"
 _SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}
-_TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 JOINER_WORDS = ("", "・", "の")
 
 
@@ -196,34 +188,6 @@ def _render_condition(condition, names):
     return _render_atom(condition, names)
 
 
-def _render_count(count):
-    """數量字面:N体/N枚/Nつ(まで)、全て;變數數量(算式)只記字面、照寫,上限「〜の数まで」
-    帶 cmp ≤;
-    `each`(「それぞれ」「ずつ」)由數值拼回基本字面,再驗原文字面是它加上這兩個字。"""
-    if not count:
-        return ""
-    if count.get("kind") == AMOUNT_FORMULA:
-        text = count.get("text") or ""
-        bare = text.rstrip("、")
-        if (not bare.endswith(FORMULA_COUNT_TAILS)
-                or (count.get("cmp") == "≤") != bare.endswith(FORMULA_UPTO_TAIL)):
-            raise NoTemplate("物件數量無模板")
-        return text
-    if count.get("cmp") == "全部":
-        return "全て"
-    if count.get("cmp") not in ("=", "≤") or not count.get("unit"):
-        raise NoTemplate("物件數量無模板")
-    # 官方卡文的數字是全形,照它寫(正規化時兩邊都會折成半形,這裡只為報告好讀)。
-    digits = str(count["value"]).translate(_TO_FULLWIDTH_DIGITS)
-    base = f"{digits}{count['unit']}{'まで' if count['cmp'] == '≤' else ''}"
-    if count.get("each"):
-        text = count.get("text") or ""
-        if text == base or not re.fullmatch(f"(?:{EACH_PREFIX})?{base}(?:{EACH_SUFFIX})?", text):
-            raise NoTemplate("物件數量無模板:each")
-        return text
-    return base
-
-
 def _head_of(obj):
     """回指時的頭名詞:條件式裡第一個大類(剩餘物件的條件帶「非」,不能整個條件式去拼)。"""
     return "モンスター" if _first_category(obj["condition"]) == "怪獸" else "カード"
@@ -306,7 +270,7 @@ def _render_object(obj, seg, card, names, line=None, with_count=True, self_id="o
         return "その" + _head_of(obj)
     text = _render_condition(obj["condition"], names)
     if with_count and obj["count"]:
-        text += _render_count(obj["count"])
+        text += render_count(obj["count"])
     return text
 
 
@@ -339,9 +303,6 @@ def _render_detach_object(obj, seg, card, names, self_id):
         return word
     return _render_object(owner, seg, card, names, {"ref": obj.get("of_ref")},
                           self_id=self_id) + "の" + word
-
-
-_POSITION_PARTICLES = FROM_PARTICLES + ("に", "へ")
 
 
 def _targeted_earlier(obj_id, seg, card):
@@ -386,47 +347,6 @@ def _render_ref(ref, obj, seg, card):
     raise NoTemplate(f"回指字面無模板:{ref}")
 
 
-def _render_zone_text(pos, particle):
-    """明寫的從/到:有含助詞的原文字面且與區域一致就照字面寫;否則由區域拼回、接上預設助詞。"""
-    zones = pos["zones"]
-    text = pos.get("text")
-    display = render_display(pos.get("form")) if particle == "から" else ""
-    if text:
-        # 「自分フィールドの、」的讀點是字面的一部分,驗區域時先去掉。
-        bare = text[:-1] if text.endswith("、") else text
-        particles = (f"に{display}存在する",) if display else _POSITION_PARTICLES
-        phrase = next((bare[:-len(p)] for p in particles
-                       if bare.endswith(p)), None)
-        if phrase is None or parse_from(phrase) != zones:
-            raise NoTemplate("從/到的字面與區域不一致")
-        return text
-    if display:
-        raise NoTemplate("從的表示形式沒有字面")
-    return _render_zones(zones) + particle
-
-
-def _render_zones(zones):
-    """區域列表 → 字面(沒有原文字面時用):方明寫才加「自分の/相手の」,只有一個區域且是
-    フィールド時不加「の」(「自分フィールド」「自分の手札・フィールド」「自分の墓地」是官方的
-    寫法);明寫的方是整個列表共用的前綴,沒寫的(預設或沒有方)各區域可以不同
-    (「手札・フィールド」:手牌預設我方、場上沒有方)。"""
-    written = {z["side"] for z in zones if z.get("side_source") == "明寫"}
-    if len(written) > 1 or (written and any(
-            z.get("side_source") != "明寫" for z in zones)):
-        raise NoTemplate("從的區域分屬兩方")
-    try:
-        words = [DEFAULT_ZONE_WORD[z["zone"]] for z in zones]
-    except KeyError as e:
-        raise NoTemplate(f"區域無模板:{e.args[0]}") from None
-    prefix = ""
-    if written:
-        side = written.pop()
-        if side not in _SIDE_TEXT:
-            raise NoTemplate(f"方無模板:{side}")
-        prefix = _SIDE_TEXT[side] + ("" if words == ["フィールド"] else "の")
-    return prefix + "・".join(words)
-
-
 def _render_from(lines):
     """所有對象線共用一個明寫的「從」才有字面 → (字面, 寫在物件前還是述語前);
     繼承、推得的不寫。"""
@@ -436,7 +356,7 @@ def _render_from(lines):
         return "", "名詞前"
     if len(written) != len(lines) or any(w != written[0] for w in written):
         raise NoTemplate("對象線的從不一致")
-    return _render_zone_text(written[0], "から"), written[0].get("placement") or "名詞前"
+    return render_zone_text(written[0], "から"), written[0].get("placement") or "名詞前"
 
 
 def _is_zone_object(line):
@@ -475,7 +395,7 @@ def _render_to(lines, predicate_to):
         return form, "", "述語前", display
     if len(written) != len(lines) or any(w != written[0] for w in written):
         raise NoTemplate("對象線的到不一致")
-    return (form, _render_zone_text(written[0], "に"),
+    return (form, render_zone_text(written[0], "に"),
             written[0].get("placement") or "述語前", display)
 
 
@@ -592,19 +512,10 @@ def _render_existence(seg, premise, card, objects):
             + "が" + seg["predicate"])
 
 
-def _render_premise_zones(zones, text):
-    """前提的區域:帶原文字面(舊式「フィールド上」)時先驗過與區域一致再照字面,否則照方的來源還原。"""
-    if text is None:
-        return _render_zones(zones)
-    if parse_from(text) != zones:
-        raise NoTemplate("前提的區域字面與區域不一致")
-    return text
-
-
 def _render_leading_premise(leading, seg, card, objects, names, followed, self_id="o0"):
     """句首的前提(位置、存在、遊戲狀態)→ 字面;區域與物件的字面規則借這裡的。"""
     return render_premise(
-        leading, _render_premise_zones,
+        leading, render_premise_zones,
         lambda obj_id, ref: _render_object(objects[obj_id], seg, card, names,
                                            {"ref": ref} if ref else None,
                                            self_id=self_id),
@@ -618,9 +529,9 @@ def _render_recipient(recipient, seg, card, objects):
         if obj is None or not recipient.get("ref"):
             raise NoTemplate("受方的物件找不到")
         return _render_ref(recipient["ref"], obj, seg, card) + "に"
-    if recipient not in _SIDE_TEXT:
+    if recipient not in SIDE_TEXT:
         raise NoTemplate(f"受方無模板:{recipient}")
-    return _SIDE_TEXT[recipient] + "に"
+    return SIDE_TEXT[recipient] + "に"
 
 
 def _render_treat_as(seg, names, objects, self_id):
@@ -657,7 +568,7 @@ def _render_material_times(count):
     if (count.get("unit") != MATERIAL_TIMES or count.get("cmp") != "="
             or not isinstance(count.get("value"), int)):
         raise NoTemplate("素材數量無模板")
-    return MATERIAL_TIMES + str(count["value"]).translate(_TO_FULLWIDTH_DIGITS)
+    return MATERIAL_TIMES + str(count["value"]).translate(TO_FULLWIDTH_DIGITS)
 
 
 def _render_damage(seg, card, objects, names, self_id, inner_duration):
@@ -838,7 +749,7 @@ def _render_draw(seg, card, objects, names):
     from_ = line["from"]
     if from_ and from_["source"] == "明寫" and not from_.get("placement"):
         drawer = agent_side(seg["agent"])
-        from_text = _render_zone_text(
+        from_text = render_zone_text(
             {**from_, "zones": draw.undo_drawer_deck(from_["zones"], drawer)}, "から")
     elif from_ and from_["source"] == "推得" and [z["zone"] for z in from_["zones"]] == ["牌組"]:
         from_text = ""
@@ -969,7 +880,7 @@ def render_segment(seg, card, self_id="o0"):
             if seg["lines"] or seg["amount"].get("unit") != "LP" \
                     or not isinstance(seg["amount"].get("value"), int):
                 raise NoTemplate("數量無模板")
-            words.append(str(seg["amount"]["value"]).translate(_TO_FULLWIDTH_DIGITS) + "LP")
+            words.append(str(seg["amount"]["value"]).translate(TO_FULLWIDTH_DIGITS) + "LP")
             counts.add(("", None))
             marker = "を"
         for line in spoken:
@@ -985,7 +896,7 @@ def render_segment(seg, card, self_id="o0"):
             else:
                 words.append(_render_object(objects[line["object"]], seg, card, names, line,
                                             self_id=self_id))
-            counts.add((_render_count(line["count"]), (line["count"] or {}).get("placement")))
+            counts.add((render_count(line["count"]), (line["count"] or {}).get("placement")))
             picks.add(line.get("pick"))
         if len(counts) > 1 or len(picks) > 1:
             raise NoTemplate("對象線的助詞或數量不一致")
@@ -1057,7 +968,7 @@ def _tree_glue(block, card, names):
         raise NoTemplate(f"回指字面無模板:{ref}")
 
     def render_premise_text(premise):
-        return render_premise_prefix(premise, _render_premise_zones, render_object)
+        return render_premise_prefix(premise, render_premise_zones, render_object)
 
     return [_PUNCT_RE.sub("", piece)
             for piece in tree_glue(block, render_premise_text, render_object)]

@@ -74,33 +74,31 @@ import re
 import damage
 import draw
 from archetype_table import fold_width
-from attribute_atoms import is_param_atom, joiner, parse_modifier as parse_param_group
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from clause_join import JOIN, split_continuative
-from condition_atoms import (TARGETING_THIS_FORMS, parse_modifier as parse_atom_modifier,
-                             targeting_this_atom)
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
 from premise import is_lasting, split_premises
-from segment_fields import (CAUSE_PATTERN, CLAUSE_DURATION_PATTERN, DISPLAY_PATTERN,
-                            EFFECT_HOLDER_PREFIX,
-                            DURATION_TURN, ORDER_PATTERN,
-                            OWNER_JOINER, OWNER_PATTERN, OWNER_TEXT, PER_TURN_PATTERN,
-                            REPLACEMENT_PREFIX,
-                            TIMING_PATTERN, TREAT_DELTA_PATTERN, TREAT_PATTERN, implicit_delay,
-                            is_delayed, parse_treat_delta,
-                            MENTION_FORMS, inherited_duration, lasting, mention_head, parse_cause,
-                            find_battle_duration, parse_duration, parse_leading_duration,
-                            parse_modify, parse_per_turn,
-                            parse_placement_form, parse_timing, resolve_polarity)
-from structure_shape import (AMOUNT_FORMULA, BATTLE_TRIGGERS, DEFAULT_ZONE_WORD, DISPLAY_WORD,
-                             ZONE_WORDS, new_line, new_object,
-                             new_segment, position, unparsed, zone)
-from synonyms import (
-    ACTION_PAST, ACTIVATION_SUFFIXES, ATTACK_PREFIX_PATTERN, COST_GLUE, MODIFY_ACTION,
-    MODIFY_PREDICATE, ONLY_MARKER, PREDICATE_NOUN_PATTERN, SELECT_PREFIX, SUMMON_NOUNS,
-    TARGET_REF,
-    TARGETING_PREFIXES, action_ancestors, attack_times,
-    merged_voice, parse_predicates)
+from quantity import (COUNT_PATTERN, FRONT_COUNT_PATTERN, FULLWIDTH_DIGITS, floating_count,
+                      parse_count)
+from segment_fields import (CAUSE_PATTERN, CLAUSE_DURATION_PATTERN, DISPLAY_PATTERN, DURATION_TURN,
+                            EFFECT_HOLDER_PREFIX, MENTION_FORMS, ORDER_PATTERN, OWNER_JOINER,
+                            OWNER_PATTERN, OWNER_TEXT, PER_TURN_PATTERN, REPLACEMENT_PREFIX,
+                            TIMING_PATTERN, TREAT_DELTA_PATTERN, TREAT_PATTERN,
+                            find_battle_duration, implicit_delay, inherited_duration, is_delayed,
+                            lasting, mention_head, parse_cause, parse_duration,
+                            parse_leading_duration, parse_modify, parse_per_turn,
+                            parse_placement_form, parse_timing, parse_treat_delta, resolve_polarity)
+from structure_shape import (BATTLE_TRIGGERS, DISPLAY_WORD, new_line, new_object, new_segment,
+                             position, unparsed, zone)
+from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, ATTACK_PREFIX_PATTERN, COST_GLUE,
+                      MODIFY_ACTION, ONLY_MARKER, PREDICATE_NOUN_PATTERN, SELECT_PREFIX,
+                      SUMMON_NOUNS, TARGETING_PREFIXES, TARGET_REF, action_ancestors, attack_times,
+                      merged_voice, parse_predicates)
+from zone_phrase import (FROM_PARTICLES, SIDE_WORDS, ZONE_PHRASE, ZONE_PHRASE_RE, parse_from,
+                         zone_literal)
+from attribute_atoms import is_param_atom, joiner, parse_modifier as parse_param_group
+from condition_atoms import (TARGETING_THIS_FORMS, parse_modifier as parse_atom_modifier,
+                             targeting_this_atom)
 
 # 推得表:動作詞 → (沒寫「從」時的出發地, 沒寫「到」時的終點)。
 INFERENCE_TABLE = {
@@ -113,30 +111,14 @@ INFERENCE_TABLE = {
     "覆蓋": (None, "魔陷區"),
     "抽牌": ("牌組", "手牌"),
 }
-# 區域字面表在 structure_shape.ZONE_WORDS(三處共用)。
-# 場上系區域:沒寫方時不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
-FIELD_ZONES = ("場上", "EX怪獸區", "怪獸區", "魔陷區", "P區", "場地區")
-# 從的助詞:新式「墓地の」「墓地から」;舊式連體修飾「墓地に存在するX」(= 墓地のX)。
-FROM_PARTICLES = ("から", "の", "に存在する")
 HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠カード": "陷阱",
                  "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
 # 帶子類型的頭名詞:大類 且 屬性比較(卡片子類型 = 協調,與票 07 的 Xモンスター 同一種原子)。
 HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
 _HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE), key=len,
                          reverse=True))
-# 「持ち主の手札に戻す」的持ち主:值持有者,靜態判不了是哪一方,查詢指定我方/對手時不命中。
-# 「お互いは」(誰,雙方各自);「自身の手札」的自身 = 這一段的誰那一方(「ドローしたプレイヤーは
-# 自身の手札を」),同持有者靜態判不了,查詢指定我方/對手時不命中。
-SIDE_WORDS = {"自分": "我方", "相手": "對手", "自分か相手": "任一方", "持ち主": "持有者",
-              "お互い": "雙方各自", "自身": "自身"}
 EXIST_WORDS = ("あった", "ある", "存在する", "存在した")
-FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
 
-_ZONE_WORDS_ALT = "|".join(w for w, _ in ZONE_WORDS)
-# 區域短語:[自分の|相手の|自分か相手の]區域(・區域|か區域)*;「・」與「か」都是列舉
-# (自分の手札・フィールド、自分のフィールドか墓地),字面由從/到的 text 還原(票 06)。
-_ZONE_PHRASE = (f"(?:(?:自分か相手|自分|相手|持ち主|自身)の?)?(?:{_ZONE_WORDS_ALT})"
-                f"(?:[・か](?:{_ZONE_WORDS_ALT}))*")
 # 受方可以是物件的回指(「この効果で特殊召喚したモンスターに装備できる」,票 06)。
 _RECIPIENT_REF = ("(?:この効果で)?(?:その|それらの|" + "|".join(ACTION_PAST.values())
                   + f")(?:モンスター|カード)|{TARGET_REF}(?:モンスター|カード)")
@@ -186,8 +168,8 @@ _PRED_HEAD = f"(?:{ATTACK_PREFIX_PATTERN})?(?:{PREDICATE_NOUN_PATTERN})?"
 _SUBJECTLESS_RE = re.compile(
     f"^(?P<cause>{_CAUSE_ALT})?"
     f"(?P<timing>{TIMING_PATTERN})?"
-    f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
-    f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
+    f"(?:(?P<from2>{ZONE_PHRASE})から)?"
+    f"(?:(?P<to>{ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?P<pred>{_PRED_HEAD}[^を]+)$")
 TOPIC_UNKNOWN = object()
 # 句首的「Xは」(「「A」または「B」は」的「または」屬於 X)。
@@ -228,27 +210,12 @@ REPEAT_RE = re.compile("^(?=.*(?:処理|この効果)を).*繰り返す(?:（[^�
 # 舊式的代價句:「(代價子句)る事で、(效果子句)」= 新式「(代價子句)て発動できる。(效果子句)」。
 # 代價子句以非過去形收尾(る/う/す/く;く 是「取り除く事で」)才算,「〜された事で」是條件意味、不切。
 _OLD_COST_RE = re.compile("^(?P<cost>.+?[るうすく])" + COST_GLUE + "、?(?P<rest>.+)$")
-# 對象線的數量字面:N体/N枚(まで)、全て;「それぞれ」「ずつ」是每一份各 N(`each`);
-# 變數數量「任意の数だけ」記算式字面。寫在物件前的變數數量(「破壊した数だけ相手フィールドの
-# カードを」)與寫在述語前「從」之後的數量(「自分の墓地から１枚選んで」)另帶 placement。
-EACH_PREFIX, EACH_SUFFIX, FORMULA_COUNT_TAIL = "それぞれ", "ずつ", "数だけ"
-# 單位「つ」:超量素材、計數器的「１つ」「２つまで」。
-COUNT_UNITS = "体|枚|つ"
-COUNT_PATTERN = (f"(?:{EACH_PREFIX})?[０-９]+(?:{COUNT_UNITS})(?:まで|{EACH_SUFFIX})?|全て"
-                 f"|任意の{FORMULA_COUNT_TAIL}")
-_COUNT_RE = re.compile(f"^(?P<each>{EACH_PREFIX})?(?P<digits>[０-９]+)(?P<unit>{COUNT_UNITS})"
-                       f"(?P<upto>まで)?(?P<per>{EACH_SUFFIX})?$")
-# 物件前的變數數量另收上限「〜の数まで、」(「自分フィールドの「＠イグニスター」モンスターの
-# 数まで、相手フィールドの〜を選んで破壊する」),算式帶 cmp ≤。
-FORMULA_UPTO_TAIL = "数まで"
-FORMULA_COUNT_TAILS = (FORMULA_COUNT_TAIL, FORMULA_UPTO_TAIL)
-FRONT_COUNT_PATTERN = f"[^、を]+?(?:{'|'.join(FORMULA_COUNT_TAILS)})、?"
 ZONE_AS_OBJECT = "物件"
 RANDOM_PICK = "ランダムに"
 PICK_RANDOM = "隨機"
 # 物件前的「到に」:主語形「自分フィールドにモンスターが特殊召喚された」(助詞が時才有);
 # 後接「存在する」的是舊式從的助詞(フィールド上に存在するモンスター),不是到。
-_TO_FRONT = f"(?:(?P<to_front>{_ZONE_PHRASE})に(?!(?:{DISPLAY_WORD}で)?存在する))?"
+_TO_FRONT = f"(?:(?P<to_front>{ZONE_PHRASE})に(?!(?:{DISPLAY_WORD}で)?存在する))?"
 # 誰:玩家字面「自分/相手/お互い」與動作回指「ドローしたプレイヤー」(指回本區塊最近做過
 # 那個動作的段);助詞 が/は(「お互いに」也是誰),後面可帶讀點。
 PLAYER_REF_HEAD = "プレイヤー"
@@ -269,7 +236,7 @@ _CLAUSE_PATTERN = (
     # 物件前的「從」:「EXデッキから特殊召喚されたモンスター」的「から」是修飾語(曾被特殊召喚),
     # 不是這一段的從;「自分フィールドの、「A」または「B」が」的讀點記進從的字面(票 08)。
     # 舊式「フィールド上に表側表示で存在するX」:表示形式記在從的放置形式。
-    f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)}"
+    f"(?:(?P<from>{ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)}"
     f"|に(?P<from_display>{DISPLAY_WORD})で存在する)"
     "(?P<from_pause>、)?(?!特殊召喚され))?"
     # 物件短語裡的「を含む」(カード名に「X」を含む)、「を持つ」(…と同じ数値のレベルを持つ)
@@ -301,13 +268,13 @@ _CLAUSE_PATTERN = (
     f"(?:(?P<treat>(?:{TREAT_DELTA_PATTERN}|{EFFECT_HOLDER_PREFIX})?{TREAT_PATTERN})"
     f"|(?P<order>{ORDER_PATTERN}))?"
     # 「從」也可寫在物件後(XをデッキからYに加える);受方(相手に見せて)緊接述語前。
-    f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
+    f"(?:(?P<from2>{ZONE_PHRASE})から)?"
     f"(?P<count2>{COUNT_PATTERN})?"
     # 「選んで」:字面留在原述語字面開頭、不標取對象;單獨出現是發動句的選取宣告。
     f"(?P<select>{SELECT_PREFIX})?"
     # 述語前的期間:「エンドフェイズまで除外する」。
     f"(?P<duration>{CLAUSE_DURATION_PATTERN})?"
-    f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
+    f"(?:(?P<to>{ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?:(?P<recipient>自分|相手|{_RECIPIENT_REF})に)?"
     # 到的表示形式:「〜に表側表示で置く」「表側攻撃表示か裏側守備表示で特殊召喚する」。
     f"(?P<display>{DISPLAY_PATTERN})?"
@@ -333,8 +300,6 @@ BATTLE_PREDICATE = "戦闘を行"
 _BATTLE_RE = re.compile(
     f"^(?P<agent>[^、]+?){BATTLE_AGENT_MARKER}"
     f"(?:(?P<partner>[^、]+?){BATTLE_PARTNER_MARKER})?(?P<pred>{BATTLE_PREDICATE}[^を、]*)$")
-_FROM_RE = re.compile("^(?:(?P<side>自分か相手|自分|相手|持ち主|自身)の?)?(?P<zones>.+)$")
-_ZONE_PHRASE_RE = re.compile(f"^{_ZONE_PHRASE}$")
 _SELF_RE = re.compile("^このカード$")
 REF_RE = re.compile("^(?P<ref>その|それらの)(?P<head>モンスター|カード)$")
 # 回指後接數量(「そのカード１枚を相手に見せて」):數量屬於這次提及,記在對象線、placement 物件後。
@@ -403,70 +368,6 @@ def agent_side(agent):
     if isinstance(agent, dict):
         return agent.get("side")
     return agent
-
-
-def parse_from(phrase):
-    """「自分の手札・フィールド」→ 區域列表;任何一截不是區域字面就回 None。"""
-    m = _FROM_RE.match(phrase)
-    if not m:
-        return None
-    zones = []
-    for part in re.split("[・か]", m.group("zones")):
-        for word, name in ZONE_WORDS:
-            if part == word:
-                break
-        else:
-            return None
-        if m.group("side"):
-            side, side_source = SIDE_WORDS[m.group("side")], "明寫"
-        elif name in FIELD_ZONES:
-            # 「フィールドに「海」が存在する場合」是任一方的場上:場上系沒寫方就不預設。
-            side, side_source = None, None
-        else:
-            side, side_source = "我方", "預設"
-        zones.append(zone(name, side, side_source))
-    return zones
-
-
-def parse_count(m):
-    if not m.group("count"):
-        return None
-    digits = m.group("count")[:-len(m.group("unit")) - len(m.group("upto") or "")]
-    return {"text": m.group("count"),
-            "value": int(digits.translate(FULLWIDTH_DIGITS)),
-            "unit": m.group("unit"), "cmp": "≤" if m.group("upto") else "="}
-
-
-def zone_literal(phrase):
-    """區域短語用了非預設的字面(舊式「フィールド上」)就回短語本身(要留原文字面),否則 None。
-    前提的區域平常照方的來源還原(票 05),只有這種情形還原不回原文。"""
-    m = _FROM_RE.match(phrase)
-    parts = re.split("[・か]", m.group("zones")) if m else []
-    if "か" in phrase or any(
-            part != DEFAULT_ZONE_WORD.get(dict(ZONE_WORDS).get(part)) for part in parts):
-        return phrase   # 「か」列舉(自分のフィールドか墓地)沒有預設寫法,也留字面(票 06)
-    return None
-
-
-def floating_count(text, placement=None):
-    """對象線的數量(「カードを２枚まで」「それらのモンスターを全て」),記在對象線上;
-    變數數量(「任意の数だけ」「破壊した数だけ」)是算式字面;「それぞれ」「ずつ」帶 `each`;
-    寫在物件前或述語前的帶 `placement`(有值才寫)。"""
-    if text == "全て":
-        count = {"text": text, "cmp": "全部"}
-    elif text.rstrip("、").endswith(FORMULA_COUNT_TAILS):
-        count = {"kind": AMOUNT_FORMULA, "text": text}
-        if text.rstrip("、").endswith(FORMULA_UPTO_TAIL):
-            count["cmp"] = "≤"
-    else:
-        m = _COUNT_RE.match(text)
-        count = {"text": text, "value": int(m.group("digits").translate(FULLWIDTH_DIGITS)),
-                 "unit": m.group("unit"), "cmp": "≤" if m.group("upto") else "="}
-        if m.group("each") or m.group("per"):
-            count["each"] = True
-    if placement:
-        count["placement"] = placement
-    return count
 
 
 OR_FORM = "か"
@@ -1186,7 +1087,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     phrases = [None] if elided else split_objects(g("objects"))
     zone_object = (not elided and from_text is None and len(phrases) == 1
                    and (g("of_effect") or "") + g("marker") == "を"
-                   and _ZONE_PHRASE_RE.match(phrases[0]) and parse_from(phrases[0]))
+                   and ZONE_PHRASE_RE.match(phrases[0]) and parse_from(phrases[0]))
     if zone_object:
         from_zones, from_text, from_placement = zone_object, phrases[0], ZONE_AS_OBJECT
     for phrase in phrases:
@@ -1600,7 +1501,7 @@ def _fill_effect(seg, clause, kind, state, clause_start, inherited_timing=None):
 # 性質變更句的主語:「[區域の][全ての]物件短語の」;區域照簡單子句記成對象線的從,
 # 「全ての」記成對象線的數量(屬於這次提及)。
 _MODIFY_SUBJECT_RE = re.compile(
-    f"^(?:(?P<from>{_ZONE_PHRASE})の)?(?P<all>全ての)?(?P<phrase>.+)の$")
+    f"^(?:(?P<from>{ZONE_PHRASE})の)?(?P<all>全ての)?(?P<phrase>.+)の$")
 ALL_PREFIX = "全ての"
 
 

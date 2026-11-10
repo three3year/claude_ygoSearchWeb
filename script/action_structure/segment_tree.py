@@ -31,12 +31,11 @@ from block_split import body_start
 from clause_join import JOIN, split_continuative
 from effect_reference import is_reference, match_reference, reference_node, render_reference
 from premise import render_premise, split_premises
+from segment_extract import BlockState, INTERVAL_RE, INTERVAL_REASON, parse_sentence, sentences
 from segment_fields import EFFECT_HOLDER_PREFIX
-from segment_extract import (INTERVAL_REASON, INTERVAL_RE, BlockState, parse_from,
-                             parse_sentence, sentences, zone_literal)
-from structure_shape import (DISPLAY_WORD, NoTemplate, branch_node, display_value,
-                             display_word, embedded_node, new_block, segment_node, swap_sides,
-                             unparsed)
+from structure_shape import (DISPLAY_WORD, NoTemplate, branch_node, display_value, display_word,
+                             embedded_node, new_block, segment_node, swap_sides, unparsed)
+from zone_phrase import parse_from, zone_literal
 
 # ● 分歧的引導句(閉集):「以下の効果」後的字面 → (方式, 選者)。模板由方式 + form 寫回。
 BRANCH_HEADERS = (

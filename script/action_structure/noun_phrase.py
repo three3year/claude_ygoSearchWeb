@@ -53,6 +53,9 @@ REASON_MODS = "物件修飾解析不出"
 # 名詞短語的列舉「AかB」「AまたはB」:或,`form` 記連接的字面。
 OR_FORM = "か"
 OR_FORMS = ("または", OR_FORM)
+# 「このカードまたは〜」「そのモンスターか〜」的左邊是此卡或回指,不是新的名詞短語:這種列舉是兩個物件的聯集,
+# 一個條件式表達不了,不當列舉切。
+_POINTING_MODS = ("この", "その", "それらの")
 _HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
 _HEAD_TEXT[("魔法", "陷阱")] = "魔法・罠カード"
 _SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}
@@ -79,7 +82,7 @@ def _split_on(mods, form):
             depth -= 1
         elif depth == 0 and i >= last and mods.startswith(form, i):
             left = NOUN_RE.match(mods[last:i])
-            if left and not left.group("count"):
+            if left and not left.group("count") and left.group("mods") not in _POINTING_MODS:
                 pieces.append(mods[last:i])
                 last = i + len(form)
     return pieces

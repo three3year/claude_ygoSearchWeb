@@ -14,7 +14,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] (站主)每一項挑一張真實卡寫查詢斷言,列在 Comments「待站主核可」
 - [x] 查「支付」命中寫「ライフポイントを払う」的段

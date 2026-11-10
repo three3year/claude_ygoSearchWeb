@@ -7,7 +7,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] 重建後 `data/action_structure.json` 與改前逐位元組相同;兩次建置逐位元組相同
 - [x] 覆蓋報告與反向檢查報告的數字與改前相同

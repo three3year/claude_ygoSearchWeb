@@ -16,7 +16,7 @@
 
 **Blocked by:** 08
 
-**Status:** ready-for-agent
+**Status:** needs-info
 
 - [ ] (站主)從 シトリスの蟲惑魔 1688285、発条補修ゼンマイコン 1735088、サイバース・コード・マジシャン 64865、彼岸の悪鬼 ラビキャント 734741、天賦の魔導士クロウリー 875572、トリックスター・フーディ 1410324 挑 1–3 張寫斷言,列在 Comments「待站主核可」
 - [ ] 查「成為超量素材」命中 シトリスの蟲惑魔 與 発条補修ゼンマイコン;查「作為素材」不命中那兩段
@@ -184,3 +184,5 @@
 - `block_state.BlockState.last_summoned`、`block_state.summoned_object`:同一句前面剛特殊召喚出來的物件(讀法 3 用)。
 - `ClauseContext.split_at`:句型回話「這個子句請在這裡切成兩段」(讀法 8 用),只有效果子句的串接理會。
 - 新模組 `material_summon.py`(召喚段帶素材線)、`xyz_material.py`(簡單子句裡「誰的素材」那一格);README 的模組表加了一列。
+
+**主會話收尾(2026-11-11)**:有非站主驗收項因票外寫法未過(見上方回報),Status 設 needs-info,等收尾摘要(`.scratch/action-structure-m3/report/milestone-3-summary.md`)裁定。

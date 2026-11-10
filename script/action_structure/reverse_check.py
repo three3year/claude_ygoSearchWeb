@@ -22,21 +22,20 @@ import re
 import damage
 import draw
 from archetype_table import fold_width
-from attribute_atoms import EXCEPT, is_param_atom, joiner, render_group, render_level
 from block_split import LABEL_WIDTH
-from condition_atoms import quoted_name, render_atom
 from names_attributes import TREAT_PREDICATE, render_treat_as
+from noun_phrase import render_condition
 from premise import render_premise, split_premise
 from quantity import TO_FULLWIDTH_DIGITS, render_count
 from report_common import card_order, safe_label
 from segment_extract import (ACTION_REF_RE, ACTIVATION_REF, AGENT_PLAYER_WORDS, ALL_PREFIX,
                              BATTLE_AGENT_MARKER, BATTLE_PARTNER_MARKER, BATTLE_TIMING_REF,
                              CAUSE_EFFECT_OF, CAUSE_EXCLUDE, CAUSE_METHOD, COUNT_AFTER_OBJECT,
-                             EXCLUDE_METHOD_TAIL, EXIST_WORDS, HEAD_CATEGORY, HEAD_SUBTYPE,
-                             MATERIAL_JOINER, MATERIAL_TIMES, MATERIAL_WORDS, OBJECT_COUNTER,
-                             OBJECT_MATERIAL, OR_FORM, PICK_RANDOM, PLAYER_REF_HEAD, PREMISE_DONE,
-                             RANDOM_PICK, REF_RE, SUMMON_METHODS, TARGET_REF_RE, ZONE_AS_OBJECT,
-                             agent_particle, agent_side, xyz_monster_condition)
+                             EXCLUDE_METHOD_TAIL, EXIST_WORDS, MATERIAL_JOINER, MATERIAL_TIMES,
+                             MATERIAL_WORDS, OBJECT_COUNTER, OBJECT_MATERIAL, PICK_RANDOM,
+                             PLAYER_REF_HEAD, PREMISE_DONE, RANDOM_PICK, REF_RE, SUMMON_METHODS,
+                             TARGET_REF_RE, ZONE_AS_OBJECT, agent_particle, agent_side,
+                             xyz_monster_condition)
 from segment_fields import (MENTION_FORMS, OWNER_JOINER, OWNER_TEXT, REPLACEMENT_PREFIX,
                             is_clause_duration, render_cause, render_display, render_modify,
                             render_per_turn, render_placement_form, render_timing,
@@ -70,122 +69,11 @@ _GLUE_RE = re.compile("|".join(GLUE))
 _PUNCT_RE = re.compile("[。、\n ]")
 _WS_RE = re.compile(r"[\s　]+")
 
-_HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
-_HEAD_TEXT[("魔法", "陷阱")] = "魔法・罠カード"
-_SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}
-JOINER_WORDS = ("", "・", "の")
-
 
 def normalise(text):
     """去空白(含全形空白)、全形英數符號折成半形(與名稱比對同一張折疊表 `fold_width`);
     ①②③ 等編號字元保持原樣。"""
     return fold_width(_WS_RE.sub("", text))
-
-
-def _quoted(atom, names):
-    """名稱原子 → 「X」;名稱列找不到就是無模板。"""
-    text = quoted_name(atom, names)
-    if text is None:
-        raise NoTemplate("名稱原子引用的名稱列找不到")
-    return text
-
-
-def _render_atom(atom, names):
-    """修飾語原子 → 字面:字段(「X」/「X」と名のついた)、「X」以外の、カード名に「X」を含む、
-    屬性比較(種族名、「レベル１」、「光属性」);票 07 的原子(記載、卡名範圍、位置、
-    卡片子類型、引用)的模板在 condition_atoms.render_atom,先問它。"""
-    rendered = render_atom(atom, names)
-    if rendered is not None:
-        return rendered
-    op = atom.get("op")
-    if op == "字段":
-        form = atom.get("form")
-        if form not in (None, "と名のついた"):
-            raise NoTemplate(f"字段寫法無模板:{form}")
-        return _quoted(atom, names) + (form or "")
-    if op == "非" and atom.get("arg", {}).get("op") == "卡名":
-        return _quoted(atom["arg"], names) + "以外の"
-    if op == "非" and is_param_atom(atom.get("arg", {})):
-        arg = atom["arg"]
-        text = render_group(arg) if arg.get("op") == "或" else _render_atom(arg, names)
-        if text is None:
-            raise NoTemplate("屬性比較無模板")
-        return text + EXCEPT
-    if op == "卡名包含":
-        return "カード名に" + _quoted(atom, names) + "を含む"
-    level = render_level(atom)   # レベル１、レベル４以下、レベル５以上
-    if level is not None:
-        return level
-    if op == "屬性比較" and atom.get("cmp") == "=":
-        if atom["attr"] == "種族":
-            return atom["value"]
-        if atom["attr"] == "屬性":
-            return atom["value"] + "属性"
-        raise NoTemplate(f"屬性比較無模板:{atom['attr']}")
-    if op == "解析不出":
-        raise NoTemplate("物件條件無模板:解析不出")
-    raise NoTemplate(f"物件條件無模板:{op}")
-
-
-def _render_head(condition):
-    """大類(與 魔法・罠 的或)、大類 且 子類型(チューナー)→ 頭名詞;不是頭名詞回 None。"""
-    op = condition.get("op")
-    if op == "大類":
-        return _HEAD_TEXT[condition["value"]]
-    if op == "或":
-        values = tuple(a.get("value") for a in condition["args"]
-                       if a.get("op") == "大類")
-        if len(values) == len(condition["args"]) and values in _HEAD_TEXT:
-            return _HEAD_TEXT[values]
-    if op == "且" and len(condition["args"]) == 2:
-        category, subtype = condition["args"]
-        if (category.get("op") == "大類" and subtype.get("op") == "屬性比較"
-                and subtype.get("attr") == "卡片子類型" and subtype.get("cmp") == "="):
-            return _SUBTYPE_HEAD_TEXT.get((category["value"], subtype.get("value")))
-    return None
-
-
-def _render_modifiers(mods, names):
-    """修飾語列表 → 字面:屬性比較之間與後面的「・」「の」照 attribute_atoms.joiner
-    (魔法使い族・光属性、獣族・獣戦士族の炎属性、ドラゴン族の「ドラグニティ」)。"""
-    out = []
-    for i, atom in enumerate(mods):
-        if not is_param_atom(atom):
-            out.append(_render_atom(atom, names))
-            continue
-        text = render_group(atom) if atom.get("op") == "或" else _render_atom(atom, names)
-        if text is None:
-            raise NoTemplate("屬性比較無模板")
-        written = atom.get("joiner")
-        if written is not None and written not in JOINER_WORDS:
-            raise NoTemplate("修飾語連接字無模板")
-        out.append(text + (written if written is not None
-                           else joiner(atom, mods[i + 1] if i + 1 < len(mods) else None)))
-    return "".join(out)
-
-
-def _render_condition(condition, names):
-    """條件式 → 名詞短語:且 = 修飾語(照字面順序,相鄰的屬性比較以「・」連)+ 頭名詞(且 的末項);
-    單獨的卡名 = 「X」。"""
-    if condition is None:
-        raise NoTemplate("物件條件無模板:空")
-    if condition.get("op") == "或" and condition.get("form") == OR_FORM:
-        return OR_FORM.join(_render_condition(arg, names) for arg in condition["args"])
-    head = _render_head(condition)
-    if head:
-        return head
-    op = condition.get("op")
-    if op == "卡名":
-        return _quoted(condition, names)
-    if op == "或" and all(a.get("op") == "卡名" for a in condition["args"]):
-        return "または".join(_quoted(a, names) for a in condition["args"])
-    if op == "且":
-        *mods, last = condition["args"]
-        head = _render_head(last)
-        if head is None:
-            raise NoTemplate("物件條件無模板:且 的末項不是大類")
-        return _render_modifiers(mods, names) + head
-    return _render_atom(condition, names)
 
 
 def _head_of(obj):
@@ -268,7 +156,7 @@ def _render_object(obj, seg, card, names, line=None, with_count=True, self_id="o
                         and start <= obj["span"][0] and obj["span"][1] <= end)
     if not defined_here:
         return "その" + _head_of(obj)
-    text = _render_condition(obj["condition"], names)
+    text = render_condition(obj["condition"], names)
     if with_count and obj["count"]:
         text += render_count(obj["count"])
     return text

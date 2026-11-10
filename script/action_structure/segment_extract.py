@@ -74,9 +74,11 @@ import re
 import damage
 import draw
 from archetype_table import fold_width
-from attribute_words import ATTRIBUTE_JA, RACE_JA
 from clause_join import JOIN, split_continuative
+from condition_atoms import TARGETING_THIS_FORMS, targeting_this_atom
 from names_attributes import REASON_NAME_UNKNOWN, TREAT_PREDICATE, parse_treat_as
+from noun_phrase import (HEAD_CATEGORY, NOUN_RE, OR_FORM, category_condition, category_of,
+                         noun_condition, parse_modifiers, split_alternatives)
 from premise import is_lasting, split_premises
 from quantity import (COUNT_PATTERN, FRONT_COUNT_PATTERN, FULLWIDTH_DIGITS, floating_count,
                       parse_count)
@@ -96,9 +98,6 @@ from synonyms import (ACTION_PAST, ACTIVATION_SUFFIXES, ATTACK_PREFIX_PATTERN, C
                       merged_voice, parse_predicates)
 from zone_phrase import (FROM_PARTICLES, SIDE_WORDS, ZONE_PHRASE, ZONE_PHRASE_RE, parse_from,
                          zone_literal)
-from attribute_atoms import is_param_atom, joiner, parse_modifier as parse_param_group
-from condition_atoms import (TARGETING_THIS_FORMS, parse_modifier as parse_atom_modifier,
-                             targeting_this_atom)
 
 # 推得表:動作詞 → (沒寫「從」時的出發地, 沒寫「到」時的終點)。
 INFERENCE_TABLE = {
@@ -111,12 +110,6 @@ INFERENCE_TABLE = {
     "覆蓋": (None, "魔陷區"),
     "抽牌": ("牌組", "手牌"),
 }
-HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠カード": "陷阱",
-                 "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
-# 帶子類型的頭名詞:大類 且 屬性比較(卡片子類型 = 協調,與票 07 的 Xモンスター 同一種原子)。
-HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
-_HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE), key=len,
-                         reverse=True))
 EXIST_WORDS = ("あった", "ある", "存在する", "存在した")
 
 # 受方可以是物件的回指(「この効果で特殊召喚したモンスターに装備できる」,票 06)。
@@ -329,27 +322,16 @@ TARGET_REF_RE = re.compile(f"^{TARGET_REF}(?P<head>モンスター|カード)$")
 TARGET_OF = "対象の"
 # 動作回指可帶「この効果で」(この効果で除外したモンスター);字面整個記進對象線 ref(票 08)。
 ACTION_REF_RE = re.compile("^(?:この効果で)?(?P<past>.+?)(?P<head>モンスター|カード)$")
-_NOUN_RE = re.compile(
-    f"^(?P<mods>.*?)(?P<head>{_HEADS})"
-    "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
 # 「X」１体:只有卡名、沒有頭名詞的物件;「A」または「B」是兩個卡名的「或」(票 08)。
 _NAMED_RE = re.compile(
     "^(?P<names>「[^「」]+」(?:または「[^「」]+」)*)"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
-# 名稱修飾語(從左到右逐個認;「X」單獨出現只能緊接頭名詞,所以要在字串尾)。
-_MOD_RES = (
-    ("以外", re.compile("^「(?P<name>[^「」]+)」以外の")),
-    ("と名のついた", re.compile("^「(?P<name>[^「」]+)」と名のついた")),
-    ("卡名包含", re.compile("^カード名に「(?P<name>[^「」]+)」を含む")),
-    ("字段", re.compile("^「(?P<name>[^「」]+)」$")),
-)
 
 REASON_NOT_ARCHETYPE = "「」名稱不是字段"
 REASON_CLAUSE = "子句解析不出"
 REASON_FROM = "從解析不出"
 REASON_TO = "到解析不出"
 REASON_OBJECT = "物件解析不出"
-REASON_MODS = "物件修飾解析不出"
 REASON_REF = "指回的物件找不到"
 REASON_ACTIVATION = "發動句解析不出"
 REASON_CAUSE = "原因解析不出"
@@ -368,56 +350,6 @@ def agent_side(agent):
     if isinstance(agent, dict):
         return agent.get("side")
     return agent
-
-
-OR_FORM = "か"
-
-
-def split_alternatives(mods, head):
-    """物件短語的修飾語裡,頂層(「」外)的「か」左邊是完整名詞短語(帶頭名詞、沒有數量)時才算列舉:
-    回傳各截名詞短語(最後一截接回頭名詞);不是列舉回 None(「自分か相手の」是方,不在此列)。"""
-    pieces, depth, last = [], 0, 0
-    for i, ch in enumerate(mods):
-        if ch == "「":
-            depth += 1
-        elif ch == "」":
-            depth -= 1
-        elif ch == OR_FORM and depth == 0:
-            left = _NOUN_RE.match(mods[last:i])
-            if left and not left.group("count"):
-                pieces.append(mods[last:i])
-                last = i + 1
-    if not pieces:
-        return None
-    return pieces + [mods[last:] + head]
-
-
-def _noun_condition(atoms, head):
-    condition = category_condition(head)
-    return {"op": "且", "args": atoms + [condition]} if atoms else condition
-
-
-def category_condition(head):
-    if head in HEAD_SUBTYPE:
-        category, subtype = HEAD_SUBTYPE[head]
-        return {"op": "且", "args": [{"op": "大類", "value": category},
-                                    {"op": "屬性比較", "attr": "卡片子類型",
-                                     "cmp": "=", "value": subtype}]}
-    value = HEAD_CATEGORY[head]
-    if isinstance(value, tuple):
-        return {"op": "或", "args": [{"op": "大類", "value": v} for v in value]}
-    return {"op": "大類", "value": value}
-
-
-# ── 條件式:屬性比較的修飾語(種族、屬性);等級(レベルN、N以上/以下)與「・」列舉在
-# attribute_atoms,名稱類的在 BlockState.parse_modifiers ──
-def parse_modifier(part):
-    """一截修飾語 → 屬性比較原子;認不得回 None。"""
-    if part in RACE_JA:
-        return {"op": "屬性比較", "attr": "種族", "cmp": "=", "value": part}
-    if part.endswith("属性") and part[:-2] in ATTRIBUTE_JA:
-        return {"op": "屬性比較", "attr": "屬性", "cmp": "=", "value": part[:-2]}
-    return None
 
 
 def split_objects(phrase):
@@ -562,85 +494,6 @@ class BlockState:
                 reason = REASON_NOT_ARCHETYPE
         return atom, reason
 
-    def parse_modifiers(self, mods):
-        """修飾語 → (原子列表, 原因):名稱類的句型逐個認,其餘以「・」切成一截截給
-        `parse_modifier`(種族、屬性、レベルN);認不得的那截以「解析不出」原子收尾。
-        種族/屬性/等級原子與下一個修飾語之間實際寫的字(「・」「の」或沒有)與模板的預設寫法
-        (`attribute_atoms.joiner`)不同時,記進該原子的 `joiner`(素材行「水属性レベル４」、
-        「ドラゴン族のシンクロモンスター」)。"""
-        atoms, reason, rest = [], None, mods
-        dot_before, written_after = [], []
-        dot = False
-
-        def add(new_atoms, tail=""):
-            nonlocal dot
-            atoms.extend(new_atoms)
-            dot_before.extend([dot] + [False] * (len(new_atoms) - 1))
-            written_after.extend([tail] + [""] * (len(new_atoms) - 1))
-            dot = False
-
-        while rest:
-            # 種族/屬性的「・」列舉(含後面的「の」)整組先認:「ドラゴン族・鳥獣族」是或、
-            # 「光・闇属性」逐截切會把「光」認不出。
-            atom, length = parse_param_group(rest)
-            if atom is not None:
-                literal = rest[:length]
-                dot = dot or literal.startswith("・")
-                add([atom], "の" if is_param_atom(atom) and literal.endswith("の") else "")
-                rest = rest[length:]
-                continue
-            if rest.startswith("・"):  # 列舉後接的其他修飾語(植物族・レベル１)
-                dot = True
-                rest = rest[1:]
-            for kind, pattern in _MOD_RES:
-                m = pattern.match(rest)
-                if m:
-                    break
-            else:
-                piece, sep, remainder = rest.partition("・")
-                atom = parse_modifier(piece)
-                if atom is not None:
-                    add([atom])
-                    dot = bool(sep)
-                    rest = remainder
-                    continue
-                extra = parse_atom_modifier(rest, self)   # 票 07 的原子(condition_atoms)
-                if extra is None:
-                    atoms.append({"op": "解析不出", "text": rest})
-                    return atoms, reason or REASON_MODS
-                new_atoms, why, end = extra
-                if not new_atoms:
-                    atoms.append({"op": "解析不出", "text": rest})
-                    return atoms, reason or why
-                add(new_atoms)
-                reason = reason or why
-                rest = rest[end:]
-                continue
-            if kind == "以外":
-                atom, why = self.name_atom("卡名", m.group("name"))
-                if atom:
-                    atom = {"op": "非", "arg": atom}
-            elif kind == "卡名包含":
-                atom, why = self.name_atom("卡名包含", m.group("name"))
-            else:
-                atom, why = self.name_atom(
-                    "字段", m.group("name"),
-                    form=kind if kind == "と名のついた" else None)
-            if atom is None:
-                atoms.append({"op": "解析不出", "text": rest})
-                return atoms, reason or why
-            add([atom])
-            reason = reason or why
-            rest = rest[m.end():]
-        for i, atom in enumerate(atoms):
-            if not is_param_atom(atom):
-                continue
-            following = atoms[i + 1] if i + 1 < len(atoms) else None
-            written = written_after[i] + (
-                "・" if following is not None and dot_before[i + 1] else "")
-            if written != joiner(atom, following):
-                atom["joiner"] = written
-        return atoms, reason
 
     def find(self, obj_id):
         for obj in self.card["objects"]:
@@ -671,7 +524,7 @@ class BlockState:
                 continue
             obj = self.find(obj_id)
             category = (self._self_category() if obj["source"]["kind"] == "自己"
-                        else _category_of(obj["condition"]))
+                        else category_of(obj["condition"]))
             if want == "卡" or category == want:
                 return obj_id
         return None
@@ -744,7 +597,7 @@ class BlockState:
 
     def new_object(self, phrase, sentence_start, source, initial_position=None):
         named = _NAMED_RE.match(phrase)
-        m = named or _NOUN_RE.match(phrase)
+        m = named or NOUN_RE.match(phrase)
         if not m and phrase in TARGETING_THIS_FORMS:
             offset = self.offset_of(phrase, sentence_start)
             obj = new_object(f"{self.block['id']}.o{offset}", source, text=phrase,
@@ -767,15 +620,15 @@ class BlockState:
         elif split_alternatives(m.group("mods"), m.group("head")):
             atoms, reason, alternatives = [], None, []
             for piece in split_alternatives(m.group("mods"), m.group("head")):
-                piece_m = _NOUN_RE.match(piece)
-                piece_atoms, why = self.parse_modifiers(piece_m.group("mods"))
-                alternatives.append(_noun_condition(piece_atoms, piece_m.group("head")))
+                piece_m = NOUN_RE.match(piece)
+                piece_atoms, why = parse_modifiers(self, piece_m.group("mods"))
+                alternatives.append(noun_condition(piece_atoms, piece_m.group("head")))
                 atoms.extend(piece_atoms)
                 reason = reason or why
             condition = {"op": "或", "args": alternatives, "form": OR_FORM}
         else:
-            atoms, reason = self.parse_modifiers(m.group("mods"))
-            condition = _noun_condition(atoms, m.group("head"))
+            atoms, reason = parse_modifiers(self, m.group("mods"))
+            condition = noun_condition(atoms, m.group("head"))
             # 名詞修飾的位置(「墓地のモンスター」「EXデッキの「No.」Xモンスター」)就是
             # 物件的初始位置:後續段「從」沒寫時由此繼承(spec「初始位置」;票 06)。
             if initial_position is None:
@@ -865,24 +718,6 @@ class BlockState:
                          block=self.block["id"], condition=condition,
                          initial_position=current["zones"] if current else None)
         return self.add_object(obj), None, None
-
-
-def _category_of(condition):
-    if not condition:
-        return None
-    if condition.get("op") == "大類":
-        return condition["value"]
-    if condition.get("op") == "且":
-        for arg in condition["args"]:
-            found = _category_of(arg)
-            if found:
-                return found
-    if condition.get("op") == "或" and all(a.get("op") == "大類" for a in condition["args"]):
-        return tuple(a["value"] for a in condition["args"])
-    if condition.get("op") == "或" and condition.get("form") == OR_FORM:
-        found = {_category_of(arg) for arg in condition["args"]}
-        return found.pop() if len(found) == 1 else None
-    return None
 
 
 def _fill_existence(seg, m, state, sentence_start):

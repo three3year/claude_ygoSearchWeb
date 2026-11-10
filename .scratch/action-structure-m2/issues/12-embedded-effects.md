@@ -85,3 +85,8 @@
 - 票 13(引用他卡效果):內嵌效果節點現在有四種——一般(`binding.自己` + `span`、可有 `ref`)、依值分支(多 `by`,內容樹是 `form` 標籤的依前提分歧)、效果被換掉(`binding.我方` = 對手、`form`「」となる」、`ref`)、裝備卡(`header` = 裝備段 id、沒有 `span`)。`tree_glue` 依這幾個鍵分派,票 13 的 `{ref: {object, effect}, block: None}` 節點要避開這些鍵的意思(`ref` 在這裡是主語字面字串,票 13 的 `ref` 是物件)。`embedded_bindings` 只收有 `block` 的節點。
 - 效果被換掉的內容區塊存的是對調後的方;任何讀內容區塊方的程式(查詢以外)要看綁定的「我方」。
 - `synonyms.TARGET_REF` 現在是正規式片段 `(?:選択した|対象の)`,不是字面。
+
+code review 修正紀錄(2026-11-10,m2/fix;整合分支 a5cdb78 之後):
+
+- 內嵌效果節點的主語字面鍵 `ref`(字串)改名 `subject`,與票 13 引用節點同一個鍵;`ref` 只留在對象線/受方/誰的回指字面。反向檢查模板照 `subject` 寫回。GLOSSARY 段樹節點列同步。
+- `segment_tree.EQUIP_HEADER` 改名 `HOLDER_EQUIP_HEADER`(實為「以下の効果を持つ装備カード扱い」引導句)。

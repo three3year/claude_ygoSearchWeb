@@ -94,3 +94,11 @@
 - 內嵌效果節點現在有五種:票 12 的四種(都有 `block`)加引用節點(`block` None、`ref` 是物件)。走節點的程式用 `effect_reference.is_reference` / `iter_references` / `card_references`。
 - `card_structure` 現在 import `action_query`(第二輪候選卡);`action_query` 不能反過來 import `card_structure`。
 - 新卡形成引用循環會出現在覆蓋報告「引用循環」節。
+
+code review 修正紀錄(2026-11-10,m2/fix;整合分支 a5cdb78 之後):
+
+- 引用資料的鍵 `ref`(物件)改名 `reference`(主語字面同票 12 用 `subject`),引用節點只靠 `effect_reference.is_reference`(帶 `reference`)判,`card_structure` 讀回也走它;spec 實作決策「引用他卡效果」的節點鍵名同步改。讀回再序列化逐位元組相同。
+- `selected_blocks`:被引用卡上找不到指定部分時退回整張(spec「判不出就看整張」);全庫實際走退回的是星逢の天河 20417688 與緊急儀式術 38844957:各 83 張候選儀式魔法裡 19 張原文沒有「儀式召喚」字面,改看整張;引用循環不變(4 個)。測試 `PartNotFoundTest`。
+- 解析不出的引用節點的原文照未解析組規則比字面(spec「未解析組規則不變」;上一版的「解析不出的引用節點不列未解析組」作廢):極征竜－シャスマティス 查捨棄回到未解析組,原因引用其他效果,項目 `segment` 為 None。測試 `ShasmatisTest.test_unparsed_reference_sentence_follows_unparsed_group_rule`。
+- 站主裁定(2026-11-10):動作詞儀式召喚保留,spec「新動作詞要加哪些?」與實作決策補一行。
+- code review 修正全部合計的全庫前後(整合分支 a5cdb78 產物 → m2/fix 重建;兩次建置逐位元組相同、覆蓋與反向檢查報告兩次相同):段 65,160 → 65,160;段解析不出 26,768 → 26,403;反向檢查通過段 29,275 → 29,541(+266);整張通過 1,028 → 1,057;字面不符 0 → 0;改前通過、改後不通過(依卡號 + 段原文)0。

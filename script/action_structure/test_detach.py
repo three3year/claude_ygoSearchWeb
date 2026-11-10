@@ -222,6 +222,39 @@ class KingJackalTest(unittest.TestCase):
         self.assertEqual(failures, [])
 
 
+COLD_ENCHANTER = 24661486   # コールド・エンチャンター
+COLD_ENCHANTER_TEXT = ("手札を１枚捨てて発動できる。フィールド上に表側表示で存在するモンスター１体を"
+                       "選択し、アイスカウンターを１つ置く。")
+CLOUD_NUCLEUS = 88210105    # 雲魔物の雲核
+CLOUD_NUCLEUS_TEXT = ("①：手札から「雲魔物」モンスター１体を捨て、フィールドの表側表示モンスター１体を"
+                      "対象として発動できる。対象のモンスターにそのレベルの数だけフォッグカウンターを置く。")
+
+
+class PlaceCounterTest(unittest.TestCase):
+    """計數器的「置く」是放到卡上,不是放置到魔陷區:開推得開關查「放置,到魔陷區」不命中,
+    查「放置」照常命中。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(COLD_ENCHANTER, name_ja="コールド・エンチャンター"),
+                     card(CLOUD_NUCLEUS, name_ja="雲魔物の雲核", type=0x2)]
+        cls.structures = build(cls.cards, [
+            faq(COLD_ENCHANTER, "コールド・エンチャンター", COLD_ENCHANTER_TEXT),
+            faq(CLOUD_NUCLEUS, "雲魔物の雲核", CLOUD_NUCLEUS_TEXT)])
+
+    def hits(self, **query):
+        return [h["id"] for h in run_query(self.structures, self.cards, query)["hits"]]
+
+    def test_placing_a_counter_is_placing(self):
+        self.assertIn(COLD_ENCHANTER, self.hits(actions=["放置"]))
+        self.assertIn(CLOUD_NUCLEUS, self.hits(actions=["放置"]))
+
+    def test_placing_a_counter_is_not_into_spell_trap_zone(self):
+        hits = self.hits(actions=["放置"], to_zones=["魔陷區"], include_inferred=True)
+        self.assertNotIn(COLD_ENCHANTER, hits)
+        self.assertNotIn(CLOUD_NUCLEUS, hits)
+
+
 SPACE_CYCLONE = 69176131   # スペース・サイクロン
 SPACE_CYCLONE_TEXT = "フィールド上に存在するエクシーズ素材を１つ取り除く。"
 

@@ -1249,7 +1249,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                 line["to"]["placement"] = "名詞前"
         elif written_to:
             line["to"] = position([zone(written_to, None)], "明寫", form=form)
-        elif inferred_to:
+        elif inferred_to and not _placed_on_card(obj):
             line["to"] = position([zone(inferred_to, inferred_side,
                                         inferred_side and "預設")], "推得",
                                   inferred=True, form=form)
@@ -1316,6 +1316,12 @@ def _fill_draw(seg, m, kind, state, sentence_start, inherited_timing=None):
     state.acted.setdefault(obj_id, []).extend(seg["actions"])
     _update_positions(seg, state)
     state.note_actions(seg)
+
+
+def _placed_on_card(obj):
+    """計數器放在卡上(「対象のモンスターにフォッグカウンターを置く」),不在任何區域:
+    推得表的「放置 → 魔陷區」不適用。卡能放到別張卡上的只有計數器,所以只看物件種類。"""
+    return obj.get("kind") == OBJECT_COUNTER
 
 
 def _clause_predicate(m):

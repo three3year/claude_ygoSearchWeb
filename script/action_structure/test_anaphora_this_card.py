@@ -6,6 +6,8 @@ import unittest
 
 from card_structure import build_structures
 from test_golden import SPELL, card, faq
+from test_modifier_closed_sets import (DARK_BURST, DARK_BURST_TEXT, KURIBOH, LUSTER_DRAGON,
+                                       _STAT_CARDS)
 from test_object_boundary import BLACK_MAGICIAN, NORMAL_MONSTER, POT_OF_GREED, _Golden
 
 BLACK_MAGICIAN_CARD = card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", type=NORMAL_MONSTER,
@@ -222,6 +224,28 @@ class KarakuriInnTest(_Golden):
 
     def test_the_segment_writes_back_to_its_text(self):
         self.assertWritesBack(KARAKURI_INN, "その自分のモンスターの表示形式を変更し")
+
+
+class DarkBurstAddToHandTest(_Golden):
+    """ダーク・バースト 674561(使用者故事 23):加入手牌那一段的物件「その闇属性モンスター」是回指,
+    指回被取對象的「攻撃力１５００以下の闇属性モンスター１体」(條件由票 04 判)。"""
+    cards = [card(DARK_BURST, name_ja="ダーク・バースト", type=SPELL)] + _STAT_CARDS
+    faq = [faq(DARK_BURST, "ダーク・バースト", DARK_BURST_TEXT)]
+    QUERY = dict(actions=["加入手牌"])
+
+    def test_add_to_hand_hits_with_a_dark_monster_of_1500_or_less_attack(self):
+        self.assertIn(DARK_BURST, self.hits(card=KURIBOH, **self.QUERY))
+
+    def test_add_to_hand_rejects_a_dark_monster_with_more_attack(self):
+        self.assertNotIn(DARK_BURST, self.hits(card=BLACK_MAGICIAN, **self.QUERY))
+        self.assertNotIn(DARK_BURST, self.unparsed(card=BLACK_MAGICIAN, **self.QUERY))
+
+    def test_add_to_hand_rejects_a_non_dark_monster(self):
+        self.assertNotIn(DARK_BURST, self.hits(card=LUSTER_DRAGON, **self.QUERY))
+        self.assertNotIn(DARK_BURST, self.unparsed(card=LUSTER_DRAGON, **self.QUERY))
+
+    def test_the_whole_card_passes_the_reverse_check(self):
+        self.assertEqual(self.failures(DARK_BURST), [])
 
 
 CHAOS_SORCERER = 9596126

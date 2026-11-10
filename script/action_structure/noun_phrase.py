@@ -34,6 +34,13 @@ _MOD_RES = (
     ("卡名包含", re.compile("^カード名に「(?P<name>[^「」]+)」を含む")),
     ("字段", re.compile("^「(?P<name>[^「」]+)」$")),
 )
+# 「<名詞短語>以外の」(「チューナー以外の」「「彼岸」モンスター以外の」「光属性モンスター以外の」,m3 票 04):
+# 非(那個名詞短語的條件)。名詞短語從這裡起到頭名詞為止、中間沒有「の」(「自分フィールドのチューナー以外の」
+# 的「自分フィールドの」修飾的是外層);裡面只收卡片屬性的原子(`CARD_PROPERTY_OPS`)——狀態原子代入時
+# 任何卡都算,包進「非」會變成任何卡都不算。「このカード以外の」「「X」以外の」「水属性以外の」照舊各走各的規則。
+_EXCEPT_NOUN_RE = re.compile(
+    f"^(?P<inner>(?:「[^「」]+」|[^の「」、])*?(?:{_HEADS}))以外の")
+CARD_PROPERTY_OPS = ("大類", "屬性比較", "字段", "卡名", "卡名包含", "記載", "卡名範圍")
 REASON_MODS = "物件修飾解析不出"
 OR_FORM = "か"
 _HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
@@ -125,6 +132,13 @@ def parse_modifiers(state, mods):
         dot = False
 
     while rest:
+        excepted = _parse_except_noun(state, rest)
+        if excepted is not None:
+            atom, why, length = excepted
+            add([atom])
+            reason = reason or why
+            rest = rest[length:]
+            continue
         # 種族/屬性的「・」列舉(含後面的「の」)整組先認:「ドラゴン族・鳥獣族」是或、
         # 「光・闇属性」逐截切會把「光」認不出。
         atom, length = parse_param_group(rest)
@@ -188,6 +202,35 @@ def parse_modifiers(state, mods):
     return atoms, reason
 
 
+def _parse_except_noun(state, rest):
+    """開頭的「<名詞短語>以外の」→ (非 原子, 原因, 字面長度);不是、或裡面的名詞短語認不全就回 None。"""
+    m = _EXCEPT_NOUN_RE.match(rest)
+    inner = m and NOUN_RE.match(m.group("inner"))
+    if not inner or inner.group("count"):
+        return None
+    atoms, why = parse_modifiers(state, inner.group("mods"))
+    condition = noun_condition(atoms, inner.group("head"))
+    if not _only_card_properties(condition):
+        return None
+    return {"op": "非", "arg": condition}, why, m.end()
+
+
+def _only_card_properties(condition):
+    op = condition.get("op")
+    if op in ("且", "或"):
+        return all(_only_card_properties(arg) for arg in condition["args"])
+    if op == "非":
+        return _only_card_properties(condition["arg"])
+    return op in CARD_PROPERTY_OPS and "ref" not in condition
+
+
+def _is_noun_condition(condition):
+    """條件式是不是一個名詞短語(以頭名詞收尾)。"""
+    if _render_head(condition):
+        return True
+    return condition.get("op") == "且" and bool(_render_head(condition["args"][-1]))
+
+
 def _quoted(atom, names):
     """名稱原子 → 「X」;名稱列找不到就是無模板。"""
     text = quoted_name(atom, names)
@@ -217,6 +260,8 @@ def _render_atom(atom, names):
         if text is None:
             raise NoTemplate("屬性比較無模板")
         return text + EXCEPT
+    if op == "非" and _is_noun_condition(atom.get("arg", {})):
+        return render_condition(atom["arg"], names) + EXCEPT
     if op == "卡名包含":
         return "カード名に" + _quoted(atom, names) + "を含む"
     number = render_number(atom)   # レベル１、レベル４以下、攻撃力１５００以下

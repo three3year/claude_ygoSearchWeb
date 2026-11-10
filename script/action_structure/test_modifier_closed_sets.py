@@ -160,5 +160,206 @@ class SanganTest(_Golden):
         self.assertWritesBack(SANGAN, "デッキから攻撃力１５００以下のモンスター１体を手札に加える")
 
 
+DD_THOMAS = 41546
+DD_THOMAS_TEXT = (
+    "「DD魔導賢者トーマス」のモンスター効果は１ターンに１度しか使用できない。"
+    "①：自分のPゾーンの「DD」カード１枚を対象として発動できる。そのカードを破壊し、"
+    "デッキからレベル８の「DDD」モンスター１体を守備表示で特殊召喚する。"
+    "このターン、この効果で特殊召喚したモンスターの効果は無効化され、相手が受ける戦闘ダメージは半分になる。")
+DD_THOMAS_PEN = (
+    "「DD魔導賢者トーマス」のP効果は１ターンに１度しか使用できない。"
+    "①：自分メインフェイズに発動できる。"
+    "自分のエクストラデッキから表側表示の「DD」Pモンスター１体を手札に加える。")
+DD, DDD = 0xaf, 0x10af
+DD_ARCHETYPES = [
+    {"setcode": DD, "hex": "0xaf", "names_ja": ["DD"], "name_zh": "DD", "source": "strings.conf"},
+    {"setcode": DDD, "hex": "0x10af", "names_ja": ["DDD"], "name_zh": "DDD",
+     "source": "strings.conf"},
+]
+PENDULUM_MONSTER = 0x1000021
+DD_SAVANT_KEPLER = 11609969    # DD魔導賢者ケプラー:DD、靈擺、等級 1
+DDD_CAESAR = 44186624          # DDD制覇王カイゼル:DDD、靈擺、等級 7
+DDD_HELL_ARMAGEDDON = 47198668  # DDD死偉王ヘル・アーマゲドン:DDD、靈擺、等級 8
+
+
+class DDThomasTest(_Golden):
+    """DD魔導賢者トーマス 41546:區域字面「Pゾーン」「エクストラデッキ」(使用者故事 30)。"""
+    archetypes = DD_ARCHETYPES
+    cards = [
+        card(DD_THOMAS, name_ja="DD魔導賢者トーマス", type=PENDULUM_MONSTER, level=8, race=0x8,
+             attribute=0x20, atk=1800, setcode=DD),
+        card(DD_SAVANT_KEPLER, name_ja="DD魔導賢者ケプラー", type=PENDULUM_MONSTER, level=1,
+             race=0x8, attribute=0x20, atk=0, setcode=DD),
+        card(DDD_CAESAR, name_ja="DDD制覇王カイゼル", type=PENDULUM_MONSTER, level=7,
+             race=0x8, attribute=0x20, atk=2800, setcode=DDD),
+        card(DDD_HELL_ARMAGEDDON, name_ja="DDD死偉王ヘル・アーマゲドン", type=PENDULUM_MONSTER,
+             level=8, race=0x8, attribute=0x20, atk=3000, setcode=DDD),
+        card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", type=NORMAL_MONSTER, level=7,
+             race=0x2, attribute=0x20, atk=2500),
+    ]
+    faq = [faq(DD_THOMAS, "DD魔導賢者トーマス", DD_THOMAS_TEXT, pen_effect=DD_THOMAS_PEN)]
+
+    def test_destroy_hits_for_a_dd_card(self):
+        """查「破壞」指定一張「DD」卡:「自分のPゾーンの「DD」カード１枚」判得了、命中。"""
+        self.assertIn(DD_THOMAS, self.hits(actions=["破壞"], card=DD_SAVANT_KEPLER))
+
+    def test_destroy_misses_for_a_non_dd_card(self):
+        self.assertJudgedMiss(DD_THOMAS, actions=["破壞"], card=BLACK_MAGICIAN)
+
+    def test_the_target_comes_from_my_pendulum_zone(self):
+        """「自分のPゾーンの」是從:查「破壞,從我方的 P區」命中;P區算在場上裡。"""
+        mine = {"zone": "P區", "side": "我方"}
+        self.assertIn(DD_THOMAS, self.hits(actions=["破壞"], from_zones=[mine]))
+        self.assertIn(DD_THOMAS, self.hits(actions=["破壞"], from_zones=["場上"]))
+        self.assertNotIn(DD_THOMAS, self.hits(actions=["破壞"], from_zones=["墓地"]))
+
+    def test_special_summon_hits_only_for_a_level_8_ddd_monster(self):
+        """「レベル８の「DDD」モンスター１体」:等級後面的「の」不擋住後面的字段。"""
+        self.assertIn(DD_THOMAS, self.hits(actions=["特殊召喚"], card=DDD_HELL_ARMAGEDDON))
+        self.assertNotIn(DD_THOMAS, self.hits(actions=["特殊召喚"], card=DDD_CAESAR))
+
+    def test_add_to_hand_comes_from_the_extra_deck(self):
+        """靈擺效果「自分のエクストラデッキから〜」:查「加入手牌,從額外牌組」指定 DD 靈擺怪獸命中。"""
+        self.assertIn(DD_THOMAS, self.hits(actions=["加入手牌"], from_zones=["額外牌組"],
+                                           card=DD_SAVANT_KEPLER))
+        self.assertJudgedMiss(DD_THOMAS, actions=["加入手牌"], from_zones=["額外牌組"],
+                              card=BLACK_MAGICIAN)
+
+    def test_segments_write_back_to_their_text(self):
+        for text in ("自分のPゾーンの「DD」カード１枚を対象として",
+                     "デッキからレベル８の「DDD」モンスター１体を守備表示で特殊召喚する",
+                     "自分のエクストラデッキから表側表示の「DD」Pモンスター１体を手札に加える"):
+            self.assertWritesBack(DD_THOMAS, text)
+
+
+DARK_DIMENSION_WARRIOR = 109401
+DARK_DIMENSION_WARRIOR_TEXT = (
+    "チューナー＋チューナー以外のモンスター１体以上\n"
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。"
+    "①：手札を１枚除外し、除外されている自分の闇属性モンスター１体を対象として発動できる。"
+    "そのモンスターを表側守備表示または裏側守備表示で特殊召喚する。"
+    "②：自分・相手のエンドフェイズに発動する。"
+    "フィールドにセットされたカードの数×１００ダメージを相手に与える。")
+SYNCHRO_MONSTER = 0x2021
+
+
+class DarkDimensionWarriorTest(_Golden):
+    """闇次元の戦士 109401:連體子句「除外されている自分の」(使用者故事 24)。素材行的「１体以上」是數量的
+    寫法(票 12),不在這張票。"""
+    cards = [card(DARK_DIMENSION_WARRIOR, name_ja="闇次元の戦士", type=SYNCHRO_MONSTER, level=5,
+                  race=0x1, attribute=0x20, atk=1200)] + _STAT_CARDS
+    faq = [faq(DARK_DIMENSION_WARRIOR, "闇次元の戦士", DARK_DIMENSION_WARRIOR_TEXT)]
+
+    def test_targets_a_dark_monster(self):
+        """只看取對象、指定闇屬性怪獸:「除外されている自分の闇属性モンスター１体」判得了、命中。"""
+        self.assertIn(DARK_DIMENSION_WARRIOR, self.hits(targeting=True, card=KURIBOH))
+
+    def test_does_not_target_a_non_dark_monster(self):
+        self.assertNotIn(DARK_DIMENSION_WARRIOR, self.hits(targeting=True, card=LUSTER_DRAGON))
+
+    def test_the_target_is_in_my_banished_zone(self):
+        mine = {"zone": "除外", "side": "我方"}
+        theirs = {"zone": "除外", "side": "對手"}
+        self.assertIn(DARK_DIMENSION_WARRIOR, self.hits(targeting=True, from_zones=[mine]))
+        self.assertNotIn(DARK_DIMENSION_WARRIOR, self.hits(targeting=True, from_zones=[theirs]))
+
+    def test_the_targeting_declaration_writes_back_to_its_text(self):
+        self.assertWritesBack(DARK_DIMENSION_WARRIOR, "除外されている自分の闇属性モンスター１体を対象として")
+
+
+LURKING_G = 25137581
+LURKING_G_TEXT = (
+    "このカード名の①の効果は１ターンに１度しか使用できない。"
+    "①：相手がモンスターの特殊召喚に成功した時に発動できる。このカードを手札から裏側守備表示で特殊召喚する。"
+    "この効果で特殊召喚したこのカードは、このターンのエンドフェイズに表側守備表示になる。"
+    "②：このカードがエンドフェイズにリバースした場合に発動する。"
+    "フィールドの特殊召喚されたモンスターを全て破壊する。")
+GRANMARG = 60229110
+GRANMARG_TEXT = (
+    "①：このカードがアドバンス召喚に成功した場合、フィールドにセットされたカード１枚を対象として発動する。"
+    "セットされたそのカードを破壊する。")
+KASHTIRA_SOLITARY = 92998610
+KASHTIRA_SOLITARY_TEXT = (
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。\n"
+    "①：このカードが召喚した時、手札からモンスター１体を除外して発動できる。"
+    "種族が除外したモンスターと同じモンスター１体をデッキから除外する。\n"
+    "②：このカードが戦闘または相手の効果で破壊された場合、"
+    "自分の除外状態のモンスター１体を対象として発動できる。そのモンスターを手札に加える。")
+
+
+class RelativeClauseTest(_Golden):
+    """連體子句:「特殊召喚された」「セットされた」「除外状態の」。"""
+    cards = [card(LURKING_G, name_ja="潜伏するG", level=7, race=0x800, attribute=0x1, atk=1300),
+             card(GRANMARG, name_ja="地帝グランマーグ", level=6, race=0x100, attribute=0x1,
+                  atk=2400),
+             card(KASHTIRA_SOLITARY, name_ja="孤高除獣", level=4, race=0x4000, attribute=0x20,
+                  atk=1700)] + _STAT_CARDS
+    faq = [faq(LURKING_G, "潜伏するG", LURKING_G_TEXT),
+           faq(GRANMARG, "地帝グランマーグ", GRANMARG_TEXT),
+           faq(KASHTIRA_SOLITARY, "孤高除獣", KASHTIRA_SOLITARY_TEXT)]
+
+    def test_special_summoned_is_a_state_any_monster_can_have(self):
+        """「フィールドの特殊召喚されたモンスターを全て破壊する」:曾被特殊召喚是狀態,任何怪獸都代得進去;
+        魔法卡不是怪獸,不命中。"""
+        self.assertIn(LURKING_G, self.hits(actions=["破壞"], card=KURIBOH))
+        self.assertJudgedMiss(LURKING_G, actions=["破壞"], card=POT_OF_GREED)
+        self.assertWritesBack(LURKING_G, "フィールドの特殊召喚されたモンスターを全て破壊する")
+
+    def test_set_card_on_the_field_is_targeted(self):
+        """「フィールドにセットされたカード１枚を対象として」:位置 場上 加 表示形式 裏側,任何卡都代得進去。"""
+        self.assertIn(GRANMARG, self.hits(targeting=True, card=POT_OF_GREED))
+        self.assertIn(GRANMARG, self.hits(targeting=True, from_zones=["場上"]))
+        self.assertNotIn(GRANMARG, self.hits(targeting=True, from_zones=["墓地"]))
+        self.assertWritesBack(GRANMARG, "フィールドにセットされたカード１枚を対象として")
+
+    def test_banished_state_is_the_banished_zone(self):
+        """「自分の除外状態のモンスター１体を対象として〜そのモンスターを手札に加える」:
+        查「加入手牌,從我方的除外」指定怪獸命中,指定魔法卡不命中。"""
+        mine = {"zone": "除外", "side": "我方"}
+        self.assertIn(KASHTIRA_SOLITARY,
+                      self.hits(actions=["加入手牌"], from_zones=[mine], card=KURIBOH))
+        self.assertJudgedMiss(KASHTIRA_SOLITARY, actions=["加入手牌"], from_zones=[mine],
+                              card=POT_OF_GREED)
+        self.assertNotIn(KASHTIRA_SOLITARY, self.hits(actions=["加入手牌"], from_zones=["墓地"]))
+        self.assertWritesBack(KASHTIRA_SOLITARY, "自分の除外状態のモンスター１体を対象として")
+
+
+PEERLESS_FIST = 21834870
+PEERLESS_FIST_TEXT = (
+    "①：自分フィールドに効果モンスター以外の表側表示モンスターが存在し、"
+    "モンスターの効果・魔法・罠カードが発動した時に発動できる。その発動を無効にする。"
+    "②：セットされたこのカードが相手の効果で破壊された場合に発動できる。"
+    "EXデッキから効果モンスター以外のモンスター１体を特殊召喚する。")
+SHINE_SPIRITS = 12624008
+SHINE_SPIRITS_TEXT = (
+    "このカードが戦闘によって破壊され墓地へ送られた時、"
+    "フィールド上に表側表示で存在する光属性モンスター以外のモンスターを全て破壊する。")
+COUNTER_TRAP = 0x100004
+LIGHT_MONSTER = 89631139   # 青眼の白龍:光屬性
+
+
+class ExceptNounTest(_Golden):
+    """「<名詞短語>以外の」→ 非(那個名詞短語的條件)。"""
+    cards = [card(PEERLESS_FIST, name_ja="天威無双の拳", type=COUNTER_TRAP),
+             card(SHINE_SPIRITS, name_ja="シャインスピリッツ", level=7, race=0x80000,
+                  attribute=0x10, atk=2000),
+             card(LIGHT_MONSTER, name_ja="青眼の白龍", type=NORMAL_MONSTER, level=8, race=0x2000,
+                  attribute=0x10, atk=3000)] + _STAT_CARDS
+    faq = [faq(PEERLESS_FIST, "天威無双の拳", PEERLESS_FIST_TEXT),
+           faq(SHINE_SPIRITS, "シャインスピリッツ", SHINE_SPIRITS_TEXT)]
+
+    def test_other_than_effect_monsters_accepts_a_non_effect_monster(self):
+        """「EXデッキから効果モンスター以外のモンスター１体を特殊召喚する」:通常怪獸命中,效果怪獸不命中。"""
+        self.assertIn(PEERLESS_FIST, self.hits(actions=["特殊召喚"], card=BLACK_MAGICIAN))
+        self.assertJudgedMiss(PEERLESS_FIST, actions=["特殊召喚"], card=KURIBOH)
+        self.assertJudgedMiss(PEERLESS_FIST, actions=["特殊召喚"], card=POT_OF_GREED)
+        self.assertWritesBack(PEERLESS_FIST, "EXデッキから効果モンスター以外のモンスター１体を特殊召喚する")
+
+    def test_other_than_light_monsters_rejects_a_light_monster(self):
+        """「光属性モンスター以外のモンスターを全て破壊する」:闇屬性怪獸命中,光屬性怪獸不命中。"""
+        self.assertIn(SHINE_SPIRITS, self.hits(actions=["破壞"], card=KURIBOH))
+        self.assertJudgedMiss(SHINE_SPIRITS, actions=["破壞"], card=LIGHT_MONSTER)
+
+
 if __name__ == "__main__":
     unittest.main()

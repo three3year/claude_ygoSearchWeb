@@ -160,6 +160,100 @@ class SanganTest(_Golden):
         self.assertWritesBack(SANGAN, "デッキから攻撃力１５００以下のモンスター１体を手札に加える")
 
 
+DRAGON_PALADIN = 6075801
+DRAGON_PALADIN_TEXT = (
+    "①：このカードが召喚・特殊召喚に成功した場合に発動できる。"
+    "自分の手札・デッキからレベル７・８のドラゴン族モンスター１体を装備カード扱いとしてこのカードに装備する。"
+    "②：装備カードを装備したこのカードは他のモンスターの効果を受けない。"
+    "③：自分フィールドのモンスター１体とこのカードをリリースし、"
+    "自分の墓地のレベル７・８のドラゴン族モンスター１体を対象として発動できる。そのモンスターを特殊召喚する。")
+SPRIGHT_STARTER = 15443125
+SPRIGHT_STARTER_TEXT = (
+    "このカード名のカードは１ターンに１枚しか発動できない。\n"
+    "①：デッキから「スプライト」モンスター１体を特殊召喚し、自分はそのモンスターの元々の攻撃力分のLPを失う。"
+    "このカードの発動後、ターン終了時まで自分はレベル２・ランク２・リンク２のモンスターしか特殊召喚できない。")
+REBEL_MONARCH = 9283801
+REBEL_MONARCH_TEXT = (
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。\n"
+    "①：手札を１枚捨てて発動できる。攻撃力が２４００以上か８００で守備力が１０００のデッキのモンスター３体を"
+    "相手に見せ、相手はその中から１体選ぶ。そのモンスター１体を自分の手札に加え、残りを墓地へ送る。"
+    "このカードの発動後、ターン終了時まで自分はEXデッキからモンスターを特殊召喚できない。\n"
+    "②：墓地のこのカードを除外して発動できる。手札から攻撃力８００／守備力１０００のモンスター１体を特殊召喚する。")
+XYZ_MONSTER, LINK_MONSTER = 0x800021, 0x4000021
+RED_EYES = 74677422        # 真紅眼の黒竜:龍族、等級 7
+BLUE_EYES = 89631139       # 青眼の白龍:龍族、等級 8
+RANK_2_XYZ = 90590303      # ギガンテック・スプライト:階級 2
+RANK_4_XYZ = 84013237      # No.39 希望皇ホープ:階級 4
+LINK_2 = 2857636           # スプライト・エルフ:連結 2
+SQUIRE = 73125233          # 冥帝従騎エイドス:攻 800 守 1000
+ALL_POLARITIES = ("做", "不能", "不會", "可以", "只能", "必須")
+
+
+class NumberAttributeTest(_Golden):
+    """數值屬性的列舉與並列:「レベル７・８の」「レベル２・ランク２・リンク２の」是或,「攻撃力８００／守備力１０００の」是且。"""
+    cards = [
+        card(DRAGON_PALADIN, name_ja="巨竜の聖騎士", level=4, race=0x1, attribute=0x10, atk=1700),
+        card(SPRIGHT_STARTER, name_ja="スプライト・スターター", type=0x10002),
+        card(REBEL_MONARCH, name_ja="叛逆の帝王", type=SPELL),
+        card(RED_EYES, name_ja="真紅眼の黒竜", type=NORMAL_MONSTER, level=7, race=0x2000,
+             attribute=0x20, atk=2400, **{"def": 2000}),
+        card(BLUE_EYES, name_ja="青眼の白龍", type=NORMAL_MONSTER, level=8, race=0x2000,
+             attribute=0x10, atk=3000, **{"def": 2500}),
+        card(RANK_2_XYZ, name_ja="ギガンテック・スプライト", type=XYZ_MONSTER, level=2, race=0x1000,
+             attribute=0x20, atk=1600, **{"def": 1600}),
+        card(RANK_4_XYZ, name_ja="No.39 希望皇ホープ", type=XYZ_MONSTER, level=4, race=0x1,
+             attribute=0x10, atk=2500, **{"def": 2000}),
+        card(LINK_2, name_ja="スプライト・エルフ", type=LINK_MONSTER, level=2, race=0x1000,
+             attribute=0x4, atk=1400, **{"def": None}),
+        card(SQUIRE, name_ja="冥帝従騎エイドス", level=2, race=0x2, attribute=0x20, atk=800,
+             **{"def": 1000}),
+    ] + _STAT_CARDS
+    faq = [faq(DRAGON_PALADIN, "巨竜の聖騎士", DRAGON_PALADIN_TEXT),
+           faq(SPRIGHT_STARTER, "スプライト・スターター", SPRIGHT_STARTER_TEXT),
+           faq(REBEL_MONARCH, "叛逆の帝王", REBEL_MONARCH_TEXT)]
+
+    def test_level_list_accepts_either_level(self):
+        """「自分の墓地のレベル７・８のドラゴン族モンスター１体を対象として〜特殊召喚する」:等級 7、8 的龍族命中,
+        等級 4 的龍族不命中。"""
+        for cid in (RED_EYES, BLUE_EYES):
+            self.assertIn(DRAGON_PALADIN,
+                          self.hits(actions=["特殊召喚"], targeting=True, card=cid))
+        self.assertNotIn(DRAGON_PALADIN,
+                         self.hits(actions=["特殊召喚"], targeting=True, card=LUSTER_DRAGON))
+        self.assertWritesBack(DRAGON_PALADIN, "自分の墓地のレベル７・８のドラゴン族モンスター１体を対象として")
+
+    def test_level_rank_link_list_accepts_any_of_the_three(self):
+        """「レベル２・ランク２・リンク２のモンスターしか特殊召喚できない」:等級 2、階級 2、連結 2 各自命中,
+        階級 4、等級 1 不命中。"""
+        for cid in (SQUIRE, RANK_2_XYZ, LINK_2):
+            self.assertTrue(self.hits_restriction(cid), cid)
+        for cid in (RANK_4_XYZ, KURIBOH):
+            self.assertFalse(self.hits_restriction(cid), cid)
+        self.assertWritesBack(
+            SPRIGHT_STARTER,
+            "このカードの発動後、ターン終了時まで自分はレベル２・ランク２・リンク２のモンスターしか特殊召喚できない")
+
+    def hit_texts(self, hit):
+        structure = next(s for s in self.structures if s["id"] == hit["id"])
+        return [seg["text"] for block in structure["blocks"] for seg in block["segments"]
+                if seg["id"] in hit["segments"]]
+
+    def hits_restriction(self, cid):
+        """指定卡代入時,命中的段裡有沒有「レベル２・ランク２・リンク２の〜」那一段。"""
+        result = self.run_(actions=["特殊召喚"], polarities=ALL_POLARITIES, card=cid)
+        return any("リンク２" in text for hit in result["hits"] if hit["id"] == SPRIGHT_STARTER
+                   for text in self.hit_texts(hit))
+
+    def test_attack_slash_defense_requires_both(self):
+        """「手札から攻撃力８００／守備力１０００のモンスター１体を特殊召喚する」:攻守都符合才命中。"""
+        mine = {"zone": "手牌", "side": "我方"}
+        self.assertIn(REBEL_MONARCH,
+                      self.hits(actions=["特殊召喚"], from_zones=[mine], card=SQUIRE))
+        self.assertNotIn(REBEL_MONARCH,
+                         self.hits(actions=["特殊召喚"], from_zones=[mine], card=KURIBOH))
+        self.assertWritesBack(REBEL_MONARCH, "手札から攻撃力８００／守備力１０００のモンスター１体を特殊召喚する")
+
+
 DD_THOMAS = 41546
 DD_THOMAS_TEXT = (
     "「DD魔導賢者トーマス」のモンスター効果は１ターンに１度しか使用できない。"

@@ -11,8 +11,8 @@
 
 import re
 
-from attribute_atoms import (EXCEPT, is_param_atom, joiner, parse_modifier as parse_param_group,
-                             render_group, render_number)
+from attribute_atoms import (EXCEPT, SEPARATORS, is_param_atom, joiner,
+                             parse_modifier as parse_param_group, render_group, render_number)
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from condition_atoms import parse_modifier as parse_atom_modifier, quoted_name, render_atom
 from structure_shape import NoTemplate
@@ -56,7 +56,7 @@ OR_FORMS = ("または", OR_FORM)
 _HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
 _HEAD_TEXT[("魔法", "陷阱")] = "魔法・罠カード"
 _SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}
-JOINER_WORDS = ("", "・", "の")
+JOINER_WORDS = ("", "の") + SEPARATORS
 
 
 def split_alternatives(mods, head):
@@ -152,14 +152,14 @@ def parse_modifiers(state, mods):
     「ドラゴン族のシンクロモンスター」)。"""
     atoms, reason, rest = [], None, mods
     dot_before, written_after = [], []
-    dot = False
+    dot = ""   # 這個原子前面寫的連接字(「・」「／」),沒有是空字串
 
     def add(new_atoms, tail=""):
         nonlocal dot
         atoms.extend(new_atoms)
-        dot_before.extend([dot] + [False] * (len(new_atoms) - 1))
+        dot_before.extend([dot] + [""] * (len(new_atoms) - 1))
         written_after.extend([tail] + [""] * (len(new_atoms) - 1))
-        dot = False
+        dot = ""
 
     while rest:
         excepted = _parse_except_noun(state, rest)
@@ -174,12 +174,12 @@ def parse_modifiers(state, mods):
         atom, length = parse_param_group(rest)
         if atom is not None:
             literal = rest[:length]
-            dot = dot or literal.startswith("・")
+            dot = dot or (literal[0] if literal.startswith(SEPARATORS) else "")
             add([atom], "の" if is_param_atom(atom) and literal.endswith("の") else "")
             rest = rest[length:]
             continue
         if rest.startswith("・"):  # 列舉後接的其他修飾語(植物族・レベル１)
-            dot = True
+            dot = "・"
             rest = rest[1:]
         for kind, pattern in _MOD_RES:
             m = pattern.match(rest)
@@ -190,7 +190,7 @@ def parse_modifiers(state, mods):
             atom = parse_modifier(piece)
             if atom is not None:
                 add([atom])
-                dot = bool(sep)
+                dot = sep
                 rest = remainder
                 continue
             extra = parse_atom_modifier(rest, state)   # 票 07 的原子(condition_atoms)
@@ -225,8 +225,7 @@ def parse_modifiers(state, mods):
         if not is_param_atom(atom):
             continue
         following = atoms[i + 1] if i + 1 < len(atoms) else None
-        written = written_after[i] + (
-            "・" if following is not None and dot_before[i + 1] else "")
+        written = written_after[i] + (dot_before[i + 1] if following is not None else "")
         if written != joiner(atom, following):
             atom["joiner"] = written
     return atoms, reason

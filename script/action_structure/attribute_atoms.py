@@ -48,13 +48,15 @@ def _or(atoms):
 
 
 EXCEPT = "以外の"
+# 屬性比較之間的連接字:「・」;攻守並列寫「／」(「攻撃力８００／守備力１０００のモンスター」,且)。
+SEPARATORS = ("・", "／")
 
 
 def parse_modifier(text):
     """開頭的種族/屬性修飾語(含「・」列舉與後面的「の」)→ (原子, 字面長度);
     不是就回 (None, 0)。前面的「・」(種族接屬性的連接)也一併吃掉。
     後接「以外の」(水属性以外のモンスター)→ 非(原子)。"""
-    skip = 1 if text.startswith("・") else 0
+    skip = 1 if text.startswith(SEPARATORS) else 0
     rest = text[skip:]
     for pattern, attr in ((_RACES_RE, "種族"), (_ATTRS_RE, "屬性")):
         m = pattern.match(rest)

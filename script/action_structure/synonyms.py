@@ -179,7 +179,13 @@ _TAILS_LONGEST_FIRST = sorted(TAILS, key=len, reverse=True)
 # ── 取對象:述語前的字面(「Xを選択して破壊する」「Xを対象として発動できる」)。
 # 舊式「選択して」與新式「対象として」同一機制;「以下の効果から１つを選択して」是分歧(票 06),
 # 物件短語解析不出就不會標成取對象。
-TARGETING_PREFIXES = ("選択して", "対象として")
+# 連用形的取對象字面(m3 票 07):連用形串接切開後的左半「Xを選択し、」「Xを対象とし、」,述語空、
+# 沒有動作詞的宣告;右半省略的物件指回它(`BlockState.declare`)。排在て形後面:先試長的。
+# 後面接「た」的不是(「選択したモンスター」是回指),句型與拆字面都用 `TARGETING_PATTERN`。
+TARGETING_CONTINUATIVE = ("選択し", "対象とし")
+TARGETING_PREFIXES = ("選択して", "対象として") + TARGETING_CONTINUATIVE
+TARGETING_PATTERN = "|".join(prefix + ("(?!た)" if prefix in TARGETING_CONTINUATIVE else "")
+                             for prefix in TARGETING_PREFIXES)
 # 指回取對象物件的回指字面(「選択したモンスター」;新式用「そのモンスター」,或「対象のモンスター」,
 # 「〜を対象として発動できる。〜を対象のモンスターに装備する」)。
 TARGET_REF = "(?:選択した|対象の)"

@@ -79,7 +79,7 @@ class ShapeSplitTest(unittest.TestCase):
     def test_subjectless_right_half_after_unparsed_left_without_topic_is_unparsed(self):
         """左半解不出又沒有「Xは」時,右半省略的主語判不了:標解析不出、列未解析組,不退回此卡。"""
         cards, structures = build(
-            SELF, "甲", "①：相手の墓地のモンスター１体を選択し、自分フィールドに特殊召喚する。")
+            SELF, "甲", "①：相手の墓地のモンスター１体を操り、自分フィールドに特殊召喚する。")
         hits, unparsed = query(cards, structures, actions=["特殊召喚"])
         self.assertNotIn(SELF, hits)
         self.assertIn(SELF, unparsed)

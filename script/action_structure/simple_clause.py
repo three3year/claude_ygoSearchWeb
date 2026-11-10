@@ -45,10 +45,10 @@ from segment_fields import (CLAUSE_DURATION_PATTERN, DISPLAY_PATTERN, EFFECT_HOL
                             TREAT_PATTERN, is_delayed, parse_cause, parse_duration, parse_per_turn,
                             parse_placement_form, parse_timing, render_display, render_per_turn,
                             render_placement_form, render_timing, resolve_polarity)
-from segment_history import targeted_earlier
+from segment_history import declared_earlier, targeted_earlier
 from structure_shape import DISPLAY_WORD, NoTemplate, new_line, position, unparsed, zone
 from synonyms import (ACTION_PAST, ATTACK_PREFIX_PATTERN, ONLY_MARKER, PREDICATE_NOUN_PATTERN,
-                      SELECT_PREFIX, SUMMON_NOUNS, TARGETING_PREFIXES, TARGET_REF, action_ancestors,
+                      SELECT_PREFIX, SUMMON_NOUNS, TARGETING_PATTERN, TARGET_REF, action_ancestors,
                       attack_times, merged_voice, parse_predicates)
 from zone_phrase import (FROM_PARTICLES, SIDE_TEXT, SIDE_WORDS, ZONE_PHRASE, ZONE_PHRASE_RE,
                          parse_from, render_zone_text)
@@ -65,8 +65,13 @@ _PRED_HEAD = f"(?:{ATTACK_PREFIX_PATTERN})?(?:{PREDICATE_NOUN_PATTERN})?"
 _SUBJECTLESS_RE = re.compile(
     f"^(?P<cause>{CAUSE_ALT})?"
     f"(?P<timing>{TIMING_PATTERN})?"
+    # 物件省略時述語前照樣可寫的格(m3 票 07:「Xを選択し、表側攻撃表示で特殊召喚する」
+    # 「〜エンドフェイズ時までゲームから除外する」):槽的順序同簡單子句助詞後的那一段。
+    f"(?P<treat>{TREAT_PATTERN})?"
     f"(?:(?P<from2>{ZONE_PHRASE})から)?"
+    f"(?P<duration>{CLAUSE_DURATION_PATTERN})?"
     f"(?:(?P<to>{ZONE_PHRASE})(?P<to_particle>に|へ))?"
+    f"(?P<display>{DISPLAY_PATTERN})?"
     f"(?P<pred>{_PRED_HEAD}[^を]+)$")
 ZONE_AS_OBJECT = "物件"
 RANDOM_PICK = "ランダムに"
@@ -108,7 +113,7 @@ _CLAUSE_PATTERN = (
     # 抗性的每回合次數「それぞれ１ターンに１度だけ」:段的 per_turn。
     f"(?P<per_turn>{PER_TURN_PATTERN})?"
     # 取對象字面(舊式 選択して、新式 対象として):單獨出現(述語空)是發動句的取對象宣告。
-    f"(?P<targeting>{'|'.join(TARGETING_PREFIXES)})?"
+    f"(?P<targeting>{TARGETING_PATTERN})?"
     f"(?P<cause>{CAUSE_ALT})?"
     f"(?P<timing>{TIMING_PATTERN})?"
     # 到的放置形式(segment_fields.parse_placement_form):順序「好きな順番で」;
@@ -145,6 +150,12 @@ _REF_COUNT_RE = re.compile("^(?P<phrase>(?:その|それらの)(?:モンスタ�
 COUNT_AFTER_OBJECT = "物件後"
 # 數量格(spec「數量」:支付 1000LP,段可無物件):「１０００LP」當受詞時不是物件。
 _AMOUNT_RE = re.compile("^(?P<digits>[０-９]+)(?P<unit>LP)$")
+# 不能取對象的區域(m3 票 07,spec 預設 11):「デッキから/手札から〜を選択し、」是選擇,不是取對象宣告——
+# 字面一樣留在原述語字面,對象線不標取對象、物件不進被取對象的清單。只收連用形的「選択し」;
+# 「選択して」維持原本的讀法。
+PRIVATE_ZONES = ("牌組", "手牌", "額外牌組")
+SELECTION_LITERAL = "選択し"
+EQUIP_ACTION = "裝備"
 REASON_FROM = "從解析不出"
 REASON_TO = "到解析不出"
 REASON_DISPLAY = "表示形式沒有到"
@@ -167,6 +178,12 @@ def split_objects(phrase):
             buf += ch
     parts.append(buf)
     return [p for p in parts if p]
+
+
+def is_private_selection(literal, zones):
+    """取對象字面其實是選擇:「選択し」而且明寫的出發地含牌組、手牌或額外牌組。
+    抽取與模板共用這一把尺(`zones` 是明寫的從的區域列,沒寫是 None)。"""
+    return literal == SELECTION_LITERAL and any(z["zone"] in PRIVATE_ZONES for z in zones or ())
 
 
 def _placed_on_card(obj):
@@ -262,6 +279,10 @@ def fill_clause(ctx, clause_text):
             seg["unparsed"] = unparsed(reason)
             return
         seg["recipient"] = {"object": obj_id, "ref": ref}
+    elif EQUIP_ACTION in seg["actions"] and not elided and state.declared_object() is not None:
+        # 「Xを対象とし、このカードを装備魔法カード扱いで装備する」(m3 票 07):沒寫出來的裝備對象
+        # 是左半宣告的物件;模板不寫字面。
+        seg["recipient"] = {"object": state.declared_object(), "ref": None, "elided": True}
     if g("cause") and g("cause_front"):
         seg["unparsed"] = unparsed(REASON_TWICE)
         return
@@ -287,6 +308,10 @@ def fill_clause(ctx, clause_text):
         ctx.inherit_timing()
     # 延遲段(次のスタンバイフェイズに、序列中段的條件段之後)指回被點名物件的線不標取對象。
     targetable = kind == "效果" and not is_delayed(seg)
+    if (isinstance(seg["recipient"], dict) and targetable
+            and seg["recipient"]["object"] in state.targeted):
+        # 受方是被取對象的物件(裝備對象):與對象線同一把尺標取對象,查詢「只看取對象」時算。
+        seg["recipient"]["targeting"] = True
     from_zones = None
     # 「從」寫在物件後(XをデッキからYに加える)記 placement 述語前,模板放回原位。
     from_text, from_placement = None, "名詞前"
@@ -333,6 +358,7 @@ def fill_clause(ctx, clause_text):
     if g("display") and not (to_zones or written_to or inferred_to):
         seg["unparsed"] = unparsed(REASON_DISPLAY)
         return
+    marks_targeting = bool(targeting) and not is_private_selection(targeting, from_zones)
     phrases = [None] if elided else split_objects(g("objects"))
     zone_object = (not elided and from_text is None and len(phrases) == 1
                    and (g("of_effect") or "") + g("marker") == "を"
@@ -362,11 +388,11 @@ def fill_clause(ctx, clause_text):
         if count is not None and count.get("cmp") == "全部" and obj["source"]["kind"] == "子集":
             obj["source"]["select"] = "全部"
         role = "被召喚" if summoning else "受事"
-        if targeting:
+        if marks_targeting:
             state.targeted.append(obj_id)
         # 取對象標記:這一句點名的,或效果段裡指回先前被點名的物件(そのモンスター、選択したモンスター)。
         line = new_line(obj_id, role,
-                        targeting=bool(targeting) or (targetable
+                        targeting=marks_targeting or (targetable
                                                       and obj_id in state.targeted),
                         marker=marker, ref=ref, count=count)
         if g("pick"):
@@ -409,6 +435,8 @@ def fill_clause(ctx, clause_text):
         if obj_id != state.self_id and obj_id not in state.recent:
             state.recent.append(obj_id)
         state.acted.setdefault(obj_id, []).extend(seg["actions"])
+    if not parsed:
+        state.declare([line["object"] for line in seg["lines"]])
     update_positions(seg, state)
     state.note_actions(seg)
 
@@ -469,6 +497,11 @@ def _render_recipient(recipient, seg, card, objects):
     """受方:我方/對手寫「自分に/相手に」;物件的回指(裝備的對象,票 06)照回指字面。"""
     if isinstance(recipient, dict):
         obj = objects.get(recipient.get("object"))
+        if obj is not None and recipient.get("elided"):
+            # 沒寫出來的裝備對象(m3 票 07):要是本區塊先前的宣告段點名過的物件。
+            if recipient.get("ref") or not declared_earlier(obj["id"], seg, card):
+                raise NoTemplate("省略的受方無模板")
+            return ""
         if obj is None or not recipient.get("ref"):
             raise NoTemplate("受方的物件找不到")
         return render_ref(recipient["ref"], obj, seg, card) + "に"
@@ -509,9 +542,11 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
         counts.add(("", None))
         marker = "を"
     for line in spoken:
-        if targeting_text and not line["targeting"]:
+        written_from = line["from"]["zones"] if (line["from"] or {}).get("source") == "明寫" else None
+        selects = is_private_selection(targeting_text, written_from)
+        if targeting_text and not selects and not line["targeting"]:
             raise NoTemplate("取對象字面下有線沒標取對象")
-        if line["targeting"] and not targeting_text and not (
+        if line["targeting"] and (selects or not targeting_text) and not (
                 line["ref"] and targeted_earlier(line["object"], seg, card)):
             raise NoTemplate("取對象線無模板")
         if line["role"] not in ("受事", "被召喚"):

@@ -30,6 +30,7 @@
 import re
 
 import damage
+import draw
 
 from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
 from block_state import (INFERENCE_TABLE, INTERVAL_PATTERN, INTERVAL_REASON, OBJECT_COUNTER,
@@ -391,6 +392,10 @@ def fill_clause(ctx, clause_text):
             if current is not None:
                 line["from"] = position(current["zones"], "繼承",
                                         inferred=current["inferred"])
+            elif seg["actions"] == [draw.DRAW_ACTION]:
+                # 「相手がこのカードをドローした時」:推得的牌組照抽牌者標方(m3 票 02)。
+                line["from"] = position(draw.inferred_deck(agent_side(agent)), "推得",
+                                        inferred=True)
             elif inferred_from:
                 side = "我方" if inferred_from == "手牌" else None
                 line["from"] = position([zone(inferred_from, side, side and "預設")],

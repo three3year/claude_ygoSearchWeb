@@ -315,5 +315,73 @@ class DamageStepTriggerTest(unittest.TestCase):
                                  [trigger])
 
 
+DARK_BRIBE = 77538567       # 魔宮の賄賂
+DARK_BRIBE_TEXT = ("①：相手が魔法・罠カードを発動した時に発動できる。その発動を無効にし破壊する。"
+                   "相手は１枚ドローする。")
+SCRAP_SQUALL = 48445393     # スクラップ・スコール
+SCRAP_SQUALL_TEXT = (
+    "自分フィールド上に表側表示で存在する「スクラップ」と名のついたモンスター１体を選択して発動する。"
+    "自分のデッキから「スクラップ」と名のついたモンスター１体を墓地へ送り、カードを１枚ドローする。"
+    "その後、選択したモンスターを破壊する。")
+MINE, THEIRS = {"zone": "牌組", "side": "我方"}, {"zone": "牌組", "side": "對手"}
+
+
+class InferredDeckSideTest(unittest.TestCase):
+    """抽牌沒寫「デッキから」、牌組由推得表補上時,牌組的方照抽牌者標;抽牌者沒寫的記我方。"""
+
+    def draws_from(self, cards, structures, cid, deck, **query):
+        return [s["text"] for s in hit_segments(structures, cards, cid, actions=["抽牌"],
+                                                from_zones=[deck], **query)]
+
+    def test_dark_bribe_opponent_draws_from_their_deck(self):
+        cards = [card(DARK_BRIBE, name_ja="魔宮の賄賂", type=0x100004)]
+        structures = build(cards, [faq(DARK_BRIBE, "魔宮の賄賂", DARK_BRIBE_TEXT)])
+        self.assertEqual(self.draws_from(cards, structures, DARK_BRIBE, THEIRS,
+                                         include_inferred=True), ["相手は１枚ドローする"])
+        self.assertEqual(self.draws_from(cards, structures, DARK_BRIBE, MINE,
+                                         include_inferred=True), [])
+        self.assertEqual(self.draws_from(cards, structures, DARK_BRIBE, THEIRS), [])
+        self.assertEqual(check_card(own(structures, DARK_BRIBE)), [])
+
+    def test_scrap_squall_unwritten_drawer_draws_from_my_deck(self):
+        cards = [card(SCRAP_SQUALL, name_ja="スクラップ・スコール", type=0x10002, setcode=0x24)]
+        structures, _ = build_structures(
+            cards, [faq(SCRAP_SQUALL, "スクラップ・スコール", SCRAP_SQUALL_TEXT)],
+            archetypes=[{"setcode": 0x24, "hex": "0x24", "names_ja": ["スクラップ"],
+                         "name_zh": "廢鐵", "source": "strings.conf"}])
+        self.assertEqual(self.draws_from(cards, structures, SCRAP_SQUALL, MINE,
+                                         include_inferred=True), ["カードを１枚ドローする"])
+        self.assertEqual(self.draws_from(cards, structures, SCRAP_SQUALL, THEIRS,
+                                         include_inferred=True), [])
+        self.assertEqual(self.draws_from(cards, structures, SCRAP_SQUALL, MINE), [])
+        self.assertEqual(check_card(own(structures, SCRAP_SQUALL)), [])
+
+    def test_each_drawer_side(self):
+        both = {"zone": "牌組", "side": "雙方各自"}
+        for text, hit, miss in (
+                ("①：自分は２枚ドローする。", [MINE], [THEIRS, both]),
+                ("①：相手プレイヤーはカードを１枚ドローする。", [THEIRS], [MINE, both]),
+                ("①：お互いはそれぞれ１枚ドローする。", [both], [MINE, THEIRS])):
+            cards, structures = library(text)
+            self.assertEqual(check_card(own(structures, SELF)), [])
+            for deck in hit + miss:
+                with self.subTest(text=text, deck=deck):
+                    found = self.draws_from(cards, structures, SELF, deck, include_inferred=True)
+                    self.assertEqual(bool(found), deck in hit)
+
+    def test_drawing_this_card_condition(self):
+        """「相手がこのカードをドローした時」(簡單子句,物件是此卡):推得的牌組同樣照抽牌者標。"""
+        for text, deck in (("①：このカードをドローした時に発動できる。このカードを破壊する。", MINE),
+                           ("①：相手がこのカードをドローした時に発動できる。このカードを破壊する。",
+                            THEIRS)):
+            with self.subTest(text=text):
+                cards, structures = library(text)
+                hits = {d["side"]: bool(self.draws_from(
+                    cards, structures, SELF, d, include_inferred=True, kinds=["條件"],
+                    include_condition=True)) for d in (MINE, THEIRS)}
+                self.assertEqual(hits, {d["side"]: d == deck for d in (MINE, THEIRS)})
+                self.assertEqual(check_card(own(structures, SELF)), [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -25,9 +25,9 @@
 import re
 
 from block_split import KIND_ACTIVATION
+from block_state import REF_RE, TARGET_REF_RE
 from clause_join import split_continuative
 from noun_phrase import HEAD_CATEGORY
-from segment_extract import REF_RE, TARGET_REF_RE
 from segment_fields import CLAUSE_DURATION_PATTERN, parse_duration, render_duration
 from structure_shape import NoTemplate, embedded_node, iter_nodes, unparsed
 from synonyms import PREDICATE_STEMS, action_ancestors

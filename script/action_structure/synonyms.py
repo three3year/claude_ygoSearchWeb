@@ -133,7 +133,6 @@ def action_ancestors(action):
     return out
 
 
-
 # 述語語尾 → (態, 極性[, 可選])。語尾不在表內的述語標「述語語尾不明」,不猜。
 # 「〜できる」「〜事ができる」「〜する事ができる」(舊式)都是可選的效果,極性仍是做(票 10 的決定)。
 TAILS = {
@@ -204,11 +203,6 @@ ONLY_MARKER = "しか"
 SELECT_PREFIX = "選んで"
 
 
-def split_select(pred):
-    """述語字面 → (選取字面或 None, 其餘述語)。「選んで破壊する」→ ("選んで", "破壊する")。"""
-    if pred.startswith(SELECT_PREFIX):
-        return SELECT_PREFIX, pred[len(SELECT_PREFIX):]
-    return None, pred
 # 攻擊的下位詞寫在述語「攻撃」前面的字面(閉集):次數 → 多次攻擊(段的 `times`,
 # 「もう１度」是第二次攻擊,記 2);「相手モンスター全てに１回ずつ」→ 全體攻擊。字面留在原述語字面裡,
 # 反向檢查照 `attack_times` 驗段的 `times`。
@@ -236,15 +230,6 @@ def attack_times(pred):
         return None
     value = int(m.group("n").translate(_FULLWIDTH_DIGITS)) if m.group("n") else 2
     return {"value": value, "text": m.group("times")}
-
-
-def split_targeting(pred):
-    """述語字面 → (取對象字面或 None, 其餘述語)。「選択して破壊する」→ ("選択して", "破壊する");
-    單獨的「選択して」(發動句的取對象宣告)→ ("選択して", "")。"""
-    for prefix in TARGETING_PREFIXES:
-        if pred.startswith(prefix):
-            return prefix, pred[len(prefix):]
-    return None, pred
 
 
 def parse_predicate(pred):
@@ -308,4 +293,3 @@ def merged_voice(parsed):
     if len(voices) == 1:
         return voices.pop()
     return VOICE_MIXED if voices else None
-

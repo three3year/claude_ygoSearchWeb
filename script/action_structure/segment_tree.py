@@ -28,10 +28,11 @@
 import re
 
 from block_split import body_start
+from block_state import BlockState, INTERVAL_RE, INTERVAL_REASON
 from clause_join import JOIN, split_continuative
 from effect_reference import is_reference, match_reference, reference_node, render_reference
 from premise import render_premise, split_premises
-from segment_extract import BlockState, INTERVAL_RE, INTERVAL_REASON, parse_sentence, sentences
+from segment_extract import parse_sentence, sentences
 from segment_fields import EFFECT_HOLDER_PREFIX
 from structure_shape import (DISPLAY_WORD, NoTemplate, branch_node, display_value, display_word,
                              embedded_node, new_block, segment_node, swap_sides, unparsed)

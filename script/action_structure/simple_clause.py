@@ -40,6 +40,8 @@
   「XをYのX素材とする」是 成為超量素材,線的到是 Y 的超量素材物件;「XをYのL素材とする場合」是 作為素材,
   Y 記在受方。「Xも融合素材とする事ができる」的「も」是助詞。素材寫在召喚句裡的(「Xを素材としてS召喚する」)
   不走這裡,在 `material_summon`。
+- 離場(m3 票 10):「フィールドから離れた」的「フィールドから」是述語的一部分(字幹連出發地一起寫),不佔述語前的「從」;
+  對象線的從是述語寫明的 場上(明寫、沒有字面),主語另寫了位置(「自分フィールドの〜が」)就用那個位置。
 """
 
 import re
@@ -68,11 +70,13 @@ from segment_fields import (CLAUSE_DURATION_PATTERN, DISPLAY_PATTERN, EFFECT_HOL
                             parse_placement_form, parse_timing, render_display, render_per_turn,
                             render_placement_form, render_timing, resolve_polarity)
 from segment_history import declared_earlier, targeted_earlier
-from structure_shape import DISPLAY_WORD, NoTemplate, new_line, position, unparsed, zone
-from synonyms import (ACTION_PAST, ATTACK_PREFIX_PATTERN, ONLY_MARKER, PREDICATE_NOUN_PATTERN,
-                      SELECT_PREFIX, SUMMON_NOUNS, SUMMON_SUCCESS_AHEAD, TARGETING_PATTERN,
-                      TARGET_REF, XYZ_ATTACH_ACTION, action_ancestors, attack_times, is_summon,
-                      merged_voice, parse_material_predicates, parse_predicates)
+from structure_shape import (DISPLAY_WORD, NoTemplate, new_line, position, unparsed, zone,
+                             zone_names)
+from synonyms import (ACTION_PAST, ATTACK_PREFIX_PATTERN, LEAVE_VERB, ONLY_MARKER,
+                      PREDICATE_FROM, PREDICATE_NOUN_PATTERN, SELECT_PREFIX, SUMMON_NOUNS,
+                      SUMMON_SUCCESS_AHEAD, TARGETING_PATTERN, TARGET_REF, XYZ_ATTACH_ACTION,
+                      action_ancestors, attack_times, is_summon, merged_voice,
+                      parse_material_predicates, parse_predicates)
 from zone_phrase import (FROM_PARTICLES, SIDE_TEXT, SIDE_WORDS, ZONE_PHRASE, ZONE_PHRASE_RE,
                          parse_from, render_zone_text)
 
@@ -86,9 +90,10 @@ _RECIPIENT_REF = ("(?:この効果で)?(?:その|それらの|" + "|".join(ACTIO
 # 名詞(攻撃を、効果を、表示形式を、コントロールは),其餘不收「を」。
 _PRED_HEAD = f"(?:{ATTACK_PREFIX_PATTERN})?(?:{PREDICATE_NOUN_PATTERN})?"
 # 寫在述語前的「從」(XをデッキからYに加える);「墓地からの特殊召喚に成功した」的「からの」也是從
-# (m3 票 08),助詞字面記在 `from2_particle`。
+# (m3 票 08),助詞字面記在 `from2_particle`。「フィールドから離れた」的「フィールドから」是述語的一部分
+# (離場的字幹,m3 票 10),不是這一格。
 _FROM_BEFORE_PREDICATE = (f"(?:(?P<from2>{ZONE_PHRASE})"
-                          f"(?P<from2_particle>から(?:の{SUMMON_SUCCESS_AHEAD})?))?")
+                          f"(?P<from2_particle>から(?!{LEAVE_VERB})(?:の{SUMMON_SUCCESS_AHEAD})?))?")
 _SUBJECTLESS_RE = re.compile(
     f"^(?P<cause>{CAUSE_ALT})?"
     f"(?P<timing>{TIMING_PATTERN})?"
@@ -349,6 +354,9 @@ def fill_clause(ctx, clause_text):
     if parsed:
         seg["polarity"], seg["optional"] = resolve_polarity(parsed, marker)
     written_to = next((p.to for p in reversed(parsed) if p.to), None)
+    # 述語本身寫明的出發地(「フィールドから離れた」,m3 票 10)。
+    written_from = next((PREDICATE_FROM[p.action] for p in parsed if p.action in PREDICATE_FROM),
+                        None)
     agent = seg["agent"]
     if g("agent"):
         if agent is not None:
@@ -532,6 +540,8 @@ def fill_clause(ctx, clause_text):
                 line["from"]["placement"] = from_placement
             if obj["source"]["kind"] == "新建" and obj["initial_position"] is None:
                 obj["initial_position"] = list(from_zones)
+        elif written_from:
+            line["from"] = position([zone(written_from, None)], "明寫")
         else:
             current = state.current_position(obj_id)
             if current is not None:
@@ -569,9 +579,17 @@ def fill_clause(ctx, clause_text):
     state.note_actions(seg)
 
 
-def render_from(lines):
+def render_from(lines, predicate_from=None):
     """所有對象線共用一個明寫的「從」才有字面 → (字面, 寫在物件前還是述語前);
-    繼承、推得的不寫。"""
+    繼承、推得的不寫。`predicate_from` 是述語本身寫明的出發地(「フィールドから離れた」的場上,m3 票 10):
+    每條線的從都要是明寫、落在那個區域裡;沒有自己字面的從就是述語寫的那一個,不另寫。"""
+    if predicate_from:
+        for line in lines:
+            pos = line["from"] or {}
+            if pos.get("source") != "明寫" or not all(
+                    predicate_from in zone_names(z["zone"]) for z in pos["zones"]):
+                raise NoTemplate("對象線的從與述語寫明的出發地不一致")
+        lines = [line for line in lines if line["from"].get("text")]
     written = [line["from"] for line in lines
                if line["from"] and line["from"]["source"] == "明寫" and not _is_zone_object(line)]
     if not written:
@@ -727,7 +745,8 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
         to_form, to_text, to_placement, display = "", "", "述語前", ""
     else:
         to_form, to_text, to_placement, display = _render_to(lines, predicate_to)
-    from_text, from_placement = render_from(lines)
+    from_text, from_placement = render_from(
+        lines, next((PREDICATE_FROM[a] for a in seg["actions"] if a in PREDICATE_FROM), None))
     # 物件前的到(自分フィールドにモンスターが特殊召喚された)照 placement 放回。
     if to_placement == "名詞前":
         parts.append(to_text)

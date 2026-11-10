@@ -29,6 +29,7 @@ import clause_front
 import damage
 import draw
 import existence_clause
+import leave_field
 import material_line
 import material_summon
 import simple_clause
@@ -85,7 +86,7 @@ def _render_leading_premise(leading, seg, card, objects, names, followed, self_i
         lambda obj_id, ref: render_object(objects[obj_id], seg, card, names,
                                           {"ref": ref} if ref else None,
                                           self_id=self_id),
-        followed=followed)
+        followed=followed, count_of=lambda obj_id: objects[obj_id]["count"])
 
 
 def _is_segment_done(premise):
@@ -131,6 +132,10 @@ WHOLE_TEMPLATES = (
                     and all(line["role"] == "素材" for line in t.seg["lines"]),
                     lambda t: material_line.render_line(t.seg, t.card, t.names, t.objects,
                                                         t.self_id)),
+    # 「(Xは、)フィールドから離れた場合に除外される」的去處(m3 票 10):做代替的段,但文面沒有「代わりに」。
+    SegmentTemplate("離場的去處", lambda t: leave_field.replaced_leave(t.seg, t.card) is not None,
+                    lambda t: leave_field.render_destination(t.seg, t.card, t.objects, t.names,
+                                                             t.self_id)),
 )
 # 子句模板:寫段的子句本體,前後由 `render_segment` 套上句首期間、前提、「代わりに」與觸發形。
 # 依序試、第一個適用的負責寫(最後一列永遠適用);加一種句型的模板 = 在它前面加一列。
@@ -259,7 +264,8 @@ def _tree_glue(block, card, names):
         raise NoTemplate(f"回指字面無模板:{ref}")
 
     def render_premise_text(premise):
-        return render_premise_prefix(premise, render_premise_zones, render_tree_object)
+        return render_premise_prefix(premise, render_premise_zones, render_tree_object,
+                                     lambda obj_id: objects[obj_id]["count"])
 
     return [_PUNCT_RE.sub("", piece)
             for piece in tree_glue(block, render_premise_text, render_tree_object)]

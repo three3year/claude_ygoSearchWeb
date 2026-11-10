@@ -710,7 +710,7 @@ def _header_text(node):
     return "以下の効果" + form
 
 
-def render_premise_prefix(premise, render_zones, render_object):
+def render_premise_prefix(premise, render_zones, render_object, count_of):
     """依前提各支的前提字面(後面接引導句,所以帶讀點)。"""
     return render_premise(premise, render_zones,
-                          render_object, followed=True)
+                          render_object, followed=True, count_of=count_of)

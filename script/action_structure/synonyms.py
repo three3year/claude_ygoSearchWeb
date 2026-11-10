@@ -16,13 +16,15 @@
   效果把卡疊到超量怪獸下面是 成為超量素材(「Yの下に重ねてX素材とする」「YのX素材とする/にする」),機制不同、分開。
   兩者字面只差前面的「Yの」「重ねて」:成為超量素材的字幹連這一截一起寫,查表前由 `parse_material_predicates`
   把句型切在述語外的「の」接回去。
+- 離場(m3 票 10):「フィールド(上)から離れた」,只比字面(沒有上下位詞、不進推得表);字幹連「フィールドから」
+  一起寫,出發地 場上 由述語寫明(`PREDICATE_FROM`)。
 各舊式用語在官方 DB 文本上的出現次數見 `.scratch/action-structure/report/old_style_phrases.md`
 (`stats/old_style_phrases.py` 可重跑)。
 """
 import re
 from typing import NamedTuple
 
-from structure_shape import DISPLAY_WORDS, VOICE_MIXED
+from structure_shape import DISPLAY_WORDS, VOICE_MIXED, ZONE_WORDS
 
 
 class Predicate(NamedTuple):
@@ -53,6 +55,14 @@ MATERIAL_SUMMON_KINDS = ("X召喚", "エクシーズ召喚", "S召喚", "シン�
 MATERIAL_OWNER_PARTICLE = "の"
 # 素材字幹(〜素材と)後面接「して」是原因「〜素材として」,不是述語的て形。
 MATERIAL_AS_TAIL = "して"
+# 離場(m3 票 10):從場上離開、去哪裡沒寫。字幹連出發地一起寫(「フィールドから離れ」「フィールド上から離れ」):
+# 單獨的「離れ」會比中「墓地から離れた」與故事文;出發地「場上」由述語本身寫明(`PREDICATE_FROM`)。
+LEAVE_ACTION = "離場"
+LEAVE_VERB = "離れ"
+LEAVE_FROM = "場上"
+LEAVE_STEMS = tuple(f"{word}から{LEAVE_VERB}" for word, name in ZONE_WORDS if name == LEAVE_FROM)
+# 述語本身寫明的出發地(動作詞 → 區域),對應 `PREDICATE_STEMS` 第三欄的終點。
+PREDICATE_FROM = {LEAVE_ACTION: LEAVE_FROM}
 # ── 述語字面 → 動作詞;第三欄是述語本身寫明的終點(「墓地へ送る」「ゲームから除外する」)。
 # 比對時取最長的字幹(`_STEMS_LONGEST_FIRST`;「攻撃対象に選択」不能被「攻撃」先吃掉)。
 PREDICATE_STEMS = (
@@ -149,6 +159,8 @@ PREDICATE_STEMS = (
       for word in XYZ_MATERIAL_WORDS for particle in "とに"),
     # 舊式儀式怪獸的召喚手續「「X」により降臨」(m3 票 11):降臨 = 儀式召喚。
     ("降臨", "儀式召喚", None),
+    # m3 票 10:離場「フィールド(上)から離れた」;沒有上下位詞、不進推得表。
+    *((stem, LEAVE_ACTION, None) for stem in LEAVE_STEMS),
 )
 _STEMS_LONGEST_FIRST = sorted(PREDICATE_STEMS, key=lambda row: len(row[0]), reverse=True)
 # 字幹出現在別的詞裡、不是那個動作的字面(查詢未解析組比字面時扣掉)。

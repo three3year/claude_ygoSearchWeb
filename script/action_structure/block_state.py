@@ -42,7 +42,7 @@ from anaphora import contradicts, restated_reference, self_state_atoms
 from archetype_table import fold_width
 from condition_atoms import TARGETING_THIS_FORMS, targeting_this_atom
 from names_attributes import REASON_NAME_UNKNOWN
-from noun_phrase import (EFFECT_HEADS, HEAD_CATEGORY, NOUN_RE, category_condition,
+from noun_phrase import (EFFECT_HEADS, HEAD_CATEGORY, NOUN_RE, OR_FORM, category_condition,
                          category_of, noun_condition, parse_modifiers, split_alternatives)
 from quantity import parse_count
 from segment_fields import implicit_delay
@@ -85,9 +85,10 @@ TARGET_REF_RE = re.compile(f"^{TARGET_REF}(?P<head>モンスター|カード)$")
 TARGET_OF = "対象の"
 # 動作回指可帶「この効果で」(この効果で除外したモンスター);字面整個記進對象線 ref(票 08)。
 ACTION_REF_RE = re.compile("^(?:この効果で)?(?P<past>.+?)(?P<head>モンスター|カード)$")
-# 「X」１体:只有卡名、沒有頭名詞的物件;「A」または「B」是兩個卡名的「或」(票 08)。
+# 「X」１体:只有卡名、沒有頭名詞的物件;「A」または「B」是兩個卡名的「或」(票 08);
+# 連接字也可以是「か」(「「A」か「B」が存在する場合」,m3 票 12;或的 `form` 記「か」),兩種混用的不收。
 _NAMED_RE = re.compile(
-    "^(?P<names>「[^「」]+」(?:または「[^「」]+」)*)"
+    "^(?P<names>「[^「」]+」(?:(?P<or>または|か)「[^「」]+」(?:(?P=or)「[^「」]+」)*)?)"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
 REASON_NOT_ARCHETYPE = "「」名稱不是字段"
 REASON_CLAUSE = "子句解析不出"
@@ -395,6 +396,8 @@ class BlockState:
                 condition = {"op": "解析不出", "text": phrase}
             else:
                 condition = atoms[0] if len(atoms) == 1 else {"op": "或", "args": atoms}
+                if named.group("or") == OR_FORM:
+                    condition["form"] = OR_FORM
         elif split_alternatives(m.group("mods"), m.group("head")):
             atoms, reason, alternatives = [], None, []
             form, pieces = split_alternatives(m.group("mods"), m.group("head"))

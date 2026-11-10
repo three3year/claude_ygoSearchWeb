@@ -195,5 +195,60 @@ class LifePointPaymentTest(unittest.TestCase):
         self.assertEqual((result["groups"]["全部"], result["groups"]["未解析"]), ([], [SELF]))
 
 
+WIND_UP_RAT = 57962537   # ゼンマイネズミ
+WIND_UP_RAT_TEXT = (
+    "自分のメインフェイズ時に発動できる。自分フィールド上に表側攻撃表示で存在するこのカードを"
+    "表側守備表示に変更し、自分の墓地の「ゼンマイ」と名のついたモンスター１体を選択して"
+    "表側守備表示で特殊召喚する。この効果はこのカードがフィールド上に表側表示で存在する限り"
+    "１度しか使用できない。")
+GUILLOTINE = 35686187    # 断頭台の惨劇
+GUILLOTINE_TEXT = (
+    "相手フィールド上に表側攻撃表示で存在するモンスターの表示形式が表側守備表示に変更された時に"
+    "発動できる。相手フィールド上に守備表示で存在するモンスターを全て破壊する。")
+
+
+class ChangePositionFormsTest(unittest.TestCase):
+    """變更表示形式的寫法「〜表示に変更する」「〜表示にならない」;表示形式字面留在原述語字面。"""
+
+    def test_wind_up_rat_changes_itself_to_defense(self):
+        cards = [card(WIND_UP_RAT, name_ja="ゼンマイネズミ", level=3, race=0x4000,
+                      attribute=0x1, atk=600, setcode=0x58)]
+        structures = build(cards, [faq(WIND_UP_RAT, "ゼンマイネズミ", WIND_UP_RAT_TEXT)])
+        seg, = hit_segments(structures, cards, WIND_UP_RAT, actions=["變更表示形式"],
+                            card=WIND_UP_RAT)
+        self.assertEqual(seg["text"],
+                         "自分フィールド上に表側攻撃表示で存在するこのカードを表側守備表示に変更し")
+        self.assertEqual(hit_segments(structures, cards, WIND_UP_RAT, actions=["變更表示形式"],
+                                      polarities=["不能"]), [])
+        failures = [f for f in check_card(own(structures, WIND_UP_RAT))
+                    if f["segment"] == seg["id"]]
+        self.assertEqual(failures, [])
+
+    def test_guillotine_position_changed_condition(self):
+        """「Xの表示形式が表側守備表示に変更された時」:條件段命中變更表示形式(被動),整張通過。"""
+        cards = [card(GUILLOTINE, name_ja="断頭台の惨劇", type=0x4)]
+        structures = build(cards, [faq(GUILLOTINE, "断頭台の惨劇", GUILLOTINE_TEXT)])
+        seg, = hit_segments(structures, cards, GUILLOTINE, actions=["變更表示形式"],
+                            kinds=["條件"], include_condition=True)
+        self.assertEqual((seg["voice"], seg["trigger"]), ("被動", "時"))
+        self.assertEqual(hit_segments(structures, cards, GUILLOTINE, actions=["變更表示形式"]), [])
+        self.assertEqual(check_card(own(structures, GUILLOTINE)), [])
+
+    def test_position_written_as_object_of_change(self):
+        cards, structures = library("①：このカードの表示形式を表側攻撃表示に変更する。")
+        seg, = hit_segments(structures, cards, SELF, actions=["變更表示形式"], card=SELF)
+        self.assertEqual(seg["predicate"], "表示形式を表側攻撃表示に変更する")
+        self.assertEqual(check_card(own(structures, SELF)), [])
+
+    def test_does_not_become_defense_position(self):
+        """「Xは守備表示にならない」:極性不會,預設(只算做)不命中。"""
+        cards, structures = library("①：このカードは守備表示にならない。")
+        seg, = hit_segments(structures, cards, SELF, actions=["變更表示形式"],
+                            polarities=["不會"])
+        self.assertEqual(seg["predicate"], "守備表示にならない")
+        self.assertEqual(hit_segments(structures, cards, SELF, actions=["變更表示形式"]), [])
+        self.assertEqual(check_card(own(structures, SELF)), [])
+
+
 if __name__ == "__main__":
     unittest.main()

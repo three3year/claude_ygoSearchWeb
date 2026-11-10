@@ -9,10 +9,9 @@
   部分一律整張。前面可有一截連用形子句(「〜アップし、このカードは〜を得る」),那截照一般句子解析、
   節點與它同時。
 
-節點(`structure_shape.embedded_node` 加鍵;其他內嵌效果節點的 `ref` 是主語字面字串,這裡的 `ref`
-是物件,用 `is_reference` 分辨——沒有內容區塊的就是引用節點):
+節點(`structure_shape.embedded_node` 加鍵;帶 `reference` 的內嵌效果節點就是引用節點,`is_reference`):
   {"node": "內嵌效果", "binding": None, "block": None, "join",
-   "ref": {"object": 被引用物件 id, "text": 物件的回指字面(「その罠カード」;首次出現的物件為 None),
+   "reference": {"object": 被引用物件 id, "text": 物件的回指字面(「その罠カード」;首次出現的物件為 None),
            "effect": {"part": 卡片發動|含動作|代價|整張, "action": 動作詞(含動作、代價才有)},
            "candidates": [候選卡號]},
    "form": 句型(「と同じになる」或得る句的尾), "subject": 主語字面, "span": 句子範圍,
@@ -90,7 +89,7 @@ def match_reference(text):
 
 
 def reference(obj_id, text, effect):
-    """節點的 `ref`:被引用物件、回指字面、引用的部分、候選卡(建置第二輪填)。"""
+    """節點的 `reference`:被引用物件、回指字面、引用的部分、候選卡(建置第二輪填)。"""
     return {"object": obj_id, "text": text, "effect": effect, "candidates": []}
 
 
@@ -99,7 +98,7 @@ def reference_node(state, found, offset, end, join):
     被引用物件找不到、解析不出、或不是卡(超量素材、計數器)時節點標解析不出(引用其他效果)。"""
     obj_id, text = _resolve_object(state, found["object"], offset + found["object_start"])
     node = embedded_node(None, None, join)
-    node["ref"] = reference(obj_id, text, found["effect"])
+    node["reference"] = reference(obj_id, text, found["effect"])
     node["form"] = found["form"]
     node["subject"] = found["subject"]
     if found["duration"]:
@@ -123,9 +122,7 @@ def _resolve_object(state, phrase, start):
 
 
 def is_reference(node):
-    """引用節點:沒有內容區塊的內嵌效果節點。"""
-    return node.get("node") == "內嵌效果" and node.get("block") is None \
-        and isinstance(node.get("ref"), dict)
+    return node.get("node") == "內嵌效果" and node.get("reference") is not None
 
 
 def iter_references(block):
@@ -165,7 +162,7 @@ def selected_blocks(card, effect):
 def render_reference(node, render_object):
     """引用節點 → 引導句字面(反向檢查從區塊殘留扣掉);`render_object(物件 id, 回指字面)` 由反向檢查
     提供。句型、部分、期間對不上就丟 NoTemplate。"""
-    ref = node["ref"]
+    ref = node["reference"]
     text = ref.get("text")
     obj_text = text if text and REFERRED_RE.match(text) else render_object(ref["object"], text)
     if node.get("form") == BECOME_FORM:
@@ -200,12 +197,12 @@ def reference_edges(structures):
         for node in card_references(card):
             if node.get("unparsed") or node.get("any"):
                 continue
-            for cid in node["ref"]["candidates"]:
+            for cid in node["reference"]["candidates"]:
                 target = by_id.get(cid)
                 if target is None or target["unparsed"]:
                     continue
                 if any(not n.get("unparsed") and not n.get("any")
-                       for b in selected_blocks(target, node["ref"]["effect"])
+                       for b in selected_blocks(target, node["reference"]["effect"])
                        for n in iter_references(b)):
                     edges.setdefault(card["id"], set()).add(cid)
     return {cid: sorted(targets) for cid, targets in sorted(edges.items())}

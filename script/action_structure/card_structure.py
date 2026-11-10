@@ -37,7 +37,7 @@ import json
 from action_query import resolve_references
 from archetype_table import archetype_lookup, fold_width
 from block_split import CATEGORY_SPELL_TRAP, split_blocks
-from effect_reference import reference
+from effect_reference import is_reference, reference
 from names_attributes import (SOURCE_OFFICIAL_NAME, TREAT_PREDICATE, extract_names,
                               extract_treat_as, fill_from_card_list,
                               treat_as_sentences)
@@ -291,8 +291,8 @@ def _hydrate_nodes(items):
                 for branch in node["branches"]]
         elif node["node"] == "內嵌效果":
             node = _hydrate(node, embedded_node(None, None))
-            if isinstance(node.get("ref"), dict):
-                node["ref"] = _hydrate(node["ref"], reference(None, None, None))
+            if is_reference(node):
+                node["reference"] = _hydrate(node["reference"], reference(None, None, None))
             if node["block"]:
                 node["block"] = _hydrate_block(node["block"])
         out.append(node)

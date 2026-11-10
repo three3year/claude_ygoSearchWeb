@@ -748,11 +748,11 @@ class _Expansion:
             for node in iter_references(block):
                 if node.get("unparsed") or (node.get("any") and not self.q["generic_reference"]):
                     continue
-                for cid in node["ref"]["candidates"]:
+                for cid in node["reference"]["candidates"]:
                     target = self.by_id.get(cid)
                     if cid in visiting or cid in seen or target is None or target["unparsed"]:
                         continue
-                    entry = self.entry(target, node["ref"]["effect"], visiting)
+                    entry = self.entry(target, node["reference"]["effect"], visiting)
                     if entry is None:
                         continue
                     if node.get("any"):
@@ -788,8 +788,8 @@ def resolve_references(structures, cards):
         for node in nodes:
             if node.get("unparsed"):
                 continue
-            obj = objects[node["ref"]["object"]]
+            obj = objects[node["reference"]["object"]]
             if is_generic(obj):
                 node["any"] = True
-            node["ref"]["candidates"] = sorted(
+            node["reference"]["candidates"] = sorted(
                 {entry["id"] for entry in judge.candidates(card, obj, names)})

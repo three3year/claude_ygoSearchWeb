@@ -107,11 +107,11 @@ class FreshiaTest(unittest.TestCase):
 
     def test_spell_named_hole_is_not_a_candidate(self):
         node, = reference_nodes(self.structure)
-        self.assertNotIn(BLACK_HOLE, node["ref"]["candidates"])
+        self.assertNotIn(BLACK_HOLE, node["reference"]["candidates"])
 
     def test_referenced_part_is_card_activation(self):
         node, = reference_nodes(self.structure)
-        self.assertEqual(node["ref"]["effect"], {"part": "卡片發動"})
+        self.assertEqual(node["reference"]["effect"], {"part": "卡片發動"})
         self.assertNotIn("any", node)
 
     def test_reference_sentence_and_cost_pass_reverse_check(self):
@@ -161,8 +161,8 @@ class HoshiaiTest(unittest.TestCase):
 
     def test_referenced_part_is_block_with_ritual_summon(self):
         node, = reference_nodes(self.structure)
-        self.assertEqual(node["ref"]["effect"], {"part": "含動作", "action": "儀式召喚"})
-        self.assertEqual(node["ref"]["candidates"], [GISHIKI_MIRROR])
+        self.assertEqual(node["reference"]["effect"], {"part": "含動作", "action": "儀式召喚"})
+        self.assertEqual(node["reference"]["candidates"], [GISHIKI_MIRROR])
 
     def test_ritual_summon_hits_via_ritual_spell(self):
         result = self.query("儀式召喚")
@@ -217,8 +217,8 @@ class ShasmatisTest(unittest.TestCase):
     def test_node_is_unparsed_with_reference_reason(self):
         node, = reference_nodes(self.structure)
         self.assertEqual(node["unparsed"], {"reason": "引用其他效果"})
-        self.assertEqual(node["ref"]["effect"], {"part": "代價", "action": "捨棄"})
-        self.assertEqual(node["ref"]["candidates"], [])
+        self.assertEqual(node["reference"]["effect"], {"part": "代價", "action": "捨棄"})
+        self.assertEqual(node["reference"]["candidates"], [])
 
     def test_never_in_via_group(self):
         for actions in (["破壞"], ["捨棄"], ["特殊召喚"], []):
@@ -259,9 +259,9 @@ class BlackPantherTest(unittest.TestCase):
     def test_node_is_any_with_monster_candidates(self):
         node, = reference_nodes(self.structure)
         self.assertTrue(node["any"])
-        self.assertEqual(node["ref"]["effect"], {"part": "整張"})
-        self.assertNotIn(BLACK_HOLE, node["ref"]["candidates"])
-        self.assertIn(DESTROYER, node["ref"]["candidates"])
+        self.assertEqual(node["reference"]["effect"], {"part": "整張"})
+        self.assertNotIn(BLACK_HOLE, node["reference"]["candidates"])
+        self.assertIn(DESTROYER, node["reference"]["candidates"])
 
     def test_switch_off_never_hits_via(self):
         for actions in (["破壞"], ["特殊召喚"], []):

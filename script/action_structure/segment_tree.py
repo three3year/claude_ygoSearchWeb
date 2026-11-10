@@ -213,7 +213,7 @@ def _replaced_node(state, replaced, join):
                              for obj in state.card["objects"]]
     node = embedded_node({"自己": replaced["object"], **SIDE_SWAP}, inner, join)
     node["form"] = REPLACED_CLOSE
-    node["ref"] = replaced["subject"]
+    node["subject"] = replaced["subject"]
     node["span"] = [replaced["subject_start"], replaced["end"]]
     return node
 
@@ -432,7 +432,7 @@ def _embedded(state, subject, start, join, lookups, by=None):
     end = text.find("。", start)
     node["span"] = [start, len(text) if end < 0 else end]
     if ref is not None:
-        node["ref"] = ref
+        node["subject"] = ref
     return node
 
 
@@ -564,15 +564,15 @@ def tree_glue(block, render_premise_text, render_object):
                     raise NoTemplate("內嵌效果的裝備段無模板")
                 continue
             if node.get("form") == REPLACED_CLOSE:
-                if node.get("ref") not in REPLACED_SUBJECTS \
+                if node.get("subject") not in REPLACED_SUBJECTS \
                         or {k: v for k, v in binding.items() if k != "自己"} != SIDE_SWAP:
                     raise NoTemplate("效果被換掉的引導句無模板")
-                pieces.extend((node["ref"] + REPLACED_OPEN, REPLACED_CLOSE))
+                pieces.extend((node["subject"] + REPLACED_OPEN, REPLACED_CLOSE))
                 continue
             by = node.get("by")
             if by is not None and by not in BY_DISPLAY:
                 raise NoTemplate("依值分支的引導句無模板")
-            pieces.append(render_object(binding["自己"], node.get("ref"))
+            pieces.append(render_object(binding["自己"], node.get("subject"))
                           + (f"は{by}によって" + EMBED_TAIL if by else EMBED_HEADER))
     return sorted(set(pieces), key=len, reverse=True)
 

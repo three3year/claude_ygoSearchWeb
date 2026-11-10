@@ -31,6 +31,7 @@ from block_split import body_start
 from block_state import BlockState, INTERVAL_RE, INTERVAL_REASON
 from clause_join import JOIN, split_continuative
 from effect_reference import is_reference, match_reference, reference_node, render_reference
+from object_boundary import find_cut
 from premise import render_premise, split_premises
 from segment_extract import parse_sentence, sentences
 from segment_fields import EFFECT_HOLDER_PREFIX
@@ -438,7 +439,10 @@ def _embedded(state, subject, start, join, lookups, by=None):
     """「Xは以下の効果を得る」→ 內嵌效果節點:綁定 自己 = X,內容是 ● 列舉組成的區塊;
     X 解析不出回 None(引導句已照一般句子解析)。依值分支型(「Xは表示形式によって〜」,`by`)
     的內容區塊是依前提分歧,每個 ● 的標籤是那一支的前提(`_extract_labelled`)。"""
-    obj_id, ref, reason = state.object_at(subject, start)
+    # 主語前面吞進了前文(「〜の数によって、このカードは以下の効果を得る」,物件切點):這種引導句
+    # 認不成內嵌效果,照一般句子解析,不拿吞了前文的字面去建物件。
+    swallowed = not state.parses_cleanly(subject) and find_cut(subject)
+    obj_id, ref, reason = (None, None, None) if swallowed else state.object_at(subject, start)
     if obj_id is None:
         _parse_header_as_sentence(state, (None, None, None, start, None))
         return None

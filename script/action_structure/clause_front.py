@@ -93,7 +93,10 @@ def fill_front(ctx, front):
     kinds = {kind for kind, _, _ in found or ()}
     duration = next((_parse_front_duration(m.group()) for kind, _, m in found or ()
                      if kind in DURATION_PLACEMENTS), None)
-    if (found is None or ("時機" in kinds and seg["timing"] is not None)
+    # 主語要像個物件短語(「このターン相手」不是)。
+    subject_named = all(state.names_object(m.group("phrase")) for kind, _, m in found or ()
+                        if kind == "主語")
+    if (found is None or not subject_named or ("時機" in kinds and seg["timing"] is not None)
             or ("誰" in kinds and seg["agent"] is not None)
             or ("原因" in kinds and seg["cause"] is not None)
             or (duration is not None and seg["duration"] not in (None, duration))):

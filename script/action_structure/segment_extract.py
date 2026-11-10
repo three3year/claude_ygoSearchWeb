@@ -43,7 +43,7 @@ from block_state import (ClauseContext, INTERVAL_RE, INTERVAL_REASON, KIND_PROCE
                          KIND_RESTRICTION, segment_at)
 from clause_join import JOIN, split_continuative
 from names_attributes import parse_treat_as
-from object_boundary import REASON_FRONT
+from object_boundary import REASON_FRONT, find_cut
 from premise import is_lasting, split_premises
 from segment_fields import (REPLACEMENT_PREFIX, find_battle_duration, inherited_duration, lasting,
                             parse_cause, parse_leading_duration)
@@ -144,12 +144,20 @@ def fill_clause(ctx, clause_text):
             return
     cut = simple_clause.swallowed_front(ctx.state, clause_text)
     # 前文尾端認得的「區域から」是子句本體的「從」(「このターンのエンドフェイズに、デッキから〜」),還給本體。
+    # 區域短語前面那截自己要正好在切點結束(「自分のエクストラデッキから」的「デッキから」不是)。
     given_back = _ZONE_FROM_RE.search(clause_text[:cut])
-    if given_back and parse_from(given_back.group("zones")):
+    if given_back and parse_from(given_back.group("zones")) and (
+            find_cut(clause_text[:given_back.start()] + "カード") == given_back.start()):
         cut = given_back.start()
     if not cut:
         simple_clause.fill_clause(ctx, clause_text)
         return
+    _fill_after_front(ctx, clause_text, cut, fill_clause)
+
+
+def _fill_after_front(ctx, clause_text, cut, fill_body):
+    """子句在 `cut` 切成前文與本體:前文交給 `clause_front`,本體交給 `fill_body(ctx, 本體)`。
+    前文認不得時本體照常解析,最後才把段標成解析不出(本體自己解析不出時留它的原因)。"""
     seg = ctx.seg
     front = clause_text[:cut]
     if not clause_front.fill_front(ctx, front) and _FROM_FRONT_RE.search(front) \
@@ -157,15 +165,25 @@ def fill_clause(ctx, clause_text):
         # 前文以「〜から」收尾:物件前的「從」,區域短語認不得(「自分のエクストラデッキから」「その中から」)。
         seg["unparsed"] = unparsed(simple_clause.REASON_FROM)
     front_failure, seg["unparsed"] = seg["unparsed"], None
-    fill_clause(replace(ctx, sentence_start=ctx.sentence_start + cut), clause_text[cut:])
+    fill_body(replace(ctx, sentence_start=ctx.sentence_start + cut), clause_text[cut:])
     seg["unparsed"] = seg["unparsed"] or front_failure
 
 
 def _fill_effect(ctx, clause):
-    """效果子句:性質變更句(「その攻撃力は〜倍になる」)走它的句型,其餘照一般的子句句型。"""
+    """效果子句:性質變更句(「その攻撃力は〜倍になる」)走它的句型,其餘照一般的子句句型。
+    性質變更句的主語吞進前文時同樣先切(`stat_modify.swallowed_front`);它的模板只寫得出前提、
+    次數限制與子句前的期間,前文帶了別的格(時機、誰、主語、原因)就算認不得。"""
+    seg = ctx.seg
+    cut = stat_modify.swallowed_front(ctx.state, clause)
+    if cut:
+        _fill_after_front(ctx, clause, cut, stat_modify.fill_clause)
+        if not seg["unparsed"] and (clause_front.front_timing(seg["timing"]) or seg["agent"]
+                                    or seg["cause"] or len(seg["lines"]) != 1):
+            seg["unparsed"] = unparsed(REASON_FRONT)
+        return
     if stat_modify.fill_clause(ctx, clause):
         return
-    ctx.seg["duration"] = find_battle_duration(clause)
+    seg["duration"] = find_battle_duration(clause)
     fill_clause(ctx, clause)
 
 

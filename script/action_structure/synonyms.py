@@ -28,7 +28,7 @@ class Predicate(NamedTuple):
 
 
 # ── 述語字面 → 動作詞;第三欄是述語本身寫明的終點(「墓地へ送る」「ゲームから除外する」)。
-# 同一動作詞多個字面時,長的、舊式的排前面(startswith 逐一試,「生け贄に捧げ」不能被更短的字面先吃掉)。
+# 比對時取最長的字幹(`_STEMS_LONGEST_FIRST`;「攻撃対象に選択」不能被「攻撃」先吃掉)。
 PREDICATE_STEMS = (
     # 「Xモンスター１体のX召喚を行う」(物件 + 助詞「の」;述語含「を」,`PREDICATE_NOUNS`)。
     *((f"{kind}を行う", kind, None) for kind in ("融合召喚", "S召喚", "X召喚", "L召喚")),
@@ -63,8 +63,7 @@ PREDICATE_STEMS = (
     # 「(Xの)表示形式を変更できない」「(Xの)コントロールは変更できない」。
     ("表示形式を変更", "變更表示形式", None), ("表示形式は変更", "變更表示形式", None),
     ("コントロールを変更", "變更控制權", None), ("コントロールは変更", "變更控制權", None),
-    # 攻擊家族。長的字面在前(「攻撃対象に選択」「攻撃宣言」不能被「攻撃」先吃掉);
-    # 「攻撃をする」的を是述語的一部分(句型層 `PREDICATE_NOUNS`)。
+    # 攻擊家族。「攻撃をする」的を是述語的一部分(句型層 `PREDICATE_NOUNS`)。
     ("攻撃対象に選択", "選為攻擊對象", None),
     ("攻撃宣言", "攻擊", None),
     ("攻撃を", "攻擊", None),
@@ -97,6 +96,7 @@ PREDICATE_STEMS = (
     ("ドロー", "抽牌", None),
     ("手札に加わ", "加入手牌", "手牌"),
 )
+_STEMS_LONGEST_FIRST = sorted(PREDICATE_STEMS, key=lambda row: len(row[0]), reverse=True)
 # 字幹出現在別的詞裡、不是那個動作的字面(查詢未解析組比字面時扣掉)。
 STEM_FALSE_FRIENDS = {"攻撃": ("攻撃力", "攻撃表示", "攻撃対象"), "ドロー": ("ドローフェイズ",)}
 MODIFY_ACTION = "性質變更"
@@ -265,7 +265,7 @@ def parse_predicate(pred):
             return None, REASON_TAIL
         return parsed._replace(
             action=MULTIPLE_ATTACK if prefix.group("times") else ALL_ATTACK), None
-    for stem, action, to in PREDICATE_STEMS:
+    for stem, action, to in _STEMS_LONGEST_FIRST:
         if pred.startswith(stem):
             tail = pred[len(stem):]
             if tail not in TAILS:
@@ -282,7 +282,7 @@ def parse_predicates(pred):
     parsed, reason = parse_predicate(pred)
     if parsed is not None:
         return [parsed], None
-    for stem, action, to in PREDICATE_STEMS:
+    for stem, action, to in _STEMS_LONGEST_FIRST:
         if not pred.startswith(stem):
             continue
         rest = pred[len(stem):]

@@ -36,7 +36,7 @@ MODIFY_DAMAGE_PREDICATE = "になる"
 PLAYER_WORDS = (("お互いのプレイヤー", "雙方各自"), ("お互い", "雙方各自"),
                 ("相手プレイヤー", "對手"), ("相手ライフ", "對手"),
                 ("このカードのコントローラー", "我方"), ("自分", "我方"), ("相手", "對手"))
-_PLAYER_ALT = "|".join(w for w, _ in PLAYER_WORDS)
+_PLAYER_ALT = "|".join(sorted((w for w, _ in PLAYER_WORDS), key=len, reverse=True))
 # 受方字面在玩家字面後的接法(閉集,依句型):給予「相手ライフに」;受到「自分は」「自分が」
 # 「お互いに」;變更「自分への」「お互いが受ける」「相手に与える」「お互いの」;回復「自分は」
 # 「自分のLPを」「自分のLPが」。

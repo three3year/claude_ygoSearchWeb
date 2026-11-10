@@ -556,12 +556,12 @@ class BlockState:
         self.self_id = self_id  # 「このカード」指誰:內嵌效果裡綁定成被賦予效果的物件(票 06)
         self.subject = None   # 本句「Xは」的物件:後面主語省略的子句(「〜できず、〜できる」)沿用(票 09)
         self.topic = None
-        self.action_segments = {}
+        self.last_segment_of_action = {}
 
     def note_actions(self, seg):
         """段解析完後記下它做過的動作詞,給之後的「〜したプレイヤー」指回。"""
         for action in seg["actions"]:
-            self.action_segments[action] = seg["id"]
+            self.last_segment_of_action[action] = seg["id"]
 
     def agent_of(self, word, marker, pause, kind):
         """誰的字面 → (agent 格, 原因)。玩家字面寫成預設接法(條件段「相手が」、其餘「自分は」)時
@@ -571,7 +571,7 @@ class BlockState:
         if word not in AGENT_PLAYER_WORDS:
             past = word[:-len(PLAYER_REF_HEAD)]
             action = next(a for a, p in ACTION_PAST.items() if p == past)
-            seg_id = self.action_segments.get(action)
+            seg_id = self.last_segment_of_action.get(action)
             if seg_id is None:
                 return None, REASON_REF
             if marker + (pause or "") != agent_particle(kind):
@@ -664,14 +664,14 @@ class BlockState:
         (`attribute_atoms.joiner`)不同時,記進該原子的 `joiner`(素材行「水属性レベル４」、
         「ドラゴン族のシンクロモンスター」)。"""
         atoms, reason, rest = [], None, mods
-        dots, tails = [], []
+        dot_before, written_after = [], []
         dot = False
 
         def add(new_atoms, tail=""):
             nonlocal dot
             atoms.extend(new_atoms)
-            dots.extend([dot] + [False] * (len(new_atoms) - 1))
-            tails.extend([tail] + [""] * (len(new_atoms) - 1))
+            dot_before.extend([dot] + [False] * (len(new_atoms) - 1))
+            written_after.extend([tail] + [""] * (len(new_atoms) - 1))
             dot = False
 
         while rest:
@@ -731,7 +731,8 @@ class BlockState:
             if not is_param_atom(atom):
                 continue
             following = atoms[i + 1] if i + 1 < len(atoms) else None
-            written = tails[i] + ("・" if following is not None and dots[i + 1] else "")
+            written = written_after[i] + (
+                "・" if following is not None and dot_before[i + 1] else "")
             if written != joiner(atom, following):
                 atom["joiner"] = written
         return atoms, reason
@@ -799,7 +800,8 @@ class BlockState:
         self.recent.append(obj["id"])
         return obj["id"]
 
-    def _offset(self, phrase, sentence_start):
+    def offset_of(self, phrase, sentence_start):
+        """短語在區塊原文的起點(從句子起點往後找;找不到就是句子起點):新建物件的 id 用它。"""
         offset = self.block["text"].find(phrase, sentence_start)
         return offset if offset >= 0 else sentence_start
 
@@ -839,7 +841,7 @@ class BlockState:
         named = _NAMED_RE.match(phrase)
         m = named or _NOUN_RE.match(phrase)
         if not m and phrase in TARGETING_THIS_FORMS:
-            offset = self._offset(phrase, sentence_start)
+            offset = self.offset_of(phrase, sentence_start)
             obj = new_object(f"{self.block['id']}.o{offset}", source, text=phrase,
                              span=(offset, offset + len(phrase)), block=self.block["id"],
                              condition=targeting_this_atom(self, phrase))
@@ -874,7 +876,7 @@ class BlockState:
             if initial_position is None:
                 located = [z for a in atoms if a.get("op") == "位置" for z in a["zones"]]
                 initial_position = [dict(z) for z in located] or None
-        offset = self._offset(phrase, sentence_start)
+        offset = self.offset_of(phrase, sentence_start)
         obj = new_object(f"{self.block['id']}.o{offset}", source,
                          text=phrase, span=(offset, offset + len(phrase)),
                          block=self.block["id"], condition=condition,
@@ -898,7 +900,7 @@ class BlockState:
             if owner_from is None:
                 return None, None, REASON_OBJECT
             of = self.implicit_owner(*owner_from, sentence_start)
-        offset = self._offset(phrase, sentence_start)
+        offset = self.offset_of(phrase, sentence_start)
         obj = new_object(f"{self.block['id']}.o{offset}", {"kind": "新建"},
                          text=phrase, span=(offset, offset + len(phrase)),
                          block=self.block["id"],
@@ -913,7 +915,7 @@ class BlockState:
 
     def implicit_owner(self, from_phrase, zones, sentence_start):
         """超量素材隱含的所屬卡:新建的超量怪獸,初始位置 = 寫在物件前的從;id 取從的字面位置。"""
-        offset = self._offset(from_phrase, sentence_start)
+        offset = self.offset_of(from_phrase, sentence_start)
         obj = new_object(f"{self.block['id']}.o{offset}", {"kind": "新建"},
                          block=self.block["id"], condition=xyz_monster_condition(),
                          initial_position=[dict(z) for z in zones])
@@ -923,7 +925,7 @@ class BlockState:
     def zone_object(self, phrase, sentence_start):
         """區域當物件(「自分の手札を１枚選んで捨てる」):新建、沒有條件的卡(條件同頭名詞
         カード),初始位置由呼叫端以對象線的「從」寫入;與「手札からカードを１枚捨てる」同一結構。"""
-        offset = self._offset(phrase, sentence_start)
+        offset = self.offset_of(phrase, sentence_start)
         obj = new_object(f"{self.block['id']}.o{offset}", {"kind": "新建"},
                          text=phrase, span=(offset, offset + len(phrase)),
                          block=self.block["id"], condition=category_condition("カード"))
@@ -951,7 +953,7 @@ class BlockState:
         if subset["source"].get("select") == "全部":
             condition = {"op": "且", "args": [condition,
                                               {"op": "非", "arg": subset["condition"]}]}
-        offset = self._offset(phrase, sentence_start)
+        offset = self.offset_of(phrase, sentence_start)
         obj = new_object(f"{self.block['id']}.o{offset}",
                          {"kind": "剩餘", "of": container["id"], "minus": subset["id"]},
                          text=phrase, span=(offset, offset + len(phrase)),
@@ -1127,10 +1129,8 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         seg["duration"] = parse_duration(g("duration"))
     if g("timing"):
         seg["timing"] = parse_timing(g("timing"))
-    elif inherited_timing:
-        seg["timing"] = _same_timing(inherited_timing)
-    elif state.delayed and kind == "效果":
-        seg["timing"] = implicit_delay()
+    else:
+        _inherit_timing(seg, state, kind, inherited_timing)
     # 延遲段(次のスタンバイフェイズに、序列中段的條件段之後)指回被點名物件的線不標取對象。
     targetable = kind == "效果" and not is_delayed(seg)
     from_zones = None
@@ -1291,14 +1291,11 @@ def _fill_draw(seg, m, kind, state, sentence_start, inherited_timing=None):
             return
     elif g("rule"):
         seg["cause"] = draw.rule_cause()
-    if inherited_timing:
-        seg["timing"] = _same_timing(inherited_timing)
-    elif state.delayed and kind == "效果":
-        seg["timing"] = implicit_delay()
+    _inherit_timing(seg, state, kind, inherited_timing)
     if g("object"):
         obj_id, _, _ = state.new_object(g("object"), sentence_start, {"kind": "新建"})
     else:
-        offset = state._offset(g("pred"), sentence_start)
+        offset = state.offset_of(g("pred"), sentence_start)
         obj_id = state.add_object(new_object(
             f"{state.block['id']}.o{offset}", {"kind": "新建"}, block=state.block["id"],
             condition=category_condition(draw.DRAWN_OBJECT)))
@@ -1401,10 +1398,7 @@ def _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing
             return True
     if g("duration"):
         seg["duration"] = {"kind": DURATION_TURN, "text": g("duration")}
-    if inherited_timing:
-        seg["timing"] = _same_timing(inherited_timing)
-    elif state.delayed and kind == "效果":
-        seg["timing"] = implicit_delay()
+    _inherit_timing(seg, state, kind, inherited_timing)
     subject = g("subject")
     if subject in SIDE_WORDS and g("subject_marker"):
         seg["agent"] = SIDE_WORDS[subject]
@@ -1563,9 +1557,13 @@ def _hold_topic(seg, piece, state, piece_start):
                    else TOPIC_UNKNOWN)
 
 
-def _same_timing(timing):
-    """連用形串接的後一段與前一段同一時點:時機照抄、但字面只在前一段。"""
-    return {k: v for k, v in timing.items() if k != "text"}
+def _inherit_timing(seg, state, kind, inherited_timing):
+    """沒寫時機的段:連用形串接(同時)的後一段與前一段同一時點(時機照抄、字面只在前一段);
+    延遲序列裡的效果段是隱含的延遲。"""
+    if inherited_timing:
+        seg["timing"] = {k: v for k, v in inherited_timing.items() if k != "text"}
+    elif state.delayed and kind == "效果":
+        seg["timing"] = implicit_delay()
 
 
 def _fill_effect(seg, clause, kind, state, clause_start, inherited_timing=None):
@@ -1583,10 +1581,7 @@ def _fill_effect(seg, clause, kind, state, clause_start, inherited_timing=None):
     seg["predicate"], seg["voice"] = modify["predicate"], "主動"
     seg["modified"] = modify["modified"]
     seg["duration"] = modify["duration"] or seg["duration"]
-    if inherited_timing:
-        seg["timing"] = _same_timing(inherited_timing)
-    elif state.delayed:
-        seg["timing"] = implicit_delay()
+    _inherit_timing(seg, state, kind, inherited_timing)
     line["targeting"] = line["object"] in state.targeted and not is_delayed(seg)
     seg["lines"] = [line]
 

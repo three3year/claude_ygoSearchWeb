@@ -351,7 +351,7 @@ DURATION_THIS_TURN = ("そのターンの終了時まで", "ターン終了時�
 _DURATION_RE = re.compile("^(?P<text>.+?まで)")
 DURATION_BATTLE = "該戰鬥"
 BATTLE_DURATION_PATTERN = ("(?:その|(?:相手)?モンスターに攻撃する)?"
-                           "(?:ダメージ計算時のみ|ダメージステップの間|ダメージステップ時のみ)、?")
+                           "(?:ダメージ計算時のみ|ダメージステップの間)、?")
 _BATTLE_DURATION_RE = re.compile(BATTLE_DURATION_PATTERN)
 
 

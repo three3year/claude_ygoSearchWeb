@@ -50,18 +50,19 @@ ZONE_PARENT = {"牌組頂": "牌組", "牌組底": "牌組", "怪獸區": "場�
 PLACEMENT_TREAT_KINDS = ("裝備卡", "永續魔法", "永續陷阱", "魔法")
 FACES = ("表側", "裏側")
 BATTLE_POSITIONS = ("攻擊", "守備")
-# 表示形式字面 ↔ (表裏, 攻守);沒寫的一半是 None。長的在前,「守備表示」不能先吃掉
-# 「裏側守備表示」的尾巴。到的放置形式 display、前提的位置/存在原子、從的表示形式共用這張表。
+# 表示形式字面 ↔ (表裏, 攻守);沒寫的一半是 None。到的放置形式 display、前提的位置/存在原子、
+# 從的表示形式共用這張表。正規式依長度排(「守備表示」不能先吃掉「裏側守備表示」的尾巴)。
 DISPLAY_WORDS = (("表側攻撃表示", "表側", "攻擊"), ("表側守備表示", "表側", "守備"),
                  ("裏側守備表示", "裏側", "守備"), ("表側表示", "表側", None),
                  ("裏側表示", "裏側", None), ("攻撃表示", None, "攻擊"),
                  ("守備表示", None, "守備"))
-DISPLAY_WORD = "(?:" + "|".join(w for w, _, _ in DISPLAY_WORDS) + ")"
+DISPLAY_WORD = "(?:" + "|".join(
+    sorted((w for w, _, _ in DISPLAY_WORDS), key=len, reverse=True)) + ")"
 # 到的表示形式另收省略「表示」的寫法(「エンドフェイズまで表側で除外できる」「裏側で除外する」),
 # 值同 表側表示/裏側表示;前提與從不收(由值拼回字面時用上面的完整寫法)。
 SHORT_DISPLAY_WORDS = (("表側", "表側", None), ("裏側", "裏側", None))
 PLACEMENT_DISPLAY_WORD = "(?:" + "|".join(
-    w for w, _, _ in DISPLAY_WORDS + SHORT_DISPLAY_WORDS) + ")"
+    sorted((w for w, _, _ in DISPLAY_WORDS + SHORT_DISPLAY_WORDS), key=len, reverse=True)) + ")"
 _DISPLAY_VALUE = {w: {"face": f, "position": p} for w, f, p in DISPLAY_WORDS + SHORT_DISPLAY_WORDS}
 _DISPLAY_TEXT = {(f, p): w for w, f, p in DISPLAY_WORDS}
 # 性質變更段的 `modified`:attr 是清單(攻守同時改時兩項);form 是改法;limit 是門檻 {"cmp", "text"}。

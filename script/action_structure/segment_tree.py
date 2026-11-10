@@ -60,7 +60,7 @@ _ELIDED_RE = re.compile("^存在しない場合、?")
 # ● 列舉:行首,或緊接句號(官方文本有些不換行:「〜を得る。●攻撃表示：」)。
 _ITEM_RE = re.compile("(?:^|\n|(?<=。))●")
 
-EQUIP_HEADER = "裝備"
+HOLDER_EQUIP_HEADER = "裝備"
 REASON_BRANCH_MODE = "分歧方式判不出"
 REASON_BRANCH_PREMISE = "分歧前提解析不出"
 EMBED_TAIL = "以下の効果を得る"
@@ -96,7 +96,7 @@ def extract_block(block, card, lookups=None, self_id="o0"):
         nodes.append(node)
         block["tree"]["items"] = nodes
         return block
-    if headers and headers[-1][0] == EQUIP_HEADER:
+    if headers and headers[-1][0] == HOLDER_EQUIP_HEADER:
         for extra in headers[:-1]:
             _parse_header_as_sentence(state, extra)
         header_segs = _parse_header_as_sentence(state, headers[-1])
@@ -235,7 +235,7 @@ def _header_of(text):
     if _METHOD_HEADER_RE.search(text):
         return "方法", None, None
     if EFFECT_HOLDER_PREFIX in text:
-        return EQUIP_HEADER, None, None
+        return HOLDER_EQUIP_HEADER, None, None
     return None
 
 

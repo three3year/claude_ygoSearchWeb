@@ -49,9 +49,9 @@ _RANGE_RE = re.compile("^「(?P<lo>[^「」]+)」～「(?P<hi>[^「」]+)」の�
 # 字面取自共用的區域字面表(structure_shape.ZONE_WORDS),子區域(デッキの上)與舊式「フィールド上」不在此列。
 _ZONE_NAMES = ("額外牌組", "牌組", "手牌", "場上", "墓地")
 _ZONE_NAME = {DEFAULT_ZONE_WORD[name]: name for name in _ZONE_NAMES}
-_ZONE_LITERALS = {"エクストラデッキ": "額外牌組"}
+_NON_DEFAULT_ZONE_WORDS = {"エクストラデッキ": "額外牌組"}
 _ZONE_ALT = "|".join(_ZONE_NAME)
-_POSITION_ZONE_ALT = "|".join(list(_ZONE_LITERALS) + list(_ZONE_NAME))
+_POSITION_ZONE_ALT = "|".join(list(_NON_DEFAULT_ZONE_WORDS) + list(_ZONE_NAME))
 _ZONE_RE = re.compile(f"^(?P<side>自分|相手)?(?P<zone>{_POSITION_ZONE_ALT})の")
 _NOT_SELF_RE = re.compile("^(?P<text>このカード|その(?:モンスター|カード))以外の(?P<pause>、)?")
 SELF_TEXT = "このカード"
@@ -149,8 +149,8 @@ def parse_modifier(rest, state):
     if m:
         side = _SIDE.get(m.group("side"))
         word = m.group("zone")
-        atom = {"op": "位置", "zones": [zone(_ZONE_LITERALS.get(word) or _ZONE_NAME[word], side)]}
-        if word in _ZONE_LITERALS:
+        atom = {"op": "位置", "zones": [zone(_NON_DEFAULT_ZONE_WORDS.get(word) or _ZONE_NAME[word], side)]}
+        if word in _NON_DEFAULT_ZONE_WORDS:
             atom["text"] = word
         return [atom], None, m.end()
     m = _CONTROLLER_RE.match(rest)
@@ -209,7 +209,7 @@ def parse_zone_list(text):
     zones = []
     for item in m.group("rest").split("・"):
         word = item.removesuffix(FACE_UP_NOTE)
-        name = _ZONE_LITERALS.get(word) or _ZONE_NAME.get(word)
+        name = _NON_DEFAULT_ZONE_WORDS.get(word) or _ZONE_NAME.get(word)
         if name is None:
             return None
         entry = zone(name, side)
@@ -283,7 +283,7 @@ def render_atom(atom, names):
         if len(zones) != 1 or zones[0]["zone"] not in _ZONE_TEXT:
             return None
         word = atom.get("text") or _ZONE_TEXT[zones[0]["zone"]]
-        if _ZONE_LITERALS.get(word, _ZONE_NAME.get(word)) != zones[0]["zone"]:
+        if _NON_DEFAULT_ZONE_WORDS.get(word, _ZONE_NAME.get(word)) != zones[0]["zone"]:
             return None
         side = zones[0].get("side")
         prefix = (_SIDE_TEXT.get(side, "") if side else "") + word

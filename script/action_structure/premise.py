@@ -106,8 +106,9 @@ _OBJECT_FIRST_RE = re.compile(
 # 「<區域>にXが存在する場合、」。
 _ZONE_FIRST_RE = re.compile(
     f"^(?P<zones>[^、]+?)に(?P<obj>[^、]+?)(?P<any>{ANY_OF})?が" + _tail())
+# 沒寫區域的:物件短語裡不能有助詞「に」「は」「が」(「この効果は自分フィールド上にXが表側表示で〜」不是)。
 _NO_ZONE_RE = re.compile(
-    "^(?P<obj>(?:「[^「」]*」|[^、「」])+?)(?P<particle>が)" + _tail(display_required=True))
+    "^(?P<obj>(?:「[^「」]*」|[^、「」にはが])+?)(?P<particle>が)" + _tail(display_required=True))
 # LP 比較(m3 票 12):「自分のLPが相手より(N以上)少ない/多い(場合|時)」「〜少なく、/多く、」→ 遊戲狀態原子
 # `{"op": "遊戲狀態", "state": "LP比較", "value": 少|多, "word": LP 的字面, "form"}`,差距有寫才帶 `margin`。
 # 只收和對手比的;和定值比(「自分のLPが１０００以下の場合」)不收。
@@ -318,6 +319,8 @@ def _existence_atom(state, phrase, offset, zones, first, negated, form):
         return None
     if obj_id == state.self_id and not negated:
         atom = {"op": "位置", "object": obj_id, "zones": zones, "form": form}
+        if first == "區域":
+            atom["order"] = first   # 「<區域>にこのカードが〜」;沒有 order 的位置原子是物件在前
     else:
         atom = {"op": "存在", "object": obj_id, "zones": zones, "form": form}
         if first is not None:
@@ -459,7 +462,7 @@ def _render_existence(atom, previous, last, render_zones, render_object, count_o
     marks = [atom.get(key) for key in ("any", "each", "face", "position", "inferred")]
     if bare in ENUM_FORMS:
         # 列舉「A及びB」前面的各個:[區域に]A及び,沒有動詞。
-        if (op != "存在" or negated or atom.get("order") != "區域" or any(marks)
+        if (negated or atom.get("order") != "區域" or any(marks)
                 or atom.get("held") or atom.get("elided")
                 or is_existence_count(count_of(atom["object"]))):
             raise NoTemplate("前提的列舉無模板")
@@ -501,11 +504,11 @@ def _render_existence(atom, previous, last, render_zones, render_object, count_o
             raise NoTemplate("沒寫區域的前提無模板")
         return f"{obj}が{lead}{verb}"
     if atom.get("joined"):
-        if op != "存在" or atom.get("order") != "區域":
+        if atom.get("order") != "區域":
             raise NoTemplate("前提的列舉無模板")
         return f"{_enumeration_lead(atom, previous, render_zones)}{obj}が{lead}{verb}"
     zones = render_zones(atom["zones"], atom.get("text"))
-    if op == "位置" or atom.get("order") == "物件":
+    if atom.get("order", "物件" if op == "位置" else None) == "物件":
         particle = atom.get("particle", "が")
         if particle not in ("が", "は"):
             raise NoTemplate("前提的助詞無模板")
@@ -518,7 +521,7 @@ def _enumeration_lead(atom, previous, render_zones):
     它的區域要和前一個(形式是連接字的存在原子)相同。"""
     if not atom.get("joined"):
         return render_zones(atom["zones"], atom.get("text")) + "に"
-    if (previous is None or previous.get("op") != "存在"
+    if (previous is None or previous.get("op") not in ("位置", "存在")
             or (previous.get("form") or "") not in ENUM_FORMS
             or previous.get("zones") != atom.get("zones")
             or previous.get("text") != atom.get("text")):

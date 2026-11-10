@@ -16,7 +16,7 @@ from action_query import run_query
 from card_structure import build_structures
 from reverse_check import check_card
 from test_end_phase_timing_ritual import HYMN, RITUAL_SPELL, SAFFIRA, SAFFIRA_TEXT
-from test_golden import ARCHETYPES, card, faq
+from test_golden import ARCHETYPES, SPELL, TRAP, card, faq
 
 SELF = 10000121
 FIELD_SPELL = 0x80002
@@ -140,6 +140,8 @@ TRICKSTAR_FOODIE_TEXT = (
     "このカードを手札から特殊召喚する。\n"
     "②：このカードが「トリックスター」LモンスターのL素材として墓地へ送られた場合に発動できる。"
     "デッキから「トリックスター・フュージョン」か「トリックスター・ディフュージョン」１枚を手札に加える。")
+TRICKSTAR_FUSION = 88693151      # トリックスター・フュージョン(魔法)
+TRICKSTAR_DIFFUSION = 63181559   # トリックスター・ディフュージョン(陷阱)
 TRICKSTAR_ARCHETYPES = ARCHETYPES + [
     {"setcode": 0xfb, "hex": "0xfb", "names_ja": ["トリックスター"], "name_zh": "淘氣仙星",
      "source": "strings.conf"}]
@@ -147,18 +149,36 @@ TRICKSTAR_ARCHETYPES = ARCHETYPES + [
 
 class TrickstarFoodieTest(unittest.TestCase):
     """トリックスター・フーディ 1410324:「「トリックスター」融合・Lモンスターのいずれかが存在する場合」
-    (故事 35)。②的「「A」か「B」１枚」不在本票。"""
+    (故事 35);②的「「A」か「B」１枚」是兩個卡名的或。"""
 
     @classmethod
     def setUpClass(cls):
         cls.cards = [card(TRICKSTAR_FOODIE, name_ja="トリックスター・フーディ", level=2,
-                          race=0x4, attribute=0x10, atk=600, setcode=0xfb, **{"def": 1800})]
+                          race=0x4, attribute=0x10, atk=600, setcode=0xfb, **{"def": 1800}),
+                     card(TRICKSTAR_FUSION, name_ja="トリックスター・フュージョン", type=SPELL,
+                          setcode=0xfb),
+                     card(TRICKSTAR_DIFFUSION, name_ja="トリックスター・ディフュージョン",
+                          type=TRAP, setcode=0xfb),
+                     card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", type=SPELL)]
         cls.structures = build(cls.cards, [faq(TRICKSTAR_FOODIE, "トリックスター・フーディ",
                                                TRICKSTAR_FOODIE_TEXT)], TRICKSTAR_ARCHETYPES)
         cls.own = own(cls.structures, TRICKSTAR_FOODIE)
 
     def test_any_of_premise_writes_back(self):
         self.assertEqual(failures_on(self.own, "のいずれかが存在する場合"), [])
+
+    def test_whole_card_writes_back(self):
+        self.assertEqual(check_card(self.own), [])
+
+    def test_either_named_card_is_added_to_hand(self):
+        """②「「A」か「B」１枚を手札に加える」:兩張卡代入都命中,別的卡不命中。"""
+        query = dict(actions=["加入手牌"], from_zones=["牌組"])
+        for named in (TRICKSTAR_FUSION, TRICKSTAR_DIFFUSION):
+            with self.subTest(card=named):
+                self.assertIn(TRICKSTAR_FOODIE,
+                              hits(self.cards, self.structures, card=named, **query))
+        self.assertNotIn(TRICKSTAR_FOODIE,
+                         hits(self.cards, self.structures, card=BLACK_MAGICIAN, **query))
 
     def test_special_summon_from_hand_hits(self):
         self.assertIn(TRICKSTAR_FOODIE, hits(self.cards, self.structures, actions=["特殊召喚"],
@@ -281,6 +301,12 @@ class CountedPremiseTest(unittest.TestCase):
                 _, structures = library(text)
                 self.assertEqual(check_card(own(structures)), [])
 
+    def test_counter_count_writes_back(self):
+        """計數器的數量(單位 つ):「魔力カウンターが４つ以上存在する場合」。"""
+        _, structures = library(
+            "自分フィールドに魔力カウンターが４つ以上存在する場合、このカードは手札から特殊召喚できる。")
+        self.assertEqual(check_card(own(structures)), [])
+
     def test_counted_object_is_still_what_sono_refers_back_to(self):
         """「相手フィールドに「ペンギン」モンスターが２体以上存在する場合に発動できる。そのモンスターを
         破壊する。」:前提的物件帶數量,後文照常指回它(條件是字段)。"""
@@ -306,6 +332,8 @@ class EnumeratedPremiseTest(unittest.TestCase):
             "このカードを破壊する。",
             "①：自分フィールドに融合・Sモンスターのいずれかが存在する場合に発動できる。"
             "このカードを破壊する。",
+            "①：自分フィールドに「青眼の白龍」か「ブラック・マジシャン」が存在する場合に発動できる。"
+            "このカードを破壊する。",
             "①：自分フィールドに融合・Sモンスターがそれぞれ存在する場合に発動できる。"
             "このカードを破壊する。",
             "①：自分の墓地に融合・Sモンスターがそれぞれ１体以上存在する場合に発動できる。"
@@ -328,6 +356,18 @@ class EnumeratedPremiseTest(unittest.TestCase):
         self.assertEqual(check_card(own(structures)), [])
         self.assertIn(SELF, hits(cards, structures, actions=["破壞"], card=PENGUIN_SOLDIER))
         self.assertNotIn(SELF, hits(cards, structures, actions=["破壞"], card=BLACK_MAGICIAN))
+
+    def test_this_card_in_an_enumeration_sets_its_position(self):
+        """「自分の墓地にこのカードと「ブラック・マジシャン」が存在する場合」:列舉裡的此卡照舊把目前位置
+        設成墓地,後面的「このカードを特殊召喚する」從墓地(推得關也命中)。"""
+        cards, structures = library(
+            "①：自分の墓地にこのカードと「ブラック・マジシャン」が存在する場合に発動できる。"
+            "このカードを特殊召喚する。")
+        self.assertEqual(check_card(own(structures)), [])
+        self.assertIn(SELF, hits(cards, structures, actions=["特殊召喚"], from_zones=["墓地"],
+                                 card=SELF))
+        self.assertNotIn(SELF, hits(cards, structures, actions=["特殊召喚"], from_zones=["手牌"],
+                                    card=SELF))
 
     def test_effect_after_alternative_premises_hits(self):
         """前提的或後面的段照常命中。"""

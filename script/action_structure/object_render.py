@@ -76,7 +76,7 @@ def _render_detach_object(obj, seg, card, names, self_id):
         raise NoTemplate("去除對象無模板")
     if obj["kind"] == OBJECT_MATERIAL and obj["condition"] is not None:
         return _render_held_material(obj, seg, card, names, self_id)
-    if obj["condition"] is not None or obj["count"]:
+    if obj["condition"] is not None or (obj["count"] and not is_existence_count(obj["count"])):
         raise NoTemplate("去除對象無模板")
     if obj["kind"] == OBJECT_COUNTER:
         word = obj.get("counter") or ""

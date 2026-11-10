@@ -391,7 +391,7 @@ class SummonReverseCheckTest(SummonFixture):
         return [(f["segment"], f["reason"], f["detail"]) for f in check_card(self.structure(cid))]
 
     def test_whole_cards_pass_reverse_check(self):
-        for cid in (MOBIUS, ETHEREAL_HOLY, GILASAURUS, CYBER_PRIMA, PRIMA_LIGHT):
+        for cid in (MOBIUS, DES_LACOODA, ETHEREAL_HOLY, GILASAURUS, CYBER_PRIMA, PRIMA_LIGHT):
             self.assertEqual(check_card(self.structure(cid)), [], cid)
 
     def test_summon_condition_segments_render_back(self):

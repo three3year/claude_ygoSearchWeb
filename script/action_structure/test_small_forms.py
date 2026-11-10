@@ -250,5 +250,70 @@ class ChangePositionFormsTest(unittest.TestCase):
         self.assertEqual(check_card(own(structures, SELF)), [])
 
 
+SHIELD_WARRIOR = 95360850   # シールド・ウォリアー
+SHIELD_WARRIOR_TEXT = (
+    "戦闘ダメージ計算時、自分の墓地に存在するこのカードをゲームから除外して発動する事ができる。"
+    "自分フィールド上に存在するモンスターはその戦闘では破壊されない。")
+LAVALVAL_IGNIS = 3989465    # ラヴァルバル・イグニス
+LAVALVAL_IGNIS_TEXT = (
+    "レベル３モンスター×２\n"
+    "このカードが戦闘を行うダメージステップ時に１度だけ、このカードのエクシーズ素材を１つ取り除いて"
+    "発動できる。このカードの攻撃力はエンドフェイズ時まで５００ポイントアップする。")
+
+
+class DamageStepTriggerTest(unittest.TestCase):
+    """觸發形閉集的「ダメージステップ時」「戦闘ダメージ計算時」(與「ダメージ計算時」同一種戰鬥時點)。"""
+
+    def conditions(self, cards, structures, cid, **query):
+        return [(s["text"], s["trigger"], s["unparsed"]) for s in hit_segments(
+            structures, cards, cid, kinds=["條件"], include_condition=True, **query)]
+
+    def test_shield_warrior_battle_damage_calculation_timing(self):
+        """「戦闘ダメージ計算時、〜て発動する事ができる」:時點是沒有動作詞的條件段,整張通過;
+        代價段命中「除外,從墓地」且對象是此卡。"""
+        cards = [card(SHIELD_WARRIOR, name_ja="シールド・ウォリアー", level=3, race=0x1,
+                      attribute=0x1, atk=800)]
+        structures = build(cards, [faq(SHIELD_WARRIOR, "シールド・ウォリアー",
+                                       SHIELD_WARRIOR_TEXT)])
+        self.assertEqual(self.conditions(cards, structures, SHIELD_WARRIOR),
+                         [("戦闘ダメージ計算時", "戦闘ダメージ計算時", None)])
+        self.assertEqual(check_card(own(structures, SHIELD_WARRIOR)), [])
+        cost, = hit_segments(structures, cards, SHIELD_WARRIOR, actions=["除外"],
+                             from_zones=["墓地"], card=SHIELD_WARRIOR)
+        self.assertEqual(cost["kind"], "代價")
+
+    def test_lavalval_ignis_battles_at_damage_step(self):
+        """「このカードが戦闘を行うダメージステップ時に」:條件段命中戰鬥(施事是此卡),觸發形是整個時點字面。"""
+        cards = [card(LAVALVAL_IGNIS, name_ja="ラヴァルバル・イグニス", type=0x800021, level=3,
+                      race=0x1, attribute=0x4, atk=1800, setcode=0x39)]
+        structures = build(cards, [faq(LAVALVAL_IGNIS, "ラヴァルバル・イグニス",
+                                       LAVALVAL_IGNIS_TEXT)])
+        seg, = hit_segments(structures, cards, LAVALVAL_IGNIS, actions=["戰鬥"],
+                            card=LAVALVAL_IGNIS, kinds=["條件"], include_condition=True)
+        self.assertEqual((seg["text"], seg["trigger"]),
+                         ("このカードが戦闘を行うダメージステップ時", "ダメージステップ時"))
+        self.assertEqual(hit_segments(structures, cards, LAVALVAL_IGNIS, actions=["戰鬥"]), [])
+        failures = [f for f in check_card(own(structures, LAVALVAL_IGNIS))
+                    if f["segment"] == seg["id"]]
+        self.assertEqual(failures, [])
+
+    def test_damage_step_timing_after_a_condition(self):
+        """「〜する場合、ダメージステップ時に発動する事ができる」:時點另成一個條件段。"""
+        cards, structures = library(
+            "①：このカードが破壊された場合、ダメージステップ時に発動する事ができる。"
+            "このカードを除外する。")
+        self.assertEqual([c[1:] for c in self.conditions(cards, structures, SELF)],
+                         [("場合", None), ("ダメージステップ時", None)])
+        self.assertEqual(check_card(own(structures, SELF)), [])
+
+    def test_damage_step_start_and_end_are_still_their_own_triggers(self):
+        for trigger in ("ダメージステップ開始時", "ダメージステップ終了時", "ダメージ計算時"):
+            with self.subTest(trigger=trigger):
+                cards, structures = library(
+                    f"①：このカードが戦闘を行う{trigger}に発動できる。このカードを破壊する。")
+                self.assertEqual([c[1] for c in self.conditions(cards, structures, SELF)],
+                                 [trigger])
+
+
 if __name__ == "__main__":
     unittest.main()

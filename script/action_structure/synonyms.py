@@ -15,7 +15,7 @@
 import re
 from typing import NamedTuple
 
-from structure_shape import VOICE_MIXED
+from structure_shape import DISPLAY_WORDS, VOICE_MIXED
 
 
 class Predicate(NamedTuple):
@@ -62,6 +62,10 @@ PREDICATE_STEMS = (
     # 「(Xの)表示形式を変更できない」「(Xの)コントロールは変更できない」。
     ("表示形式を変更", "變更表示形式", None), ("表示形式は変更", "變更表示形式", None),
     ("コントロールを変更", "變更控制權", None), ("コントロールは変更", "變更控制權", None),
+    # 「〜を守備表示にする」(他動詞,語尾 する/し/した)與「〜が守備表示になった」(自動詞,同「手札に加わ」);
+    # 表示形式字面留在原述語字面裡。
+    *((f"{word}に", "變更表示形式", None) for word, _, _ in DISPLAY_WORDS),
+    *((f"{word}にな", "變更表示形式", None) for word, _, _ in DISPLAY_WORDS),
     # 攻擊家族。「攻撃をする」的を是述語的一部分(句型層 `PREDICATE_NOUNS`)。
     ("攻撃対象に選択", "選為攻擊對象", None),
     ("攻撃宣言", "攻擊", None),

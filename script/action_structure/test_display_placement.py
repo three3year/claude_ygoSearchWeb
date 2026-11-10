@@ -326,6 +326,56 @@ class TreatBeforeFromTest(unittest.TestCase):
         self.assertEqual(failures_of(structures, TOY_SOLDIER, seg), [])
 
 
+SUMMON_PRIEST = 423585   # 召喚僧サモンプリースト
+SUMMON_PRIEST_TEXT = "①：このカードが召喚・反転召喚した場合に発動する。このカードを守備表示にする。"
+RESEARCHER = 3648368     # A・O・J リサーチャー(舊式:〜を選択して表側攻撃表示にする)
+RESEARCHER_TEXT = ("１ターンに１度、手札を１枚捨てて発動できる。相手フィールド上に裏側守備表示で"
+                   "存在するモンスター１体を選択して表側攻撃表示にする。")
+GRAIOUSE = 1151281   # サブテラーマリス・グライオース(自動詞「裏側表示になった時」)
+GRAIOUSE_TEXT = ("①：自分フィールドの表側表示モンスターが裏側表示になった時、自分フィールドに"
+                 "表側表示モンスターが存在しない場合に発動できる。このカードを手札から守備表示で特殊召喚する。")
+DESTROY_FACE_UP = 10000501   # 合成卡:表示形式只是物件修飾
+DESTROY_FACE_UP_TEXT = "①：自分メインフェイズに発動できる。表側表示で存在するモンスター１体を破壊する。"
+
+
+class DisplayChangeTest(unittest.TestCase):
+    """「〜を守備表示にする」「〜を選択して表側攻撃表示にする」「〜が裏側表示になった時」都是變更表示形式
+    (spec 故事 12);表示形式只是物件修飾的「表側表示で存在するモンスターを破壊する」不命中。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(SUMMON_PRIEST, name_ja="召喚僧サモンプリースト"),
+                     card(RESEARCHER, name_ja="A・O・J リサーチャー"),
+                     card(GRAIOUSE, name_ja="サブテラーマリス・グライオース"),
+                     card(DESTROY_FACE_UP, name_ja="甲")]
+        cls.structures = build(cls.cards, [
+            faq(SUMMON_PRIEST, "召喚僧サモンプリースト", SUMMON_PRIEST_TEXT),
+            faq(RESEARCHER, "A・O・J リサーチャー", RESEARCHER_TEXT),
+            faq(GRAIOUSE, "サブテラーマリス・グライオース", GRAIOUSE_TEXT),
+            faq(DESTROY_FACE_UP, "甲", DESTROY_FACE_UP_TEXT)])
+
+    def hits(self, **query):
+        return [h["id"] for h in run_query(self.structures, self.cards, query)["hits"]]
+
+    def test_set_to_defense_position_is_display_change(self):
+        hits = self.hits(actions=["變更表示形式"], card=SUMMON_PRIEST)
+        self.assertIn(SUMMON_PRIEST, hits)
+        self.assertIn(RESEARCHER, self.hits(actions=["變更表示形式"], targeting=True))
+
+    def test_became_face_down_trigger_is_display_change(self):
+        self.assertIn(GRAIOUSE, self.hits(actions=["變更表示形式"], include_condition=True))
+
+    def test_face_up_modifier_is_not_display_change(self):
+        self.assertNotIn(DESTROY_FACE_UP, self.hits(actions=["變更表示形式"],
+                                                    include_condition=True))
+
+    def test_display_change_segments_pass_reverse_check(self):
+        for cid in (SUMMON_PRIEST, RESEARCHER, GRAIOUSE):
+            seg, = hit_segments(self.structures, self.cards, cid, actions=["變更表示形式"],
+                                include_condition=True)
+            self.assertEqual(failures_of(self.structures, cid, seg), [], cid)
+
+
 class RoundTripTest(unittest.TestCase):
     """產物讀回:display 的 alternatives 裡沒寫的一半(None)被省略後要補回,反向檢查照常通過。"""
 

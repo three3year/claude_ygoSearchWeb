@@ -56,10 +56,13 @@ class DarkWorldDealingsTest(unittest.TestCase):
         self.assertEqual([z["zone"] for z in line["from"]["zones"]], ["牌組"])
 
     def test_deck_to_hand_hits_without_action_word(self):
-        """抽到的卡是新建物件、線帶從/到:只給「牌組 → 手牌」(到是推得)也命中抽牌段。"""
+        """抽到的卡是新建物件、線帶從/到:只給「牌組 → 手牌」(到是推得)開推得開關時命中抽牌段,
+        沒開不命中(spec 故事 27)。"""
         segs = hit_segments(self.structures, self.cards, DARK_WORLD_DEALINGS,
                             from_zones=["牌組"], to_zones=["手牌"], include_inferred=True)
         self.assertEqual([s["id"] for s in segs], [self.draw_segment()["id"]])
+        self.assertEqual(hit_segments(self.structures, self.cards, DARK_WORLD_DEALINGS,
+                                      from_zones=["牌組"], to_zones=["手牌"]), [])
 
     def test_discard_agent_refers_back_to_the_draw_segment(self):
         seg, = hit_segments(self.structures, self.cards, DARK_WORLD_DEALINGS,

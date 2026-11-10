@@ -43,3 +43,7 @@
    `git show ffe6e5c:data/action_structure.json > before.json`、`python -X utf8 script/action_structure/build_structure.py -o after.json`、`python -X utf8 .scratch/action-structure-m2/stats/split_changes.py before.json after.json .scratch/action-structure-m2/report/split-changes.md`
 2. 語尾閉集與排除清單(上面列的)是我依全庫各個「、」的左半語尾統計補齊的。spec 只寫了接續詞與 の/は/を/に。排除「限り」「により」「につき」「を除き」「とき」與形容詞/否定的終止形,是我的決定。
 3. 清單裡有幾類切了,但左半不是動作句,站主可以看要不要再排除:舊式取對象「Xを選択し、」(128 處)、「Xを対象とし、」(58)、「融合素材とし、」(92)、「〜とはカード名が異なり、」(24,其實是物件修飾,右半還是一段)、通常怪獸的故事文(「〜を操り、」等)。這些左半都標解析不出;右半主語省略時判不了主語,也標解析不出,不會靜默命中錯物件。
+
+### 2026-11-10 站主裁定(切法改變排除)
+
+維持現況,不再排除五類左半(重算數字與理由見里程碑二摘要「多子句切法改變」)。第 1、2、4 類的左半改列下一輪抽取規則:「Xを選択し、」「Xを対象とし、」認成取對象宣告,「〜とはカード名が異なり、」認成右半物件的修飾;第 3 類隨「X素材とする」一起做。

@@ -75,10 +75,14 @@ def parse_cause_phrase(state, text, sentence_start):
         return {"kind": "戰鬥", "text": "との" + battle.group("tail"),
                 "objects": [obj_id]}, None
     if text.endswith(CAUSE_BY):
-        obj_id, _, reason = state.object_at(text[:-len(CAUSE_BY)], sentence_start)
+        obj_id, ref, reason = state.object_at(text[:-len(CAUSE_BY)], sentence_start)
         if obj_id is None:
             return None, reason
-        return {"kind": "效果", "text": CAUSE_BY, "object": obj_id}, None
+        cause = {"kind": "效果", "text": CAUSE_BY, "object": obj_id}
+        if ref is not None:
+            # 以自己的卡名寫的(P 效果讓自己降臨的儀式怪獸):物件0,回指字面是卡名。
+            cause["ref"] = ref
+        return cause, None
     if text.endswith(OWNER_TEXT):
         objects = []
         for phrase in text[:-len(OWNER_TEXT)].split(OWNER_JOINER):
@@ -104,9 +108,11 @@ def render_cause_phrase(cause, seg, card, objects, names, self_id):
                                  for o in cause["objects"]) + cause["text"]
     if cause and cause.get("object") is not None:
         obj = objects.get(cause["object"])
-        if obj is None or cause.get("kind") != "效果"                 or cause.get("text") not in (CAUSE_EFFECT_OF, CAUSE_BY):
+        if (obj is None or cause.get("kind") != "效果"
+                or cause.get("text") not in (CAUSE_EFFECT_OF, CAUSE_BY)):
             raise NoTemplate("原因無模板:效果的物件")
-        return render_object(obj, seg, card, names, self_id=self_id) + cause["text"]
+        line = {"ref": cause["ref"]} if cause.get("ref") else None
+        return render_object(obj, seg, card, names, line, self_id=self_id) + cause["text"]
     if cause and cause.get("kind") == CAUSE_EXCLUDE:
         text = cause.get("text") or ""
         parsed, _ = (parse_predicates(text[:-len(EXCLUDE_METHOD_TAIL)])

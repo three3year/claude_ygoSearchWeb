@@ -76,6 +76,23 @@ def targeted_earlier(obj_id, seg, card):
     return False
 
 
+def declared_earlier(obj_id, seg, card):
+    """這一段之前,同一區塊裡有沒有一個沒有動作詞的宣告段(「Xを対象とし、」「Xを選択し、」)點名過該物件:
+    省略的受方(沒寫出來的裝備對象)要對得上它(m3 票 07)。"""
+    block_id = seg["id"].split(".")[0]
+    for block in all_blocks(card):
+        if block["id"] != block_id:
+            continue
+        for other in block["segments"]:
+            if other["id"] == seg["id"]:
+                return False
+            literal = split_predicate_literal(other["predicate"] or "")
+            if (literal.targeting and not literal.predicate and not other["actions"]
+                    and any(l["object"] == obj_id for l in other["lines"])):
+                return True
+    return False
+
+
 def last_segment_doing(action, seg, card):
     """同一區塊裡、這一段之前最後一個做過該動作詞的段 id(「ドローしたプレイヤー」的回指)。"""
     block_id = seg["id"].split(".")[0]

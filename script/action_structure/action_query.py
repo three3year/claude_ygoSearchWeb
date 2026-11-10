@@ -50,6 +50,8 @@ name_ja 與 setcode。名稱比對雙方先全半形折疊。
 條件式含引用(等級 = 物件1.階級)時:先求被引用物件的候選卡(卡片總表裡滿足它條件式的卡),
 X 只要能在候選卡裡找到一組讓全部條件成立就符合(spec 使用者故事 15);被引用物件解析不出
 就判不了,列進未解析組。
+異同原子(m3 票 06,「與某物件的某屬性相同/不同」)的比較對象是別的物件時同樣照引用比;比較對象是
+同一個物件群的其他成員時,單張卡代入一律符合(`same_different_fits`)。
 """
 import functools
 import itertools
@@ -62,6 +64,7 @@ from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from effect_reference import card_references, is_reference, iter_references, selected_blocks
 from condition_atoms import EQUIPPED, SAME_CARD, TARGETING_THIS, referenced_objects
+from same_different import KIND_ATTR, NAME_ATTR, SAME, SAME_DIFFERENT
 from state_atoms import ACTED_BY_EFFECT, EQUIPPED_ON, SUMMON_METHOD
 from structure_shape import iter_nodes, iter_segments, zone_names
 from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
@@ -186,6 +189,39 @@ def compare_attr(condition, entry, binding):
         return (rhs not in lhs) if condition["cmp"] == "≠" else None
     op = COMPARATORS.get(condition["cmp"])
     return None if op is None else op(lhs, rhs)
+
+
+def same_different_fits(condition, view, from_zones, binding):
+    """異同原子(m3 票 06)對一張卡:比較對象是同群的其他成員(沒有 `ref`)時單張卡代入一律符合;
+    是別的物件時照引用比較——那個物件沒綁定候選卡就判不了(None),綁了就逐個屬性比:相同是每個屬性都相同、
+    不同是每個屬性都不同,任一邊沒有那個屬性的值就不符。"""
+    ref = condition.get("ref")
+    if ref is None:
+        return True
+    bound = (binding or {}).get(ref["object"])
+    if bound is None:
+        return None
+    for attr in condition["attrs"]:
+        mine = _compared_values(condition, attr, view.entry, view, from_zones)
+        theirs = _compared_values(condition, attr, bound)
+        if not mine or not theirs or bool(mine & theirs) != (condition["cmp"] == SAME):
+            return False
+    return True
+
+
+def _compared_values(condition, attr, entry, view=None, from_zones=None):
+    """異同原子要比的那個屬性在一張卡上的值(集合;沒有值是空集合)。卡名:代入的卡照卡片屬性表
+    (「〜として扱う」的列看位置),寫了「元々の」或是被引用物件的候選卡只看官方卡名;種類:括號裡列的
+    大類與卡片子類型裡這張卡是哪幾種。"""
+    if attr == NAME_ATTR:
+        if view is not None and not condition.get("original"):
+            return {name for name in view.names(from_zones) if name}
+        return {_fold(entry["name_ja"])} if entry["name_ja"] else set()
+    if attr == KIND_ATTR:
+        kinds = {name for name, bit in CATEGORY_BITS.items() if entry["type"] & bit}
+        return (kinds | card_attr(entry, "卡片子類型")) & set(condition.get("kinds", ()))
+    value = card_attr(entry, attr)
+    return set() if value is None else {value}
 
 
 @functools.lru_cache(maxsize=None)
@@ -318,6 +354,8 @@ def _position_sensitive(condition):
             continue
         if node.get("op") in ("卡名", "卡名包含", "字段", "卡名範圍"):
             return True
+        if node.get("op") == SAME_DIFFERENT and NAME_ATTR in node["attrs"]:
+            return True
         stack.extend(node.get("args", ()))
         if "arg" in node:
             stack.append(node["arg"])
@@ -379,6 +417,8 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
         return STATE_ATOMS[op].fits(condition, view.entry)
     if op == "屬性比較":
         return compare_attr(condition, view.entry, binding)
+    if op == SAME_DIFFERENT:
+        return same_different_fits(condition, view, from_zones, binding)
     if op == "卡名範圍":
         texts = condition.get("texts") or [
             _name_text({"name": n}, names) for n in condition.get("names", ())]
@@ -402,6 +442,24 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
             # 含括號精確比對:「バスター・モード」不會被「バスター・モード・ゼロ」誤收。
             return f"「{folded}」" in view.text
         return any(folded in name for name in view.names(from_zones))
+    return None
+
+
+def _fits_apart_from_references(condition, view, names, from_zones):
+    """「且」裡不含引用的那幾個條件成不成立:有一個不成立,綁哪張候選卡都不會符合,不必逐張試
+    (被引用物件的候選卡可以有幾千張)。頂層不是「且」就不先篩。"""
+    if condition.get("op") != "且":
+        return True
+    return all(eval_condition(arg, view, names, from_zones) is True
+               for arg in condition["args"] if not referenced_objects(arg))
+
+
+def _same_atom_on(condition, ref_id):
+    """條件式頂層(本身或「且」的一項)對 `ref_id` 這個物件的 異同 相同 原子;沒有回 None。"""
+    for atom in condition["args"] if condition.get("op") == "且" else [condition]:
+        if (atom.get("op") == SAME_DIFFERENT and atom["cmp"] == SAME
+                and (atom.get("ref") or {}).get("object") == ref_id):
+            return atom
     return None
 
 
@@ -449,9 +507,11 @@ class _Judge:
         self.exists_cache: dict[str, bool] = {}
         # (卡號, 物件 id) → 該物件的候選卡(卡片總表條目)。
         self.candidate_cache: dict[tuple[int, str], list[dict]] = {}
-        # (卡號, 物件 id) → [(被引用物件 id, 候選卡列表)];None = 被引用物件找不到或解析不出。
-        self.pool_cache: dict[tuple[int, str], list[tuple[str, list[dict]]] | None] = {}
+        # (卡號, 物件 id) → 條件式引用到的物件;None = 被引用物件找不到或解析不出。
+        self.referenced_cache: dict[tuple[int, str], list[dict] | None] = {}
         self.objects_cache: dict[int, dict[str, dict]] = {}
+        # (卡號, 物件 id, 被引用物件 id) → (異同 相同 的原子, 候選卡照那個屬性的值分的組);沒有那種原子是 (None, None)。
+        self.sharing_cache: dict[tuple[int, str, str], tuple[dict | None, dict | None]] = {}
 
     def view(self, entry):
         if entry["id"] not in self.views:
@@ -469,36 +529,62 @@ class _Judge:
                 return False
             if obj["source"]["kind"] == "自己":
                 return True
-        pools = self.reference_pools(obj, owner, names)
-        if pools is None:
+        referenced = self.referenced(obj, owner)
+        if referenced is None:
             return False
-        if not pools:
+        if not referenced:
             return eval_condition(obj["condition"], self.view(entry), names,
                                   from_zones) is True
-        # 引用:在每個被引用物件的候選卡裡找得到一組讓全部條件成立即可。
+        # 引用:在每個被引用物件的候選卡裡找得到一組讓全部條件成立即可。不含引用的條件先判——
+        # 不成立就不必求候選卡(每個被引用物件要掃一次總表)。
         view = self.view(entry)
-        for combo in itertools.product(*(pool for _, pool in pools)):
-            binding = {ref_id: bound for (ref_id, _), bound in zip(pools, combo)}
+        if not _fits_apart_from_references(obj["condition"], view, names, from_zones):
+            return False
+        narrowed = [self.sharing_pool(owner, obj, ref_obj["id"],
+                                      self.candidates(owner, ref_obj, names), view, from_zones)
+                    for ref_obj in referenced]
+        for combo in itertools.product(*narrowed):
+            binding = {ref_obj["id"]: bound for ref_obj, bound in zip(referenced, combo)}
             if eval_condition(obj["condition"], view, names, from_zones,
                               binding) is True:
                 return True
         return False
 
-    def reference_pools(self, obj, owner, names):
-        """物件條件式引用到的每個物件與它的候選卡 [(物件 id, 候選卡列表)];沒有引用是空列表,
-        被引用物件找不到或解析不出是 None(判不了)。每個物件整次查詢只算一次:
-        只給條件的查詢會對幾千張卡反覆代入同一個物件。"""
+    def sharing_pool(self, owner, obj, ref_id, pool, view, from_zones):
+        """候選卡裡只留與代入的卡「相同」得起來的:條件式頂層有對這個物件的 異同 相同(m3 票 06)時,
+        候選卡照那個屬性的值分好組(整次查詢只分一次),只取代入的卡那幾個值的組——不必把幾千張候選卡
+        逐張試。沒有這種原子就原樣回傳。"""
+        key = (owner["id"], obj["id"], ref_id)
+        if key not in self.sharing_cache:
+            atom = _same_atom_on(obj["condition"], ref_id)
+            groups = None
+            if atom is not None:
+                groups = {}
+                for bound in pool:
+                    for value in _compared_values(atom, atom["attrs"][0], bound):
+                        groups.setdefault(value, []).append(bound)
+            self.sharing_cache[key] = (atom, groups)
+        atom, groups = self.sharing_cache[key]
+        if atom is None:
+            return pool
+        mine = _compared_values(atom, atom["attrs"][0], view.entry, view, from_zones)
+        return [bound for value in mine for bound in groups.get(value, ())]
+
+    def referenced(self, obj, owner):
+        """物件條件式引用到的物件(列表);沒有引用是空列表,被引用物件找不到或解析不出是 None(判不了)。
+        每個物件整次查詢只查一次:只給條件的查詢會對幾千張卡反覆代入同一個物件。候選卡(`candidates`)
+        等代入的卡過了不含引用的條件才求。"""
         key = (owner["id"], obj["id"])
-        if key not in self.pool_cache:
-            pools = []
+        if key not in self.referenced_cache:
+            found = []
             for ref_id in referenced_objects(obj["condition"]):
                 ref_obj = self.objects_of(owner).get(ref_id)
                 if ref_obj is None or ref_obj["unparsed"]:
-                    pools = None
+                    found = None
                     break
-                pools.append((ref_id, self.candidates(owner, ref_obj, names)))
-            self.pool_cache[key] = pools
-        return self.pool_cache[key]
+                found.append(ref_obj)
+            self.referenced_cache[key] = found
+        return self.referenced_cache[key]
 
     def candidates(self, owner, ref_obj, names):
         """被引用物件的候選卡:卡片總表裡滿足它條件式的卡(不看位置)。先放空列表,

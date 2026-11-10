@@ -46,6 +46,7 @@ import re
 
 import damage
 import draw
+import same_different
 import xyz_material
 
 from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
@@ -206,7 +207,7 @@ REASON_DISPLAY = "表示形式沒有到"
 
 def split_objects(phrase):
     """以「と」切物件,但「」裡的と、「X」と名のついた 的と(字段的舊式寫法)、「このカードを対象とする」
-    的と不算。"""
+    的と不算;後面接比較的と(「そのモンスターとはカード名が異なる〜」,m3 票 06)是修飾語的一部分。"""
     parts, depth, buf = [], 0, ""
     for i, ch in enumerate(phrase):
         if ch == "「":
@@ -214,7 +215,8 @@ def split_objects(phrase):
         elif ch == "」":
             depth -= 1
         if (ch == "と" and depth == 0
-                and not phrase.startswith(("と名のついた", "と同じ", "とする"), i)):
+                and not phrase.startswith(("と名のついた", "と同じ", "とする"), i)
+                and not same_different.compares_after(phrase, i)):
             parts.append(buf)
             buf = ""
         else:

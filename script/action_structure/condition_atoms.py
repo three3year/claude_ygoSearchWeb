@@ -6,6 +6,7 @@
 指定卡代入時不看卡片參數的)的代入規則是 `action_query.STATE_ATOMS` 那張表。
 和「指誰」有關的原子(他の、召喚方式、只修飾此卡的狀態;m3 票 05)在 `state_atoms`,這裡的 `parse_modifier`、
 `render_atom` 先問它。
+異同原子(カード名が異なる、同名、Xとは属性が異なる;m3 票 06)在 `same_different`,`parse_modifier` 最後問它。
 
 - 記載(名稱):「X」のカード名が記された → {"op": "記載", "name": 名稱列 id};
   「X」またはそのカード名が記された → 或(卡名∋X, 記載 X)。查詢時掃卡文含「X」(含括號)。
@@ -46,6 +47,7 @@
 import re
 
 import position_atoms
+import same_different
 import state_atoms
 from structure_shape import DEFAULT_ZONE_WORD, ZONE_WORDS, zone
 
@@ -222,7 +224,7 @@ def parse_modifier(rest, state):
     clause = position_atoms.parse_modifier(rest)
     if clause:
         return clause[0], None, clause[1]
-    return None
+    return same_different.parse_modifier(rest, state)   # 異同(m3 票 06)
 
 
 def _zone_atom(op, word, side):
@@ -303,6 +305,8 @@ def render_atom(atom, names):
     clause = position_atoms.render_atom(atom)
     if clause is not None:
         return clause
+    if op == same_different.SAME_DIFFERENT:
+        return same_different.render_atom(atom)
     if op == "記載":
         quoted = quoted_name(atom, names)
         return None if quoted is None else quoted + "のカード名が記された"

@@ -65,6 +65,34 @@ def main():
             shown.add((k, bool(r[4] and not r[4]["unparsed"])))
             st = "解析出" if r[4] and not r[4]["unparsed"] else ("解析不出:" + r[4]["unparsed"]["reason"] if r[4] else "")
             print(f"  [{k}/{st}] {r[1]} {r[0]}「{short(r[3], 50)}、｜{short(r[5], 45)}」")
+    merged_left_halves()
+
+
+def merged_left_halves():
+    """m3 票 06 之後「〜とは〜が異なり(、)」不另成段,併在右半的段裡:數這種段、它的狀態、
+    帶這截字面的物件解析出幾個。"""
+    rows = []
+    for c in cards():
+        objects = {o["id"]: o for o in c["objects"]}
+        for b in c["blocks"]:
+            for s in b["segments"]:
+                t = b["text"][s["span"][0]:s["span"][1]]
+                if re.search(r"異なり(?!$)", t):
+                    objs = [objects[l["object"]] for l in s["lines"]
+                            if "異なり" in (objects[l["object"]]["text"] or "")]
+                    rows.append((c["id"], c["name_ja"], s, t, objs))
+    print(f"\n## 4b 「〜とは〜が異なり(、)」併在右半的段裡:{len(rows)} 處 / {len({r[0] for r in rows})} 張")
+    seg = collections.Counter(("解析不出:" + r[2]["unparsed"]["reason"]) if r[2]["unparsed"] else "解析出" for r in rows)
+    print("段:", dict(seg.most_common()))
+    obj = collections.Counter(
+        "沒有建出物件" if not r[4] else
+        ("物件解析不出:" + r[4][0]["unparsed"]["reason"]) if r[4][0]["unparsed"] else "物件解析出"
+        for r in rows)
+    print("帶這截字面的物件:", dict(obj.most_common()))
+    for r in rows:
+        if r[2]["unparsed"] or not r[4] or r[4][0]["unparsed"]:
+            why = (r[2]["unparsed"] or {}).get("reason") or (r[4][0]["unparsed"]["reason"] if r[4] else "")
+            print(f"  [{why}] {r[1]} {r[0]}「{short(r[3], 90)}」")
 
 
 if __name__ == "__main__":

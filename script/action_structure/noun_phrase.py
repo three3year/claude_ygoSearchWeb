@@ -15,6 +15,7 @@ from attribute_atoms import (EXCEPT, SEPARATORS, is_param_atom, joiner,
                              parse_modifier as parse_param_group, render_group, render_number)
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from condition_atoms import parse_modifier as parse_atom_modifier, quoted_name, render_atom
+from same_different import elided_backed, link_elided
 from structure_shape import NoTemplate
 
 
@@ -224,6 +225,7 @@ def parse_modifiers(state, mods):
         add([atom])
         reason = reason or why
         rest = rest[m.end():]
+    link_elided(atoms)   # 異同原子沒寫的比較對象(m3 票 06)
     for i, atom in enumerate(atoms):
         if not is_param_atom(atom):
             continue
@@ -338,6 +340,8 @@ def _render_head(condition):
 def _render_modifiers(mods, names):
     """修飾語列表 → 字面:屬性比較之間與後面的「・」「の」照 attribute_atoms.joiner
     (魔法使い族・光属性、獣族・獣戦士族の炎属性、ドラゴン族の「ドラグニティ」)。"""
+    if not elided_backed(mods):
+        raise NoTemplate("異同原子省略的比較對象無模板")
     out = []
     for i, atom in enumerate(mods):
         if not is_param_atom(atom):

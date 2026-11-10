@@ -272,12 +272,21 @@ class BlockState:
 
     def resolve_reference(self, phrase):
         """修飾語裡指回的物件短語(「そのモンスターのランク」「見せたモンスターと同じ」的
-        その/それらの+頭名詞、動作回指)→ 物件 id 或 None;與 object_at 同一把尺。"""
+        その/それらの+頭名詞、動作回指;異同原子的比較對象另有 対象の/選択した+頭名詞、帶修飾語的回指
+        「その表側表示モンスター」,m3 票 06)→ 物件 id 或 None;與 object_at 同一把尺,但不建新物件。"""
         ref = REF_RE.match(phrase)
         if ref:
             return self.recent_of(ref.group("head"))
+        target_ref = TARGET_REF_RE.match(phrase)
+        if target_ref:
+            # 「対象のモンスターとは属性が異なり、〜」(m3 票 06):指回被取對象的物件。
+            return self.recent_of(target_ref.group("head"), among=self.targeted)
         if self.is_action_reference(phrase):
             return self.action_reference(phrase)
+        restated = restated_reference(phrase)
+        if restated:
+            return self.recent_of(restated.head, among=self.targeted if restated.targeted else None,
+                                  restated=restated.atoms)
         return None
 
     def add_object(self, obj):

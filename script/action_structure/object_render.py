@@ -8,7 +8,7 @@
 from block_state import (ACTION_REF_RE, ACTIVATION_REF, MATERIAL_WORDS, OBJECT_COUNTER,
                          OBJECT_MATERIAL, REF_RE, TARGET_REF_RE, xyz_monster_condition)
 from noun_phrase import render_condition
-from quantity import render_count
+from quantity import is_existence_count, render_count
 from segment_history import last_action_on, targeted_earlier
 from structure_shape import NoTemplate
 from synonyms import ACTION_PAST
@@ -60,7 +60,8 @@ def render_object(obj, seg, card, names, line=None, with_count=True, self_id="o0
     if not defined_here:
         return "その" + _head_of(obj)
     text = render_condition(obj["condition"], names)
-    if with_count and obj["count"]:
+    # 存在前提的數量(「モンスターが２体以上存在する」)不接在名詞後,由前提的模板寫。
+    if with_count and obj["count"] and not is_existence_count(obj["count"]):
         text += render_count(obj["count"])
     return text
 

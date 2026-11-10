@@ -29,6 +29,9 @@ _ZONE_WORDS_ALT = "|".join(w for w, _ in ZONE_WORDS)
 ZONE_PHRASE = (f"(?:(?:自分か相手|自分|相手|持ち主|自身)の?)?(?:{_ZONE_WORDS_ALT})"
                f"(?:[・か](?:{_ZONE_WORDS_ALT}))*")
 _FROM_RE = re.compile("^(?:(?P<side>自分か相手|自分|相手|持ち主|自身)の?)?(?P<zones>.+)$")
+# 區域短語裡的列舉連接字:「・」「か」,與「または」(m3 票 12:「墓地またはフィールド上に」是區域的或,
+# 同樣記成區域集合)。`ZONE_PHRASE` 不收「または」,只有自己帶句型的呼叫端(前提)會把這種短語交進來。
+_ZONE_SEPARATOR_RE = re.compile("・|または|か")
 ZONE_PHRASE_RE = re.compile(f"^{ZONE_PHRASE}$")
 SIDE_TEXT = {v: k for k, v in SIDE_WORDS.items()}
 # 「墓地からの(特殊召喚に成功した)」的「からの」排在「の」前:先比長的,才拆得回區域短語。
@@ -41,7 +44,7 @@ def parse_from(phrase):
     if not m:
         return None
     zones = []
-    for part in re.split("[・か]", m.group("zones")):
+    for part in _ZONE_SEPARATOR_RE.split(m.group("zones")):
         for word, name in ZONE_WORDS:
             if part == word:
                 break
@@ -62,10 +65,10 @@ def zone_literal(phrase):
     """區域短語用了非預設的字面(舊式「フィールド上」)就回短語本身(要留原文字面),否則 None。
     前提的區域平常照方的來源還原(票 05),只有這種情形還原不回原文。"""
     m = _FROM_RE.match(phrase)
-    parts = re.split("[・か]", m.group("zones")) if m else []
-    if "か" in phrase or any(
+    parts = _ZONE_SEPARATOR_RE.split(m.group("zones")) if m else []
+    if "か" in phrase or "または" in phrase or any(
             part != DEFAULT_ZONE_WORD.get(dict(ZONE_WORDS).get(part)) for part in parts):
-        return phrase   # 「か」列舉(自分のフィールドか墓地)沒有預設寫法,也留字面(票 06)
+        return phrase   # 「か」「または」列舉(自分のフィールドか墓地)沒有預設寫法,也留字面(票 06)
     return None
 
 

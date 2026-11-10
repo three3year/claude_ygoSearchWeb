@@ -3,7 +3,7 @@
 閉集字面(戦闘で、相手の効果で…)在 `segment_fields.CAUSE_FORMS`,由 `segment_fields.parse_cause`、
 `render_cause` 處理;這裡加上要解物件的寫法:「「X」の効果で」(物件)、「融合召喚及び以下の方法で」
 (召喚方式)、「Xとの戦闘では」(戰鬥的對手)、「Xの(効果を受けない)」(誰的效果)、
-「ドロー以外の方法で」(方法)。
+「ドロー以外の方法で」(方法)、「「X」により(降臨)」(物件)。
 - 抽取:`parse_cause_phrase`;`CAUSE_ALT` 是各句型共用的原因槽正規式片段。
 - 模板:`render_cause_phrase`。
 """
@@ -30,8 +30,14 @@ _BATTLE_CAUSE_RE = re.compile("^(?P<phrase>.+?)との(?P<tail>戦闘では|戦�
 EXCLUDE_METHOD_TAIL = "以外の方法で"
 EXCLUDE_METHOD_PATTERN = f"ドロー{EXCLUDE_METHOD_TAIL}"
 CAUSE_EXCLUDE = "方法"
+# 「「X」により降臨」(m3 票 11):X(儀式魔法的物件短語)的效果;只認後面緊接「降臨」的,
+# 「により」單獨不是原因字面。
+CAUSE_BY = "により"
+DESCENT_STEM = "降臨"
+DESCENT_TAIL = CAUSE_BY + DESCENT_STEM
+_DESCENT_CAUSE = f"(?:「[^「」]*」|[^を、「」])+?{CAUSE_BY}(?={DESCENT_STEM})"
 CAUSE_ALT = (f"{CAUSE_PATTERN}|{_NAMED_CAUSE}|{_METHOD_CAUSE}|{_BATTLE_CAUSE}|{OWNER_PATTERN}"
-             f"|{EXCLUDE_METHOD_PATTERN}")
+             f"|{EXCLUDE_METHOD_PATTERN}|{_DESCENT_CAUSE}")
 _NAMED_CAUSE_RE = re.compile(f"^(?P<name>「[^「」]+」)の効果で$")
 _METHOD_CAUSE_RE = re.compile(f"^{_METHOD_CAUSE}$")
 CAUSE_EFFECT_OF = "の効果で"
@@ -68,6 +74,11 @@ def parse_cause_phrase(state, text, sentence_start):
             return None, reason
         return {"kind": "戰鬥", "text": "との" + battle.group("tail"),
                 "objects": [obj_id]}, None
+    if text.endswith(CAUSE_BY):
+        obj_id, _, reason = state.object_at(text[:-len(CAUSE_BY)], sentence_start)
+        if obj_id is None:
+            return None, reason
+        return {"kind": "效果", "text": CAUSE_BY, "object": obj_id}, None
     if text.endswith(OWNER_TEXT):
         objects = []
         for phrase in text[:-len(OWNER_TEXT)].split(OWNER_JOINER):
@@ -80,7 +91,7 @@ def parse_cause_phrase(state, text, sentence_start):
 
 
 def render_cause_phrase(cause, seg, card, objects, names, self_id):
-    """原因:閉集字面(戦闘で…);「「X」の効果で」寫物件;召喚方式寫各方式以「及び」連接 + で;
+    """原因:閉集字面(戦闘で…);「「X」の効果で」「「X」により」寫物件 + 字面;召喚方式寫各方式以「及び」連接 + で;
     帶 `objects` 的寫各物件以「及び」連接 + 字面(「との戦闘では」「の」)。"""
     if cause and cause.get("objects"):
         expected = {"戰鬥": ("との戦闘では", "との戦闘で", "との戦闘によって"),
@@ -93,9 +104,9 @@ def render_cause_phrase(cause, seg, card, objects, names, self_id):
                                  for o in cause["objects"]) + cause["text"]
     if cause and cause.get("object") is not None:
         obj = objects.get(cause["object"])
-        if obj is None or cause.get("kind") != "效果" or cause.get("text") != CAUSE_EFFECT_OF:
+        if obj is None or cause.get("kind") != "效果"                 or cause.get("text") not in (CAUSE_EFFECT_OF, CAUSE_BY):
             raise NoTemplate("原因無模板:效果的物件")
-        return render_object(obj, seg, card, names, self_id=self_id) + CAUSE_EFFECT_OF
+        return render_object(obj, seg, card, names, self_id=self_id) + cause["text"]
     if cause and cause.get("kind") == CAUSE_EXCLUDE:
         text = cause.get("text") or ""
         parsed, _ = (parse_predicates(text[:-len(EXCLUDE_METHOD_TAIL)])

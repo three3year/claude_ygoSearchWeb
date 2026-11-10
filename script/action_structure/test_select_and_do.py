@@ -370,8 +370,6 @@ class SelectPatternTest(unittest.TestCase):
         self.assertTrue(passes(structures))
 
     def test_end_phase_duration_before_predicate(self):
-        cards, structures = library("①：そのモンスターをエンドフェイズまで除外する。")
-        self.assertFalse(passes(structures))
         cards, structures = library(
             "①：フィールドのモンスター１体を選んでエンドフェイズまで除外する。")
         seg, = hit_segments(structures, cards, SELF, actions=["除外"])

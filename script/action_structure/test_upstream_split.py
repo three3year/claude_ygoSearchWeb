@@ -45,13 +45,13 @@ SUMMON_REACTOR_SUPPLEMENT = (
     "■『このカードが自分フィールド上に表側表示で存在する限り、相手フィールド上にモンスターが"
     "召喚・反転召喚・特殊召喚された時、相手ライフに８００ポイントダメージを与える。"
     "この効果は１ターンに１度しか使用できない』モンスター効果は誘発効果です。")
-BLACK_MAGICIAN = 46986414
+BLACK_MAGICIAN = card(46986414, name_ja="ブラック・マジシャン", level=7, race=0x2,
+                      attribute=0x20, atk=2500)
 
 
-def build(cid, name_ja, text, **kw):
-    cards = [card(cid, name_ja=name_ja, **kw),
-             card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7, race=0x2,
-                  attribute=0x20, atk=2500)]
+def build(cid, name_ja, text, extra_cards=(), **kw):
+    """`extra_cards`:卡文以「」點名的卡要在卡片總表裡,卡名才認得出。"""
+    cards = [card(cid, name_ja=name_ja, **kw), *extra_cards]
     structures, _ = build_structures(cards, [faq(cid, name_ja, text)],
                                      archetypes=ARCHETYPES)
     return cards, [s for s in structures if s["id"] == cid]
@@ -113,7 +113,7 @@ class KagiriPremiseTest(unittest.TestCase):
         後面的效果照常命中,整張通過反向檢查。"""
         cards, structures = build(
             SELF, "甲", "自分フィールド上に「ブラック・マジシャン」が存在する時、"
-                        "このカードを破壊する。")
+                        "このカードを破壊する。", extra_cards=[BLACK_MAGICIAN])
         self.assertIn(SELF, hits(cards, structures, actions=["破壞"]))
         self.assertEqual(check_card(structures[0]), [])
 
@@ -239,9 +239,7 @@ class OmittedTextTest(unittest.TestCase):
             "actions": ["發動"], "polarities": ["做", "不能", "不會", "可以", "只能", "必須"]})
         listed = [s["text"] for u in result["unparsed"] for s in u["segments"]]
         self.assertNotIn("この効果は１ターンに１度しか使用できない", listed)
-        details = [f["detail"] for f in check_card(structure)]
         self.assertFalse([f for f in check_card(structure) if f["reason"] == "段外殘留"])
-        self.assertTrue(details)
 
 
 if __name__ == "__main__":

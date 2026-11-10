@@ -7,7 +7,7 @@ import unittest
 
 from action_query import run_query
 from card_structure import build_structures
-from reverse_check import REASON_NO_TEMPLATE, check_card
+from reverse_check import check_card
 from test_golden import ARCHETYPES, SPELL, card, faq
 
 PARALLEL_PORT_ARMOR = 879958   # パラレルポート・アーマー(通常罠)
@@ -61,16 +61,8 @@ class ParallelPortArmorTest(unittest.TestCase):
         self.assertNotIn(PARALLEL_PORT_ARMOR, hits)
 
     def test_both_halves_pass_reverse_check(self):
-        """前半「装備モンスターは相手の効果の対象にならず」自成一段;兩半都寫得回原文,不出現字面不符或段外殘留。"""
-        card_ = own(self.structures, PARALLEL_PORT_ARMOR)
-        failing = {f["segment"] for f in check_card(card_)}
-        texts = {seg["text"] for block in card_["blocks"] for seg in block["segments"]
-                 if seg["id"] in failing}
-        self.assertNotIn("装備モンスターは相手の効果の対象にならず", texts)
-        self.assertNotIn("戦闘では破壊されない", texts)
-        reasons = {f["reason"] for f in check_card(card_)
-                   if f["segment"] is not None}
-        self.assertLessEqual(reasons, {REASON_NO_TEMPLATE})
+        """前半「装備モンスターは相手の効果の対象にならず」自成一段;兩半都寫得回原文,整張通過。"""
+        self.assertEqual(check_card(own(self.structures, PARALLEL_PORT_ARMOR)), [])
 
 
 class ShapeSplitTest(unittest.TestCase):

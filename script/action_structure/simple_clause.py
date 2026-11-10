@@ -33,6 +33,7 @@
 import re
 
 import damage
+import draw
 
 from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
 from block_state import (INFERENCE_TABLE, INTERVAL_PATTERN, INTERVAL_REASON, OBJECT_COUNTER,
@@ -149,7 +150,9 @@ _CLAUSE_NO_TO_FRONT_RE = re.compile(_CLAUSE_PATTERN.replace(_TO_FRONT, "", 1))
 _REF_COUNT_RE = re.compile("^(?P<phrase>(?:その|それらの)(?:モンスター|カード))(?P<count>[０-９]+(?:体|枚))$")
 COUNT_AFTER_OBJECT = "物件後"
 # 數量格(spec「數量」:支付 1000LP,段可無物件):「１０００LP」當受詞時不是物件。
-_AMOUNT_RE = re.compile("^(?P<digits>[０-９]+)(?P<unit>LP)$")
+# 單位閉集:「LP」與舊式全寫「ライフポイント」(m3 票 02),單位字面留在數量格的 `unit`。
+AMOUNT_UNITS = ("LP", "ライフポイント")
+_AMOUNT_RE = re.compile(f"^(?P<digits>[０-９]+)(?P<unit>{'|'.join(AMOUNT_UNITS)})$")
 # 不能取對象的區域(m3 票 07,spec 預設 11):「デッキから/手札から〜を選択し、」是選擇,不是取對象宣告——
 # 字面一樣留在原述語字面,對象線不標取對象、物件不進被取對象的清單。只收連用形的「選択し」;
 # 「選択して」維持原本的讀法。
@@ -415,6 +418,10 @@ def fill_clause(ctx, clause_text):
             if current is not None:
                 line["from"] = position(current["zones"], "繼承",
                                         inferred=current["inferred"])
+            elif seg["actions"] == [draw.DRAW_ACTION]:
+                # 「相手がこのカードをドローした時」:推得的牌組照抽牌者標方(m3 票 02)。
+                line["from"] = position(draw.inferred_deck(agent_side(agent)), "推得",
+                                        inferred=True)
             elif inferred_from:
                 side = "我方" if inferred_from == "手牌" else None
                 line["from"] = position([zone(inferred_from, side, side and "預設")],
@@ -535,10 +542,11 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     words, counts, picks = [], set(), set()
     if seg["amount"]:
         # 數量格(「１０００LPを払って」):段無物件,數量當受詞寫。
-        if seg["lines"] or seg["amount"].get("unit") != "LP" \
+        if seg["lines"] or seg["amount"].get("unit") not in AMOUNT_UNITS \
                 or not isinstance(seg["amount"].get("value"), int):
             raise NoTemplate("數量無模板")
-        words.append(str(seg["amount"]["value"]).translate(TO_FULLWIDTH_DIGITS) + "LP")
+        words.append(str(seg["amount"]["value"]).translate(TO_FULLWIDTH_DIGITS)
+                     + seg["amount"]["unit"])
         counts.add(("", None))
         marker = "を"
     for line in spoken:

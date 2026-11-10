@@ -64,6 +64,11 @@ _LIMIT_SENTENCE_RE = re.compile(
 OMITTED_SENTENCES = ((_UNIQUE_RE, UNIQUE_REASON), (_LIMIT_SENTENCE_RE, INTERVAL_REASON))
 # 同一句次數限制寫成句尾括號注記(「〜発動できる（このカード名のこの効果は１ターンに１度しか使用できない）」)。
 _LIMIT_NOTE_RE = re.compile("（(?P<note>[^（）]+)）$")
+# 只寫成括號注記的次數限制(閉集,m3 票 02):分歧引導句後的「以下の効果はそれぞれ〜しか選択/使用できない」、
+# 「〜の効果に対してそれぞれ〜しか発動できない」、效果句後的「１ターンに１度のみ」。
+_NOTE_ONLY_LIMIT_RE = re.compile(
+    "^(?:このカード名の(?:以下の|この)効果は(?:[^、。]+に対して)?それぞれ１ターンに１度しか"
+    "(?:選択|使用|発動)できない|１ターンに１度のみ)$")
 # 句首的「Xは」(「「A」または「B」は」的「または」屬於 X)。
 _TOPIC_RE = re.compile("^(?P<topic>(?:または|[^をがは、])+?)は")
 # 觸發形:戰鬥時點排在「時」前面,「〜戦闘を行うダメージ計算時」的觸發形是整個時點字面;
@@ -100,6 +105,16 @@ _OLD_COST_RE = re.compile("^(?P<cost>.+?[るうすく])" + COST_GLUE + "、?(?P<
 
 
 REASON_ACTIVATION = "發動句解析不出"
+
+
+def limit_note(sentence):
+    """句尾括號版的次數限制 → 括號注記(含括號)的 match;句尾沒有括號注記、或注記不是次數限制回 None。
+    注記進略過文本(原因 次數限制),前面的句子照常解析;分歧引導句後的由 `segment_tree` 剝。"""
+    note = _LIMIT_NOTE_RE.search(sentence)
+    if note and (_LIMIT_SENTENCE_RE.match(note.group("note"))
+                 or _NOTE_ONLY_LIMIT_RE.match(note.group("note"))):
+        return note
+    return None
 
 
 def sentences(text, body_start, end=None):
@@ -258,8 +273,8 @@ def parse_sentence(state, start, end, activation_lead=False):
         if pattern.match(sent):
             state.omit(start, sent, reason)
             return []
-    note = _LIMIT_NOTE_RE.search(sent)
-    if note and _LIMIT_SENTENCE_RE.match(note.group("note")):
+    note = limit_note(sent)
+    if note:
         state.omit(start + note.start(), note.group(), INTERVAL_REASON)
         end = start + note.start()
         sent = text[start:end]

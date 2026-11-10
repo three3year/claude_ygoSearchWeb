@@ -83,6 +83,12 @@ def drawer_deck(zones, drawer):
     return [{**z, "side": drawer} if z["side_source"] == "預設" else z for z in zones]
 
 
+def inferred_deck(drawer):
+    """沒寫「デッキから」、由推得表補上的牌組:方照抽牌者標(對手、雙方各自照記),抽牌者沒寫的記我方
+    (m3 票 02);與明寫的「デッキから」同一把尺(`drawer_deck`)。"""
+    return drawer_deck([zone(INFERENCE_TABLE[DRAW_ACTION][0], "我方", "預設")], drawer)
+
+
 def undo_drawer_deck(zones, drawer):
     """`drawer_deck` 的反向(反向檢查由字面拼回區域時比對用):抽牌者的牌組換回區域預設的我方。"""
     return [{**z, "side": "我方"} if z["side_source"] == "預設" and z["side"] == drawer else z
@@ -169,8 +175,7 @@ def fill_clause(ctx, clause_text):
                          "明寫", text=g("from") + "から")
         state.find(obj_id)["initial_position"] = list(from_["zones"])
     else:
-        from_ = position([zone(INFERENCE_TABLE[DRAW_ACTION][0], None)], "推得",
-                         inferred=True)
+        from_ = position(inferred_deck(agent_side(seg["agent"])), "推得", inferred=True)
     line = new_line(obj_id, "受事", marker=DRAWN_MARKER if g("object") else None,
                     count=count)
     line["from"] = from_
@@ -211,7 +216,8 @@ def render_clause(seg, card, objects, names):
         drawer = agent_side(seg["agent"])
         from_text = render_zone_text(
             {**from_, "zones": undo_drawer_deck(from_["zones"], drawer)}, "から")
-    elif from_ and from_["source"] == "推得" and [z["zone"] for z in from_["zones"]] == ["牌組"]:
+    elif from_ and from_["source"] == "推得" and from_["zones"] == inferred_deck(
+            agent_side(seg["agent"])):
         from_text = ""
     else:
         raise NoTemplate("抽牌段的從無模板")

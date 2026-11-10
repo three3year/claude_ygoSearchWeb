@@ -2,7 +2,7 @@
 
 回指字面要對得上先前的段才寫得回去:動作回指(「めくったカード」)看 `last_action_on`,
 「選択したモンスター」看 `targeted_earlier`,「ドローしたプレイヤー」看 `last_segment_doing`。
-`all_blocks` 走過區塊與內嵌效果的區塊。
+`all_blocks` 走過區塊與內嵌效果的區塊;「この効果で(〜召喚に成功した)」指的段從 `segments_before` 的範圍找。
 """
 
 from predicate_literal import split_predicate_literal
@@ -18,6 +18,30 @@ def all_blocks(card):
         for node in iter_nodes(block["tree"]["items"]):
             if node.get("node") == "內嵌效果" and node.get("block"):
                 stack.append(node["block"])
+
+
+def _with_embedded(block):
+    yield block
+    for node in iter_nodes(block["tree"]["items"]):
+        if node.get("node") == "內嵌效果" and node.get("block"):
+            yield from _with_embedded(node["block"])
+
+
+def segments_before(seg, card):
+    """(這一段所在的頂層區塊之前的各頂層區塊, 同一區塊裡這一段之前的段);段找不到回兩個空列表。
+    與抽取當下看得到的範圍相同:前面的區塊已抽完,自己的區塊只抽到這一段之前。"""
+    block_id = seg["id"].split(".")[0]
+    for index, top in enumerate(card["blocks"]):
+        for block in _with_embedded(top):
+            if block["id"] != block_id:
+                continue
+            own = []
+            for other in block["segments"]:
+                if other["id"] == seg["id"]:
+                    break
+                own.append(other)
+            return card["blocks"][:index], own
+    return [], []
 
 
 def last_action_on(obj_id, seg, card):

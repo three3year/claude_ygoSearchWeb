@@ -31,6 +31,7 @@ class Predicate(NamedTuple):
 # 傷害句型卻把「ダメージを」切在述語外(傷害名詞要帶原因與數量),原述語字面只留「与えた」「受ける」;
 # 查這張表前要把受詞接回去,抽取與模板都只走 `damage.parse_damage_predicates`。
 DAMAGE_OBJECT = "ダメージを"
+BARE_SUMMON_STEM = "召喚"
 # ── 述語字面 → 動作詞;第三欄是述語本身寫明的終點(「墓地へ送る」「ゲームから除外する」)。
 # 比對時取最長的字幹(`_STEMS_LONGEST_FIRST`;「攻撃対象に選択」不能被「攻撃」先吃掉)。
 PREDICATE_STEMS = (
@@ -101,6 +102,15 @@ PREDICATE_STEMS = (
     ("ドローを", "抽牌", None),
     ("ドロー", "抽牌", None),
     ("手札に加わ", "加入手牌", "手牌"),
+    # m3 票 08:單獨的「召喚」(通常召喚的下位詞;通常召喚還含覆蓋)、上級召喚、反轉召喚、P召喚;
+    # 片假名全寫的 リンク/シンクロ/エクシーズ召喚 與字母寫法同一個詞。「召喚」落在別種召喚的字面裡
+    # (特殊召喚、通常召喚…)不算,查詢未解析組比字面時扣掉(STEM_FALSE_FRIENDS)。
+    (BARE_SUMMON_STEM, "召喚", None),
+    ("アドバンス召喚", "上級召喚", None), ("生け贄召喚", "上級召喚", None),
+    ("反転召喚", "反轉召喚", None),
+    ("P召喚", "P召喚", None), ("ペンデュラム召喚", "P召喚", None),
+    ("リンク召喚", "L召喚", None), ("シンクロ召喚", "S召喚", None),
+    ("エクシーズ召喚", "X召喚", None),
 )
 _STEMS_LONGEST_FIRST = sorted(PREDICATE_STEMS, key=lambda row: len(row[0]), reverse=True)
 # 字幹出現在別的詞裡、不是那個動作的字面(查詢未解析組比字面時扣掉)。
@@ -120,6 +130,8 @@ ACTION_PAST = {"翻開": "めくった", "特殊召喚": "特殊召喚した", "
 # 推得表與角色也照上位詞算(票 07)。
 ACTION_PARENT = {"融合召喚": "特殊召喚", "S召喚": "特殊召喚", "X召喚": "特殊召喚",
                  "L召喚": "特殊召喚", "儀式召喚": "特殊召喚",
+                 # m3 票 08:上級召喚 → 召喚 → 通常召喚(兩層);P召喚是特殊召喚的下位;反轉召喚沒有上位詞。
+                 "召喚": "通常召喚", "上級召喚": "召喚", "P召喚": "特殊召喚",
                  # 攻擊 > 直接攻擊、多次攻擊、全體攻擊(spec「攻擊系只做兩層夠嗎?」)
                  "直接攻擊": "攻擊", "多次攻擊": "攻擊", "全體攻擊": "攻擊"}
 ATTACK = "攻擊"
@@ -135,6 +147,35 @@ def action_ancestors(action):
         action = ACTION_PARENT[action]
         out.append(action)
     return out
+
+
+# 召喚系的根:這三個詞與它們的下位詞都是把怪獸叫出來,對象線的角色是 被召喚。
+SUMMON_ROOTS = ("特殊召喚", "通常召喚", "反轉召喚")
+
+
+def is_summon(action):
+    return any(a in SUMMON_ROOTS for a in action_ancestors(action))
+
+
+# 召喚系的述語字幹(長的在前),給句型認「〜召喚に成功した」前面的助詞用。
+SUMMON_STEMS = tuple(stem for stem, action, _ in _STEMS_LONGEST_FIRST
+                     if stem.endswith(BARE_SUMMON_STEM) and is_summon(action))
+# 別種召喚的字面與含「召喚」的名詞裡的「召喚」不是動作詞 召喚:查「召喚」的未解析組比字面時扣掉。
+# 召喚自己的下位詞(アドバンス召喚、生け贄召喚)不扣。
+SUMMON_WORDS_NOT_ACTIONS = ("召喚条件", "召喚獣", "召喚師", "召喚魔術", "召喚士", "召喚神",
+                            "デーモンの召喚")
+STEM_FALSE_FRIENDS[BARE_SUMMON_STEM] = tuple(
+    stem for stem, action, _ in _STEMS_LONGEST_FIRST
+    if stem.endswith(BARE_SUMMON_STEM) and "召喚" not in action_ancestors(action)
+) + SUMMON_WORDS_NOT_ACTIONS
+# 召喚的列舉(「召喚・特殊召喚に成功した」「召喚・反転召喚・特殊召喚できない」):一段多個動作詞,
+# 語尾只寫在最後一個。只收召喚系的字幹,別的「A・B」不是動作的列舉。
+SUMMON_JOINER = "・"
+_SUMMON_STEM_ALT = "|".join(SUMMON_STEMS)
+# 後面緊接「〜召喚(・〜召喚)に成功」的位置(lookahead):句型用它認「モンスターの特殊召喚に成功」的「の」
+# (對象線的助詞)與「墓地からの特殊召喚に成功」的「からの」(從)。
+SUMMON_SUCCESS_AHEAD = (f"(?=(?:{_SUMMON_STEM_ALT})(?:{SUMMON_JOINER}(?:{_SUMMON_STEM_ALT}))*"
+                        "に成功)")
 
 
 # 述語語尾 → (態, 極性[, 可選])。語尾不在表內的述語標「述語語尾不明」,不猜。
@@ -278,6 +319,13 @@ def parse_predicates(pred):
         if not pred.startswith(stem):
             continue
         rest = pred[len(stem):]
+        if rest.startswith(SUMMON_JOINER) and is_summon(action):
+            following, reason = parse_predicates(rest[len(SUMMON_JOINER):])
+            if following is None:
+                return None, reason
+            if not is_summon(following[0].action):
+                return None, REASON_PREDICATE
+            return [following[0]._replace(action=action, to=to)] + following, None
         for tail in _TAILS_LONGEST_FIRST:
             if tail and (tail.endswith(("て", "で")) or tail == "し") \
                     and rest.startswith(tail) and len(rest) > len(tail):

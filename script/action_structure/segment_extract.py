@@ -45,8 +45,8 @@ import material_line
 import material_summon
 import simple_clause
 import stat_modify
-from block_state import (ClauseContext, INTERVAL_RE, INTERVAL_REASON, KIND_PROCEDURE,
-                         KIND_RESTRICTION, segment_at)
+from block_state import (ClauseContext, INTERVAL_RE, INTERVAL_REASON, INTERVAL_SCOPE,
+                         INTERVAL_TIMES, KIND_PROCEDURE, KIND_RESTRICTION, segment_at)
 from cause_phrase import DESCENT_TAIL
 from clause_join import JOIN, split_continuative
 from names_attributes import parse_treat_as
@@ -71,7 +71,7 @@ _UNIQUE_RE = re.compile(
     "に１(?:体|枚)しか表側表示で存在できない$")
 _LIMIT_SENTENCE_RE = re.compile(
     "^(?:「[^「」]+」の|このカード名の)?(?:この)?効果は(?:お互いに)?"
-    "(?:１ターンに|デュエル中に)[１-９]度しか(?:使用|適用)できない$")
+    f"{INTERVAL_SCOPE}{INTERVAL_TIMES}しか(?:使用|適用)できない$")
 OMITTED_SENTENCES = ((_UNIQUE_RE, UNIQUE_REASON), (_LIMIT_SENTENCE_RE, INTERVAL_REASON))
 # 同一句次數限制寫成句尾括號注記(「〜発動できる（このカード名のこの効果は１ターンに１度しか使用できない）」)。
 _LIMIT_NOTE_RE = re.compile("（(?P<note>[^（）]+)）$")

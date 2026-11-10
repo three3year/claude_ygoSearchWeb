@@ -39,9 +39,10 @@
 """
 import re
 
-from quantity import (EXISTENCE_COUNT_PATTERN, FULLWIDTH_DIGITS, TO_FULLWIDTH_DIGITS,
-                      is_existence_count, parse_existence_count, render_existence_count)
-from structure_shape import DISPLAY_WORD, NoTemplate, display_value, display_word, zone
+from quantity import (EXISTENCE_COUNT_PATTERN, is_existence_count, parse_existence_count,
+                      render_existence_count)
+from structure_shape import (DISPLAY_WORD, FULLWIDTH_DIGITS, TO_FULLWIDTH_DIGITS, NoTemplate,
+                             display_value, display_word, zone)
 from synonyms import XYZ_MATERIAL_WORDS
 
 GAME_STATE_TURN = "回合方"

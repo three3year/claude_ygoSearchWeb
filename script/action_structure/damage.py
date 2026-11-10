@@ -23,12 +23,12 @@
 import re
 
 from agent_phrase import render_agent
-from block_state import REASON_CLAUSE, REASON_TWICE
 from cause_phrase import REASON_CAUSE, parse_cause_phrase
 from object_render import render_object
 from predicate_literal import check_predicate
 from segment_fields import CAUSE_PATTERN, DURATION_TURN, render_cause, resolve_polarity
-from structure_shape import AMOUNT_FORMULA, NoTemplate, new_line, unparsed
+from structure_shape import (AMOUNT_FORMULA, FULLWIDTH_DIGITS, REASON_CLAUSE, REASON_TWICE,
+                             TO_FULLWIDTH_DIGITS, NoTemplate, new_line, unparsed)
 from synonyms import DAMAGE_OBJECT, MODIFY_ACTION, merged_voice, parse_predicates
 from zone_phrase import SIDE_WORDS
 
@@ -61,8 +61,6 @@ SOURCE_THAT_BATTLE = ("その戦闘で発生する", "その戦闘によって�
 LIMIT_CMP = {"以下の": "≤", "未満の": "<"}
 VALUE_FORMS = {"０": ("數值", 0), "倍": ("倍", None), "半分": ("半分", None)}
 DURATION_THIS_TURN = "このターン"
-_FULLWIDTH = str.maketrans("０１２３４５６７８９", "0123456789")
-_TO_FULLWIDTH = str.maketrans("0123456789", "０１２３４５６７８９")
 
 _FIXED = "[０-９]+(?:ポイント)?"
 _FORMULA = "[^、]+?(?:×[０-９]+(?:ポイント)?|分の|と同じ)"
@@ -146,7 +144,7 @@ def parse_amount(text, noun):
             return None   # 「１０００戦闘ダメージ」沒有這種寫法,不猜
         unit = noun
         text += noun
-    return {"text": text, "value": int(m.group("digits").translate(_FULLWIDTH)), "unit": unit}
+    return {"text": text, "value": int(m.group("digits").translate(FULLWIDTH_DIGITS)), "unit": unit}
 
 
 def noun_cause(noun):
@@ -206,7 +204,7 @@ def render_amount(amount, noun):
     value, unit = amount.get("value"), amount.get("unit")
     if not isinstance(value, int):
         raise NoTemplate("數量無模板")
-    digits = str(value).translate(_TO_FULLWIDTH)
+    digits = str(value).translate(TO_FULLWIDTH_DIGITS)
     if unit == PLAIN_NOUN and noun == PLAIN_NOUN:
         written = digits + unit
         return "", _checked(written, amount)
@@ -231,7 +229,7 @@ def render_lp_amount(amount):
     value, unit = amount.get("value"), amount.get("unit")
     if not isinstance(value, int) or unit not in ("LP", "ライフポイント"):
         raise NoTemplate("數量無模板")
-    return _checked(str(value).translate(_TO_FULLWIDTH) + unit, amount)
+    return _checked(str(value).translate(TO_FULLWIDTH_DIGITS) + unit, amount)
 
 
 def split_cause(cause):

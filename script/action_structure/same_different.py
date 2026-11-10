@@ -23,6 +23,8 @@
 import re
 from typing import NamedTuple
 
+from structure_shape import REASON_REF
+
 SAME_DIFFERENT = "異同"
 SAME, DIFFERENT = "=", "≠"
 NAME_ATTR, KIND_ATTR = "卡名", "種類"
@@ -34,7 +36,6 @@ KIND_WORD = "種類"
 KIND_WORDS = (("モンスター", "怪獸"), ("魔法", "魔法"), ("罠", "陷阱"), ("儀式", "儀式"),
               ("融合", "融合"), ("S", "同步"), ("X", "超量"), ("P", "靈擺"), ("L", "連結"),
               ("リンク", "連結"))
-REASON_REF = "指回的物件找不到"
 SELF_TEXT = "このカード"
 # 「その同名カード」的「その」:最近提過的那一張(任何大類)。
 THAT, THAT_CARD = "その", "そのカード"

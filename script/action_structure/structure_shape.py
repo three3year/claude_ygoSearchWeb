@@ -85,6 +85,9 @@ DURATION_KINDS = ("本回合", "到X為止", "持續", "該戰鬥")
 DURATION_RANGES = ("整回合", "發動後")
 # 段的 `amount`:固定值 {"text", "value", "unit", "cmp"(選填)};算式 {"kind": "算式", "text", "cmp"(選填)}。
 AMOUNT_FORMULA = "算式"
+# 卡文的數字一律全形:抽取時換成整數、模板寫回時換回全形,各模組共用這兩張表。
+FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
+TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 ATTRIBUTE_TABLES = ("name", "archetype", "attribute", "race", "level",
                     "category")
 
@@ -113,6 +116,14 @@ class TemplateInput(NamedTuple):
 def unparsed(reason):
     """「解析不出」的格:原因一律帶著,覆蓋報告依原因分類。"""
     return {"reason": reason}
+
+
+# 各模組共用的解析不出原因(只有一個模組用的原因留在那個模組)。
+REASON_CLAUSE = "子句解析不出"
+REASON_OBJECT = "物件解析不出"
+REASON_REF = "指回的物件找不到"
+# 同一格(誰、原因、期間、數量)在句中寫了兩處:不猜哪一處算數。
+REASON_TWICE = "同一格寫了兩處"
 
 
 def zone_names(name):

@@ -13,13 +13,14 @@
 import re
 
 from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
-from block_state import INFERENCE_TABLE, REASON_CLAUSE, REASON_TWICE, update_positions
+from block_state import INFERENCE_TABLE, update_positions
 from cause_phrase import parse_cause_phrase, render_cause_phrase
 from noun_phrase import category_condition
 from object_render import render_object
 from predicate_literal import render_predicate
 from segment_fields import CAUSE_PATTERN, render_timing, resolve_polarity
-from structure_shape import NoTemplate, new_line, new_object, position, unparsed, zone
+from structure_shape import (FULLWIDTH_DIGITS, REASON_CLAUSE, REASON_TWICE, NoTemplate, new_line,
+                             new_object, position, unparsed, zone)
 from synonyms import merged_voice, parse_predicates
 from zone_phrase import parse_from, render_zone_text
 
@@ -35,7 +36,6 @@ PLACEMENT_BEFORE_NOUN = "名詞前"
 FORMULA_TAIL = "(?:数|数分)だけ"
 _FORMULA_TAIL_RE = re.compile(f"{FORMULA_TAIL}、?$")
 _FIXED_RE = re.compile(f"^(?P<digits>[０-９]+){COUNT_UNIT}$")
-_FULLWIDTH = str.maketrans("０１２３４５６７８９", "0123456789")
 
 
 def clause_pattern(agent_pattern):
@@ -66,7 +66,7 @@ def parse_count(fixed, front, lead, each):
         return None, False
     text, placement = written[0]
     if placement is None:
-        count = {"text": text, "value": int(text[:-len(COUNT_UNIT)].translate(_FULLWIDTH)),
+        count = {"text": text, "value": int(text[:-len(COUNT_UNIT)].translate(FULLWIDTH_DIGITS)),
                  "unit": COUNT_UNIT, "cmp": "="}
     else:
         count = {"kind": "算式", "text": text, "placement": placement}
@@ -116,7 +116,7 @@ def render_count(count):
         return text, placement
     m = _FIXED_RE.match(text)
     if (not m or count.get("unit") != COUNT_UNIT or count.get("cmp") != "="
-            or int(m.group("digits").translate(_FULLWIDTH)) != count.get("value")
+            or int(m.group("digits").translate(FULLWIDTH_DIGITS)) != count.get("value")
             or count.get("placement")):
         raise ValueError("抽牌張數無模板")
     return text, None

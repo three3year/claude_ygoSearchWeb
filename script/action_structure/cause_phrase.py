@@ -12,12 +12,11 @@
 
 import re
 
-from block_state import REASON_REF
 from object_render import render_object
 from segment_fields import (CAUSE_MATERIAL, CAUSE_PATTERN, MATERIAL_FORMS, OWNER_JOINER,
                             OWNER_PATTERN, OWNER_TEXT, parse_cause, render_cause)
 from segment_history import segments_before
-from structure_shape import NoTemplate
+from structure_shape import REASON_REF, NoTemplate
 from synonyms import action_ancestors, is_summon, parse_predicates
 
 

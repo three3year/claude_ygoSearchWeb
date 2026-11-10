@@ -13,14 +13,15 @@
 import re
 
 import simple_clause
-from block_state import ClauseContext, REASON_CLAUSE, REASON_TWICE
+from block_state import ClauseContext
 from material_line import ROLE_MATERIAL
 from object_render import render_object
 from predicate_literal import check_predicate
 from segment_fields import (CAUSE_MATERIAL, MATERIAL_FORMS, is_delayed, parse_cause,
                             resolve_polarity)
 from segment_history import targeted_earlier
-from structure_shape import NoTemplate, new_line, position, unparsed
+from structure_shape import (REASON_CLAUSE, REASON_TWICE, NoTemplate, new_line, position,
+                             unparsed)
 from synonyms import BARE_SUMMON_STEM, is_summon, merged_voice, parse_predicates
 from zone_phrase import ZONE_PHRASE, parse_from
 

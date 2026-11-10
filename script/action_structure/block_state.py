@@ -6,7 +6,6 @@
 - 物件短語的字面閉集與句型(回指 `REF_RE`、`TARGET_REF_RE`、`ACTION_REF_RE`,超量素材、計數器)
   在這裡;名詞短語的修飾語與頭名詞在 `noun_phrase`。
 - 推得表 `INFERENCE_TABLE` 與位置自動規則 `update_positions`;`segment_at` 由區塊原文的範圍開一個段。
-- 各模組共用的解析不出原因(`REASON_CLAUSE`、`REASON_OBJECT`、`REASON_REF`、`REASON_TWICE`…)。
 - `ClauseContext`:各句型的 `fill_clause` 共用的參數(段、區塊狀態、句子起點、承襲的時機)。
 誰、原因、區域、數量各自的字面在 `agent_phrase`、`cause_phrase`、`zone_phrase`、`quantity`。
 
@@ -46,7 +45,7 @@ from noun_phrase import (EFFECT_HEADS, HEAD_CATEGORY, NOUN_RE, OR_FORM, category
                          category_of, noun_condition, parse_modifiers, split_alternatives)
 from quantity import parse_count
 from segment_fields import implicit_delay
-from structure_shape import new_object, new_segment, unparsed
+from structure_shape import REASON_OBJECT, REASON_REF, new_object, new_segment, unparsed
 from synonyms import ACTION_PAST, TARGET_REF, XYZ_MATERIAL_WORDS, is_summon
 
 
@@ -63,7 +62,8 @@ INFERENCE_TABLE = {
 }
 # 次數限制字面(「１ターンに１度、」):spec 說不記,出現在句中時進略過文本(原因 次數限制),
 # 反向檢查比對時扣掉。
-INTERVAL_PATTERN = "(?:１ターンに|デュエル中に)[１-９]度、"
+INTERVAL_SCOPE, INTERVAL_TIMES = "(?:１ターンに|デュエル中に)", "[１-９]度"
+INTERVAL_PATTERN = f"{INTERVAL_SCOPE}{INTERVAL_TIMES}、"
 INTERVAL_RE = re.compile(INTERVAL_PATTERN)
 INTERVAL_REASON = "次數限制"
 KIND_PROCEDURE, KIND_RESTRICTION, KIND_MODIFIER = "召喚手續", "限制", "修飾"
@@ -91,11 +91,6 @@ _NAMED_RE = re.compile(
     "^(?P<names>「[^「」]+」(?:(?P<or>または|か)「[^「」]+」(?:(?P=or)「[^「」]+」)*)?)"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
 REASON_NOT_ARCHETYPE = "「」名稱不是字段"
-REASON_CLAUSE = "子句解析不出"
-REASON_OBJECT = "物件解析不出"
-REASON_REF = "指回的物件找不到"
-# 同一格(原因、期間、數量)在句中寫了兩處:不猜哪一處算數。
-REASON_TWICE = "同一格寫了兩處"
 # 物件的目前位置:{"zones": [區域], "inferred": bool}(推得的或繼承自推得的才是 True)。
 CurrentPosition = dict[str, object]
 # 主語省略的子句向前一截要主語時,前一截句首「Xは」的三態(`BlockState.topic`):

@@ -18,7 +18,7 @@
 import re
 
 from agent_phrase import AGENT_PATTERN, parse_agent
-from block_state import INTERVAL_REASON
+from block_state import INTERVAL_REASON, INTERVAL_SCOPE, INTERVAL_TIMES
 from cause_phrase import CAUSE_ALT, parse_cause_phrase
 from object_boundary import REASON_FRONT
 from premise import PHASE_WORDS, parse_game_state
@@ -33,7 +33,7 @@ PHASE_ALT = "|".join(word for word, _ in PHASE_WORDS)
 SIDE_ALT = "自分・相手の|自分|相手"
 # 不在句首的「このターン、」「このターン中、」(句首的由 `segment_fields.parse_leading_duration` 剝)。
 LEADING_THIS_TURN = ("このターン、", "このターン中、")
-_INTERVAL = "(?:１ターンに|デュエル中に)?[１-９]度(?:だけ)?、"
+_INTERVAL = f"{INTERVAL_SCOPE}?{INTERVAL_TIMES}(?:だけ)?、"
 _INTERVAL_RE = re.compile(f"^{_INTERVAL}")
 # 子句前的期間:某個回合、階段或傷害步驟結束為止,該戰鬥的字面,與不在句首的「このターン、」。
 FRONT_DURATION = (

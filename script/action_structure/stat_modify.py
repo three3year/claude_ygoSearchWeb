@@ -8,14 +8,15 @@
 
 import re
 
-from block_state import REASON_OBJECT, REASON_REF, REASON_TWICE, segment_at
+from block_state import segment_at
 from clause_front import front_duration
 from object_boundary import find_cut
 from object_render import render_object
 from segment_fields import (MENTION_FORMS, is_delayed, mention_head, parse_modify,
                             parse_treat_delta, render_modify, render_treat_delta)
 from simple_clause import render_from
-from structure_shape import NoTemplate, new_line, position, unparsed
+from structure_shape import (REASON_OBJECT, REASON_REF, REASON_TWICE, NoTemplate, new_line,
+                             position, unparsed)
 from synonyms import MODIFY_ACTION
 from zone_phrase import ZONE_PHRASE, parse_from
 

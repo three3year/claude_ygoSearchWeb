@@ -53,7 +53,7 @@ import xyz_material
 
 from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
 from block_state import (INFERENCE_TABLE, INTERVAL_PATTERN, INTERVAL_REASON, OBJECT_COUNTER,
-                         REASON_CLAUSE, REASON_REF, REASON_TWICE, update_positions)
+                         update_positions)
 from cause_phrase import (CAUSE_ALT, EXCLUDE_METHOD_PATTERN, parse_cause_phrase,
                           render_cause_phrase, summoned_by)
 from clause_front import (PLACEMENT_AFTER_SUBJECT, front_duration, front_timing,
@@ -62,16 +62,16 @@ from condition_atoms import TARGETING_THIS_FORMS
 from object_boundary import find_cut
 from object_render import render_object, render_ref
 from predicate_literal import join_predicate_literal, render_predicate
-from quantity import (COUNT_PATTERN, FRONT_COUNT_PATTERN, FULLWIDTH_DIGITS, TO_FULLWIDTH_DIGITS,
-                      floating_count, render_count)
+from quantity import COUNT_PATTERN, FRONT_COUNT_PATTERN, floating_count, render_count
 from segment_fields import (CLAUSE_DURATION_PATTERN, DISPLAY_PATTERN, EFFECT_HOLDER_PREFIX,
                             ORDER_PATTERN, PER_TURN_PATTERN, TIMING_PATTERN, TREAT_DELTA_PATTERN,
                             TREAT_PATTERN, is_delayed, parse_cause, parse_duration, parse_per_turn,
                             parse_placement_form, parse_timing, render_display, render_per_turn,
                             render_placement_form, render_timing, resolve_polarity)
 from segment_history import declared_earlier, targeted_earlier
-from structure_shape import (DISPLAY_WORD, NoTemplate, new_line, position, unparsed, zone,
-                             zone_names)
+from structure_shape import (DISPLAY_WORD, FULLWIDTH_DIGITS, REASON_CLAUSE, REASON_REF,
+                             REASON_TWICE, TO_FULLWIDTH_DIGITS, NoTemplate, new_line, position,
+                             unparsed, zone, zone_names)
 from synonyms import (ACTION_PAST, ATTACK_PREFIX_PATTERN, LEAVE_VERB, ONLY_MARKER,
                       PREDICATE_FROM, PREDICATE_NOUN_PATTERN, SELECT_PREFIX, SUMMON_NOUNS,
                       SUMMON_SUCCESS_AHEAD, TARGETING_PATTERN, TARGET_REF, XYZ_ATTACH_ACTION,

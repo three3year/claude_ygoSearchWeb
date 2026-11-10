@@ -13,10 +13,11 @@
   記在段的受方 `{"object": Y, "ref": 回指字面, "particle": "の"}`。
 """
 
-from block_state import OBJECT_MATERIAL, REASON_CLAUSE, REASON_REF, REASON_TWICE, summoned_object
+from block_state import OBJECT_MATERIAL, summoned_object
 from object_render import render_object
 from segment_history import previous_segment
-from structure_shape import NoTemplate, new_object, position, unparsed
+from structure_shape import (REASON_CLAUSE, REASON_REF, REASON_TWICE, NoTemplate, new_object,
+                             position, unparsed)
 from synonyms import (MATERIAL_ACTION, MATERIAL_NOUNS, MATERIAL_OWNER_PARTICLE,
                       MATERIAL_SUMMON_KINDS, XYZ_ATTACH_ACTION, XYZ_MATERIAL_WORDS)
 

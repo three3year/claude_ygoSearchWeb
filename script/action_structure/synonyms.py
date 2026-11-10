@@ -24,7 +24,7 @@
 import re
 from typing import NamedTuple
 
-from structure_shape import DISPLAY_WORDS, VOICE_MIXED, ZONE_WORDS
+from structure_shape import DISPLAY_WORDS, FULLWIDTH_DIGITS, VOICE_MIXED, ZONE_WORDS
 
 
 class Predicate(NamedTuple):
@@ -342,7 +342,6 @@ SUMMON_NOUNS = ("融合召喚を", "S召喚を", "X召喚を", "L召喚を",
 PREDICATE_NOUNS = ("攻撃を", "効果を", "表示形式を", "表示形式は", "コントロールを",
                    "コントロールは") + SUMMON_NOUNS
 PREDICATE_NOUN_PATTERN = "|".join(PREDICATE_NOUNS)
-_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
 
 
 def attack_times(pred):
@@ -350,7 +349,7 @@ def attack_times(pred):
     m = _ATTACK_PREFIX_RE.match(pred or "")
     if not m or not m.group("times"):
         return None
-    value = int(m.group("n").translate(_FULLWIDTH_DIGITS)) if m.group("n") else 2
+    value = int(m.group("n").translate(FULLWIDTH_DIGITS)) if m.group("n") else 2
     return {"value": value, "text": m.group("times")}
 
 

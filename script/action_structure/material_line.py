@@ -7,8 +7,8 @@ import re
 
 from block_state import KIND_PROCEDURE, segment_at
 from object_render import render_object
-from quantity import FULLWIDTH_DIGITS, TO_FULLWIDTH_DIGITS
-from structure_shape import NoTemplate, new_line, unparsed
+from structure_shape import (FULLWIDTH_DIGITS, TO_FULLWIDTH_DIGITS, NoTemplate, new_line,
+                             unparsed)
 
 
 ROLE_MATERIAL = "素材"

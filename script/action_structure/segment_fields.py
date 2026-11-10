@@ -33,9 +33,9 @@
 import re
 
 from premise import PHASE_WORDS
-from structure_shape import (AMOUNT_FORMULA, DISPLAY_WORD, DURATION_KINDS,
-                             PLACEMENT_DISPLAY_WORD, NoTemplate, display_value,
-                             placement_form)
+from structure_shape import (AMOUNT_FORMULA, DISPLAY_WORD, DURATION_KINDS, FULLWIDTH_DIGITS,
+                             PLACEMENT_DISPLAY_WORD, TO_FULLWIDTH_DIGITS, NoTemplate,
+                             display_value, placement_form)
 from synonyms import ATTACK_FAMILY, MODIFY_PREDICATE, ONLY, ONLY_MARKER
 
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
@@ -154,7 +154,7 @@ _PER_TURN_RE = re.compile("^(?:それぞれ)?１ターンに(?P<n>[１-９])度�
 def parse_per_turn(text):
     """「１ターンに１度だけ」→ {"value", "text"}。"""
     m = _PER_TURN_RE.match(text)
-    return {"value": int(m.group("n").translate(_FULLWIDTH_DIGITS)), "text": text}
+    return {"value": int(m.group("n").translate(FULLWIDTH_DIGITS)), "text": text}
 
 
 def render_per_turn(per_turn):
@@ -162,7 +162,7 @@ def render_per_turn(per_turn):
     if not per_turn:
         return ""
     m = _PER_TURN_RE.match(per_turn.get("text") or "")
-    if not m or int(m.group("n").translate(_FULLWIDTH_DIGITS)) != per_turn.get("value"):
+    if not m or int(m.group("n").translate(FULLWIDTH_DIGITS)) != per_turn.get("value"):
         raise NoTemplate("每回合次數無模板")
     return per_turn["text"]
 
@@ -432,8 +432,6 @@ DELTA_TAILS = ("する", "し")
 DELTA_UNIT = "ポイント"
 # 「Nになる」的目標值可以是引用其他值的算式字面「そのモンスターと同じ」。
 SAME_AS = "と同じ"
-_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
-_TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 # 差量寫在主語前(「その差分×５００だけこのカードの攻撃力はアップする」):算式字面以「だけ」收尾,
 # 可帶讀點;value 另記 placement 主語前。
 LEADING_FORMULA = "主語前"
@@ -465,7 +463,7 @@ def parse_modify(clause):
     if m.group("direction"):
         modified["form"] = DELTA_WORDS[m.group("direction")]
         if m.group("delta"):
-            modified["value"] = int(m.group("delta").translate(_FULLWIDTH_DIGITS))
+            modified["value"] = int(m.group("delta").translate(FULLWIDTH_DIGITS))
             if m.group("unit"):
                 modified["unit"] = m.group("unit")
         elif m.group("formula"):
@@ -483,7 +481,7 @@ def parse_modify(clause):
         else:
             modified["form"] = "數值"
             modified["value"] = (
-                int(m.group("value").translate(_FULLWIDTH_DIGITS)) if m.group("value")
+                int(m.group("value").translate(FULLWIDTH_DIGITS)) if m.group("value")
                 else {"kind": AMOUNT_FORMULA, "text": m.group("same")})
         if m.group("lead"):
             return None
@@ -539,7 +537,7 @@ def _render_value(value, unit, allow_none):
     if value is None and allow_none:
         return ""
     if isinstance(value, int) and unit in (None, DELTA_UNIT):
-        return str(value).translate(_TO_FULLWIDTH_DIGITS) + (unit or "")
+        return str(value).translate(TO_FULLWIDTH_DIGITS) + (unit or "")
     if isinstance(value, dict) and value.get("kind") == AMOUNT_FORMULA and value.get("text") \
             and unit is None:
         return value["text"]
@@ -576,7 +574,7 @@ def parse_treat_delta(treat_text):
     if not m:
         return None
     modified = {"attr": _attrs(m.group("attr")), "form": DELTA_WORDS[m.group("direction")],
-                "value": int(m.group("delta").translate(_FULLWIDTH_DIGITS))}
+                "value": int(m.group("delta").translate(FULLWIDTH_DIGITS))}
     if m.group("unit"):
         modified["unit"] = m.group("unit")
     return m.group()[:-1], modified, m.group("direction")

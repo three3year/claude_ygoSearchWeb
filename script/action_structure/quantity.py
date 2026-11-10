@@ -9,10 +9,9 @@
 
 import re
 
-from structure_shape import AMOUNT_FORMULA, NoTemplate
+from structure_shape import AMOUNT_FORMULA, FULLWIDTH_DIGITS, TO_FULLWIDTH_DIGITS, NoTemplate
 
 
-FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
 # 對象線的數量字面:N体/N枚(まで)、全て;「それぞれ」「ずつ」是每一份各 N(`each`);
 # 變數數量「任意の数だけ」記算式字面。寫在物件前的變數數量(「破壊した数だけ相手フィールドの
 # カードを」)與寫在述語前「從」之後的數量(「自分の墓地から１枚選んで」)另帶 placement。
@@ -28,7 +27,6 @@ _COUNT_RE = re.compile(f"^(?P<each>{EACH_PREFIX})?(?P<digits>[０-９]+)(?P<unit
 FORMULA_UPTO_TAIL = "数まで"
 FORMULA_COUNT_TAILS = (FORMULA_COUNT_TAIL, FORMULA_UPTO_TAIL)
 FRONT_COUNT_PATTERN = f"[^、を]+?(?:{'|'.join(FORMULA_COUNT_TAILS)})、?"
-TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 # 存在前提的數量:寫在「存在する」前(「モンスターが２体以上存在する場合」),記在物件的數量格,
 # `placement` 存在前——不接在名詞後,由前提的模板寫。單位另收「種類」(卡名的種類數);
 # 比較是 以上(≥)、以下(≤)、沒寫(=)。

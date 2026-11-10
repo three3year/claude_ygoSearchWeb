@@ -8,9 +8,8 @@
 
 import re
 
-from block_state import REASON_CLAUSE, REASON_REF
 from segment_history import last_segment_doing
-from structure_shape import NoTemplate
+from structure_shape import REASON_CLAUSE, REASON_REF, NoTemplate
 from synonyms import ACTION_PAST
 from zone_phrase import SIDE_WORDS
 

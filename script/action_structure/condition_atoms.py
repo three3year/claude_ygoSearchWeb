@@ -49,7 +49,7 @@ import re
 import position_atoms
 import same_different
 import state_atoms
-from structure_shape import DEFAULT_ZONE_WORD, ZONE_WORDS, zone
+from structure_shape import DEFAULT_ZONE_WORD, REASON_REF, ZONE_WORDS, zone
 
 # 「X」(１体)またはそのカード名が記された:名稱後可帶數量字面(「「ブラック・マジシャン」１体または
 # そのカード名が記されたカード１枚」,票 09),記在卡名原子的 count、模板放回。
@@ -109,7 +109,6 @@ _SAME_AS_RE = re.compile(
     f"^(?P<attrs>(?:{_ATTR})(?:か(?:{_ATTR}))*)が(?P<ref>{_REF})と同じで、?")
 _SAME_VALUE_RE = re.compile(
     f"^(?P<ref>{_REF})の(?P<rattr>{_ATTR})と同じ数値の(?P<attr>{_ATTR})を持つ")
-REASON_REF = "指回的物件找不到"
 
 _SIDE = {"自分": "我方", "相手": "對手"}
 # 控制方另收「自分または相手の」「自分か相手の」(任一方),長的先比。

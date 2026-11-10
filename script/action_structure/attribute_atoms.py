@@ -13,6 +13,7 @@
 import re
 
 from attribute_words import ATTRIBUTE_JA, RACE_JA
+from structure_shape import FULLWIDTH_DIGITS, TO_FULLWIDTH_DIGITS
 
 _race_alt = "|".join(re.escape(w) for w in sorted(RACE_JA, key=len, reverse=True))
 _attr_alt = "|".join(re.escape(w) for w in ATTRIBUTE_JA)
@@ -35,8 +36,6 @@ _NUMBER_RE = re.compile(
 _MORE_RE = re.compile(f"・(?P<word>{_SCALE_WORDS})?(?P<n>[０-９]+)")
 _LEVEL_CMP = {None: "=", "以上": "≥", "以下": "≤"}
 _LEVEL_CMP_TEXT = {v: k or "" for k, v in _LEVEL_CMP.items()}
-_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
-_TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 
 
 def _atom(attr, value):
@@ -81,7 +80,7 @@ def _number_atom(m):
 
     def compare(attr, digits):
         return {"op": "屬性比較", "attr": attr, "cmp": cmp,
-                "value": int(digits.translate(_FULLWIDTH_DIGITS))}
+                "value": int(digits.translate(FULLWIDTH_DIGITS))}
 
     atoms = [compare(attr, m.group("n"))]
     if not m.group("more"):
@@ -99,7 +98,7 @@ def render_number(atom):
     if atom.get("op") != "屬性比較" or atom.get("attr") not in _NUMBER_TEXT \
             or "ref" in atom or atom.get("cmp") not in _LEVEL_CMP_TEXT:
         return None
-    digits = str(atom["value"]).translate(_TO_FULLWIDTH_DIGITS)
+    digits = str(atom["value"]).translate(TO_FULLWIDTH_DIGITS)
     return _NUMBER_TEXT[atom["attr"]] + digits + _LEVEL_CMP_TEXT[atom["cmp"]]
 
 
@@ -139,7 +138,7 @@ def render_scales(atom):
         return None
     pieces, previous = [], None
     for a in atom["args"]:
-        digits = str(a["value"]).translate(_TO_FULLWIDTH_DIGITS)
+        digits = str(a["value"]).translate(TO_FULLWIDTH_DIGITS)
         pieces.append(digits if a["attr"] == previous else _NUMBER_TEXT[a["attr"]] + digits)
         previous = a["attr"]
     return "・".join(pieces)

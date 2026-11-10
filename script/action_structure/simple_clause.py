@@ -31,6 +31,9 @@
 - 物件切點(m3 票 03):物件槽往前吞進前文時(`swallowed_front`),前文由 `clause_front` 先填進段
   (前提、子句前的期間與時機、誰、主語的施事線、名詞前的原因),這裡只解析切點之後的本體;
   「Aと、B」的讀點記在後一條線的 `lead`。模板把主語線寫在誰的位置、子句前的時機寫在最前面。
+- 「〜召喚に成功した」(m3 票 08):「モンスターの特殊召喚に成功」的「の」是助詞、「墓地からの特殊召喚に成功」的
+  「からの」是從;「この効果で特殊召喚に成功した」主語省略時,被召喚的是原因指向的那一段召喚的物件
+  (`cause_phrase.summoned_by`)。對象線的角色照召喚系的根算(`synonyms.is_summon`)。
 """
 
 import re
@@ -41,7 +44,8 @@ import draw
 from agent_phrase import AGENT_PATTERN, agent_side, parse_agent, render_agent
 from block_state import (INFERENCE_TABLE, INTERVAL_PATTERN, INTERVAL_REASON, OBJECT_COUNTER,
                          REASON_CLAUSE, REASON_REF, REASON_TWICE, update_positions)
-from cause_phrase import CAUSE_ALT, EXCLUDE_METHOD_PATTERN, parse_cause_phrase, render_cause_phrase
+from cause_phrase import (CAUSE_ALT, EXCLUDE_METHOD_PATTERN, parse_cause_phrase,
+                          render_cause_phrase, summoned_by)
 from clause_front import (PLACEMENT_AFTER_SUBJECT, front_duration, front_timing,
                           render_front_duration, render_front_timing, subject_line)
 from condition_atoms import TARGETING_THIS_FORMS
@@ -58,8 +62,9 @@ from segment_fields import (CLAUSE_DURATION_PATTERN, DISPLAY_PATTERN, EFFECT_HOL
 from segment_history import declared_earlier, targeted_earlier
 from structure_shape import DISPLAY_WORD, NoTemplate, new_line, position, unparsed, zone
 from synonyms import (ACTION_PAST, ATTACK_PREFIX_PATTERN, ONLY_MARKER, PREDICATE_NOUN_PATTERN,
-                      SELECT_PREFIX, SUMMON_NOUNS, TARGETING_PATTERN, TARGET_REF, action_ancestors,
-                      attack_times, merged_voice, parse_predicates)
+                      SELECT_PREFIX, SUMMON_NOUNS, SUMMON_SUCCESS_AHEAD, TARGETING_PATTERN,
+                      TARGET_REF, action_ancestors, attack_times, is_summon, merged_voice,
+                      parse_predicates)
 from zone_phrase import (FROM_PARTICLES, SIDE_TEXT, SIDE_WORDS, ZONE_PHRASE, ZONE_PHRASE_RE,
                          parse_from, render_zone_text)
 
@@ -72,10 +77,14 @@ _RECIPIENT_REF = ("(?:この効果で)?(?:その|それらの|" + "|".join(ACTIO
 # 述語槽開頭可帶攻擊次數/全體(「２回攻撃」「相手モンスター全てに１回ずつ攻撃」)與含「を/は」的
 # 名詞(攻撃を、効果を、表示形式を、コントロールは),其餘不收「を」。
 _PRED_HEAD = f"(?:{ATTACK_PREFIX_PATTERN})?(?:{PREDICATE_NOUN_PATTERN})?"
+# 寫在述語前的「從」(XをデッキからYに加える);「墓地からの特殊召喚に成功した」的「からの」也是從
+# (m3 票 08),助詞字面記在 `from2_particle`。
+_FROM_BEFORE_PREDICATE = (f"(?:(?P<from2>{ZONE_PHRASE})"
+                          f"(?P<from2_particle>から(?:の{SUMMON_SUCCESS_AHEAD})?))?")
 _SUBJECTLESS_RE = re.compile(
     f"^(?P<cause>{CAUSE_ALT})?"
     f"(?P<timing>{TIMING_PATTERN})?"
-    f"(?:(?P<from2>{ZONE_PHRASE})から)?"
+    f"{_FROM_BEFORE_PREDICATE}"
     f"(?:(?P<to>{ZONE_PHRASE})(?P<to_particle>に|へ))?"
     # 物件省略時到的表示形式照樣寫在述語前(m3 票 07:「Xを選択し、表側攻撃表示で特殊召喚する」)。
     f"(?P<display>{DISPLAY_PATTERN})?"
@@ -111,7 +120,9 @@ _CLAUSE_PATTERN = (
     # 「Xの表示形式を変更」「Xのコントロールは変更」:X 是物件、助詞「の」。
     # 「Xモンスター１体のX召喚を行う」:X 是物件、助詞「の」。
     f"(?P<marker>を|が|は|(?<!で)(?<!に)(?<!から){ONLY_MARKER}"
-    f"|の(?=表示形式|コントロール|(?:{'|'.join(SUMMON_NOUNS)})行))"
+    f"|の(?=表示形式|コントロール|(?:{'|'.join(SUMMON_NOUNS)})行)"
+    # 「モンスターの特殊召喚に成功した」「このカードの召喚に成功した」:物件 + 助詞「の」(m3 票 08)。
+    f"|の{SUMMON_SUCCESS_AHEAD})"
     # 助詞後的讀點(「水属性モンスターは、〜」)記進助詞字面。
     "(?P<marker_pause>、)?"
     f"(?P<pick>{RANDOM_PICK})?"
@@ -130,7 +141,7 @@ _CLAUSE_PATTERN = (
     f"(?:(?P<treat>(?:{TREAT_DELTA_PATTERN}|{EFFECT_HOLDER_PREFIX})?{TREAT_PATTERN})"
     f"|(?P<order>{ORDER_PATTERN}))?"
     # 「從」也可寫在物件後(XをデッキからYに加える);受方(相手に見せて)緊接述語前。
-    f"(?:(?P<from2>{ZONE_PHRASE})から)?"
+    f"{_FROM_BEFORE_PREDICATE}"
     f"(?P<count2>{COUNT_PATTERN})?"
     # 「選んで」:字面留在原述語字面開頭、不標取對象;單獨出現是發動句的選取宣告。
     f"(?P<select>{SELECT_PREFIX})?"
@@ -188,6 +199,12 @@ def split_objects(phrase):
             buf += ch
     parts.append(buf)
     return [p for p in parts if p]
+
+
+def _segment_by_id(state, seg_id):
+    """已抽出的段(自己的區塊與前面的區塊)裡找 id。"""
+    return next(seg for block in (state.block, *state.card["blocks"])
+                for seg in block["segments"] if seg["id"] == seg_id)
 
 
 def is_private_selection(literal, zones):
@@ -326,10 +343,17 @@ def fill_clause(ctx, clause_text):
         seg["unparsed"] = unparsed(REASON_TWICE)
         return
     if g("cause") or g("cause_front"):
-        seg["cause"], reason = parse_cause_phrase(state, g("cause") or g("cause_front"), sentence_start)
+        seg["cause"], reason = parse_cause_phrase(state, g("cause") or g("cause_front"),
+                                                  sentence_start, seg["actions"])
         if seg["cause"] is None:
             seg["unparsed"] = unparsed(reason)
             return
+        if elided and seg["cause"].get("segment"):
+            # 主語省略的「この効果で特殊召喚に成功した」:被召喚的是那一段召喚的物件,不一定是此卡。
+            elided = summoned_by(_segment_by_id(state, seg["cause"]["segment"]))
+            if elided is None:
+                seg["unparsed"] = unparsed(REASON_REF)
+                return
         if g("cause_front"):
             seg["cause"]["placement"] = "名詞前"
     if g("per_turn"):
@@ -360,7 +384,7 @@ def fill_clause(ctx, clause_text):
     if g("from"):
         from_text = g("from") + g("from_particle") + (g("from_pause") or "")
     elif g("from2"):
-        from_text, from_placement = g("from2") + "から", "述語前"
+        from_text, from_placement = g("from2") + g("from2_particle"), "述語前"
     if from_text:
         from_zones = parse_from(g("from") or g("from2"))
         if from_zones is None:
@@ -433,7 +457,8 @@ def fill_clause(ctx, clause_text):
         obj = state.find(obj_id)
         if count is not None and count.get("cmp") == "全部" and obj["source"]["kind"] == "子集":
             obj["source"]["select"] = "全部"
-        role = "被召喚" if summoning else "受事"
+        # 角色照召喚系的根算(m3 票 08):召喚、反轉召喚與通常召喚的對象也是被召喚的那一方。
+        role = "被召喚" if any(is_summon(a) for a in seg["actions"]) else "受事"
         if marks_targeting:
             state.targeted.append(obj_id)
         # 取對象標記:這一句點名的,或效果段裡指回先前被點名的物件(そのモンスター、選択したモンスター)。

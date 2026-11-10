@@ -31,7 +31,8 @@ ZONE_PHRASE = (f"(?:(?:自分か相手|自分|相手|持ち主|自身)の?)?(?:{
 _FROM_RE = re.compile("^(?:(?P<side>自分か相手|自分|相手|持ち主|自身)の?)?(?P<zones>.+)$")
 ZONE_PHRASE_RE = re.compile(f"^{ZONE_PHRASE}$")
 SIDE_TEXT = {v: k for k, v in SIDE_WORDS.items()}
-_POSITION_PARTICLES = FROM_PARTICLES + ("に", "へ")
+# 「墓地からの(特殊召喚に成功した)」的「からの」排在「の」前:先比長的,才拆得回區域短語。
+_POSITION_PARTICLES = ("からの",) + FROM_PARTICLES + ("に", "へ")
 
 
 def parse_from(phrase):

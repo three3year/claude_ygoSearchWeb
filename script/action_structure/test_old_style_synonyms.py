@@ -203,5 +203,40 @@ class SameMechanismOldAndNewTest(OldStyleFixture):
             self.assertEqual(check_card(self.structure(cid)), [], cid)
 
 
+DEMON_GIANT = 84341431  # デーモンの巨神(五段動詞「払う」的「う」語尾)
+DEMON_GIANT_TEXT = ("①：モンスターゾーンのこのカードが効果で破壊される場合、"
+                    "代わりに５００LPを払う事ができる。")
+MELFFY_LASSY = 34800281  # メルフィー・ラッシィ(「S召喚を行う事ができる」)
+MELFFY_LASSY_TEXT = ("①：自分フィールドの獣族モンスターが手札に戻った自分・相手ターンに発動できる。"
+                     "このカードを手札から特殊召喚する。その後、このカードと手札の「メルフィー」"
+                     "モンスターのみを素材としてS召喚を行う事ができる。")
+
+
+class GodanTailTest(unittest.TestCase):
+    """五段動詞的「う」語尾(払う、行う)與「〜事ができる」同一套接法:「払う事ができる」是支付、
+    「S召喚を行う事ができる」仍是 S召喚。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(DEMON_GIANT, name_ja="デーモンの巨神", level=6, race=0x8,
+                          attribute=0x20, atk=2500),
+                     card(MELFFY_LASSY, name_ja="メルフィー・ラッシィ", level=2, race=0x4000,
+                          attribute=0x2, atk=600)]
+        faqs = [faq(DEMON_GIANT, "デーモンの巨神", DEMON_GIANT_TEXT),
+                faq(MELFFY_LASSY, "メルフィー・ラッシィ", MELFFY_LASSY_TEXT)]
+        cls.structures, _ = build_structures(cls.cards, faqs)
+
+    def test_pay_with_u_tail_is_pay(self):
+        result = run_query(self.structures, self.cards, {"actions": ["支付"], "replacement": True})
+        self.assertIn(DEMON_GIANT, [hit["id"] for hit in result["hits"]])
+
+    def test_perform_summon_with_u_tail_is_still_that_summon(self):
+        """述語認得出(S召喚),未解析組列的是物件(「〜のみを素材として」),不是語尾不明。"""
+        result = run_query(self.structures, self.cards, {"actions": ["S召喚"]})
+        reasons = [seg["reason"] for entry in result["unparsed"] if entry["id"] == MELFFY_LASSY
+                   for seg in entry["segments"]]
+        self.assertEqual(reasons, ["物件解析不出"])
+
+
 if __name__ == "__main__":
     unittest.main()

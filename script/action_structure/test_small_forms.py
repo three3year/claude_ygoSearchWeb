@@ -163,10 +163,15 @@ class LifePointPaymentTest(unittest.TestCase):
         cls.structures = build(cls.cards, [faq(MASTER_GIG, "マスター・ジーグ", MASTER_GIG_TEXT)])
 
     def test_master_gig_pay_hits_the_cost_written_in_full(self):
-        seg, = hit_segments(self.structures, self.cards, MASTER_GIG, actions=["支付"])
-        self.assertEqual((seg["kind"], seg["text"]), ("代價", "１０００ライフポイントを払って"))
-        self.assertEqual((seg["amount"]["value"], seg["amount"]["unit"]), (1000, "ライフポイント"))
-        self.assertEqual(seg["lines"], [])
+        """查「支付」命中代價段(只看效果段就不命中);這一段沒有物件,指定卡代入不命中。
+        數量「１０００ライフポイント」由數量格寫回(整張通過反向檢查,見下)。"""
+        segs = hit_segments(self.structures, self.cards, MASTER_GIG, actions=["支付"],
+                            kinds=["代價"])
+        self.assertEqual([seg["text"] for seg in segs], ["１０００ライフポイントを払って"])
+        self.assertEqual(hit_segments(self.structures, self.cards, MASTER_GIG, actions=["支付"],
+                                      kinds=["效果"]), [])
+        self.assertEqual(hit_segments(self.structures, self.cards, MASTER_GIG, actions=["支付"],
+                                      card=MASTER_GIG), [])
 
     def test_master_gig_pay_is_not_a_destroy_cost(self):
         segs = hit_segments(self.structures, self.cards, MASTER_GIG, actions=["破壞"],
@@ -176,16 +181,15 @@ class LifePointPaymentTest(unittest.TestCase):
     def test_master_gig_whole_card_passes_reverse_check(self):
         self.assertEqual(check_card(own(self.structures, MASTER_GIG)), [])
 
-    def test_unit_written_in_full_and_short_have_the_same_structure(self):
-        shapes = []
+    def test_unit_written_in_full_and_short_read_the_same(self):
+        """單位寫「LP」或「ライフポイント」:同樣命中支付的代價段,整張都寫回原文(單位照字面)。"""
         for unit in ("LP", "ライフポイント"):
-            cards, structures = library(f"①：５００{unit}を払って発動できる。このカードを破壊する。")
-            seg, = hit_segments(structures, cards, SELF, actions=["支付"])
-            self.assertEqual(check_card(own(structures, SELF)), [])
-            self.assertEqual(seg["amount"]["unit"], unit)
-            shapes.append({k: v for k, v in seg.items() if k not in ("span", "text", "amount")}
-                          | {"value": seg["amount"]["value"]})
-        self.assertEqual(shapes[0], shapes[1])
+            with self.subTest(unit=unit):
+                cards, structures = library(
+                    f"①：５００{unit}を払って発動できる。このカードを破壊する。")
+                segs = hit_segments(structures, cards, SELF, actions=["支付"], kinds=["代價"])
+                self.assertEqual([seg["text"] for seg in segs], [f"５００{unit}を払って"])
+                self.assertEqual(check_card(own(structures, SELF)), [])
 
     def test_formula_amount_stays_unparsed(self):
         """「１００の倍數のライフポイントを払って」是算式,不收:不命中、列進未解析組。"""
@@ -230,14 +234,15 @@ class ChangePositionFormsTest(unittest.TestCase):
         structures = build(cards, [faq(GUILLOTINE, "断頭台の惨劇", GUILLOTINE_TEXT)])
         seg, = hit_segments(structures, cards, GUILLOTINE, actions=["變更表示形式"],
                             kinds=["條件"], include_condition=True)
-        self.assertEqual((seg["voice"], seg["trigger"]), ("被動", "時"))
+        self.assertEqual(seg["text"], "相手フィールド上に表側攻撃表示で存在するモンスターの表示形式が"
+                                      "表側守備表示に変更された時")
         self.assertEqual(hit_segments(structures, cards, GUILLOTINE, actions=["變更表示形式"]), [])
         self.assertEqual(check_card(own(structures, GUILLOTINE)), [])
 
     def test_position_written_as_object_of_change(self):
         cards, structures = library("①：このカードの表示形式を表側攻撃表示に変更する。")
         seg, = hit_segments(structures, cards, SELF, actions=["變更表示形式"], card=SELF)
-        self.assertEqual(seg["predicate"], "表示形式を表側攻撃表示に変更する")
+        self.assertEqual(seg["text"], "このカードの表示形式を表側攻撃表示に変更する")
         self.assertEqual(check_card(own(structures, SELF)), [])
 
     def test_does_not_become_defense_position(self):
@@ -245,7 +250,7 @@ class ChangePositionFormsTest(unittest.TestCase):
         cards, structures = library("①：このカードは守備表示にならない。")
         seg, = hit_segments(structures, cards, SELF, actions=["變更表示形式"],
                             polarities=["不會"])
-        self.assertEqual(seg["predicate"], "守備表示にならない")
+        self.assertEqual(seg["text"], "このカードは守備表示にならない")
         self.assertEqual(hit_segments(structures, cards, SELF, actions=["變更表示形式"]), [])
         self.assertEqual(check_card(own(structures, SELF)), [])
 
@@ -265,7 +270,8 @@ class DamageStepTriggerTest(unittest.TestCase):
     """觸發形閉集的「ダメージステップ時」「戦闘ダメージ計算時」(與「ダメージ計算時」同一種戰鬥時點)。"""
 
     def conditions(self, cards, structures, cid, **query):
-        return [(s["text"], s["trigger"], s["unparsed"]) for s in hit_segments(
+        """命中的條件段的原文(條件段的範圍到觸發形為止;解析不出的段不會命中)。"""
+        return [s["text"] for s in hit_segments(
             structures, cards, cid, kinds=["條件"], include_condition=True, **query)]
 
     def test_shield_warrior_battle_damage_calculation_timing(self):
@@ -276,22 +282,26 @@ class DamageStepTriggerTest(unittest.TestCase):
         structures = build(cards, [faq(SHIELD_WARRIOR, "シールド・ウォリアー",
                                        SHIELD_WARRIOR_TEXT)])
         self.assertEqual(self.conditions(cards, structures, SHIELD_WARRIOR),
-                         [("戦闘ダメージ計算時", "戦闘ダメージ計算時", None)])
+                         ["戦闘ダメージ計算時"])
         self.assertEqual(check_card(own(structures, SHIELD_WARRIOR)), [])
-        cost, = hit_segments(structures, cards, SHIELD_WARRIOR, actions=["除外"],
-                             from_zones=["墓地"], card=SHIELD_WARRIOR)
-        self.assertEqual(cost["kind"], "代價")
+        banish = dict(actions=["除外"], from_zones=["墓地"], card=SHIELD_WARRIOR)
+        self.assertEqual(
+            [s["text"] for s in hit_segments(structures, cards, SHIELD_WARRIOR, kinds=["代價"],
+                                             **banish)],
+            ["自分の墓地に存在するこのカードをゲームから除外して"])
+        self.assertEqual(hit_segments(structures, cards, SHIELD_WARRIOR, kinds=["效果"],
+                                      **banish), [])
 
     def test_lavalval_ignis_battles_at_damage_step(self):
-        """「このカードが戦闘を行うダメージステップ時に」:條件段命中戰鬥(施事是此卡),觸發形是整個時點字面。"""
+        """「このカードが戦闘を行うダメージステップ時に」:條件段命中戰鬥(施事是此卡)——觸發形是整個時點
+        字面,子句「このカードが戦闘を行う」才解析得出;這一段寫回原文相符。"""
         cards = [card(LAVALVAL_IGNIS, name_ja="ラヴァルバル・イグニス", type=0x800021, level=3,
                       race=0x1, attribute=0x4, atk=1800, setcode=0x39)]
         structures = build(cards, [faq(LAVALVAL_IGNIS, "ラヴァルバル・イグニス",
                                        LAVALVAL_IGNIS_TEXT)])
         seg, = hit_segments(structures, cards, LAVALVAL_IGNIS, actions=["戰鬥"],
                             card=LAVALVAL_IGNIS, kinds=["條件"], include_condition=True)
-        self.assertEqual((seg["text"], seg["trigger"]),
-                         ("このカードが戦闘を行うダメージステップ時", "ダメージステップ時"))
+        self.assertEqual(seg["text"], "このカードが戦闘を行うダメージステップ時")
         self.assertEqual(hit_segments(structures, cards, LAVALVAL_IGNIS, actions=["戰鬥"]), [])
         failures = [f for f in check_card(own(structures, LAVALVAL_IGNIS))
                     if f["segment"] == seg["id"]]
@@ -302,8 +312,8 @@ class DamageStepTriggerTest(unittest.TestCase):
         cards, structures = library(
             "①：このカードが破壊された場合、ダメージステップ時に発動する事ができる。"
             "このカードを除外する。")
-        self.assertEqual([c[1:] for c in self.conditions(cards, structures, SELF)],
-                         [("場合", None), ("ダメージステップ時", None)])
+        self.assertEqual(self.conditions(cards, structures, SELF),
+                         ["このカードが破壊された場合", "ダメージステップ時"])
         self.assertEqual(check_card(own(structures, SELF)), [])
 
     def test_damage_step_start_and_end_are_still_their_own_triggers(self):
@@ -311,8 +321,10 @@ class DamageStepTriggerTest(unittest.TestCase):
             with self.subTest(trigger=trigger):
                 cards, structures = library(
                     f"①：このカードが戦闘を行う{trigger}に発動できる。このカードを破壊する。")
-                self.assertEqual([c[1] for c in self.conditions(cards, structures, SELF)],
-                                 [trigger])
+                self.assertEqual(
+                    self.conditions(cards, structures, SELF, actions=["戰鬥"], card=SELF),
+                    [f"このカードが戦闘を行う{trigger}"])
+                self.assertEqual(check_card(own(structures, SELF)), [])
 
 
 DARK_BRIBE = 77538567       # 魔宮の賄賂
@@ -416,8 +428,7 @@ class PlaceAndRemoveStemTest(unittest.TestCase):
         placed = dict(actions=["放置"], to_zones=[{"zone": "魔陷區", "side": "我方"}],
                       kinds=["條件"], include_condition=True)
         seg, = hit_segments(structures, cards, CRYSTAL_BRILLIANCE, card=7093411, **placed)
-        self.assertEqual((seg["text"], seg["voice"]),
-                         ("自分の魔法＆罠ゾーンに「宝玉獣」カードが置かれた場合", "被動"))
+        self.assertEqual(seg["text"], "自分の魔法＆罠ゾーンに「宝玉獣」カードが置かれた場合")
         self.assertEqual(hit_segments(structures, cards, CRYSTAL_BRILLIANCE,
                                       card=CRYSTAL_BRILLIANCE, **placed), [])
         self.assertEqual(hit_segments(structures, cards, CRYSTAL_BRILLIANCE, actions=["放置"]), [])
@@ -433,33 +444,36 @@ class PlaceAndRemoveStemTest(unittest.TestCase):
                                        CRYSTAL_CORE_TEXT)])
         seg, = hit_segments(structures, cards, CRYSTAL_CORE, actions=["去除"],
                             polarities=["不能"], kinds=["條件"], include_condition=True)
-        self.assertEqual((seg["text"], seg["trigger"]), ("取り除けない場合", "場合"))
+        self.assertEqual(seg["text"], "取り除けない場合")
         removes = hit_segments(structures, cards, CRYSTAL_CORE, actions=["去除"],
                                include_condition=True, kinds=["條件", "效果"])
         self.assertEqual([s["text"] for s in removes], ["このカードのカウンターを１つ取り除く"])
         self.assertEqual(block_failures(own(structures, CRYSTAL_CORE), "④"), [])
 
     def test_existing_forms_keep_their_reading(self):
-        for text, action, predicate, voice in (
-                ("①：このカードを自分の魔法＆罠ゾーンに表側表示で置く。", "放置", "置く", "主動"),
-                ("①：このカードを自分の魔法＆罠ゾーンに表側表示で置く事ができる。",
-                 "放置", "置く事ができる", "主動"),
-                ("①：このカードを自分の魔法＆罠ゾーンに表側表示で置き、手札を１枚捨てる。",
-                 "放置", "置き", "主動"),
-                ("①：このカードを自分の魔法＆罠ゾーンに置いて発動できる。手札を１枚捨てる。",
-                 "放置", "置いて", "主動"),
+        """各語尾(終止、可能、連用、て形、被動)照舊命中那個動作詞的段,整張寫回原文相符
+        (述語字面拆得回動作詞與態才寫得回)。"""
+        for text, action, clause in (
+                ("①：このカードを自分の魔法＆罠ゾーンに表側表示で置く。", "放置",
+                 "このカードを自分の魔法＆罠ゾーンに表側表示で置く"),
+                ("①：このカードを自分の魔法＆罠ゾーンに表側表示で置く事ができる。", "放置",
+                 "このカードを自分の魔法＆罠ゾーンに表側表示で置く事ができる"),
+                ("①：このカードを自分の魔法＆罠ゾーンに表側表示で置き、手札を１枚捨てる。", "放置",
+                 "このカードを自分の魔法＆罠ゾーンに表側表示で置き"),
+                ("①：このカードを自分の魔法＆罠ゾーンに置いて発動できる。手札を１枚捨てる。", "放置",
+                 "このカードを自分の魔法＆罠ゾーンに置いて"),
                 ("①：自分の魔法＆罠ゾーンにカードが置かれた場合に発動できる。手札を１枚捨てる。",
-                 "放置", "置かれた", "被動"),
-                ("①：このカードのX素材を１つ取り除く。", "去除", "取り除く", "主動"),
-                ("①：このカードのX素材を１つ取り除いて発動できる。手札を１枚捨てる。",
-                 "去除", "取り除いて", "主動"),
+                 "放置", "自分の魔法＆罠ゾーンにカードが置かれた場合"),
+                ("①：このカードのX素材を１つ取り除く。", "去除", "このカードのX素材を１つ取り除く"),
+                ("①：このカードのX素材を１つ取り除いて発動できる。手札を１枚捨てる。", "去除",
+                 "このカードのX素材を１つ取り除いて"),
                 ("①：このカードのX素材が全て取り除かれた場合に発動できる。手札を１枚捨てる。",
-                 "去除", "取り除かれた", "被動")):
+                 "去除", "このカードのX素材が全て取り除かれた場合")):
             with self.subTest(text=text):
                 cards, structures = library(text)
                 seg, = hit_segments(structures, cards, SELF, actions=[action],
                                     include_condition=True, kinds=["條件", "代價", "效果"])
-                self.assertEqual((seg["predicate"], seg["voice"]), (predicate, voice))
+                self.assertEqual(seg["text"], clause)
                 self.assertEqual(check_card(own(structures, SELF)), [])
 
     def unparsed_group(self, text, action):

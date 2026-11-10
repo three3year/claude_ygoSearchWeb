@@ -127,7 +127,6 @@ LEARNER_DEVICE_TEXT = (
     "自分の墓地のモンスターの数×２００アップする。②：このカードがフィールドから墓地へ送られた"
     "ターンのエンドフェイズに発動できる。このカードを自分フィールドにセットする。"
     "この効果でセットしたこのカードはフィールドから離れた場合に除外される。")
-LEAVE_SENTENCE = "この効果でセットしたこのカードはフィールドから離れた場合に除外される"
 
 
 class LearnerDeviceTest(unittest.TestCase):
@@ -153,10 +152,9 @@ class LearnerDeviceTest(unittest.TestCase):
         self.assertIn(LEARNER_DEVICE, hits(self.cards, self.structures, actions=["覆蓋"],
                                            from_zones=["墓地"], card=LEARNER_DEVICE))
 
-    def test_activation_sentence_writes_back(self):
-        """發動句的兩段(條件段、只有前提的段)寫回原文相符;剩下沒過的只有離場那一句。"""
-        self.assertLessEqual(set(failed_texts(own(self.structures, LEARNER_DEVICE))),
-                             {LEAVE_SENTENCE})
+    def test_whole_card_writes_back(self):
+        """整張寫回原文相符:發動句的兩段(條件段、只有前提的段)與離場那一句都過。"""
+        self.assertEqual(check_card(own(self.structures, LEARNER_DEVICE)), [])
 
 
 SAFFIRA = 56350972          # 竜姫神サフィラ
@@ -205,21 +203,16 @@ class SaffiraTimepointsTest(unittest.TestCase):
         self.assertNotIn(FIRST_TIMEPOINT, self.hit_texts(actions=["儀式召喚"]))
 
     def test_second_timepoint_is_its_own_condition_segment(self):
-        """第二個時點的動作子句自成條件段,不與第一個時點黏在一起:開條件段查「送墓」時,
-        命中它,或句首的「存在し、」前提解析不出時列進未解析組;關掉條件段就兩邊都沒有。"""
+        """第二個時點的動作子句自成條件段(句首的「存在し、」是它的前提),不與第一個時點黏在一起:
+        開條件段查「送墓,從手牌」命中的就是它;關掉條件段不命中,也不列進未解析組。"""
         query = dict(actions=["送墓"], from_zones=["手牌"])
-        on = run_query(self.structures, self.cards, {**query, "include_condition": True})
-        listed = [h["id"] for h in on["hits"]] + on["groups"]["未解析"]
-        self.assertIn(SAFFIRA, listed)
+        self.assertEqual(self.hit_texts(include_condition=True, **query), [SECOND_TIMEPOINT])
         off = run_query(self.structures, self.cards, query)
         self.assertNotIn(SAFFIRA, [h["id"] for h in off["hits"]] + off["groups"]["未解析"])
 
     def test_timepoint_enumeration_writes_back(self):
-        """時點列舉與分歧引導句寫回原文相符:區塊沒有段外殘留、段樹有模板;
-        還沒過的只剩第二個時點的動作子句。"""
-        failed = failed_texts(self.own)
-        self.assertNotIn(None, failed)
-        self.assertLessEqual(set(failed), {SECOND_TIMEPOINT})
+        """整張寫回原文相符:時點列舉、分歧引導句與兩個時點的動作子句都過,區塊沒有段外殘留。"""
+        self.assertEqual(check_card(self.own), [])
 
     def test_branches_still_hit(self):
         """● 各支照舊命中(分歧的各支不因引導句的前提改變)。"""
@@ -273,9 +266,8 @@ class TgWerewolfTest(unittest.TestCase):
     def test_activation_sentence_is_parsed_and_the_phase_writes_back(self):
         """發動句不標「發動句解析不出」;「のエンドフェイズに」那一段寫回原文相符。沒過的只剩
         條件段的述語「破壊され墓地へ送られた」(連用形被動串接)。"""
-        reasons = {s["unparsed"]["reason"] for b in self.own["blocks"] for s in b["segments"]
-                   if s["unparsed"]}
-        self.assertNotIn("發動句解析不出", reasons)
+        details = [f["detail"] for f in check_card(self.own)]
+        self.assertNotIn("段解析不出:發動句解析不出", details)
         self.assertLessEqual(set(failed_texts(self.own)), {TG_DESTROYED})
 
 
@@ -354,16 +346,18 @@ class TurnPhaseFormsTest(unittest.TestCase):
 
     def test_forms_outside_this_rule_stay_unparsed(self):
         """不收的寫法照舊解析不出、不被這條規則誤認:「〜エンドフェイズ時まで」(期間)、
-        「〜した相手ターンのエンドフェイズに」(回合另帶方)。"""
-        for text in (
-                "このカードの効果は発動したターンのエンドフェイズ時まで適用される。",
-                "①：このカードが墓地へ送られた相手ターンのエンドフェイズに発動できる。"
-                "このカードを特殊召喚する。"):
+        「〜した相手ターンのエンドフェイズに」(回合另帶方)。被誤認的話,「ターン」前的動作子句會成條件段、
+        開條件段查那個動作詞就命中;照舊解析不出則不命中、列進未解析組。"""
+        for text, action in (
+                ("このカードの効果は発動したターンのエンドフェイズ時まで適用される。", "發動"),
+                ("①：このカードが墓地へ送られた相手ターンのエンドフェイズに発動できる。"
+                 "このカードを特殊召喚する。", "送墓")):
             with self.subTest(text=text):
-                _, structures = synthetic(text)
-                segs = [s for b in own(structures, OLD_STYLE)["blocks"] for s in b["segments"]]
-                self.assertFalse([s for s in segs if s["trigger"] == "ターン"])
-                self.assertTrue(segs[0]["unparsed"])
+                cards, structures = synthetic(text)
+                result = run_query(structures, cards,
+                                   {"actions": [action], "include_condition": True})
+                self.assertNotIn(OLD_STYLE, [h["id"] for h in result["hits"]])
+                self.assertIn(OLD_STYLE, result["groups"]["未解析"])
 
     def test_turn_comma_then_game_state_keeps_the_condition_segment(self):
         """「〜したターン、自分メインフェイズに発動できる」:條件段不掉成段外殘留。"""

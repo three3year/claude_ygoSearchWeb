@@ -21,6 +21,7 @@ class _WithArchetypes(_Golden):
     def setUpClass(cls):
         cls.structures, _ = build_structures(cls.cards, cls.faq, cls.archetypes)
 
+
 JUDGMENT_THUNDER = 59080
 JUDGMENT_THUNDER_TEXT = (
     "このカード名はルール上「マギストス」カード、「エンディミオン」カードとしても扱う。\n"
@@ -221,6 +222,27 @@ class KarakuriInnTest(_Golden):
 
     def test_the_segment_writes_back_to_its_text(self):
         self.assertWritesBack(KARAKURI_INN, "その自分のモンスターの表示形式を変更し")
+
+
+CHAOS_SORCERER = 9596126
+CHAOS_SORCERER_TEXT = (
+    "このカードは通常召喚できない。\n"
+    "自分の墓地から光・闇属性モンスターを１体ずつ除外した場合に特殊召喚できる。\n"
+    "①：１ターンに１度、フィールドの表側表示モンスター１体を対象として発動できる"
+    "（この効果を発動するターン、このカードは攻撃できない）。その表側表示モンスターを除外する。")
+
+
+class ChaosSorcererTest(_Golden):
+    """カオス・ソーサラー 9596126:前文帶括號注記的取對象句這輪解析不出,「その表側表示モンスター」沒有
+    物件可指——那一段不算命中,列進未解析組(不另建一個物件頂替)。"""
+    cards = [card(CHAOS_SORCERER, name_ja="カオス・ソーサラー", type=0x2000021, level=6, race=0x2,
+                  attribute=0x20, atk=2300)]
+    faq = [faq(CHAOS_SORCERER, "カオス・ソーサラー", CHAOS_SORCERER_TEXT)]
+    QUERY = dict(actions=["除外"], kinds=["效果"])
+
+    def test_a_reference_with_nothing_to_point_at_is_listed_as_unparsed(self):
+        self.assertNotIn(CHAOS_SORCERER, self.hits(**self.QUERY))
+        self.assertIn(CHAOS_SORCERER, self.unparsed(**self.QUERY))
 
 
 INVASION_WAVE = 18816758

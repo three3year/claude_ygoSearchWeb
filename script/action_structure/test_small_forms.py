@@ -383,5 +383,106 @@ class InferredDeckSideTest(unittest.TestCase):
                 self.assertEqual(check_card(own(structures, SELF)), [])
 
 
+CRYSTAL_BRILLIANCE = 47149093   # 宝玉の玲瓏
+CRYSTAL_BRILLIANCE_TEXT = (
+    "①：「宝玉の玲瓏」は自分フィールドに１枚しか表側表示で存在できない。"
+    "②：自分フィールドの「宝玉獣」モンスターの攻撃力は、その元々の守備力分アップする。"
+    "③：自分の魔法＆罠ゾーンに「宝玉獣」カードが置かれた場合、魔法＆罠ゾーンの表側表示のこのカードを"
+    "墓地へ送って発動できる（ダメージステップでも発動可能）。自分の手札・墓地から「宝玉獣」モンスター"
+    "１体を選んで特殊召喚する。このターン、自分が受ける全てのダメージは半分になる。")
+CRYSTAL_CORE = 22790789         # 巨大戦艦 クリスタル・コア
+CRYSTAL_CORE_TEXT = (
+    "①：このカードが召喚した場合に発動する。このカードにカウンターを３つ置く。\n"
+    "②：このカードは戦闘では破壊されない。\n"
+    "③：１ターンに１度、相手フィールドの表側攻撃表示モンスター１体を対象として発動できる。"
+    "その相手の表側攻撃表示モンスターを表側守備表示にする。\n"
+    "④：このカードが戦闘を行ったダメージステップ終了時に発動する。"
+    "このカードのカウンターを１つ取り除く。取り除けない場合、このカードを破壊する。")
+CRYSTAL_BEASTS = [{"setcode": 0x1034, "hex": "0x1034", "names_ja": ["宝玉獣"],
+                   "name_zh": "寶玉獸", "source": "strings.conf"}]
+
+
+class PlaceAndRemoveStemTest(unittest.TestCase):
+    """放置、去除是單字幹(置、取り除)加カ行的語尾;被動「置かれた」、不能「取り除けない」解析得出;
+    字幹假朋友(位置、装置、置換)不算放置的字面。"""
+
+    def test_crystal_brilliance_card_placed_in_spell_trap_zone(self):
+        """③「自分の魔法＆罠ゾーンに「宝玉獣」カードが置かれた場合」:條件段命中「放置,到我方魔陷區」(被動)。"""
+        cards = [card(CRYSTAL_BRILLIANCE, name_ja="宝玉の玲瓏", type=0x20004, setcode=0x34),
+                 card(7093411, name_ja="宝玉獣 サファイア・ペガサス", setcode=0x1034)]
+        structures, _ = build_structures(
+            cards, [faq(CRYSTAL_BRILLIANCE, "宝玉の玲瓏", CRYSTAL_BRILLIANCE_TEXT)],
+            archetypes=CRYSTAL_BEASTS)
+        placed = dict(actions=["放置"], to_zones=[{"zone": "魔陷區", "side": "我方"}],
+                      kinds=["條件"], include_condition=True)
+        seg, = hit_segments(structures, cards, CRYSTAL_BRILLIANCE, card=7093411, **placed)
+        self.assertEqual((seg["text"], seg["voice"]),
+                         ("自分の魔法＆罠ゾーンに「宝玉獣」カードが置かれた場合", "被動"))
+        self.assertEqual(hit_segments(structures, cards, CRYSTAL_BRILLIANCE,
+                                      card=CRYSTAL_BRILLIANCE, **placed), [])
+        self.assertEqual(hit_segments(structures, cards, CRYSTAL_BRILLIANCE, actions=["放置"]), [])
+        failures = [f for f in check_card(own(structures, CRYSTAL_BRILLIANCE))
+                    if f["segment"] == seg["id"]]
+        self.assertEqual(failures, [])
+
+    def test_crystal_core_cannot_remove_condition(self):
+        """④「取り除けない場合、このカードを破壊する」:條件段命中去除(極性 不能),④ 通過反向檢查。"""
+        cards = [card(CRYSTAL_CORE, name_ja="巨大戦艦 クリスタル・コア", level=5, race=0x20,
+                      attribute=0x2, atk=2100, setcode=0x15)]
+        structures = build(cards, [faq(CRYSTAL_CORE, "巨大戦艦 クリスタル・コア",
+                                       CRYSTAL_CORE_TEXT)])
+        seg, = hit_segments(structures, cards, CRYSTAL_CORE, actions=["去除"],
+                            polarities=["不能"], kinds=["條件"], include_condition=True)
+        self.assertEqual((seg["text"], seg["trigger"]), ("取り除けない場合", "場合"))
+        removes = hit_segments(structures, cards, CRYSTAL_CORE, actions=["去除"],
+                               include_condition=True, kinds=["條件", "效果"])
+        self.assertEqual([s["text"] for s in removes], ["このカードのカウンターを１つ取り除く"])
+        self.assertEqual(block_failures(own(structures, CRYSTAL_CORE), "④"), [])
+
+    def test_existing_forms_keep_their_reading(self):
+        for text, action, predicate, voice in (
+                ("①：このカードを自分の魔法＆罠ゾーンに表側表示で置く。", "放置", "置く", "主動"),
+                ("①：このカードを自分の魔法＆罠ゾーンに表側表示で置く事ができる。",
+                 "放置", "置く事ができる", "主動"),
+                ("①：このカードを自分の魔法＆罠ゾーンに表側表示で置き、手札を１枚捨てる。",
+                 "放置", "置き", "主動"),
+                ("①：このカードを自分の魔法＆罠ゾーンに置いて発動できる。手札を１枚捨てる。",
+                 "放置", "置いて", "主動"),
+                ("①：自分の魔法＆罠ゾーンにカードが置かれた場合に発動できる。手札を１枚捨てる。",
+                 "放置", "置かれた", "被動"),
+                ("①：このカードのX素材を１つ取り除く。", "去除", "取り除く", "主動"),
+                ("①：このカードのX素材を１つ取り除いて発動できる。手札を１枚捨てる。",
+                 "去除", "取り除いて", "主動"),
+                ("①：このカードのX素材が全て取り除かれた場合に発動できる。手札を１枚捨てる。",
+                 "去除", "取り除かれた", "被動")):
+            with self.subTest(text=text):
+                cards, structures = library(text)
+                seg, = hit_segments(structures, cards, SELF, actions=[action],
+                                    include_condition=True, kinds=["條件", "代價", "效果"])
+                self.assertEqual((seg["predicate"], seg["voice"]), (predicate, voice))
+                self.assertEqual(check_card(own(structures, SELF)), [])
+
+    def unparsed_group(self, text, action):
+        cards, structures = library(text)
+        result = run_query(structures, cards, {"actions": [action], "include_condition": True})
+        self.assertEqual(result["groups"]["全部"], [])
+        return result["groups"]["未解析"]
+
+    def test_false_friends_are_not_place_literals(self):
+        """解析不出的段只含「位置」「装置」「置換」:不列進放置的未解析組。"""
+        for text in ("①：このカードの位置を、他の自分のメインモンスターゾーンに移動する。",
+                     "①：「強制脱出装置」のカード名が記されたカードを確認する。",
+                     "①：「置換融合」のカード名が記されたカードを確認する。"):
+            with self.subTest(text=text):
+                self.assertEqual(self.unparsed_group(text, "放置"), [])
+
+    def test_unparsed_place_and_remove_forms_are_listed(self):
+        """字面真的是放置、去除(這輪沒收的語尾)而段解析不出:照樣列進未解析組。"""
+        self.assertEqual(self.unparsed_group(
+            "①：魔力カウンターが置かれているこのカードは直接攻撃できる。", "放置"), [SELF])
+        self.assertEqual(self.unparsed_group(
+            "①：このカードのX素材を取り除かずに発動する事もできる。", "去除"), [SELF])
+
+
 if __name__ == "__main__":
     unittest.main()

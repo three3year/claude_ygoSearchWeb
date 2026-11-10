@@ -147,6 +147,8 @@ PREDICATE_STEMS = (
     *((f"重ねて{word}と", XYZ_ATTACH_ACTION, None) for word in XYZ_MATERIAL_WORDS),
     *((f"{MATERIAL_OWNER_PARTICLE}{word}{particle}", XYZ_ATTACH_ACTION, None)
       for word in XYZ_MATERIAL_WORDS for particle in "とに"),
+    # 舊式儀式怪獸的召喚手續「「X」により降臨」(m3 票 11):降臨 = 儀式召喚。
+    ("降臨", "儀式召喚", None),
 )
 _STEMS_LONGEST_FIRST = sorted(PREDICATE_STEMS, key=lambda row: len(row[0]), reverse=True)
 # 字幹出現在別的詞裡、不是那個動作的字面(查詢未解析組比字面時扣掉)。

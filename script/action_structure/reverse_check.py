@@ -25,6 +25,7 @@ import re
 from typing import Callable, NamedTuple
 
 import battle_clause
+import clause_front
 import damage
 import draw
 import existence_clause
@@ -36,7 +37,7 @@ from archetype_table import fold_width
 from block_split import LABEL_WIDTH
 from block_state import ACTION_REF_RE, REF_RE
 from object_render import render_object
-from premise import render_premise, split_premise
+from premise import render_premise, split_premise, timepoint_glue
 from report_common import card_order, safe_label
 from segment_extract import BATTLE_TIMING_REF, PREMISE_DONE
 from segment_fields import REPLACEMENT_PREFIX, is_clause_duration, split_duration
@@ -134,6 +135,7 @@ WHOLE_TEMPLATES = (
 # 子句模板:寫段的子句本體,前後由 `render_segment` 套上句首期間、前提、「代わりに」與觸發形。
 # 依序試、第一個適用的負責寫(最後一列永遠適用);加一種句型的模板 = 在它前面加一列。
 # 存在前提與抽牌的模板不吃 `self_id`:裡面的「このカード」一律照物件0 寫。
+SIMPLE_TEMPLATE = "簡單子句"
 CLAUSE_TEMPLATES = (
     SegmentTemplate("存在前提", lambda t: t.existence is not None,
                     lambda t: existence_clause.render_clause(t.seg, t.existence, t.card,
@@ -150,7 +152,7 @@ CLAUSE_TEMPLATES = (
                     lambda t: stat_modify.render_clause(t.seg, t.card, t.objects, t.names,
                                                         t.self_id, t.inner_duration),
                     INNER_OWN),
-    SegmentTemplate("戰鬥", lambda t: any(line["role"] == "施事" for line in t.seg["lines"]),
+    SegmentTemplate("戰鬥", lambda t: battle_clause.is_battle_segment(t.seg),
                     lambda t: battle_clause.render_clause(t.seg, t.card, t.objects, t.names,
                                                           t.self_id)),
     SegmentTemplate("抽牌", lambda t: draw.is_draw_segment(t.seg, t.objects),
@@ -159,7 +161,7 @@ CLAUSE_TEMPLATES = (
                     lambda t: material_summon.render_clause(t.seg, t.card, t.objects, t.names,
                                                             t.self_id, t.inner_duration),
                     INNER_BEFORE_PREDICATE),
-    SegmentTemplate("簡單子句", lambda t: True,
+    SegmentTemplate(SIMPLE_TEMPLATE, lambda t: True,
                     lambda t: simple_clause.render_clause(t.seg, t.card, t.objects, t.names,
                                                           t.self_id, t.inner_duration),
                     INNER_BEFORE_PREDICATE),
@@ -192,9 +194,20 @@ def render_segment(seg, card, self_id="o0"):
     leading, existence = split_premise(seg["premise"])
     premise_only = (seg["kind"] == "條件" and leading is not None
                     and existence is None and not seg["actions"] and not seg["lines"])
-    prefix, inner_duration = split_duration(seg["duration"])
+    # 物件切點切出來的期間(「ダメージステップ終了時まで」):寫在子句前的接在前提之後、子句本體之前;
+    # 寫在誰/主語後的只有簡單子句模板寫得出(它自己讀段的期間)。
+    front_period = ""
+    placement = clause_front.front_duration(seg["duration"])
+    if placement:
+        prefix, inner_duration = "", None
+        if placement == clause_front.PLACEMENT_FRONT:
+            front_period = clause_front.render_front_duration(seg["duration"])
+    else:
+        prefix, inner_duration = split_duration(seg["duration"])
     t = t._replace(existence=existence, inner_duration=inner_duration)
     template = _first_template(CLAUSE_TEMPLATES, t)
+    if placement == clause_front.PLACEMENT_AFTER_SUBJECT and template.name != SIMPLE_TEMPLATE:
+        raise NoTemplate("期間無模板:主語後")
     if (inner_duration is not None and template.inner_duration != INNER_OWN
             and not is_clause_duration(inner_duration)):
         raise NoTemplate("期間無模板:句中")
@@ -211,6 +224,7 @@ def render_segment(seg, card, self_id="o0"):
                                           followed=not premise_only, self_id=self_id)
     if premise_only:
         return prefix
+    prefix += front_period
     if not seg["lines"] and not seg["amount"] and not damage.is_damage_segment(seg):
         raise NoTemplate("段無對象線")
     if seg["replaces"]:
@@ -249,6 +263,18 @@ def _tree_glue(block, card, names):
 
     return [_PUNCT_RE.sub("", piece)
             for piece in tree_glue(block, render_premise_text, render_tree_object)]
+
+
+def _timepoint_glue(block):
+    """段的前提裡時點列舉前面各支的字面(「の〈階段〉及び、」,在段外),去掉標點後供殘留比對。
+    前提無模板的段自己已列無模板,這裡略過。"""
+    pieces = []
+    for seg in block["segments"]:
+        try:
+            pieces.extend(_PUNCT_RE.sub("", piece) for piece in timepoint_glue(seg["premise"]))
+        except NoTemplate:
+            continue
+    return pieces
 
 
 def _holes(block, card):
@@ -352,6 +378,7 @@ def check_card(card):
         except NoTemplate as e:
             failures.append(_failure(card, block, None, REASON_NO_TEMPLATE, str(e)))
             glue_failed = True
+        glue = glue + _timepoint_glue(block)
         for piece in _residue(block, glue, glue_failed, holes):
             failures.append(_failure(card, block, None, REASON_RESIDUE,
                                      piece.strip("。、\n ")))

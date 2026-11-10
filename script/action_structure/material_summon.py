@@ -98,6 +98,9 @@ def fill_clause(ctx, clause_text):
                                         ctx.sentence_start)
     if materials is None:
         seg["unparsed"] = unparsed(reason)
+        if m.group("literal") in LEFT_HALF_FORMS:
+            # 左半的素材解不出:不拖累右半的召喚段,請呼叫端照連用形串接切成兩段。
+            ctx.split_at = m.start("rest")
         return True
     rest = m.group("rest")
     if m.group("subject"):

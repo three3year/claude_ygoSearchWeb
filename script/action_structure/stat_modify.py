@@ -8,7 +8,9 @@
 
 import re
 
-from block_state import REASON_OBJECT, REASON_REF, segment_at
+from block_state import REASON_OBJECT, REASON_REF, REASON_TWICE, segment_at
+from clause_front import front_duration
+from object_boundary import find_cut
 from object_render import render_object
 from segment_fields import (MENTION_FORMS, is_delayed, mention_head, parse_modify,
                             parse_treat_delta, render_modify, render_treat_delta)
@@ -56,8 +58,30 @@ def _modify_subject(subject, marker, state, sentence_start):
     return line, None
 
 
+def swallowed_front(state, clause):
+    """性質變更句的主語往前吞進了多少不屬於它的字面(從子句開頭起算的字數;0 = 沒有),判法同
+    `simple_clause.swallowed_front`:「ダメージステップの間このカードの攻撃力は〜」的主語是このカード。"""
+    modify = parse_modify(clause)
+    subject = modify and modify["subject"]
+    if not subject or subject in MENTION_FORMS or not clause.startswith(subject):
+        return 0
+    mention = next((form for form in sorted(MENTION_FORMS, key=len, reverse=True)
+                    if subject.endswith(form)), None)
+    if mention:
+        # 「ターン終了時までその攻撃力は」:回指字面前面整截要正好在切點結束。
+        front = subject[:-len(mention)]
+        return len(front) if find_cut(front + "カード") == len(front) else 0
+    m = _MODIFY_SUBJECT_RE.match(subject)
+    if not m or state.parses_cleanly(m.group("phrase")):
+        return 0
+    whole = subject[:-1]
+    cut = find_cut(whole)
+    return cut if cut and state.names_object(whole[cut:]) else 0
+
+
 def fill_clause(ctx, clause):
-    """性質變更句(「その攻撃力は〜倍になる」)→ 填格回 True;不是這個句型回 False。"""
+    """性質變更句(「その攻撃力は〜倍になる」)→ 填格回 True;不是這個句型回 False。
+    段上可能已有子句前文填好的期間、時機(`clause_front`),句中沒寫才沿用。"""
     modify = parse_modify(clause)
     if modify is None:
         return False
@@ -69,8 +93,12 @@ def fill_clause(ctx, clause):
     seg["actions"] = [MODIFY_ACTION]
     seg["predicate"], seg["voice"] = modify["predicate"], "主動"
     seg["modified"] = modify["modified"]
+    if modify["duration"] and front_duration(seg["duration"]):
+        seg["unparsed"] = unparsed(REASON_TWICE)
+        return True
     seg["duration"] = modify["duration"] or seg["duration"]
-    ctx.inherit_timing()
+    if seg["timing"] is None:
+        ctx.inherit_timing()
     line["targeting"] = line["object"] in state.targeted and not is_delayed(seg)
     seg["lines"] = [line]
     return True

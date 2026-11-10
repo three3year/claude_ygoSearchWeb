@@ -100,15 +100,16 @@ def is_attached(line):
     return bool(line["to"]) and line["to"].get("object") is not None
 
 
-def render_owner(seg, card, objects, names, self_id):
+def render_owner(seg, lines, card, objects, names, self_id):
     """成為超量素材的所屬格 → 字面(「そのモンスターの下に」「このカードの」「下に」「その」);段沒有這一格回空字串。
-    字面由超量素材物件的所屬重寫,要與到的 `text` 相符;沒寫所屬(或只寫「その」)時,所屬要是前一段召喚的物件。"""
-    attached = [line for line in seg["lines"] if is_attached(line)]
+    `lines` 是物件槽的對象線(主語的線不算)。字面由超量素材物件的所屬重寫,要與到的 `text` 相符;
+    沒寫所屬(或只寫「その」)時,所屬要是前一段召喚的物件。"""
+    attached = [line for line in lines if is_attached(line)]
     if not attached:
         return ""
     to = attached[0]["to"]
     material = objects.get(to["object"])
-    if (len(attached) != len(seg["lines"]) or any(line["to"] != to for line in attached)
+    if (len(attached) != len(lines) or any(line["to"] != to for line in attached)
             or seg["actions"] != [XYZ_ATTACH_ACTION] or to["zones"] or to["form"]
             or to["source"] != "明寫" or material is None
             or material["kind"] != OBJECT_MATERIAL or material["condition"] is not None

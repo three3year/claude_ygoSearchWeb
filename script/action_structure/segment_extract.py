@@ -30,8 +30,10 @@
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
 """
 import re
+from dataclasses import replace
 
 import battle_clause
+import clause_front
 import damage
 import draw
 import existence_clause
@@ -41,15 +43,18 @@ import simple_clause
 import stat_modify
 from block_state import (ClauseContext, INTERVAL_RE, INTERVAL_REASON, KIND_PROCEDURE,
                          KIND_RESTRICTION, segment_at)
+from cause_phrase import DESCENT_TAIL
 from clause_join import JOIN, split_continuative
 from names_attributes import parse_treat_as
+from object_boundary import REASON_FRONT, find_cut
 from premise import is_lasting, split_premises
 from segment_fields import (REPLACEMENT_PREFIX, find_battle_duration, inherited_duration, lasting,
                             parse_cause, parse_leading_duration)
 from structure_shape import BATTLE_TRIGGERS, unparsed
 from synonyms import ACTIVATION_SUFFIXES, COST_GLUE
 from treat_as import treat_as_segment
-from zone_phrase import parse_from, zone_literal
+from turn_phase import PREMISE_HAPPENED, TURN_TRIGGER, build_timepoints, match_timepoints
+from zone_phrase import ZONE_PHRASE, parse_from, zone_literal
 
 
 _ACTIVATION_RE = re.compile("^(?P<body>.*?)(?P<suffix>" + "|".join(ACTIVATION_SUFFIXES) + ")$")
@@ -94,9 +99,8 @@ _SUMMON_TRIGGER_RE = re.compile(f"^{_COND}(?P<trig>時|場合)(?:に、|に|、)
 BLOCK_SUMMON, BLOCK_MATERIAL = "召喚條件", "素材"
 # 「〜したターン、」(票 09):句首的動作子句 + ターン 是條件段(觸發形 ターン),後面的段的前提引用它
 # (`本回合發生過`);「相手ターンに」是遊戲狀態前提,不走這裡(前面要有 した/成功した)。
-TURN_TRIGGER = "ターン"
+# 「〜したターンの〈階段〉に」是另一種句型,在 `turn_phase`(觸發形與前提原子的名字也定義在那裡)。
 _TURN_RE = re.compile("^(?P<cond>[^、]+?(?:した|に成功した))ターン、(?P<rest>.+)$")
-PREMISE_HAPPENED = "本回合發生過"
 # 重複到停為止(spec 故事 28、GLOSSARY「未結構化」):「「〜」処理を繰り返す」「〜までこの効果を
 # (最大で７回)繰り返す」「〜処理を〜の数だけ繰り返す」。要有「処理を」或「この効果を」才算,
 # 通常怪獸的故事文「攻撃を繰り返す」不是效果。句尾可帶「（最大４回）」。
@@ -144,21 +148,60 @@ def sentences(text, body_start, end=None):
 # 都不是就當簡單子句。加一種句型 = 加一個模組(`fill_clause(ctx, 子句) -> bool`)再排進這張表。
 CLAUSE_FORMS = (existence_clause.fill_clause, damage.fill_clause, battle_clause.fill_clause,
                 draw.fill_clause, material_summon.fill_clause)
+_FROM_FRONT_RE = re.compile("から、?$")
+_ZONE_FROM_RE = re.compile(f"(?P<zones>{ZONE_PHRASE})から、?$")
 
 
 def fill_clause(ctx, clause_text):
-    """子句 → 填進 `ctx.seg`;失敗就在段上標原因。"""
+    """子句 → 填進 `ctx.seg`;失敗就在段上標原因。
+    簡單子句的物件槽往前吞進了前文時(物件切點,`simple_clause.swallowed_front`):前文交給
+    `clause_front`,子句本體從切點起重新照各句型解析;前文認不得的,本體照常解析(物件、位置、
+    後文的回指都接得上),但這一段標解析不出。"""
     for fill in CLAUSE_FORMS:
         if fill(ctx, clause_text):
             return
-    simple_clause.fill_clause(ctx, clause_text)
+    cut = simple_clause.swallowed_front(ctx.state, clause_text)
+    # 前文尾端認得的「區域から」是子句本體的「從」(「このターンのエンドフェイズに、デッキから〜」),還給本體。
+    # 區域短語前面那截自己要正好在切點結束(「自分のエクストラデッキから」的「デッキから」不是)。
+    given_back = _ZONE_FROM_RE.search(clause_text[:cut])
+    if given_back and parse_from(given_back.group("zones")) and (
+            find_cut(clause_text[:given_back.start()] + "カード") == given_back.start()):
+        cut = given_back.start()
+    if not cut:
+        simple_clause.fill_clause(ctx, clause_text)
+        return
+    _fill_after_front(ctx, clause_text, cut, fill_clause)
+
+
+def _fill_after_front(ctx, clause_text, cut, fill_body):
+    """子句在 `cut` 切成前文與本體:前文交給 `clause_front`,本體交給 `fill_body(ctx, 本體)`。
+    前文認不得時本體照常解析,最後才把段標成解析不出(本體自己解析不出時留它的原因)。"""
+    seg = ctx.seg
+    front = clause_text[:cut]
+    if not clause_front.fill_front(ctx, front) and _FROM_FRONT_RE.search(front) \
+            and seg["unparsed"]["reason"] == REASON_FRONT:
+        # 前文以「〜から」收尾:物件前的「從」,區域短語認不得(「自分のエクストラデッキから」「その中から」)。
+        seg["unparsed"] = unparsed(simple_clause.REASON_FROM)
+    front_failure, seg["unparsed"] = seg["unparsed"], None
+    fill_body(replace(ctx, sentence_start=ctx.sentence_start + cut), clause_text[cut:])
+    seg["unparsed"] = seg["unparsed"] or front_failure
 
 
 def _fill_effect(ctx, clause):
-    """效果子句:性質變更句(「その攻撃力は〜倍になる」)走它的句型,其餘照一般的子句句型。"""
+    """效果子句:性質變更句(「その攻撃力は〜倍になる」)走它的句型,其餘照一般的子句句型。
+    性質變更句的主語吞進前文時同樣先切(`stat_modify.swallowed_front`);它的模板只寫得出前提、
+    次數限制與子句前的期間,前文帶了別的格(時機、誰、主語、原因)就算認不得。"""
+    seg = ctx.seg
+    cut = stat_modify.swallowed_front(ctx.state, clause)
+    if cut:
+        _fill_after_front(ctx, clause, cut, stat_modify.fill_clause)
+        if not seg["unparsed"] and (clause_front.front_timing(seg["timing"]) or seg["agent"]
+                                    or seg["cause"] or len(seg["lines"]) != 1):
+            seg["unparsed"] = unparsed(REASON_FRONT)
+        return
     if stat_modify.fill_clause(ctx, clause):
         return
-    ctx.seg["duration"] = find_battle_duration(clause)
+    seg["duration"] = find_battle_duration(clause)
     fill_clause(ctx, clause)
 
 
@@ -211,7 +254,11 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
         # 效果子句接在「事で、」後面,它的段範圍從自己起算(前提已在代價段上)。
         start += len(clause) - len(cost.group("rest"))
         clause, seg_start = cost.group("rest"), None
-    for i, (offset, piece) in enumerate(split_continuative(clause)):
+    pieces = split_continuative(clause)
+    i = -1
+    while i + 1 < len(pieces):
+        i += 1
+        offset, piece = pieces[i]
         piece_start = start + offset
         join = JOIN if i else None
         then = _THEN_RE.match(piece) if i else None
@@ -219,12 +266,29 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
             piece_start += then.end()
             piece = piece[then.end():]
             join = SEQUENCE_JOIN
+        # 子句開頭的「さらに」是接著詞(同句首的「さらに、」),留在段外;段的範圍前面還有前提時不剝
+        # (接著詞會落在段的中間)。
+        also = _ALSO_RE.match(piece) if (i or seg_start in (None, piece_start)) else None
+        if also and piece[also.end():]:
+            piece_start += also.end()
+            piece = piece[also.end():]
+            if i == 0:
+                seg_start = None
         seg = segment_at(state, "效果", seg_start if (i == 0 and seg_start is not None)
                          else piece_start, piece_start + len(piece))
         if replaces:
             seg["replaces"] = replaces
-        _fill_effect(ClauseContext(seg, state, piece_start,
-                                   segs[-1][0]["timing"] if i and not then else None), piece)
+        ctx = ClauseContext(seg, state, piece_start,
+                            segs[-1][0]["timing"] if i and not then else None)
+        _fill_effect(ctx, piece)
+        if ctx.split_at is not None:
+            # 「Xを融合素材とし、Yを融合召喚する」的 X 解不出(m3 票 09):不併段,照連用形串接切成兩段——
+            # 這一段縮到左半、標解析不出,右半排成下一截照常解析。
+            pieces.insert(i + 1, (piece_start - start + ctx.split_at, piece[ctx.split_at:]))
+            piece = piece[:ctx.split_at].rstrip("、")
+            seg["span"][1] = piece_start + len(piece)
+            seg["text"] = state.block["text"][seg["span"][0]:seg["span"][1]]
+            seg["duration"] = find_battle_duration(piece)
         _hold_topic(seg, piece, state, piece_start)
         segs.append((seg, join))
         derived = stat_modify.derived_segment(seg, state)
@@ -235,6 +299,7 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
 
 SEQUENCE_JOIN = "先後"
 _THEN_RE = re.compile("^その後、?")
+_ALSO_RE = re.compile("^さらに、?")
 
 
 def _hold_topic(seg, piece, state, piece_start):
@@ -247,6 +312,18 @@ def _hold_topic(seg, piece, state, piece_start):
         state.hold_topic(m.group("topic"), piece_start)
     else:
         state.lose_topic()
+
+
+def _after_turn_segments(turn_seg, points, segs):
+    """「〜したターン」的條件段排到句子其餘各段前面。「〜したターン、」的(`turn_seg`)由後面第一個段以前提
+    引用;「〜したターンの〈階段〉に」的(`points`)前提已經併進句首前提。"""
+    if turn_seg is not None:
+        if segs:
+            _attach_premise(segs[0][0], {"op": PREMISE_HAPPENED, "segment": turn_seg["id"]})
+        return [(turn_seg, None)] + segs
+    if points is not None:
+        return [(seg, None) for seg in points.segs] + segs
+    return segs
 
 
 def _apply_duration(segs, duration):
@@ -265,8 +342,11 @@ def parse_sentence(state, start, end, activation_lead=False):
     text = state.block["text"]
     sent = text[start:end]
     state.start_sentence()
-    summon_block = state.block["kind"] == BLOCK_SUMMON
-    if state.block["kind"] == BLOCK_MATERIAL:
+    # 不以句號結尾的降臨句(「「X」により降臨」後直接換行)被區塊切分歸成素材行:它是召喚手續,
+    # 照召喚條件句解析。
+    descent = state.block["kind"] == BLOCK_MATERIAL and sent.endswith(DESCENT_TAIL)
+    summon_block = state.block["kind"] == BLOCK_SUMMON or descent
+    if state.block["kind"] == BLOCK_MATERIAL and not descent:
         return [(material_line.material_segment(state, start, end), None)]
     treat = parse_treat_as(sent)
     if treat is not None:
@@ -298,13 +378,19 @@ def parse_sentence(state, start, end, activation_lead=False):
         fill_clause(ClauseContext(turn_seg, state, start), turn.group("cond"))
         start += turn.start("rest")
         body = turn.group("rest")
+    points = None if turn else match_timepoints(body)
+    if points is not None:
+        # 「〜したターンの〈階段〉に」(可列舉):各時點的動作子句是條件段,「の〈階段〉に」是後面那一段的前提。
+        points = build_timepoints(state, body, start, points, fill_clause, parse_from, zone_literal)
+        body = text[points.rest_start:start + len(body)]
+        start = points.rest_start
     interval = INTERVAL_RE.match(body)
     if interval:
         # 句首的「１ターンに１度、」(①：１ターンに１度、〜):次數限制不記,進略過文本。
         state.omit(start, interval.group(), INTERVAL_REASON)
         start += interval.end()
         body = body[interval.end():]
-    seg_from = start
+    seg_from = start if points is None else points.carrier_start
     lead, lead_length = parse_leading_duration(body)
     if lead is not None:
         start += lead_length
@@ -312,12 +398,18 @@ def parse_sentence(state, start, end, activation_lead=False):
     premise, premise_end, clause_start = split_premises(body, state, start,
                                                         parse_from, zone_literal)
     body = text[clause_start:start + len(body)]
+    if points is not None:
+        if premise is None:
+            premise_end = points.text_end
+        atoms = points.atoms + (premise["args"] if premise and premise.get("op") == "且"
+                                else [premise] if premise else [])
+        premise = atoms[0] if len(atoms) == 1 else {"op": "且", "args": atoms}
     if act and premise and body in ("", "に"):
         seg = segment_at(state, "條件", seg_from, premise_end)
         seg["premise"] = premise
         if lead is not None:
             seg["duration"] = lead
-        return [(seg, None)]
+        return _after_turn_segments(turn_seg, points, [(seg, None)])
     segs = []
     trigger_re = _TRIGGER_RE if act else (_SUMMON_TRIGGER_RE if summon_block
                                          else _OLD_TRIGGER_RE)
@@ -365,10 +457,7 @@ def parse_sentence(state, start, end, activation_lead=False):
         _apply_duration(segs[1:], inherited_duration(lead))
     if is_lasting(premise):
         _apply_duration(segs, lasting())
-    if turn_seg is not None:
-        if segs:
-            _attach_premise(segs[0][0], {"op": PREMISE_HAPPENED, "segment": turn_seg["id"]})
-        segs.insert(0, (turn_seg, None))
+    segs = _after_turn_segments(turn_seg, points, segs)
     if summon_block:
         # 召喚條件區塊的段類別(spec):做的是召喚手續(含「〜した場合」的手續子句),
         # 不能/只能/必須的是限制。

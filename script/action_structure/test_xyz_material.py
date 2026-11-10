@@ -133,6 +133,15 @@ BAHAMUT_SHARK_TEXT = (
     "このターン、相手は墓地のカードの効果を発動できない。")
 BAHAMUT_SHARK_BOOST = ("このカードが水属性モンスターをX素材としている場合、"
                        "自分フィールドの水属性モンスターの攻撃力は５００アップする")
+FUTURE_FUSION_NOVA = 92058902   # 未来融合－フューチャー・フュージョン・ノヴァ(左半的素材解不出)
+FUTURE_FUSION_NOVA_TEXT = (
+    "このカード名のカードは１ターンに１枚しか発動できない。\n"
+    "①：このカードの発動時の効果処理として、「サイバー・ドラゴン」を含む自分のデッキのモンスターを"
+    "融合素材とし、機械族・光属性の融合モンスター１体を融合召喚する。"
+    "このカードがフィールドから離れる時にそのモンスターは破壊される。"
+    "そのモンスターが破壊される時にこのカードは破壊される。"
+    "このカードの発動後、ターン終了時まで自分は、機械族モンスターしか特殊召喚できず、"
+    "この効果で特殊召喚したモンスターでしか攻撃宣言できない。")
 FUSION_MONSTER = 0x61
 ARCHETYPES = [
     {"setcode": 0x135, "hex": "0x135", "names_ja": ["＠イグニスター"], "name_zh": "@伊格尼斯者",
@@ -215,8 +224,14 @@ class MaterialFixture(unittest.TestCase):
                  attribute=0x2, atk=1700),
             card(1008, name_ja="地屬性的融合怪獸", type=FUSION_MONSTER, level=6, race=0x1,
                  attribute=0x1),
+            card(FUTURE_FUSION_NOVA, name_ja="未来融合－フューチャー・フュージョン・ノヴァ",
+                 type=0x20002, setcode=0x46),
+            card(70095154, name_ja="サイバー・ドラゴン", level=5, race=0x20, attribute=0x10,
+                 atk=2100, setcode=0x1093),
         ]
         cls.faq = [
+            faq(FUTURE_FUSION_NOVA, "未来融合－フューチャー・フュージョン・ノヴァ",
+                FUTURE_FUSION_NOVA_TEXT),
             faq(TEMPLE_GUARDIAN, "神殿の守護神", TEMPLE_GUARDIAN_TEXT),
             faq(XYZ_REBORN, "エクシーズ・リボーン", XYZ_REBORN_TEXT),
             faq(DOYON, "ドヨン＠イグニスター", DOYON_TEXT),
@@ -362,6 +377,13 @@ class MaterialInSummonSegmentTest(MaterialFixture):
         self.assertEqual(self.hit_texts(CROWLEY, actions=["融合召喚"], from_zones=["手牌"],
                                         card=1002), [CROWLEY_FUSION])
         self.assertEqual(self.hit_texts(CROWLEY, actions=["融合召喚"], card=PSY_CIRCUIT), [])
+
+    def test_unresolved_materials_do_not_take_the_summon_down(self):
+        """未来融合－フューチャー・フュージョン・ノヴァ「このカードの発動時の効果処理として、〜を融合素材とし、
+        機械族・光属性の融合モンスター１体を融合召喚する」:左半的素材解不出時不併段,只有左半標解析不出,
+        查「融合召喚」照舊命中右半。"""
+        self.assertEqual(self.hit_texts(FUTURE_FUSION_NOVA, actions=["融合召喚"]),
+                         ["機械族・光属性の融合モンスター１体を融合召喚する"])
 
     def test_material_before_the_summoned_card(self):
         """黎明の堕天使ルシフェル「「堕天使ルシフェル」を素材としてこのカードが融合召喚に成功した場合」:

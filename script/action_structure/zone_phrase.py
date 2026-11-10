@@ -15,7 +15,7 @@ from structure_shape import DEFAULT_ZONE_WORD, NoTemplate, ZONE_WORDS, zone
 
 # 區域字面表在 structure_shape.ZONE_WORDS(三處共用)。
 # 場上系區域:沒寫方時不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
-FIELD_ZONES = ("場上", "EX怪獸區", "怪獸區", "魔陷區", "P區", "場地區")
+FIELD_ZONES = ("場上", "EX怪獸區", "怪獸區", "魔陷區", "P區", "場地區", "主要怪獸區")
 # 從的助詞:新式「墓地の」「墓地から」;舊式連體修飾「墓地に存在するX」(= 墓地のX)。
 FROM_PARTICLES = ("から", "の", "に存在する")
 # 「持ち主の手札に戻す」的持ち主:值持有者,靜態判不了是哪一方,查詢指定我方/對手時不命中。

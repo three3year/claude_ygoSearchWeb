@@ -9,7 +9,7 @@ from card_structure import build_structures
 from test_golden import SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT, card, faq
 
 TAIL_UNKNOWN = 11111111   # 述語語尾「させる」(使役)同義表沒收:段解析不出
-MODS_UNKNOWN = 22222222   # 物件修飾「攻撃力１０００以下の」目前解析不出
+MODS_UNKNOWN = 22222222   # 物件修飾「攻撃力が一番高い」解析不出(群體的最高,m3 不收)
 NO_TEXT = 33333333        # 無官方日文
 BLACK_MAGICIAN = 46986414
 
@@ -27,7 +27,7 @@ def fixtures():
         faq(TAIL_UNKNOWN, "語尾不明",
             "①：手札からモンスター１体を特殊召喚させる。"),
         faq(MODS_UNKNOWN, "修飾不明",
-            "①：手札から攻撃力１０００以下のモンスター１体を特殊召喚する。"),
+            "①：手札から攻撃力が一番高いモンスター１体を特殊召喚する。"),
     ]
     return cards, entries
 

@@ -386,6 +386,8 @@ REASON_MODS = "物件修飾解析不出"
 REASON_REF = "指回的物件找不到"
 REASON_ACTIVATION = "發動句解析不出"
 REASON_CAUSE = "原因解析不出"
+# 同一格(原因、期間、數量)在句中寫了兩處:不猜哪一處算數。
+REASON_TWICE = "同一格寫了兩處"
 REASON_DISPLAY = "表示形式沒有到"
 
 
@@ -1109,7 +1111,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
             return
         seg["recipient"] = {"object": obj_id, "ref": ref}
     if g("cause") and g("cause_front"):
-        seg["unparsed"] = unparsed(REASON_CAUSE)
+        seg["unparsed"] = unparsed(REASON_TWICE)
         return
     if g("cause") or g("cause_front"):
         seg["cause"], reason = state.cause_at(g("cause") or g("cause_front"), sentence_start)
@@ -1124,7 +1126,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         state.omit(m.start("interval") + sentence_start, g("interval"), INTERVAL_REASON)
     if g("duration"):
         if seg["duration"] is not None:
-            seg["unparsed"] = unparsed(REASON_CLAUSE)
+            seg["unparsed"] = unparsed(REASON_TWICE)
             return
         seg["duration"] = parse_duration(g("duration"))
     if g("timing"):
@@ -1166,7 +1168,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                       (("count", None), ("count2", "述語前"), ("count_front", "名詞前"))
                       if g(group)]
     if len(written_counts) > 1:
-        seg["unparsed"] = unparsed(REASON_CLAUSE)
+        seg["unparsed"] = unparsed(REASON_TWICE)
         return
     count = floating_count(*written_counts[0]) if written_counts else None
     amount = _AMOUNT_RE.match(g("objects") or "")
@@ -1278,11 +1280,11 @@ def _fill_draw(seg, m, kind, state, sentence_start, inherited_timing=None):
             seg["unparsed"] = unparsed(reason)
             return
     count, ambiguous = draw.parse_count(g("count"), g("count_front"), g("count_lead"), g("each"))
-    if ambiguous or (g("each") and count is None):
-        seg["unparsed"] = unparsed(REASON_CLAUSE)
+    if ambiguous or (g("cause") and g("rule")):
+        seg["unparsed"] = unparsed(REASON_TWICE)
         return
-    if g("cause") and g("rule"):
-        seg["unparsed"] = unparsed(REASON_CAUSE)
+    if g("each") and count is None:
+        seg["unparsed"] = unparsed(REASON_CLAUSE)
         return
     if g("cause"):
         seg["cause"], reason = state.cause_at(g("cause"), sentence_start)
@@ -1364,7 +1366,7 @@ def _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing
     verbal = g("cause") or g("cause_pre")
     if verbal:
         if cause is not None:
-            seg["unparsed"] = unparsed(REASON_CAUSE)
+            seg["unparsed"] = unparsed(REASON_TWICE)
             return True
         cause, reason = state.cause_at(verbal, sentence_start)
         if cause is None:
@@ -1388,7 +1390,7 @@ def _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing
         cause["source"] = source
     seg["cause"] = cause
     if g("amount_pre") and g("amount"):
-        seg["unparsed"] = unparsed(REASON_CLAUSE)
+        seg["unparsed"] = unparsed(REASON_TWICE)
         return True
     amount_text = g("amount_pre") or g("amount")
     if amount_text:

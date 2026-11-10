@@ -260,5 +260,26 @@ class DamageTemplateTest(unittest.TestCase):
         self.assertEqual(recipients, ["對手", "對手", "我方", "雙方各自", "對手"])
 
 
+BYE_BYE_DAMAGE = 20735371   # バイバイダメージ
+BYE_BYE_DAMAGE_TEXT = (
+    "①：自分のモンスターが攻撃されたダメージ計算時に発動できる。その自分のモンスターはその戦闘"
+    "では破壊されない。その戦闘で自分が戦闘ダメージを受けた時、相手はその数値の倍の効果ダメージを"
+    "受ける。")
+
+
+class CauseWrittenTwiceTest(unittest.TestCase):
+    """「その戦闘で自分が戦闘ダメージを受けた時」:原因寫在述語前(その戦闘で)又寫在名詞(戦闘ダメージ),
+    不猜哪一處算數;未解析組列的原因是「同一格寫了兩處」,不是一般的原因解析不出。"""
+
+    def test_unparsed_reason_says_written_twice(self):
+        cards = [card(BYE_BYE_DAMAGE, name_ja="バイバイダメージ", type=0x4)]
+        structures, _ = build_structures(
+            cards, [faq(BYE_BYE_DAMAGE, "バイバイダメージ", BYE_BYE_DAMAGE_TEXT)])
+        result = run_query(structures, cards, {"actions": ["傷害"], "include_condition": True})
+        reasons = {seg["text"]: seg["reason"] for entry in result["unparsed"]
+                   for seg in entry["segments"]}
+        self.assertEqual(reasons.get("その戦闘で自分が戦闘ダメージを受けた時"), "同一格寫了兩處")
+
+
 if __name__ == "__main__":
     unittest.main()

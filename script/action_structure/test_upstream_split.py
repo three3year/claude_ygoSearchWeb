@@ -1,7 +1,6 @@
-"""上游切分(m2 票 03):「限り」前提、句首期間、略過文本的新原因。
+"""上游切分:「限り」前提、句首期間、略過文本的新原因。
 
-走接縫一(查詢判斷)與接縫二(反向檢查);票上指明「只驗前提剝得掉、段的 duration 有值」
-的兩張卡(動作詞留給票 04)另讀段的前提與期間格,因為那兩段的述語本票還解析不出。
+走接縫一(查詢判斷)與接縫二(反向檢查)。
 官方文本逐字寫在測試裡(`data/sources/` 不入版控)。
 """
 import unittest
@@ -50,7 +49,6 @@ BLACK_MAGICIAN = 46986414
 
 
 def build(cid, name_ja, text, **kw):
-    """一張卡加一張被「」點名用的ブラック・マジシャン;回傳 (卡片總表, 該卡的結構列表)。"""
     cards = [card(cid, name_ja=name_ja, **kw),
              card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7, race=0x2,
                   attribute=0x20, atk=2500)]
@@ -64,7 +62,6 @@ def hits(cards, structures, **query):
 
 
 def segment_starting(structure, prefix):
-    """原文以 prefix 開頭的段(段的範圍從前提起算)。"""
     for block in structure["blocks"]:
         for seg in block["segments"]:
             if block["text"][seg["span"][0]:].startswith(prefix):
@@ -76,8 +73,7 @@ class KagiriPremiseTest(unittest.TestCase):
     """「〜に存在する限り、」剝成前提(form 限り、),段的期間記持續。"""
 
     def test_vanguard_premise_is_stripped_and_segment_lasts(self):
-        """切り込み隊長 ②:前提是此卡的位置原子、form「限り、」,段的期間是持續
-        (述語「攻撃対象に選択できない」留給票 04)。"""
+        """切り込み隊長 ②:前提是此卡的位置原子、form「限り、」,段的期間是持續。"""
         _, structures = build(VANGUARD, "切り込み隊長", VANGUARD_TEXT)
         seg = segment_starting(structures[0], "このカードがモンスターゾーンに存在する限り")
         self.assertEqual(seg["premise"]["op"], "位置")
@@ -126,7 +122,7 @@ class LeadingDurationTest(unittest.TestCase):
     """句首時間狀語剝成期間,套到同一句後面所有段;字面在第一段,反向檢查原樣寫回。"""
 
     def test_bahamut_shark_after_activation_until_end_of_turn(self):
-        """バハムート・シャーク ③ 句:期間本回合、range 發動後(動作詞攻擊留給票 04)。"""
+        """バハムート・シャーク ③ 句:期間本回合、range 發動後。"""
         _, structures = build(BAHAMUT_SHARK, "バハムート・シャーク", BAHAMUT_SHARK_TEXT,
                               type=0x800021)
         seg = segment_starting(structures[0], "この効果の発動後")
@@ -228,7 +224,7 @@ class OmittedTextTest(unittest.TestCase):
 
     def test_summon_reactor_limit_sentence_inside_a_block_is_omitted(self):
         """サモン・リアクター・AI:補足情報的『』引用讓「この効果は１ターンに１度しか使用
-        できない」留在效果區塊裡;句子層把它收進略過文本(原因次數限制),不再是解析不出的段。"""
+        できない」留在效果區塊裡;句子層把它收進略過文本(原因次數限制)。"""
         entry = faq(SUMMON_REACTOR, "サモン・リアクター・AI", SUMMON_REACTOR_TEXT)
         entry["supplement"] = SUMMON_REACTOR_SUPPLEMENT
         cards = [card(SUMMON_REACTOR, name_ja="サモン・リアクター・AI")]
@@ -245,7 +241,7 @@ class OmittedTextTest(unittest.TestCase):
         self.assertNotIn("この効果は１ターンに１度しか使用できない", listed)
         details = [f["detail"] for f in check_card(structure)]
         self.assertFalse([f for f in check_card(structure) if f["reason"] == "段外殘留"])
-        self.assertTrue(details)   # 其他段本票還解析不出,只確認略過的那句不殘留
+        self.assertTrue(details)
 
 
 if __name__ == "__main__":

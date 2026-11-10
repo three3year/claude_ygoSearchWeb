@@ -6,7 +6,7 @@
 
 - 位置:「Xが<區域>に存在する(場合|状態で|限り|時)、」X 是このカード或任何物件短語。
   「存在する」前可寫表示形式(「表側表示で存在する」),原子帶選填 `face`(表側/裏側)、
-  `position`(攻擊/守備),只記有寫的一半(m2 票 05)。此卡 →
+  `position`(攻擊/守備),只記有寫的一半。此卡 →
   `位置` 原子並把物件0 在本區塊的目前位置設成該區域(後續段的「從」繼承、不算推得);
   其他物件 → 新建物件(初始位置 = 該區域)加 `存在` 原子。
 - 存在:「<區域>にXが存在する(場合|状態で|限り|時)、」→ 新建物件 + `存在` 原子;
@@ -48,15 +48,14 @@ _GAME_STATE_RE = re.compile(
     "^(?P<side>自分・相手の|自分|相手)?"
     "(?P<what>ターン|" + "|".join(w for w, _ in PHASE_WORDS) + "|ダメージステップ)"
     "(?P<form>に、?)")
-# 位置/存在原子的形式(m2 票 03 加「限り」「時」):「限り」是持續的前提(段的期間記持續,
+# 位置/存在原子的形式:「限り」是持續的前提(段的期間記持續,
 # `KAGIRI`);「時」只在後面接讀點、「に」或句尾時才是前提(「存在する時の」是名詞修飾)。
 KAGIRI = "限り"
 PREMISE_FORMS = ("場合", "状態で", KAGIRI, "時")
 _FORM = f"(?P<form>場合|状態で|{KAGIRI}|時(?=、|に|$))"
-# 「存在する」前可寫表示形式(m2 票 05):「表側表示で存在する時」→ 原子帶選填 face、position。
 _DISPLAY = f"(?:(?P<display>{DISPLAY_WORD})で)?"
 # 「Xが<區域>に存在する場合、」:X 不含讀點;區域短語交給 parse_zones 認,認不得就不是前提。
-# m2 票 04:物件後的助詞也可以是「は」(「このカードはモンスターゾーンに存在する限り、〜を受けない」):
+# 物件後的助詞也可以是「は」(「このカードはモンスターゾーンに存在する限り、〜を受けない」):
 # 這時 X 也是後面主語省略的子句的主語(`state.subject`),原子帶 `particle`。
 _OBJECT_FIRST_RE = re.compile(
     # 「」裡的字與「または」的「は」不是助詞。
@@ -137,7 +136,7 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
             continue
         if m.group("obj") == f"「{state.card['name_ja']}」":
             # 前提裡的本卡卡名是另一張同名卡(「自分フィールド上に「古代の歯車」が表側表示で
-            # 存在する時、手札からこのカードを〜」,m2 票 05),不是物件0。
+            # 存在する時、手札からこのカードを〜」),不是物件0。
             obj_id, ref, _ = state.new_object(m.group("obj"), offset, {"kind": "新建"})
         else:
             obj_id, ref, _ = state.object_at(m.group("obj"), offset)
@@ -153,11 +152,8 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
             atom["particle"] = "は"
             state.subject = obj_id
         if m.group("display"):
-            # 表示形式只記有寫的一半(「表側表示」只有 face)。
             atom.update({k: v for k, v in display_value(m.group("display")).items() if v})
         if ref is not None:
-            # 物件是回指(「この効果で特殊召喚したモンスターが〜に存在する限り」,m2 票 03):
-            # 回指字面記在原子上,模板照它寫。
             atom["ref"] = ref
         literal = zone_literal(m.group("zones"))
         if literal is not None:
@@ -175,7 +171,7 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
 
 
 def is_lasting(premise):
-    """前提裡有「〜限り」的位置/存在原子:整句的段期間是持續(m2 票 03)。"""
+    """前提裡有「〜限り」的位置/存在原子:整句的段期間是持續。"""
     if premise is None:
         return False
     atoms = premise["args"] if premise.get("op") == "且" else [premise]

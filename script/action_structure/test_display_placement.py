@@ -1,4 +1,4 @@
-"""表示形式與放置(m2 票 05):表示形式字面依句中位置落格、新動作詞放置與覆蓋。
+"""表示形式與放置:表示形式字面依句中位置落格、新動作詞放置與覆蓋。
 
 走接縫一(查詢判斷)與接縫二(反向檢查);查詢層沒有的格(`display`、`treat`、前提的 `face`、
 原因、物件修飾)先用查詢命中段,再讀該段的格。官方文本逐字寫在測試裡(`data/sources/` 不入版控)。
@@ -40,7 +40,6 @@ def build(cards, faqs):
 
 
 def hit_segments(structures, cards, cid, **query):
-    """查詢命中某卡的段(含內嵌效果的段);沒命中回空列表。"""
     result = run_query(structures, cards, query)
     ids = next((h["segments"] for h in result["hits"] if h["id"] == cid), [])
     structure = next(s for s in structures if s["id"] == cid)
@@ -49,7 +48,6 @@ def hit_segments(structures, cards, cid, **query):
 
 
 def failures_of(structures, cid, seg):
-    """反向檢查中屬於這一段的不通過項。"""
     return [f for f in check_card(own(structures, cid)) if f["segment"] == seg["id"]]
 
 
@@ -91,7 +89,6 @@ class WhiteMaidenTest(unittest.TestCase):
                          {"text": "表側表示で", "alternatives": [{"face": "表側", "position": None}]})
 
     def test_place_segment_passes_reverse_check(self):
-        """③ 的「攻撃・効果の対象になった時」不在本票範圍,只驗放置段。"""
         [seg] = hit_segments(self.structures, self.cards, WHITE_MAIDEN, actions=["放置"])
         self.assertEqual(failures_of(self.structures, WHITE_MAIDEN, seg), [])
 
@@ -129,13 +126,13 @@ class CenturionTest(unittest.TestCase):
         self.assertEqual(form["display"]["alternatives"], [{"face": "表側", "position": None}])
 
     def test_place_segment_passes_reverse_check(self):
-        """treat 寫在區域前、display 寫在述語前,原樣寫回(② 的代價句、③ 不在本票範圍)。"""
+        """treat 寫在區域前、display 寫在述語前,原樣寫回。"""
         self.assertEqual(failures_of(self.structures, CENTURION, self.place_segment()), [])
 
 
 LITTLE_OPPOSITION = 15967552   # リトル・オポジション(通常陷阱)
 # 真卡的 ● 句「自身の手札・デッキからレベル２以下のモンスター１体を選び、指定された自身の
-# メインモンスターゾーンに表側攻撃表示か裏側守備表示で特殊召喚する」帶「選び」(m2 票 09)與
+# メインモンスターゾーンに表側攻撃表示か裏側守備表示で特殊召喚する」帶「選び」與
 # 區域位置(spec 不做),整段解析不出;這裡把該句去掉範圍外的兩截,當合成卡的效果。
 LITTLE_OPPOSITION_SENTENCE = (
     "自分の手札・デッキからレベル２以下のモンスター１体を表側攻撃表示か裏側守備表示で特殊召喚する")
@@ -167,8 +164,7 @@ class AlternativesTest(unittest.TestCase):
         self.assertEqual(check_card(own(structures, LITTLE_OPPOSITION)), [])
 
     def test_real_card_self_special_summon(self):
-        """WAKE CUP！ アル ①後半「このカードを表側攻撃表示か裏側守備表示で特殊召喚する」
-        (前半「選んで捨て」是 m2 票 09)。"""
+        """WAKE CUP！ アル ①後半「このカードを表側攻撃表示か裏側守備表示で特殊召喚する」。"""
         cards = [card(WAKE_CUP_AL, name_ja="WAKE CUP！ アル", type=0x200021, level=7,
                       race=0x40, attribute=0x8, atk=2700, **{"def": 400})]
         structures = build(cards, [faq(WAKE_CUP_AL, "WAKE CUP！ アル", WAKE_CUP_AL_TEXT)])
@@ -257,7 +253,7 @@ class GustaFalcoTest(unittest.TestCase):
         self.assertEqual(check_card(own(self.structures, GUSTA_FALCO)), [])
 
 
-SUMMON_REACTOR = 89493368   # サモン・リアクター・AI(m2 票 03 留給本票的「表側表示で存在する限り」)
+SUMMON_REACTOR = 89493368   # サモン・リアクター・AI
 SUMMON_REACTOR_TEXT = (
     "このカードが自分フィールド上に表側表示で存在する限り、相手フィールド上にモンスターが"
     "召喚・反転召喚・特殊召喚された時、相手ライフに８００ポイントダメージを与える。"

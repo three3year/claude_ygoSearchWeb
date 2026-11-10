@@ -93,7 +93,7 @@ class BranchTest(unittest.TestCase):
             "●自分はデッキから１枚ドローする。")
         self.assertIn(TEST_CARD, hits(structures, cards, actions=["加入手牌"],
                                       from_zones=["牌組"], card=GREEDY_POT))
-        # 第二支的「ドローする」是抽牌(m2 票 10);引導句與兩支都過。
+        # 第二支的「ドローする」是抽牌;引導句與兩支都過。
         self.assertIn(TEST_CARD, hits(structures, cards, actions=["抽牌"]))
         self.assertEqual(check_card(structures[0]), [])
 

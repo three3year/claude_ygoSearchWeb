@@ -2,8 +2,8 @@
 
 - 原因(`cause`):「戦闘で」「効果で」「相手の効果で」「戦闘・効果で」→ `{"kind": 戰鬥|效果|戰鬥或效果,
   "text": 字面, "side": 我方/對手(效果含誰的,有寫才有)}`;字面只認閉集 `CAUSE_FORMS`,模板照字面寫。
-  m2 票 04:帶「は」的字面(効果では、戦闘及び効果では…)、誰的效果(`OWNER_FORMS`、`OWNER_PATTERN`)。
-- 每回合次數(`per_turn`,m2 票 04):抗性的「(それぞれ)１ターンに１度だけ」→ {"value", "text"}。
+  帶「は」的字面(効果では、戦闘及び効果では…)、誰的效果(`OWNER_FORMS`、`OWNER_PATTERN`)。
+- 每回合次數(`per_turn`):抗性的「(それぞれ)１ターンに１度だけ」→ {"value", "text"}。
 - 極性(`polarity`):述語語尾給的極性(`segment_extract.TAILS`)之外,「Xは〜できる」(助詞は)是
   永續的許可(直接攻撃できる)→ 極性「可以」、不是可選的動作;「Xを〜できる」仍是可選的「做」
   (票 10 的決定)。`resolve_polarity` 是抽取與反向檢查共用的一把尺。
@@ -13,7 +13,7 @@
 - 期間(`duration`):「そのターンの終了時まで」「ターン終了時まで」→ `{"kind": "本回合", "text"}`;
   其他「〜まで」→ `{"kind": "到X為止", "text"}`。形狀允許出現在任何段、本回合可帶選填 `range`
   (整回合/發動後,`structure_shape.DURATION_RANGES`)。句中的「〜まで」只從性質變更句抽出;
-  m2 票 03 加句子層的兩種:「〜限り、」前提 → 持續(沒有字面);句首時間狀語(`LEADING_DURATIONS`:
+  另有句子層的兩種:「〜限り、」前提 → 持續(沒有字面);句首時間狀語(`LEADING_DURATIONS`:
   このターン、/この効果の発動後、ターン終了時まで/このカード・この効果を発動するターン、)→ 本回合
   (帶 range),套到同一句的每個段、字面只在第一段,模板寫在段的最前面(`split_duration`)。
 - 被改的屬性(`modified`):性質變更句「その攻撃力はそのターンの終了時まで元々の攻撃力の倍になる」
@@ -21,7 +21,7 @@
   "base": 「元々の攻撃力」(倍/半分時), "value": 整數(數值時)}`(attr 是清單,值域與選填 limit
   `{"cmp", "text"}` 見 `structure_shape.MODIFY_ATTRS`/`MODIFY_FORMS`);對象線的 `ref` 記提及的字面
   (「その」「このカードの」「そのモンスターの」)。後續段要讀改後的屬性時,往前找同區塊作用在同一物件
-  上的性質變更段即可(段上就有 `modified`),不另存狀態。m2 票 08:增減「〜は３００アップ/ダウンする」
+  上的性質變更段即可(段上就有 `modified`),不另存狀態。增減「〜は３００アップ/ダウンする」
   → form 增/減、value 差量(整數)或算式字面 `{"kind": "算式", "text"}`(寫在主語前的「〜だけ、」另帶
   `placement` 主語前),舊式「Nポイント」記 `unit`;攻守同時是 attr 兩項(「・」);attr 加等級、屬性、
   種族、卡名(「レベルは４になる」「レベルはそのモンスターと同じになる」= 數值、value 算式);主語是
@@ -41,9 +41,9 @@ from synonyms import ATTACK_FAMILY, MODIFY_PREDICATE, ONLY, ONLY_MARKER
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
 CAUSE_FORMS = {
     "戦闘によって": ("戰鬥", None), "戦闘で": ("戰鬥", None),
-    # 「〜ならず、戦闘では破壊されない」的主語省略右半(里程碑二票 02)。
+    # 「〜ならず、戦闘では破壊されない」的主語省略右半。
     "戦闘では": ("戰鬥", None),
-    # m2 票 04:帶「は」的寫法(では、によっては)與「その戦闘で」。
+    # 帶「は」的寫法(では、によっては)與「その戦闘で」。
     "その戦闘で": ("戰鬥", None), "その戦闘では": ("戰鬥", None),
     "戦闘によっては": ("戰鬥", None),
     "効果では": ("效果", None), "カードの効果では": ("效果", None),
@@ -57,12 +57,12 @@ CAUSE_FORMS = {
     "カードの効果で": ("效果", None), "効果で": ("效果", None),
     "自分の効果で": ("效果", "我方"), "相手の効果で": ("效果", "對手"),
     "自分のカードの効果で": ("效果", "我方"), "相手のカードの効果で": ("效果", "對手"),
-    # m2 票 06:受到傷害的原因(「相手のカードの効果によって自分がダメージを受けた時」)。
+    # 受到傷害的原因(「相手のカードの効果によって自分がダメージを受けた時」)。
     "自分のカードの効果によって": ("效果", "我方"), "相手のカードの効果によって": ("效果", "對手"),
     "戦闘またはカードの効果によって": ("戰鬥或效果", None),
     "戦闘・効果で": ("戰鬥或效果", None), "戦闘・効果によって": ("戰鬥或效果", None),
     "戦闘または効果で": ("戰鬥或效果", None),
-    # m2 票 05:ガスタ・ファルコ「戦闘以外によって墓地へ送られた時」。
+    # ガスタ・ファルコ「戦闘以外によって墓地へ送られた時」。
     "戦闘以外によって": ("戰鬥以外", None), "戦闘以外で": ("戰鬥以外", None),
 }
 # 作為X素材(票 09):「S素材として墓地へ送られた」→ {"kind": "作為素材", "text": 字面, "summon": 卡片子類型}
@@ -75,7 +75,7 @@ MATERIAL_FORMS = {
 }
 CAUSE_PATTERN = "|".join(sorted(map(re.escape, [*CAUSE_FORMS, *MATERIAL_FORMS]),
                                 key=len, reverse=True))
-# 誰的效果(m2 票 04):「〜の効果を受けない」「〜の効果の対象にならない」的「〜の」是原因,
+# 誰的效果:「〜の効果を受けない」「〜の効果の対象にならない」的「〜の」是原因,
 # 「効果を受け」「効果の対象に」留在述語。方的字面閉集記 side;其餘是物件短語(「A及びB」多個),
 # 原因記 {"kind": 效果, "text": "の", "objects": [...]}(`segment_extract.BlockState.cause_at`)。
 OWNER_FORMS = {"相手の": "對手", "自分の": "我方", "カードの": None,
@@ -123,7 +123,7 @@ def render_cause(cause):
 
 # 永續許可的動作詞:「Xは直接攻撃できる」是卡在場上時一直成立的許可,不是一次做的動作;
 # 「このカードは手札から特殊召喚できる」仍是可選的做(票 05/11 的斷言),所以只認不移動卡的動作。
-# m2 票 04 擴成攻擊家族(攻擊、直接攻擊、多次攻擊、全體攻擊;spec「永續許可擴到攻擊家族」)。
+# 含攻擊家族(攻擊、直接攻擊、多次攻擊、全體攻擊;spec「永續許可擴到攻擊家族」)。
 PERMISSION_ACTIONS = ATTACK_FAMILY
 
 
@@ -132,7 +132,7 @@ def resolve_polarity(parsed, marker):
     「Xは〜できる」且動作詞是永續許可的(攻擊家族)→ 極性「可以」、不可選;主語省略的子句
     (助詞 None:「相手フィールド上の全てのモンスターに１回ずつ攻撃が可能」)主語是「Xは」的 X 或此卡,
     同「は」;助詞後的讀點(「Xは、」)不影響。
-    「Xしか〜できない」(助詞しか,m2 票 03)→ 極性「只能」,同述語開頭的「しか」;其餘照語尾。"""
+    「Xしか〜できない」(助詞しか)→ 極性「只能」,同述語開頭的「しか」;其餘照語尾。"""
     polarity = parsed[-1].polarity
     optional = True if any(p.optional for p in parsed) else None
     marker = marker.rstrip("、") if marker else marker
@@ -144,7 +144,6 @@ def resolve_polarity(parsed, marker):
     return polarity, optional
 
 
-# 抗性的每回合次數(m2 票 04,段的 `per_turn`):「(それぞれ)１ターンに１度だけ」;查詢先不比。
 PER_TURN_PATTERN = "(?:それぞれ)?１ターンに[１-９]度だけ"
 _PER_TURN_RE = re.compile("^(?:それぞれ)?１ターンに(?P<n>[１-９])度だけ$")
 
@@ -225,20 +224,18 @@ ORDER_FORMS = ("好きな順番で",)
 TREAT_PATTERN = ("(?:" + "|".join(map(re.escape, sorted(TREAT_FORMS, key=len, reverse=True)))
                  + ")、?")
 ORDER_PATTERN = "|".join(map(re.escape, ORDER_FORMS))
-# 放置形式的表示形式寫在述語前:「表側表示で」「表側攻撃表示か裏側守備表示で」(二選一,m2 票 05)。
+# 放置形式的表示形式寫在述語前:「表側表示で」「表側攻撃表示か裏側守備表示で」(二選一)。
 DISPLAY_PATTERN = f"{PLACEMENT_DISPLAY_WORD}(?:か{PLACEMENT_DISPLAY_WORD})?で"
 _DISPLAY_RE = re.compile(
     f"^(?P<a>{PLACEMENT_DISPLAY_WORD})(?:か(?P<b>{PLACEMENT_DISPLAY_WORD}))?で$")
 
 
-# 「以下の効果を持つ装備魔法カード扱いで」(m2 票 12):被當成裝備卡的物件帶後面 ● 列舉的效果
+# 「以下の効果を持つ装備魔法カード扱いで」:被當成裝備卡的物件帶後面 ● 列舉的效果
 # (`segment_tree` 在裝備段後接內嵌效果節點);前綴屬於 treat 字面。
 EFFECT_HOLDER_PREFIX = "以下の効果を持つ"
 
 
 def _treat_kind(text):
-    """treat 字面 → 種類:去掉讀點與增減前綴(「攻撃力３００アップの」,m2 票 08)、
-    「以下の効果を持つ」(m2 票 12)再查閉集。"""
     delta = parse_treat_delta(text)
     base = text[len(delta[0]) + 1:] if delta else text
     if base.startswith(EFFECT_HOLDER_PREFIX):
@@ -301,8 +298,8 @@ def lasting():
     return {"kind": DURATION_LASTING}
 
 
-# 句首時間狀語(m2 票 03):字面閉集 → range(None = 沒有 range)。期間都是本回合;誓約
-# 「このカードを発動するターン、」是整回合(發動前後都算),「この効果の發動後、」是發動後。
+# 句首時間狀語:字面閉集 → range(None = 沒有 range)。期間都是本回合;誓約
+# 「このカードを発動するターン、」是整回合(發動前後都算),「この効果の発動後、」是發動後。
 # 字面含讀點,反向檢查原樣寫在段的最前面。
 LEADING_DURATIONS = {
     "このターン、": None,
@@ -352,16 +349,13 @@ def split_duration(duration):
 
 DURATION_THIS_TURN = ("そのターンの終了時まで", "ターン終了時まで", "このターンの終了時まで")
 _DURATION_RE = re.compile("^(?P<text>.+?まで)")
-# 該戰鬥(m2 票 07):「(その)ダメージ計算時のみ」「ダメージステップの間」「ダメージステップ時のみ」,
-# 字面可帶讀點;句中出現,寫在性質變更句的期間槽([屬性]は[期間][值]になる)。
-# m2 票 08:前面可帶「(相手)モンスターに攻撃する」(攻擊時才增減)。
 DURATION_BATTLE = "該戰鬥"
 BATTLE_DURATION_PATTERN = ("(?:その|(?:相手)?モンスターに攻撃する)?"
                            "(?:ダメージ計算時のみ|ダメージステップの間|ダメージステップ時のみ)、?")
 _BATTLE_DURATION_RE = re.compile(BATTLE_DURATION_PATTERN)
 
 
-# 簡單子句述語前的期間(m2 票 09):「エンドフェイズまで表側で除外する」「次のスタンバイフェイズまで
+# 簡單子句述語前的期間:「エンドフェイズまで表側で除外する」「次のスタンバイフェイズまで
 # 除外する」;模板寫在述語前(到之前)。只收階段與「ターン終了時」的「〜まで」。
 CLAUSE_DURATION_PATTERN = (f"(?:次のターンの|次の)?(?:自分|相手)?(?:{_PHASE_ALT})まで"
                            "|(?:その)?ターン終了時まで")
@@ -373,13 +367,12 @@ def is_clause_duration(duration):
     text = (duration or {}).get("text") or ""
     return bool(_CLAUSE_DURATION_RE.match(text)) and duration == parse_duration(text)
 def _bare(text):
-    """期間字面去掉句中的讀點(「ターン終了時まで、」)。"""
     return text[:-1] if text.endswith("、") else text
 
 
 def parse_duration(text):
     """「〜まで」→ duration 格;本回合的字面是閉集,其餘是「到X為止」;戰鬥時點的字面是該戰鬥。
-    字面可帶讀點(m2 票 08:「攻撃力・守備力はターン終了時まで、〜分ダウンする」)。"""
+    字面可帶讀點(「攻撃力・守備力はターン終了時まで、〜分ダウンする」)。"""
     if _bare(text) in DURATION_THIS_TURN:
         return {"kind": "本回合", "text": text}
     if _bare(text).endswith("まで"):
@@ -390,8 +383,7 @@ def parse_duration(text):
 
 
 def find_battle_duration(clause):
-    """子句裡任何位置的該戰鬥字面 → duration 格;沒有回 None。子句其餘部分解不解得出都記
-    (「攻撃力はそのダメージ計算時のみ３０００アップする」的增減是票 08)。"""
+    """子句裡任何位置的該戰鬥字面 → duration 格;沒有回 None。子句其餘部分解不解得出都記。"""
     m = _BATTLE_DURATION_RE.search(clause)
     return {"kind": DURATION_BATTLE, "text": m.group()} if m else None
 
@@ -420,12 +412,12 @@ _ATTRS = f"(?:{_STAT_ALT})(?:{STAT_JOINER}(?:{_STAT_ALT}))*"
 # 倍/半分的基準只有攻守(「元々の攻撃力の倍」)。
 _BASE_ALT = "元々の(?:攻撃力|守備力)"
 # 提及的字面:「その攻撃力」的その是回指(物件是最近的物件),「このカードの」是物件0。
-# 其餘主語是「物件短語 + の」(m2 票 08),物件照一般規則解析(`segment_extract._modify_subject`)。
+# 其餘主語是「物件短語 + の」,物件照一般規則解析(`segment_extract._modify_subject`)。
 MENTION_FORMS = ("その", "それらの", "このカードの", "そのモンスターの", "そのカードの",
                  "それらのモンスターの", "それらのカードの")
 # 屬性後的助詞:「攻撃力は、」的讀點記進對象線的助詞字面(同「自分フィールドの、」記進從的字面)。
 MODIFY_MARKERS = ("は", "は、")
-# 增減(m2 票 08):述語字面 アップ/ダウン + する/し(連用形串接);差量的單位只有舊式「ポイント」。
+# 增減:述語字面 アップ/ダウン + する/し(連用形串接);差量的單位只有舊式「ポイント」。
 DELTA_WORDS = {"アップ": "增", "ダウン": "減"}
 _DELTA_TEXT = {v: k for k, v in DELTA_WORDS.items()}
 DELTA_TAILS = ("する", "し")
@@ -562,7 +554,7 @@ def render_modify(subject, marker, modified, duration, predicate):
     return f"{subject}{render_attrs(modified)}{marker}{period}{render_change(modified, predicate)}"
 
 
-# 「攻撃力・守備力３００アップの装備カード扱いで」(m2 票 08):放置形式 treat 字面前的增減,
+# 「攻撃力・守備力３００アップの装備カード扱いで」:放置形式 treat 字面前的增減,
 # 拆出一段衍生的性質變更段(`derived_from`),它的範圍是「攻撃力・守備力３００アップ」。
 TREAT_DELTA_PATTERN = (f"{_ATTRS}[０-９]+(?:{DELTA_UNIT})?(?:{'|'.join(DELTA_WORDS)})の")
 _TREAT_DELTA_RE = re.compile(

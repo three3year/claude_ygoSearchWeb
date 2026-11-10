@@ -99,7 +99,7 @@ class BuildCoverageTest(unittest.TestCase):
 
 
 class OmittedCoverageTest(unittest.TestCase):
-    """略過文本(m2 票 03):依原因計處數與張數,報告列一節。"""
+    """略過文本:依原因計處數與張數,報告列一節。"""
 
     @classmethod
     def setUpClass(cls):

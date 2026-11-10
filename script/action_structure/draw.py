@@ -1,4 +1,4 @@
-"""抽牌(m2 票 10):句型與字面閉集(抽取的填格在 `segment_extract._fill_draw`,模板在
+"""抽牌:句型與字面閉集(抽取的填格在 `segment_extract._fill_draw`,模板在
 `reverse_check._render_draw`)。
 
 - 抽到的卡是新建物件(條件同頭名詞カード,即 大類 卡);「カードを」有寫時物件字面是它、助詞を,
@@ -24,7 +24,6 @@ RULE_TEXT = "通常の"
 CAUSE_RULE = "規則"
 PLACEMENT_BEFORE_SUBJECT = "主語前"
 PLACEMENT_BEFORE_NOUN = "名詞前"
-# 變數張數的字面收尾(「破壊した数だけ」「その枚数分だけ」)。
 FORMULA_TAIL = "(?:数|数分)だけ"
 _FORMULA_TAIL_RE = re.compile(f"{FORMULA_TAIL}、?$")
 _FIXED_RE = re.compile(f"^(?P<digits>[０-９]+){COUNT_UNIT}$")

@@ -17,10 +17,10 @@
                     命中的被代替段在 hit 的 "replaced_by"(被代替段 id → 做代替的段 id)指出做代替的段
   polarities        極性範圍(預設只算「做」;不能、不會、可以、只能、必須要指定才算)
   generic_only      只查泛用組(票 07)
-  modified          被改的屬性(m2 票 06):{"attr", "form", "value"} 任一子集,比段的 `modified`;
+  modified          被改的屬性:{"attr", "form", "value"} 任一子集,比段的 `modified`;
                     attr 比「段的 attr 清單含它」(「性質變更,屬性傷害,數值 0」= 全部防傷害段)
 
-  generic_reference 泛用引用開關(m2 票 13,預設關):開時被引用物件是泛用物件的引用節點也展開
+  generic_reference 泛用引用開關(預設關):開時被引用物件是泛用物件的引用節點也展開
 
 結果:{"hits": [{"id", "segments", "group", "replaced_by"(有命中被代替段才有),
                 "via"、"mark"(經引用組才有)}],
@@ -28,7 +28,7 @@
                 全部 = 特定 + 泛用,不含經引用),
       "unparsed": [{"id", "reason", "segments": [{"segment", "reason", "text"}]}]}
 
-經引用組(m2 票 13,GLOSSARY「經引用」):直接沒命中、但引用節點的候選卡在節點指定的部分命中的卡;
+經引用組(GLOSSARY「經引用」):直接沒命中、但引用節點的候選卡在節點指定的部分命中的卡;
 hit 的 `segments` 是空的,`via` 列經由的卡與它的命中段(展開到底,遇到循環就停)。
 
 未解析組(spec「解析不出的段怎麼呈現」):不靜默略過。兩種來源:
@@ -70,7 +70,7 @@ MODIFIED_KEYS = ("attr", "form", "value")
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
                 "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10}
-# 魔陷的子類型位元(速攻、永續、裝備、場地、反擊、儀式):一個都沒有的是「通常」(m2 票 04)。
+# 魔陷的子類型位元(速攻、永續、裝備、場地、反擊、儀式):一個都沒有的是「通常」。
 SPELL_TRAP_SUBTYPE_BITS = 0x10000 | 0x20000 | 0x40000 | 0x80000 | 0x100000 | 0x80
 EXTRA_DECK_BITS = (SUBTYPE_BITS["融合"] | SUBTYPE_BITS["同步"] | SUBTYPE_BITS["超量"]
                    | SUBTYPE_BITS["連結"] | SUBTYPE_BITS["靈擺"])
@@ -88,7 +88,6 @@ def card_attr(entry, attr):
     kind = entry["type"]
     if not kind & 0x1:
         if attr == "卡片子類型":
-            # 儀式魔法(m2 票 13:「儀式魔法カード」的候選卡);其餘魔陷子類型的條件原子還沒有值。
             if kind & SPELL_TRAP_SUBTYPE_BITS:
                 return {"儀式"} if kind & SUBTYPE_BITS["儀式"] else set()
             return {"通常"}
@@ -332,10 +331,8 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
         # 位置、控制方與表示形式不是卡的屬性:任何卡都代得進去(泛用原子)。
         return True
     if op == SAME_CARD:
-        # 「このカード以外の」的那一張實體(m2 票 09):代入的是卡,同名的另一張也算,所以永遠不是它。
         return False
     if op in (EQUIPPED, TARGETING_THIS):
-        # 被裝備者(m2 票 08)、以此卡為對象(m2 票 11)是狀態,任何卡都代得進去;但不是泛用原子。
         return True
     if op == "曾被特殊召喚":
         # 從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。
@@ -417,7 +414,6 @@ class _Judge:
 
     def card_fits(self, entry, obj, owner, names, from_zones):
         if obj["unparsed"] or obj["kind"] != "卡":
-            # 超量素材、計數器(m2 票 11)不是卡,沒有卡代得進去。
             return False
         if obj["source"]["kind"] == "自己":
             return entry["id"] == owner["id"] or entry["id"] in owner.get(
@@ -563,7 +559,6 @@ def literal_has_actions(text, literals):
 
 
 def _has_stem(stem, text):
-    """字面含述語字幹;字幹落在別的詞裡(「攻撃」在「攻撃力」「攻撃表示」裡)不算。"""
     for word in STEM_FALSE_FRIENDS.get(stem, ()):
         text = text.replace(word, "")
     return stem in text
@@ -653,7 +648,7 @@ def segment_hit_lines(seg, card, q, judge, objects, names):
 
 def run_query(structures, cards, query):
     """全庫結構 + 卡片總表 + 查詢 → 命中結果;一張卡任一分支、任一段命中即命中。
-    直接沒命中的卡,引用節點指定的被引用卡部分命中時進「經引用」組(m2 票 13)。"""
+    直接沒命中的卡,引用節點指定的被引用卡部分命中時進「經引用」組。"""
     q = _normalise(query)
     judge = _Judge(cards, structures, q)
     literals = action_literals(q["actions"])
@@ -666,8 +661,6 @@ def run_query(structures, cards, query):
         matched, generic, incomplete, replaced_hits = [], True, [], set()
         per_block = block_hits[card["id"]] = {}
         for block in card["blocks"]:
-            # 區塊種類被篩掉:種類判不出的區塊才可能是靜默漏掉,列進未解析組。被篩掉的區塊仍記它
-            # 命中的段:別張卡引用到這張卡時,被引用的部分不看區塊種類。
             skipped = q["block_kinds"] and block["kind"] not in q["block_kinds"]
             for _, seg in iter_segments(block):
                 lines = segment_hit_lines(seg, card, q, judge, objects, names)
@@ -730,8 +723,6 @@ VIA_GENERIC = "經泛用引用"
 
 
 class _Expansion:
-    """經引用的展開(m2 票 13):引用節點的候選卡在 `effect` 指定的部分有命中段就算,沒有就往那部分裡的
-    引用節點再展開(展開到底);走過的卡不再走(遇到循環就停)。泛用引用節點(`any`)只在開關開時展開。"""
 
     def __init__(self, structures, block_hits, q):
         self.by_id = {card["id"]: card for card in structures}
@@ -739,7 +730,6 @@ class _Expansion:
         self.q = q
 
     def hit(self, card):
-        """直接沒命中的卡 → 經引用組的 hit,或 None。經由的全是泛用引用節點時標「經泛用引用」。"""
         blocks = [b for b in card["blocks"]
                   if not self.q["block_kinds"] or b["kind"] in self.q["block_kinds"]]
         via = self.via(blocks, {card["id"]})
@@ -784,7 +774,7 @@ class _Expansion:
 
 
 def resolve_references(structures, cards):
-    """建置第二輪(m2 票 13):每個解析出的引用節點求被引用物件的候選卡(卡片總表裡滿足它條件式的卡,
+    """建置第二輪:每個解析出的引用節點求被引用物件的候選卡(卡片總表裡滿足它條件式的卡,
     排序的卡號),被引用物件是泛用物件時節點記 `any`。就地改結構。"""
     judge = _Judge(cards, structures, _normalise({}))
     for card in structures:

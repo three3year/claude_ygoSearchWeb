@@ -1,9 +1,8 @@
-"""戰鬥時點(m2 票 07):觸發形「ダメージ計算前/時/後」「ダメージステップ開始時/終了時」、
+"""戰鬥時點:觸發形「ダメージ計算前/時/後」「ダメージステップ開始時/終了時」、
 動作詞戰鬥(「Xと戦闘を行う」,施事與受事都是物件)、期間該戰鬥(「ダメージ計算時のみ」)。
 
 走接縫一(查詢判斷)與接縫二(反向檢查)。施事/受事、觸發形、期間沒有查詢欄(spec「查詢判斷」),
-先用既有欄查到命中段再讀該段的格;期間該戰鬥的那段述語(「３０００アップする」)留給票 08,
-解析不出、查不到,直接讀段的期間格。官方文本逐字寫在測試裡(`data/sources/` 不入版控)。
+先用既有欄查到命中段再讀該段的格。官方文本逐字寫在測試裡(`data/sources/` 不入版控)。
 """
 import unittest
 
@@ -43,7 +42,6 @@ POWER_CODE_TALKER_TEXT = (
 
 
 def build(*entries):
-    """(卡片總表條目, faq 條目或 None) 列表 → (卡片總表, 結構列表)。"""
     cards = [c for c, _ in entries]
     structures, _ = build_structures(cards, [f for _, f in entries if f], ARCHETYPES)
     return cards, structures
@@ -54,7 +52,6 @@ def structure_of(structures, cid):
 
 
 def hit_segments(structures, cards, cid, **query):
-    """查詢命中 cid 的段(含內嵌效果的段);沒命中回空清單。"""
     result = run_query(structures, cards, query)
     ids = next((h["segments"] for h in result["hits"] if h["id"] == cid), [])
     return [seg for b in structure_of(structures, cid)["blocks"]
@@ -62,7 +59,6 @@ def hit_segments(structures, cards, cid, **query):
 
 
 def segment_with(structure, literal):
-    """原文含 literal 的段。"""
     for block in structure["blocks"]:
         for _, seg in iter_segments(block):
             if literal in seg["text"]:
@@ -112,8 +108,7 @@ class GuiltyGearTest(unittest.TestCase):
 
 class YubelTest(unittest.TestCase):
     """ユベル ②「攻撃表示のこのカードが攻撃対象に選択された場合、そのダメージ計算前に発動する」:
-    「そのダメージ計算前」是另一個條件段(觸發形 ダメージ計算前,指回前一個條件段)。
-    「攻撃対象に選択された」的動作詞是票 04,這裡不驗。"""
+    「そのダメージ計算前」是另一個條件段(觸發形 ダメージ計算前,指回前一個條件段)。"""
 
     @classmethod
     def setUpClass(cls):
@@ -164,7 +159,7 @@ class LilyTest(unittest.TestCase):
         self.assertEqual(failures_on(self.structure, segs[0]), [])
 
     def test_boost_lasts_for_that_battle(self):
-        """增減本身(「３０００アップする」)由 m2 票 08 解析成性質變更,期間仍是該戰鬥。"""
+        """增減本身(「３０００アップする」)解析成性質變更,期間仍是該戰鬥。"""
         boost, = hit_segments(self.structures, self.cards, LILY, actions=["性質變更"],
                               modified={"attr": "攻擊力", "form": "增", "value": 3000})
         self.assertEqual(boost["duration"], {"kind": "該戰鬥", "text": "そのダメージ計算時のみ"})

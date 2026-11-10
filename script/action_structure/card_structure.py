@@ -23,7 +23,7 @@
   tree        段樹:{"items": [節點]};節點 = {"node": "段", "segment", "join"}
               | {"node": "分歧", "mode", "chooser", "branches": [{"premise", "items"}], "join"}
               | {"node": "內嵌效果", "binding", "block", "join"}
-              | 引用節點(m2 票 13):內嵌效果節點 block None、帶 ref/form/subject(`effect_reference`)
+              | 引用節點:內嵌效果節點 block None、帶 ref/form/subject(`effect_reference`)
               join = 同時 / 先後 / None;"unstructured": True 標「未結構化」
   unparsed
 
@@ -136,7 +136,6 @@ def build_structures(cards, faq_entries, archetypes=None, built_at="",
                                      patches.get(entry["id"]), status))
         for result in status.values():
             patch_report.setdefault(result, []).append(entry["id"])
-    # 第二輪(m2 票 13):引用節點的候選卡要看全庫的卡片屬性表,逐卡建完才求得出。
     resolve_references(structures, cards)
     report = {
         "built_at": built_at,
@@ -220,7 +219,6 @@ def _hydrate_position(pos):
     if pos["form"]:
         pos["form"] = _hydrate(pos["form"], placement_form())
         if pos["form"]["display"]:
-            # 表示形式各項沒寫的一半(None)被省略,補回(m2 票 05)。
             display = dict(pos["form"]["display"])
             display["alternatives"] = [_hydrate(a, {"face": None, "position": None})
                                        for a in display["alternatives"]]
@@ -294,7 +292,6 @@ def _hydrate_nodes(items):
         elif node["node"] == "內嵌效果":
             node = _hydrate(node, embedded_node(None, None))
             if isinstance(node.get("ref"), dict):
-                # 引用節點(m2 票 13):被引用物件、回指字面、候選卡可能省略。
                 node["ref"] = _hydrate(node["ref"], reference(None, None, None))
             if node["block"]:
                 node["block"] = _hydrate_block(node["block"])

@@ -1,4 +1,4 @@
-"""多子句先切再解析(里程碑二票 02):只走接縫一(查詢判斷)與接縫二(反向檢查)。
+"""多子句先切再解析:只走接縫一(查詢判斷)與接縫二(反向檢查)。
 
 連用形語尾加「、」就切,兩截各自解析;左半解不出時只有它標解析不出,右半照常命中;
 右半沒主語時繼承左半的「は」主語。接續詞與不是連用形的讀點不切。
@@ -61,8 +61,7 @@ class ParallelPortArmorTest(unittest.TestCase):
         self.assertNotIn(PARALLEL_PORT_ARMOR, hits)
 
     def test_both_halves_pass_reverse_check(self):
-        """前半「装備モンスターは相手の効果の対象にならず」自成一段(取對象 m2 票 04、
-        被裝備者 m2 票 08 之後解析得出);兩半都寫得回原文,不出現字面不符或段外殘留。"""
+        """前半「装備モンスターは相手の効果の対象にならず」自成一段;兩半都寫得回原文,不出現字面不符或段外殘留。"""
         card_ = own(self.structures, PARALLEL_PORT_ARMOR)
         failing = {f["segment"] for f in check_card(card_)}
         texts = {seg["text"] for block in card_["blocks"] for seg in block["segments"]
@@ -71,12 +70,11 @@ class ParallelPortArmorTest(unittest.TestCase):
         self.assertNotIn("戦闘では破壊されない", texts)
         reasons = {f["reason"] for f in check_card(card_)
                    if f["segment"] is not None}
-        # m2 票 11 收了「リンクモンスター」之後整張通過,剩下的原因只可能是無模板。
         self.assertLessEqual(reasons, {REASON_NO_TEMPLATE})
 
 
 class ShapeSplitTest(unittest.TestCase):
-    """不再要求左半先解析成簡單子句:左半解不出時右半照常命中。"""
+    """左半解不出時右半照常命中。"""
 
     def test_right_half_hits_when_left_half_is_unparsed(self):
         cards, structures = build(

@@ -40,7 +40,7 @@ EXCEPT = "以外の"
 def parse_modifier(text):
     """開頭的種族/屬性修飾語(含「・」列舉與後面的「の」)→ (原子, 字面長度);
     不是就回 (None, 0)。前面的「・」(種族接屬性的連接)也一併吃掉。
-    後接「以外の」(水属性以外のモンスター,m2 票 04)→ 非(原子)。"""
+    後接「以外の」(水属性以外のモンスター)→ 非(原子)。"""
     skip = 1 if text.startswith("・") else 0
     rest = text[skip:]
     for pattern, attr in ((_RACES_RE, "種族"), (_ATTRS_RE, "屬性")):
@@ -107,7 +107,7 @@ def joiner(atom, following):
     if following.get("op") == "屬性比較" and following.get("attr") == "卡片子類型":
         # 「ドラゴン族・闇属性Sモンスター」字母緊接,不寫「の」;「サイバース族の儀式モンスター」
         # 「恐竜族の融合モンスター」是整個詞,寫「の」。
-        # 「ドラゴン族の通常モンスター」(m2 票 04)同;但「レベル４通常モンスター」緊接(官方 11:3)。
+        # 「ドラゴン族の通常モンスター」同;但「レベル４通常モンスター」緊接(官方 11:3)。
         if following.get("value") == "通常":
             return "" if atom.get("attr") == "等級" else "の"
         return "の" if following.get("value") in ("融合", "儀式") else ""

@@ -1,4 +1,4 @@
-"""引用他卡效果(m2 票 13):複製他卡效果的句子 → 沒有內容區塊的內嵌效果節點。
+"""引用他卡效果:複製他卡效果的句子 → 沒有內容區塊的內嵌效果節點。
 
 兩組句型(閉集):
 - 「(この効果|このカードの効果)は、<被引用物件><部分>と同じになる」:部分是「発動時の効果」(卡片發動)、
@@ -9,7 +9,7 @@
   部分一律整張。前面可有一截連用形子句(「〜アップし、このカードは〜を得る」),那截照一般句子解析、
   節點與它同時。
 
-節點(`structure_shape.embedded_node` 加鍵;票 12 的內嵌效果節點 `ref` 是主語字面字串,這裡的 `ref`
+節點(`structure_shape.embedded_node` 加鍵;其他內嵌效果節點的 `ref` 是主語字面字串,這裡的 `ref`
 是物件,用 `is_reference` 分辨——沒有內容區塊的就是引用節點):
   {"node": "內嵌效果", "binding": None, "block": None, "join",
    "ref": {"object": 被引用物件 id, "text": 物件的回指字面(「その罠カード」;首次出現的物件為 None),
@@ -38,8 +38,6 @@ BEFORE_SUBJECT = "主語前"
 
 BECOME_SUBJECTS = ("この効果", "このカードの効果")
 BECOME_FORM = "と同じになる"
-# 部分字面 → effect;長的在前(「発動時の儀式召喚する効果」不能被「発動時の効果」先吃掉——正規式是整句比對,
-# 順序只影響可讀性)。
 BECOME_PARTS = (
     ("発動時の儀式召喚する効果", {"part": PART_WITH, "action": "儀式召喚"}),
     ("発動時の効果", {"part": PART_ACTIVATION}),
@@ -60,8 +58,6 @@ _GAIN_RE = re.compile(
     f"(?:^|、)(?:(?P<lead>{_DURATION})、)?(?P<subject>{GAIN_SUBJECT})は、?"
     f"(?:(?P<mid>{_DURATION})、)?(?P<object>[^、]+?)"
     f"(?P<form>{'|'.join(re.escape(form) for form in GAIN_FORMS)})$")
-# 被引用物件的回指:「その罠カード」「その儀式魔法カード」「選択した通常罠カード」(頭名詞前可有修飾語);
-# 「そのモンスター」「選択したモンスター」走一般的回指(`BlockState.object_at`)。
 _HEADS = "|".join(sorted(HEAD_CATEGORY, key=len, reverse=True))
 REFERRED_RE = re.compile(f"^(?P<ref>その|選択した)(?P<mods>.*?)(?P<head>{_HEADS})$")
 _TARGETED = "選択した"
@@ -81,7 +77,7 @@ def match_reference(text):
         return None
     start = m.start() + 1 if m.start() > 0 else 0
     if start and start not in {offset for offset, _ in split_continuative(text)}:
-        return None   # 「、」不是連用形的切點(前一截不是完整子句)
+        return None
     duration = None
     literal = m.group("lead") or m.group("mid")
     if literal:
@@ -127,7 +123,7 @@ def _resolve_object(state, phrase, start):
 
 
 def is_reference(node):
-    """引用節點:沒有內容區塊的內嵌效果節點(票 12 的內嵌效果節點都有內容區塊)。"""
+    """引用節點:沒有內容區塊的內嵌效果節點。"""
     return node.get("node") == "內嵌效果" and node.get("block") is None \
         and isinstance(node.get("ref"), dict)
 

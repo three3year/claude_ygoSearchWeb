@@ -13,7 +13,7 @@
   (`{"reason"}` 形的格)依原因附卡號。對象線的從/到另依來源(明寫、繼承、推得、留空)計。
 - 物件:依來源計;解析不出依原因附卡號。
 - 不認得的「」名稱:名稱表列裡帶 `unparsed` 的。
-- 略過文本(m2 票 03):依原因計處數與張數(次數限制遍及大半新式卡,只列張數不附卡號)。
+- 略過文本:依原因計處數與張數(次數限制遍及大半新式卡,只列張數不附卡號)。
 卡號列表一律排序去重,「附卡號」列全部、不截斷。
 """
 from collections import Counter, defaultdict
@@ -182,7 +182,6 @@ def build_coverage(structures):
 
 
 def _references(structures):
-    """引用節點(m2 票 13):總數、解析出、泛用的卡、解析不出(引用其他效果)的卡、引用循環。"""
     total = resolved = 0
     generic, unparsed_cards = set(), set()
     for card in structures:

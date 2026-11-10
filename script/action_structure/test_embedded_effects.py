@@ -1,4 +1,4 @@
-"""內嵌效果擴充(m2 票 12):依值分支、效果被換掉、以下の効果を持つ装備カード扱い。
+"""內嵌效果擴充:依值分支、效果被換掉、以下の効果を持つ装備カード扱い。
 
 走接縫一(查詢判斷)與接縫二(反向檢查);查詢層沒有的格(`pick`、前提、物件條件…)先用查詢命中段,
 再讀該段的格。官方文本逐字寫在測試裡(`data/sources/` 不入版控)。
@@ -33,7 +33,6 @@ def own(structures, cid):
 
 
 def hit_segments(structures, cards, cid, **query):
-    """查詢命中某卡的段(含內嵌效果的段);沒命中回空列表。"""
     result = run_query(structures, cards, query)
     ids = next((h["segments"] for h in result["hits"] if h["id"] == cid), [])
     return [seg for b in own(structures, cid)["blocks"] for _, seg in iter_segments(b)
@@ -41,7 +40,6 @@ def hit_segments(structures, cards, cid, **query):
 
 
 def embedded_of(structure):
-    """卡上全部內嵌效果節點(依區塊、段樹順序)。"""
     found = []
     stack = list(structure["blocks"])
     while stack:

@@ -1,4 +1,4 @@
-"""攻守增減(m2 票 08):「Nアップ/ダウンする」併進性質變更,`form` 增/減、`value` 差量或算式字面;
+"""攻守增減:「Nアップ/ダウンする」併進性質變更,`form` 增/減、`value` 差量或算式字面;
 `attr` 多值並擴到等級;主語是任意物件短語(群體、被裝備者);「Nアップの装備カード扱いで」拆成
 裝備段加衍生的性質變更段。
 
@@ -49,7 +49,6 @@ METAL_ARMOR_TEXT = (
 
 
 def build(*entries):
-    """(卡片總表條目, faq 條目或 None) 列表 → (卡片總表, 結構列表)。"""
     cards = [c for c, _ in entries]
     structures, _ = build_structures(cards, [f for _, f in entries if f], ARCHETYPES)
     return cards, structures
@@ -60,7 +59,6 @@ def structure_of(structures, cid):
 
 
 def hit_segments(structures, cards, cid, **query):
-    """查詢命中 cid 的段(含內嵌效果的段);沒命中回空清單。"""
     result = run_query(structures, cards, query)
     ids = next((h["segments"] for h in result["hits"] if h["id"] == cid), [])
     return [seg for b in structure_of(structures, cid)["blocks"]

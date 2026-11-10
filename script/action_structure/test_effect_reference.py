@@ -1,4 +1,4 @@
-"""引用他卡效果(m2 票 13):「この効果は、その罠カード発動時の効果と同じになる」這類複製他卡效果的句子。
+"""引用他卡效果:「この効果は、その罠カード発動時の効果と同じになる」這類複製他卡效果的句子。
 
 走接縫一(查詢判斷:經引用組、`via`、泛用引用開關)與接縫二(反向檢查);覆蓋報告的兩節
 (引用其他效果、引用循環)從 `build_coverage` / `render_coverage` 驗。官方文本逐字寫在測試裡
@@ -46,7 +46,6 @@ def hit_of(result, cid):
 
 
 def reference_nodes(structure):
-    """卡上全部引用節點(沒有內容區塊的內嵌效果節點)。"""
     return [node for block in structure["blocks"] for node in block["tree"]["items"]
             if node["node"] == "內嵌效果" and node["block"] is None]
 
@@ -116,8 +115,7 @@ class FreshiaTest(unittest.TestCase):
         self.assertNotIn("any", node)
 
     def test_reference_sentence_and_cost_pass_reverse_check(self):
-        """③ 的引用句(節點只寫引導句模板)沒有殘留、送墓代價(「か」列舉的物件)通過;
-        「X素材を１つ取り除き」是去除(m2 票 11),不在本票。"""
+        """③ 的引用句(節點只寫引導句模板)沒有殘留、送墓代價(「か」列舉的物件)通過。"""
         failures = [f for f in check_card(self.structure) if f["block"] == "b131"]
         self.assertEqual([f for f in failures if f["segment"] in (None, "b131.s31")], [])
 

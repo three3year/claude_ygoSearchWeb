@@ -1,4 +1,4 @@
-"""m2 票 04 抗性/限制:既有動作詞加極性(不會/不能/只能)與攻擊家族。
+"""抗性/限制:既有動作詞加極性(不會/不能/只能)與攻擊家族。
 
 接縫一(查詢判斷)與接縫二(反向檢查)。斷言裡的「原因效果」「`times` 2」這類現有查詢欄比不到的
 條件,先用查詢命中、再讀命中段的格(spec「查詢判斷」不加篩選欄)。官方文本逐字寫在測試裡。
@@ -66,7 +66,6 @@ RESISTANCE_ARCHETYPES = ARCHETYPES + [
 
 
 class ResistanceCase(unittest.TestCase):
-    """共用:建結構、查命中卡號、讀命中段的格。"""
     CARDS = []
     FAQ = []
 
@@ -79,7 +78,6 @@ class ResistanceCase(unittest.TestCase):
         return [h["id"] for h in run_query(self.structures, self.cards, query)["hits"]]
 
     def hit_segments(self, cid, **query):
-        """命中段的段物件:錨定在查詢結果上,再讀段的格。"""
         result = run_query(self.structures, self.cards, query)
         ids = next((h["segments"] for h in result["hits"] if h["id"] == cid), [])
         structure = self.structure(cid)
@@ -146,7 +144,7 @@ class AttackFamilyTest(ResistanceCase):
 
 
 class KinoTest(ResistanceCase):
-    """キノの蟲惑魔 75416738(標準卡,m2 票 04)。"""
+    """キノの蟲惑魔 75416738。"""
     CARDS = [card(KINO, name_ja="キノの蟲惑魔", level=4, race=0x800, attribute=0x1,
                   atk=1300, setcode=0x108a, **{"def": 1500})]
     FAQ = [faq(KINO, "キノの蟲惑魔", KINO_TEXT)]
@@ -186,7 +184,7 @@ class KinoTest(ResistanceCase):
 
 
 class WaterStageTest(ResistanceCase):
-    """水舞台 29047353(標準卡,m2 票 04)。"""
+    """水舞台 29047353。"""
     CARDS = [card(WATER_STAGE, name_ja="水舞台", type=SPELL | 0x80000)]
     FAQ = [faq(WATER_STAGE, "水舞台", WATER_STAGE_TEXT)]
 

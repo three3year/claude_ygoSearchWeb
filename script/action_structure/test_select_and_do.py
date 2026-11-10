@@ -1,4 +1,4 @@
-"""「選んで」(m2 票 09):「〜を選んで+述語」不另成段,字面留在述語開頭、不標取對象。
+"""「選んで」:「〜を選んで+述語」不另成段,字面留在述語開頭、不標取對象。
 
 走接縫一(查詢判斷)與接縫二(反向檢查);查詢層沒有的格(`count`、`pick`、物件條件、`display`…)
 先用查詢命中段,再讀該段的格。官方文本逐字寫在測試裡(`data/sources/` 不入版控)。
@@ -32,7 +32,6 @@ def own(structures, cid):
 
 
 def hit_segments(structures, cards, cid, **query):
-    """查詢命中某卡的段(含內嵌效果的段);沒命中回空列表。"""
     result = run_query(structures, cards, query)
     ids = next((h["segments"] for h in result["hits"] if h["id"] == cid), [])
     return [seg for b in own(structures, cid)["blocks"] for _, seg in iter_segments(b)
@@ -93,7 +92,6 @@ IGNITE_BURST_TEXT = (
 
 
 def _atoms(condition):
-    """條件式裡的全部原子(且/或/非 展開)。"""
     if not isinstance(condition, dict):
         return []
     out = [condition]
@@ -105,7 +103,7 @@ def _atoms(condition):
 
 
 class IgniteBurstTest(unittest.TestCase):
-    """イグナイト・バースト 65872270(m2 票 09 標準卡)。"""
+    """イグナイト・バースト 65872270。"""
 
     @classmethod
     def setUpClass(cls):
@@ -163,7 +161,7 @@ HYMN = 80566312            # 祝祷の聖歌
 
 
 class SaffiraTest(unittest.TestCase):
-    """竜姫神サフィラ 56350972(m2 票 09 標準卡)。"""
+    """竜姫神サフィラ 56350972。"""
 
     @classmethod
     def setUpClass(cls):
@@ -194,7 +192,7 @@ class SaffiraTest(unittest.TestCase):
         self.assertEqual(len(segs), 1)
 
     def test_select_segments_write_back(self):
-        """● 裡三個「選んで」段原樣寫回;整張不通過的其餘段(降臨、抽牌、發動條件)不在本票範圍。"""
+        """● 裡三個「選んで」段原樣寫回。"""
         segs = [s for b in own(self.structures, SAFFIRA)["blocks"] for _, s in iter_segments(b)
                 if "選んで" in (s["predicate"] or "")]
         failed = {f["segment"] for f in check_card(own(self.structures, SAFFIRA))}
@@ -202,7 +200,7 @@ class SaffiraTest(unittest.TestCase):
         self.assertEqual([s["id"] for s in segs if s["id"] in failed], [])
 
     def test_draw_branch_writes_back(self):
-        """m2 票 10 重驗:● 第一支「自分はデッキから２枚ドローし、その後手札を１枚選んで捨てる」
+        """● 第一支「自分はデッキから２枚ドローし、その後手札を１枚選んで捨てる」
         的抽牌段命中、誰我方、張數 2,抽牌與捨棄兩段都寫回。"""
         draw_seg, = hit_segments(self.structures, self.cards, SAFFIRA, actions=["抽牌"],
                                  from_zones=["牌組"])
@@ -231,7 +229,7 @@ DINA_BANISH = "相手の手札をランダムに１枚選んでエンドフェ�
 
 
 class DinaTest(unittest.TestCase):
-    """耀聖の波詩ディーナ 59581480(m2 票 09 標準卡):只驗 ③ 後半;① 的區域位置與 ③ 前半的
+    """耀聖の波詩ディーナ 59581480:只驗 ③ 後半;① 的區域位置與 ③ 前半的
     「入れ替える」不在範圍,整張反向檢查不要求。"""
 
     @classmethod
@@ -373,7 +371,7 @@ class SelectPatternTest(unittest.TestCase):
 
     def test_end_phase_duration_before_predicate(self):
         cards, structures = library("①：そのモンスターをエンドフェイズまで除外する。")
-        self.assertFalse(passes(structures))   # 「その」指不到東西,只確認期間槽不讓段解析失敗
+        self.assertFalse(passes(structures))
         cards, structures = library(
             "①：フィールドのモンスター１体を選んでエンドフェイズまで除外する。")
         seg, = hit_segments(structures, cards, SELF, actions=["除外"])

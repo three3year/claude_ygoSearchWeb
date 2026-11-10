@@ -114,7 +114,6 @@ def _render_atom(atom, names):
     if op == "非" and atom.get("arg", {}).get("op") == "卡名":
         return _quoted(atom["arg"], names) + "以外の"
     if op == "非" and is_param_atom(atom.get("arg", {})):
-        # 種族/屬性(列舉)以外的(m2 票 04:水属性以外のモンスター)。
         arg = atom["arg"]
         text = render_group(arg) if arg.get("op") == "或" else _render_atom(arg, names)
         if text is None:
@@ -165,7 +164,6 @@ def _render_modifiers(mods, names):
         text = render_group(atom) if atom.get("op") == "或" else _render_atom(atom, names)
         if text is None:
             raise NoTemplate("屬性比較無模板")
-        # 實際寫法與預設不同時,抽取端把它記在 `joiner`(m2 票 11);只收「・」「の」與不寫。
         written = atom.get("joiner")
         if written is not None and written not in JOINER_WORDS:
             raise NoTemplate("修飾語連接字無模板")
@@ -180,7 +178,6 @@ def _render_condition(condition, names):
     if condition is None:
         raise NoTemplate("物件條件無模板:空")
     if condition.get("op") == "或" and condition.get("form") == OR_FORM:
-        # 名詞短語的「か」列舉(m2 票 13):各截各自寫成名詞短語。
         return OR_FORM.join(_render_condition(arg, names) for arg in condition["args"])
     head = _render_head(condition)
     if head:
@@ -200,8 +197,8 @@ def _render_condition(condition, names):
 
 
 def _render_count(count):
-    """數量字面:N体/N枚/Nつ(まで)、全て;變數數量(算式,m2 票 09)只記字面、照寫,上限「〜の数まで」
-    帶 cmp ≤(m2 票 11);
+    """數量字面:N体/N枚/Nつ(まで)、全て;變數數量(算式)只記字面、照寫,上限「〜の数まで」
+    帶 cmp ≤;
     `each`(「それぞれ」「ずつ」)由數值拼回基本字面,再驗原文字面是它加上這兩個字。"""
     if not count:
         return ""
@@ -314,7 +311,7 @@ def _render_object(obj, seg, card, names, line=None, with_count=True, self_id="o
 
 
 def _render_detach_object(obj, seg, card, names, self_id):
-    """超量素材、計數器(m2 票 11):[所屬物件の]X素材|種類名。所屬物件照一般物件寫(回指字面在
+    """超量素材、計數器:[所屬物件の]X素材|種類名。所屬物件照一般物件寫(回指字面在
     `of_ref`);隱含的所屬卡(超量怪獸、沒有字面)不寫,它的位置由對象線的從寫出。
     超量素材的名詞取 X素材/エクシーズ素材 閉集裡物件字面結尾的那個。"""
     if (obj["source"]["kind"] != "新建" or obj["condition"] is not None or obj["count"]
@@ -397,7 +394,6 @@ def _render_zone_text(pos, particle):
     if text:
         # 「自分フィールドの、」的讀點是字面的一部分,驗區域時先去掉。
         bare = text[:-1] if text.endswith("、") else text
-        # 從的表示形式(「フィールド上に表側表示で存在する」,m2 票 05)夾在助詞中間。
         particles = (f"に{display}存在する",) if display else _POSITION_PARTICLES
         phrase = next((bare[:-len(p)] for p in particles
                        if bare.endswith(p)), None)
@@ -444,7 +440,6 @@ def _render_from(lines):
 
 
 def _is_zone_object(line):
-    """區域當物件的線(m2 票 09):明寫的「從」寫在物件的位置。"""
     return bool(line["from"]) and line["from"].get("placement") == ZONE_AS_OBJECT
 
 
@@ -465,7 +460,7 @@ def _render_to(lines, predicate_to):
     「自分フィールドにモンスターが特殊召喚された」的到在物件前(placement 名詞前),其餘在述語前。
     形式字面(treat、order,`render_placement_form`)照句型槽寫在述語前的「從」之前(「魔法カード扱いで
     手札から魔法＆罠ゾーンにセットできる」);到是推得或在述語裡時只寫形式(「装備魔法カード扱いで、
-    〜に装備できる」,票 06)。表示形式(m2 票 05)不論到怎麼來都寫在述語前,由呼叫端接在述語前。"""
+    〜に装備できる」)。表示形式不論到怎麼來都寫在述語前,由呼叫端接在述語前。"""
     displays = {render_display(line["to"].get("form")) for line in lines if line["to"]}
     forms = {render_placement_form(line["to"].get("form")) for line in lines if line["to"]}
     if len(displays) > 1 or len(forms) > 1:
@@ -487,7 +482,7 @@ def _render_to(lines, predicate_to):
 def _render_predicate(seg, marker):
     """述語字面必須能拆回段的動作詞、態、極性(多動作詞是て形串接;「Xは〜できる」的極性是可以,
     與抽取端同一把尺 resolve_polarity);開頭的取對象字面(「選択して」「対象として」)拆出來、
-    單獨出現時是沒有動作詞的取對象宣告;「選んで」(m2 票 09)同一個位置、同樣拆法,但不標取對象。
+    單獨出現時是沒有動作詞的取對象宣告;「選んで」同一個位置、同樣拆法,但不標取對象。
     回傳 (取對象字面或 None, 選取字面或 None, 述語字面, 述語寫明的終點)。"""
     if not seg["predicate"]:
         raise NoTemplate("段無動作詞")
@@ -507,14 +502,13 @@ def _render_predicate(seg, marker):
                                                       seg["optional"]):
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
     if attack_times(rest) != seg["times"]:
-        # 多次攻擊的次數(m2 票 04)寫在原述語字面裡,格要與字面一致。
         raise NoTemplate("攻擊次數與述語字面不一致")
     return prefix, select, rest, next((p.to for p in parsed if p.to), None)
 
 
 def _render_cause(cause, seg, card, objects, names, self_id):
     """原因:閉集字面(戦闘で…);「「X」の効果で」寫物件;召喚方式寫各方式以「及び」連接 + で;
-    帶 `objects` 的(m2 票 04)寫各物件以「及び」連接 + 字面(「との戦闘では」「の」)。"""
+    帶 `objects` 的寫各物件以「及び」連接 + 字面(「との戦闘では」「の」)。"""
     if cause and cause.get("objects"):
         expected = {"戰鬥": ("との戦闘では", "との戦闘で", "との戦闘によって"),
                     "效果": (OWNER_TEXT,)}.get(cause.get("kind"), ())
@@ -530,7 +524,6 @@ def _render_cause(cause, seg, card, objects, names, self_id):
             raise NoTemplate("原因無模板:效果的物件")
         return _render_object(obj, seg, card, names, self_id=self_id) + CAUSE_EFFECT_OF
     if cause and cause.get("kind") == CAUSE_EXCLUDE:
-        # 「ドロー以外の方法で」(m2 票 10):字面的 X 要拆回 exclude 的動作詞。
         text = cause.get("text") or ""
         parsed, _ = (parse_predicates(text[:-len(EXCLUDE_METHOD_TAIL)])
                      if text.endswith(EXCLUDE_METHOD_TAIL) else (None, None))
@@ -548,7 +541,7 @@ def _render_cause(cause, seg, card, objects, names, self_id):
 
 def _render_modify(seg, card, objects, names, self_id):
     """性質變更句:[主語][屬性]は[期間][值]述語;主語是回指字面(對象線的 ref,物件0 是「このカードの」),
-    或「[從の][全ての]物件の」(m2 票 08)。"""
+    或「[從の][全ての]物件の」。"""
     if len(seg["lines"]) != 1 or seg["actions"] != [MODIFY_ACTION] or not seg["modified"]:
         raise NoTemplate("性質變更段的格不齊")
     line = seg["lines"][0]
@@ -573,7 +566,7 @@ def _render_modify(seg, card, objects, names, self_id):
 
 
 def _render_derived(seg):
-    """衍生的性質變更段(m2 票 08,「攻撃力３００アップの装備カード扱いで」):不另寫一句,
+    """衍生的性質變更段(「攻撃力３００アップの装備カード扱いで」):不另寫一句,
     只寫回它在 treat 字面裡的範圍「[屬性][差量]アップ」;其餘格要空。"""
     if (seg["actions"] != [MODIFY_ACTION] or not seg["modified"] or len(seg["lines"]) != 1
             or seg["lines"][0]["role"] != "受事" or seg["lines"][0]["ref"]
@@ -647,7 +640,7 @@ def _render_treat_as(seg, names, objects, self_id):
 
 
 def _render_materials(seg, card, names, objects, self_id):
-    """素材行(票 09):每條角色「素材」的線寫物件全名(超量素材數「×N」接在後面,m2 票 11),以「＋」連;
+    """素材行:每條角色「素材」的線寫物件全名(超量素材數「×N」接在後面),以「＋」連;
     沒有述語。"""
     if seg["actions"] or seg["predicate"] or seg["kind"] != "召喚手續":
         raise NoTemplate("素材段的格不齊")
@@ -658,7 +651,7 @@ def _render_materials(seg, card, names, objects, self_id):
 
 
 def _render_material_times(count):
-    """超量素材數「×N」(m2 票 11):對象線 count 單位 ×;沒有就是空字串。"""
+    """超量素材數「×N」:對象線 count 單位 ×;沒有就是空字串。"""
     if not count:
         return ""
     if (count.get("unit") != MATERIAL_TIMES or count.get("cmp") != "="
@@ -668,7 +661,7 @@ def _render_material_times(count):
 
 
 def _render_damage(seg, card, objects, names, self_id, inner_duration):
-    """傷害、回復、傷害值變更段(m2 票 06,`damage`):
+    """傷害、回復、傷害值變更段(`damage`):
     給予 [主語][原因][算式だけ][受方に(名詞前)][數量]名詞を[受方に]与え〜;
     受到 [原因(主語前)][受方は|が][原因][門檻][數量]名詞を受け〜(受けない 是數值 0 的變更);
     變更 [このターン][來源][受方への|が受ける|に与える]名詞は(０|倍|半分)になる;
@@ -746,7 +739,6 @@ def _render_damage(seg, card, objects, names, self_id, inner_duration):
 
 
 def _check_predicate(seg, parsed):
-    """述語字面拆回的動作詞、態、極性要與段一致(傷害、回復段)。"""
     if parsed is None or [p.action for p in parsed] != seg["actions"]:
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
     polarity, optional = resolve_polarity(parsed, None)
@@ -756,7 +748,7 @@ def _check_predicate(seg, parsed):
 
 
 def _render_battle(seg, card, objects, names, self_id):
-    """戰鬥子句(m2 票 07):[施事]が[受事と]述語;施事一條、受事至多一條,線不帶從/到/取對象/數量,
+    """戰鬥子句:[施事]が[受事と]述語;施事一條、受事至多一條,線不帶從/到/取對象/數量,
     段不帶誰、受方、原因、時機、數量。"""
     lines = seg["lines"]
     roles = [(line["role"], line["marker"]) for line in lines]
@@ -775,7 +767,7 @@ def _render_battle(seg, card, objects, names, self_id):
 
 
 def _last_segment_doing(action, seg, card):
-    """同一區塊裡、這一段之前最後一個做過該動作詞的段 id(「ドローしたプレイヤー」的回指,m2 票 10)。"""
+    """同一區塊裡、這一段之前最後一個做過該動作詞的段 id(「ドローしたプレイヤー」的回指)。"""
     block_id = seg["id"].split(".")[0]
     for block in _all_blocks(card):
         if block["id"] != block_id:
@@ -796,7 +788,7 @@ _AGENT_TEXT_RE = re.compile("^(?P<word>" + "|".join(AGENT_PLAYER_WORDS)
 
 
 def _render_agent(agent, seg, card):
-    """誰(m2 票 10 擴):方的字串寫預設接法(條件段「相手が」、其餘「自分は」);玩家字面
+    """誰:方的字串寫預設接法(條件段「相手が」、其餘「自分は」);玩家字面
     `{"side", "text"}` 驗過玩家字與方一致再照字面;動作回指 `{"ref", "segment"}` 要指回這一段之前
     最後一個做過那個動作的段,接法是預設的。"""
     particle = agent_particle(seg["kind"])
@@ -821,7 +813,6 @@ _DRAWN_CONDITION = {"op": "大類", "value": "卡"}
 
 
 def _is_draw_segment(seg, objects):
-    """抽牌段(m2 票 10):動作詞只有抽牌、一條線指向新建的「カード」物件(有寫或沒寫)。"""
     if seg["actions"] != [draw.DRAW_ACTION] or len(seg["lines"]) != 1:
         return False
     line = seg["lines"][0]
@@ -913,9 +904,7 @@ def render_segment(seg, card, self_id="o0"):
     leading, existence = split_premise(seg["premise"])
     premise_only = (seg["kind"] == "條件" and leading is not None
                     and existence is None and not seg["actions"] and not seg["lines"])
-    # 句首時間狀語(m2 票 03)寫在前提之前;句中的「〜まで」只有性質變更句模板寫得出。
     prefix, inner_duration = split_duration(seg["duration"])
-    # 簡單子句述語前的期間(m2 票 09)由簡單子句模板寫;其餘句中期間只有性質變更句(與傷害句)寫得出。
     clause_duration = None
     if inner_duration is not None and seg["actions"] != [MODIFY_ACTION]:
         if not is_clause_duration(inner_duration):
@@ -923,7 +912,6 @@ def render_segment(seg, card, self_id="o0"):
         clause_duration = inner_duration
     if (seg["kind"] == "條件" and seg["trigger"] in BATTLE_TRIGGERS
             and not seg["actions"] and not seg["lines"]):
-        # 只有戰鬥時點的條件段(m2 票 07):[前提][その]觸發形;「その」是前提 段已執行。
         if _is_segment_done(seg["premise"]):
             return prefix + BATTLE_TIMING_REF + seg["trigger"]
         if leading is not None:
@@ -962,7 +950,6 @@ def render_segment(seg, card, self_id="o0"):
             parts.append(_render_agent(seg["agent"], seg, card))
         cause_front = bool(seg["cause"]) and seg["cause"].get("placement") == "名詞前"
         if cause_front:
-            # 寫在主語後、物件前的方法原因(「相手がドロー以外の方法でデッキから〜」,m2 票 10)。
             parts.append(_render_cause({k: v for k, v in seg["cause"].items() if k != "placement"},
                                        seg, card, objects, names, self_id))
         # 主語省略的線(票 09)不寫物件與助詞;其餘線的助詞要一致。
@@ -1010,11 +997,10 @@ def render_segment(seg, card, self_id="o0"):
         if to_placement == "名詞前":
             parts.append(to_text)
         if count_placement == "名詞前":
-            parts.append(count_text)   # 物件前的變數數量(「破壊した数だけ相手フィールドの〜」)
+            parts.append(count_text)
         if from_placement == "名詞前":
             parts.append(from_text)
         if count_placement == COUNT_AFTER_OBJECT:
-            # 回指後接數量(「そのカード１枚を」,m2 票 10):只有一條線時寫在物件與助詞之間。
             if len(words) != 1:
                 raise NoTemplate("對象線的助詞或數量不一致")
             words[0] += count_text
@@ -1032,7 +1018,7 @@ def render_segment(seg, card, self_id="o0"):
         if from_placement == "述語前":
             parts.append(from_text)
         if count_placement == "述語前":
-            parts.append(count_text)   # 「從」之後的數量(「自分の墓地から１枚選んで」)
+            parts.append(count_text)
         parts.append(select_text or "")
         parts.append(clause_duration["text"] if clause_duration else "")
         if to_placement == "述語前":
@@ -1112,7 +1098,6 @@ def _residue(block, glue, glue_failed=False, holes=()):
         if glue_failed and node.get("span"):
             cut.append((node["span"][0], node["span"][1], None))
         if glue_failed and node.get("node") == "分歧":
-            # 依值分支型內嵌效果的 ● 標籤(m2 票 12)。
             cut.extend((b["label"][0], b["label"][1], None) for b in node["branches"]
                        if b.get("label"))
     if block["label"]:
@@ -1151,7 +1136,6 @@ def check_card(card):
         holes = _holes(block, card)
         view = card
         if binding.get("我方") == "對手":
-            # 效果被換掉(m2 票 12):內容區塊存的是對調過的方,依綁定對調回去再寫回原文的視角。
             view = {**card, "objects": [swap_sides(o) if o["block"] == block["id"] else o
                                         for o in card["objects"]]}
         for seg in block["segments"]:

@@ -1,4 +1,4 @@
-"""傷害與回復(m2 票 06):句型與模板成對放在一起(抽取的填格在 `segment_extract._fill_damage`)。
+"""傷害與回復:句型與模板成對放在一起(抽取的填格在 `segment_extract._fill_damage`)。
 
 - 動作詞傷害:「与える」「受ける」同一個動作詞,`recipient` 是受傷的一方、`predicate` 留字面
   (「与えた」「受ける」);動作詞回復(「回復する」)形狀同傷害。
@@ -28,14 +28,11 @@ from structure_shape import AMOUNT_FORMULA, NoTemplate
 DAMAGE_ACTION = "傷害"
 RECOVER_ACTION = "回復"
 DAMAGE_ATTR = "傷害"
-# 傷害、回復的述語字幹(同義表收這三個;「ダメージを」接在字幹裡,一般子句的述語不含を,所以
-# 只有這裡的句型會產生傷害段)。述語字面只留「与えた」「受ける」「回復する」,驗證時接回。
 DAMAGE_OBJECT = "ダメージを"
 DEAL_STEM, RECEIVE_STEM, RECOVER_STEM = "与え", "受け", "回復"
 NEGATED_RECEIVE = "受けない"
 MODIFY_DAMAGE_PREDICATE = "になる"
 
-# 玩家字面 → 方(長的在前)。「このカードのコントローラー」從此卡看是我方。
 PLAYER_WORDS = (("お互いのプレイヤー", "雙方各自"), ("お互い", "雙方各自"),
                 ("相手プレイヤー", "對手"), ("相手ライフ", "對手"),
                 ("このカードのコントローラー", "我方"), ("自分", "我方"), ("相手", "對手"))
@@ -49,15 +46,12 @@ MODIFY_TAILS = ("への", "が受ける", "に与える", "の")
 RECOVER_TAILS = ("は", "のLPを", "のライフポイントを", "のLPが")
 PLACEMENT_BEFORE_NOUN = "名詞前"
 CAUSE_BEFORE_SUBJECT = "主語前"
-# 名詞型原因:傷害名詞字面 → 種類(None = 沒寫種類的「ダメージ」,不記原因)。
 NOUN_CAUSES = {"戦闘・効果ダメージ": "戰鬥或效果", "戦闘ダメージ": "戰鬥",
                "効果ダメージ": "效果", "ダメージ": None}
 _NOUN_ALT = "|".join(sorted(NOUN_CAUSES, key=len, reverse=True))
 PLAIN_NOUN = "ダメージ"
-# 傷害來源「このカードの戦闘で発生する」:物件後的接法、沒有物件的「その戦闘で発生する」。
 SOURCE_TAILS = ("の戦闘で発生する", "の戦闘によって発生する")
 SOURCE_THAT_BATTLE = ("その戦闘で発生する", "その戦闘によって発生する")
-# 門檻「X以下の」:字尾 → cmp。
 LIMIT_CMP = {"以下の": "≤", "未満の": "<"}
 VALUE_FORMS = {"０": ("數值", 0), "倍": ("倍", None), "半分": ("半分", None)}
 DURATION_THIS_TURN = "このターン"
@@ -69,7 +63,6 @@ _FORMULA = "[^、]+?(?:×[０-９]+(?:ポイント)?|分の|と同じ)"
 _LP_UNIT = "(?:LP|ライフポイント)"
 _CAUSE = f"(?:{CAUSE_PATTERN})"
 
-# 給予:[主語(が|は)][原因][算式だけ][受方に][數量]名詞を[受方に]与え〜
 _DEAL_RE = re.compile(
     # 主語「自分が」「相手が」後面接的是關係子句(「自分が受けたダメージと同じ数値分の」是算式),
     # 不是施事:玩家當施事只認「は」。
@@ -81,7 +74,6 @@ _DEAL_RE = re.compile(
     f"(?P<noun>{_NOUN_ALT})を"
     f"(?:(?P<recipient>{_PLAYER_ALT})に)?"
     f"(?P<pred>{DEAL_STEM}[^、]*)$")
-# 受到:[原因][受方(は|が)][原因][門檻][數量]名詞を受け〜
 _RECEIVE_RE = re.compile(
     f"^(?P<cause_pre>{_CAUSE})?"
     f"(?P<recipient>{_PLAYER_ALT})(?P<recipient_tail>{'|'.join(RECEIVE_TAILS)})"
@@ -90,7 +82,6 @@ _RECEIVE_RE = re.compile(
     f"(?P<amount>{_FIXED}|{_FORMULA})?"
     f"(?P<noun>{_NOUN_ALT})を"
     f"(?P<pred>{RECEIVE_STEM}[^、]*)$")
-# 傷害值變更:[このターン][來源][受方(への|が受ける|に与える|の)]名詞は(０|倍|半分)になる
 _MODIFY_RE = re.compile(
     f"^(?P<duration>{DURATION_THIS_TURN})?"
     "(?:(?P<source_that>" + "|".join(SOURCE_THAT_BATTLE) + ")"
@@ -98,7 +89,6 @@ _MODIFY_RE = re.compile(
     f"(?:(?P<recipient>{_PLAYER_ALT})(?P<recipient_tail>{'|'.join(MODIFY_TAILS)}))?"
     f"(?P<noun>{_NOUN_ALT})は"
     f"(?P<value>{'|'.join(VALUE_FORMS)}){MODIFY_DAMAGE_PREDICATE}$")
-# 回復:「自分は１０００LP回復する」「その数値分だけ自分のLPを回復する」「自分のLPが回復した」。
 _RECOVER_SUBJECT_RE = re.compile(
     f"^(?P<recipient>{_PLAYER_ALT})(?P<recipient_tail>は)"
     f"(?P<amount>[０-９]+{_LP_UNIT}|[^、]+?×[０-９]+{_LP_UNIT})"
@@ -181,8 +171,6 @@ def is_damage_segment(seg):
     modified = seg.get("modified") or {}
     return DAMAGE_ATTR in (modified.get("attr") or []) and seg["predicate"] != "として扱う"
 
-
-# ── 模板 ──
 
 def render_recipient(recipient, tails):
     """玩家受方 → 字面;字面要是 玩家字面 + 允許的接法,且玩家字面與方對得上。"""

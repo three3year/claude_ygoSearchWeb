@@ -1,4 +1,4 @@
-"""去除(m2 票 11):「取り除く」的對象只有超量素材與計數器兩種物件。
+"""去除:「取り除く」的對象只有超量素材與計數器兩種物件。
 
 超量素材 `{kind: 超量素材, of: 所屬卡物件}`、計數器 `{kind: 計數器, counter: 種類名}`;
 數量單位「つ」進對象線 `count`。代價、效果、代替、被動條件四種形態走既有機制。
@@ -37,7 +37,6 @@ def own(structures, cid):
 
 
 def hit_segments(structures, cards, cid, **query):
-    """查詢命中某卡的段(含內嵌效果的段);沒命中回空列表。"""
     result = run_query(structures, cards, query)
     ids = next((h["segments"] for h in result["hits"] if h["id"] == cid), [])
     return [seg for b in own(structures, cid)["blocks"] for _, seg in iter_segments(b)
@@ -60,7 +59,7 @@ SHADOW_MAKER_TEXT = (
 
 
 class ShadowMakerTest(unittest.TestCase):
-    """Em影絵師シャドー・メイカー 69655484(m2 票 11 標準卡)。"""
+    """Em影絵師シャドー・メイカー 69655484。"""
 
     @classmethod
     def setUpClass(cls):
@@ -137,7 +136,7 @@ LIGHT_DRAGON_TEXT = (
 
 
 class LightDragonTest(unittest.TestCase):
-    """ライトドラゴン＠イグニスター 61399402(m2 票 11 標準卡,跨類回歸)。"""
+    """ライトドラゴン＠イグニスター 61399402。"""
 
     @classmethod
     def setUpClass(cls):
@@ -280,7 +279,7 @@ SELF = 10001101   # 合成卡(本檔號段 10001101 起)
 
 
 class MaterialLineAndJoinerTest(unittest.TestCase):
-    """標準卡順手收的:超量素材行「×N」,與修飾語的連接字照原文寫回(素材行「水属性レベル４」不寫「・」,
+    """超量素材行「×N」,與修飾語的連接字照原文寫回(素材行「水属性レベル４」不寫「・」,
     「ドラゴン族のシンクロモンスター」寫「の」)。"""
 
     @staticmethod
@@ -313,7 +312,7 @@ DEMETTO_TEXT = (
 
 
 class MaterialAttachedIsOutOfScopeTest(unittest.TestCase):
-    """「X素材としている」(作為超量素材)留到下個里程碑:那段仍解析不出,查「去除」列未解析組、不命中。"""
+    """「X素材としている」(作為超量素材)那段解析不出,查「去除」列未解析組、不命中。"""
 
     @classmethod
     def setUpClass(cls):

@@ -1,4 +1,4 @@
-"""傷害與回復(m2 票 06):動作詞傷害(与える/受ける 同一詞)、回復,傷害值變更記成性質變更 `attr` 傷害。
+"""傷害與回復:動作詞傷害(与える/受ける 同一詞)、回復,傷害值變更記成性質變更 `attr` 傷害。
 
 走接縫一(查詢判斷)與接縫二(反向檢查)。spec「查詢判斷」只加 `modified` 欄,「受方對手」「原因戰鬥」
 「施事是物件0」這類條件先用既有欄查到命中段,再讀命中段的格(`hit_segments`)。
@@ -62,7 +62,6 @@ TRAPEZE_TEXT = (
 
 
 def build(*entries):
-    """(卡號, 卡名, 卡文, 卡片參數) 列表 → (卡片總表, 結構列表)。"""
     cards = [card(cid, name_ja=name, **kw) for cid, name, _, kw in entries]
     structures, _ = build_structures(
         cards, [faq(cid, name, text) for cid, name, text, _ in entries], ARCHETYPES)
@@ -70,7 +69,6 @@ def build(*entries):
 
 
 def hit_segments(cards, structures, cid, **query):
-    """查詢命中 cid 的段物件(含內嵌效果的段);沒命中回空列表。"""
     result = run_query(structures, cards, query)
     ids = next((h["segments"] for h in result["hits"] if h["id"] == cid), [])
     structure = next(s for s in structures if s["id"] == cid)
@@ -79,7 +77,6 @@ def hit_segments(cards, structures, cid, **query):
 
 
 def side_of(recipient):
-    """受方的方(玩家受方是 {"side", "text"})。"""
     return recipient["side"] if isinstance(recipient, dict) else recipient
 
 

@@ -1,4 +1,4 @@
-"""抽牌(m2 票 10):抽到的卡是新建物件、張數進對象線 `count`、從牌組到手牌;「カードを」有沒有寫
+"""抽牌:抽到的卡是新建物件、張數進對象線 `count`、從牌組到手牌;「カードを」有沒有寫
 結構相同;「自分は/相手は/お互いは」是 `agent`,「ドローしたプレイヤーは」是指回抽牌段的 `agent`。
 
 走接縫一(查詢判斷)與接縫二(反向檢查);查詢層沒有的格(`agent`、`count`、`cause`…)先用查詢
@@ -23,7 +23,6 @@ def own(structures, cid):
 
 
 def hit_segments(structures, cards, cid, **query):
-    """查詢命中某卡的段(含內嵌效果的段);沒命中回空列表。"""
     result = run_query(structures, cards, query)
     ids = next((h["segments"] for h in result["hits"] if h["id"] == cid), [])
     return [seg for b in own(structures, cid)["blocks"] for _, seg in iter_segments(b)
@@ -37,7 +36,7 @@ DARK_WORLD_DEALINGS_TEXT = (
 
 
 class DarkWorldDealingsTest(unittest.TestCase):
-    """暗黒界の取引 74117290(標準卡,m2 票 10)。"""
+    """暗黒界の取引 74117290。"""
 
     @classmethod
     def setUpClass(cls):
@@ -81,7 +80,7 @@ TSUPPA_REACH_TEXT = (
 
 
 class TsuppaReachTest(unittest.TestCase):
-    """ツッパリーチ 20216608(標準卡,m2 票 10)。"""
+    """ツッパリーチ 20216608。"""
 
     @classmethod
     def setUpClass(cls):
@@ -178,7 +177,6 @@ _LITERAL_KEYS = {"id", "span", "text", "block", "marker", "object"}
 
 
 def draw_shape(cid, name, text):
-    """抽牌段除字面(原文、範圍、id、物件字面、助詞)外的結構,另回傳誰與張數。"""
     cards = [card(cid, name_ja=name, type=SPELL)]
     structures = build(cards, [faq(cid, name, text)])
     seg, = hit_segments(structures, cards, cid, actions=["抽牌"])

@@ -12,25 +12,25 @@
   (位置不是卡的屬性),泛用物件的定義把它當泛用原子。
 - 卡片子類型:「No.」Xモンスター、Sモンスター 的 X/S/L/P/融合/儀式 →
   {"op": "屬性比較", "attr": "卡片子類型", "cmp": "=", "value": "超量"};片假名全寫(リンク、シンクロ、
-  エクシーズ,m2 票 11)值同字母,另帶 `text` 記字面。
+  エクシーズ)值同字母,另帶 `text` 記字面。
 - 屬性比較(引用):種族か属性が見せたモンスターと同じで、→ 或(種族 = 物件.種族, 屬性 = 物件.屬性);
   そのモンスターのランクと同じ数値のレベルを持つ → 等級 = 物件.階級。
   引用 {"object": 物件 id, "attr": 屬性名, "text": 指回的字面};`form` 記句型(同じで / 同じ数值)
   讓模板放回原字面。指回的物件由 `BlockState.resolve_reference` 解。
-- 控制方(m2 票 07):修飾語開頭的「自分の」「相手の」(自分の「EM」モンスター、相手の表側表示モンスター),
+- 控制方:修飾語開頭的「自分の」「相手の」(自分の「EM」モンスター、相手の表側表示モンスター),
   或緊接頭名詞的「相手」「自分」(相手モンスター)→ {"op": "控制方", "value": 我方|對手, "text": 字面};
   「自分フィールドの」是位置,不在此列。代入時任何卡都算(泛用原子)。
-- 此卡以外(m2 票 09):「このカード以外の」→ 非(同一張 物件0):{"op": "非", "arg": {"op": "同一張",
+- 此卡以外:「このカード以外の」→ 非(同一張 物件0):{"op": "非", "arg": {"op": "同一張",
   "object": 此卡的物件 id, "text": "このカード"}};代入的是卡而不是那一張實體,任何卡都代得進去
   (同名的另一張也算),但不是泛用原子(泛用物件的定義不變)。
-- 位置的非預設區域字面(m2 票 09):「エクストラデッキの」= 額外牌組,原子另帶 `text`(區域字面),模板照它寫。
-- 以此卡為對象(m2 票 11):「このカードを対象とする(Xの)効果」→ {"op": "以此卡為對象", "object": 此卡的
+- 位置的非預設區域字面:「エクストラデッキの」= 額外牌組,原子另帶 `text`(區域字面),模板照它寫。
+- 以此卡為對象:「このカードを対象とする(Xの)効果」→ {"op": "以此卡為對象", "object": 此卡的
   物件 id, "text": 字面};效果所屬的卡的狀態,代入時任何卡都算、不是泛用原子。
-- 位置的區域列舉(m2 票 12):「フィールド（表側表示）・墓地の」→ 位置原子多個區域,「（表側表示）」記在
+- 位置的區域列舉:「フィールド（表側表示）・墓地の」→ 位置原子多個區域,「（表側表示）」記在
   那個區域的 `face`;原子帶 `text`(區域字面),模板驗過與區域一致後照它寫。
-- 回指物件以外(m2 票 12):「そのモンスター以外の、」→ 非(同一張 指回的物件),同此卡以外;
+- 回指物件以外:「そのモンスター以外の、」→ 非(同一張 指回的物件),同此卡以外;
   後接讀點時 非 原子帶 `text`(含讀點的整個字面)。
-- 被裝備者(m2 票 08):緊接頭名詞的「装備」(装備モンスター)、「このカードを装備した」、
+- 被裝備者:緊接頭名詞的「装備」(装備モンスター)、「このカードを装備した」、
   「このカードの効果でこのカードを装備した」→ {"op": "被裝備者", "equip": 裝備卡物件, "text": 字面};
   裝備卡是「このカード」指的物件(內嵌效果裡是綁定的物件)。被裝備是狀態不是卡的屬性:代入時任何卡
   都算,但不是泛用原子(spec 泛用判定不變)。
@@ -49,14 +49,12 @@ _RANGE_RE = re.compile("^「(?P<lo>[^「」]+)」～「(?P<hi>[^「」]+)」の�
 # 字面取自共用的區域字面表(structure_shape.ZONE_WORDS),子區域(デッキの上)與舊式「フィールド上」不在此列。
 _ZONE_NAMES = ("額外牌組", "牌組", "手牌", "場上", "墓地")
 _ZONE_NAME = {DEFAULT_ZONE_WORD[name]: name for name in _ZONE_NAMES}
-# 非預設的區域字面(位置原子另帶 text 記字面)。
 _ZONE_LITERALS = {"エクストラデッキ": "額外牌組"}
 _ZONE_ALT = "|".join(_ZONE_NAME)
 _POSITION_ZONE_ALT = "|".join(list(_ZONE_LITERALS) + list(_ZONE_NAME))
 _ZONE_RE = re.compile(f"^(?P<side>自分|相手)?(?P<zone>{_POSITION_ZONE_ALT})の")
 _NOT_SELF_RE = re.compile("^(?P<text>このカード|その(?:モンスター|カード))以外の(?P<pause>、)?")
 SELF_TEXT = "このカード"
-# 區域列舉(m2 票 12):「フィールド（表側表示）・墓地」;單一區域只在帶「（表側表示）」時走這裡。
 FACE_UP_NOTE = "（表側表示）"
 _ZONE_ITEM = f"(?:{_POSITION_ZONE_ALT})(?:{FACE_UP_NOTE})?"
 _ZONE_LIST_RE = re.compile(
@@ -69,8 +67,7 @@ _SUMMONED_FROM_RE = re.compile(
     f"^(?P<side>自分|相手)?の?(?P<zone>{_ZONE_ALT})から特殊召喚された")
 SUBTYPE_LETTERS = (("融合", "融合"), ("儀式", "儀式"), ("S", "同步"), ("X", "超量"),
                    ("L", "連結"), ("P", "靈擺"),
-                   ("通常", "通常"))   # m2 票 04:「「ホール」通常罠カード」「通常モンスター」
-# 片假名全寫(m2 票 11:「自分の墓地からリンクモンスター１体を選んで」):值同字母,原子另帶 text 記字面。
+                   ("通常", "通常"))   # 「「ホール」通常罠カード」「通常モンスター」
 SUBTYPE_WORDS = (("リンク", "連結"), ("シンクロ", "同步"), ("エクシーズ", "超量"))
 _SUBTYPE = "|".join([word for word, _ in SUBTYPE_WORDS]
                     + [letter for letter, _ in SUBTYPE_LETTERS])
@@ -78,7 +75,7 @@ _ARCHETYPE_SUBTYPE_RE = re.compile(f"^「(?P<name>[^「」]+)」(?P<sub>{_SUBTYP
 _SUBTYPE_RE = re.compile(f"^(?P<sub>{_SUBTYPE})$")
 # 表示形式(表側、裏側是狀態,不是卡的屬性;spec「區域」;票 06):閉集,值就是字面。
 FACE_WORDS = ("表側攻撃表示", "表側守備表示", "裏側守備表示", "表側表示", "裏側表示")
-# 後接「の」的(「エクストラデッキの表側表示の「X」モンスター」,m2 票 09)原子另帶 text(含「の」)。
+# 後接「の」的(「エクストラデッキの表側表示の「X」モンスター」)原子另帶 text(含「の」)。
 _FACE_RE = re.compile("^(?P<face>" + "|".join(FACE_WORDS) + ")(?P<of>の)?")
 ATTR_WORDS = (("種族", "種族"), ("属性", "屬性"), ("レベル", "等級"), ("ランク", "階級"))
 _ATTR = "|".join(word for word, _ in ATTR_WORDS)
@@ -91,14 +88,10 @@ REASON_REF = "指回的物件找不到"
 
 _SIDE = {"自分": "我方", "相手": "對手"}
 _CONTROLLER_RE = re.compile("^(?P<side>自分|相手)(?:の|$)")
-# 被裝備者(m2 票 08):緊接頭名詞的修飾語字面閉集;裝備卡是「このカード」(內嵌效果裡是綁定的物件)。
 EQUIPPED = "被裝備者"
 EQUIPPED_FORMS = ("装備", "このカードを装備した", "このカードの効果でこのカードを装備した")
 _EQUIPPED_RE = re.compile("^(?:" + "|".join(sorted(EQUIPPED_FORMS, key=len, reverse=True))
                           + ")$")
-# 以此卡為對象(m2 票 11):「このカードを対象とする(Xの)効果が発動した時」的效果所屬的卡;
-# 對象是「このカード」指的物件(內嵌效果裡是綁定的物件)。是發動中效果的狀態,代入時任何卡都算,
-# 不是泛用原子。
 TARGETING_THIS = "以此卡為對象"
 TARGETING_THIS_FORMS = ("このカードを対象とする",)
 _TARGETING_THIS_RE = re.compile("^(?:" + "|".join(TARGETING_THIS_FORMS) + ")")
@@ -281,7 +274,6 @@ def render_atom(atom, names):
         lo, hi = (quoted_name(n, names) for n in atom["names"])
         return None if lo is None or hi is None else f"{lo}～{hi}のいずれかの"
     if op == "位置" and _ZONE_LIST_RE.match((atom.get("text") or "") + "の"):
-        # 區域列舉(m2 票 12):字面要拆得回同一組區域。
         zones = [{**zone(z["zone"], z.get("side")), **({"face": z["face"]} if z.get("face") else {})}
                  for z in atom["zones"]]
         return atom["text"] + "の" if parse_zone_list(atom["text"]) == zones else None

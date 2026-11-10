@@ -8,7 +8,7 @@ BLOCK_KINDS = ("素材", "召喚條件", "卡片發動", "靈擺效果", "編號
 SEGMENT_KINDS = ("條件", "代價", "效果", "被代替", "召喚手續", "限制", "修飾")
 POLARITIES = ("做", "不能", "不會", "可以", "只能", "必須")
 # ターン:「〜したターン、」的動作子句是條件段,後面的段以前提 `本回合發生過` 引用它(票 09)。
-# 戰鬥時點(m2 票 07):「〜戦闘を行うダメージ計算時に」的觸發形是整個時點字面,不是「時」。
+# 戰鬥時點:「〜戦闘を行うダメージ計算時に」的觸發形是整個時點字面,不是「時」。
 BATTLE_TRIGGERS = ("ダメージ計算前", "ダメージ計算時", "ダメージ計算後",
                    "ダメージステップ開始時", "ダメージステップ終了時")
 TRIGGER_FORMS = ("時", "場合", "際", "ターン") + BATTLE_TRIGGERS
@@ -16,9 +16,9 @@ ROLES = ("施事", "受事", "被召喚", "素材")
 POSITION_SOURCES = ("明寫", "繼承", "推得")
 JOINS = ("同時", "先後")
 BRANCH_MODES = ("選1", "各自可以", "依前提")
-SIDES = ("我方", "對手", "任一方", "雙方各自", "持有者",   # 持有者:「持ち主の」(m2 票 09)
-         "自身")   # 自身:「自身の手札」= 這一段的誰那一方(m2 票 10)
-OBJECT_KINDS = ("卡", "玩家", "計數器", "格位", "宣言值", "超量素材")   # 超量素材:m2 票 11
+SIDES = ("我方", "對手", "任一方", "雙方各自", "持有者",   # 持有者:「持ち主の」
+         "自身")   # 自身:「自身の手札」= 這一段的誰那一方
+OBJECT_KINDS = ("卡", "玩家", "計數器", "格位", "宣言值", "超量素材")
 OBJECT_SOURCES = ("自己", "新建", "子集", "剩餘", "聯集")
 VOICE_ACTIVE, VOICE_PASSIVE, VOICE_MIXED = "主動", "被動", "混合"
 VOICES = (VOICE_ACTIVE, VOICE_PASSIVE, VOICE_MIXED)  # 混合:て形串接的多個述語態不同
@@ -50,15 +50,15 @@ ZONE_PARENT = {"牌組頂": "牌組", "牌組底": "牌組", "怪獸區": "場�
 PLACEMENT_TREAT_KINDS = ("裝備卡", "永續魔法", "永續陷阱", "魔法")
 FACES = ("表側", "裏側")
 BATTLE_POSITIONS = ("攻擊", "守備")
-# 表示形式字面 ↔ (表裏, 攻守)(m2 票 05);沒寫的一半是 None。長的在前,「守備表示」不能先吃掉
+# 表示形式字面 ↔ (表裏, 攻守);沒寫的一半是 None。長的在前,「守備表示」不能先吃掉
 # 「裏側守備表示」的尾巴。到的放置形式 display、前提的位置/存在原子、從的表示形式共用這張表。
 DISPLAY_WORDS = (("表側攻撃表示", "表側", "攻擊"), ("表側守備表示", "表側", "守備"),
                  ("裏側守備表示", "裏側", "守備"), ("表側表示", "表側", None),
                  ("裏側表示", "裏側", None), ("攻撃表示", None, "攻擊"),
                  ("守備表示", None, "守備"))
 DISPLAY_WORD = "(?:" + "|".join(w for w, _, _ in DISPLAY_WORDS) + ")"
-# 到的表示形式另收省略「表示」的寫法(「エンドフェイズまで表側で除外できる」「裏側で除外する」,
-# m2 票 09),值同 表側表示/裏側表示;前提與從不收(由值拼回字面時用上面的完整寫法)。
+# 到的表示形式另收省略「表示」的寫法(「エンドフェイズまで表側で除外できる」「裏側で除外する」),
+# 值同 表側表示/裏側表示;前提與從不收(由值拼回字面時用上面的完整寫法)。
 SHORT_DISPLAY_WORDS = (("表側", "表側", None), ("裏側", "裏側", None))
 PLACEMENT_DISPLAY_WORD = "(?:" + "|".join(
     w for w, _, _ in DISPLAY_WORDS + SHORT_DISPLAY_WORDS) + ")"
@@ -133,7 +133,7 @@ def new_line(obj_id, role, targeting=False, from_=None, to=None, marker=None,
     """對象線:物件、取對象標記、角色、從、到;另記這一次提及的字面:`marker` 是助詞
     (を/が/は,None = を),`ref` 是回指字面(None = 本段首次出現;「そのモンスター」
     「それらのカード」「めくったカード」),`count` 是助詞後的數量(「を全て」「を２枚まで」,
-    屬於這次提及、不屬於物件);`pick` 是怎麼選(「ランダムに」→ 隨機,None = 由選者選;m2 票 09)。"""
+    屬於這次提及、不屬於物件);`pick` 是怎麼選(「ランダムに」→ 隨機,None = 由選者選)。"""
     return {"object": obj_id, "targeting": targeting, "role": role,
             "from": from_, "to": to, "marker": marker, "ref": ref, "count": count,
             "pick": pick}
@@ -158,9 +158,9 @@ def new_segment(seg_id, kind, span, text, predicate=None, voice=None):
         "amount": None,      # 數量(段可無物件,例:支付 1000LP;算式 {"kind": "算式", "text"})
         "optional": None,    # 可選
         "replaces": None,    # 代替誰(段 id)
-        "times": None,       # 多次攻擊的次數 {"value", "text"}(m2 票 04;字面在原述語字面裡)
-        "per_turn": None,    # 抗性的每回合次數 {"value", "text"}(m2 票 04:「１ターンに１度だけ」)
-        "derived_from": None,  # 衍生自哪一段(段 id;「Nアップの装備カード扱いで」的性質變更段,m2 票 08)
+        "times": None,       # 多次攻擊的次數 {"value", "text"}(字面在原述語字面裡)
+        "per_turn": None,    # 抗性的每回合次數 {"value", "text"}(「１ターンに１度だけ」)
+        "derived_from": None,  # 衍生自哪一段(段 id;「Nアップの装備カード扱いで」的性質變更段)
         "span": list(span),  # 原文範圍(相對於區塊 text)
         "text": text,
         "predicate": predicate,  # 原述語字面
@@ -216,13 +216,13 @@ def embedded_node(binding, block, join=None):
 
 
 _SWAPPED_SIDE = {"我方": "對手", "對手": "我方"}
-# 方的值落在哪些鍵(m2 票 12):區域與階段原子的 side、段的 agent/recipient(玩家字串)、
+# 方的值落在哪些鍵:區域與階段原子的 side、段的 agent/recipient(玩家字串)、
 # 控制方原子與回合方遊戲狀態原子的 value。
 _SIDE_KEYS = ("side", "agent", "recipient")
 
 
 def swap_sides(value):
-    """內嵌效果綁定「我方 = 對手」(效果被換掉,m2 票 12):把一個段或物件裡所有的方對調後回傳新的
+    """內嵌效果綁定「我方 = 對手」(效果被換掉):把一個段或物件裡所有的方對調後回傳新的
     (深複製);對調兩次等於原值,反向檢查用同一個函式對調回去。"""
     if isinstance(value, list):
         return [swap_sides(item) for item in value]

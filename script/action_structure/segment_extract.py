@@ -48,22 +48,22 @@
   再查推得表;推得值與繼承自推得值的標 inferred,查詢開關開才算。
   區域的方沒寫(「墓地から」)照慣例歸我方但記 side_source 預設,場上系沒寫方不預設(任一方的
   場上);明寫「自分の」記明寫,反向檢查沒有字面時只在明寫才寫出來。
-- 上游切分(m2 票 03):整句是場上唯一或次數限制句(`OMITTED_SENTENCES`)的進略過文本、不產生段;
+- 上游切分:整句是場上唯一或次數限制句(`OMITTED_SENTENCES`)的進略過文本、不產生段;
   句首時間狀語(このターン、/この効果の発動後、ターン終了時まで/〜を発動するターン、)剝成期間、
   套到整句的段;前提「〜限り、」整句的段期間持續;「Xしか〜できない」的しか是助詞、極性只能。
-- 「選んで」(m2 票 09):不另成段,字面留在原述語字面開頭、不標取對象;區域當物件(「自分の手札を
+- 「選んで」:不另成段,字面留在原述語字面開頭、不標取對象;區域當物件(「自分の手札を
   １枚選んで捨てる」)新建沒有條件的卡物件、從 = 那個區域;對象線加 pick(ランダムに)、count 的
   each(それぞれ/ずつ)與算式(任意の数だけ、〜した数だけ);到的方可為持有者(持ち主の);述語前的
   「〜まで」記期間;句中「、その後」與前一段先後連接。
-- 抗性/限制(m2 票 04):述語槽開頭可帶攻擊次數/全體與「攻撃を」「効果を」「表示形式を」
+- 抗性/限制:述語槽開頭可帶攻擊次數/全體與「攻撃を」「効果を」「表示形式を」
   「コントロールは」這幾個含を/は的名詞;「Xの表示形式を」的の是助詞;助詞後的讀點記進助詞字面;
   原因可帶物件(「Xとの戦闘では」「Xの効果を受けない」的 X);「それぞれ１ターンに１度だけ」記 per_turn;
   句型把「が」當助詞切錯而述語解不出時(「〜に１回ずつ攻撃が可能」),整句當主語省略的子句再試。
-- 去除(m2 票 11):對象是超量素材「(Xの)X素材」(`of` 所屬卡;沒寫時是隱含的新建超量怪獸,初始位置 = 從)
+- 去除:對象是超量素材「(Xの)X素材」(`of` 所屬卡;沒寫時是隱含的新建超量怪獸,初始位置 = 從)
   與計數器「(Xの)魔力カウンター」(`counter` 種類名);數量單位「つ」;舊式代價「〜く事で、」。
-  標準卡順手收的:「このカードを対象とする(Xの)効果が発動した」(物件條件 以此卡為對象)、超量素材行「×N」、
+  另收:「このカードを対象とする(Xの)効果が発動した」(物件條件 以此卡為對象)、超量素材行「×N」、
   物件前的「〜の数まで、」、片假名子類型(リンク…)、修飾語連接字與預設不同時記 `joiner`。
-- 抽牌(m2 票 10,`draw`):「[誰]デッキから[カードを]N枚ドローする」另開句型,抽到的卡是新建物件(「カードを」
+- 抽牌(`draw`):「[誰]デッキから[カードを]N枚ドローする」另開句型,抽到的卡是新建物件(「カードを」
   沒寫時沒有字面)、張數在對象線、從牌組到手牌(推得);誰可為「お互いは」與指回抽牌段的「ドローしたプレイヤーは」
   (`agent` {ref, segment});原因加規則(通常の)與方法(「ドロー以外の方法で」,exclude);「自身の手札」的方是自身;
   回指後接數量(「そのカード１枚を」)記在對象線。
@@ -109,9 +109,9 @@ INFERENCE_TABLE = {
     "捨棄": ("手牌", "墓地"),
     "特殊召喚": (None, "場上"),
     "裝備": (None, "魔陷區"),
-    "放置": (None, "魔陷區"),     # m2 票 05
+    "放置": (None, "魔陷區"),
     "覆蓋": (None, "魔陷區"),
-    "抽牌": ("牌組", "手牌"),     # m2 票 10
+    "抽牌": ("牌組", "手牌"),
 }
 # 區域字面表在 structure_shape.ZONE_WORDS(三處共用)。
 # 場上系區域:沒寫方時不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
@@ -124,8 +124,8 @@ HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠�
 HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
 _HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE), key=len,
                          reverse=True))
-# 「持ち主の手札に戻す」的持ち主(m2 票 09):值持有者,靜態判不了是哪一方,查詢指定我方/對手時不命中。
-# m2 票 10:「お互いは」(誰,雙方各自);「自身の手札」的自身 = 這一段的誰那一方(「ドローしたプレイヤーは
+# 「持ち主の手札に戻す」的持ち主:值持有者,靜態判不了是哪一方,查詢指定我方/對手時不命中。
+# 「お互いは」(誰,雙方各自);「自身の手札」的自身 = 這一段的誰那一方(「ドローしたプレイヤーは
 # 自身の手札を」),同持有者靜態判不了,查詢指定我方/對手時不命中。
 SIDE_WORDS = {"自分": "我方", "相手": "對手", "自分か相手": "任一方", "持ち主": "持有者",
               "お互い": "雙方各自", "自身": "自身"}
@@ -146,7 +146,7 @@ _ACTIVATION_RE = re.compile("^(?P<body>.*?)(?P<suffix>" + "|".join(ACTIVATION_SU
 INTERVAL_PATTERN = "(?:１ターンに|デュエル中に)[１-９]度、"
 INTERVAL_RE = re.compile(INTERVAL_PATTERN)
 INTERVAL_REASON = "次數限制"
-# 整句不記、進略過文本的句子(m2 票 03):場上唯一「Xは自分フィールドに１体しか表側表示で存在
+# 整句不記、進略過文本的句子:場上唯一「Xは自分フィールドに１体しか表側表示で存在
 # できない」;次數限制「この効果は１ターンに１度しか使用できない」型(區塊切分只在它自成一句、
 # 沒被補足情報的『』引用黏進效果區塊時才略過,黏進去的由這裡收)。
 UNIQUE_REASON = "場上唯一"
@@ -162,10 +162,10 @@ OMITTED_SENTENCES = ((_UNIQUE_RE, UNIQUE_REASON), (_LIMIT_SENTENCE_RE, INTERVAL_
 _NAMED_CAUSE = "「[^「」]+」の効果で"
 SUMMON_METHODS = ("融合召喚", "S召喚", "X召喚", "L召喚", "儀式召喚", "P召喚", "以下の方法")
 _METHOD_CAUSE = (f"(?:{'|'.join(SUMMON_METHODS)})(?:及び(?:{'|'.join(SUMMON_METHODS)}))*で")
-# 「Xとの戦闘では」(m2 票 04):戰鬥的對手是物件。「〜の(効果を受けない)」:誰的效果(OWNER_PATTERN)。
+# 「Xとの戦闘では」:戰鬥的對手是物件。「〜の(効果を受けない)」:誰的效果(OWNER_PATTERN)。
 _BATTLE_CAUSE = "(?:「[^「」]*」|[^を、「」])+?との(?:戦闘では|戦闘で|戦闘によって)"
 _BATTLE_CAUSE_RE = re.compile("^(?P<phrase>.+?)との(?P<tail>戦闘では|戦闘で|戦闘によって)$")
-# 「ドロー以外の方法で手札に加わった」(m2 票 10):原因是方法,`exclude` 記被排除的動作詞;
+# 「ドロー以外の方法で手札に加わった」:原因是方法,`exclude` 記被排除的動作詞;
 # 「X以外の」的 X 是同義表的述語字幹(目前只收ドロー,全庫 33 處)。
 EXCLUDE_METHOD_TAIL = "以外の方法で"
 EXCLUDE_METHOD_PATTERN = f"ドロー{EXCLUDE_METHOD_TAIL}"
@@ -179,7 +179,7 @@ CAUSE_METHOD = "召喚方式"
 # 主語省略的子句(「〜できず、「X」の効果でのみ特殊召喚できる」「〜した場合にEXデッキから特殊召喚できる」):
 # 沒有物件與助詞,主語是前一個「は」子句的物件或このカード,對象線標 elided。
 # 述語槽開頭可帶攻擊次數/全體(「２回攻撃」「相手モンスター全てに１回ずつ攻撃」)與含「を/は」的
-# 名詞(攻撃を、効果を、表示形式を、コントロールは;m2 票 04),其餘不收「を」。
+# 名詞(攻撃を、効果を、表示形式を、コントロールは),其餘不收「を」。
 _PRED_HEAD = f"(?:{ATTACK_PREFIX_PATTERN})?(?:{PREDICATE_NOUN_PATTERN})?"
 _SUBJECTLESS_RE = re.compile(
     f"^(?P<cause>{_CAUSE_ALT})?"
@@ -187,16 +187,16 @@ _SUBJECTLESS_RE = re.compile(
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?P<pred>{_PRED_HEAD}[^を]+)$")
-TOPIC_UNKNOWN = object()   # 前一截解析不出、又沒有認得出的「Xは」:主語省略的子句判不了主語
+TOPIC_UNKNOWN = object()
 # 句首的「Xは」(「「A」または「B」は」的「または」屬於 X)。
 _TOPIC_RE = re.compile("^(?P<topic>(?:または|[^をがは、])+?)は")
-# 觸發形:戰鬥時點(m2 票 07)排在「時」前面,「〜戦闘を行うダメージ計算時」的觸發形是整個時點字面;
-# 後接「(、)または」的是「A時點、またはB時」兩個觸發的或,維持切在後面的「時」(同改前)。
+# 觸發形:戰鬥時點排在「時」前面,「〜戦闘を行うダメージ計算時」的觸發形是整個時點字面;
+# 後接「(、)または」的是「A時點、またはB時」兩個觸發的或,維持切在後面的「時」。
 _TRIGGERS = f"(?:{'|'.join(BATTLE_TRIGGERS)})(?!、?または)|時|場合|際"
-# 條件子句不在「」中間結束(m2 票 12):「「時械神」モンスター」的「時」不是觸發形。
+# 條件子句不在「」中間結束:「「時械神」モンスター」的「時」不是觸發形。
 _COND = "(?P<cond>(?:「[^「」]*」|[^「」])+?)"
 _TRIGGER_RE = re.compile(f"^{_COND}(?P<trig>{_TRIGGERS})に?、?(?P<rest>.*)$")
-# 發動句裡單獨的戰鬥時點(m2 票 07):「そのダメージ計算前に発動する」「ダメージ計算時に、〜て発動できる」
+# 發動句裡單獨的戰鬥時點:「そのダメージ計算前に発動する」「ダメージ計算時に、〜て発動できる」
 # 開一個沒有動作詞的條件段;「その」指回同一句前一個條件段(前提 段已執行)。後面要接「に」「、」或句尾,
 # 「ダメージステップ終了時まで」不是。
 BATTLE_TIMING_REF = "その"
@@ -224,35 +224,32 @@ PREMISE_HAPPENED = "本回合發生過"
 # 通常怪獸的故事文「攻撃を繰り返す」不是效果。句尾可帶「（最大４回）」。
 REPEAT_RE = re.compile("^(?=.*(?:処理|この効果)を).*繰り返す(?:（[^）]*）)?$")
 # 舊式的代價句:「(代價子句)る事で、(效果子句)」= 新式「(代價子句)て発動できる。(效果子句)」。
-# 代價子句以非過去形收尾(る/う/す/く;く 是「取り除く事で」,m2 票 11)才算,「〜された事で」是條件意味、不切。
+# 代價子句以非過去形收尾(る/う/す/く;く 是「取り除く事で」)才算,「〜された事で」是條件意味、不切。
 _OLD_COST_RE = re.compile("^(?P<cost>.+?[るうすく])" + COST_GLUE + "、?(?P<rest>.+)$")
-# 對象線的數量字面(m2 票 09 擴):N体/N枚(まで)、全て;「それぞれ」「ずつ」是每一份各 N(`each`);
+# 對象線的數量字面:N体/N枚(まで)、全て;「それぞれ」「ずつ」是每一份各 N(`each`);
 # 變數數量「任意の数だけ」記算式字面。寫在物件前的變數數量(「破壊した数だけ相手フィールドの
 # カードを」)與寫在述語前「從」之後的數量(「自分の墓地から１枚選んで」)另帶 placement。
 EACH_PREFIX, EACH_SUFFIX, FORMULA_COUNT_TAIL = "それぞれ", "ずつ", "数だけ"
-# 單位「つ」(m2 票 11):超量素材、計數器的「１つ」「２つまで」。
+# 單位「つ」:超量素材、計數器的「１つ」「２つまで」。
 COUNT_UNITS = "体|枚|つ"
 COUNT_PATTERN = (f"(?:{EACH_PREFIX})?[０-９]+(?:{COUNT_UNITS})(?:まで|{EACH_SUFFIX})?|全て"
                  f"|任意の{FORMULA_COUNT_TAIL}")
 _COUNT_RE = re.compile(f"^(?P<each>{EACH_PREFIX})?(?P<digits>[０-９]+)(?P<unit>{COUNT_UNITS})"
                        f"(?P<upto>まで)?(?P<per>{EACH_SUFFIX})?$")
-# 物件前的變數數量另收上限「〜の数まで、」(m2 票 11:「自分フィールドの「＠イグニスター」モンスターの
+# 物件前的變數數量另收上限「〜の数まで、」(「自分フィールドの「＠イグニスター」モンスターの
 # 数まで、相手フィールドの〜を選んで破壊する」),算式帶 cmp ≤。
 FORMULA_UPTO_TAIL = "数まで"
 FORMULA_COUNT_TAILS = (FORMULA_COUNT_TAIL, FORMULA_UPTO_TAIL)
 FRONT_COUNT_PATTERN = f"[^、を]+?(?:{'|'.join(FORMULA_COUNT_TAILS)})、?"
-# 區域當物件時「從」的 placement:區域短語寫在物件的位置。
 ZONE_AS_OBJECT = "物件"
-# 「ランダムに」(m2 票 09):對象線 pick 隨機;沒寫是由選者選。
 RANDOM_PICK = "ランダムに"
 PICK_RANDOM = "隨機"
 # 物件前的「到に」:主語形「自分フィールドにモンスターが特殊召喚された」(助詞が時才有);
 # 後接「存在する」的是舊式從的助詞(フィールド上に存在するモンスター),不是到。
 _TO_FRONT = f"(?:(?P<to_front>{_ZONE_PHRASE})に(?!(?:{DISPLAY_WORD}で)?存在する))?"
-# 誰(m2 票 10 擴):玩家字面「自分/相手/お互い」與動作回指「ドローしたプレイヤー」(指回本區塊最近做過
+# 誰:玩家字面「自分/相手/お互い」與動作回指「ドローしたプレイヤー」(指回本區塊最近做過
 # 那個動作的段);助詞 が/は(「お互いに」也是誰),後面可帶讀點。
 PLAYER_REF_HEAD = "プレイヤー"
-# 誰的玩家字面 → 方;「お互いのプレイヤー」「相手プレイヤー」不是預設寫法,記成 {"side", "text"}。
 AGENT_PLAYER_WORDS = {"お互いのプレイヤー": "雙方各自", "相手プレイヤー": "對手",
                       "自分": "我方", "相手": "對手", "お互い": "雙方各自"}
 AGENT_PATTERN = ("|".join(AGENT_PLAYER_WORDS) + "|(?:"
@@ -269,7 +266,7 @@ _CLAUSE_PATTERN = (
     f"(?P<count_front>{FRONT_COUNT_PATTERN})?"
     # 物件前的「從」:「EXデッキから特殊召喚されたモンスター」的「から」是修飾語(曾被特殊召喚),
     # 不是這一段的從;「自分フィールドの、「A」または「B」が」的讀點記進從的字面(票 08)。
-    # 舊式「フィールド上に表側表示で存在するX」(m2 票 05):表示形式記在從的放置形式。
+    # 舊式「フィールド上に表側表示で存在するX」:表示形式記在從的放置形式。
     f"(?:(?P<from>{_ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)}"
     f"|に(?P<from_display>{DISPLAY_WORD})で存在する)"
     "(?P<from_pause>、)?(?!特殊召喚され))?"
@@ -277,11 +274,11 @@ _CLAUSE_PATTERN = (
     # 不是受詞助詞;述語裡沒有を,所以切錯時會回頭把「を含む」吃進物件短語。
     # 「Xの効果を発動」:物件是 X,「の効果」記進對象線的助詞字面;「「A」または「B」が」的
     # 「または」整個屬於物件短語,裡面的「は」不是助詞(票 08)。
-    # 「Xしか〜できない」(m2 票 03):「しか」緊接物件時當助詞,極性只能(`resolve_polarity`);
+    # 「Xしか〜できない」:「しか」緊接物件時當助詞,極性只能(`resolve_polarity`);
     # 「〜の効果でしか」「メインフェイズにしか」「手札からしか」的しか接在原因/時機/從後,不是助詞。
     "(?P<objects>(?:を含む|を持つ|または|[^を])+?)(?P<of_effect>の効果)?"
-    # 「Xの表示形式を変更」「Xのコントロールは変更」:X 是物件、助詞「の」(m2 票 04)。
-    # 「Xモンスター１体のX召喚を行う」(m2 票 12):X 是物件、助詞「の」。
+    # 「Xの表示形式を変更」「Xのコントロールは変更」:X 是物件、助詞「の」。
+    # 「Xモンスター１体のX召喚を行う」:X 是物件、助詞「の」。
     f"(?P<marker>を|が|は|(?<!で)(?<!に)(?<!から){ONLY_MARKER}"
     f"|の(?=表示形式|コントロール|(?:{'|'.join(SUMMON_NOUNS)})行))"
     # 助詞後的讀點(「水属性モンスターは、〜」)記進助詞字面。
@@ -290,7 +287,7 @@ _CLAUSE_PATTERN = (
     f"(?P<count>{COUNT_PATTERN})?"
     # 次數限制不記(spec):「「X」は１ターンに１度、〜でのみ特殊召喚できる」的這截進略過文本。
     f"(?P<interval>{INTERVAL_PATTERN})?"
-    # 抗性的每回合次數「それぞれ１ターンに１度だけ」(m2 票 04):段的 per_turn。
+    # 抗性的每回合次數「それぞれ１ターンに１度だけ」:段的 per_turn。
     f"(?P<per_turn>{PER_TURN_PATTERN})?"
     # 取對象字面(舊式 選択して、新式 対象として):單獨出現(述語空)是發動句的取對象宣告。
     f"(?P<targeting>{'|'.join(TARGETING_PREFIXES)})?"
@@ -298,24 +295,24 @@ _CLAUSE_PATTERN = (
     f"(?P<timing>{TIMING_PATTERN})?"
     # 到的放置形式(segment_fields.parse_placement_form):順序「好きな順番で」;
     # 卡片種類視同「装備魔法カード扱いで、」是裝備時到的形式(到本身推得)。
-    # 「攻撃力３００アップの装備カード扱いで」的增減前綴屬於 treat 字面,另拆一段衍生段(m2 票 08)。
+    # 「攻撃力３００アップの装備カード扱いで」的增減前綴屬於 treat 字面,另拆一段衍生段。
     f"(?:(?P<treat>(?:{TREAT_DELTA_PATTERN}|{EFFECT_HOLDER_PREFIX})?{TREAT_PATTERN})"
     f"|(?P<order>{ORDER_PATTERN}))?"
     # 「從」也可寫在物件後(XをデッキからYに加える);受方(相手に見せて)緊接述語前。
     f"(?:(?P<from2>{_ZONE_PHRASE})から)?"
     f"(?P<count2>{COUNT_PATTERN})?"
-    # 「選んで」(m2 票 09):字面留在原述語字面開頭、不標取對象;單獨出現是發動句的選取宣告。
+    # 「選んで」:字面留在原述語字面開頭、不標取對象;單獨出現是發動句的選取宣告。
     f"(?P<select>{SELECT_PREFIX})?"
-    # 述語前的期間(m2 票 09):「エンドフェイズまで除外する」。
+    # 述語前的期間:「エンドフェイズまで除外する」。
     f"(?P<duration>{CLAUSE_DURATION_PATTERN})?"
     f"(?:(?P<to>{_ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?:(?P<recipient>自分|相手|{_RECIPIENT_REF})に)?"
-    # 到的表示形式(m2 票 05):「〜に表側表示で置く」「表側攻撃表示か裏側守備表示で特殊召喚する」。
+    # 到的表示形式:「〜に表側表示で置く」「表側攻撃表示か裏側守備表示で特殊召喚する」。
     f"(?P<display>{DISPLAY_PATTERN})?"
     # 述語裡的「しか」只能在開頭(「融合召喚でしか特殊召喚できない」);句中出現時回頭讓它當助詞。
     f"(?P<pred>(?:{ONLY_MARKER})?{_PRED_HEAD}(?:(?!{ONLY_MARKER})[^を])*)$")
 _CLAUSE_RE = re.compile(_CLAUSE_PATTERN)
-# 「このカードを対象とする(Xの)効果が発動した」(m2 票 11):物件是效果所屬的卡,修飾語「このカードを
+# 「このカードを対象とする(Xの)効果が発動した」:物件是效果所屬的卡,修飾語「このカードを
 # 対象とする」含を,一般句型會把它切成物件「このカード」+ 述語;另開句型,沒寫 X 時助詞字面是「効果が」。
 _OBJECTS_GROUPS = "(?P<objects>(?:を含む|を持つ|または|[^を])+?)(?P<of_effect>の効果)?"
 _TARGETING_THIS_CLAUSE_RE = re.compile(_CLAUSE_PATTERN.replace(
@@ -327,7 +324,7 @@ _TARGETING_THIS_CLAUSE_RE = re.compile(_CLAUSE_PATTERN.replace(
 _CLAUSE_NO_TO_FRONT_RE = re.compile(_CLAUSE_PATTERN.replace(_TO_FRONT, "", 1))
 _EXIST_RE = re.compile(
     "^(?P<container>.+?)の中に(?P<objects>.+?)が(?P<pred>" + "|".join(EXIST_WORDS) + ")$")
-# 戰鬥子句(m2 票 07):述語「戦闘を行う」含「を」,一般句型的述語槽吃不到,另開句型。
+# 戰鬥子句:述語「戦闘を行う」含「を」,一般句型的述語槽吃不到,另開句型。
 # 施事寫在前、受事(「Yと」)可省;物件短語裡沒有讀點(「自分のモンスターが、〜と」不收)。
 BATTLE_AGENT_MARKER, BATTLE_PARTNER_MARKER = "が", "と"
 BATTLE_PREDICATE = "戦闘を行"
@@ -338,7 +335,7 @@ _FROM_RE = re.compile("^(?:(?P<side>自分か相手|自分|相手|持ち主|自�
 _ZONE_PHRASE_RE = re.compile(f"^{_ZONE_PHRASE}$")
 _SELF_RE = re.compile("^このカード$")
 REF_RE = re.compile("^(?P<ref>その|それらの)(?P<head>モンスター|カード)$")
-# 回指後接數量(「そのカード１枚を相手に見せて」,m2 票 10):數量屬於這次提及,記在對象線、placement 物件後。
+# 回指後接數量(「そのカード１枚を相手に見せて」):數量屬於這次提及,記在對象線、placement 物件後。
 _REF_COUNT_RE = re.compile("^(?P<phrase>(?:その|それらの)(?:モンスター|カード))(?P<count>[０-９]+(?:体|枚))$")
 COUNT_AFTER_OBJECT = "物件後"
 # 「その発動」:指回本區塊最近被發動的那張卡(「罠カードが発動した時、…その発動を無効にし」,票 09)。
@@ -346,7 +343,7 @@ ACTIVATION_REF = "その発動"
 # 數量格(spec「數量」:支付 1000LP,段可無物件):「１０００LP」當受詞時不是物件。
 _AMOUNT_RE = re.compile("^(?P<digits>[０-９]+)(?P<unit>LP)$")
 _REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
-# 去除的對象(m2 票 11):超量素材「(Xの)X素材」、計數器「(Xの)魔力カウンター」;「の」前是所屬的物件
+# 去除的對象:超量素材「(Xの)X素材」、計數器「(Xの)魔力カウンター」;「の」前是所屬的物件
 # (`of`,このカード/そのモンスター…)。超量素材沒寫所屬卡時(「自分フィールドのX素材」的
 # 「自分フィールドの」是從),所屬卡是隱含的新建超量怪獸,初始位置 = 從;字面沒有它(`text` 是 None)。
 OBJECT_MATERIAL, OBJECT_COUNTER = "超量素材", "計數器"
@@ -468,7 +465,6 @@ def floating_count(text, placement=None):
     return count
 
 
-# 名詞短語的「か」列舉(m2 票 13):或 節點帶 form「か」,模板以「か」連各截(「または」是卡名的或)。
 OR_FORM = "か"
 
 
@@ -492,7 +488,6 @@ def split_alternatives(mods, head):
 
 
 def _noun_condition(atoms, head):
-    """修飾語原子 + 頭名詞 → 條件式;且 的順序 = 字面順序(修飾語在前、大類頭名詞在後),反向檢查照此組回。"""
     condition = category_condition(head)
     return {"op": "且", "args": atoms + [condition]} if atoms else condition
 
@@ -522,7 +517,7 @@ def parse_modifier(part):
 
 def split_objects(phrase):
     """以「と」切物件,但「」裡的と、「X」と名のついた 的と(字段的舊式寫法)、「このカードを対象とする」
-    的と(m2 票 11)不算。"""
+    的と不算。"""
     parts, depth, buf = [], 0, ""
     for i, ch in enumerate(phrase):
         if ch == "「":
@@ -560,10 +555,7 @@ class BlockState:
         self.acted = {}       # 物件 id → 本區塊對它做過的動作詞(動作回指「〜したモンスター」用;票 06)
         self.self_id = self_id  # 「このカード」指誰:內嵌效果裡綁定成被賦予效果的物件(票 06)
         self.subject = None   # 本句「Xは」的物件:後面主語省略的子句(「〜できず、〜できる」)沿用(票 09)
-        # 前一截解析不出(里程碑二票 02):它句首「Xは」的(字面, 句起點),右半主語省略時才建它的
-        # 物件;沒有「Xは」是 TOPIC_UNKNOWN。
         self.topic = None
-        # 動作詞 → 本區塊最近做過它的段 id(「ドローしたプレイヤーは」的 agent 回指,m2 票 10)。
         self.action_segments = {}
 
     def note_actions(self, seg):
@@ -611,13 +603,12 @@ class BlockState:
 
     def cause_at(self, text, sentence_start):
         """原因字面 → (cause 格, 原因):閉集字面(戦闘で…)、「「X」の効果で」(物件)、
-        「融合召喚及び以下の方法で」(召喚方式);m2 票 04 加「Xとの戦闘では」(戰鬥的對手)與
+        「融合召喚及び以下の方法で」(召喚方式);「Xとの戦闘では」(戰鬥的對手)與
         「Xの(効果を受けない)」(誰的效果,「A及びB」多個),物件記在 `objects`。"""
         cause = parse_cause(text)
         if cause is not None:
             return cause, None
         if text.endswith(EXCLUDE_METHOD_TAIL):
-            # 「ドロー以外の方法で」(m2 票 10):X 是述語字幹,拆回動作詞記進 exclude。
             parsed, reason = parse_predicates(text[:-len(EXCLUDE_METHOD_TAIL)])
             if parsed is None:
                 return None, REASON_CAUSE
@@ -634,14 +625,12 @@ class BlockState:
                     "methods": text[:-1].split("及び")}, None
         battle = _BATTLE_CAUSE_RE.match(text)
         if battle:
-            # 「水属性以外のモンスターとの戦闘では」:戰鬥,對手是物件(m2 票 04)。
             obj_id, _, reason = self.object_at(battle.group("phrase"), sentence_start)
             if obj_id is None:
                 return None, reason
             return {"kind": "戰鬥", "text": "との" + battle.group("tail"),
                     "objects": [obj_id]}, None
         if text.endswith(OWNER_TEXT):
-            # 誰的效果(「「ホール」通常罠カード及び「落とし穴」通常罠カードの」,m2 票 04)。
             objects = []
             for phrase in text[:-len(OWNER_TEXT)].split(OWNER_JOINER):
                 obj_id, _, reason = self.object_at(phrase, sentence_start)
@@ -672,10 +661,10 @@ class BlockState:
         """修飾語 → (原子列表, 原因):名稱類的句型逐個認,其餘以「・」切成一截截給
         `parse_modifier`(種族、屬性、レベルN);認不得的那截以「解析不出」原子收尾。
         種族/屬性/等級原子與下一個修飾語之間實際寫的字(「・」「の」或沒有)與模板的預設寫法
-        (`attribute_atoms.joiner`)不同時,記進該原子的 `joiner`(m2 票 11:素材行「水属性レベル４」、
+        (`attribute_atoms.joiner`)不同時,記進該原子的 `joiner`(素材行「水属性レベル４」、
         「ドラゴン族のシンクロモンスター」)。"""
         atoms, reason, rest = [], None, mods
-        dots, tails = [], []   # 每個原子字面前有沒有「・」;種族/屬性列舉字面結尾吃掉的「の」
+        dots, tails = [], []
         dot = False
 
         def add(new_atoms, tail=""):
@@ -841,8 +830,6 @@ class BlockState:
             obj_id = self.recent_of(target_ref.group("head"), among=self.targeted)
             if obj_id is not None or not phrase.startswith(TARGET_OF):
                 return obj_id, phrase, (None if obj_id else REASON_REF)
-            # 「対象のモンスター」本區塊沒有被取對象的物件(取對象在卡片發動區塊):照改前當新建物件,
-            # 修飾語「対象の」解析不出(m2 票 12)。
         if self.is_action_reference(phrase):
             obj_id = self.action_reference(phrase)
             return obj_id, phrase, (None if obj_id else REASON_REF)
@@ -852,7 +839,6 @@ class BlockState:
         named = _NAMED_RE.match(phrase)
         m = named or _NOUN_RE.match(phrase)
         if not m and phrase in TARGETING_THIS_FORMS:
-            # 「このカードを対象とする効果」的效果所屬的卡(m2 票 11):沒有頭名詞,條件只有這個原子。
             offset = self._offset(phrase, sentence_start)
             obj = new_object(f"{self.block['id']}.o{offset}", source, text=phrase,
                              span=(offset, offset + len(phrase)), block=self.block["id"],
@@ -872,8 +858,6 @@ class BlockState:
             else:
                 condition = atoms[0] if len(atoms) == 1 else {"op": "或", "args": atoms}
         elif split_alternatives(m.group("mods"), m.group("head")):
-            # 「「ホール」通常罠カードか「落とし穴」通常罠カード」(m2 票 13):每截都是帶頭名詞的名詞短語,
-            # 條件 = 或(各截的條件),`form`「か」讓模板以「か」連回;數量在最後一截(整個物件的數量)。
             atoms, reason, alternatives = [], None, []
             for piece in split_alternatives(m.group("mods"), m.group("head")):
                 piece_m = _NOUN_RE.match(piece)
@@ -900,7 +884,7 @@ class BlockState:
         return self.add_object(obj), None, None
 
     def detach_object(self, phrase, sentence_start, owner_from=None):
-        """超量素材或計數器(m2 票 11)→ (物件 id, None, 原因):`of` 是所屬的物件(有寫才有,回指字面記
+        """超量素材或計數器→ (物件 id, None, 原因):`of` 是所屬的物件(有寫才有,回指字面記
         `of_ref`);超量素材沒寫所屬卡要靠 `owner_from` 建隱含的所屬卡,沒有就解析不出;
         計數器另帶種類名 `counter`。這幾個鍵有值才寫(接在工廠的格後面)。"""
         material = _MATERIAL_RE.match(phrase)
@@ -937,7 +921,7 @@ class BlockState:
         return obj["id"]
 
     def zone_object(self, phrase, sentence_start):
-        """區域當物件(「自分の手札を１枚選んで捨てる」,m2 票 09):新建、沒有條件的卡(條件同頭名詞
+        """區域當物件(「自分の手札を１枚選んで捨てる」):新建、沒有條件的卡(條件同頭名詞
         カード),初始位置由呼叫端以對象線的「從」寫入;與「手札からカードを１枚捨てる」同一結構。"""
         offset = self._offset(phrase, sentence_start)
         obj = new_object(f"{self.block['id']}.o{offset}", {"kind": "新建"},
@@ -987,10 +971,8 @@ def _category_of(condition):
             if found:
                 return found
     if condition.get("op") == "或" and all(a.get("op") == "大類" for a in condition["args"]):
-        # 頭名詞「魔法・罠カード」(m2 票 13:「その魔法・罠カード」指得回它)。
         return tuple(a["value"] for a in condition["args"])
     if condition.get("op") == "或" and condition.get("form") == OR_FORM:
-        # 名詞短語的「か」列舉(m2 票 13):各截大類相同才有大類(「その罠カード」指得回它)。
         found = {_category_of(arg) for arg in condition["args"]}
         return found.pop() if len(found) == 1 else None
     return None
@@ -1015,7 +997,7 @@ def _fill_existence(seg, m, state, sentence_start):
 
 def _fill_battle(seg, m, state, sentence_start):
     """戰鬥子句「Xが(Yと)戦闘を行う」:X 是施事(助詞 が)、Y 是受事(助詞 と),兩者都是物件;
-    戰鬥不移動卡片,線沒有從/到(m2 票 07)。"""
+    戰鬥不移動卡片,線沒有從/到。"""
     parsed, reason = parse_predicates(m.group("pred"))
     seg["predicate"] = m.group("pred")
     if parsed is None:
@@ -1080,7 +1062,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         whole = _SUBJECTLESS_RE.match(clause_text) if parsed is None and pred else None
         if whole and whole.group("pred"):
             # 句型把述語前的「が」當助詞切錯時(「〜に１回ずつ攻撃が可能」):整句當主語省略的子句
-            # 述語解析得出才改用它(m2 票 04)。
+            # 述語解析得出才改用它。
             retry = _clause_predicate(whole)
             if retry[2] is not None:
                 elided = state.elided_subject()
@@ -1091,14 +1073,11 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
     g = m.groupdict().get
     targeting = g("targeting")
     to_front = g("to_front")
-    # 原述語字面含取對象字面(「選択して破壊する」)或選取字面(「選んで破壊する」,m2 票 09);
-    # 反向檢查以 split_targeting / split_select 拆回。
     seg["predicate"] = (targeting or "") + (g("select") or "") + pred
     if parsed is None and pred:
         seg["unparsed"] = unparsed(reason)
         return
     if parsed and any(p.action == damage.RECOVER_ACTION for p in parsed):
-        # 回復的受方是玩家,只走 damage 的句型;一般子句(「回復した場合」主語省略)不把卡當受事。
         seg["unparsed"] = unparsed(REASON_CLAUSE)
         return
     if parsed is None:
@@ -1128,7 +1107,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
             return
         seg["recipient"] = {"object": obj_id, "ref": ref}
     if g("cause") and g("cause_front"):
-        seg["unparsed"] = unparsed(REASON_CAUSE)   # 兩處原因,不猜
+        seg["unparsed"] = unparsed(REASON_CAUSE)
         return
     if g("cause") or g("cause_front"):
         seg["cause"], reason = state.cause_at(g("cause") or g("cause_front"), sentence_start)
@@ -1143,7 +1122,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
         state.omit(m.start("interval") + sentence_start, g("interval"), INTERVAL_REASON)
     if g("duration"):
         if seg["duration"] is not None:
-            seg["unparsed"] = unparsed(REASON_CLAUSE)   # 句中兩個期間,不猜
+            seg["unparsed"] = unparsed(REASON_CLAUSE)
             return
         seg["duration"] = parse_duration(g("duration"))
     if g("timing"):
@@ -1187,7 +1166,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                       (("count", None), ("count2", "述語前"), ("count_front", "名詞前"))
                       if g(group)]
     if len(written_counts) > 1:
-        seg["unparsed"] = unparsed(REASON_CLAUSE)   # 一次提及寫了兩處數量,不猜
+        seg["unparsed"] = unparsed(REASON_CLAUSE)
         return
     count = floating_count(*written_counts[0]) if written_counts else None
     amount = _AMOUNT_RE.match(g("objects") or "")
@@ -1198,7 +1177,6 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                          "unit": amount.group("unit")}
         return
     if g("display") and not (to_zones or written_to or inferred_to):
-        # 表示形式記在到上;沒有到(明寫、述語自帶、推得都沒有)就沒地方放(m2 票 05)。
         seg["unparsed"] = unparsed(REASON_DISPLAY)
         return
     phrases = [None] if elided else split_objects(g("objects"))
@@ -1206,14 +1184,11 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                    and (g("of_effect") or "") + g("marker") == "を"
                    and _ZONE_PHRASE_RE.match(phrases[0]) and parse_from(phrases[0]))
     if zone_object:
-        # 區域當物件(m2 票 09):區域短語就是「從」,寫在物件的位置。
         from_zones, from_text, from_placement = zone_object, phrases[0], ZONE_AS_OBJECT
     for phrase in phrases:
         ref_count = _REF_COUNT_RE.match(phrase or "")
         if ref_count and (count is not None or len(phrases) > 1 or state.object_at(
                 ref_count.group("phrase"), sentence_start)[0] is None):
-            # 只認單一物件、助詞後沒有數量、指得回東西的;其餘照舊整串當新建物件(「その」標修飾
-            # 解析不出),不改既有結果。
             ref_count = None
         if ref_count:
             phrase = ref_count.group("phrase")
@@ -1264,7 +1239,6 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
                 side = "我方" if inferred_from == "手牌" else None
                 line["from"] = position([zone(inferred_from, side, side and "預設")],
                                         "推得", inferred=True)
-        # 放置形式每條線各一份,不共用。
         form = parse_placement_form(g("treat"), g("order"), g("display"))
         if to_zones is not None:
             line["to"] = position(to_zones, "明寫", text=to_text,
@@ -1286,7 +1260,7 @@ def _fill_clause(seg, clause_text, kind, state, sentence_start, inherited_timing
 
 
 def _fill_draw(seg, m, kind, state, sentence_start, inherited_timing=None):
-    """抽牌子句(m2 票 10,`draw`):抽到的卡是新建物件(「カードを」沒寫時物件沒有字面)、張數在對象線、
+    """抽牌子句(`draw`):抽到的卡是新建物件(「カードを」沒寫時物件沒有字面)、張數在對象線、
     從牌組(明寫或推得)到手牌(推得);玩家主語進 `agent`。"""
     g = m.groupdict().get
     parsed, reason = parse_predicates(g("pred"))
@@ -1305,7 +1279,7 @@ def _fill_draw(seg, m, kind, state, sentence_start, inherited_timing=None):
             return
     count, ambiguous = draw.parse_count(g("count"), g("count_front"), g("count_lead"), g("each"))
     if ambiguous or (g("each") and count is None):
-        seg["unparsed"] = unparsed(REASON_CLAUSE)   # 張數寫了兩處、或「それぞれ」沒有張數,不猜
+        seg["unparsed"] = unparsed(REASON_CLAUSE)
         return
     if g("cause") and g("rule"):
         seg["unparsed"] = unparsed(REASON_CAUSE)
@@ -1324,7 +1298,6 @@ def _fill_draw(seg, m, kind, state, sentence_start, inherited_timing=None):
     if g("object"):
         obj_id, _, _ = state.new_object(g("object"), sentence_start, {"kind": "新建"})
     else:
-        # 沒寫「カードを」:物件沒有字面與範圍,id 取述語的偏移(穩定、不與其他物件重複)。
         offset = state._offset(g("pred"), sentence_start)
         obj_id = state.add_object(new_object(
             f"{state.block['id']}.o{offset}", {"kind": "新建"}, block=state.block["id"],
@@ -1361,7 +1334,7 @@ def _clause_predicate(m):
 
 
 def _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing=None):
-    """傷害、回復與傷害值變更的句型(m2 票 06,`damage`)→ 填格回 True;不是這些句型回 False。
+    """傷害、回復與傷害值變更的句型(`damage`)→ 填格回 True;不是這些句型回 False。
     玩家主語/受方進 `agent`/`recipient`、不建物件;物件主語(「このカードが」)是角色施事的對象線。"""
     found = damage.match_clause(clause_text)
     if found is None:
@@ -1394,7 +1367,7 @@ def _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing
     verbal = g("cause") or g("cause_pre")
     if verbal:
         if cause is not None:
-            seg["unparsed"] = unparsed(REASON_CAUSE)   # 動詞型與名詞型原因同時寫,不猜
+            seg["unparsed"] = unparsed(REASON_CAUSE)
             return True
         cause, reason = state.cause_at(verbal, sentence_start)
         if cause is None:
@@ -1418,7 +1391,7 @@ def _fill_damage(seg, clause_text, kind, state, sentence_start, inherited_timing
         cause["source"] = source
     seg["cause"] = cause
     if g("amount_pre") and g("amount"):
-        seg["unparsed"] = unparsed(REASON_CLAUSE)   # 「その枚数分だけ〜３００ポイント」兩截數量,不猜
+        seg["unparsed"] = unparsed(REASON_CLAUSE)
         return True
     amount_text = g("amount_pre") or g("amount")
     if amount_text:
@@ -1538,8 +1511,6 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
         join = JOIN if i else None
         then = _THEN_RE.match(piece) if i else None
         if then:
-            # 「〜ドローし、その後手札を１枚選んで捨てる」(m2 票 09):句中的「その後」與前一段先後連接,
-            # 字面留在段外(反向檢查的固定接著詞)。
             piece_start += then.end()
             piece = piece[then.end():]
             join = SEQUENCE_JOIN
@@ -1562,7 +1533,7 @@ _THEN_RE = re.compile("^その後、?")
 
 
 def _derived_modify(seg, state):
-    """「攻撃力３００アップの装備カード扱いで〜に装備する」的裝備段 → 衍生的性質變更段(m2 票 08):
+    """「攻撃力３００アップの装備カード扱いで〜に装備する」的裝備段 → 衍生的性質變更段:
     範圍是 treat 字面裡的「攻撃力３００アップ」、記 `derived_from` = 裝備段、對象線是裝備的對象
     (裝備段的受方物件);與裝備段同時。沒有增減前綴、或受方不是物件時回 None。"""
     recipient = seg["recipient"]
@@ -1601,7 +1572,6 @@ def _fill_effect(seg, clause, kind, state, clause_start, inherited_timing=None):
     """效果子句:性質變更句(「その攻撃力は〜倍になる」)走它的句型,其餘是簡單子句。"""
     modify = parse_modify(clause)
     if modify is None:
-        # 該戰鬥(m2 票 07):子句其餘部分解不出也記期間。
         seg["duration"] = find_battle_duration(clause)
         _fill_clause(seg, clause, kind, state, clause_start, inherited_timing)
         return
@@ -1612,7 +1582,6 @@ def _fill_effect(seg, clause, kind, state, clause_start, inherited_timing=None):
     seg["actions"] = [MODIFY_ACTION]
     seg["predicate"], seg["voice"] = modify["predicate"], "主動"
     seg["modified"] = modify["modified"]
-    # 該戰鬥(m2 票 07)可能已由句子層先寫;句型抽出的期間優先,沒有才留原值。
     seg["duration"] = modify["duration"] or seg["duration"]
     if inherited_timing:
         seg["timing"] = _same_timing(inherited_timing)
@@ -1622,7 +1591,7 @@ def _fill_effect(seg, clause, kind, state, clause_start, inherited_timing=None):
     seg["lines"] = [line]
 
 
-# 性質變更句的主語(m2 票 08):「[區域の][全ての]物件短語の」;區域照簡單子句記成對象線的從,
+# 性質變更句的主語:「[區域の][全ての]物件短語の」;區域照簡單子句記成對象線的從,
 # 「全ての」記成對象線的數量(屬於這次提及)。
 _MODIFY_SUBJECT_RE = re.compile(
     f"^(?:(?P<from>{_ZONE_PHRASE})の)?(?P<all>全ての)?(?P<phrase>.+)の$")
@@ -1644,7 +1613,6 @@ def _modify_subject(subject, marker, state, sentence_start):
     from_zones = parse_from(m.group("from")) if m.group("from") else None
     phrase = m.group("phrase")
     if m.group("from") and from_zones is None:
-        # 不是區域字面(「このカードのリンク先の」):整截當物件短語。
         phrase = subject[:-1]
         if m.group("all"):
             return None, REASON_OBJECT
@@ -1670,7 +1638,6 @@ def _material_segment(state, start, end):
         times = _MATERIAL_TIMES_RE.match(phrase)
         count = None
         if times:
-            # 超量素材「レベル４モンスター×２」(m2 票 11):素材數記在對象線 count,單位 ×。
             phrase = times.group("phrase")
             count = {"text": times.group("times"), "unit": MATERIAL_TIMES,
                      "value": int(times.group("digits").translate(FULLWIDTH_DIGITS)), "cmp": "="}
@@ -1708,7 +1675,6 @@ def _treat_as_segment(state, start, end, treat):
 
 
 def _apply_duration(segs, duration):
-    """句子層的期間套到這一句的每個段;段自己已有期間(性質變更句的「〜まで」)的不覆蓋。"""
     for seg, _ in segs:
         if seg["duration"] is None:
             seg["duration"] = dict(duration)
@@ -1755,7 +1721,6 @@ def parse_sentence(state, start, end):
         state.omit(start, interval.group(), INTERVAL_REASON)
         start += interval.end()
         body = body[interval.end():]
-    # 句首時間狀語(m2 票 03):剝成期間、字面留在第一段的範圍內(不是略過文本)。
     seg_from = start
     lead, lead_length = parse_leading_duration(body)
     if lead is not None:
@@ -1774,7 +1739,6 @@ def parse_sentence(state, start, end):
     trigger_re = _TRIGGER_RE if act else (_SUMMON_TRIGGER_RE if summon_block
                                          else _OLD_TRIGGER_RE)
     rest, rest_start, seg_start = body, clause_start, seg_from
-    # 發動句開頭就是戰鬥時點(「ダメージ計算時に発動できる」)要先認,否則「時」會切在時點中間。
     timing = _battle_timing(state, body, clause_start, seg_from, segs) if act else None
     trig = None if timing else trigger_re.match(body)
     replaced = trig is not None and trig.group("rest").startswith(REPLACEMENT_PREFIX)
@@ -1783,15 +1747,12 @@ def parse_sentence(state, start, end):
                                                trig, segs,
                                                "被代替" if replaced else "條件")
         seg_start = rest_start
-        # 「〜場合、そのダメージ計算前に発動する」:條件段後面再接戰鬥時點。
         timing = (_battle_timing(state, rest, rest_start, rest_start, segs)
                   if act and rest else None)
     if timing:
         rest, rest_start = timing
         seg_start = rest_start
     if segs and state.block["segments"] and not summon_block:
-        # 序列中段(區塊已有段)出現條件段:之後的段算延遲(リビングデッドの呼び声);
-        # 召喚條件區塊的「〜した場合に特殊召喚できる」是召喚手續,不是延遲。
         state.delayed = True
     segs = [(seg, None) for seg in segs]
     if rest and not act:
@@ -1817,11 +1778,9 @@ def parse_sentence(state, start, end):
     if premise and segs:
         _attach_premise(segs[0][0], premise)
     if lead is not None:
-        # 句首時間狀語套到這一句的每個段,字面只在第一段。
         _apply_duration(segs[:1], lead)
         _apply_duration(segs[1:], inherited_duration(lead))
     if is_lasting(premise):
-        # 「〜限り、」:字面留在前提的 form,整句的段期間是持續(m2 票 03)。
         _apply_duration(segs, lasting())
     if turn_seg is not None:
         if segs:

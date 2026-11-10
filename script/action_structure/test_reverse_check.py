@@ -142,7 +142,7 @@ def lines_with_form(structure):
 
 
 class PlacementFormTest(unittest.TestCase):
-    """到的放置形式三槽 `{treat, display, order}`(m2 票 01):各槽寫回固定位置。"""
+    """到的放置形式三槽 `{treat, display, order}`:各槽寫回固定位置。"""
 
     def test_order_slot_is_written_before_the_destination(self):
         structure = build_one(SPROUT, "森羅の神芽 スプラウト", SPROUT_TEXT)
@@ -180,7 +180,7 @@ class PlacementFormTest(unittest.TestCase):
 
 
 class ModifiedAttrTest(unittest.TestCase):
-    """性質變更段的 `modified.attr` 是清單(m2 票 01);多項以「・」寫回(m2 票 08)。"""
+    """性質變更段的 `modified.attr` 是清單;多項以「・」寫回。"""
 
     TEXT = "①：このカードの攻撃力はターン終了時まで０になる。"
 
@@ -205,7 +205,7 @@ class ModifiedAttrTest(unittest.TestCase):
 
 
 class ResistanceSlotTest(unittest.TestCase):
-    """m2 票 04 的新格:`times` 由原述語字面驗、`per_turn` 照字面寫回、原因的物件寫回。"""
+    """`times` 由原述語字面驗、`per_turn` 照字面寫回、原因的物件寫回。"""
 
     def test_times_must_agree_with_the_predicate_literal(self):
         structure = build_one(10000401, "甲", "このカードは１度のバトルフェイズ中に２回攻撃できる。")
@@ -236,9 +236,7 @@ MISMATCH_TEXT = "①：デッキから闇属性モンスター１体を特殊召
 
 
 def build_with_mismatch(cards, entries, mismatch_ids):
-    """建置後把指定卡物件的屬性改成光:結構說光属性、原文寫闇属性 → 字面不符的固定例。
-    m2 票 11 之後全庫沒有自然的字面不符(原本的「闇属性のモンスター」記下連接字後寫得回原文),
-    所以照本檔其他測試的做法改結構。"""
+    """建置後把指定卡物件的屬性改成光:結構說光属性、原文寫闇属性 → 字面不符的固定例。"""
     structures, _ = build_structures(cards, entries)
     for structure in structures:
         if structure["id"] not in mismatch_ids:
@@ -266,7 +264,7 @@ class ReportTest(unittest.TestCase):
             faq(2, "乙", "①：このカードをバウンスする。"),
             faq(3, "丙", "①：このカードをバウンスする。②：このカードを破壊する。"),
             faq(4, "丁", "①：このカードをバウンスする。"),
-            faq(5, "戊", MISMATCH_TEXT),   # 建置後改成光属性(build_with_mismatch)
+            faq(5, "戊", MISMATCH_TEXT),
         ]
         return cards, entries
 

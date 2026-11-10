@@ -300,7 +300,9 @@ def _residue(block, glue, glue_failed=False, holes=()):
     for start, end, triggered in cut:
         if start > pos:
             pieces.append((after, text[pos:start]))
-        pos, after = max(pos, end), triggered
+        if end > pos:
+            # 落在段裡面的不記字面(條件段中間的「１度だけ、」)不往後延伸:後面那一片接在誰後面照舊看那個段。
+            pos, after = end, triggered
     if pos < len(text):
         pieces.append((after, text[pos:]))
     residue = []

@@ -264,10 +264,17 @@ def _clause_predicate(m):
     return pred, to_phrase, parsed, reason
 
 
+def _has_own_destination(m):
+    """述語那邊自己寫了到(述語前的「Yに」,或述語本身寫明終點的「墓地へ送られた」):物件前的「〜に」就不是到,
+    是物件修飾的一部分(「魔法＆罠ゾーンにセットされたこのカードが墓地へ送られた」)。"""
+    _, to_phrase, parsed, _ = _clause_predicate(m)
+    return bool(to_phrase) or any(p.to for p in parsed or ())
+
+
 def _match_clause(clause_text):
     """簡單子句的句型比對(物件 + 助詞 + 述語);不是這個句型回 None。"""
     m = _TARGETING_THIS_CLAUSE_RE.match(clause_text) or _CLAUSE_RE.match(clause_text)
-    if m and m.group("to_front") and m.group("marker") != "が":
+    if m and m.group("to_front") and (m.group("marker") != "が" or _has_own_destination(m)):
         m = _CLAUSE_NO_TO_FRONT_RE.match(clause_text)
     if m and m.group("marker") != "の" and parse_cause(m.group("objects") + m.group("marker")):
         # 「戦闘では破壊されない」:「戦闘で」+「は」是原因字面,不是物件 + 助詞;主語省略。

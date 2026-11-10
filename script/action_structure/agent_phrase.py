@@ -8,6 +8,7 @@
 
 import re
 
+from block_state import KIND_PROCEDURE, KIND_RESTRICTION
 from segment_history import last_segment_doing
 from structure_shape import REASON_CLAUSE, REASON_REF, REASON_TWICE, NoTemplate
 from synonyms import ACTION_PAST
@@ -30,6 +31,15 @@ _AGENT_TEXT_RE = re.compile("^(?P<word>" + "|".join(AGENT_PLAYER_WORDS)
 def agent_particle(kind):
     """誰的預設接法:條件子句是「相手が〜した時」,效果句是「自分は〜する」(全庫 66:0、31:1)。"""
     return "が" if kind in ("條件", "被代替") else "は"
+
+
+def _kind_when_filled(seg):
+    """段填誰的當下的類別。召喚條件區塊的召喚手續、限制是整句解析完才改寫的類別
+    (`segment_extract.parse_sentence`),帶觸發形的原本是條件段:「自分が戦士族モンスターの召喚に成功した時、
+    このカードを手札から特殊召喚できる」的「自分が」照條件子句的接法寫。"""
+    if seg["kind"] in (KIND_PROCEDURE, KIND_RESTRICTION) and seg["trigger"]:
+        return "條件"
+    return seg["kind"]
 
 
 def agent_side(agent):
@@ -76,7 +86,7 @@ def render_agent(agent, seg, card):
     """誰:方的字串寫預設接法(條件段「相手が」、其餘「自分は」);玩家字面
     `{"side", "text"}` 驗過玩家字與方一致再照字面;動作回指 `{"ref", "segment"}` 要指回這一段之前
     最後一個做過那個動作的段,接法是預設的。"""
-    particle = agent_particle(seg["kind"])
+    particle = agent_particle(_kind_when_filled(seg))
     if isinstance(agent, dict) and "ref" in agent:
         ref = agent["ref"] or ""
         past = ref[:-len(PLAYER_REF_HEAD)] if ref.endswith(PLAYER_REF_HEAD) else None

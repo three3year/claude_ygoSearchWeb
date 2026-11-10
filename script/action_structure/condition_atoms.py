@@ -20,7 +20,7 @@
 - 屬性比較(引用):種族か属性が見せたモンスターと同じで、→ 或(種族 = 物件.種族, 屬性 = 物件.屬性);
   そのモンスターのランクと同じ数値のレベルを持つ → 等級 = 物件.階級。
   引用 {"object": 物件 id, "attr": 屬性名, "text": 指回的字面};`form` 記句型(同じで / 同じ数值)
-  讓模板放回原字面。指回的物件由 `BlockState.resolve_reference` 解。
+  讓模板放回原字面;「同じで」後面沒寫讀點時另記 `joiner` 空字串。指回的物件由 `BlockState.resolve_reference` 解。
 - 控制方:修飾語開頭的「自分の」「相手の」(自分の「EM」モンスター、相手の表側表示モンスター),
   或緊接頭名詞的「相手」「自分」(相手モンスター)→ {"op": "控制方", "value": 我方|對手, "text": 字面};
   「自分フィールドの」是位置,不在此列。代入時任何卡都算(泛用原子)。
@@ -105,8 +105,10 @@ _FACE_RE = re.compile("^(?P<face>" + "|".join(FACE_WORDS) + ")(?P<of>の)?")
 ATTR_WORDS = (("種族", "種族"), ("属性", "屬性"), ("レベル", "等級"), ("ランク", "階級"))
 _ATTR = "|".join(word for word, _ in ATTR_WORDS)
 _REF = "(?:見せた|その|それらの)(?:モンスター|カード)"
+# 「同じで」後面預設接讀點;沒寫讀點(「同じで攻撃力２４００／守備力１０００の」)時原子記 `joiner` 空字串。
+SAME_AS_PAUSE = "、"
 _SAME_AS_RE = re.compile(
-    f"^(?P<attrs>(?:{_ATTR})(?:か(?:{_ATTR}))*)が(?P<ref>{_REF})と同じで、?")
+    f"^(?P<attrs>(?:{_ATTR})(?:か(?:{_ATTR}))*)が(?P<ref>{_REF})と同じで(?P<pause>{SAME_AS_PAUSE})?")
 _SAME_VALUE_RE = re.compile(
     f"^(?P<ref>{_REF})の(?P<rattr>{_ATTR})と同じ数値の(?P<attr>{_ATTR})を持つ")
 
@@ -216,6 +218,9 @@ def parse_modifier(rest, state):
         atoms = [_compare(_ATTR_NAME[word], obj_id, _ATTR_NAME[word], m.group("ref"),
                           "同じで")
                  for word in m.group("attrs").split("か")]
+        if not m.group("pause"):
+            for atom in atoms:
+                atom["joiner"] = ""
         return [atoms[0] if len(atoms) == 1 else {"op": "或", "args": atoms}], None, m.end()
     m = _SAME_VALUE_RE.match(rest)
     if m:
@@ -376,9 +381,12 @@ def _render_compare(atoms):
                           or a.get("form") != first.get("form") for a in atoms):
         return None
     if first.get("form") == "同じで":
-        if any(a["attr"] != a["ref"]["attr"] for a in atoms):
+        pause = first.get("joiner", SAME_AS_PAUSE)
+        if any(a["attr"] != a["ref"]["attr"] or a.get("joiner", SAME_AS_PAUSE) != pause
+               for a in atoms) or pause not in ("", SAME_AS_PAUSE):
             return None
-        return "か".join(_ATTR_TEXT[a["attr"]] for a in atoms) + "が" + ref["text"] + "と同じで、"
+        return ("か".join(_ATTR_TEXT[a["attr"]] for a in atoms) + "が" + ref["text"] + "と同じで"
+                + pause)
     if first.get("form") == "同じ数値" and len(atoms) == 1:
         return (ref["text"] + "の" + _ATTR_TEXT[ref["attr"]] + "と同じ数値の"
                 + _ATTR_TEXT[first["attr"]] + "を持つ")

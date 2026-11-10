@@ -1,4 +1,4 @@
-"""物件修飾:閉集與卡片屬性(m3 票 04)。
+"""物件修飾:閉集與卡片屬性。
 
 卡片總表查得到的修飾語(子類型、攻守與階級的數值、區域字面、連體子句、「〜以外の」、「AまたはB」)
 指定卡代入時判得了。接縫只有查詢判斷(`run_query`)與反向檢查(`check_card`);官方文本逐字寫在測試裡。
@@ -113,7 +113,7 @@ _STAT_CARDS = [
 
 class DarkBurstTest(_Golden):
     """ダーク・バースト 674561:「攻撃力１５００以下の闇属性モンスター１体」(使用者故事 23)。
-    加入手牌那一段的物件是「その闇属性モンスター」(票 05 的回指),這裡只驗取對象的那一段。"""
+    加入手牌那一段的物件是「その闇属性モンスター」(回指),這裡只驗取對象的那一段。"""
     cards = [card(DARK_BURST, name_ja="ダーク・バースト", type=SPELL)] + _STAT_CARDS
     faq = [faq(DARK_BURST, "ダーク・バースト", DARK_BURST_TEXT)]
 
@@ -338,8 +338,7 @@ SYNCHRO_MONSTER = 0x2021
 
 
 class DarkDimensionWarriorTest(_Golden):
-    """闇次元の戦士 109401:連體子句「除外されている自分の」(使用者故事 24)。素材行的「１体以上」是數量的
-    寫法(票 12),不在這張票。"""
+    """闇次元の戦士 109401:連體子句「除外されている自分の」(使用者故事 24)。"""
     cards = [card(DARK_DIMENSION_WARRIOR, name_ja="闇次元の戦士", type=SYNCHRO_MONSTER, level=5,
                   race=0x1, attribute=0x20, atk=1200)] + _STAT_CARDS
     faq = [faq(DARK_DIMENSION_WARRIOR, "闇次元の戦士", DARK_DIMENSION_WARRIOR_TEXT)]

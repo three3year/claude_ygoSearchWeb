@@ -1,4 +1,4 @@
-"""前提的數量與列舉(m3 票 12):只走接縫一(查詢判斷)與接縫二(反向檢查)。
+"""前提的數量與列舉:只走接縫一(查詢判斷)與接縫二(反向檢查)。
 
 - 數量「２体以上/３枚以上/２種類以上」寫在「存在する」前:記在 存在 原子所指物件的數量格。
 - 連用形串接「Aが存在し、/存在せず、Bが存在しない場合」:兩個前提的且。
@@ -189,7 +189,7 @@ class TrickstarFoodieTest(unittest.TestCase):
 
 class SaffiraSecondTimepointTest(unittest.TestCase):
     """竜姫神サフィラ 56350972 ① 第二個時點的條件段「このカードがモンスターゾーンに存在し、手札・デッキから
-    光属性モンスターが墓地へ送られたターン」:句首的連用形前提剝得出(票 11 留給本票驗的那一段)。"""
+    光属性モンスターが墓地へ送られたターン」:句首的連用形前提剝得出。"""
 
     @classmethod
     def setUpClass(cls):
@@ -204,7 +204,7 @@ class SaffiraSecondTimepointTest(unittest.TestCase):
         self.assertEqual(check_card(own(self.structures, SAFFIRA)), [])
 
     def test_sent_to_graveyard_from_hand_hits_the_condition_segment(self):
-        """開條件段查「送墓,從手牌」命中(不再只是列在未解析組);關掉條件段不命中。"""
+        """開條件段查「送墓,從手牌」命中;關掉條件段不命中。"""
         query = dict(actions=["送墓"], from_zones=["手牌"])
         self.assertIn(SAFFIRA, hits(self.cards, self.structures, include_condition=True, **query))
         self.assertNotIn(SAFFIRA, hits(self.cards, self.structures, **query))
@@ -276,7 +276,7 @@ class PremiseThenAlsoTest(unittest.TestCase):
         self.assertNotIn(SELF, result["groups"]["未解析"])
 
     def test_plain_existence_premise_then_also(self):
-        """原本就認得的前提(沒有數量)後面接「さらに」也一樣。"""
+        """沒有數量的前提後面接「さらに」也一樣。"""
         cards, structures = library(
             "①：デッキから「竜の渓谷」１枚を手札に加える。"
             "自分フィールドに「ペンギン」モンスターが存在する場合、さらにそのモンスターを破壊できる。")

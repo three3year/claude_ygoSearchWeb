@@ -1,4 +1,4 @@
-"""異同原子(m3 票 06):「與某物件的某屬性相同/不同」的抽取與句型模板成對放在一起。
+"""異同原子:「與某物件的某屬性相同/不同」的抽取與句型模板成對放在一起。
 
 `condition_atoms.parse_modifier` 最後問這裡的 `parse_modifier`,`condition_atoms.render_atom` 問這裡的
 `render_atom`;查詢判斷在 `action_query.same_different_fits`。

@@ -21,15 +21,15 @@ from structure_shape import NoTemplate
 
 HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠カード": "陷阱",
                  "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
-# 帶子類型的頭名詞:大類 且 屬性比較(卡片子類型 = 協調,與票 07 的 Xモンスター 同一種原子)。
+# 帶子類型的頭名詞:大類 且 屬性比較(卡片子類型 = 協調,與 condition_atoms 的 Xモンスター 同一種原子)。
 HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
-# 「效果」的頭名詞(m3 票 04):被發動、被無效的是效果,不是卡——「魔法・罠・モンスター(の効果)」
+# 「效果」的頭名詞:被發動、被無效的是效果,不是卡——「魔法・罠・モンスター(の効果)」
 # 「魔法・罠・効果モンスター(の効果)」「モンスターの効果・魔法・罠カード」。物件種類記 效果,條件式是
 # 「誰的效果」:各項的或,照字面順序;項是大類,或 (大類, 子類型)。
 EFFECT_HEADS = {"魔法・罠・モンスター": ("魔法", "陷阱", "怪獸"),
                 "魔法・罠・効果モンスター": ("魔法", "陷阱", ("怪獸", "效果")),
                 "モンスターの効果・魔法・罠カード": ("怪獸", "魔法", "陷阱")}
-# 頭名詞的另一種寫法(m3 票 04):條件式同正規寫法,另帶 `text` 記字面。
+# 頭名詞的另一種寫法:條件式同正規寫法,另帶 `text` 記字面。
 HEAD_VARIANTS = {"魔法または罠カード": "魔法・罠カード", "モンスターカード": "モンスター"}
 _HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE) + list(EFFECT_HEADS)
                          + list(HEAD_VARIANTS), key=len, reverse=True))
@@ -43,7 +43,7 @@ _MOD_RES = (
     ("卡名包含", re.compile("^カード名に「(?P<name>[^「」]+)」を含む")),
     ("字段", re.compile("^「(?P<name>[^「」]+)」$")),
 )
-# 「<名詞短語>以外の」(「チューナー以外の」「「彼岸」モンスター以外の」「光属性モンスター以外の」,m3 票 04):
+# 「<名詞短語>以外の」(「チューナー以外の」「「彼岸」モンスター以外の」「光属性モンスター以外の」):
 # 非(那個名詞短語的條件)。名詞短語從這裡起到頭名詞為止、中間沒有「の」(「自分フィールドのチューナー以外の」
 # 的「自分フィールドの」修飾的是外層);裡面只收卡片屬性的原子(`CARD_PROPERTY_OPS`)——狀態原子代入時
 # 任何卡都算,包進「非」會變成任何卡都不算。「このカード以外の」「「X」以外の」「水属性以外の」照舊各走各的規則。
@@ -197,7 +197,7 @@ def parse_modifiers(state, mods):
                 dot = sep
                 rest = remainder
                 continue
-            extra = parse_atom_modifier(rest, state)   # 票 07 的原子(condition_atoms)
+            extra = parse_atom_modifier(rest, state)
             if extra is None:
                 atoms.append({"op": "解析不出", "text": rest})
                 return atoms, reason or REASON_MODS
@@ -225,7 +225,7 @@ def parse_modifiers(state, mods):
         add([atom])
         reason = reason or why
         rest = rest[m.end():]
-    link_elided(atoms)   # 異同原子沒寫的比較對象(m3 票 06)
+    link_elided(atoms)   # 異同原子沒寫的比較對象
     for i, atom in enumerate(atoms):
         if not is_param_atom(atom):
             continue
@@ -275,8 +275,8 @@ def _quoted(atom, names):
 
 def _render_atom(atom, names):
     """修飾語原子 → 字面:字段(「X」/「X」と名のついた)、「X」以外の、カード名に「X」を含む、
-    屬性比較(種族名、「レベル１」、「光属性」);票 07 的原子(記載、卡名範圍、位置、
-    卡片子類型、引用)的模板在 condition_atoms.render_atom,先問它。"""
+    屬性比較(種族名、「レベル１」、「光属性」);記載、卡名範圍、位置、
+    卡片子類型、引用的模板在 condition_atoms.render_atom,先問它。"""
     rendered = render_atom(atom, names)
     if rendered is not None:
         return rendered
@@ -359,7 +359,7 @@ def _render_modifiers(mods, names):
 
 
 def render_modifiers(condition, names):
-    """只有修飾語、沒有頭名詞的條件式(帶狀態的此卡的狀態,m3 票 05)→ 修飾語字面。"""
+    """只有修飾語、沒有頭名詞的條件式(帶狀態的此卡的狀態)→ 修飾語字面。"""
     if condition is None:
         raise NoTemplate("物件條件無模板:空")
     atoms = condition["args"] if condition.get("op") == "且" else [condition]

@@ -1,4 +1,4 @@
-"""物件切點(m3 票 03):物件範圍不再往前吞進主語、時點、標籤等前文。
+"""物件切點:物件範圍不往前吞進主語、時點、標籤等前文。
 
 接縫只有查詢判斷(`run_query`)與反向檢查(`check_card`);官方文本逐字寫在測試裡。
 """
@@ -111,7 +111,7 @@ class DarkMagicExpandedTest(_Golden):
     faq = [faq(DARK_MAGIC_EXPANDED, "黒魔導強化", DARK_MAGIC_EXPANDED_TEXT)]
 
     def test_labels_are_branch_labels_not_part_of_any_object(self):
-        """沒有物件因為吞進標籤而解析不出;標籤不是段外殘留;分歧是依值分歧(標籤的值這輪認不得,
+        """沒有物件因為吞進標籤而解析不出;標籤不是段外殘留;分歧是依值分歧(標籤的值認不得,
         所以段樹那一筆是「分歧前提解析不出」,不是「分歧方式判不出」)。"""
         failures = self.failures(DARK_MAGIC_EXPANDED)
         self.assertNotIn("物件無模板:物件修飾解析不出", [f["detail"] for f in failures])
@@ -226,7 +226,7 @@ WAKE_CUP_KURO_TEXT = (
 
 
 class WakeCupKuroTest(_Golden):
-    """WAKE CUP！ クロ 6361316 ③:「自分・相手ターンに、」這輪沒有規則認得(票 12 不收),那一段標
+    """WAKE CUP！ クロ 6361316 ③:「自分・相手ターンに、」沒有規則認得,那一段標
     解析不出;但物件不帶這截字面,後面的「そのモンスター」照常指回它、判得了。"""
     cards = [
         card(WAKE_CUP_KURO, name_ja="WAKE CUP！ クロ", level=7, race=0x40, attribute=0x8, atk=400),

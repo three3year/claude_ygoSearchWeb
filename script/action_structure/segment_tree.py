@@ -136,7 +136,7 @@ def extract_block(block, card, lookups=None, self_id="o0"):
             block["tree"]["items"] = nodes
             return block
         headers = []
-    # 引導句前面整個是時點(m3 票 11)的先認;不是時點才看連用形串接的子句(m3 票 07)。
+    # 引導句前面整個是時點的先認;不是時點才看連用形串接的子句。
     timepoints = _header_timepoints(state, headers)
     if timepoints is None:
         lead_nodes, headers = _lead_in(state, headers)
@@ -148,7 +148,7 @@ def extract_block(block, card, lookups=None, self_id="o0"):
 
 
 def _lead_in(state, headers):
-    """引導句前面連用形串接的子句(「Xを対象とし、以下の効果から１つを選択して発動できる」,m3 票 07):
+    """引導句前面連用形串接的子句(「Xを対象とし、以下の効果から１つを選択して発動できる」):
     先照一般子句解析成段——宣告的對象要在各支之前點名,各支的回指(対象のモンスター、そのモンスター)
     才指得回它;引導句只剩「以下の効果〜」,與前面的段同時。發動句的引導句(〜発動できる)前面是代價子句。
     回傳 (段節點, 引導句列表);不是這種引導句時原樣交回。"""
@@ -280,7 +280,7 @@ def _split_headers(state, spans):
         header = _header_of(text)
         note = limit_note(text)
         if header is None and note:
-            # 分歧引導句後的括號版次數限制(m3 票 02):扣掉注記再認;注記在 `_branch` 進略過文本。
+            # 分歧引導句後的括號版次數限制:扣掉注記再認;注記在 `_branch` 進略過文本。
             header = _header_of(text[:note.start()])
             if header is not None and header[0] != "分歧":
                 header = None
@@ -306,7 +306,7 @@ def _parse_items(state, items):
     bounds, labels = [], []
     for i, start in enumerate(items):
         end = items[i + 1] - 1 if i + 1 < len(items) else len(text)
-        # 「●２体以上：」「●自分：」:● 後到「：」是依值分歧的標籤,不屬於後面的句子(m3 票 03)。
+        # 「●２体以上：」「●自分：」:● 後到「：」是依值分歧的標籤,不屬於後面的句子。
         label = _LABEL_RE.match(text, start, end)
         labels.append([start, label.end()] if label else None)
         bounds.append((label.end() if label else start, end))
@@ -371,7 +371,7 @@ def _union_positions(state, base, branches):
 def _branch(state, headers, branches, timepoints=None):
     """引導句 + 各支 → [分歧節點];引導句的前提是時點(「〜したターンの〈階段〉に、以下の効果から〜」,
     `timepoints` 是 `_header_timepoints` 先解析好的)時,各時點的條件段排在分歧節點前面。
-    各支帶標籤(「●２体以上：」,m3 票 03)的是依值分歧:標籤的值現在只認得內嵌效果的表示形式
+    各支帶標籤(「●２体以上：」)的是依值分歧:標籤的值只認得內嵌效果的表示形式
     (`_extract_labelled`),這裡的一律前提解析不出;引導句照一般句子解析(時點已先成條件段的,
     只記引導句的範圍,不重複解析)。"""
     if any(branch.get("label") for branch in branches):

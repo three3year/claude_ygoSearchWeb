@@ -84,8 +84,8 @@ def drawer_deck(zones, drawer):
 
 
 def inferred_deck(drawer):
-    """沒寫「デッキから」、由推得表補上的牌組:方照抽牌者標(對手、雙方各自照記),抽牌者沒寫的記我方
-    (m3 票 02);與明寫的「デッキから」同一把尺(`drawer_deck`)。"""
+    """沒寫「デッキから」、由推得表補上的牌組:方照抽牌者標(對手、雙方各自照記),抽牌者沒寫的記我方;
+    與明寫的「デッキから」同一把尺(`drawer_deck`)。"""
     return drawer_deck([zone(INFERENCE_TABLE[DRAW_ACTION][0], "我方", "預設")], drawer)
 
 

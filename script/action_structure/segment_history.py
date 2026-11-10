@@ -10,7 +10,7 @@ from structure_shape import iter_nodes
 
 
 def all_blocks(card):
-    """區塊與內嵌效果的區塊(票 06)。"""
+    """區塊與內嵌效果的區塊。"""
     stack = list(card["blocks"])
     while stack:
         block = stack.pop()
@@ -84,7 +84,7 @@ def targeted_earlier(obj_id, seg, card):
 
 def declared_earlier(obj_id, seg, card):
     """這一段之前,同一區塊裡有沒有一個沒有動作詞的宣告段(「Xを対象とし、」「Xを選択し、」)點名過該物件:
-    省略的受方(沒寫出來的裝備對象)要對得上它(m3 票 07)。"""
+    省略的受方(沒寫出來的裝備對象)要對得上它。"""
     block_id = seg["id"].split(".")[0]
     for block in all_blocks(card):
         if block["id"] != block_id:

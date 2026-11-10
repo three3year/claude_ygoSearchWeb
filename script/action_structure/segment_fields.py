@@ -64,7 +64,7 @@ CAUSE_FORMS = {
     "戦闘または効果で": ("戰鬥或效果", None),
     # ガスタ・ファルコ「戦闘以外によって墓地へ送られた時」。
     "戦闘以外によって": ("戰鬥以外", None), "戦闘以外で": ("戰鬥以外", None),
-    # m3 票 10(站主裁定):「相手によって(フィールドから離れた)」= 對手的攻擊或對手的卡片效果。
+    # 站主裁定:「相手によって(フィールドから離れた)」= 對手的攻擊或對手的卡片效果。
     "相手によって": ("戰鬥或效果", "對手"),
 }
 # 作為X素材(票 09):「S素材として墓地へ送られた」→ {"kind": "作為素材", "text": 字面, "summon": 卡片子類型}
@@ -74,7 +74,7 @@ MATERIAL_FORMS = {
     "融合素材として": "融合", "S素材として": "同步", "シンクロ素材として": "同步",
     "X素材として": "超量", "エクシーズ素材として": "超量", "L素材として": "連結",
     "リンク素材として": "連結", "素材として": None,
-    "シンクロ召喚の素材として": "同步",   # 舊式寫全「召喚の」(m3 票 09)
+    "シンクロ召喚の素材として": "同步",   # 舊式寫全「召喚の」
 }
 CAUSE_PATTERN = "|".join(sorted(map(re.escape, [*CAUSE_FORMS, *MATERIAL_FORMS]),
                                 key=len, reverse=True))
@@ -228,7 +228,7 @@ TREAT_PATTERN = ("(?:" + "|".join(map(re.escape, sorted(TREAT_FORMS, key=len, re
                  + ")、?")
 ORDER_PATTERN = "|".join(map(re.escape, ORDER_FORMS))
 # 放置形式的表示形式寫在述語前:「表側表示で」「表側攻撃表示か裏側守備表示で」(二選一;
-# 「表側守備表示または裏側守備表示で」同,m3 票 04)。
+# 「表側守備表示または裏側守備表示で」同)。
 _DISPLAY_OR = "(?:か|または)"
 DISPLAY_PATTERN = f"{PLACEMENT_DISPLAY_WORD}(?:{_DISPLAY_OR}{PLACEMENT_DISPLAY_WORD})?で"
 _DISPLAY_RE = re.compile(

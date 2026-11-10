@@ -1,4 +1,4 @@
-"""小型寫法(m3 票 02):每項只動一處規則或閉集——句尾括號版次數限制、支付的「ライフポイント」、
+"""小型寫法:每項只動一處規則或閉集——句尾括號版次數限制、支付的「ライフポイント」、
 「〜表示に変更する/〜表示にならない」、觸發形「ダメージステップ時」「戦闘ダメージ計算時」、
 抽牌推得的牌組標方、放置與去除的單字幹。
 
@@ -188,7 +188,7 @@ class LifePointPaymentTest(unittest.TestCase):
         self.assertEqual(shapes[0], shapes[1])
 
     def test_formula_amount_stays_unparsed(self):
-        """「１００の倍數のライフポイントを払って」是算式,這輪不收:不命中、列進未解析組。"""
+        """「１００の倍數のライフポイントを払って」是算式,不收:不命中、列進未解析組。"""
         cards, structures = library(
             "①：１００の倍数のライフポイントを払って発動できる。このカードを破壊する。")
         result = run_query(structures, cards, {"actions": ["支付"]})
@@ -477,7 +477,7 @@ class PlaceAndRemoveStemTest(unittest.TestCase):
                 self.assertEqual(self.unparsed_group(text, "放置"), [])
 
     def test_unparsed_place_and_remove_forms_are_listed(self):
-        """字面真的是放置、去除(這輪沒收的語尾)而段解析不出:照樣列進未解析組。"""
+        """字面真的是放置、去除(沒收的語尾)而段解析不出:照樣列進未解析組。"""
         self.assertEqual(self.unparsed_group(
             "①：魔力カウンターが置かれているこのカードは直接攻撃できる。", "放置"), [SELF])
         self.assertEqual(self.unparsed_group(

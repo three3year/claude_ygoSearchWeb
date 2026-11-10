@@ -1,4 +1,4 @@
-"""連用形的宣告左半「Xを選択し、」「Xを対象とし、」(m3 票 07)。
+"""連用形的宣告左半「Xを選択し、」「Xを対象とし、」。
 
 走接縫一(查詢判斷)與接縫二(反向檢查);查詢層沒有的格(受方、選者)先用查詢命中段,再讀該段的格。
 官方文本逐字寫在測試裡(`data/sources/` 不入版控)。
@@ -63,7 +63,7 @@ class LimitReverseTest(unittest.TestCase):
                          [line["object"] for line in declared["lines"]])
 
     def test_right_half_writes_back(self):
-        """右半省略物件,模板不寫物件與助詞(左半的「攻撃力１０００以下の」是票 04 的修飾語)。"""
+        """右半省略物件,模板不寫物件與助詞(左半的「攻撃力１０００以下の」是修飾語)。"""
         summon = hit_segments(self.structures, self.cards, LIMIT_REVERSE,
                               actions=["特殊召喚"], targeting=True)
         self.assertEqual(len(summon), 1)

@@ -2,7 +2,7 @@
 
 此卡寫「このカード」;本段首次出現的寫全名(條件式 → 名詞短語在 `noun_phrase.render_condition`,
 加數量);回指照對象線的回指字面(`render_ref`,驗過與先前的段相符);超量素材、計數器另有寫法。
-帶狀態的此卡(母體是此卡的子集,m3 票 05)寫「〈狀態〉このカード」;帶修飾語的回指(「その相手モンスター」)
+帶狀態的此卡(母體是此卡的子集)寫「〈狀態〉このカード」;帶修飾語的回指(「その相手モンスター」)
 照字面,修飾語要是 `anaphora.restating_atoms` 認得的重述。
 抽取端是 `block_state.BlockState.object_at`。
 """
@@ -39,10 +39,10 @@ def render_object(obj, seg, card, names, line=None, with_count=True, self_id="o0
     """物件在這一段的字面:物件0(內嵌效果裡是綁定的物件)是このカード;本段首次出現的寫全名
     (條件+數量);回指的照對象線的回指字面(驗過句型);剩餘物件寫 残りの+頭名詞。
     助詞後的數量在對象線上,由呼叫端接在助詞後。`seg` 為 None 時是段樹引導句裡的物件,
-    一律寫全名(票 06)。"""
+    一律寫全名。"""
     ref = line["ref"] if line else None
     if ref is not None:
-        # 回指字面優先:「この効果で特殊召喚したモンスター」也可以指這張卡自己(票 06 的動作回指)。
+        # 回指字面優先:「この効果で特殊召喚したモンスター」也可以指這張卡自己(動作回指)。
         return render_ref(ref, obj, seg, card)
     if obj["source"]["kind"] == "自己" or obj["id"] == self_id:
         return "このカード"
@@ -61,7 +61,7 @@ def render_object(obj, seg, card, names, line=None, with_count=True, self_id="o0
         defined_here = (obj["span"] and obj["block"] == seg["id"].split(".")[0]
                         and start <= obj["span"][0] and obj["span"][1] <= end)
     if kind == "子集" and obj["source"].get("of") == self_id:
-        # 帶狀態的此卡(m3 票 05):〈狀態〉このカード;每次提及各建一個,只在提到它的那一段寫得出。
+        # 帶狀態的此卡:〈狀態〉このカード;每次提及各建一個,只在提到它的那一段寫得出。
         if not defined_here or obj["count"]:
             raise NoTemplate("帶狀態的此卡無模板")
         return render_modifiers(obj["condition"], names) + SELF_TAIL
@@ -113,7 +113,7 @@ HOLDER_MARKER, HELD_MARKER = "が", "を"
 
 
 def _render_held_material(obj, seg, card, names, self_id):
-    """帶條件式的超量素材物件(「Xが「Y」をX素材としている」的 Y,m3 票 09):[所屬物件]が[條件+數量]を。
+    """帶條件式的超量素材物件(「Xが「Y」をX素材としている」的 Y):[所屬物件]が[條件+數量]を。
     素材名詞與「としている」由前提的模板接在後面。"""
     owner = next((o for o in card["objects"] if o["id"] == obj.get("of")), None)
     if owner is None or obj["unparsed"]:
@@ -132,9 +132,9 @@ def render_ref(ref, obj, seg, card):
     if REF_RE.match(ref):
         return ref
     if obj["source"]["kind"] == "自己" and ref == f"「{card['name_ja']}」":
-        return ref   # 本卡以自己的卡名當主語(票 09)
+        return ref   # 本卡以自己的卡名當主語
     if ref == ACTIVATION_REF:
-        # 「その発動」指回本區塊先前被發動的那張卡(票 09)。
+        # 「その発動」指回本區塊先前被發動的那張卡。
         if last_action_on(obj["id"], seg, card) != "發動":
             raise NoTemplate("「その発動」回指的物件先前沒被發動")
         return ref
@@ -150,7 +150,7 @@ def render_ref(ref, obj, seg, card):
         return ref
     restated = restated_reference(ref)
     if restated:
-        # 帶修飾語的回指(「その相手モンスター」「対象の墓地のモンスター」,m3 票 05):修飾語照
+        # 帶修飾語的回指(「その相手モンスター」「対象の墓地のモンスター」):修飾語照
         # `anaphora.restating_atoms` 認得全才寫;指向被取對象物件的要先前真的被取對象。
         if restated.targeted and not targeted_earlier(obj["id"], seg, card):
             raise NoTemplate("「対象の」回指的物件先前沒被取對象")

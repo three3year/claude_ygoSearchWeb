@@ -32,7 +32,7 @@ def treat_as_segment(state, start, end, treat):
 
 
 def render_treat_as_segment(seg, names, objects, self_id):
-    """修飾段(票 09):「〜として扱う」句由 names_attributes.render_treat_as 從被改的屬性拼回;
+    """修飾段:「〜として扱う」句由 names_attributes.render_treat_as 從被改的屬性拼回;
     對象線只能是此卡、沒有動作詞。"""
     if (seg["actions"] or seg["predicate"] != TREAT_PREDICATE or not seg["modified"]
             or len(seg["lines"]) != 1 or seg["lines"][0]["object"] != self_id):

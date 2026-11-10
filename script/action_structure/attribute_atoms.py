@@ -18,7 +18,7 @@ _race_alt = "|".join(re.escape(w) for w in sorted(RACE_JA, key=len, reverse=True
 _attr_alt = "|".join(re.escape(w) for w in ATTRIBUTE_JA)
 _RACES_RE = re.compile(f"^(?P<words>(?:{_race_alt})(?:・(?:{_race_alt}))*)(?P<no>の)?")
 _ATTRS_RE = re.compile(f"^(?P<words>(?:{_attr_alt})(?:・(?:{_attr_alt}))*)属性(?P<no>の)?")
-# 數值屬性(m3 票 04 加 階級、連結值、攻擊力、守備力):「レベル１」「ランク４の」「攻撃力１５００以下の」
+# 數值屬性(等級、階級、連結值、攻擊力、守備力):「レベル１」「ランク４の」「攻撃力１５００以下の」
 # 「リンク３以上の」,帶比較與「の」(joiner 照 cmp 寫回)。
 NUMBER_WORDS = (("レベル", "等級"), ("ランク", "階級"), ("リンク", "連結值"),
                 ("攻撃力", "攻擊力"), ("守備力", "守備力"))

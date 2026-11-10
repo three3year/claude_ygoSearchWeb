@@ -103,7 +103,7 @@ INNER_NONE = "不收"                 # 這個句型沒有寫期間的位置:段
 
 class TemplateInput(NamedTuple):
     """模板拿得到的東西:段、卡片結構、物件表與名稱表(id → 列)、「このカード」指的物件;
-    子句模板另有票 10 的存在前提原子與句中期間。"""
+    子句模板另有存在前提原子與句中期間。"""
     seg: dict
     card: dict
     objects: dict
@@ -132,7 +132,7 @@ WHOLE_TEMPLATES = (
                     and all(line["role"] == "素材" for line in t.seg["lines"]),
                     lambda t: material_line.render_line(t.seg, t.card, t.names, t.objects,
                                                         t.self_id)),
-    # 「(Xは、)フィールドから離れた場合に除外される」的去處(m3 票 10):做代替的段,但文面沒有「代わりに」。
+    # 「(Xは、)フィールドから離れた場合に除外される」的去處:做代替的段,但文面沒有「代わりに」。
     SegmentTemplate("離場的去處", lambda t: leave_field.replaced_leave(t.seg, t.card) is not None,
                     lambda t: leave_field.render_destination(t.seg, t.card, t.objects, t.names,
                                                              t.self_id)),
@@ -182,7 +182,7 @@ def render_segment(seg, card, self_id="o0"):
     [句首期間][前提][代わりに]子句本體[觸發形]:子句本體由 `CLAUSE_TEMPLATES` 第一個適用的模板寫
     (「代わりに」在做代替的段前;被代替段同條件段帶觸發形;只有前提的條件段只寫前提)。
     句中期間照模板那一列的去向分流:模板自己寫的原樣交給它,述語前的要是 `is_clause_duration` 的字面,
-    不收的有句中期間就是無模板。`self_id` 是「このカード」指的物件(內嵌效果裡是綁定的物件,票 06)。"""
+    不收的有句中期間就是無模板。`self_id` 是「このカード」指的物件(內嵌效果裡是綁定的物件)。"""
     if seg["unparsed"]:
         raise NoTemplate(f"段解析不出:{seg['unparsed']['reason']}")
     if seg["kind"] not in TEMPLATE_KINDS:

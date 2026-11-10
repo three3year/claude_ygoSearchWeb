@@ -1,4 +1,4 @@
-"""標準卡剩下的時點與降臨(m3 票 11):只走接縫一(查詢判斷)與接縫二(反向檢查)。
+"""標準卡剩下的時點與降臨:只走接縫一(查詢判斷)與接縫二(反向檢查)。
 
 - 「「X」により降臨」:召喚手續段,動作詞 儀式召喚,原因 效果帶物件 X,極性 做。
 - 「Xした/されたターンのエンドフェイズに」:前提 本回合發生過(指向那個動作的條件段)且
@@ -70,7 +70,7 @@ class LawGuardianTest(unittest.TestCase):
                                             polarities=["不能", "只能"]))
 
     def test_descent_line_writes_back(self):
-        """降臨句寫回原文相符(第二句的「〜になるよう」物件修飾不在本票)。"""
+        """降臨句寫回原文相符。"""
         self.assertNotIn("「ローの祈り」により降臨",
                          failed_texts(own(self.structures, LAW_GUARDIAN)))
 
@@ -154,7 +154,7 @@ class LearnerDeviceTest(unittest.TestCase):
                                            from_zones=["墓地"], card=LEARNER_DEVICE))
 
     def test_activation_sentence_writes_back(self):
-        """發動句的兩段(條件段、只有前提的段)寫回原文相符;剩下沒過的只有離場那一句(票 10)。"""
+        """發動句的兩段(條件段、只有前提的段)寫回原文相符;剩下沒過的只有離場那一句。"""
         self.assertLessEqual(set(failed_texts(own(self.structures, LEARNER_DEVICE))),
                              {LEAVE_SENTENCE})
 
@@ -206,7 +206,7 @@ class SaffiraTimepointsTest(unittest.TestCase):
 
     def test_second_timepoint_is_its_own_condition_segment(self):
         """第二個時點的動作子句自成條件段,不與第一個時點黏在一起:開條件段查「送墓」時,
-        命中它或(句首的「存在し、」前提還沒收時)列進未解析組;關掉條件段就兩邊都沒有。"""
+        命中它,或句首的「存在し、」前提解析不出時列進未解析組;關掉條件段就兩邊都沒有。"""
         query = dict(actions=["送墓"], from_zones=["手牌"])
         on = run_query(self.structures, self.cards, {**query, "include_condition": True})
         listed = [h["id"] for h in on["hits"]] + on["groups"]["未解析"]
@@ -216,7 +216,7 @@ class SaffiraTimepointsTest(unittest.TestCase):
 
     def test_timepoint_enumeration_writes_back(self):
         """時點列舉與分歧引導句寫回原文相符:區塊沒有段外殘留、段樹有模板;
-        還沒過的只剩第二個時點的動作子句(句首前提「存在し、」是票 12、物件切點是票 03)。"""
+        還沒過的只剩第二個時點的動作子句。"""
         failed = failed_texts(self.own)
         self.assertNotIn(None, failed)
         self.assertLessEqual(set(failed), {SECOND_TIMEPOINT})
@@ -260,7 +260,7 @@ class TgWerewolfTest(unittest.TestCase):
 
     def test_destroyed_turn_is_a_condition_not_a_cost(self):
         """「破壊され墓地へ送られたターン」是條件段:查「破壞」預設(不看條件段)時這張卡不在命中組
-        也不在未解析組;開條件段才列出(命中,或連用形被動串接還沒收時列進未解析組)。"""
+        也不在未解析組;開條件段才列出(命中,或連用形被動串接解析不出時列進未解析組)。"""
         self.assertNotIn(TG_WEREWOLF, self.listed(actions=["破壞"]))
         self.assertIn(TG_WEREWOLF, self.listed(actions=["破壞"], include_condition=True))
 
@@ -271,8 +271,8 @@ class TgWerewolfTest(unittest.TestCase):
                                            from_zones=["牌組"], card=TG_WEREWOLF))
 
     def test_activation_sentence_is_parsed_and_the_phase_writes_back(self):
-        """發動句不再標「發動句解析不出」;「のエンドフェイズに」那一段寫回原文相符。沒過的只剩
-        條件段的述語「破壊され墓地へ送られた」(連用形被動串接,不在本輪各票)。"""
+        """發動句不標「發動句解析不出」;「のエンドフェイズに」那一段寫回原文相符。沒過的只剩
+        條件段的述語「破壊され墓地へ送られた」(連用形被動串接)。"""
         reasons = {s["unparsed"]["reason"] for b in self.own["blocks"] for s in b["segments"]
                    if s["unparsed"]}
         self.assertNotIn("發動句解析不出", reasons)
@@ -366,7 +366,7 @@ class TurnPhaseFormsTest(unittest.TestCase):
                 self.assertTrue(segs[0]["unparsed"])
 
     def test_turn_comma_then_game_state_keeps_the_condition_segment(self):
-        """「〜したターン、自分メインフェイズに発動できる」:條件段不再掉成段外殘留。"""
+        """「〜したターン、自分メインフェイズに発動できる」:條件段不掉成段外殘留。"""
         _, structures = synthetic(
             "①：このカードを発動したターン、自分メインフェイズに発動できる。このカードを破壊する。")
         self.assertEqual(check_card(own(structures, OLD_STYLE)), [])

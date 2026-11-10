@@ -5,8 +5,8 @@
 - 簡單子句:[誰が][到に][從から|從の|從に存在する][物件](を|が|は)[數量][取對象][原因][時機][形式][從から][到に][受方に]述語
   (物件前的「到に」只在助詞是「が」時:「自分フィールドにモンスターが特殊召喚された」;
   「從」寫在物件後的記 placement 述語前;受方是「相手に見せて」的相手,或物件的回指
-  「この効果で特殊召喚したモンスターに装備」(票 06);形式「装備魔法カード扱いで、」是裝備時
-  到的形式、到本身推得(票 06);「Xの効果を発動」的
+  「この効果で特殊召喚したモンスターに装備」;形式「装備魔法カード扱いで、」是裝備時
+  到的形式、到本身推得;「Xの効果を発動」的
   「の効果」記進對象線的助詞字面;「「A」または「B」」是兩個卡名的或;
   「EXデッキから特殊召喚された」的「から」是修飾語,不是從)。
   述語字面經同義表(`synonyms`)收成動作詞,語尾決定態與極性;て形串接的多個述語
@@ -17,7 +17,7 @@
   字面留在原述語字面的開頭(「選択して破壊する」);述語空的(「Xを選択して発動できる」)是
   發動句的取對象宣告,代價段、沒有動作詞。之後效果段裡指回被點名物件的線(そのモンスター、
   舊式 選択したモンスター)也標取對象。「選択」不是動作詞。
-  連用形的「Xを選択し、」「Xを対象とし、」(m3 票 07)是連用形串接左半的取對象宣告:同一句後面省略的
+  連用形的「Xを選択し、」「Xを対象とし、」是連用形串接左半的取對象宣告:同一句後面省略的
   物件、沒寫出來的裝備對象(段的受方)指回它;出發地是牌組、手牌的「選択し」是選擇,不標取對象
   (`is_private_selection`)。
 - 「選んで」:不另成段,字面留在原述語字面開頭、不標取對象;區域當物件(「自分の手札を
@@ -28,19 +28,19 @@
   「コントロールは」這幾個含を/は的名詞;「Xの表示形式を」的の是助詞;助詞後的讀點記進助詞字面;
   原因可帶物件(「Xとの戦闘では」「Xの効果を受けない」的 X);「それぞれ１ターンに１度だけ」記 per_turn;
   句型把「が」當助詞切錯而述語解不出時(「〜に１回ずつ攻撃が可能」),整句當主語省略的子句再試。
-- 物件切點(m3 票 03):物件槽往前吞進前文時(`swallowed_front`),前文由 `clause_front` 先填進段
+- 物件切點:物件槽往前吞進前文時(`swallowed_front`),前文由 `clause_front` 先填進段
   (前提、子句前的期間與時機、誰、主語的施事線、名詞前的原因),這裡只解析切點之後的本體;
   「Aと、B」的讀點記在後一條線的 `lead`。模板把主語線寫在誰的位置、子句前的時機寫在最前面。
-- 「Xが Yに 攻撃する」(m3 票 05):被攻擊的 Y 以「に」標,記成助詞「に」的對象線(同「Yを攻撃する」);
+- 「Xが Yに 攻撃する」:被攻擊的 Y 以「に」標,記成助詞「に」的對象線(同「Yを攻撃する」);
   只在一般句型解析不出時才試,被動的「Yに攻撃された」不收。
-- 「〜召喚に成功した」(m3 票 08):「モンスターの特殊召喚に成功」的「の」是助詞、「墓地からの特殊召喚に成功」的
+- 「〜召喚に成功した」:「モンスターの特殊召喚に成功」的「の」是助詞、「墓地からの特殊召喚に成功」的
   「からの」是從;「この効果で特殊召喚に成功した」主語省略時,被召喚的是原因指向的那一段召喚的物件
   (`cause_phrase.summoned_by`)。對象線的角色照召喚系的根算(`synonyms.is_summon`)。
-- 素材(m3 票 09):述語前多一格「誰的素材」(`xyz_material.OWNER_SLOT`)——「XをYの下に重ねてX素材とする」
+- 素材:述語前多一格「誰的素材」(`xyz_material.OWNER_SLOT`)——「XをYの下に重ねてX素材とする」
   「XをYのX素材とする」是 成為超量素材,線的到是 Y 的超量素材物件;「XをYのL素材とする場合」是 作為素材,
   Y 記在受方。「Xも融合素材とする事ができる」的「も」是助詞。素材寫在召喚句裡的(「Xを素材としてS召喚する」)
   不走這裡,在 `material_summon`。
-- 離場(m3 票 10):「フィールドから離れた」的「フィールドから」是述語的一部分(字幹連出發地一起寫),不佔述語前的「從」;
+- 離場:「フィールドから離れた」的「フィールドから」是述語的一部分(字幹連出發地一起寫),不佔述語前的「從」;
   對象線的從是述語寫明的 場上(明寫、沒有字面),主語另寫了位置(「自分フィールドの〜が」)就用那個位置。
 """
 
@@ -81,7 +81,7 @@ from zone_phrase import (FROM_PARTICLES, SIDE_TEXT, SIDE_WORDS, ZONE_PHRASE, ZON
                          parse_from, render_zone_text)
 
 
-# 受方可以是物件的回指(「この効果で特殊召喚したモンスターに装備できる」,票 06)。
+# 受方可以是物件的回指(「この効果で特殊召喚したモンスターに装備できる」)。
 _RECIPIENT_REF = ("(?:この効果で)?(?:その|それらの|" + "|".join(ACTION_PAST.values())
                   + f")(?:モンスター|カード)|{TARGET_REF}(?:モンスター|カード)")
 # 主語省略的子句(「〜できず、「X」の効果でのみ特殊召喚できる」「〜した場合にEXデッキから特殊召喚できる」):
@@ -90,8 +90,8 @@ _RECIPIENT_REF = ("(?:この効果で)?(?:その|それらの|" + "|".join(ACTIO
 # 名詞(攻撃を、効果を、表示形式を、コントロールは),其餘不收「を」。
 _PRED_HEAD = f"(?:{ATTACK_PREFIX_PATTERN})?(?:{PREDICATE_NOUN_PATTERN})?"
 # 寫在述語前的「從」(XをデッキからYに加える);「墓地からの特殊召喚に成功した」的「からの」也是從
-# (m3 票 08),助詞字面記在 `from2_particle`。「フィールドから離れた」的「フィールドから」是述語的一部分
-# (離場的字幹,m3 票 10),不是這一格。
+# ,助詞字面記在 `from2_particle`。「フィールドから離れた」的「フィールドから」是述語的一部分
+# (離場的字幹),不是這一格。
 _FROM_BEFORE_PREDICATE = (f"(?:(?P<from2>{ZONE_PHRASE})"
                           f"(?P<from2_particle>から(?!{LEAVE_VERB})(?:の{SUMMON_SUCCESS_AHEAD})?))?")
 _SUBJECTLESS_RE = re.compile(
@@ -99,11 +99,11 @@ _SUBJECTLESS_RE = re.compile(
     f"(?P<timing>{TIMING_PATTERN})?"
     f"{_FROM_BEFORE_PREDICATE}"
     f"(?:(?P<to>{ZONE_PHRASE})(?P<to_particle>に|へ))?"
-    # 物件省略時到的表示形式照樣寫在述語前(m3 票 07:「Xを選択し、表側攻撃表示で特殊召喚する」)。
+    # 物件省略時到的表示形式照樣寫在述語前(「Xを選択し、表側攻撃表示で特殊召喚する」)。
     f"(?P<display>{DISPLAY_PATTERN})?"
     f"(?P<pred>{_PRED_HEAD}[^を]+)$")
 ZONE_AS_OBJECT = "物件"
-# 後面(隔著數量)是「〜素材と/に」的述語的位置:「も」當助詞只在這裡認(m3 票 09)。
+# 後面(隔著數量)是「〜素材と/に」的述語的位置:「も」當助詞只在這裡認。
 ALSO_MATERIAL_AHEAD = "(?=[^を、]*?素材(?:と|に))"
 OBJECT_PAUSE = "、"
 RANDOM_PICK = "ランダムに"
@@ -120,7 +120,7 @@ _CLAUSE_PATTERN = (
     f"{_TO_FRONT}"
     f"(?P<count_front>{FRONT_COUNT_PATTERN})?"
     # 物件前的「從」:「EXデッキから特殊召喚されたモンスター」的「から」是修飾語(曾被特殊召喚),
-    # 不是這一段的從;「自分フィールドの、「A」または「B」が」的讀點記進從的字面(票 08)。
+    # 不是這一段的從;「自分フィールドの、「A」または「B」が」的讀點記進從的字面。
     # 舊式「フィールド上に表側表示で存在するX」:表示形式記在從的放置形式。
     f"(?:(?P<from>{ZONE_PHRASE})(?P<from_particle>{'|'.join(FROM_PARTICLES)}"
     f"|に(?P<from_display>{DISPLAY_WORD})で存在する)"
@@ -128,7 +128,7 @@ _CLAUSE_PATTERN = (
     # 物件短語裡的「を含む」(カード名に「X」を含む)、「を持つ」(…と同じ数値のレベルを持つ)
     # 不是受詞助詞;述語裡沒有を,所以切錯時會回頭把「を含む」吃進物件短語。
     # 「Xの効果を発動」:物件是 X,「の効果」記進對象線的助詞字面;「「A」または「B」が」的
-    # 「または」整個屬於物件短語,裡面的「は」不是助詞(票 08)。
+    # 「または」整個屬於物件短語,裡面的「は」不是助詞。
     # 「Xしか〜できない」:「しか」緊接物件時當助詞,極性只能(`resolve_polarity`);
     # 「〜の効果でしか」「メインフェイズにしか」「手札からしか」的しか接在原因/時機/從後,不是助詞。
     "(?P<objects>(?:を含む|を持つ|または|[^を])+?)(?P<of_effect>の効果)?"
@@ -136,9 +136,9 @@ _CLAUSE_PATTERN = (
     # 「Xモンスター１体のX召喚を行う」:X 是物件、助詞「の」。
     f"(?P<marker>を|が|は|(?<!で)(?<!に)(?<!から){ONLY_MARKER}"
     f"|の(?=表示形式|コントロール|(?:{'|'.join(SUMMON_NOUNS)})行)"
-    # 「モンスターの特殊召喚に成功した」「このカードの召喚に成功した」:物件 + 助詞「の」(m3 票 08)。
+    # 「モンスターの特殊召喚に成功した」「このカードの召喚に成功した」:物件 + 助詞「の」。
     f"|の{SUMMON_SUCCESS_AHEAD}"
-    # 「デッキのモンスターも(１体まで)融合素材とする事ができる」:助詞「も」只在後面是素材的述語時認(m3 票 09)。
+    # 「デッキのモンスターも(１体まで)融合素材とする事ができる」:助詞「も」只在後面是素材的述語時認。
     f"|も{ALSO_MATERIAL_AHEAD})"
     # 助詞後的讀點(「水属性モンスターは、〜」)記進助詞字面。
     "(?P<marker_pause>、)?"
@@ -166,7 +166,7 @@ _CLAUSE_PATTERN = (
     f"(?P<duration>{CLAUSE_DURATION_PATTERN})?"
     f"(?:(?P<to>{ZONE_PHRASE})(?P<to_particle>に|へ))?"
     f"(?:(?P<recipient>自分|相手|{_RECIPIENT_REF})に)?"
-    # 誰的素材(m3 票 09):「そのモンスターの下に(重ねてX素材とする)」「このカードの(X素材とする)」。
+    # 誰的素材:「そのモンスターの下に(重ねてX素材とする)」「このカードの(X素材とする)」。
     f"{xyz_material.OWNER_SLOT}"
     # 到的表示形式:「〜に表側表示で置く」「表側攻撃表示か裏側守備表示で特殊召喚する」。
     f"(?P<display>{DISPLAY_PATTERN})?"
@@ -180,7 +180,7 @@ _TARGETING_THIS_CLAUSE_RE = re.compile(_CLAUSE_PATTERN.replace(
     _OBJECTS_GROUPS,
     f"(?P<objects>(?:{'|'.join(TARGETING_THIS_FORMS)})(?:[^を、]+?)?)"
     "(?P<of_effect>の効果|(?<=する)効果)", 1))
-# 「Xが Yに 攻撃する」(m3 票 05):被攻擊的 Y 以「に」標(同「Yを攻撃する」的 Y),助詞字面記「に」。
+# 「Xが Yに 攻撃する」:被攻擊的 Y 以「に」標(同「Yを攻撃する」的 Y),助詞字面記「に」。
 # 一般句型先中「が」、把「Yに攻撃する」整截當述語,所以只在那樣解析不出時才用這個句型(`_match_clause`)。
 # 被動的「Xが Yに 攻撃された」Y 是攻擊的一方,不是這個讀法,不收。
 ATTACK_TARGET_MARKER = "に"
@@ -196,12 +196,12 @@ _CLAUSE_NO_TO_FRONT_RE = re.compile(_CLAUSE_PATTERN.replace(_TO_FRONT, "", 1))
 _REF_COUNT_RE = re.compile("^(?P<phrase>(?:その|それらの)(?:モンスター|カード))(?P<count>[０-９]+(?:体|枚))$")
 COUNT_AFTER_OBJECT = "物件後"
 # 數量格(spec「數量」:支付 1000LP,段可無物件):「１０００LP」當受詞時不是物件。
-# 單位閉集:「LP」與舊式全寫「ライフポイント」(m3 票 02),單位字面留在數量格的 `unit`。
+# 單位閉集:「LP」與舊式全寫「ライフポイント」,單位字面留在數量格的 `unit`。
 AMOUNT_UNITS = ("LP", "ライフポイント")
 _AMOUNT_RE = re.compile(f"^(?P<digits>[０-９]+)(?P<unit>{'|'.join(AMOUNT_UNITS)})$")
-# 不能取對象的區域(m3 票 07,spec 預設 11):「デッキから/手札から〜を選択し、」是選擇,不是取對象宣告——
+# 不能取對象的區域(spec 預設 11):「デッキから/手札から〜を選択し、」是選擇,不是取對象宣告——
 # 字面一樣留在原述語字面,對象線不標取對象、物件不進被取對象的清單。只收連用形的「選択し」;
-# 「選択して」維持原本的讀法。
+# 「選択して」照取對象字面判。
 PRIVATE_ZONES = ("牌組", "手牌", "額外牌組")
 SELECTION_LITERAL = "選択し"
 EQUIP_ACTION = "裝備"
@@ -212,7 +212,7 @@ REASON_DISPLAY = "表示形式沒有到"
 
 def split_objects(phrase):
     """以「と」切物件,但「」裡的と、「X」と名のついた 的と(字段的舊式寫法)、「このカードを対象とする」
-    的と不算;後面接比較的と(「そのモンスターとはカード名が異なる〜」,m3 票 06)是修飾語的一部分。"""
+    的と不算;後面接比較的と(「そのモンスターとはカード名が異なる〜」)是修飾語的一部分。"""
     parts, depth, buf = [], 0, ""
     for i, ch in enumerate(phrase):
         if ch == "「":
@@ -303,7 +303,7 @@ def fill_clause(ctx, clause_text):
     """把簡單子句解析進段;失敗就在段上標原因。`ctx.inherited_timing` 是連用形串接(同時)的前一段的
     時機:「次のスタンバイフェイズに戻り、その攻撃力は〜になる」的第二段同一時點。
     主語省略的子句(「〜できず、「X」の効果でのみ特殊召喚できる」「〜場合にEXデッキから特殊召喚できる」)
-    的物件是本句「Xは」的物件或このカード,對象線標 `elided`(票 09)。
+    的物件是本句「Xは」的物件或このカード,對象線標 `elided`。
     段上可能已有子句前文填好的格(`clause_front`:誰、原因、時機、主語的對象線),同一格兩處都寫就不猜。"""
     seg, state, sentence_start = ctx.seg, ctx.state, ctx.sentence_start
     kind = ctx.kind
@@ -354,7 +354,7 @@ def fill_clause(ctx, clause_text):
     if parsed:
         seg["polarity"], seg["optional"] = resolve_polarity(parsed, marker)
     written_to = next((p.to for p in reversed(parsed) if p.to), None)
-    # 述語本身寫明的出發地(「フィールドから離れた」,m3 票 10)。
+    # 述語本身寫明的出發地(「フィールドから離れた」)。
     written_from = next((PREDICATE_FROM[p.action] for p in parsed if p.action in PREDICATE_FROM),
                         None)
     agent = seg["agent"]
@@ -370,14 +370,14 @@ def fill_clause(ctx, clause_text):
     if g("recipient") in SIDE_WORDS:
         seg["recipient"] = SIDE_WORDS[g("recipient")]
     elif g("recipient"):
-        # 受方是物件的回指(裝備的對象):{"object", "ref"},找不到就整段標原因(票 06)。
+        # 受方是物件的回指(裝備的對象):{"object", "ref"},找不到就整段標原因。
         obj_id, ref, reason = state.object_at(g("recipient"), sentence_start)
         if obj_id is None:
             seg["unparsed"] = unparsed(reason)
             return
         seg["recipient"] = {"object": obj_id, "ref": ref}
     elif EQUIP_ACTION in seg["actions"] and not elided and state.declared_object() is not None:
-        # 「Xを対象とし、このカードを装備魔法カード扱いで装備する」(m3 票 07):沒寫出來的裝備對象
+        # 「Xを対象とし、このカードを装備魔法カード扱いで装備する」:沒寫出來的裝備對象
         # 是左半宣告的物件;模板不寫字面。
         seg["recipient"] = {"object": state.declared_object(), "ref": None, "elided": True}
     if (g("cause") and g("cause_front")) or (seg["cause"] and (g("cause") or g("cause_front"))):
@@ -467,7 +467,7 @@ def fill_clause(ctx, clause_text):
         return
     attached, owner_new = None, []
     if g("material_owner") or g("under") or XYZ_ATTACH_ACTION in seg["actions"]:
-        # 誰的素材(m3 票 09):成為超量素材的到是 Y 的超量素材物件;作為素材的 Y 記在受方。
+        # 誰的素材:成為超量素材的到是 Y 的超量素材物件;作為素材的 Y 記在受方。
         if to_text:
             seg["unparsed"] = unparsed(REASON_TWICE)
             return
@@ -514,7 +514,7 @@ def fill_clause(ctx, clause_text):
         obj = state.find(obj_id)
         if count is not None and count.get("cmp") == "全部" and obj["source"]["kind"] == "子集":
             obj["source"]["select"] = "全部"
-        # 角色照召喚系的根算(m3 票 08):召喚、反轉召喚與通常召喚的對象也是被召喚的那一方。
+        # 角色照召喚系的根算:召喚、反轉召喚與通常召喚的對象也是被召喚的那一方。
         role = "被召喚" if any(is_summon(a) for a in seg["actions"]) else "受事"
         if marks_targeting:
             state.targeted.append(obj_id)
@@ -548,7 +548,7 @@ def fill_clause(ctx, clause_text):
                 line["from"] = position(current["zones"], "繼承",
                                         inferred=current["inferred"])
             elif seg["actions"] == [draw.DRAW_ACTION]:
-                # 「相手がこのカードをドローした時」:推得的牌組照抽牌者標方(m3 票 02)。
+                # 「相手がこのカードをドローした時」:推得的牌組照抽牌者標方。
                 line["from"] = position(draw.inferred_deck(agent_side(agent)), "推得",
                                         inferred=True)
             elif inferred_from:
@@ -581,7 +581,7 @@ def fill_clause(ctx, clause_text):
 
 def render_from(lines, predicate_from=None):
     """所有對象線共用一個明寫的「從」才有字面 → (字面, 寫在物件前還是述語前);
-    繼承、推得的不寫。`predicate_from` 是述語本身寫明的出發地(「フィールドから離れた」的場上,m3 票 10):
+    繼承、推得的不寫。`predicate_from` 是述語本身寫明的出發地(「フィールドから離れた」的場上):
     每條線的從都要是明寫、落在那個區域裡;沒有自己字面的從就是述語寫的那一個,不另寫。"""
     if predicate_from:
         for line in lines:
@@ -640,14 +640,14 @@ def _render_to(lines, predicate_to):
 
 
 def _render_recipient(recipient, seg, card, objects, names, self_id):
-    """受方:我方/對手寫「自分に/相手に」;物件的回指(裝備的對象,票 06)照回指字面;
-    作為素材的受方(要召喚的怪獸,m3 票 09)寫物件 +「の」。"""
+    """受方:我方/對手寫「自分に/相手に」;物件的回指(裝備的對象)照回指字面;
+    作為素材的受方(要召喚的怪獸)寫物件 +「の」。"""
     if isinstance(recipient, dict):
         if recipient.get("particle"):
             return xyz_material.render_recipient_of(recipient, seg, card, objects, names, self_id)
         obj = objects.get(recipient.get("object"))
         if obj is not None and recipient.get("elided"):
-            # 沒寫出來的裝備對象(m3 票 07):要是本區塊先前的宣告段點名過的物件。
+            # 沒寫出來的裝備對象:要是本區塊先前的宣告段點名過的物件。
             if recipient.get("ref") or not declared_earlier(obj["id"], seg, card):
                 raise NoTemplate("省略的受方無模板")
             return ""
@@ -687,7 +687,7 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     if cause_front:
         parts.append(render_cause_phrase({k: v for k, v in seg["cause"].items() if k != "placement"},
                                          seg, card, objects, names, self_id))
-    # 主語省略的線(票 09)不寫物件與助詞;其餘線的助詞要一致。
+    # 主語省略的線不寫物件與助詞;其餘線的助詞要一致。
     spoken = [line for line in lines if not line.get("elided")]
     if len(spoken) != len(lines) and len(lines) != 1:
         raise NoTemplate("主語省略的段只能有一條線")
@@ -695,7 +695,7 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     if len(markers) > 1:
         raise NoTemplate("對象線的助詞或數量不一致")
     marker = markers.pop() if markers else None
-    # 誰的素材(m3 票 09):成為超量素材的所屬格,或作為素材的受方「Yの」;兩者都寫在述語前。
+    # 誰的素材:成為超量素材的所屬格,或作為素材的受方「Yの」;兩者都寫在述語前。
     owner_text = xyz_material.render_owner(seg, lines, card, objects, names, self_id)
     recipient_text = ""
     if seg["recipient"] is not None:

@@ -46,11 +46,11 @@ hit 的 `segments` 是空的,`via` 列經由的卡與它的命中段(展開到�
 (官方卡名、setcode,加「〜として扱う」的列);帶位置條件的列只在該對象線的「從」落在
 該位置時算,「從」沒寫就只算任何位置的列。無官方日文的卡沒有結構,退回卡片總表的
 name_ja 與 setcode。名稱比對雙方先全半形折疊。
-帶狀態的此卡(母體是物件0 的子集,m3 票 05)只有這張卡自己代得進去,狀態照條件式判;它不是泛用物件。
+帶狀態的此卡(母體是物件0 的子集)只有這張卡自己代得進去,狀態照條件式判;它不是泛用物件。
 條件式含引用(等級 = 物件1.階級)時:先求被引用物件的候選卡(卡片總表裡滿足它條件式的卡),
 X 只要能在候選卡裡找到一組讓全部條件成立就符合(spec 使用者故事 15);被引用物件解析不出
 就判不了,列進未解析組。
-異同原子(m3 票 06,「與某物件的某屬性相同/不同」)的比較對象是別的物件時同樣照引用比;比較對象是
+異同原子(「與某物件的某屬性相同/不同」)的比較對象是別的物件時同樣照引用比;比較對象是
 同一個物件群的其他成員時,單張卡代入一律符合(`same_different_fits`)。
 """
 import functools
@@ -129,7 +129,7 @@ STATE_ATOMS = {
     EQUIPPED: StateAtom(_any_card, generic=False),
     TARGETING_THIS: StateAtom(_any_card, generic=False),
     "曾被特殊召喚": StateAtom(_summoned_from_fits, generic=False),
-    # m3 票 05:怎麼被召喚出來的、被本卡效果做過什麼、是不是正裝備在怪獸上,都是狀態。
+    # 怎麼被召喚出來的、被本卡效果做過什麼、是不是正裝備在怪獸上,都是狀態。
     SUMMON_METHOD: StateAtom(_any_card, generic=False),
     ACTED_BY_EFFECT: StateAtom(_any_card, generic=False),
     EQUIPPED_ON: StateAtom(_any_card, generic=False),
@@ -192,7 +192,7 @@ def compare_attr(condition, entry, binding):
 
 
 def same_different_fits(condition, view, from_zones, binding):
-    """異同原子(m3 票 06)對一張卡:比較對象是同群的其他成員(沒有 `ref`)時單張卡代入一律符合;
+    """異同原子對一張卡:比較對象是同群的其他成員(沒有 `ref`)時單張卡代入一律符合;
     是別的物件時照引用比較——那個物件沒綁定候選卡就判不了(None),綁了就逐個屬性比:相同是每個屬性都相同、
     不同是每個屬性都不同,任一邊沒有那個屬性的值就不符。"""
     ref = condition.get("ref")
@@ -464,7 +464,7 @@ def _same_atom_on(condition, ref_id):
 
 
 def is_this_card(obj, objects):
-    """物件是不是這張卡自己:物件0,或母體是它的子集(帶狀態的此卡,m3 票 05)。"""
+    """物件是不是這張卡自己:物件0,或母體是它的子集(帶狀態的此卡)。"""
     if obj["source"]["kind"] == "自己":
         return True
     container = objects.get(obj["source"].get("of")) if obj["source"]["kind"] == "子集" else None
@@ -551,7 +551,7 @@ class _Judge:
         return False
 
     def sharing_pool(self, owner, obj, ref_id, pool, view, from_zones):
-        """候選卡裡只留與代入的卡「相同」得起來的:條件式頂層有對這個物件的 異同 相同(m3 票 06)時,
+        """候選卡裡只留與代入的卡「相同」得起來的:條件式頂層有對這個物件的 異同 相同時,
         候選卡照那個屬性的值分好組(整次查詢只分一次),只取代入的卡那幾個值的組——不必把幾千張候選卡
         逐張試。沒有這種原子就原樣回傳。"""
         key = (owner["id"], obj["id"], ref_id)
@@ -798,7 +798,7 @@ def segment_hit_lines(seg, card, q, judge, objects, names):
     if not q["line_constrained"]:
         return list(seg["lines"])
     hit = []
-    # 受方是被取對象的物件(裝備對象,m3 票 07)時,這一段算有取對象:被裝備上去的卡那條線照常比其餘條件。
+    # 受方是被取對象的物件(裝備對象)時,這一段算有取對象:被裝備上去的卡那條線照常比其餘條件。
     recipient_targeted = isinstance(seg["recipient"], dict) and seg["recipient"].get("targeting")
     for line in seg["lines"]:
         if _is_doer(line, seg):

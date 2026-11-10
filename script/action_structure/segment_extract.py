@@ -7,11 +7,11 @@
   條件段帶觸發形;代價子句以て形結尾才算代價。前提(`premise` 模組:「〜に存在する場合、」
   「相手ターンに」)先剝掉、寫進第一個段的前提格(段的範圍從前提起算);整句只有前提的
   (「自分メインフェイズに発動できる」)開一個沒有動作詞的條件段放它;效果句開頭的前提同樣。
-  效果句的前提後面是接著詞「さらに」時(m3 票 12),前提也自成一個只有前提的條件段、接著詞留在段外。
+  效果句的前提後面是接著詞「さらに」時,前提也自成一個只有前提的條件段、接著詞留在段外。
 - 舊式的「(條件子句)(時|場合|際)、(效果子句)」(沒有発動できる)→ 條件段 + 效果段。
 - 舊式的「(代價子句)る事で、(效果子句)」(= 新式「〜て発動できる。〜」)→ 代價段 + 效果段。
 - 效果子句以「代わりに」開頭的是代替(票 08):條件段改標「被代替」(不更新位置)、效果段記 `replaces`。
-- 離場(m3 票 10,`leave_field`):「Xがフィールドから離れた時に Yは破壊される」(觸發形後沒有讀點)在觸發形切成
+- 離場(`leave_field`):「Xがフィールドから離れた時に Yは破壊される」(觸發形後沒有讀點)在觸發形切成
   條件段加效果段;「Xは、フィールドから離れた場合に除外される」照代替記(被代替段加做代替的段,沒有「代わりに」)。
 - 其他句子是效果段;連用形串接(「〜に戻り、その攻撃力は〜になる」「〜手札に加え、〜に戻す」)切成
   多段、連接「同時」、後段與前段同一時機(`clause_join`);性質變更句「その攻撃力は〜倍になる」
@@ -75,7 +75,7 @@ _LIMIT_SENTENCE_RE = re.compile(
 OMITTED_SENTENCES = ((_UNIQUE_RE, UNIQUE_REASON), (_LIMIT_SENTENCE_RE, INTERVAL_REASON))
 # 同一句次數限制寫成句尾括號注記(「〜発動できる（このカード名のこの効果は１ターンに１度しか使用できない）」)。
 _LIMIT_NOTE_RE = re.compile("（(?P<note>[^（）]+)）$")
-# 只寫成括號注記的次數限制(閉集,m3 票 02):分歧引導句後的「以下の効果はそれぞれ〜しか選択/使用できない」、
+# 只寫成括號注記的次數限制(閉集):分歧引導句後的「以下の効果はそれぞれ〜しか選択/使用できない」、
 # 「〜の効果に対してそれぞれ〜しか発動できない」、效果句後的「１ターンに１度のみ」。
 _NOTE_ONLY_LIMIT_RE = re.compile(
     "^(?:このカード名の(?:以下の|この)効果は(?:[^、。]+に対して)?それぞれ１ターンに１度しか"
@@ -282,7 +282,7 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
         piece_replaces, same_time = replaces, bool(i and not then)
         leave = leave_field.split_clause(state, piece)
         if leave is not None:
-            # 離場子句後面直接接另一截(m3 票 10):「Xがフィールドから離れた時に Yは破壊される」是條件段加效果段,
+            # 離場子句後面直接接另一截:「Xがフィールドから離れた時に Yは破壊される」是條件段加效果段,
             # 「Xは、フィールドから離れた場合に除外される」照代替記(被代替段加做代替的段)。
             left = segment_at(state, leave.kind, first_start,
                               piece_start + len(leave.cond) + len(leave.trigger))
@@ -303,7 +303,7 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
         ctx = ClauseContext(seg, state, piece_start, segs[-1][0]["timing"] if same_time else None)
         _fill_effect(ctx, piece)
         if ctx.split_at is not None:
-            # 「Xを融合素材とし、Yを融合召喚する」的 X 解不出(m3 票 09):不併段,照連用形串接切成兩段——
+            # 「Xを融合素材とし、Yを融合召喚する」的 X 解不出:不併段,照連用形串接切成兩段——
             # 這一段縮到左半、標解析不出,右半排成下一截照常解析。
             pieces.insert(i + 1, (piece_start - start + ctx.split_at, piece[ctx.split_at:]))
             piece = piece[:ctx.split_at].rstrip("、")
@@ -359,7 +359,7 @@ def parse_sentence(state, start, end, activation_lead=False):
     句首的前提先剝掉,掛在第一個段上、段的範圍從前提起算;「〜場合、代わりに〜」的條件段改標
     被代替、後面的段記代替誰(「代わりに」留在它的範圍內)。
     `activation_lead`:這一截是發動句引導句前面的子句(「Xを対象とし、以下の効果から１つを選択して
-    発動できる」的「Xを対象とし」,m3 票 07)——沒有發動語尾,但照發動句解析,每一截都是代價子句。"""
+    発動できる」的「Xを対象とし」)——沒有發動語尾,但照發動句解析,每一截都是代價子句。"""
     text = state.block["text"]
     sent = text[start:end]
     state.start_sentence()
@@ -435,7 +435,7 @@ def parse_sentence(state, start, end, activation_lead=False):
     also = _ALSO_RE.match(body)
     if (premise and also and body[also.end():] and not (act or summon_block or is_lasting(premise))
             and points is None and turn_seg is None and lead is None):
-        # 效果句的前提後面是接著詞「さらに」(「〜存在する場合、さらに〜できる」,m3 票 12):接著詞照舊留在
+        # 效果句的前提後面是接著詞「さらに」(「〜存在する場合、さらに〜できる」):接著詞照舊留在
         # 段外,前提自成一個只有前提的條件段(同整句只有前提的發動句),後面的子句照一般效果句解析。
         carrier = segment_at(state, "條件", seg_from, premise_end)
         carrier["premise"], premise = premise, None
@@ -446,7 +446,7 @@ def parse_sentence(state, start, end, activation_lead=False):
     rest, rest_start, seg_start = body, clause_start, seg_from
     timing = _battle_timing(state, body, clause_start, seg_from, segs) if act else None
     trig = None if timing or carrier else trigger_re.match(body)
-    # 「Xはフィールド上から離れた場合、ゲームから除外される」(m3 票 10):沒有「代わりに」的代替。
+    # 「Xはフィールド上から離れた場合、ゲームから除外される」:沒有「代わりに」的代替。
     replaced = trig is not None and (
         trig.group("rest").startswith(REPLACEMENT_PREFIX)
         or (not act

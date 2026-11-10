@@ -9,7 +9,7 @@ from card_structure import build_structures
 from test_golden import SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT, card, faq
 
 TAIL_UNKNOWN = 11111111   # 述語語尾「させる」(使役)同義表沒收:段解析不出
-MODS_UNKNOWN = 22222222   # 物件修飾「攻撃力が一番高い」解析不出(群體的最高,m3 不收)
+MODS_UNKNOWN = 22222222   # 物件修飾「攻撃力が一番高い」解析不出(群體的最高,不收)
 NO_TEXT = 33333333        # 無官方日文
 BLACK_MAGICIAN = 46986414
 

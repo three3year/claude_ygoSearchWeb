@@ -1,4 +1,4 @@
-"""異同原子與「〜とは〜が異なり、」(m3 票 06)。
+"""異同原子與「〜とは〜が異なり、」。
 
 「與某物件的某屬性相同/不同」:物件群內成員之間(カード名が異なるカード３枚)單張卡代入一律符合;
 比較對象是別的物件(そのモンスターとはカード名が異なる〜)時照引用比較,先求被引用物件的候選卡。
@@ -350,7 +350,7 @@ class XyzShiftTest(_Cards):
 
     def test_summon_misses_when_no_other_xyz_shares_all_three(self):
         """エメラル:同階級,但種族、屬性沒有別的超量怪獸相同。(後面「この効果で特殊召喚したモンスターは、
-        エンドフェイズ時に墓地へ送られる」這輪解析不出,所以這張卡仍列在未解析組。)"""
+        エンドフェイズ時に墓地へ送られる」解析不出,所以這張卡仍列在未解析組。)"""
         self.assertNotIn(XYZ_SHIFT, self.hits(actions=["特殊召喚"], card=EMERAL))
 
     def test_the_summon_writes_back_to_its_text(self):
@@ -462,7 +462,7 @@ PURRELY_SHARELY_TEXT = (
 
 class PurrelySharelyTest(_Cards):
     """ピュアリィ・シェアリィ！？ 10780049:「対象のモンスターとは属性が異なり、」同一個讀法——不另成段。
-    右半「〜の上に重ねてX召喚扱いで〜特殊召喚する」這輪不收,整張不要求。"""
+    右半「〜の上に重ねてX召喚扱いで〜特殊召喚する」不收,整張不要求。"""
     archetypes = PURRELY_ARCHETYPES
     cards = [card(PURRELY_SHARELY, name_ja="ピュアリィ・シェアリィ！？", type=TRAP, setcode=PURRELY)]
     faq = [faq(PURRELY_SHARELY, "ピュアリィ・シェアリィ！？", PURRELY_SHARELY_TEXT)]

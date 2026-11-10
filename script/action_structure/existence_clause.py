@@ -38,7 +38,7 @@ def fill_clause(ctx, clause_text):
 
 
 def render_clause(seg, premise, card, objects):
-    """存在前提(票 10 的形狀,帶容器 `in`):「(容器回指)の中に(子集全名)が(あった)」。"""
+    """存在前提(帶容器 `in`):「(容器回指)の中に(子集全名)が(あった)」。"""
     if premise.get("op") != "存在" or seg["actions"] or seg["kind"] != "條件":
         raise NoTemplate(f"前提無模板:{premise.get('op')}")
     if seg["predicate"] not in EXIST_WORDS:

@@ -28,7 +28,7 @@
   與計數器「(Xの)魔力カウンター」(`counter` 種類名);數量單位「つ」;舊式代價「〜く事で、」。
   另收:「このカードを対象とする(Xの)効果が発動した」(物件條件 以此卡為對象)、超量素材行「×N」、
   物件前的「〜の数まで、」、片假名子類型(リンク…)、修飾語連接字與預設不同時記 `joiner`。
-- m3 票 05(字面規則在 `anaphora`):帶修飾語的回指「その相手モンスター」「対象の墓地のモンスター」——修飾語
+- 物件短語的指誰(字面規則在 `anaphora`):帶修飾語的回指「その相手モンスター」「対象の墓地のモンスター」——修飾語
   只是重述,整個字面記進對象線 `ref`,指回最近的同大類物件裡與重述不衝突的那個(`recent_of` 的
   `restated`);帶狀態的此卡「この効果で特殊召喚したこのカード」——母體是此卡的子集,條件式是狀態的原子
   (`stateful_self_object`),它動了位置就是此卡動了(`update_positions`)。
@@ -69,7 +69,7 @@ INTERVAL_REASON = "次數限制"
 KIND_PROCEDURE, KIND_RESTRICTION, KIND_MODIFIER = "召喚手續", "限制", "修飾"
 _SELF_RE = re.compile("^このカード$")
 REF_RE = re.compile("^(?P<ref>その|それらの)(?P<head>モンスター|カード)$")
-# 「その発動」:指回本區塊最近被發動的那張卡(「罠カードが発動した時、…その発動を無効にし」,票 09)。
+# 「その発動」:指回本區塊最近被發動的那張卡(「罠カードが発動した時、…その発動を無効にし」)。
 ACTIVATION_REF = "その発動"
 _REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
 # 去除的對象:超量素材「(Xの)X素材」、計數器「(Xの)魔力カウンター」;「の」前是所屬的物件
@@ -83,10 +83,10 @@ _COUNTER_RE = re.compile("^(?:(?P<owner>.+)の)?(?P<counter>[^「」のをにが
 # 「選択したモンスター」:指回本區塊最近被取對象的同大類物件(舊式;新式用 そのモンスター)。
 TARGET_REF_RE = re.compile(f"^{TARGET_REF}(?P<head>モンスター|カード)$")
 TARGET_OF = "対象の"
-# 動作回指可帶「この効果で」(この効果で除外したモンスター);字面整個記進對象線 ref(票 08)。
+# 動作回指可帶「この効果で」(この効果で除外したモンスター);字面整個記進對象線 ref。
 ACTION_REF_RE = re.compile("^(?:この効果で)?(?P<past>.+?)(?P<head>モンスター|カード)$")
-# 「X」１体:只有卡名、沒有頭名詞的物件;「A」または「B」是兩個卡名的「或」(票 08);
-# 連接字也可以是「か」(「「A」か「B」が存在する場合」,m3 票 12;或的 `form` 記「か」),兩種混用的不收。
+# 「X」１体:只有卡名、沒有頭名詞的物件;「A」または「B」是兩個卡名的「或」;
+# 連接字也可以是「か」(「「A」か「B」が存在する場合」;或的 `form` 記「か」),兩種混用的不收。
 _NAMED_RE = re.compile(
     "^(?P<names>「[^「」]+」(?:(?P<or>または|か)「[^「」]+」(?:(?P=or)「[^「」]+」)*)?)"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
@@ -133,16 +133,16 @@ class BlockState:
         self.positions: dict[str, CurrentPosition] = {}
         self.recent = []      # 本區塊建立或引用過的物件 id(其後者優先)
         self.targeted = []     # 被取對象的物件 id(「を選択して」「を対象として」點名的,後者優先)
-        self.delayed = False  # 序列中段出現條件段之後:後面的段算延遲、不標取對象(票 08)
-        self.acted = {}       # 物件 id → 本區塊對它做過的動作詞(動作回指「〜したモンスター」用;票 06)
-        self.self_id = self_id  # 「このカード」指誰:內嵌效果裡綁定成被賦予效果的物件(票 06)
-        self.subject = None   # 本句「Xは」的物件:後面主語省略的子句(「〜できず、〜できる」)沿用(票 09)
+        self.delayed = False  # 序列中段出現條件段之後:後面的段算延遲、不標取對象
+        self.acted = {}       # 物件 id → 本區塊對它做過的動作詞(動作回指「〜したモンスター」用)
+        self.self_id = self_id  # 「このカード」指誰:內嵌效果裡綁定成被賦予效果的物件
+        self.subject = None   # 本句「Xは」的物件:後面主語省略的子句(「〜できず、〜できる」)沿用
         self.topic = Topic(TOPIC_NONE)
-        # 本句左半的宣告(「Xを選択し、」「Xを対象とし、」)點名的物件:右半省略的物件指回它(m3 票 07)。
+        # 本句左半的宣告(「Xを選択し、」「Xを対象とし、」)點名的物件:右半省略的物件指回它。
         self.declared = None
         self.last_segment_of_action = {}
         # 本句前面的效果段剛特殊召喚出來的物件:「〜を特殊召喚し、このカードを下に重ねてX素材とする」沒寫的
-        # 所屬卡是它(m3 票 09)。
+        # 所屬卡是它。
         self.last_summoned = None
 
     def note_actions(self, seg):
@@ -236,10 +236,10 @@ class BlockState:
 
     def recent_of(self, head, among=None, action=None, restated=()):
         """本區塊最近提過的同大類物件(頭名詞 カード 任何大類都算);`among` 可改成別的候選列;
-        給了 `action` 就只找本區塊被做過那個動作的(動作回指,票 06)。「このカード」不進 recent
+        給了 `action` 就只找本區塊被做過那個動作的(動作回指)。「このカード」不進 recent
         (その 不會指它),但動作回指可以:「このカードを特殊召喚する。〜この効果で特殊召喚した
         モンスターに装備」;它的大類看卡片屬性表。`restated` 是回指字面裡重述的修飾語原子
-        (「その相手モンスター」的相手,m3 票 05):與它衝突的物件跳過。"""
+        (「その相手モンスター」的相手):與它衝突的物件跳過。"""
         want = HEAD_CATEGORY[head]
         candidates = list(reversed(self.recent if among is None else among))
         if action is not None and among is None:
@@ -274,13 +274,13 @@ class BlockState:
     def resolve_reference(self, phrase):
         """修飾語裡指回的物件短語(「そのモンスターのランク」「見せたモンスターと同じ」的
         その/それらの+頭名詞、動作回指;異同原子的比較對象另有 対象の/選択した+頭名詞、帶修飾語的回指
-        「その表側表示モンスター」,m3 票 06)→ 物件 id 或 None;與 object_at 同一把尺,但不建新物件。"""
+        「その表側表示モンスター」)→ 物件 id 或 None;與 object_at 同一把尺,但不建新物件。"""
         ref = REF_RE.match(phrase)
         if ref:
             return self.recent_of(ref.group("head"))
         target_ref = TARGET_REF_RE.match(phrase)
         if target_ref:
-            # 「対象のモンスターとは属性が異なり、〜」(m3 票 06):指回被取對象的物件。
+            # 「対象のモンスターとは属性が異なり、〜」:指回被取對象的物件。
             return self.recent_of(target_ref.group("head"), among=self.targeted)
         if self.is_action_reference(phrase):
             return self.action_reference(phrase)
@@ -308,7 +308,7 @@ class BlockState:
         if _SELF_RE.match(phrase):
             return self.self_id, None, None
         if phrase == f"「{self.card['name_ja']}」":
-            # 本卡以自己的卡名當主語(「「滅びの黒魔術師」は〜でのみ特殊召喚できる」,票 09):物件0,
+            # 本卡以自己的卡名當主語(「「滅びの黒魔術師」は〜でのみ特殊召喚できる」):物件0,
             # 回指字面是卡名。
             return self.self_id, phrase, None
         ref = REF_RE.match(phrase)
@@ -332,7 +332,7 @@ class BlockState:
             return obj_id, phrase, (None if obj_id else REASON_REF)
         restated = restated_reference(phrase)
         if restated:
-            # 「その相手モンスター」「対象の墓地のモンスター」(m3 票 05):修飾語只是重述,整個字面是回指字面。
+            # 「その相手モンスター」「対象の墓地のモンスター」:修飾語只是重述,整個字面是回指字面。
             obj_id = self.recent_of(restated.head, among=self.targeted if restated.targeted else None,
                                     restated=restated.atoms)
             if obj_id is not None or not phrase.startswith(TARGET_OF):
@@ -412,7 +412,7 @@ class BlockState:
             atoms, reason = parse_modifiers(self, m.group("mods"))
             condition = noun_condition(atoms, m.group("head"))
             # 名詞修飾的位置(「墓地のモンスター」「EXデッキの「No.」Xモンスター」)就是
-            # 物件的初始位置:後續段「從」沒寫時由此繼承(spec「初始位置」;票 06)。
+            # 物件的初始位置:後續段「從」沒寫時由此繼承(spec「初始位置」)。
             if initial_position is None:
                 located = [z for a in atoms if a.get("op") == "位置" for z in a["zones"]]
                 initial_position = [dict(z) for z in located] or None
@@ -427,7 +427,7 @@ class BlockState:
         return self.add_object(obj), None, None
 
     def stateful_self_object(self, phrase, atoms, sentence_start):
-        """帶狀態的此卡(「この効果で特殊召喚したこのカード」,m3 票 05)→ 物件 id:母體是此卡的子集,
+        """帶狀態的此卡(「この効果で特殊召喚したこのカード」)→ 物件 id:母體是此卡的子集,
         條件式是狀態的原子(沒有頭名詞的大類)。狀態裡寫了位置(「手札のこのカード」)就是初始位置,
         沒寫繼承此卡的目前位置(推得的照樣算推得)。和此卡一樣不進 recent(その 不會指它)。"""
         located = [dict(z) for a in atoms if a.get("op") == "位置" for z in a["zones"]]
@@ -471,7 +471,7 @@ class BlockState:
         return self.add_object(obj), None, None
 
     def held_material(self, holder_phrase, material_phrase, sentence_start):
-        """「Xが「Y」をX素材としている」的超量素材物件(m3 票 09)→ 物件 id,X 或 Y 認不出物件回 None。
+        """「Xが「Y」をX素材としている」的超量素材物件→ 物件 id,X 或 Y 認不出物件回 None。
         Y 照一般的名詞短語解析,解出的條件式與數量留在物件上;物件種類改成超量素材、所屬 `of` = X
         (X 是回指時字面記 `of_ref`)。超量素材物件可以帶條件式只有這一種寫法,去除的對象(`detach_object`)沒有。"""
         holder_id, holder_ref, _ = self.object_at(holder_phrase, sentence_start)
@@ -557,7 +557,7 @@ def update_positions(seg, state):
                 "zones": line["to"]["zones"], "inferred": line["to"]["inferred"]}
             source = state.find(line["object"])["source"]
             if source["kind"] == "子集" and source["of"] == state.self_id:
-                # 帶狀態的此卡動了就是此卡動了(m3 票 05):後面的「このカード」從這裡繼承。
+                # 帶狀態的此卡動了就是此卡動了:後面的「このカード」從這裡繼承。
                 state.positions[state.self_id] = dict(state.positions[line["object"]])
 
 

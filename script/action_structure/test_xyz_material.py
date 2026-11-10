@@ -1,4 +1,4 @@
-"""X素材(m3 票 09)的查詢層與反向檢查斷言:輸入真實卡的官方 DB 文本與卡片參數,看查詢結果。
+"""X素材的查詢層與反向檢查斷言:輸入真實卡的官方 DB 文本與卡片參數,看查詢結果。
 
 只驗接縫一(查詢判斷)與接縫二(反向檢查),不驗結構內部的格。
 """
@@ -363,7 +363,7 @@ class MaterialInSummonSegmentTest(MaterialFixture):
 
     def test_fusion_material_left_half_joins_the_fusion_summon_segment(self):
         """天賦の魔導士クロウリー「自分の手札・フィールドのモンスターを融合素材とし、〜を融合召喚する」:
-        左半不再是另一段,查「融合召喚」命中整句那一段;不是「作為素材」的段。"""
+        左半不是另一段,查「融合召喚」命中整句那一段;不是「作為素材」的段。"""
         self.assertEqual(self.hit_texts(CROWLEY, actions=["融合召喚"]), [CROWLEY_FUSION])
         self.assertEqual(self.hit_texts(CROWLEY, actions=["特殊召喚"])[-1], CROWLEY_FUSION)
         self.assertNotIn(CROWLEY_FUSION, self.hit_texts(CROWLEY, actions=["作為素材"],
@@ -450,7 +450,7 @@ class HeldMaterialPremiseTest(MaterialFixture):
 
 
 class GoldenCardsTest(MaterialFixture):
-    """標準卡:整張通過反向檢查,加各自的查詢斷言(待站主核可,票 09 的 Comments)。"""
+    """標準卡:整張通過反向檢查,加各自的查詢斷言。"""
 
     def test_golden_cards_pass_reverse_check(self):
         for cid in (TEMPLE_GUARDIAN, XYZ_REBORN, DOYON, LUCIFER):

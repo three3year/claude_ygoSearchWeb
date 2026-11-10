@@ -29,7 +29,7 @@ FORMULA_UPTO_TAIL = "数まで"
 FORMULA_COUNT_TAILS = (FORMULA_COUNT_TAIL, FORMULA_UPTO_TAIL)
 FRONT_COUNT_PATTERN = f"[^、を]+?(?:{'|'.join(FORMULA_COUNT_TAILS)})、?"
 TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
-# 存在前提的數量(m3 票 12):寫在「存在する」前(「モンスターが２体以上存在する場合」),記在物件的數量格,
+# 存在前提的數量:寫在「存在する」前(「モンスターが２体以上存在する場合」),記在物件的數量格,
 # `placement` 存在前——不接在名詞後,由前提的模板寫。單位另收「種類」(卡名的種類數);
 # 比較是 以上(≥)、以下(≤)、沒寫(=)。
 BEFORE_EXISTENCE = "存在前"

@@ -1,4 +1,4 @@
-"""和「指誰」有關的修飾語原子(m3 票 05):抽取與句型模板成對放在一起。
+"""和「指誰」有關的修飾語原子:抽取與句型模板成對放在一起。
 
 `condition_atoms.parse_modifier` 先問這裡的 `parse_modifier`,`condition_atoms.render_atom` 先問這裡的
 `render_atom`;只修飾此卡的狀態字面由 `anaphora.self_state_atoms` 問 `parse_self_state`。
@@ -8,7 +8,7 @@
   {"op": "非", "arg": {"op": "同一張", "object": 此卡的物件 id}, "text": "他の"}。
 - 召喚方式:連體子句「X召喚した/された」(融合召喚した、アドバンス召喚した、通常召喚された…)→
   {"op": "召喚方式", "value": 召喚系的動作詞, "text": 字面}。單獨的「特殊召喚された」不在這裡
-  (那是 `曾被特殊召喚`,票 04)。
+  (那是 `曾被特殊召喚`)。
 - 只修飾此卡的狀態(帶狀態的此卡,`parse_self_state`):
   - 本卡效果做的召喚:「この効果で/この方法で/このカードの①の効果で 特殊召喚した(された)」→ 召喚方式原子
     另帶 `by`(前綴字面)。
@@ -32,7 +32,7 @@ EQUIPPED_ON_FORMS = ("モンスターに装備されている", "装備されて
 _EQUIPPED_ON_RE = re.compile("^(?:" + "|".join(EQUIPPED_ON_FORMS) + ")")
 _STEM_ACTION = {stem: action for stem, action, _ in PREDICATE_STEMS}
 _SUMMON_ALT = "|".join(SUMMON_STEMS)
-# 單獨的「特殊召喚された」是 曾被特殊召喚(沒寫出發地,票 04),不在召喚方式裡。
+# 單獨的「特殊召喚された」是 曾被特殊召喚(沒寫出發地),不在召喚方式裡。
 PLAIN_SPECIAL_SUMMONED = "特殊召喚された"
 _SUMMONED_RE = re.compile(f"^(?P<stem>{_SUMMON_ALT})(?:した|された)")
 # 本卡自己的效果(「この効果で」「この方法で」「このカードの①の効果で」「このカードの効果で」)。

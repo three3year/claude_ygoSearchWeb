@@ -1,4 +1,4 @@
-"""物件修飾:回指與此卡(m3 票 05)——「他の」、「その+修飾+頭名詞」、帶狀態的此卡、召喚方式。
+"""物件修飾:回指與此卡——「他の」、「その+修飾+頭名詞」、帶狀態的此卡、召喚方式。
 
 接縫只有查詢判斷(`run_query`)與反向檢查(`check_card`);官方文本逐字寫在測試裡。
 """
@@ -122,7 +122,7 @@ CRUSH_WYVERN_TEXT = (
 
 
 class CrushWyvernTest(_Golden):
-    """C－クラッシュ・ワイバーン 3405259:「装備状態のこのカードを特殊召喚する」(m3 票 07 留下的)。"""
+    """C－クラッシュ・ワイバーン 3405259:「装備状態のこのカードを特殊召喚する」。"""
     cards = [card(CRUSH_WYVERN, name_ja="C－クラッシュ・ワイバーン", type=0x421, level=4,
                   race=0x20, attribute=0x10, atk=1200),
              BLACK_MAGICIAN_CARD]
@@ -228,7 +228,7 @@ class KarakuriInnTest(_Golden):
 
 class DarkBurstAddToHandTest(_Golden):
     """ダーク・バースト 674561(使用者故事 23):加入手牌那一段的物件「その闇属性モンスター」是回指,
-    指回被取對象的「攻撃力１５００以下の闇属性モンスター１体」(條件由票 04 判)。"""
+    指回被取對象的「攻撃力１５００以下の闇属性モンスター１体」。"""
     cards = [card(DARK_BURST, name_ja="ダーク・バースト", type=SPELL)] + _STAT_CARDS
     faq = [faq(DARK_BURST, "ダーク・バースト", DARK_BURST_TEXT)]
     QUERY = dict(actions=["加入手牌"])
@@ -257,7 +257,7 @@ CHAOS_SORCERER_TEXT = (
 
 
 class ChaosSorcererTest(_Golden):
-    """カオス・ソーサラー 9596126:前文帶括號注記的取對象句這輪解析不出,「その表側表示モンスター」沒有
+    """カオス・ソーサラー 9596126:前文帶括號注記的取對象句解析不出,「その表側表示モンスター」沒有
     物件可指——那一段不算命中,列進未解析組(不另建一個物件頂替)。"""
     cards = [card(CHAOS_SORCERER, name_ja="カオス・ソーサラー", type=0x2000021, level=6, race=0x2,
                   attribute=0x20, atk=2300)]

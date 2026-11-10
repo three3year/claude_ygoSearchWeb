@@ -226,10 +226,12 @@ SUMMON_STEMS = tuple(stem for stem, action, _ in _STEMS_LONGEST_FIRST
 # 召喚自己的下位詞(アドバンス召喚、生け贄召喚)不扣。
 SUMMON_WORDS_NOT_ACTIONS = ("召喚条件", "召喚獣", "召喚師", "召喚魔術", "召喚士", "召喚神",
                             "デーモンの召喚")
-STEM_FALSE_FRIENDS[BARE_SUMMON_STEM] = tuple(
+_OTHER_SUMMON_STEMS = tuple(
     stem for stem, action, _ in _STEMS_LONGEST_FIRST
-    if stem.endswith(BARE_SUMMON_STEM) and "召喚" not in action_ancestors(action)
-) + SUMMON_WORDS_NOT_ACTIONS
+    if stem.endswith(BARE_SUMMON_STEM) and "召喚" not in action_ancestors(action))
+STEM_FALSE_FRIENDS[BARE_SUMMON_STEM] = _OTHER_SUMMON_STEMS + SUMMON_WORDS_NOT_ACTIONS
+# 「召喚を行」同樣落在別種召喚的「X召喚を行う」裡(「儀式召喚を行う」「S召喚を行う」):扣掉同一批召喚字面。
+STEM_FALSE_FRIENDS["召喚を行"] = tuple(stem + "を行" for stem in _OTHER_SUMMON_STEMS)
 # 召喚的列舉(「召喚・特殊召喚に成功した」「召喚・反転召喚・特殊召喚できない」):一段多個動作詞,
 # 語尾只寫在最後一個。只收召喚系的字幹,別的「A・B」不是動作的列舉。
 SUMMON_JOINER = "・"

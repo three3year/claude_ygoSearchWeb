@@ -408,5 +408,108 @@ class SummonReverseCheckTest(SummonFixture):
             self.assertFalse(failing & set(segments), (cid, self.failing_segments(cid)))
 
 
+FAFNIR_MU_BETA = 1174075   # 竜輝巧－ファフμβ’(自分が儀式召喚を行う場合)
+FAFNIR_MU_BETA_TEXT = (
+    "レベル１モンスター×２体以上\n"
+    "このカード名の①③の効果はそれぞれ１ターンに１度しか使用できない。\n"
+    "①：このカードがX召喚した場合に発動できる。デッキから「ドライトロン」カード１枚を墓地へ送る。\n"
+    "②：自分が儀式召喚を行う場合、そのリリースするモンスターを、このカードのX素材から取り除く事もできる。\n"
+    "③：自分フィールドに機械族の儀式モンスターが存在し、相手が魔法・罠カードを発動した時、"
+    "このカードのX素材を１つ取り除いて発動できる。その発動を無効にし破壊する。")
+WHITE_FOREST_ILLUSION = 5800323   # 白き森の幻妖(〜を素材としてS召喚を行う)
+WHITE_FOREST_ILLUSION_TEXT = (
+    "チューナー＋チューナー以外のモンスター１体以上\n"
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。\n"
+    "①：このカードが特殊召喚した場合、自分の墓地の「白き森」モンスター２体を対象として発動できる。"
+    "そのモンスターを永続魔法カード扱いで元々の持ち主の魔法＆罠ゾーンに表側表示で置く。\n"
+    "②：相手メインフェイズに発動できる。このカードを含む自分フィールドのモンスターを素材として"
+    "S召喚を行う。")
+SYNTHETIC = 10004001   # 合成卡:句型取自上面兩張,召喚的種類逐一替換
+ALL_SEGMENTS = {"polarities": ["做", "不能", "不會", "可以", "只能", "必須"],
+                "include_condition": True}
+
+
+def listed(structures, cards, action):
+    """查一個動作詞(條件段、各極性都看)→ (命中的卡, 未解析組的卡)。"""
+    result = run_query(structures, cards, {"actions": [action], **ALL_SEGMENTS})
+    return [hit["id"] for hit in result["hits"]], result["groups"]["未解析"]
+
+
+class SummonPerformedLiteralTest(unittest.TestCase):
+    """未解析組比字面:「X召喚を行う」寫的是別種召喚時,不算「召喚」的字面(spec「查詢判斷」:
+    「召喚」的字幹要避免比中無關字面);各種「X召喚を行う」照舊歸到自己的動作詞。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(FAFNIR_MU_BETA, name_ja="竜輝巧－ファフμβ’", type=0x800021, level=1, race=0x20,
+                 attribute=0x10, atk=2000, setcode=0x154, **{"def": 0}),
+            card(WHITE_FOREST_ILLUSION, name_ja="白き森の幻妖", type=0x3021, level=4,
+                 race=0x2000000, attribute=0x10, atk=700, setcode=0x1b1, **{"def": 2000}),
+        ]
+        cls.structures, _ = build_structures(
+            cls.cards, [faq(FAFNIR_MU_BETA, "竜輝巧－ファフμβ’", FAFNIR_MU_BETA_TEXT),
+                        faq(WHITE_FOREST_ILLUSION, "白き森の幻妖", WHITE_FOREST_ILLUSION_TEXT)],
+            [{"setcode": 0x1b1, "hex": "0x1b1", "names_ja": ["白き森"], "name_zh": "白森林",
+              "source": "strings.conf"}])
+
+    def test_ritual_summon_performed_is_not_listed_under_summon(self):
+        """竜輝巧－ファフμβ’ ②「自分が儀式召喚を行う場合」解析不出:查「召喚」「通常召喚」不命中、
+        也不列進未解析組;查「儀式召喚」「特殊召喚」照舊列出。"""
+        for action in ("召喚", "通常召喚", "上級召喚"):
+            hits, unparsed = listed(self.structures, self.cards, action)
+            self.assertNotIn(FAFNIR_MU_BETA, hits + unparsed, action)
+        for action in ("儀式召喚", "特殊召喚"):
+            hits, unparsed = listed(self.structures, self.cards, action)
+            self.assertIn(FAFNIR_MU_BETA, hits + unparsed, action)
+
+    def test_synchro_summon_performed_is_not_listed_under_summon(self):
+        """白き森の幻妖 ②「〜を素材としてS召喚を行う」解析不出:查「召喚」「通常召喚」不列;
+        查「S召喚」照舊列出。"""
+        for action in ("召喚", "通常召喚"):
+            hits, unparsed = listed(self.structures, self.cards, action)
+            self.assertNotIn(WHITE_FOREST_ILLUSION, hits + unparsed, action)
+        hits, unparsed = listed(self.structures, self.cards, "S召喚")
+        self.assertIn(WHITE_FOREST_ILLUSION, hits + unparsed)
+
+    def test_each_kind_of_summon_performed_goes_to_its_own_action(self):
+        """「自分が〈種類〉召喚を行う場合」(解析不出)各種類:只在自己的動作詞與它的上位詞列出。
+        アドバンス召喚、A召喚 是 召喚 的下位詞,查「召喚」「通常召喚」照舊列出;單獨的「召喚を行う」也是。"""
+        cases = (("儀式", "儀式召喚", "特殊召喚"), ("融合", "融合召喚", "特殊召喚"),
+                 ("S", "S召喚", "特殊召喚"), ("シンクロ", "S召喚", "特殊召喚"),
+                 ("X", "X召喚", "特殊召喚"), ("エクシーズ", "X召喚", "特殊召喚"),
+                 ("L", "L召喚", "特殊召喚"), ("リンク", "L召喚", "特殊召喚"),
+                 ("P", "P召喚", "特殊召喚"), ("ペンデュラム", "P召喚", "特殊召喚"),
+                 ("特殊", "特殊召喚"), ("反転", "反轉召喚"), ("通常", "通常召喚"),
+                 ("アドバンス", "上級召喚", "召喚", "通常召喚"),
+                 ("A", "上級召喚", "召喚", "通常召喚"), ("", "召喚", "通常召喚"))
+        actions = ("召喚", "通常召喚", "上級召喚", "特殊召喚", "儀式召喚", "融合召喚", "S召喚",
+                   "X召喚", "L召喚", "P召喚", "反轉召喚")
+        for kind, *own in cases:
+            cards = [card(SYNTHETIC, name_ja="甲")]
+            structures, _ = build_structures(
+                cards, [faq(SYNTHETIC, "甲", f"①：自分が{kind}召喚を行う場合、このカードを破壊する。")])
+            for action in actions:
+                with self.subTest(kind=kind, action=action):
+                    hits, unparsed = listed(structures, cards, action)
+                    self.assertEqual(SYNTHETIC in hits + unparsed, action in own)
+
+    def test_parsed_summon_performed_still_hits_its_own_action(self):
+        """解析得出的「〜１体の召喚を行う」「〜１体のX召喚を行う」照舊命中自己的動作詞與上位詞。"""
+        for text, own in (
+                ("①：自分メインフェイズに発動できる。手札のモンスター１体の召喚を行う。",
+                 ("召喚", "通常召喚")),
+                ("①：自分メインフェイズに発動できる。EXデッキからXモンスター１体のX召喚を行う。",
+                 ("X召喚", "特殊召喚")),
+                ("①：自分メインフェイズに発動できる。モンスター１体のアドバンス召喚を行う。",
+                 ("上級召喚", "召喚", "通常召喚"))):
+            cards = [card(SYNTHETIC, name_ja="甲")]
+            structures, _ = build_structures(cards, [faq(SYNTHETIC, "甲", text)])
+            for action in ("召喚", "通常召喚", "上級召喚", "特殊召喚", "X召喚"):
+                with self.subTest(text=text, action=action):
+                    hits, _ = listed(structures, cards, action)
+                    self.assertEqual(SYNTHETIC in hits, action in own)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -23,7 +23,8 @@
   句首時間狀語(このターン、/この効果の発動後、ターン終了時まで/〜を発動するターン、)剝成期間、
   套到整句的段;前提「〜限り、」整句的段期間持續;「Xしか〜できない」的しか是助詞、極性只能。
 - 子句怎麼填格:`fill_clause` 照 `CLAUSE_FORMS` 依序試各句型(存在前提 `existence_clause`、
-  傷害與回復 `damage`、戰鬥 `battle_clause`、抽牌 `draw`),都不是就當簡單子句(`simple_clause`);
+  傷害與回復 `damage`、戰鬥 `battle_clause`、抽牌 `draw`、素材寫在召喚句裡 `material_summon`),
+  都不是就當簡單子句(`simple_clause`);
   效果子句先試性質變更句(`stat_modify`)。素材行在 `material_line`,「〜として扱う」句在 `treat_as`。
   物件短語、位置規則與各句型共用的子句 context 在 `block_state`。
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。

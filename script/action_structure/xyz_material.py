@@ -40,6 +40,13 @@ def is_owned(owner_literal, under):
     return bool(owner_literal) and not under
 
 
+def attaches_without_owner(parsed, pred, kind):
+    """效果段的「このカードをX素材とする」(沒寫所屬、沒有「重ねて」):效果裡拿卡「當超量素材」就是疊到
+    超量怪獸下面——成為超量素材,所屬是剛召喚出來的那一隻;條件段的「〜をX素材とする場合」仍是 作為素材。"""
+    return (kind == "效果" and [(p.action, p.polarity, p.optional) for p in parsed or ()]
+            == [(MATERIAL_ACTION, "做", False)] and pred.startswith(XYZ_MATERIAL_WORDS))
+
+
 def _resolve_owner(state, literal, sentence_start):
     """所屬字面 → (物件 id, 回指字面, 原因)。沒寫或只寫「その」時是本句剛特殊召喚出來的物件。"""
     if literal in (None, BARE_OWNER):

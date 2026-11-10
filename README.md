@@ -205,6 +205,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/block_split.py` | 區塊切分(純函式):官方 DB 文本 → 區塊 + 略過文本 |
 | `script/action_structure/segment_extract.py` | 段抽取(純函式):區塊的一句 → 段(條件/代價/效果、代替、連用形串接);子句照句型分派表 `CLAUSE_FORMS` 交給各句型模組 |
 | `script/action_structure/simple_clause.py`、`existence_clause.py`、`battle_clause.py`、`stat_modify.py`、`damage.py`、`draw.py`、`material_line.py`、`treat_as.py` | 各句型(簡單子句、存在前提、戰鬥、性質變更、傷害與回復、抽牌、素材行、〜として扱う):句型、填格與句型模板成對放在同一個模組 |
+| `script/action_structure/material_summon.py`、`xyz_material.py` | 素材的句型(m3 票 09):素材寫在召喚的句子裡(召喚段帶角色 素材 的線);簡單子句裡「誰的素材」那一格(成為超量素材的到、作為素材的受方) |
 | `script/action_structure/block_state.py` | 區塊抽取時的工作狀態 `BlockState`(物件短語 → 物件、目前位置、主語)、推得表、位置自動規則、各句型共用的子句 context |
 | `script/action_structure/noun_phrase.py`、`zone_phrase.py`、`quantity.py`、`agent_phrase.py`、`cause_phrase.py`、`predicate_literal.py` | 子句各格的字面(名詞短語 ↔ 條件式、區域、數量、誰、原因、原述語字面):抽取與句型模板成對 |
 | `script/action_structure/synonyms.py` | 同義表:述語字面 → 動作詞、語尾 → 態與極性、下位詞 |

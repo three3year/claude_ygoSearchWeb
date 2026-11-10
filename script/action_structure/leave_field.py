@@ -1,7 +1,7 @@
 """離場(m3 票 10)的兩個句型:抽取端的切點與反向檢查的模板成對放在一起。
 
 動作詞 離場(「フィールド(上)から離れた」)本身是簡單子句:字幹在 `synonyms`(連「フィールドから」一起寫,
-出發地 場上 由述語寫明)。這裡管的是觸發形後面沒有讀點、一句要切成兩段的寫法:
+出發地 場上 由述語寫明)。這裡管的是觸發形後面直接接另一截(多半沒有讀點)、一句要切成兩段的寫法:
 - 連動「Xがフィールドから離れた時に Yは破壊される」:在「時に」切成條件段(離場)加效果段。主語用「が」、
   觸發形是 時/場合、「離れた」「離れる」都收。有讀點的「〜離れた時、Yを破壊する」本來就是舊式條件句。
 - 自我限制「(Xは、)フィールドから離れた場合に除外される」「〜デッキの一番下に戻る」:去處被換掉,照代替記——
@@ -48,21 +48,21 @@ class LeaveSplit(NamedTuple):
         return KIND_REPLACED if self.replaced else KIND_CONDITION
 
 
-def is_self_restriction(cond, trigger, rest):
+def is_self_restriction(state, cond, trigger, rest):
     """「(Xは、)フィールドから離れた」+ 場合 + 沒有自己主語的去處:去處被換掉(照代替記)。
-    有讀點的「〜離れた場合、ゲームから除外される」由舊式條件句切開後也用這一把尺。"""
-    return bool(trigger == RESTRICTION_TRIGGER and _RESTRICTION_COND_RE.match(cond)
-                and _DESTINATION_RE.match(rest))
+    有讀點的「〜離れた場合、ゲームから除外される」由舊式條件句切開後也用這一把尺。
+    離場子句的主語省略、而本句沒有「Xは」可承時不算(主語省略的子句會退回此卡,這裡不猜)。"""
+    leaving = _RESTRICTION_COND_RE.match(cond)
+    if trigger != RESTRICTION_TRIGGER or not leaving or not _DESTINATION_RE.match(rest):
+        return False
+    return (leaving.group("topic") is not None or state.subject is not None
+            or state.topic.state != TOPIC_NONE)
 
 
 def split_clause(state, clause):
-    """效果子句以離場子句開頭、觸發形後直接接另一截 → `LeaveSplit`;不是回 None。
-    自我限制的主語省略、而本句沒有「Xは」可承時不切(不退回此卡)。"""
+    """效果子句以離場子句開頭、觸發形後直接接另一截 → `LeaveSplit`;不是回 None。"""
     m = _RESTRICTION_RE.match(clause)
-    if m and is_self_restriction(m.group("cond"), m.group("trig"), m.group("rest")):
-        elided = _RESTRICTION_COND_RE.match(m.group("cond")).group("topic") is None
-        if elided and state.subject is None and state.topic.state == TOPIC_NONE:
-            return None
+    if m and is_self_restriction(state, m.group("cond"), m.group("trig"), m.group("rest")):
         return LeaveSplit(m.group("cond"), m.group("trig"), m.start("rest"), True)
     m = _LINKED_RE.match(clause)
     # 句尾帶括號注記的發動句(「〜離れた場合に発動できる（ダメージステップでも発動可能）」)不是這個句型。

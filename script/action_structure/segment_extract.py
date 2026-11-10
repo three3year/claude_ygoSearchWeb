@@ -449,7 +449,8 @@ def parse_sentence(state, start, end, activation_lead=False):
     # 「Xはフィールド上から離れた場合、ゲームから除外される」(m3 票 10):沒有「代わりに」的代替。
     replaced = trig is not None and (
         trig.group("rest").startswith(REPLACEMENT_PREFIX)
-        or (not act and leave_field.is_self_restriction(*trig.group("cond", "trig", "rest"))))
+        or (not act
+            and leave_field.is_self_restriction(state, *trig.group("cond", "trig", "rest"))))
     if trig:
         rest, rest_start = _condition_and_rest(state, seg_from, clause_start, body,
                                                trig, segs,

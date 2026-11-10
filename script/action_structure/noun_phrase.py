@@ -3,7 +3,7 @@
 - 抽取:`parse_modifiers`(修飾語從左到右認成原子列表;名稱類的句型在 `_MOD_RES`,種族/屬性在
   `parse_modifier`,等級與「・」列舉在 `attribute_atoms`,其餘原子在 `condition_atoms`);
   頭名詞表 `HEAD_CATEGORY`、`HEAD_SUBTYPE`;「AかB」列舉 `split_alternatives`。
-- 模板:`render_condition`(條件式 → 名詞短語)。
+- 模板:`render_condition`(條件式 → 名詞短語)、`render_modifiers`(只有修飾語的條件式,帶狀態的此卡)。
 加一種修飾語多半只動 `condition_atoms`(原子的抽取與模板)或 `attribute_atoms`(屬性比較);
 這裡管的是原子之間怎麼接(連接字 `joiner`)與頭名詞。物件短語整體(回指、新建、子集)在
 `block_state.BlockState.object_at`。
@@ -352,6 +352,14 @@ def _render_modifiers(mods, names):
         out.append(text + (written if written is not None
                            else joiner(atom, mods[i + 1] if i + 1 < len(mods) else None)))
     return "".join(out)
+
+
+def render_modifiers(condition, names):
+    """只有修飾語、沒有頭名詞的條件式(帶狀態的此卡的狀態,m3 票 05)→ 修飾語字面。"""
+    if condition is None:
+        raise NoTemplate("物件條件無模板:空")
+    atoms = condition["args"] if condition.get("op") == "且" else [condition]
+    return _render_modifiers(atoms, names)
 
 
 def render_condition(condition, names):

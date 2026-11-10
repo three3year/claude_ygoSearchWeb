@@ -28,12 +28,17 @@
   與計數器「(Xの)魔力カウンター」(`counter` 種類名);數量單位「つ」;舊式代價「〜く事で、」。
   另收:「このカードを対象とする(Xの)効果が発動した」(物件條件 以此卡為對象)、超量素材行「×N」、
   物件前的「〜の数まで、」、片假名子類型(リンク…)、修飾語連接字與預設不同時記 `joiner`。
+- m3 票 05(字面規則在 `anaphora`):帶修飾語的回指「その相手モンスター」「対象の墓地のモンスター」——修飾語
+  只是重述,整個字面記進對象線 `ref`,指回最近的同大類物件裡與重述不衝突的那個(`recent_of` 的
+  `restated`);帶狀態的此卡「この効果で特殊召喚したこのカード」——母體是此卡的子集,條件式是狀態的原子
+  (`stateful_self_object`),它動了位置就是此卡動了(`update_positions`)。
 """
 
 import re
 from dataclasses import dataclass
 from typing import NamedTuple
 
+from anaphora import contradicts, restated_reference, self_state_atoms
 from archetype_table import fold_width
 from condition_atoms import TARGETING_THIS_FORMS, targeting_this_atom
 from names_attributes import REASON_NAME_UNKNOWN
@@ -229,11 +234,12 @@ class BlockState:
             return {"zones": list(obj["initial_position"]), "inferred": False}
         return None
 
-    def recent_of(self, head, among=None, action=None):
+    def recent_of(self, head, among=None, action=None, restated=()):
         """本區塊最近提過的同大類物件(頭名詞 カード 任何大類都算);`among` 可改成別的候選列;
         給了 `action` 就只找本區塊被做過那個動作的(動作回指,票 06)。「このカード」不進 recent
         (その 不會指它),但動作回指可以:「このカードを特殊召喚する。〜この効果で特殊召喚した
-        モンスターに装備」;它的大類看卡片屬性表。"""
+        モンスターに装備」;它的大類看卡片屬性表。`restated` 是回指字面裡重述的修飾語原子
+        (「その相手モンスター」的相手,m3 票 05):與它衝突的物件跳過。"""
         want = HEAD_CATEGORY[head]
         candidates = list(reversed(self.recent if among is None else among))
         if action is not None and among is None:
@@ -242,6 +248,9 @@ class BlockState:
             if action is not None and action not in self.acted.get(obj_id, ()):
                 continue
             obj = self.find(obj_id)
+            if restated and contradicts(obj, restated,
+                                        (self.current_position(obj_id) or {}).get("zones")):
+                continue
             category = (self._self_category() if obj["source"]["kind"] == "自己"
                         else category_of(obj["condition"]))
             if want == "卡" or category == want:
@@ -312,6 +321,16 @@ class BlockState:
         if self.is_action_reference(phrase):
             obj_id = self.action_reference(phrase)
             return obj_id, phrase, (None if obj_id else REASON_REF)
+        restated = restated_reference(phrase)
+        if restated:
+            # 「その相手モンスター」「対象の墓地のモンスター」(m3 票 05):修飾語只是重述,整個字面是回指字面。
+            obj_id = self.recent_of(restated.head, among=self.targeted if restated.targeted else None,
+                                    restated=restated.atoms)
+            if obj_id is not None or not phrase.startswith(TARGET_OF):
+                return obj_id, phrase, (None if obj_id else REASON_REF)
+        state_atoms = self_state_atoms(self, phrase)
+        if state_atoms:
+            return self.stateful_self_object(phrase, state_atoms, sentence_start), None, None
         return self.new_object(phrase, sentence_start, {"kind": "新建"})
 
     def names_object(self, phrase):
@@ -332,7 +351,8 @@ class BlockState:
         if (_SELF_RE.match(phrase) or phrase == f"「{self.card['name_ja']}」"
                 or REF_RE.match(phrase) or phrase == ACTIVATION_REF or _REMAINDER_RE.match(phrase)
                 or TARGET_REF_RE.match(phrase) or self.is_action_reference(phrase)
-                or _NAMED_RE.match(phrase) or phrase in TARGETING_THIS_FORMS):
+                or _NAMED_RE.match(phrase) or phrase in TARGETING_THIS_FORMS
+                or restated_reference(phrase) or self_state_atoms(self, phrase)):
             return True
         m = NOUN_RE.match(phrase)
         if not m:
@@ -396,6 +416,22 @@ class BlockState:
         if reason:
             obj["unparsed"] = unparsed(reason)
         return self.add_object(obj), None, None
+
+    def stateful_self_object(self, phrase, atoms, sentence_start):
+        """帶狀態的此卡(「この効果で特殊召喚したこのカード」,m3 票 05)→ 物件 id:母體是此卡的子集,
+        條件式是狀態的原子(沒有頭名詞的大類)。狀態裡寫了位置(「手札のこのカード」)就是初始位置,
+        沒寫繼承此卡的目前位置(推得的照樣算推得)。和此卡一樣不進 recent(その 不會指它)。"""
+        located = [dict(z) for a in atoms if a.get("op") == "位置" for z in a["zones"]]
+        current = self.current_position(self.self_id)
+        offset = self.offset_of(phrase, sentence_start)
+        obj = new_object(f"{self.block['id']}.o{offset}", {"kind": "子集", "of": self.self_id},
+                         text=phrase, span=(offset, offset + len(phrase)), block=self.block["id"],
+                         condition=atoms[0] if len(atoms) == 1 else {"op": "且", "args": atoms},
+                         initial_position=located or (list(current["zones"]) if current else None))
+        if not located and current:
+            self.positions[obj["id"]] = dict(current)
+        self.card["objects"].append(obj)
+        return obj["id"]
 
     def detach_object(self, phrase, sentence_start, owner_from=None):
         """超量素材或計數器→ (物件 id, None, 原因):`of` 是所屬的物件(有寫才有,回指字面記
@@ -510,6 +546,10 @@ def update_positions(seg, state):
         if line["to"]:
             state.positions[line["object"]] = {
                 "zones": line["to"]["zones"], "inferred": line["to"]["inferred"]}
+            source = state.find(line["object"])["source"]
+            if source["kind"] == "子集" and source["of"] == state.self_id:
+                # 帶狀態的此卡動了就是此卡動了(m3 票 05):後面的「このカード」從這裡繼承。
+                state.positions[state.self_id] = dict(state.positions[line["object"]])
 
 
 def segment_at(state, kind, start, end):

@@ -31,6 +31,8 @@
 - 物件切點(m3 票 03):物件槽往前吞進前文時(`swallowed_front`),前文由 `clause_front` 先填進段
   (前提、子句前的期間與時機、誰、主語的施事線、名詞前的原因),這裡只解析切點之後的本體;
   「Aと、B」的讀點記在後一條線的 `lead`。模板把主語線寫在誰的位置、子句前的時機寫在最前面。
+- 「Xが Yに 攻撃する」(m3 票 05):被攻擊的 Y 以「に」標,記成助詞「に」的對象線(同「Yを攻撃する」);
+  只在一般句型解析不出時才試,被動的「Yに攻撃された」不收。
 - 「〜召喚に成功した」(m3 票 08):「モンスターの特殊召喚に成功」的「の」是助詞、「墓地からの特殊召喚に成功」的
   「からの」是從;「この効果で特殊召喚に成功した」主語省略時,被召喚的是原因指向的那一段召喚的物件
   (`cause_phrase.summoned_by`)。對象線的角色照召喚系的根算(`synonyms.is_summon`)。
@@ -172,6 +174,15 @@ _TARGETING_THIS_CLAUSE_RE = re.compile(_CLAUSE_PATTERN.replace(
     _OBJECTS_GROUPS,
     f"(?P<objects>(?:{'|'.join(TARGETING_THIS_FORMS)})(?:[^を、]+?)?)"
     "(?P<of_effect>の効果|(?<=する)効果)", 1))
+# 「Xが Yに 攻撃する」(m3 票 05):被攻擊的 Y 以「に」標(同「Yを攻撃する」的 Y),助詞字面記「に」。
+# 一般句型先中「が」、把「Yに攻撃する」整截當述語,所以只在那樣解析不出時才用這個句型(`_match_clause`)。
+# 被動的「Xが Yに 攻撃された」Y 是攻擊的一方,不是這個讀法,不收。
+ATTACK_TARGET_MARKER = "に"
+_MARKER_GROUP = slice(_CLAUSE_PATTERN.index("(?P<marker>"), _CLAUSE_PATTERN.index("(?P<marker_pause>"))
+_ATTACK_TARGET_CLAUSE_RE = re.compile(
+    _CLAUSE_PATTERN[:_MARKER_GROUP.start]
+    + f"(?P<marker>{ATTACK_TARGET_MARKER}(?=攻撃(?!され|力|表示|対象)))"
+    + _CLAUSE_PATTERN[_MARKER_GROUP.stop:])
 # 助詞不是「が」時物件前那截不是到,而是物件修飾的一部分(相手フィールド上にセットされたカード):
 # 拿掉「到に」再比一次。
 _CLAUSE_NO_TO_FRONT_RE = re.compile(_CLAUSE_PATTERN.replace(_TO_FRONT, "", 1))
@@ -254,6 +265,11 @@ def _match_clause(clause_text):
     if m and m.group("marker") != "の" and parse_cause(m.group("objects") + m.group("marker")):
         # 「戦闘では破壊されない」:「戦闘で」+「は」是原因字面,不是物件 + 助詞;主語省略。
         m = None
+    if m is None or (m.group("pred") and _clause_predicate(m)[2] is None):
+        # 物件前的數量算式(「〜の数まで」)什麼字面都收,會把主語吞進去:這個句型不收它。
+        attack = _ATTACK_TARGET_CLAUSE_RE.match(clause_text)
+        if attack and not attack.group("count_front") and _clause_predicate(attack)[2] is not None:
+            return attack
     return m
 
 

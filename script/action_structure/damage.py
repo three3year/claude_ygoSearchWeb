@@ -291,7 +291,7 @@ def parse_damage_predicates(pred, recover):
 
 
 def fill_clause(ctx, clause_text):
-    """傷害、回復與傷害值變更的句型(`damage`)→ 填格回 True;不是這些句型回 False。
+    """傷害、回復與傷害值變更的句型 → 填格回 True;不是這些句型回 False。
     玩家主語/受方進 `agent`/`recipient`、不建物件;物件主語(「このカードが」)是角色施事的對象線。"""
     seg, state, sentence_start = ctx.seg, ctx.state, ctx.sentence_start
     found = match_clause(clause_text)
@@ -374,7 +374,7 @@ def fill_clause(ctx, clause_text):
 
 
 def render_clause(seg, card, objects, names, self_id, inner_duration):
-    """傷害、回復、傷害值變更段(`damage`):
+    """傷害、回復、傷害值變更段的模板:
     給予 [主語][原因][算式だけ][受方に(名詞前)][數量]名詞を[受方に]与え〜;
     受到 [原因(主語前)][受方は|が][原因][門檻][數量]名詞を受け〜(受けない 是數值 0 的變更);
     變更 [このターン][來源][受方への|が受ける|に与える]名詞は(０|倍|半分)になる;

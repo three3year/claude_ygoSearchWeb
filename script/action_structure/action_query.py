@@ -55,6 +55,7 @@ import itertools
 import json
 import operator
 import re
+from typing import Callable, NamedTuple
 
 from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
@@ -65,7 +66,6 @@ from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
-GENERIC_ATOMS = ("大類", "位置", "控制方", "表示形式")
 MODIFIED_KEYS = ("attr", "form", "value")
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
@@ -80,6 +80,44 @@ REASON_REF_MISSING = "引用的物件找不到"
 _RANGE_END_RE = re.compile(r"^(?P<prefix>.*?)(?P<num>\d+)$")
 # 條件式裡的名稱字面對幾千張卡反覆折疊,記住結果。
 _fold = functools.lru_cache(maxsize=None)(fold_width)
+
+
+def _any_card(condition, entry):
+    return True
+
+
+def _no_card(condition, entry):
+    return False
+
+
+def _summoned_from_fits(condition, entry):
+    """從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。"""
+    if any(z["zone"] == "額外牌組" for z in condition.get("zones", ())):
+        return bool(entry["type"] & EXTRA_DECK_BITS)
+    return True
+
+
+class StateAtom(NamedTuple):
+    """狀態原子的代入規則。"""
+    fits: Callable[[dict, dict], bool]   # (原子, 卡片總表條目) → 指定卡代入時符不符合
+    generic: bool                        # 算不算泛用原子(條件式只有大類與泛用原子的物件是泛用物件)
+
+
+# 狀態原子的代入規則:狀態(在哪、誰控制、表側裏側、被裝備…)不是卡的屬性,卡片總表查不到,
+# 指定卡或物件條件代入時照這張表判,不看卡片參數;大多數是「任何卡都代得進去」。
+# 新的狀態原子在這裡加一列(抽取與模板在 `condition_atoms`);沒列在這裡、`eval_condition` 也沒有
+# 專門判法的原子一律判不了(None),那個物件會進未解析組。
+STATE_ATOMS = {
+    "位置": StateAtom(_any_card, generic=True),
+    "控制方": StateAtom(_any_card, generic=True),
+    "表示形式": StateAtom(_any_card, generic=True),
+    # 代入的是卡而不是那一張實體:「同一張」永遠不符,所以包在外面的「非」(此卡以外)永遠符合。
+    SAME_CARD: StateAtom(_no_card, generic=False),
+    EQUIPPED: StateAtom(_any_card, generic=False),
+    TARGETING_THIS: StateAtom(_any_card, generic=False),
+    "曾被特殊召喚": StateAtom(_summoned_from_fits, generic=False),
+}
+GENERIC_ATOMS = ("大類",) + tuple(op for op, rule in STATE_ATOMS.items() if rule.generic)
 
 
 def card_attr(entry, attr):
@@ -327,18 +365,8 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
         if condition["value"] == "卡":
             return True
         return condition["value"] in view.categories(from_zones)
-    if op in ("位置", "控制方", "表示形式"):
-        # 位置、控制方與表示形式不是卡的屬性:任何卡都代得進去(泛用原子)。
-        return True
-    if op == SAME_CARD:
-        return False
-    if op in (EQUIPPED, TARGETING_THIS):
-        return True
-    if op == "曾被特殊召喚":
-        # 從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。
-        if any(z["zone"] == "額外牌組" for z in condition.get("zones", ())):
-            return bool(view.entry["type"] & EXTRA_DECK_BITS)
-        return True
+    if op in STATE_ATOMS:
+        return STATE_ATOMS[op].fits(condition, view.entry)
     if op == "屬性比較":
         return compare_attr(condition, view.entry, binding)
     if op == "卡名範圍":

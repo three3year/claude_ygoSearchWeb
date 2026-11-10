@@ -121,7 +121,7 @@ _DRAWN_CONDITION = {"op": "大類", "value": "卡"}
 
 
 def fill_clause(ctx, clause_text):
-    """抽牌子句(`draw`):抽到的卡是新建物件(「カードを」沒寫時物件沒有字面)、張數在對象線、
+    """抽牌子句 → 填格回 True;不是這個句型回 False。抽到的卡是新建物件(「カードを」沒寫時物件沒有字面)、張數在對象線、
     從牌組(明寫或推得)到手牌(推得);玩家主語進 `agent`。"""
     m = _DRAW_RE.match(clause_text)
     if not m:

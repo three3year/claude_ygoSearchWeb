@@ -24,7 +24,7 @@ _BATTLE_RE = re.compile(
 
 def fill_clause(ctx, clause_text):
     """戰鬥子句「Xが(Yと)戦闘を行う」:X 是施事(助詞 が)、Y 是受事(助詞 と),兩者都是物件;
-    戰鬥不移動卡片,線沒有從/到。"""
+    戰鬥不移動卡片,線沒有從/到。不是這個句型回 False。"""
     m = _BATTLE_RE.match(clause_text)
     if not m:
         return False

@@ -2,7 +2,8 @@
 
 放獨立模組是為了把一個原子的「抽取」與「模板」放在一起:`noun_phrase.parse_modifiers`
 認不得修飾語時交給 `parse_modifier`,`noun_phrase` 的原子模板沒模板時交給 `render_atom`;
-加一個原子只改這裡。原子的查詢判斷在 `action_query.eval_condition`。
+加一個原子只改這裡。原子的查詢判斷在 `action_query.eval_condition`;狀態原子(不是卡的屬性、
+指定卡代入時不看卡片參數的)的代入規則是 `action_query.STATE_ATOMS` 那張表。
 
 - 記載(名稱):「X」のカード名が記された → {"op": "記載", "name": 名稱列 id};
   「X」またはそのカード名が記された → 或(卡名∋X, 記載 X)。查詢時掃卡文含「X」(含括號)。

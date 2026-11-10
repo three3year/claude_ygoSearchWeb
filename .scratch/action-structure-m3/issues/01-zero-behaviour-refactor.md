@@ -24,9 +24,10 @@
 - 測試:`python -X utf8 -m unittest discover -s script/action_structure` 495 個全綠;沒有新增或修改任何測試檔。
 - 產物:`build_structure.py -o <暫存檔>` 重建後與 `data/action_structure.json` `cmp` 相同(md5 1ee4dd010327a41c1d78746aac5838c5),前後建了多次都相同。
 - 報告:`build_report.py`、`build_reverse_check.py` 重跑後 `coverage.md`、`reverse_check.md` 的 git blob 與整合分支相同(工作樹只有換行差異,已還原)。
+- 回歸工具:`passdump.py` 用整合分支的程式與本分支的程式各跑一次(同一份產物),兩份輸出逐位元組相同;`regress.py` 報「改前通過、改後不通過」0 張、「改前不通過、改後通過」0 張。
 - 另外對照了查詢:`m2_compare.py` 的輸出與改前的程式逐位元組相同;指定卡與只給條件的代入查詢(8 個動作詞 × 指定卡、屬性/種族/大類條件、泛用組、取對象加全部極性)改前改後的結果見本節末「查詢對照」。
 
-模組怎麼拆(原 `segment_extract.py` 1,807 行、`reverse_check.py` 1,265 行;拆完各 400、444 行):
+模組怎麼拆(原 `segment_extract.py` 1,807 行、`reverse_check.py` 1,265 行;拆完各 359、448 行;拆出的模組最大的是 `simple_clause.py` 568 行):
 
 - 各句型一個模組,填格 `fill_clause` 與句型模板 `render_clause` 成對:`simple_clause`(簡單子句)、`existence_clause`(存在前提)、`battle_clause`(戰鬥)、`stat_modify`(性質變更)、`damage`、`draw`;素材行 `material_line`、「〜として扱う」`treat_as`。
 - 子句各格的字面,抽取與模板成對:`noun_phrase`(修飾語、頭名詞 ↔ 條件式)、`zone_phrase`(區域)、`quantity`(數量)、`agent_phrase`(誰)、`cause_phrase`(原因)、`predicate_literal`(原述語字面)。

@@ -32,7 +32,7 @@ from block_state import BlockState, INTERVAL_RE, INTERVAL_REASON
 from clause_join import JOIN, split_continuative
 from effect_reference import is_reference, match_reference, reference_node, render_reference
 from premise import render_premise, split_premises, timepoint_glue
-from segment_extract import fill_clause, parse_sentence, sentences
+from segment_extract import fill_clause, limit_note, parse_sentence, sentences
 from segment_fields import EFFECT_HOLDER_PREFIX
 from structure_shape import (DISPLAY_WORD, NoTemplate, branch_node, display_value, display_word,
                              embedded_node, new_block, segment_node, swap_sides, unparsed)
@@ -253,6 +253,12 @@ def _split_headers(state, spans):
         if text.startswith("その後、"):
             join, text, start = "先後", text[4:], start + 4
         header = _header_of(text)
+        note = limit_note(text)
+        if header is None and note:
+            # 分歧引導句後的括號版次數限制(m3 票 02):扣掉注記再認;注記在 `_branch` 進略過文本。
+            header = _header_of(text[:note.start()])
+            if header is not None and header[0] != "分歧":
+                header = None
         if header is None:
             break
         headers.insert(0, header + (start, join))
@@ -345,6 +351,7 @@ def _branch(state, headers, branches, timepoints=None):
         node = branch_node(mode, chooser, branches, join)
         node["form"] = form
         node["span"] = _headers_span(state, headers)
+        _omit_header_notes(state, headers)
         return [node]
     # 依前提:每個引導句帶前提,各成一支、支內是那個方式的分歧(● 列舉共用)。
     outer = []
@@ -370,6 +377,7 @@ def _branch(state, headers, branches, timepoints=None):
              for i, seg in enumerate(turn_segs)]
     node = branch_node("依前提", None, outer, None if turn_segs else headers[0][4])
     node["span"] = _headers_span(state, headers)
+    _omit_header_notes(state, headers)
     return nodes + [node]
 
 
@@ -391,6 +399,17 @@ def _header_timepoints(state, headers):
     state.block["segments"].extend(points.segs)
     premise = points.atoms[0] if len(points.atoms) == 1 else {"op": "且", "args": points.atoms}
     return premise, points.segs
+
+
+def _omit_header_notes(state, headers):
+    """認成分歧的引導句,句尾的括號版次數限制(「〜発動できる（このカード名の以下の効果はそれぞれ
+    １ターンに１度しか選択できない）」)進略過文本。引導句認不成分歧時照一般句子解析,由 `parse_sentence` 剝。"""
+    text = state.block["text"]
+    for _, _, _, start, _ in headers:
+        end = text.find("。", start)
+        note = limit_note(text[start:len(text) if end < 0 else end])
+        if note:
+            state.omit(start + note.start(), note.group(), INTERVAL_REASON)
 
 
 def _headers_span(state, headers):

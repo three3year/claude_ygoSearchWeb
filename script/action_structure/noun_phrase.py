@@ -22,8 +22,16 @@ HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠�
                  "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
 # 帶子類型的頭名詞:大類 且 屬性比較(卡片子類型 = 協調,與票 07 的 Xモンスター 同一種原子)。
 HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
-_HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE), key=len,
-                         reverse=True))
+# 「效果」的頭名詞(m3 票 04):被發動、被無效的是效果,不是卡——「魔法・罠・モンスター(の効果)」
+# 「魔法・罠・効果モンスター(の効果)」「モンスターの効果・魔法・罠カード」。物件種類記 效果,條件式是
+# 「誰的效果」:各項的或,照字面順序;項是大類,或 (大類, 子類型)。
+EFFECT_HEADS = {"魔法・罠・モンスター": ("魔法", "陷阱", "怪獸"),
+                "魔法・罠・効果モンスター": ("魔法", "陷阱", ("怪獸", "效果")),
+                "モンスターの効果・魔法・罠カード": ("怪獸", "魔法", "陷阱")}
+# 頭名詞的另一種寫法(m3 票 04):條件式同正規寫法,另帶 `text` 記字面。
+HEAD_VARIANTS = {"魔法または罠カード": "魔法・罠カード", "モンスターカード": "モンスター"}
+_HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE) + list(EFFECT_HEADS)
+                         + list(HEAD_VARIANTS), key=len, reverse=True))
 NOUN_RE = re.compile(
     f"^(?P<mods>.*?)(?P<head>{_HEADS})"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
@@ -42,7 +50,9 @@ _EXCEPT_NOUN_RE = re.compile(
     f"^(?P<inner>(?:「[^「」]+」|[^の「」、])*?(?:{_HEADS}))以外の")
 CARD_PROPERTY_OPS = ("大類", "屬性比較", "字段", "卡名", "卡名包含", "記載", "卡名範圍")
 REASON_MODS = "物件修飾解析不出"
+# 名詞短語的列舉「AかB」「AまたはB」:或,`form` 記連接的字面。
 OR_FORM = "か"
+OR_FORMS = ("または", OR_FORM)
 _HEAD_TEXT = {v: k for k, v in HEAD_CATEGORY.items() if isinstance(v, str)}
 _HEAD_TEXT[("魔法", "陷阱")] = "魔法・罠カード"
 _SUBTYPE_HEAD_TEXT = {v: k for k, v in HEAD_SUBTYPE.items()}
@@ -50,22 +60,29 @@ JOINER_WORDS = ("", "・", "の")
 
 
 def split_alternatives(mods, head):
-    """物件短語的修飾語裡,頂層(「」外)的「か」左邊是完整名詞短語(帶頭名詞、沒有數量)時才算列舉:
-    回傳各截名詞短語(最後一截接回頭名詞);不是列舉回 None(「自分か相手の」是方,不在此列)。"""
+    """物件短語的修飾語裡,頂層(「」外)的「か」「または」左邊是完整名詞短語(帶頭名詞、沒有數量)時才算
+    列舉:回傳 (連接的字面, 各截名詞短語)(最後一截接回頭名詞);不是列舉回 None(「自分か相手の」
+    「自分または相手の」是方,不在此列)。兩種連接字混用的不收。"""
+    for form in OR_FORMS:
+        pieces = _split_on(mods, form)
+        if pieces:
+            return form, pieces + [mods[sum(len(p) + len(form) for p in pieces):] + head]
+    return None
+
+
+def _split_on(mods, form):
     pieces, depth, last = [], 0, 0
     for i, ch in enumerate(mods):
         if ch == "「":
             depth += 1
         elif ch == "」":
             depth -= 1
-        elif ch == OR_FORM and depth == 0:
+        elif depth == 0 and i >= last and mods.startswith(form, i):
             left = NOUN_RE.match(mods[last:i])
             if left and not left.group("count"):
                 pieces.append(mods[last:i])
-                last = i + 1
-    if not pieces:
-        return None
-    return pieces + [mods[last:] + head]
+                last = i + len(form)
+    return pieces
 
 
 def noun_condition(atoms, head):
@@ -73,12 +90,25 @@ def noun_condition(atoms, head):
     return {"op": "且", "args": atoms + [condition]} if atoms else condition
 
 
+def _subtype_condition(category, subtype):
+    return {"op": "且", "args": [{"op": "大類", "value": category},
+                                {"op": "屬性比較", "attr": "卡片子類型",
+                                 "cmp": "=", "value": subtype}]}
+
+
+def _effect_condition(head):
+    return {"op": "或", "args": [
+        {"op": "大類", "value": item} if isinstance(item, str) else _subtype_condition(*item)
+        for item in EFFECT_HEADS[head]]}
+
+
 def category_condition(head):
+    if head in HEAD_VARIANTS:
+        return {**category_condition(HEAD_VARIANTS[head]), "text": head}
     if head in HEAD_SUBTYPE:
-        category, subtype = HEAD_SUBTYPE[head]
-        return {"op": "且", "args": [{"op": "大類", "value": category},
-                                    {"op": "屬性比較", "attr": "卡片子類型",
-                                     "cmp": "=", "value": subtype}]}
+        return _subtype_condition(*HEAD_SUBTYPE[head])
+    if head in EFFECT_HEADS:
+        return _effect_condition(head)
     value = HEAD_CATEGORY[head]
     if isinstance(value, tuple):
         return {"op": "或", "args": [{"op": "大類", "value": v} for v in value]}
@@ -108,7 +138,7 @@ def category_of(condition):
                 return found
     if condition.get("op") == "或" and all(a.get("op") == "大類" for a in condition["args"]):
         return tuple(a["value"] for a in condition["args"])
-    if condition.get("op") == "或" and condition.get("form") == OR_FORM:
+    if condition.get("op") == "或" and condition.get("form") in OR_FORMS:
         found = {category_of(arg) for arg in condition["args"]}
         return found.pop() if len(found) == 1 else None
     return None
@@ -279,8 +309,15 @@ def _render_atom(atom, names):
 
 
 def _render_head(condition):
-    """大類(與 魔法・罠 的或)、大類 且 子類型(チューナー)→ 頭名詞;不是頭名詞回 None。"""
+    """大類(與 魔法・罠 的或)、大類 且 子類型(チューナー)、效果的頭名詞 → 頭名詞;不是頭名詞回 None。"""
     op = condition.get("op")
+    if "text" in condition:
+        variant = condition["text"]
+        return variant if (variant in HEAD_VARIANTS
+                           and condition == category_condition(variant)) else None
+    for head in EFFECT_HEADS:
+        if condition == _effect_condition(head):
+            return head
     if op == "大類":
         return _HEAD_TEXT[condition["value"]]
     if op == "或":
@@ -320,8 +357,8 @@ def render_condition(condition, names):
     單獨的卡名 = 「X」。"""
     if condition is None:
         raise NoTemplate("物件條件無模板:空")
-    if condition.get("op") == "或" and condition.get("form") == OR_FORM:
-        return OR_FORM.join(render_condition(arg, names) for arg in condition["args"])
+    if condition.get("op") == "或" and condition.get("form") in OR_FORMS:
+        return condition["form"].join(render_condition(arg, names) for arg in condition["args"])
     head = _render_head(condition)
     if head:
         return head

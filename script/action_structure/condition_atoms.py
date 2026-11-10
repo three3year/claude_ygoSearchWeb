@@ -100,7 +100,9 @@ _SAME_VALUE_RE = re.compile(
 REASON_REF = "指回的物件找不到"
 
 _SIDE = {"自分": "我方", "相手": "對手"}
-_CONTROLLER_RE = re.compile("^(?P<side>自分|相手)(?:の|$)")
+# 控制方另收「自分または相手の」「自分か相手の」(任一方;m3 票 04),長的先比。
+_CONTROLLER_SIDE = {"自分または相手": "任一方", "自分か相手": "任一方", **_SIDE}
+_CONTROLLER_RE = re.compile("^(?P<side>" + "|".join(_CONTROLLER_SIDE) + ")(?:の|$)")
 EQUIPPED = "被裝備者"
 EQUIPPED_FORMS = ("装備", "このカードを装備した", "このカードの効果でこのカードを装備した")
 _EQUIPPED_RE = re.compile("^(?:" + "|".join(sorted(EQUIPPED_FORMS, key=len, reverse=True))
@@ -163,7 +165,7 @@ def parse_modifier(rest, state):
         return [_zone_atom("位置", m.group("zone"), _SIDE.get(m.group("side")))], None, m.end()
     m = _CONTROLLER_RE.match(rest)
     if m:
-        return ([{"op": "控制方", "value": _SIDE[m.group("side")], "text": m.group()}],
+        return ([{"op": "控制方", "value": _CONTROLLER_SIDE[m.group("side")], "text": m.group()}],
                 None, m.end())
     m = _TARGETING_THIS_RE.match(rest)
     if m:
@@ -329,7 +331,7 @@ def render_atom(atom, names):
         return literal if literal in (text + "以外の", text + "以外の、") else None
     if op == "控制方":
         m = _CONTROLLER_RE.fullmatch(atom.get("text") or "")
-        return atom["text"] if m and _SIDE[m.group("side")] == atom.get("value") else None
+        return atom["text"] if m and _CONTROLLER_SIDE[m.group("side")] == atom.get("value") else None
     if op == TARGETING_THIS:
         ok = atom.get("text") in TARGETING_THIS_FORMS and atom.get("object")
         return atom["text"] if ok else None

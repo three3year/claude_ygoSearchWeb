@@ -37,8 +37,8 @@ from typing import NamedTuple
 from archetype_table import fold_width
 from condition_atoms import TARGETING_THIS_FORMS, targeting_this_atom
 from names_attributes import REASON_NAME_UNKNOWN
-from noun_phrase import (HEAD_CATEGORY, NOUN_RE, OR_FORM, category_condition, category_of,
-                         noun_condition, parse_modifiers, split_alternatives)
+from noun_phrase import (EFFECT_HEADS, HEAD_CATEGORY, NOUN_RE, category_condition,
+                         category_of, noun_condition, parse_modifiers, split_alternatives)
 from quantity import parse_count
 from segment_fields import implicit_delay
 from structure_shape import new_object, new_segment, unparsed
@@ -71,6 +71,7 @@ _REMAINDER_RE = re.compile("^残りの(?P<head>モンスター|カード)$")
 # (`of`,このカード/そのモンスター…)。超量素材沒寫所屬卡時(「自分フィールドのX素材」的
 # 「自分フィールドの」是從),所屬卡是隱含的新建超量怪獸,初始位置 = 從;字面沒有它(`text` 是 None)。
 OBJECT_MATERIAL, OBJECT_COUNTER = "超量素材", "計數器"
+OBJECT_CARD, OBJECT_EFFECT = "卡", "效果"
 MATERIAL_WORDS = ("X素材", "エクシーズ素材")
 _MATERIAL_RE = re.compile(f"^(?:(?P<owner>.+)の)?(?P<word>{'|'.join(MATERIAL_WORDS)})$")
 _COUNTER_RE = re.compile("^(?:(?P<owner>.+)の)?(?P<counter>[^「」のをにがは、]*カウンター)$")
@@ -328,8 +329,8 @@ class BlockState:
         m = NOUN_RE.match(phrase)
         if not m:
             return False
-        pieces = split_alternatives(m.group("mods"), m.group("head"))
-        mods = ([NOUN_RE.match(piece).group("mods") for piece in pieces] if pieces
+        split = split_alternatives(m.group("mods"), m.group("head"))
+        mods = ([NOUN_RE.match(piece).group("mods") for piece in split[1]] if split
                 else [m.group("mods")])
         return not any(atom.get("op") == "解析不出"
                        for piece in mods for atom in parse_modifiers(self, piece)[0])
@@ -345,6 +346,8 @@ class BlockState:
             return self.add_object(obj), None, None
         if not m:
             return None, None, REASON_OBJECT
+        # 頭名詞是「效果」的(「魔法・罠・モンスター(の効果)」):物件種類 效果,條件式是誰的效果。
+        is_effect = not named and m.group("head") in EFFECT_HEADS
         if named:
             # 「A」または「B」= 或(卡名∋A, 卡名∋B);任一個對不到就整個標解析不出。
             atoms, reason = [], None
@@ -358,13 +361,14 @@ class BlockState:
                 condition = atoms[0] if len(atoms) == 1 else {"op": "或", "args": atoms}
         elif split_alternatives(m.group("mods"), m.group("head")):
             atoms, reason, alternatives = [], None, []
-            for piece in split_alternatives(m.group("mods"), m.group("head")):
+            form, pieces = split_alternatives(m.group("mods"), m.group("head"))
+            for piece in pieces:
                 piece_m = NOUN_RE.match(piece)
                 piece_atoms, why = parse_modifiers(self, piece_m.group("mods"))
                 alternatives.append(noun_condition(piece_atoms, piece_m.group("head")))
                 atoms.extend(piece_atoms)
                 reason = reason or why
-            condition = {"op": "或", "args": alternatives, "form": OR_FORM}
+            condition = {"op": "或", "args": alternatives, "form": form}
         else:
             atoms, reason = parse_modifiers(self, m.group("mods"))
             condition = noun_condition(atoms, m.group("head"))
@@ -377,7 +381,8 @@ class BlockState:
         obj = new_object(f"{self.block['id']}.o{offset}", source,
                          text=phrase, span=(offset, offset + len(phrase)),
                          block=self.block["id"], condition=condition,
-                         count=parse_count(m), initial_position=initial_position)
+                         count=parse_count(m), initial_position=initial_position,
+                         kind=OBJECT_EFFECT if is_effect else OBJECT_CARD)
         if reason:
             obj["unparsed"] = unparsed(reason)
         return self.add_object(obj), None, None

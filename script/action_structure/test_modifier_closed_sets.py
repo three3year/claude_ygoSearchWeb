@@ -361,5 +361,103 @@ class ExceptNounTest(_Golden):
         self.assertJudgedMiss(SHINE_SPIRITS, actions=["破壞"], card=LIGHT_MONSTER)
 
 
+WATTGIRAFFE = 402568
+WATTGIRAFFE_TEXT = (
+    "①：このカードは直接攻撃できる。\n"
+    "②：このカードが直接攻撃で相手に戦闘ダメージを与えた場合に発動する。"
+    "このターン、相手は魔法・罠・モンスターの効果を発動できない。")
+
+
+SERIOUS_DUEL = 39276790
+SERIOUS_DUEL_TEXT = (
+    "①：ダメージステップにモンスターの効果・魔法・罠カードが発動した時に発動できる。"
+    "その発動を無効にし破壊する。")
+
+
+class EffectHeadNounTest(_Golden):
+    """「魔法・罠・モンスターの効果」「モンスターの効果・魔法・罠カード」:被發動的是效果(物件種類 效果),
+    條件式是「誰的效果」;指定卡代入時比那張卡。"""
+    cards = [card(WATTGIRAFFE, name_ja="エレキリン", level=4, race=0x1000, attribute=0x10,
+                  atk=1200),
+             card(SERIOUS_DUEL, name_ja="真剣勝負", type=COUNTER_TRAP)] + _STAT_CARDS
+    faq = [faq(WATTGIRAFFE, "エレキリン", WATTGIRAFFE_TEXT),
+           faq(SERIOUS_DUEL, "真剣勝負", SERIOUS_DUEL_TEXT)]
+
+    def test_cannot_activate_covers_spell_trap_and_monster_effects(self):
+        """「相手は魔法・罠・モンスターの効果を発動できない」:查「發動」(不能)指定魔法卡或怪獸都命中。"""
+        for cid in (POT_OF_GREED, KURIBOH):
+            self.assertIn(WATTGIRAFFE,
+                          self.hits(actions=["發動"], polarities=["不能"], card=cid))
+        self.assertWritesBack(WATTGIRAFFE, "このターン、相手は魔法・罠・モンスターの効果を発動できない")
+
+    def test_activation_trigger_covers_monster_effects_and_spell_trap_cards(self):
+        """「モンスターの効果・魔法・罠カードが発動した時」:查「發動」開條件段,指定魔法卡或怪獸都命中;
+        後面「その発動を無効にし破壊する」指回的就是它。"""
+        for cid in (POT_OF_GREED, KURIBOH):
+            self.assertIn(SERIOUS_DUEL,
+                          self.hits(actions=["發動"], include_condition=True, card=cid))
+            self.assertIn(SERIOUS_DUEL, self.hits(actions=["無效", "破壞"], card=cid))
+        self.assertWholeCardPasses(SERIOUS_DUEL)
+
+
+BLIZZARD = 473469
+BLIZZARD_TEXT = (
+    "相手のコントロールするカードの効果によって自分の罠カードが破壊され、"
+    "フィールドから墓地に送られた時に発動する事ができる。フィールド上の魔法または罠カード１枚を破壊する。")
+ORCUST_ATTACK = 29666221
+ORCUST_ATTACK_TEXT = (
+    "①：自分または相手のモンスターの攻撃宣言時に、自分フィールドの、「オルフェゴール」モンスター"
+    "または「星遺物」モンスター１体をリリースし、相手フィールドのモンスター１体を対象として発動できる。"
+    "そのモンスターを除外する。")
+TOO_DEEP_GRAVE = 17688543
+TOO_DEEP_GRAVE_TEXT = (
+    "①：自分または相手の墓地のモンスター１体を対象として発動できる。"
+    "次の自分スタンバイフェイズにそのモンスターを墓地から自分フィールドに特殊召喚する。")
+ORCUST, WORLD_LEGACY = 0x11b, 0xfe
+ORCUST_ARCHETYPES = [
+    {"setcode": ORCUST, "hex": "0x11b", "names_ja": ["オルフェゴール"], "name_zh": "自奏聖樂",
+     "source": "strings.conf"},
+    {"setcode": WORLD_LEGACY, "hex": "0xfe", "names_ja": ["星遺物"], "name_zh": "星遺物",
+     "source": "strings.conf"},
+]
+ORCUST_CYMBAL = 21441617          # オルフェゴール・ディヴェル
+WORLD_LEGACY_MONSTER = 55787576   # 星遺物－『星杯』
+
+
+class EnumerationTest(_Golden):
+    """「AまたはB」:用既有的 或。"""
+    archetypes = ORCUST_ARCHETYPES
+    cards = [card(BLIZZARD, name_ja="猛吹雪", type=TRAP),
+             card(ORCUST_ATTACK, name_ja="オルフェゴール・アタック", type=TRAP, setcode=ORCUST),
+             card(TOO_DEEP_GRAVE, name_ja="深すぎた墓穴", type=TRAP),
+             card(ORCUST_CYMBAL, name_ja="オルフェゴール・ディヴェル", level=4, race=0x20,
+                  attribute=0x20, atk=1700, setcode=ORCUST),
+             card(WORLD_LEGACY_MONSTER, name_ja="星遺物－『星杯』", level=5, race=0x20,
+                  attribute=0x10, atk=0, setcode=WORLD_LEGACY)] + _STAT_CARDS
+    faq = [faq(BLIZZARD, "猛吹雪", BLIZZARD_TEXT),
+           faq(ORCUST_ATTACK, "オルフェゴール・アタック", ORCUST_ATTACK_TEXT),
+           faq(TOO_DEEP_GRAVE, "深すぎた墓穴", TOO_DEEP_GRAVE_TEXT)]
+
+    def test_spell_or_trap_card_is_either_category(self):
+        """「フィールド上の魔法または罠カード１枚を破壊する」:魔法卡、陷阱卡命中,怪獸不命中。"""
+        self.assertIn(BLIZZARD, self.hits(actions=["破壞"], card=POT_OF_GREED))
+        self.assertIn(BLIZZARD, self.hits(actions=["破壞"], card=TOO_DEEP_GRAVE))
+        self.assertJudgedMiss(BLIZZARD, actions=["破壞"], card=KURIBOH)
+        self.assertWritesBack(BLIZZARD, "フィールド上の魔法または罠カード１枚を破壊する")
+
+    def test_either_of_two_noun_phrases(self):
+        """「「オルフェゴール」モンスターまたは「星遺物」モンスター１体をリリースし」:兩個字段的怪獸都命中,
+        別的怪獸不命中。"""
+        self.assertIn(ORCUST_ATTACK, self.hits(actions=["解放"], card=ORCUST_CYMBAL))
+        self.assertIn(ORCUST_ATTACK, self.hits(actions=["解放"], card=WORLD_LEGACY_MONSTER))
+        self.assertJudgedMiss(ORCUST_ATTACK, actions=["解放"], card=KURIBOH)
+
+    def test_either_players_graveyard(self):
+        """「自分または相手の墓地のモンスター１体を対象として」:方是任一方,怪獸代得進去、魔法卡代不進去。"""
+        self.assertIn(TOO_DEEP_GRAVE, self.hits(targeting=True, card=KURIBOH))
+        self.assertNotIn(TOO_DEEP_GRAVE, self.hits(targeting=True, card=POT_OF_GREED))
+        self.assertWritesBack(TOO_DEEP_GRAVE, "自分または相手の墓地のモンスター１体を対象として")
+
+
 if __name__ == "__main__":
     unittest.main()

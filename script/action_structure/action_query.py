@@ -65,6 +65,7 @@ from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
 from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
+SUBSTITUTABLE_KINDS = ("卡", "效果")   # 指定卡代得進去的物件種類(超量素材、計數器代不進去)
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
 MODIFIED_KEYS = ("attr", "form", "value")
 # 雙方對等的動作詞:施事線與受事線一樣當被比的物件(`_is_doer`)。
@@ -453,7 +454,8 @@ class _Judge:
         return self.views[entry["id"]]
 
     def card_fits(self, entry, obj, owner, names, from_zones):
-        if obj["unparsed"] or obj["kind"] != "卡":
+        # 效果物件的條件式是「誰的效果」:指定卡代入時比那張卡(與「Xの効果を発動」的 X 是卡物件同一個判法)。
+        if obj["unparsed"] or obj["kind"] not in SUBSTITUTABLE_KINDS:
             return False
         if obj["source"]["kind"] == "自己":
             return entry["id"] == owner["id"] or entry["id"] in owner.get(

@@ -131,6 +131,8 @@ class BlockState:
         self.self_id = self_id  # 「このカード」指誰:內嵌效果裡綁定成被賦予效果的物件(票 06)
         self.subject = None   # 本句「Xは」的物件:後面主語省略的子句(「〜できず、〜できる」)沿用(票 09)
         self.topic = Topic(TOPIC_NONE)
+        # 本句左半的宣告(「Xを選択し、」「Xを対象とし、」)點名的物件:右半省略的物件指回它(m3 票 07)。
+        self.declared = None
         self.last_segment_of_action = {}
 
     def note_actions(self, seg):
@@ -139,8 +141,22 @@ class BlockState:
             self.last_segment_of_action[action] = seg["id"]
 
     def start_sentence(self):
-        """新的一句:主語與前一截的「Xは」都歸零。"""
-        self.subject, self.topic = None, Topic(TOPIC_NONE)
+        """新的一句:主語、前一截的「Xは」與左半宣告的物件都歸零。"""
+        self.subject, self.topic, self.declared = None, Topic(TOPIC_NONE), None
+
+    def declare(self, obj_ids):
+        """沒有動作詞的宣告子句(取對象宣告、選擇)點名了這些物件:同一句後面省略的物件指回它。
+        點名兩個以上時省略的是哪一個判不了,不退回此卡。"""
+        if len(obj_ids) == 1:
+            self.declared = obj_ids[0]
+        else:
+            self.lose_topic()
+
+    def declared_object(self):
+        """同一句左半宣告的物件;後面的子句已經有自己的「Xは」、或有一截解析不出時不算(None)。"""
+        if self.subject is None and self.topic.state == TOPIC_NONE:
+            return self.declared
+        return None
 
     def hold_topic(self, phrase, sentence_start):
         """前一截解析不出、句首有「Xは」:記下短語,物件等主語省略的子句用到時才建。"""
@@ -152,7 +168,9 @@ class BlockState:
 
     def elided_subject(self):
         """主語省略的子句的物件:本句「Xは」的物件,沒有就是此卡;前一截解析不出時是它的「Xは」,
-        它沒有「Xは」或認不出物件就判不了(None),不退回此卡。"""
+        它沒有「Xは」或認不出物件就判不了(None),不退回此卡。左半是宣告(「Xを選択し、」)時是它點名的物件。"""
+        if self.declared_object() is not None:
+            return self.declared
         if self.subject is None and self.topic.state != TOPIC_NONE:
             if self.topic.state == TOPIC_UNKNOWN:
                 return None

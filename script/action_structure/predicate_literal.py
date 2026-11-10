@@ -4,11 +4,14 @@
 反向檢查端用 `split_predicate_literal` 拆;兩邊只走這一對函式,順序才不會各寫各的。
 `render_predicate` 驗述語那一截拆得回段的動作詞、態、極性;`check_predicate` 是不帶前綴的版本。
 """
+import re
 from typing import NamedTuple
 
 from segment_fields import resolve_polarity
 from structure_shape import NoTemplate
-from synonyms import SELECT_PREFIX, TARGETING_PREFIXES, attack_times, merged_voice, parse_predicates
+from synonyms import SELECT_PREFIX, TARGETING_PATTERN, attack_times, merged_voice, parse_predicates
+
+_TARGETING_RE = re.compile(TARGETING_PATTERN)
 
 
 class PredicateLiteral(NamedTuple):
@@ -42,9 +45,9 @@ def _split_select(pred):
 def _split_targeting(pred):
     """述語字面 → (取對象字面或 None, 其餘述語)。「選択して破壊する」→ ("選択して", "破壊する");
     單獨的「選択して」(發動句的取對象宣告)→ ("選択して", "")。"""
-    for prefix in TARGETING_PREFIXES:
-        if pred.startswith(prefix):
-            return prefix, pred[len(prefix):]
+    m = _TARGETING_RE.match(pred)
+    if m:
+        return m.group(), pred[m.end():]
     return None, pred
 
 

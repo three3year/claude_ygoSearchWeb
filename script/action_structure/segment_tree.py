@@ -29,13 +29,14 @@ import re
 
 from block_split import body_start
 from block_state import BlockState, INTERVAL_RE, INTERVAL_REASON
-from clause_join import JOIN, split_continuative
+from clause_join import JOIN, is_continuative, split_continuative
 from effect_reference import is_reference, match_reference, reference_node, render_reference
 from premise import render_premise, split_premises, timepoint_glue
 from segment_extract import fill_clause, limit_note, parse_sentence, sentences
 from segment_fields import EFFECT_HOLDER_PREFIX
 from structure_shape import (DISPLAY_WORD, NoTemplate, branch_node, display_value, display_word,
                              embedded_node, new_block, segment_node, swap_sides, unparsed)
+from synonyms import ACTIVATION_SUFFIXES
 from turn_phase import build_timepoints, match_timepoints
 from zone_phrase import parse_from, zone_literal
 
@@ -134,11 +135,34 @@ def extract_block(block, card, lookups=None, self_id="o0"):
             block["tree"]["items"] = nodes
             return block
         headers = []
+    # 引導句前面整個是時點(m3 票 11)的先認;不是時點才看連用形串接的子句(m3 票 07)。
     timepoints = _header_timepoints(state, headers)
+    if timepoints is None:
+        lead_nodes, headers = _lead_in(state, headers)
+        nodes.extend(lead_nodes)
     branches = _parse_items(state, items)
     nodes.extend(_branch(state, headers, branches, timepoints))
     block["tree"]["items"] = nodes
     return block
+
+
+def _lead_in(state, headers):
+    """引導句前面連用形串接的子句(「Xを対象とし、以下の効果から１つを選択して発動できる」,m3 票 07):
+    先照一般子句解析成段——宣告的對象要在各支之前點名,各支的回指(対象のモンスター、そのモンスター)
+    才指得回它;引導句只剩「以下の効果〜」,與前面的段同時。發動句的引導句(〜発動できる)前面是代價子句。
+    回傳 (段節點, 引導句列表);不是這種引導句時原樣交回。"""
+    if len(headers) != 1 or headers[0][0] != "分歧":
+        return [], headers
+    kind, pre, form, start, join = headers[0]
+    clause = pre[:-1] if pre.endswith("、") else ""
+    if not is_continuative(clause):
+        return [], headers
+    nodes = []
+    for seg, seg_join in parse_sentence(state, start, start + len(clause),
+                                        activation_lead=form.endswith(ACTIVATION_SUFFIXES)):
+        state.block["segments"].append(seg)
+        nodes.append(segment_node(seg["id"], seg_join or (None if nodes else join)))
+    return nodes, [(kind, "", form, start + len(pre), JOIN)]
 
 
 def _parse_run(state, spans):

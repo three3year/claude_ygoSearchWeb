@@ -266,11 +266,13 @@ def _apply_duration(segs, duration):
             seg["duration"] = dict(duration)
 
 
-def parse_sentence(state, start, end):
+def parse_sentence(state, start, end, activation_lead=False):
     """一句 → [(段, 與前一段的連接)](發動句可產生條件段 + 代價段;舊式條件句產生條件段 + 效果段;
     舊式代價句產生代價段 + 效果段;連用形串接的效果句、代價子句切成多段、連接「同時」)。
     句首的前提先剝掉,掛在第一個段上、段的範圍從前提起算;「〜場合、代わりに〜」的條件段改標
-    被代替、後面的段記代替誰(「代わりに」留在它的範圍內)。"""
+    被代替、後面的段記代替誰(「代わりに」留在它的範圍內)。
+    `activation_lead`:這一截是發動句引導句前面的子句(「Xを対象とし、以下の効果から１つを選択して
+    発動できる」的「Xを対象とし」,m3 票 07)——沒有發動語尾,但照發動句解析,每一截都是代價子句。"""
     text = state.block["text"]
     sent = text[start:end]
     state.start_sentence()
@@ -298,8 +300,9 @@ def parse_sentence(state, start, end):
         seg = segment_at(state, "效果", start, end)
         seg["unstructured"] = True
         return [(seg, None)]
-    act = _ACTIVATION_RE.match(sent)
-    body = act.group("body") if act else sent
+    suffix = None if activation_lead else _ACTIVATION_RE.match(sent)
+    body = suffix.group("body") if suffix else sent
+    act = bool(suffix) or activation_lead
     turn_seg = None
     turn = _TURN_RE.match(body)
     if turn:
@@ -375,7 +378,7 @@ def parse_sentence(state, start, end):
             piece_start = rest_start + offset
             seg = segment_at(state, "代價", seg_start if i == 0 else piece_start,
                              piece_start + len(piece))
-            if i < len(pieces) - 1 or piece.endswith(("て", "で")):
+            if i < len(pieces) - 1 or activation_lead or piece.endswith(("て", "で")):
                 fill_clause(ClauseContext(seg, state, piece_start), piece)
                 _hold_topic(seg, piece, state, piece_start)
             else:

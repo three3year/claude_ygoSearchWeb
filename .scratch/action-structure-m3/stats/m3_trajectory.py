@@ -3,7 +3,7 @@
   每個 commit:git archive <commit> script/action_structure data/action_structure.json data/cards.json 解到暫存資料夾,
   當 <repo 根> 跑本目錄的 m3_compare.py,取其中幾項排成 markdown 表(一列一個 commit)。
   最後一列是參數給的 commit(預設 HEAD;要已 commit 的產物,工作樹沒 commit 的改動不算)。
-輸出決定性:列的順序固定、不印時間與路徑。12 列約 6 分鐘。
+輸出決定性:列的順序固定、不印時間與路徑。14 列約 7 分鐘。
 """
 import io
 import os
@@ -30,7 +30,8 @@ STEPS = [
     ("票 12 前提", "abf206a"),
     ("票 10 離場", "850dc55"),
     ("票 06 異同", "67b15a3"),
-    ("收尾(後)", LAST),
+    ("票 13 收尾", "ef47731"),
+    ("code review 修正(後)", LAST),
 ]
 PATHS = ["script/action_structure", "data/action_structure.json", "data/cards.json"]
 COLUMNS = ["段", "段解析出", "段解析出比例", "反向檢查通過 段", "整張通過 張",

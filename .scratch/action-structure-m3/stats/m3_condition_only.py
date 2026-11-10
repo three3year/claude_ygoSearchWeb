@@ -1,7 +1,7 @@
 # 票 13:「只給條件」的查詢(不指定卡,只給物件條件)幾個代表查詢的命中張數(讀 <repo 根> 的產物,用同一個根的程式)。
 # 跑法:python -X utf8 .scratch/action-structure-m3/stats/m3_condition_only.py <repo 根>
 #   修正前 = git archive 67b15a3 script/action_structure data/action_structure.json data/cards.json 解到空資料夾當 <repo 根>
-#   修正後 = repo 根本身
+#   修正後 = 同樣解出 ef47731(票 13 的程式,產物同 67b15a3,只差查詢程式);repo 根本身會混進之後的產物改動
 # 票 13 修的錯:物件是此卡的線,存在性快取鍵每張卡都一樣,第一張卡的結果被所有卡沿用。
 # 每個查詢印:命中(groups 全部)/ 未解析組張數。加 --ids 另印每個查詢命中的卡號(一行,給前後逐張比)。
 # 輸出決定性:查詢順序固定、不印時間。全部跑完約 2 分鐘。

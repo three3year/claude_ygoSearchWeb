@@ -93,7 +93,7 @@ def _render_detach_object(obj, seg, card, names, self_id):
             raise NoTemplate("隱含的所屬卡無模板")
         return word
     return render_object(owner, seg, card, names, {"ref": obj.get("of_ref")},
-                          self_id=self_id) + "の" + word
+                         self_id=self_id) + "の" + word
 
 
 def render_ref(ref, obj, seg, card):

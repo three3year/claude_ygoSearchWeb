@@ -138,7 +138,7 @@ def fill_clause(ctx, clause_text):
     seg["polarity"], seg["optional"] = resolve_polarity(parsed, None)
     if g("agent"):
         seg["agent"], reason = parse_agent(state, g("agent"), g("agent_marker"),
-                                              g("agent_pause"), ctx.kind)
+                                           g("agent_pause"), ctx.kind)
         if seg["agent"] is None:
             seg["unparsed"] = unparsed(reason)
             return True

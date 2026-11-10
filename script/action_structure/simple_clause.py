@@ -489,7 +489,7 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
     cause_front = bool(seg["cause"]) and seg["cause"].get("placement") == "名詞前"
     if cause_front:
         parts.append(render_cause_phrase({k: v for k, v in seg["cause"].items() if k != "placement"},
-                                   seg, card, objects, names, self_id))
+                                         seg, card, objects, names, self_id))
     # 主語省略的線(票 09)不寫物件與助詞;其餘線的助詞要一致。
     spoken = [line for line in seg["lines"] if not line.get("elided")]
     if len(spoken) != len(seg["lines"]) and len(seg["lines"]) != 1:
@@ -520,7 +520,7 @@ def render_clause(seg, card, objects, names, self_id, clause_duration):
             words.append(_render_zone_object(line, objects[line["object"]]))
         else:
             words.append(render_object(objects[line["object"]], seg, card, names, line,
-                                        self_id=self_id))
+                                       self_id=self_id))
         counts.add((render_count(line["count"]), (line["count"] or {}).get("placement")))
         picks.add(line.get("pick"))
     if len(counts) > 1 or len(picks) > 1:

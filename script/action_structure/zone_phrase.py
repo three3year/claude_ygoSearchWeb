@@ -27,7 +27,7 @@ _ZONE_WORDS_ALT = "|".join(w for w, _ in ZONE_WORDS)
 # 區域短語:[自分の|相手の|自分か相手の]區域(・區域|か區域)*;「・」與「か」都是列舉
 # (自分の手札・フィールド、自分のフィールドか墓地),字面由從/到的 text 還原(票 06)。
 ZONE_PHRASE = (f"(?:(?:自分か相手|自分|相手|持ち主|自身)の?)?(?:{_ZONE_WORDS_ALT})"
-                f"(?:[・か](?:{_ZONE_WORDS_ALT}))*")
+               f"(?:[・か](?:{_ZONE_WORDS_ALT}))*")
 _FROM_RE = re.compile("^(?:(?P<side>自分か相手|自分|相手|持ち主|自身)の?)?(?P<zones>.+)$")
 ZONE_PHRASE_RE = re.compile(f"^{ZONE_PHRASE}$")
 SIDE_TEXT = {v: k for k, v in SIDE_WORDS.items()}

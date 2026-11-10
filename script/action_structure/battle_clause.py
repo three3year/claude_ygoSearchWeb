@@ -68,5 +68,5 @@ def render_clause(seg, card, objects, names, self_id):
     if select:
         raise NoTemplate("戰鬥段的格無模板")
     return "".join(render_object(objects[line["object"]], seg, card, names, line,
-                                  self_id=self_id) + line["marker"]
+                                 self_id=self_id) + line["marker"]
                    for line in lines) + predicate

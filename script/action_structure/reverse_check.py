@@ -81,8 +81,8 @@ def _render_leading_premise(leading, seg, card, objects, names, followed, self_i
     return render_premise(
         leading, render_premise_zones,
         lambda obj_id, ref: render_object(objects[obj_id], seg, card, names,
-                                           {"ref": ref} if ref else None,
-                                           self_id=self_id),
+                                          {"ref": ref} if ref else None,
+                                          self_id=self_id),
         followed=followed)
 
 
@@ -126,7 +126,7 @@ WHOLE_TEMPLATES = (
                     lambda t: render_treat_as_segment(t.seg, t.names, t.objects, t.self_id)),
     SegmentTemplate("素材行",
                     lambda t: bool(t.seg["lines"]) and all(line["role"] == "素材"
-                                                          for line in t.seg["lines"]),
+                                                           for line in t.seg["lines"]),
                     lambda t: material_line.render_line(t.seg, t.card, t.names, t.objects,
                                                         t.self_id)),
 )

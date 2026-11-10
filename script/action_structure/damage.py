@@ -386,8 +386,8 @@ def render_clause(seg, card, objects, names, self_id, inner_duration):
         source = render_source(
             seg["cause"]["source"],
             lambda obj_id, ref: render_object(objects[obj_id], seg, card, names,
-                                               {"ref": ref} if ref else None,
-                                               self_id=self_id))
+                                              {"ref": ref} if ref else None,
+                                              self_id=self_id))
     if seg["actions"] == [MODIFY_ACTION]:
         tail = render_modified(seg["modified"], predicate)
         if seg["lines"] or seg["agent"]:
@@ -430,7 +430,7 @@ def render_clause(seg, card, objects, names, self_id, inner_duration):
             if line["role"] != "施事" or line["marker"] not in ("が", "は"):
                 raise NoTemplate(f"角色無模板:{line['role']}")
             parts.append(render_object(objects[line["object"]], seg, card, names, line,
-                                        self_id=self_id) + line["marker"])
+                                       self_id=self_id) + line["marker"])
         if seg["agent"] is not None:
             if seg["lines"]:
                 raise NoTemplate(f"誰無模板:{seg['agent']}")

@@ -203,7 +203,7 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
             piece = piece[then.end():]
             join = SEQUENCE_JOIN
         seg = segment_at(state, "效果", seg_start if (i == 0 and seg_start is not None)
-                       else piece_start, piece_start + len(piece))
+                         else piece_start, piece_start + len(piece))
         if replaces:
             seg["replaces"] = replaces
         _fill_effect(ClauseContext(seg, state, piece_start,
@@ -331,7 +331,7 @@ def parse_sentence(state, start, end):
         for i, (offset, piece) in enumerate(pieces):
             piece_start = rest_start + offset
             seg = segment_at(state, "代價", seg_start if i == 0 else piece_start,
-                           piece_start + len(piece))
+                             piece_start + len(piece))
             if i < len(pieces) - 1 or piece.endswith(("て", "で")):
                 fill_clause(ClauseContext(seg, state, piece_start), piece)
                 _hold_topic(seg, piece, state, piece_start)

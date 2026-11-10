@@ -29,6 +29,7 @@ import damage
 import draw
 import existence_clause
 import material_line
+import material_summon
 import simple_clause
 import stat_modify
 from archetype_table import fold_width
@@ -125,8 +126,8 @@ WHOLE_TEMPLATES = (
     SegmentTemplate("修飾", lambda t: t.seg["kind"] == "修飾",
                     lambda t: render_treat_as_segment(t.seg, t.names, t.objects, t.self_id)),
     SegmentTemplate("素材行",
-                    lambda t: bool(t.seg["lines"]) and all(line["role"] == "素材"
-                                                           for line in t.seg["lines"]),
+                    lambda t: bool(t.seg["lines"]) and not t.seg["actions"]
+                    and all(line["role"] == "素材" for line in t.seg["lines"]),
                     lambda t: material_line.render_line(t.seg, t.card, t.names, t.objects,
                                                         t.self_id)),
 )
@@ -154,6 +155,10 @@ CLAUSE_TEMPLATES = (
                                                           t.self_id)),
     SegmentTemplate("抽牌", lambda t: draw.is_draw_segment(t.seg, t.objects),
                     lambda t: draw.render_clause(t.seg, t.card, t.objects, t.names)),
+    SegmentTemplate("召喚段帶素材線", lambda t: material_summon.is_material_summon(t.seg),
+                    lambda t: material_summon.render_clause(t.seg, t.card, t.objects, t.names,
+                                                            t.self_id, t.inner_duration),
+                    INNER_BEFORE_PREDICATE),
     SegmentTemplate("簡單子句", lambda t: True,
                     lambda t: simple_clause.render_clause(t.seg, t.card, t.objects, t.names,
                                                           t.self_id, t.inner_duration),

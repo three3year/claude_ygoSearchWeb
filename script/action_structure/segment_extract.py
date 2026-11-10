@@ -35,6 +35,7 @@ import damage
 import draw
 import existence_clause
 import material_line
+import material_summon
 import simple_clause
 import stat_modify
 from block_state import (ClauseContext, INTERVAL_RE, INTERVAL_REASON, KIND_PROCEDURE,
@@ -141,7 +142,7 @@ def sentences(text, body_start, end=None):
 # 子句句型:依序試,第一個認得的句型負責填格(認得但解析不出的也算,它會在段上標原因);
 # 都不是就當簡單子句。加一種句型 = 加一個模組(`fill_clause(ctx, 子句) -> bool`)再排進這張表。
 CLAUSE_FORMS = (existence_clause.fill_clause, damage.fill_clause, battle_clause.fill_clause,
-                draw.fill_clause)
+                draw.fill_clause, material_summon.fill_clause)
 
 
 def fill_clause(ctx, clause_text):

@@ -14,8 +14,8 @@ import re
 
 from block_state import REASON_REF
 from object_render import render_object
-from segment_fields import (CAUSE_PATTERN, OWNER_JOINER, OWNER_PATTERN, OWNER_TEXT, parse_cause,
-                            render_cause)
+from segment_fields import (CAUSE_MATERIAL, CAUSE_PATTERN, MATERIAL_FORMS, OWNER_JOINER,
+                            OWNER_PATTERN, OWNER_TEXT, parse_cause, render_cause)
 from segment_history import segments_before
 from structure_shape import NoTemplate
 from synonyms import action_ancestors, is_summon, parse_predicates
@@ -50,8 +50,17 @@ _SELF_EFFECT_CAUSE = ("(?:このカードの[①-⑳]の|この)(?:効果|方法
                       "(?=[^、。]*召喚に成功)")
 _SELF_EFFECT_RE = re.compile(
     "^(?:このカードの(?P<label>[①-⑳])の|この)(?:効果|方法)(?:によって|で)$")
+# 「「トリックスター」LモンスターのL素材として(墓地へ送られた)」(m3 票 09):作為素材,帶被召喚怪獸的物件。
+# 物件是以 モンスター 收尾的名詞短語,不收主語的助詞與「から」(同 `_OBJECT_EFFECT_CAUSE`)。
+_MATERIAL_ALT = "|".join(sorted(map(re.escape, MATERIAL_FORMS), key=len, reverse=True))
+MATERIAL_OF = "の"
+_MATERIAL_OF_CAUSE = ("(?:「[^「」]*」|または|(?!から)[^を、「」がは])*?モンスター"
+                      f"{MATERIAL_OF}(?:{_MATERIAL_ALT})")
+_MATERIAL_OF_RE = re.compile(
+    f"^(?P<phrase>.+?モンスター){MATERIAL_OF}(?P<form>{_MATERIAL_ALT})$")
 CAUSE_ALT = (f"{CAUSE_PATTERN}|{_NAMED_CAUSE}|{_METHOD_CAUSE}|{_BATTLE_CAUSE}|{OWNER_PATTERN}"
-             f"|{EXCLUDE_METHOD_PATTERN}|{_SELF_EFFECT_CAUSE}|{_OBJECT_EFFECT_CAUSE}")
+             f"|{EXCLUDE_METHOD_PATTERN}|{_SELF_EFFECT_CAUSE}|{_OBJECT_EFFECT_CAUSE}"
+             f"|{_MATERIAL_OF_CAUSE}")
 _NAMED_CAUSE_RE = re.compile(f"^(?P<name>「[^「」]+」)の効果で$")
 _METHOD_CAUSE_RE = re.compile(f"^{_METHOD_CAUSE}$")
 CAUSE_EFFECT_OF = "の効果で"
@@ -122,6 +131,12 @@ def parse_cause_phrase(state, text, sentence_start, actions=()):
     if _METHOD_CAUSE_RE.match(text):
         return {"kind": CAUSE_METHOD, "text": text,
                 "methods": text[:-1].split("及び")}, None
+    material_of = _MATERIAL_OF_RE.match(text)
+    if material_of:
+        obj_id, _, reason = state.object_at(material_of.group("phrase"), sentence_start)
+        if obj_id is None:
+            return None, reason
+        return {**parse_cause(material_of.group("form")), "object": obj_id}, None
     effect_of = _OBJECT_EFFECT_RE.match(text)
     if effect_of:
         obj_id, _, reason = state.object_at(effect_of.group("phrase"), sentence_start)
@@ -173,6 +188,13 @@ def render_cause_phrase(cause, seg, card, objects, names, self_id):
             raise NoTemplate("原因無模板:物件")
         return OWNER_JOINER.join(render_object(objects[o], seg, card, names, self_id=self_id)
                                  for o in cause["objects"]) + cause["text"]
+    if cause and cause.get("object") is not None and cause.get("kind") == CAUSE_MATERIAL:
+        # 作為素材 帶被召喚怪獸:[物件]の[素材として]。
+        obj = objects.get(cause["object"])
+        if obj is None:
+            raise NoTemplate("原因無模板:素材的物件")
+        return (render_object(obj, seg, card, names, self_id=self_id) + MATERIAL_OF
+                + render_cause({k: v for k, v in cause.items() if k != "object"}))
     if cause and cause.get("object") is not None:
         obj = objects.get(cause["object"])
         if obj is None or cause.get("kind") != "效果" or cause.get("text") not in EFFECT_OF_TAILS:

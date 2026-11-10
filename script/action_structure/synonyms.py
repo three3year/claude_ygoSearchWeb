@@ -12,6 +12,10 @@
 - 召喚(m3 票 08):單獨的「召喚」是動作詞 召喚,上位詞 通常召喚(通常召喚還含覆蓋);上級召喚
   (アドバンス召喚、生け贄召喚、A召喚)的上位詞是 召喚;反轉召喚獨立;P召喚的上位詞是 特殊召喚。
   「召喚・特殊召喚に成功した」這種列舉是一段多個動作詞(`parse_predicates`)。
+- 素材(m3 票 09):召喚時拿卡當素材是 作為素材(「〜素材にできない」「〜素材とする」「X召喚の素材とする」);
+  效果把卡疊到超量怪獸下面是 成為超量素材(「Yの下に重ねてX素材とする」「YのX素材とする/にする」),機制不同、分開。
+  兩者字面只差前面的「Yの」「重ねて」:成為超量素材的字幹連這一截一起寫,查表前由 `parse_material_predicates`
+  把句型切在述語外的「の」接回去。
 各舊式用語在官方 DB 文本上的出現次數見 `.scratch/action-structure/report/old_style_phrases.md`
 (`stats/old_style_phrases.py` 可重跑)。
 """
@@ -35,6 +39,20 @@ class Predicate(NamedTuple):
 # 查這張表前要把受詞接回去,抽取與模板都只走 `damage.parse_damage_predicates`。
 DAMAGE_OBJECT = "ダメージを"
 BARE_SUMMON_STEM = "召喚"
+# 素材(m3 票 09)。超量素材的名詞(物件「(Xの)X素材」與 成為超量素材 的述語共用這個閉集)。
+XYZ_MATERIAL_WORDS = ("X素材", "エクシーズ素材")
+XYZ_ATTACH_ACTION = "成為超量素材"
+MATERIAL_ACTION = "作為素材"
+# 哪種召喚的素材留在原述語字面:「融合素材」「S素材」…與沒寫種類的「素材」。
+MATERIAL_NOUNS = ("融合素材", "シンクロ素材", "S素材", "エクシーズ素材", "X素材", "リンク素材",
+                  "L素材", "素材")
+# 「X召喚の素材とする」「エクシーズ召喚の素材にできない」:寫全「召喚の」的素材名詞。
+MATERIAL_SUMMON_KINDS = ("X召喚", "エクシーズ召喚", "S召喚", "シンクロ召喚", "L召喚", "リンク召喚",
+                         "融合召喚")
+# 「このカードのX素材とする」的「の」:句型把它切進所屬(Y)那一格,成為超量素材的字幹卻要它才分得出來。
+MATERIAL_OWNER_PARTICLE = "の"
+# 素材字幹(〜素材と)後面接「して」是原因「〜素材として」,不是述語的て形。
+MATERIAL_AS_TAIL = "して"
 # ── 述語字面 → 動作詞;第三欄是述語本身寫明的終點(「墓地へ送る」「ゲームから除外する」)。
 # 比對時取最長的字幹(`_STEMS_LONGEST_FIRST`;「攻撃対象に選択」不能被「攻撃」先吃掉)。
 PREDICATE_STEMS = (
@@ -119,12 +137,31 @@ PREDICATE_STEMS = (
     ("P召喚", "P召喚", None), ("ペンデュラム召喚", "P召喚", None),
     ("リンク召喚", "L召喚", None), ("シンクロ召喚", "S召喚", None),
     ("エクシーズ召喚", "X召喚", None),
+    # m3 票 09:作為素材 的「〜素材とする」「〜素材とし」(「このカードをS素材とする場合」「〜も融合素材とする事ができる」),
+    # 與「X召喚の素材とする/にできない」這種寫全「召喚の」的。
+    *((f"{noun}と", "作為素材", None) for noun in MATERIAL_NOUNS),
+    *((f"{kind}の素材{particle}", "作為素材", None) for kind in MATERIAL_SUMMON_KINDS
+      for particle in "とに"),
+    # 成為超量素材(效果把卡疊到超量怪獸下面):「Yの下に重ねてX素材とする」的述語是「重ねてX素材とする」;
+    # 「YのX素材とする/にする」與 作為素材 只差所屬的「の」,字幹連「の」一起寫(`parse_material_predicates`)。
+    *((f"重ねて{word}と", XYZ_ATTACH_ACTION, None) for word in XYZ_MATERIAL_WORDS),
+    *((f"{MATERIAL_OWNER_PARTICLE}{word}{particle}", XYZ_ATTACH_ACTION, None)
+      for word in XYZ_MATERIAL_WORDS for particle in "とに"),
 )
 _STEMS_LONGEST_FIRST = sorted(PREDICATE_STEMS, key=lambda row: len(row[0]), reverse=True)
 # 字幹出現在別的詞裡、不是那個動作的字面(查詢未解析組比字面時扣掉)。
 STEM_FALSE_FRIENDS = {"攻撃": ("攻撃力", "攻撃表示", "攻撃対象"), "ドロー": ("ドローフェイズ",),
                       # 官方文本裡「置」不是「置く」的只有這三個詞(「〜装置」「置換融合」是卡名)。
                       "置": ("位置", "装置", "置換")}
+# 素材的字幹互相包含:「素材と」落在「X素材と」裡、「X素材と」落在成為超量素材的「のX素材と」「重ねてX素材と」裡,
+# 查 作為素材 的未解析組比字面時扣掉後者;「〜素材として」是原因(作為素材 被送墓)或持有狀態(X素材としている),
+# 不是這兩個動作的字面。
+_ATTACH_STEMS = tuple(stem for stem, action, _ in PREDICATE_STEMS if action == XYZ_ATTACH_ACTION)
+for _stem, _action, _ in PREDICATE_STEMS:
+    if _action in (MATERIAL_ACTION, XYZ_ATTACH_ACTION) and _stem.endswith(("素材と", "素材に")):
+        STEM_FALSE_FRIENDS[_stem] = tuple(
+            longer for longer in _ATTACH_STEMS if _stem in longer and longer != _stem
+        ) + ((_stem + "して",) if _stem.endswith("と") else ())
 MODIFY_ACTION = "性質變更"
 MODIFY_PREDICATE = "になる"
 # 動作回指(「めくったカード」「特殊召喚したモンスター」)用的過去形。
@@ -219,6 +256,8 @@ TAILS = {
     # 「手札に加える事ができず、」(連用形串接的不能)。
     "る事ができず": ("主動", "不能"), "する事ができず": ("主動", "不能"),
     "す事ができず": ("主動", "不能"), "う事ができず": ("主動", "不能"),
+    # 「〜を除外して融合素材とする事もできる」「シンクロ素材とする事もできない」(m3 票 09):「も」只是「也」。
+    "する事もできる": ("主動", "做", True), "する事もできない": ("主動", "不能"),
     # 舊式「〜事はできない」= 「〜できない」
     "する事はできない": ("主動", "不能"), "る事はできない": ("主動", "不能"),
     "す事はできない": ("主動", "不能"), "う事はできない": ("主動", "不能"),
@@ -325,6 +364,9 @@ def parse_predicate(pred):
     for stem, action, to in _STEMS_LONGEST_FIRST:
         if pred.startswith(stem):
             tail = pred[len(stem):]
+            if tail.startswith(MATERIAL_AS_TAIL) and action in (MATERIAL_ACTION, XYZ_ATTACH_ACTION):
+                # 「〜素材として(墓地へ送られた)」是原因字面,不是 作為素材 的述語。
+                return None, REASON_PREDICATE
             if tail not in TAILS:
                 return None, REASON_TAIL
             voice, polarity, *optional = TAILS[tail]
@@ -350,6 +392,8 @@ def parse_predicates(pred):
             if not is_summon(following[0].action):
                 return None, REASON_PREDICATE
             return [following[0]._replace(action=action, to=to)] + following, None
+        if rest.startswith(MATERIAL_AS_TAIL) and action in (MATERIAL_ACTION, XYZ_ATTACH_ACTION):
+            return None, REASON_PREDICATE   # 同 `parse_predicate`:「〜素材として」不是て形串接的前一個述語
         for tail in _TAILS_LONGEST_FIRST:
             if tail and (tail.endswith(("て", "で")) or tail == "し") \
                     and rest.startswith(tail) and len(rest) > len(tail):
@@ -360,6 +404,18 @@ def parse_predicates(pred):
                     return [head] + following, None
         return None, REASON_TAIL
     return None, reason
+
+
+def parse_material_predicates(pred, owned):
+    """素材句型的原述語字面(「X素材とする」「重ねてX素材とする」「L素材とする」)→ 同義表的查表結果。
+    `owned`:句型在述語前切出了所屬(「このカードの」「その」)而沒有「下に」——所屬的「の」接回去再查,
+    「YのX素材とする」才查得到 成為超量素材;查不到(「YのL素材とする場合」是 作為素材)就照原字面查。
+    抽取與模板都走這一支(同 `damage.parse_damage_predicates` 的做法)。"""
+    if owned:
+        parsed, _ = parse_predicates(MATERIAL_OWNER_PARTICLE + pred)
+        if parsed is not None:
+            return parsed, None
+    return parse_predicates(pred)
 
 
 def merged_voice(parsed):

@@ -9,7 +9,8 @@ from typing import NamedTuple
 
 from segment_fields import resolve_polarity
 from structure_shape import NoTemplate
-from synonyms import SELECT_PREFIX, TARGETING_PATTERN, attack_times, merged_voice, parse_predicates
+from synonyms import (SELECT_PREFIX, TARGETING_PATTERN, attack_times, merged_voice,
+                      parse_material_predicates, parse_predicates)
 
 _TARGETING_RE = re.compile(TARGETING_PATTERN)
 
@@ -51,10 +52,11 @@ def _split_targeting(pred):
     return None, pred
 
 
-def render_predicate(seg, marker):
+def render_predicate(seg, marker, owned=False):
     """述語字面必須能拆回段的動作詞、態、極性(多動作詞是て形串接;「Xは〜できる」的極性是可以,
     與抽取端同一把尺 resolve_polarity);開頭的取對象字面(「選択して」「対象として」)拆出來、
     單獨出現時是沒有動作詞的取對象宣告;「選んで」同一個位置、同樣拆法,但不標取對象。
+    `owned`:述語前寫了素材的所屬「Yの」,查同義表前把「の」接回去(`synonyms.parse_material_predicates`)。
     回傳 (取對象字面或 None, 選取字面或 None, 述語字面, 述語寫明的終點)。"""
     if not seg["predicate"]:
         raise NoTemplate("段無動作詞")
@@ -65,7 +67,7 @@ def render_predicate(seg, marker):
         return prefix, select, "", None
     if not seg["actions"]:
         raise NoTemplate("段無動作詞")
-    parsed, _ = parse_predicates(rest)
+    parsed, _ = parse_material_predicates(rest, owned)
     if parsed is None or [p.action for p in parsed] != seg["actions"]:
         raise NoTemplate("述語字面與動作詞、態、極性不一致")
     polarity, optional = resolve_polarity(parsed, marker)

@@ -16,6 +16,8 @@
   「ダメージステップに」→ `遊戲狀態` 原子(回合方 / 階段 / 傷害步驟);只出現在前提。
 - 票 10 的存在前提 `{"op": "存在", "object", "in": 容器}`(「めくったカードの中に〜があった」)
   是同一個 op、以 `in` 分辨;它是那個條件段的本體,`split_premise` 把它與句首前提分開。
+- 持有素材(m3 票 09):「Xが「Y」をX素材としている(場合|状態で|限り)、」也是 `存在`——物件是 X 的超量素材
+  (物件種類 超量素材、所屬 `of` = X、條件式 = Y),原子帶 `held`(素材名詞「X素材」)而沒有區域。
 - 段引用:`{"op": "本回合發生過", "segment": 段id}`(「〜したターン、」的條件段,由
   `segment_extract` 建、字面在被引用的段上);`{"op": "段已執行", "segment": 段id}` 只有形狀、尚未抽取。
 - 時點「〜したターンの〈階段〉に」(m3 票 11,抽取在 `turn_phase`):`本回合發生過` 帶 `form: "の"`,
@@ -32,6 +34,7 @@
 import re
 
 from structure_shape import DISPLAY_WORD, NoTemplate, display_value, display_word
+from synonyms import XYZ_MATERIAL_WORDS
 
 GAME_STATE_TURN = "回合方"
 GAME_STATE_PHASE = "階段"
@@ -76,6 +79,13 @@ _OBJECT_FIRST_RE = re.compile(
 _ZONE_FIRST_RE = re.compile(
     "^(?P<zones>[^、]+?)に(?P<obj>[^、]+?)が" + _DISPLAY
     + "存在(?P<neg>し)?(?:する|ない)" + _FORM)
+# 持有素材(m3 票 09):「Xが「Y」をX素材としている(場合|状態で|限り)、」→ `存在` 原子,物件是 X 的超量素材、
+# 條件是 Y(`{"op": "存在", "object": 超量素材物件, "held": "X素材", "form"}`;所屬 X 在物件的 `of`)。
+# 沒有區域(`zones`),以 `held` 分辨。
+HELD_AS = "としている"
+_HELD_RE = re.compile(
+    "^(?P<holder>(?:「[^「」]*」|[^、「」をが])+?)が(?P<material>(?:「[^「」]*」|[^、を「」])+?)を"
+    "(?P<word>" + "|".join(XYZ_MATERIAL_WORDS) + ")" + HELD_AS + _FORM)
 
 
 def parse_game_state(text):
@@ -116,6 +126,8 @@ def split_premises(body, state, start, parse_zones, zone_literal=lambda phrase: 
         if atom is None:
             atom, length = _parse_existence(rest, state, parse_zones, zone_literal,
                                             start + pos)
+        if atom is None:
+            atom, length = _parse_held(rest, state, start + pos)
         if atom is None:
             break
         atoms.append(atom)
@@ -178,6 +190,19 @@ def _parse_existence(text, state, parse_zones, zone_literal, offset):
                                        "inferred": False}
         return atom, m.end()
     return None, 0
+
+
+def _parse_held(text, state, offset):
+    """「Xが「Y」をX素材としている場合」→ (存在 原子, 字面長度);不是、或 X、Y 認不出物件就回 (None, 0)。
+    超量素材物件由 `state.held_material` 建(所屬 X、條件 Y)。"""
+    m = _HELD_RE.match(text)
+    if not m:
+        return None, 0
+    material_id = state.held_material(m.group("holder"), m.group("material"), offset)
+    if material_id is None:
+        return None, 0
+    return {"op": "存在", "object": material_id, "held": m.group("word"),
+            "form": m.group("form")}, m.end()
 
 
 def is_lasting(premise):
@@ -262,6 +287,12 @@ def render_premise(premise, render_zones, render_object, followed=True):
             raise NoTemplate("前提形式無模板")
         if last:
             form = form.rstrip("、")   # 後面沒有子句時讀點不在原文範圍內
+        if atom.get("held"):
+            # 持有素材:物件的字面是「Xが「Y」を」(所屬與條件都在超量素材物件上),這裡接素材名詞與形式。
+            if negated or atom["held"] not in XYZ_MATERIAL_WORDS:
+                raise NoTemplate("持有素材的前提無模板")
+            pieces.append(render_object(atom["object"], None) + atom["held"] + HELD_AS + form)
+            continue
         if atom.get("elided"):
             # 分歧引導句的「存在しない場合」:物件與區域承前省略(segment_tree)。
             if not negated:

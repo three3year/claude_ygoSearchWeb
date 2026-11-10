@@ -69,9 +69,13 @@ def _render_detach_object(obj, seg, card, names, self_id):
     """超量素材、計數器:[所屬物件の]X素材|種類名。所屬物件照一般物件寫(回指字面在
     `of_ref`);隱含的所屬卡(超量怪獸、沒有字面)不寫,它的位置由對象線的從寫出。
     超量素材的名詞取 X素材/エクシーズ素材 閉集裡物件字面結尾的那個。"""
-    if (obj["source"]["kind"] != "新建" or obj["condition"] is not None or obj["count"]
-            or seg is None or not obj["span"] or obj["block"] != seg["id"].split(".")[0]
+    if (obj["source"]["kind"] != "新建" or seg is None or not obj["span"]
+            or obj["block"] != seg["id"].split(".")[0]
             or not (seg["span"][0] <= obj["span"][0] and obj["span"][1] <= seg["span"][1])):
+        raise NoTemplate("去除對象無模板")
+    if obj["kind"] == OBJECT_MATERIAL and obj["condition"] is not None:
+        return _render_held_material(obj, seg, card, names, self_id)
+    if obj["condition"] is not None or obj["count"]:
         raise NoTemplate("去除對象無模板")
     if obj["kind"] == OBJECT_COUNTER:
         word = obj.get("counter") or ""
@@ -94,6 +98,22 @@ def _render_detach_object(obj, seg, card, names, self_id):
         return word
     return render_object(owner, seg, card, names, {"ref": obj.get("of_ref")},
                          self_id=self_id) + "の" + word
+
+
+HOLDER_MARKER, HELD_MARKER = "が", "を"
+
+
+def _render_held_material(obj, seg, card, names, self_id):
+    """帶條件式的超量素材物件(「Xが「Y」をX素材としている」的 Y,m3 票 09):[所屬物件]が[條件+數量]を。
+    素材名詞與「としている」由前提的模板接在後面。"""
+    owner = next((o for o in card["objects"] if o["id"] == obj.get("of")), None)
+    if owner is None or obj["unparsed"]:
+        raise NoTemplate("持有的超量素材無模板")
+    text = render_condition(obj["condition"], names)
+    if obj["count"]:
+        text += render_count(obj["count"])
+    return (render_object(owner, seg, card, names, {"ref": obj.get("of_ref")}, self_id=self_id)
+            + HOLDER_MARKER + text + HELD_MARKER)
 
 
 def render_ref(ref, obj, seg, card):

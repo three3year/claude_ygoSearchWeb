@@ -44,6 +44,12 @@ def segments_before(seg, card):
     return [], []
 
 
+def previous_segment(seg, card):
+    """同一區塊裡緊接在這一段前面的段;這一段是區塊的第一段、或找不到時回 None。"""
+    _, own = segments_before(seg, card)
+    return own[-1] if own else None
+
+
 def last_action_on(obj_id, seg, card):
     """同一區塊裡、這一段之前最後一個作用在該物件上的動作詞(動作回指「めくったカード」用)。"""
     block_id = seg["id"].split(".")[0]

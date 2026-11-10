@@ -23,7 +23,8 @@
   句首時間狀語(このターン、/この効果の発動後、ターン終了時まで/〜を発動するターン、)剝成期間、
   套到整句的段;前提「〜限り、」整句的段期間持續;「Xしか〜できない」的しか是助詞、極性只能。
 - 子句怎麼填格:`fill_clause` 照 `CLAUSE_FORMS` 依序試各句型(存在前提 `existence_clause`、
-  傷害與回復 `damage`、戰鬥 `battle_clause`、抽牌 `draw`),都不是就當簡單子句(`simple_clause`);
+  傷害與回復 `damage`、戰鬥 `battle_clause`、抽牌 `draw`、素材寫在召喚句裡 `material_summon`),
+  都不是就當簡單子句(`simple_clause`);
   效果子句先試性質變更句(`stat_modify`)。素材行在 `material_line`,「〜として扱う」句在 `treat_as`。
   物件短語、位置規則與各句型共用的子句 context 在 `block_state`。
 抽不出的段與物件一律標原因,不丟例外,全庫建置不中斷。
@@ -37,6 +38,7 @@ import damage
 import draw
 import existence_clause
 import material_line
+import material_summon
 import simple_clause
 import stat_modify
 from block_state import (ClauseContext, INTERVAL_RE, INTERVAL_REASON, KIND_PROCEDURE,
@@ -145,7 +147,7 @@ def sentences(text, body_start, end=None):
 # 子句句型:依序試,第一個認得的句型負責填格(認得但解析不出的也算,它會在段上標原因);
 # 都不是就當簡單子句。加一種句型 = 加一個模組(`fill_clause(ctx, 子句) -> bool`)再排進這張表。
 CLAUSE_FORMS = (existence_clause.fill_clause, damage.fill_clause, battle_clause.fill_clause,
-                draw.fill_clause)
+                draw.fill_clause, material_summon.fill_clause)
 _FROM_FRONT_RE = re.compile("から、?$")
 _ZONE_FROM_RE = re.compile(f"(?P<zones>{ZONE_PHRASE})から、?$")
 
@@ -252,7 +254,11 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
         # 效果子句接在「事で、」後面,它的段範圍從自己起算(前提已在代價段上)。
         start += len(clause) - len(cost.group("rest"))
         clause, seg_start = cost.group("rest"), None
-    for i, (offset, piece) in enumerate(split_continuative(clause)):
+    pieces = split_continuative(clause)
+    i = -1
+    while i + 1 < len(pieces):
+        i += 1
+        offset, piece = pieces[i]
         piece_start = start + offset
         join = JOIN if i else None
         then = _THEN_RE.match(piece) if i else None
@@ -272,8 +278,17 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
                          else piece_start, piece_start + len(piece))
         if replaces:
             seg["replaces"] = replaces
-        _fill_effect(ClauseContext(seg, state, piece_start,
-                                   segs[-1][0]["timing"] if i and not then else None), piece)
+        ctx = ClauseContext(seg, state, piece_start,
+                            segs[-1][0]["timing"] if i and not then else None)
+        _fill_effect(ctx, piece)
+        if ctx.split_at is not None:
+            # 「Xを融合素材とし、Yを融合召喚する」的 X 解不出(m3 票 09):不併段,照連用形串接切成兩段——
+            # 這一段縮到左半、標解析不出,右半排成下一截照常解析。
+            pieces.insert(i + 1, (piece_start - start + ctx.split_at, piece[ctx.split_at:]))
+            piece = piece[:ctx.split_at].rstrip("、")
+            seg["span"][1] = piece_start + len(piece)
+            seg["text"] = state.block["text"][seg["span"][0]:seg["span"][1]]
+            seg["duration"] = find_battle_duration(piece)
         _hold_topic(seg, piece, state, piece_start)
         segs.append((seg, join))
         derived = stat_modify.derived_segment(seg, state)

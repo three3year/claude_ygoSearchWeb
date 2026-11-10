@@ -37,7 +37,7 @@ import re
 from dataclasses import dataclass
 from typing import NamedTuple
 
-from anaphora import contradicts, restated_reference, self_state_atoms
+from anaphora import contradicts, restated_reference, self_state_atoms, states
 from archetype_table import fold_width
 from condition_atoms import TARGETING_THIS_FORMS, targeting_this_atom
 from names_attributes import REASON_NAME_UNKNOWN
@@ -234,11 +234,13 @@ class BlockState:
         給了 `action` 就只找本區塊被做過那個動作的(動作回指)。「このカード」不進 recent
         (その 不會指它),但動作回指可以:「このカードを特殊召喚する。〜この効果で特殊召喚した
         モンスターに装備」;它的大類看卡片屬性表。`restated` 是回指字面裡重述的修飾語原子
-        (「その相手モンスター」的相手):與它衝突的物件跳過。"""
+        (「その相手モンスター」的相手):與它衝突的物件跳過;剩下的先取自己寫明了重述的屬性值的
+        (`anaphora.states`),沒有才取最近的。"""
         want = HEAD_CATEGORY[head]
         candidates = list(reversed(self.recent if among is None else among))
         if action is not None and among is None:
             candidates.append(self.self_id)
+        fitting = []
         for obj_id in candidates:
             if action is not None and action not in self.acted.get(obj_id, ()):
                 continue
@@ -249,8 +251,10 @@ class BlockState:
             category = (self._self_category() if obj["source"]["kind"] == "自己"
                         else category_of(obj["condition"]))
             if want == "卡" or category == want:
-                return obj_id
-        return None
+                if not restated or states(obj, restated):
+                    return obj_id
+                fitting.append(obj_id)
+        return fitting[0] if fitting else None
 
     def _self_category(self):
         rows = self.card["attributes"]["category"]

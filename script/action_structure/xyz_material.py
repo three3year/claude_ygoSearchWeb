@@ -6,6 +6,8 @@
   (`{"kind": 超量素材, "of": Y, "of_ref": 回指字面}`),不是區域——
   到 `{"zones": [], "source": 明寫, "text": 這一格的字面(「そのモンスターの下に」「このカードの」「下に」「その」),
   "object": 超量素材物件 id}`。不移動到區域,不進推得表。
+- Y 不會是被疊的 X 自己:Y 的回指只找得到 X 時(「選択した墓地のモンスターを、選択したエクシーズモンスターの下に」
+  而先前的エクシーズモンスター修飾語認不得),段標指回的物件找不到。
 - 沒寫 Y(「このカードを下に重ねてX素材とする」)或只寫「その」(「このカードをそのX素材とする」):Y 是同一句
   前面剛特殊召喚出來的那一隻(`BlockState.last_summoned`),沒有就標指回的物件找不到;模板要前一段就是
   召喚它的段才寫得回。
@@ -94,6 +96,11 @@ def fill_owner(seg, state, literal, under, predicate_offset, sentence_start):
         to["object"] = material["id"]
         return to
     return attached
+
+
+def owner_of(state, to):
+    """成為超量素材的到 → 所屬卡(Y)的物件 id。"""
+    return state.find(to["object"])["of"]
 
 
 def is_attached(line):

@@ -486,5 +486,93 @@ class GoldenCardsTest(MaterialFixture):
         self.assertEqual(self.hit_texts(DOYON, actions=["送墓"]), [])
 
 
+SACRED_TEMPEST = 4820694   # セイクリッド・テンペスト(その墓地のモンスターを、そのXモンスターの下に重ねてX素材とする)
+SACRED_TEMPEST_TEXT = (
+    "「セイクリッド・テンペスト」の①の効果はデュエル中に１度しか使用できない。①：自分エンドフェイズに"
+    "自分フィールドのX素材を持った「セイクリッド」Xモンスター２体を対象として発動できる。"
+    "そのXモンスター２体のX素材を全て取り除き、相手LPを半分にする。②：自分スタンバイフェイズに"
+    "自分フィールドの「セイクリッド」Xモンスター１体と自分の墓地の「セイクリッド」モンスター１体を"
+    "対象として発動できる。その墓地のモンスターを、そのXモンスターの下に重ねてX素材とする。")
+SACRED_TEMPEST_ATTACH = "その墓地のモンスターを、そのXモンスターの下に重ねてX素材とする"
+SACRED_ARCHETYPES = [{"setcode": 0x53, "hex": "0x53", "names_ja": ["セイクリッド"],
+                      "name_zh": "星聖", "source": "strings.conf"}]
+SACRED_MONSTER, SACRED_XYZ, PLAIN_MONSTER = 10005001, 10005002, 10005003   # 合成卡(代入用)
+BARIAN = 30761649   # 冀望郷－バリアン－(その相手モンスターをそのXモンスターの下に重ねてX素材とする)
+BARIAN_TEXT = (
+    "このカード名はルール上「バリアンズ」カードとしても扱う。①：自分フィールドの、「CX」モンスター、"
+    "「CNo.」モンスター、「No.101」～「No.107」の「No.」モンスターは相手の効果の対象にならず、"
+    "相手の効果では破壊されない。②：１ターンに１度、自分が「RUM」魔法カードの効果でXモンスターの"
+    "特殊召喚に成功した場合、そのXモンスター１体と相手フィールドのモンスター１体を対象として発動できる。"
+    "その相手モンスターをそのXモンスターの下に重ねてX素材とする。")
+BARIAN_ATTACH = "その相手モンスターをそのXモンスターの下に重ねてX素材とする"
+TWIN_HEAD_EAGLE = 19310321   # 紋章獣ツインヘッド・イーグル(所屬卡的回指指不回)
+TWIN_HEAD_EAGLE_TEXT = (
+    "墓地のこのカードをゲームから除外し、自分フィールド上のエクシーズ素材の無いエクシーズモンスター１体と、"
+    "自分の墓地の「紋章獣」と名のついたモンスター２体を選択して発動できる。"
+    "選択した墓地のモンスターを、選択したエクシーズモンスターの下に重ねてエクシーズ素材とする。"
+    "「紋章獣ツインヘッド・イーグル」の効果は１ターンに１度しか使用できない。")
+TWIN_HEAD_EAGLE_ATTACH = "選択した墓地のモンスターを、選択したエクシーズモンスターの下に重ねてエクシーズ素材とする"
+HERALDIC_ARCHETYPES = [{"setcode": 0x76, "hex": "0x76", "names_ja": ["紋章獣"],
+                        "name_zh": "紋章獸", "source": "strings.conf"}]
+
+
+def attach_fixture(cid, name, text, archetypes=()):
+    cards = [card(cid, name_ja=name, type=SPELL),
+             card(SACRED_MONSTER, name_ja="聖", setcode=0x53),
+             card(SACRED_XYZ, name_ja="聖X", type=XYZ_MONSTER, setcode=0x53),
+             card(PLAIN_MONSTER, name_ja="凡")]
+    structures, _ = build_structures(cards, [faq(cid, name, text)], list(archetypes))
+    return cards, structures, next(s for s in structures if s["id"] == cid)
+
+
+def attach_hits(cards, structures, own, **query):
+    result = run_query(structures, cards, {"actions": ["成為超量素材"], **query})
+    ids = next((h["segments"] for h in result["hits"] if h["id"] == own["id"]), [])
+    return [s["text"] for b in own["blocks"] for s in b["segments"] if s["id"] in ids]
+
+
+def failed_texts(own):
+    texts = {s["id"]: s["text"] for b in own["blocks"] for s in b["segments"]}
+    return [texts.get(f["segment"]) for f in check_card(own)]
+
+
+class StackUnderTheRestatedXyzMonsterTest(unittest.TestCase):
+    """「XをそのXモンスターの下に重ねてX素材とする」:所屬卡是「そのXモンスター」指回的那一隻
+    (先前寫明是Xモンスター的物件),不是被疊的 X 自己。"""
+
+    def test_sacred_tempest_stacks_the_graveyard_monster_under_the_xyz_monster(self):
+        """セイクリッド・テンペスト ②:被疊的是墓地的「セイクリッド」怪獸(代入它命中,別的怪獸不命中);
+        所屬卡指回場上的「セイクリッド」Xモンスター,那一段寫回原文相符。"""
+        cards, structures, own = attach_fixture(SACRED_TEMPEST, "セイクリッド・テンペスト",
+                                                SACRED_TEMPEST_TEXT, SACRED_ARCHETYPES)
+        self.assertEqual(attach_hits(cards, structures, own, card=SACRED_MONSTER,
+                                     from_zones=["墓地"]), [SACRED_TEMPEST_ATTACH])
+        self.assertEqual(attach_hits(cards, structures, own, card=PLAIN_MONSTER), [])
+        self.assertNotIn(SACRED_TEMPEST_ATTACH, failed_texts(own))
+
+    def test_barian_stacks_the_opponent_monster_under_the_summoned_xyz_monster(self):
+        """冀望郷－バリアン－ ②「その相手モンスターをそのXモンスターの下に重ねてX素材とする」:所屬卡指回
+        條件裡被特殊召喚的Xモンスター;那一段寫回原文相符,被疊的是對手場上的怪獸。"""
+        cards, structures, own = attach_fixture(BARIAN, "冀望郷－バリアン－", BARIAN_TEXT)
+        self.assertEqual(attach_hits(cards, structures, own, card=PLAIN_MONSTER,
+                                     from_zones=[{"zone": "場上", "side": "對手"}]),
+                         [BARIAN_ATTACH])
+        self.assertNotIn(BARIAN_ATTACH, failed_texts(own))
+
+    def test_owner_reference_that_only_finds_the_stacked_card_is_unresolved(self):
+        """紋章獣ツインヘッド・イーグル「選択した墓地のモンスターを、選択したエクシーズモンスターの下に
+        重ねてエクシーズ素材とする」:先前的「エクシーズ素材の無いエクシーズモンスター」修飾語認不得,
+        「選択したエクシーズモンスター」指不回它——不當成指向被疊的墓地怪獸自己:查「成為超量素材」
+        不命中,列進未解析組。"""
+        cards, structures, own = attach_fixture(TWIN_HEAD_EAGLE, "紋章獣ツインヘッド・イーグル",
+                                                TWIN_HEAD_EAGLE_TEXT, HERALDIC_ARCHETYPES)
+        result = run_query(structures, cards, {"actions": ["成為超量素材"]})
+        self.assertNotIn(TWIN_HEAD_EAGLE, [hit["id"] for hit in result["hits"]])
+        self.assertEqual(
+            [(u["id"], [s["text"] for s in u["segments"]]) for u in result["unparsed"]
+             if u["segments"]],
+            [(TWIN_HEAD_EAGLE, [TWIN_HEAD_EAGLE_ATTACH])])
+
+
 if __name__ == "__main__":
     unittest.main()

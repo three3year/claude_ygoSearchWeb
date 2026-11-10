@@ -8,8 +8,10 @@
 - 帶修飾語的回指:「その相手モンスター」「その融合モンスター」「対象の墓地のモンスター」。修飾語只是重述
   (站主裁定),留在回指字面裡、不建新物件、不加條件。重述的修飾語限卡片自身的性質與狀態
   (`RESTATING_OPS`:控制方、位置、表示形式、不帶引用的屬性比較);「その同名カード」「その内のモンスター」
-  不是重述,不在這裡。指回哪一個:最近的同大類物件裡,與重述不衝突的那個(`contradicts`:方、位置、
-  同一個屬性的值);一個都沒有就是指回的物件找不到。
+  不是重述,不在這裡。指回哪一個:同大類、與重述不衝突的物件裡(`contradicts`:方、位置、
+  同一個屬性的值),先取最近一個自己寫明了重述的屬性值的(`states`:「その墓地のモンスターを、そのXモンスターの
+  下に」的「そのXモンスター」是先前寫成Xモンスター的那一隻,不是剛提到、沒寫子類型的墓地怪獸),沒有才取最近的
+  那個;一個都沒有就是指回的物件找不到。
 """
 import re
 from typing import NamedTuple
@@ -109,6 +111,15 @@ def contradicts(obj, atoms, zones):
                         and have.get("attr") == atom["attr"] and have.get("value") != atom["value"]):
                     return True
     return False
+
+
+def states(obj, atoms):
+    """物件自己寫明了重述的每一個屬性值(「そのXモンスター」指的物件先前就寫成Xモンスター)。
+    重述裡沒有屬性的(只有方、位置、表示形式)一律算寫明。"""
+    stated = [(have.get("attr"), have.get("value")) for have in _top_atoms(obj["condition"])
+              if have.get("op") == "屬性比較" and have.get("cmp") == "=" and "ref" not in have]
+    return all((atom["attr"], atom["value"]) in stated for atom in atoms
+               if atom.get("op") == "屬性比較" and atom.get("cmp") == "=")
 
 
 def self_state_atoms(state, phrase):

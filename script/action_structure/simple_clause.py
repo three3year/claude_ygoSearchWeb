@@ -505,6 +505,10 @@ def fill_clause(ctx, clause_text):
             if obj_id is None:
                 seg["unparsed"] = unparsed(reason)
                 return
+        if attached is not None and xyz_material.owner_of(state, attached()) == obj_id:
+            # 所屬卡的回指只找得到被疊的這張卡自己(它真正指的物件修飾語認不得):指回的物件找不到。
+            seg["unparsed"] = unparsed(REASON_REF)
+            return
         obj = state.find(obj_id)
         if count is not None and count.get("cmp") == "全部" and obj["source"]["kind"] == "子集":
             obj["source"]["select"] = "全部"

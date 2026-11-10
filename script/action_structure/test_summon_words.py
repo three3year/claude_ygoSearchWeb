@@ -7,7 +7,7 @@ import unittest
 from action_query import run_query
 from card_structure import build_structures
 from reverse_check import check_card
-from test_golden import card, faq
+from test_golden import SPELL, card, faq
 
 GAGAGA_SISTER = 387282   # ガガガシスター(召喚に成功した時)
 GAGAGA_SISTER_TEXT = (
@@ -78,6 +78,27 @@ SHADOW_VAMPIRE_TEXT = (
     "「ヴァンパイア」モンスター１体を特殊召喚する。この効果で特殊召喚に成功したターン、"
     "そのモンスター以外の自分のモンスターは攻撃できない。")
 VAMPIRE_FRAULEIN = 6039967   # ヴァンパイア・フロイライン(闇屬性的「ヴァンパイア」怪獸,代入用)
+MAGICAL_GEARS = 313513   # 魔法の歯車(解析不出的段裡有「召喚条件」「特殊召喚」「通常召喚」,沒有單獨的召喚)
+MAGICAL_GEARS_TEXT = (
+    "①：自分フィールドの表側表示の「アンティーク・ギア」カード３枚を墓地へ送って発動できる。"
+    "手札及びデッキからそれぞれ１体まで、「古代の機械巨人」を召喚条件を無視して特殊召喚する。"
+    "その後、自分フィールドに「古代の機械巨人」以外のモンスターが存在する場合、そのモンスターを全て破壊する。"
+    "この効果の発動後、自分のターンで数えて２ターンの間、自分は通常召喚できない。")
+LAVAL_LANCELORD = 123709   # ラヴァル・ランスロッド(這輪沒收的「リリースなしで召喚できる」)
+LAVAL_LANCELORD_TEXT = (
+    "このカードはリリースなしで召喚できる。この方法で召喚したこのカードは、エンドフェイズ時に墓地へ送られる。"
+    "フィールド上のこのカードが破壊され墓地へ送られた時、ゲームから除外されている自分の炎属性モンスター"
+    "１体を選択して手札に加える事ができる。")
+CYBER_PRIMA = 2158562   # サイバー・プリマ(字母寫法:A召喚した場合)
+CYBER_PRIMA_TEXT = "①：このカードがA召喚した場合に発動する。フィールドの表側表示の魔法カードを全て破壊する。"
+PRIMA_LIGHT = 2507443   # プリマの光(手札の戦士族モンスター１体の召喚を行う)
+PRIMA_LIGHT_TEXT = (
+    "このカード名の①②の効果は１ターンに１度、いずれか１つしか使用できない。\n"
+    "①：以下の効果から１つを選択して発動できる。\n"
+    "●自分フィールドの戦士族・地属性モンスター１体をリリースし、手札・デッキから戦士族・光属性モンスター"
+    "１体を特殊召喚する。\n●自分・相手のメインフェイズに発動できる。手札の戦士族モンスター１体の召喚を行う。\n"
+    "②：自分メインフェイズに墓地のこのカードを除外して発動できる。デッキから戦士族・天使族の「サイバー」"
+    "モンスター１体を手札に加える。")
 REPTILE = 0x80000
 ARCHETYPES = [
     {"setcode": 0x54, "hex": "0x54", "names_ja": ["ガガガ"], "name_zh": "我我我",
@@ -85,6 +106,8 @@ ARCHETYPES = [
     {"setcode": 0xd0, "hex": "0xd0", "names_ja": ["マジェスペクター"], "name_zh": "威風妖怪",
      "source": "strings.conf"},
     {"setcode": 0x1002, "hex": "0x1002", "names_ja": ["レアル・ジェネクス"], "name_zh": "真次世代",
+     "source": "strings.conf"},
+    {"setcode": 0x93, "hex": "0x93", "names_ja": ["サイバー"], "name_zh": "電子",
      "source": "strings.conf"},
     {"setcode": 0xc, "hex": "0xc", "names_ja": ["エーリアン"], "name_zh": "外星人",
      "source": "strings.conf"},
@@ -119,6 +142,12 @@ class SummonFixture(unittest.TestCase):
             card(YOKO, name_ja="麗の魔妖－妖狐", type=0x2021, level=9, race=0x10, attribute=0x4,
                  atk=2900, setcode=0x121),
             card(1001, name_ja="爬虫類", level=4, race=REPTILE, attribute=0x1),
+            card(CYBER_PRIMA, name_ja="サイバー・プリマ", level=6, race=0x1, attribute=0x10,
+                 atk=2300, setcode=0x93),
+            card(PRIMA_LIGHT, name_ja="プリマの光", type=0x10002),
+            card(MAGICAL_GEARS, name_ja="魔法の歯車", type=SPELL),
+            card(LAVAL_LANCELORD, name_ja="ラヴァル・ランスロッド", level=6, race=0x1,
+                 attribute=0x4, atk=2100, setcode=0x39),
             card(ALIEN_DOG, name_ja="エーリアン・ドッグ", level=3, race=REPTILE, attribute=0x10,
                  atk=1500, setcode=0xc),
             card(RETIARI, name_ja="剣闘獣レティアリィ", level=3, race=0x40, attribute=0x2,
@@ -141,6 +170,10 @@ class SummonFixture(unittest.TestCase):
             faq(ZEROORL, "宇宙鋏ゼロオル", ZEROORL_TEXT),
             faq(REAL_GENEX_MAGNA, "レアル・ジェネクス・マグナ", REAL_GENEX_MAGNA_TEXT),
             faq(YOKO, "麗の魔妖－妖狐", YOKO_TEXT),
+            faq(CYBER_PRIMA, "サイバー・プリマ", CYBER_PRIMA_TEXT),
+            faq(PRIMA_LIGHT, "プリマの光", PRIMA_LIGHT_TEXT),
+            faq(MAGICAL_GEARS, "魔法の歯車", MAGICAL_GEARS_TEXT),
+            faq(LAVAL_LANCELORD, "ラヴァル・ランスロッド", LAVAL_LANCELORD_TEXT),
             faq(ALIEN_DOG, "エーリアン・ドッグ", ALIEN_DOG_TEXT),
             faq(RETIARI, "剣闘獣レティアリィ", RETIARI_TEXT),
             faq(GILASAURUS, "俊足のギラザウルス", GILASAURUS_TEXT),
@@ -211,6 +244,32 @@ class BareSummonTest(SummonFixture):
         self.assertIn(REAL_GENEX_MAGNA, self.hits(actions=["召喚"], include_condition=True))
 
 
+class UnparsedGroupLiteralTest(SummonFixture):
+    """未解析組比字面:「召喚」落在別種召喚與「召喚条件」裡不算(spec「查詢判斷」)。"""
+
+    ALL = {"polarities": ["做", "不能", "不會", "可以", "只能", "必須"]}
+
+    def test_other_summons_and_summon_condition_are_not_the_bare_summon(self):
+        """魔法の歯車:解析不出的段寫的是「召喚条件を無視して特殊召喚する」「通常召喚できない」。
+        查「召喚」不列它;查「特殊召喚」「通常召喚」照舊列進未解析組。"""
+        self.assertNotIn(MAGICAL_GEARS, self.run_query(actions=["召喚"], **self.ALL)["groups"]["未解析"])
+        self.assertNotIn(MAGICAL_GEARS, self.hits(actions=["召喚"], **self.ALL))
+        for action in ("特殊召喚", "通常召喚"):
+            self.assertIn(MAGICAL_GEARS,
+                          self.run_query(actions=[action], **self.ALL)["groups"]["未解析"], action)
+
+    def test_unparsed_bare_summon_is_not_silently_dropped(self):
+        """ラヴァル・ランスロッド「このカードはリリースなしで召喚できる」這輪沒收:查「召喚」「通常召喚」時
+        不是命中就是列在未解析組,不會兩邊都沒有;查「特殊召喚」「上級召喚」不列。"""
+        for action in ("召喚", "通常召喚"):
+            result = self.run_query(actions=[action])
+            listed = result["groups"]["未解析"] + [hit["id"] for hit in result["hits"]]
+            self.assertIn(LAVAL_LANCELORD, listed, action)
+        for action in ("特殊召喚", "上級召喚", "反轉召喚"):
+            result = self.run_query(actions=[action])
+            self.assertNotIn(LAVAL_LANCELORD, result["groups"]["未解析"], action)
+
+
 class SummonKindsTest(SummonFixture):
     """各種召喚的寫法與上下位詞(spec 使用者故事 4–8)。"""
 
@@ -238,16 +297,34 @@ class SummonKindsTest(SummonFixture):
 
     def test_tribute_summon_is_under_summon(self):
         """氷帝メビウス「アドバンス召喚に成功した時」與舊式 マキシマム・シックス「生け贄召喚に成功した時」:
-        查「上級召喚」「召喚」「通常召喚」都命中;查「上級召喚」不命中只寫「召喚」的 ガガガシスター、
-        也不命中「召喚・特殊召喚」的 マジェスペクター・フロッグ。"""
+        查「上級召喚」「召喚」「通常召喚」都命中;查「上級召喚」只命中寫アドバンス召喚、生け贄召喚(與字母寫法
+        A召喚)的卡,不命中只寫「召喚」的 ガガガシスター、「召喚・特殊召喚」的 マジェスペクター・フロッグ。"""
         for action in ("上級召喚", "召喚", "通常召喚"):
             hits = self.hits(actions=[action], include_condition=True)
             self.assertIn(MOBIUS, hits, action)
             self.assertIn(MAXIMUM_SIX, hits, action)
         tribute = self.run_query(actions=["上級召喚"], include_condition=True)
         self.assertEqual(sorted(hit["id"] for hit in tribute["hits"]),
-                         sorted([MOBIUS, MAXIMUM_SIX]))
+                         sorted([MOBIUS, MAXIMUM_SIX, CYBER_PRIMA]))
         self.assertNotIn(MOBIUS, self.hits(actions=["特殊召喚"], include_condition=True))
+
+    def test_letter_a_summon_is_the_tribute_summon(self):
+        """サイバー・プリマ「このカードがA召喚した場合」:A召喚是アドバンス召喚的字母寫法,
+        查「上級召喚」「召喚」命中,查「特殊召喚」不命中。"""
+        for action in ("上級召喚", "召喚"):
+            self.assertIn(CYBER_PRIMA, self.hits(actions=[action], include_condition=True,
+                                                 card=CYBER_PRIMA))
+        self.assertNotIn(CYBER_PRIMA, self.hits(actions=["特殊召喚"], include_condition=True))
+
+    def test_perform_a_summon_names_the_summoned_monster(self):
+        """プリマの光「手札の戦士族モンスター１体の召喚を行う」:查「召喚,從手牌」戰士族代入命中,
+        魔法使族不命中;那一段不是特殊召喚。"""
+        query = {"actions": ["召喚"], "from_zones": ["手牌"]}
+        segments = self.hit_segments(PRIMA_LIGHT, card=MAXIMUM_SIX, **query)
+        self.assertIsNotNone(segments)
+        self.assertIsNone(self.hit_segments(PRIMA_LIGHT, card=GAGAGA_SISTER, **query))
+        special = self.hit_segments(PRIMA_LIGHT, actions=["特殊召喚"]) or []
+        self.assertFalse(set(segments) & set(special))
 
     def test_pendulum_summon_is_under_special_summon(self):
         """魔装聖龍 イーサルウェポン「P召喚に成功した時」:查「特殊召喚」「P召喚」命中,查「召喚」不命中。"""
@@ -314,7 +391,7 @@ class SummonReverseCheckTest(SummonFixture):
         return [(f["segment"], f["reason"], f["detail"]) for f in check_card(self.structure(cid))]
 
     def test_whole_cards_pass_reverse_check(self):
-        for cid in (MOBIUS, ETHEREAL_HOLY, GILASAURUS):
+        for cid in (MOBIUS, ETHEREAL_HOLY, GILASAURUS, CYBER_PRIMA, PRIMA_LIGHT):
             self.assertEqual(check_card(self.structure(cid)), [], cid)
 
     def test_summon_condition_segments_render_back(self):

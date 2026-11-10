@@ -58,7 +58,7 @@ import re
 
 from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
-from effect_reference import card_references, iter_references, selected_blocks
+from effect_reference import card_references, is_reference, iter_references, selected_blocks
 from condition_atoms import EQUIPPED, SAME_CARD, TARGETING_THIS, referenced_objects
 from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
 from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
@@ -585,6 +585,22 @@ def incomplete_reason(seg, objects):
     return None
 
 
+def _unparsed_references(block, literals):
+    """解析不出的引用節點沒有段,原文照未解析組規則比字面(spec「未解析組規則不變」);
+    沒有段 id,`segment` 記 None。"""
+    out = []
+    for node in iter_nodes(block["tree"]["items"]):
+        if node.get("node") == "內嵌效果" and node.get("block"):
+            out.extend(_unparsed_references(node["block"], literals))
+        if not is_reference(node) or not node.get("unparsed"):
+            continue
+        start, end = node["span"]   # 相對於節點所在區塊的原文
+        text = block["text"][start:end]
+        if literal_has_actions(text, literals):
+            out.append({"segment": None, "reason": node["unparsed"]["reason"], "text": text})
+    return out
+
+
 def segment_in_scope(seg, q):
     """段類別、極性、代替的篩選;命中與未解析組共用,被篩掉的段兩邊都不列。
     做代替的段(「代わりに〜」,帶代替誰)不是卡片自己做的動作,與被代替段一樣只在查詢含代替時看。"""
@@ -684,6 +700,8 @@ def run_query(structures, cards, query):
                 if reason and literal_has_actions(seg["text"], literals):
                     incomplete.append({"segment": seg["id"], "reason": reason,
                                        "text": seg["text"]})
+            if not skipped:
+                incomplete.extend(_unparsed_references(block, literals))
         if matched:
             hit = {"id": card["id"], "segments": matched,
                    "group": "泛用" if generic else "特定"}

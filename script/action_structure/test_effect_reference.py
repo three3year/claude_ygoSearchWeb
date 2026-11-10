@@ -249,6 +249,17 @@ class ShasmatisTest(unittest.TestCase):
                                {"actions": actions, "generic_reference": True})
             self.assertNotIn(SHASMATIS, result["groups"]["經引用"], actions)
 
+    def test_unparsed_reference_sentence_follows_unparsed_group_rule(self):
+        """解析不出的引用句照未解析組規則比字面:原文含「捨て」,查捨棄時列進未解析組,原因引用其他效果;
+        查原文沒有的動作詞(破壞)不列。"""
+        result = run_query(self.structures, self.cards, {"actions": ["捨棄"]})
+        listed = [(seg["reason"], seg["text"]) for entry in result["unparsed"]
+                  if entry["id"] == SHASMATIS for seg in entry["segments"]]
+        self.assertEqual(listed, [("引用其他效果", "この効果は、デッキから墓地へ送ったそのモンスターの、"
+                                   "自身を手札から捨てて発動する効果と同じになる")])
+        result = run_query(self.structures, self.cards, {"actions": ["破壞"]})
+        self.assertNotIn(SHASMATIS, result["groups"]["未解析"])
+
     def test_coverage_report_lists_card(self):
         coverage = build_coverage(self.structures)
         self.assertEqual(coverage["references"]["unparsed"], [SHASMATIS])

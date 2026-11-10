@@ -258,6 +258,33 @@ class PremiseThenClauseWithoutPauseTest(unittest.TestCase):
         self.assertEqual(check_card(own(structures)), [])
 
 
+class PremiseThenAlsoTest(unittest.TestCase):
+    """「〜存在する場合、さらに〜できる」:前提後面是接著詞「さらに」。接著詞照舊留在段外,
+    前提自成一個只有前提的條件段,後面的子句照一般效果句解析、照常命中。"""
+
+    TEXT = ("①：デッキから「竜の渓谷」１枚を手札に加える。"
+            "自分の墓地に魔法カードが３枚以上存在する場合、さらにこのカードを破壊できる。")
+
+    def test_writes_back(self):
+        _, structures = library(self.TEXT)
+        self.assertEqual(check_card(own(structures)), [])
+
+    def test_clause_after_also_hits(self):
+        cards, structures = library(self.TEXT)
+        self.assertIn(SELF, hits(cards, structures, actions=["破壞"], card=SELF))
+        result = run_query(structures, cards, {"actions": ["破壞"]})
+        self.assertNotIn(SELF, result["groups"]["未解析"])
+
+    def test_plain_existence_premise_then_also(self):
+        """原本就認得的前提(沒有數量)後面接「さらに」也一樣。"""
+        cards, structures = library(
+            "①：デッキから「竜の渓谷」１枚を手札に加える。"
+            "自分フィールドに「ペンギン」モンスターが存在する場合、さらにそのモンスターを破壊できる。")
+        self.assertEqual(check_card(own(structures)), [])
+        self.assertIn(SELF, hits(cards, structures, actions=["破壞"], card=PENGUIN_SOLDIER))
+        self.assertNotIn(SELF, hits(cards, structures, actions=["破壞"], card=BLACK_MAGICIAN))
+
+
 class DefaultFieldPremiseTest(unittest.TestCase):
     """沒寫區域的「Xが表側表示で存在する場合」預設場上。"""
 

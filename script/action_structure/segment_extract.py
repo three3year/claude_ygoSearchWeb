@@ -410,12 +410,21 @@ def parse_sentence(state, start, end, activation_lead=False):
         if lead is not None:
             seg["duration"] = lead
         return _after_turn_segments(turn_seg, points, [(seg, None)])
+    carrier = None
+    also = _ALSO_RE.match(body)
+    if (premise and also and body[also.end():] and not (act or summon_block or is_lasting(premise))
+            and points is None and turn_seg is None and lead is None):
+        # 效果句的前提後面是接著詞「さらに」(「〜存在する場合、さらに〜できる」,m3 票 12):接著詞照舊留在
+        # 段外,前提自成一個只有前提的條件段(同整句只有前提的發動句),後面的子句照一般效果句解析。
+        carrier = segment_at(state, "條件", seg_from, premise_end)
+        carrier["premise"], premise = premise, None
+        seg_from = clause_start
     segs = []
     trigger_re = _TRIGGER_RE if act else (_SUMMON_TRIGGER_RE if summon_block
                                          else _OLD_TRIGGER_RE)
     rest, rest_start, seg_start = body, clause_start, seg_from
     timing = _battle_timing(state, body, clause_start, seg_from, segs) if act else None
-    trig = None if timing else trigger_re.match(body)
+    trig = None if timing or carrier else trigger_re.match(body)
     replaced = trig is not None and trig.group("rest").startswith(REPLACEMENT_PREFIX)
     if trig:
         rest, rest_start = _condition_and_rest(state, seg_from, clause_start, body,
@@ -458,6 +467,8 @@ def parse_sentence(state, start, end, activation_lead=False):
     if is_lasting(premise):
         _apply_duration(segs, lasting())
     segs = _after_turn_segments(turn_seg, points, segs)
+    if carrier is not None:
+        segs = [(carrier, None)] + segs
     if summon_block:
         # 召喚條件區塊的段類別(spec):做的是召喚手續(含「〜した場合」的手續子句),
         # 不能/只能/必須的是限制。

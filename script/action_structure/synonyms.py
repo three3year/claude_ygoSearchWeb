@@ -9,6 +9,9 @@
 - 抗性與限制用既有動作詞加極性:受到效果影響、攻擊家族(攻擊 > 直接攻擊、多次攻擊、
   全體攻擊;次數與「全てに１回ずつ」寫在述語「攻撃」前,`attack_times`)、選為攻擊對象、取對象
   (只有非「做」的語尾)、作為素材、變更表示形式、變更控制權;「無効化」= 無效。
+- 召喚(m3 票 08):單獨的「召喚」是動作詞 召喚,上位詞 通常召喚(通常召喚還含覆蓋);上級召喚
+  (アドバンス召喚、生け贄召喚、A召喚)的上位詞是 召喚;反轉召喚獨立;P召喚的上位詞是 特殊召喚。
+  「召喚・特殊召喚に成功した」這種列舉是一段多個動作詞(`parse_predicates`)。
 各舊式用語在官方 DB 文本上的出現次數見 `.scratch/action-structure/report/old_style_phrases.md`
 (`stats/old_style_phrases.py` 可重跑)。
 """
@@ -158,6 +161,7 @@ SUMMON_ROOTS = ("特殊召喚", "通常召喚", "反轉召喚")
 
 
 def is_summon(action):
+    """動作詞是不是召喚系(根或它們的下位詞):融合召喚、召喚、上級召喚、反轉召喚…。"""
     return any(a in SUMMON_ROOTS for a in action_ancestors(action))
 
 

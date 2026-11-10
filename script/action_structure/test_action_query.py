@@ -97,5 +97,33 @@ class UnparsedGroupTest(unittest.TestCase):
         self.assertNotIn(SINGULARITY_FIEND, result["groups"]["未解析"])
 
 
+WEAK_SELF_SUMMONER = 44444444    # 攻擊力 500
+STRONG_SELF_SUMMONER = 55555555  # 攻擊力 3000
+SELF_SUMMON_TEXT = "①：このカードを特殊召喚する。"
+ATK_AT_MOST_1500 = {"op": "屬性比較", "attr": "攻擊力", "cmp": "≤", "value": 1500}
+
+
+class ConditionOnlyThisCardTest(unittest.TestCase):
+    """只給條件的查詢,物件是此卡的線:只有這張卡自己代得進去,每張卡各自判。"""
+
+    def hits(self, cards):
+        entries = [faq(c["id"], c["name_ja"], SELF_SUMMON_TEXT) for c in cards]
+        structures, _ = build_structures(cards, entries)
+        return run_query(structures, cards, dict(
+            actions=["特殊召喚"], condition=ATK_AT_MOST_1500))["groups"]["全部"]
+
+    def test_only_the_card_that_fits_the_condition_hits(self):
+        """兩張卡文相同、都特殊召喚自己:攻擊力 500 的命中,3000 的不命中。"""
+        weak = card(WEAK_SELF_SUMMONER, name_ja="弱者", atk=500)
+        strong = card(STRONG_SELF_SUMMONER, name_ja="強者", atk=3000)
+        self.assertEqual(self.hits([weak, strong]), [WEAK_SELF_SUMMONER])
+
+    def test_result_does_not_depend_on_card_order(self):
+        """不符條件的那張排在前面,符合的那張照樣命中。"""
+        weak = card(WEAK_SELF_SUMMONER, name_ja="弱者", atk=500)
+        strong = card(STRONG_SELF_SUMMONER, name_ja="強者", atk=3000)
+        self.assertEqual(self.hits([strong, weak]), [WEAK_SELF_SUMMONER])
+
+
 if __name__ == "__main__":
     unittest.main()

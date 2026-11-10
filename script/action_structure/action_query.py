@@ -612,6 +612,13 @@ class _Judge:
         if q["condition"] is not None:
             if obj["unparsed"]:
                 return False
+            if is_this_card(obj, self.objects_of(owner)):
+                # 此卡只有這張卡自己代得進去:看它自己滿不滿足查詢條件。不走下面的快取——
+                # 此卡的條件式與來源每張卡都一樣,鍵分不出是哪張卡。
+                entry = self.by_id.get(owner["id"])
+                return (entry is not None
+                        and eval_condition(q["condition"], self.view(entry)) is True
+                        and self.card_fits(entry, obj, owner, names, from_zones))
             # 快取鍵只看條件式本身(名稱換成字面)與來源:幾千張卡的「モンスター１体」只對
             # 總表掃一次;「從」只在條件式有看位置的原子(卡名、字段)時才進鍵;
             # 引用的物件 id 是這張卡的,有引用時卡號也進鍵。

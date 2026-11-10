@@ -7,7 +7,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] 全庫重建,既有里程碑一全部測試(含標準卡斷言)全綠
 - [x] 反向檢查全庫結果與重建前相同(通過/不通過段數與原因逐段相同;`form` 搬家後模板照新槽寫回)

@@ -7,15 +7,15 @@ import unittest
 from card_structure import build_structures
 from test_golden import SPELL, card, faq
 from test_modifier_closed_sets import (DARK_BURST, DARK_BURST_TEXT, KURIBOH, LUSTER_DRAGON,
-                                       _STAT_CARDS)
-from test_object_boundary import BLACK_MAGICIAN, NORMAL_MONSTER, POT_OF_GREED, _Golden
+                                       STAT_CARDS)
+from test_object_boundary import BLACK_MAGICIAN, NORMAL_MONSTER, POT_OF_GREED, GoldenCase
 
 BLACK_MAGICIAN_CARD = card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", type=NORMAL_MONSTER,
                            level=7, race=0x2, attribute=0x20, atk=2500)
 POT_OF_GREED_CARD = card(POT_OF_GREED, name_ja="強欲な壺", type=SPELL)
 
 
-class _WithArchetypes(_Golden):
+class ArchetypeGoldenCase(GoldenCase):
     """卡文裡有「」字段名的卡:建結構時要帶字段表。"""
     archetypes = []
 
@@ -33,7 +33,7 @@ JUDGMENT_THUNDER_TEXT = (
     "●フィールドの他のカード１枚を除外する。")
 
 
-class JudgmentThunderTest(_Golden):
+class JudgmentThunderTest(GoldenCase):
     """聖魔 裁きの雷 59080:「フィールドの他のカード１枚を除外する」的「他の」是此卡以外。"""
     cards = [card(JUDGMENT_THUNDER, name_ja="聖魔 裁きの雷", type=SPELL),
              BLACK_MAGICIAN_CARD, POT_OF_GREED_CARD]
@@ -65,7 +65,7 @@ TEN_THOUSAND_DRAGON_TEXT = (
     "①：この方法で特殊召喚したこのカードの攻撃力・守備力は１００００になる。")
 
 
-class TenThousandDragonTest(_Golden):
+class TenThousandDragonTest(GoldenCase):
     """万物創世龍 10000:「この方法で特殊召喚したこのカード」是帶狀態的此卡(母體是此卡的子集)。"""
     cards = [card(TEN_THOUSAND_DRAGON, name_ja="万物創世龍", type=0x2000021, level=10,
                   race=0x2000, attribute=0x20, atk=-2),
@@ -92,7 +92,7 @@ WORM_BEAST = 6285791
 WORM_BEAST_TEXT = "①：自分エンドフェイズに発動する。フィールドの表側表示のこのカードを持ち主の手札に戻す。"
 
 
-class WormBeastTest(_Golden):
+class WormBeastTest(GoldenCase):
     """邪悪なるワーム・ビースト 6285791:「表側表示のこのカード」的狀態是泛用原子,但物件是此卡。"""
     cards = [card(WORM_BEAST, name_ja="邪悪なるワーム・ビースト", level=3, race=0x4000,
                   attribute=0x1, atk=1400),
@@ -121,7 +121,7 @@ CRUSH_WYVERN_TEXT = (
     "手札からユニオンモンスター１体を特殊召喚する。")
 
 
-class CrushWyvernTest(_Golden):
+class CrushWyvernTest(GoldenCase):
     """C－クラッシュ・ワイバーン 3405259:「装備状態のこのカードを特殊召喚する」。"""
     cards = [card(CRUSH_WYVERN, name_ja="C－クラッシュ・ワイバーン", type=0x421, level=4,
                   race=0x20, attribute=0x10, atk=1200),
@@ -147,7 +147,7 @@ EM_ARCHETYPES = [{"setcode": 0x9f, "hex": "0x9f", "names_ja": ["EM"], "name_zh":
                   "source": "strings.conf"}]
 
 
-class SkyPupilTest(_WithArchetypes):
+class SkyPupilTest(ArchetypeGoldenCase):
     """EMスカイ・ピューピル 122520:「その相手モンスターを破壊する」是回指,「相手」只是重述。"""
     cards = [card(SKY_PUPIL, name_ja="EMスカイ・ピューピル", level=3, race=0x2, attribute=0x10,
                   atk=800, setcode=0x9f),
@@ -179,7 +179,7 @@ FIRE_KING_CIRCLE_TEXT = (
 FIELD, GRAVE = {"zone": "場上", "side": "我方"}, "墓地"
 
 
-class FireKingCircleTest(_Golden):
+class FireKingCircleTest(GoldenCase):
     """炎王炎環 59388357:「対象の自分フィールドのモンスター」「対象の墓地のモンスター」各指回被取對象的
     兩隻裡在那個位置的那一隻。"""
     cards = [card(FIRE_KING_CIRCLE, name_ja="炎王炎環", type=0x10002), BLACK_MAGICIAN_CARD]
@@ -211,7 +211,7 @@ KARAKURI_INN_TEXT = (
 OPPONENT_FIELD = {"zone": "場上", "side": "對手"}
 
 
-class KarakuriInnTest(_Golden):
+class KarakuriInnTest(GoldenCase):
     """借カラクリ旅籠蔵 3693034:「その自分のモンスター」指回我方的那隻,不是最近提到的相手フィールドの
     効果モンスター。"""
     cards = [card(KARAKURI_INN, name_ja="借カラクリ旅籠蔵", type=0x4), BLACK_MAGICIAN_CARD]
@@ -226,10 +226,10 @@ class KarakuriInnTest(_Golden):
         self.assertWritesBack(KARAKURI_INN, "その自分のモンスターの表示形式を変更し")
 
 
-class DarkBurstAddToHandTest(_Golden):
+class DarkBurstAddToHandTest(GoldenCase):
     """ダーク・バースト 674561(使用者故事 23):加入手牌那一段的物件「その闇属性モンスター」是回指,
     指回被取對象的「攻撃力１５００以下の闇属性モンスター１体」。"""
-    cards = [card(DARK_BURST, name_ja="ダーク・バースト", type=SPELL)] + _STAT_CARDS
+    cards = [card(DARK_BURST, name_ja="ダーク・バースト", type=SPELL)] + STAT_CARDS
     faq = [faq(DARK_BURST, "ダーク・バースト", DARK_BURST_TEXT)]
     QUERY = dict(actions=["加入手牌"])
 
@@ -256,7 +256,7 @@ CHAOS_SORCERER_TEXT = (
     "（この効果を発動するターン、このカードは攻撃できない）。その表側表示モンスターを除外する。")
 
 
-class ChaosSorcererTest(_Golden):
+class ChaosSorcererTest(GoldenCase):
     """カオス・ソーサラー 9596126:前文帶括號注記的取對象句解析不出,「その表側表示モンスター」沒有
     物件可指——那一段不算命中,列進未解析組(不另建一個物件頂替)。"""
     cards = [card(CHAOS_SORCERER, name_ja="カオス・ソーサラー", type=0x2000021, level=6, race=0x2,
@@ -278,7 +278,7 @@ STEELSWARM_ARCHETYPES = [{"setcode": 0x100a, "hex": "0x100a", "names_ja": ["イ�
                           "name_zh": "侵入魔", "source": "strings.conf"}]
 
 
-class InvasionWaveTest(_WithArchetypes):
+class InvasionWaveTest(ArchetypeGoldenCase):
     """侵略の波動 18816758:連體子句「アドバンス召喚した」是召喚方式(狀態),任何卡都代得進去。"""
     cards = [card(INVASION_WAVE, name_ja="侵略の波動", type=0x4),
              card(STEELSWARM_GIRASTAG, name_ja="インヴェルズ・ギラファ", level=7, race=0x8,
@@ -312,7 +312,7 @@ FUSION_ARCHETYPES = [{"setcode": 0x46, "hex": "0x46", "names_ja": ["融合", "�
                       "name_zh": "融合", "source": "strings.conf"}]
 
 
-class MagnumRelieverTest(_WithArchetypes):
+class MagnumRelieverTest(ArchetypeGoldenCase):
     """マグナム・ザ・リリーバー 43227:「他のカードの効果が発動した時」的他のカード是此卡以外的任何卡。"""
     cards = [card(MAGNUM_RELIEVER, name_ja="マグナム・ザ・リリーバー", type=0x61, level=8, race=0x8,
                   attribute=0x10, atk=2800),
@@ -343,7 +343,7 @@ CHAOS_ARCHETYPES = [{"setcode": 0xcf, "hex": "0xcf", "names_ja": ["カオス"], 
                      "source": "strings.conf"}]
 
 
-class MasterOfChaosTest(_WithArchetypes):
+class MasterOfChaosTest(ArchetypeGoldenCase):
     """超魔導戦士－マスター・オブ・カオス 85059922:「融合召喚したこのカード」是帶狀態(召喚方式)的此卡。"""
     cards = [card(MASTER_OF_CHAOS, name_ja="超魔導戦士－マスター・オブ・カオス", type=0x61, level=8,
                   race=0x2, attribute=0x20, atk=3000),
@@ -371,7 +371,7 @@ KABUKI_DRAGON_TEXT = (
     "その自分のモンスターの表示形式を変更する。")
 
 
-class KabukiDragonTest(_Golden):
+class KabukiDragonTest(GoldenCase):
     """カブキ・ドラゴン 7541475:「Xが Yに 攻撃した」的 Y 是被攻擊的一方,後面的「その相手の/自分のモンスター」
     指回它。"""
     cards = [card(KABUKI_DRAGON, name_ja="カブキ・ドラゴン", level=6, race=0x2000, attribute=0x10,

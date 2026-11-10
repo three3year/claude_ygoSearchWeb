@@ -4,7 +4,7 @@
 接縫只有查詢判斷(`run_query`)與反向檢查(`check_card`);官方文本逐字寫在測試裡。
 """
 from test_golden import SPELL, TRAP, card, faq
-from test_object_boundary import BLACK_MAGICIAN, NORMAL_MONSTER, _Golden
+from test_object_boundary import BLACK_MAGICIAN, NORMAL_MONSTER, GoldenCase
 
 BLACK_MAGICIAN_CARD = card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", type=NORMAL_MONSTER,
                            level=7, race=0x2, attribute=0x20, atk=2500)
@@ -27,7 +27,7 @@ ANCIENT_GEAR_FRAME_TEXT = (
     "召喚条件を無視して特殊召喚する。")
 
 
-class LimitReverseTest(_Golden):
+class LimitReverseTest(GoldenCase):
     """リミット・リバース 27551:「このカードがフィールド上から離れた時」是條件段 離場。"""
     cards = [card(LIMIT_REVERSE, name_ja="リミット・リバース", type=TRAP | 0x20000),
              BLACK_MAGICIAN_CARD]
@@ -56,7 +56,7 @@ class LimitReverseTest(_Golden):
         self.assertWritesBack(LIMIT_REVERSE, "このカードがフィールド上から離れた時")
 
 
-class AncientGearFrameTest(_Golden):
+class AncientGearFrameTest(GoldenCase):
     """古代の機械素体 1278431:「表側表示のこのカードが相手の効果でフィールドから離れた場合」。"""
     cards = [card(ANCIENT_GEAR_FRAME, name_ja="古代の機械素体", level=4, race=0x20,
                   attribute=0x1, atk=1600),
@@ -95,7 +95,7 @@ EXOSISTER_MARTHA_TEXT = (
     "自分フィールドのこのカードの上に重ねてX召喚扱いでEXデッキから特殊召喚する。")
 
 
-class LeavingTheGraveyardTest(_Golden):
+class LeavingTheGraveyardTest(GoldenCase):
     """エクソシスター・マルファ 37343995:「墓地から離れた」不是離場(離場只算從場上離開)。"""
     cards = [card(EXOSISTER_MARTHA, name_ja="エクソシスター・マルファ", level=4, race=0x2,
                   attribute=0x10, atk=1600)]
@@ -119,7 +119,7 @@ JET_WARRIOR_TEXT = (
 JET_WARRIOR_LEAVES = "この効果で特殊召喚したこのカードは、フィールドから離れた場合"
 
 
-class JetWarriorTest(_Golden):
+class JetWarriorTest(GoldenCase):
     """ジェット・ウォリアー 286392:「フィールドから離れた場合に除外される」照代替記——離場是被代替段、
     除外是做代替的段,文面沒有「代わりに」。"""
     cards = [card(JET_WARRIOR, name_ja="ジェット・ウォリアー", type=0x2021, level=5, race=0x1,
@@ -178,7 +178,7 @@ CYBER_AMPLIFIER_TEXT = (
     "②：このカードがフィールドから離れた時に装備モンスターは破壊される。")
 
 
-class CyberAmplifierTest(_Golden):
+class CyberAmplifierTest(GoldenCase):
     """電脳増幅器 303660:「このカードがフィールドから離れた時に装備モンスターは破壊される」
     在「時に」切成條件段(離場)加效果段(破壞)。"""
     cards = [card(CYBER_AMPLIFIER, name_ja="電脳増幅器", type=SPELL | 0x40000),
@@ -210,7 +210,7 @@ DARK_KNIGHT_TEXT = (
     "自分の墓地の悪魔族・戦士族モンスター１体を対象として発動できる。そのモンスターを守備表示で特殊召喚する。")
 
 
-class DarkKnightTest(_Golden):
+class DarkKnightTest(GoldenCase):
     """E-HERO ダーク・ナイト 86282581:原因「相手によって」(戰鬥或效果、方 對手)。"""
     cards = [card(DARK_KNIGHT, name_ja="E-HERO ダーク・ナイト", type=0x61, level=8, race=0x8,
                   attribute=0x1, atk=1600),
@@ -239,7 +239,7 @@ DISPOSABLE_LEARNER_TEXT = (
     "この効果でセットしたこのカードはフィールドから離れた場合に除外される。")
 
 
-class DisposableLearnerTest(_Golden):
+class DisposableLearnerTest(GoldenCase):
     """使い捨て学習装置 42149850:「この効果でセットしたこのカードはフィールドから離れた場合に除外される」
     (「は」後沒有讀點)。"""
     cards = [card(DISPOSABLE_LEARNER, name_ja="使い捨て学習装置", type=SPELL | 0x40000)]
@@ -264,7 +264,7 @@ BIPOLAR_UNCHAINED_TEXT = (
     "この効果で特殊召喚したこのカードは、フィールドから離れた場合にデッキの一番下に戻る。")
 
 
-class BipolarUnchainedTest(_Golden):
+class BipolarUnchainedTest(GoldenCase):
     """雙極の破械神 1966438:去處是「デッキの一番下に戻る」的自我限制,返回是做代替的段。"""
     cards = [card(BIPOLAR_UNCHAINED, name_ja="雙極の破械神", level=8, race=0x8, attribute=0x20,
                   atk=3000)]
@@ -288,7 +288,7 @@ CHAIN_DOG_TEXT = (
     "このカードをシンクロ素材とする場合、獣族モンスターのシンクロ召喚にしか使用できない。")
 
 
-class ChainDogTest(_Golden):
+class ChainDogTest(GoldenCase):
     """チェーンドッグ 96930127:舊式「フィールド上から離れた場合、ゲームから除外される」(觸發形後有讀點)
     同樣照代替記。"""
     cards = [card(CHAIN_DOG, name_ja="チェーンドッグ", level=4, race=0x4000, attribute=0x1, atk=1600)]
@@ -318,7 +318,7 @@ WHITE_VEIL_TEXT = (
     "④：魔法＆罠ゾーンの表側表示のこのカードがフィールドから離れた時に自分は３０００ダメージを受ける。")
 
 
-class WhiteVeilTest(_Golden):
+class WhiteVeilTest(GoldenCase):
     """白のヴェール 49306994:主語帶區域(魔法＆罠ゾーンの〜このカード)的離場,連動的是傷害。"""
     cards = [card(WHITE_VEIL, name_ja="白のヴェール", type=SPELL | 0x40000)]
     faq = [faq(WHITE_VEIL, "白のヴェール", WHITE_VEIL_TEXT)]
@@ -355,7 +355,7 @@ REBORN_TENGU_TEXT = (
     "デッキから「輪廻天狗」１体を特殊召喚する。")
 
 
-class WholeCardTest(_Golden):
+class WholeCardTest(GoldenCase):
     """三種寫法各一張整張通過反向檢查的卡:自我限制(ゾンビキャリア 33420078)、連動
     (自律行動ユニット 71453557)、條件(輪廻天狗 10028593)。"""
     cards = [card(ZOMBIE_CARRIER, name_ja="ゾンビキャリア", type=0x1021, level=2, race=0x10,
@@ -402,7 +402,7 @@ NURIKABE_TEXT = (
     "この効果で特殊召喚したモンスターの効果は無効化され、フィールドから離れた場合に除外される。")
 
 
-class ElidedSubjectTest(_Golden):
+class ElidedSubjectTest(GoldenCase):
     """主語省略的「〜し、フィールドから離れた場合に除外される」:承本句的「Xは」;沒有「Xは」可承的不退回此卡。"""
     cards = [card(GANASHIA, name_ja="魔轟神獣ガナシア", level=3, race=0x4000, attribute=0x10,
                   atk=1600),

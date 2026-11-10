@@ -38,7 +38,7 @@ ULTIMATE_FLAME_SWORDSMAN_TEXT = (
     "倍になる。このターンのエンドフェイズにこのカードは破壊される。")
 
 
-class _Golden(unittest.TestCase):
+class GoldenCase(unittest.TestCase):
     cards = []
     faq = []
 
@@ -74,7 +74,7 @@ class _Golden(unittest.TestCase):
                 if seg["id"] in failed]
 
 
-class FenrirTest(_Golden):
+class FenrirTest(GoldenCase):
     """フェンリル 218704:「このカードが戦闘によって相手モンスターを破壊した場合」主語與受詞各自成物件。"""
     cards = [
         card(FENRIR, name_ja="フェンリル", level=4, race=0x4000, attribute=0x2, atk=1400),
@@ -99,7 +99,7 @@ class FenrirTest(_Golden):
         self.assertWritesBack(FENRIR, "このカードが戦闘によって相手モンスターを破壊した場合")
 
 
-class DarkMagicExpandedTest(_Golden):
+class DarkMagicExpandedTest(GoldenCase):
     """黒魔導強化 111280:「●２体以上：」是依值分歧的標籤,不在任何物件的字面裡。"""
     cards = [
         card(DARK_MAGIC_EXPANDED, name_ja="黒魔導強化", type=SPELL),
@@ -133,7 +133,7 @@ class DarkMagicExpandedTest(_Golden):
                       self.hits(actions=["破壞"], polarities=["不會"], card=POT_OF_GREED))
 
 
-class UltimateFlameSwordsmanTest(_Golden):
+class UltimateFlameSwordsmanTest(GoldenCase):
     """極炎の剣士 324483:「このターンのエンドフェイズにこのカードは破壊される」時點不在物件裡。"""
     cards = [
         card(ULTIMATE_FLAME_SWORDSMAN, name_ja="極炎の剣士", type=FUSION_MONSTER, level=8,
@@ -163,7 +163,7 @@ VALLET_RECHARGER_TEXT = (
     "相手モンスターはこのカードを攻撃対象に選択できない。")
 
 
-class ValletRechargerTest(_Golden):
+class ValletRechargerTest(GoldenCase):
     """ヴァレット・リチャージャー 5969957:「相手モンスターはこのカードを攻撃対象に選択できない」
     主語(相手モンスター)是做動作的一方,查詢指定的卡比的是受詞(このカード)。"""
     cards = [
@@ -200,7 +200,7 @@ SHADOW_LICH_TEXT = (
 XYZ_MONSTER = 0x800021
 
 
-class ShadowLichTest(_Golden):
+class ShadowLichTest(GoldenCase):
     """No.48 シャドー・リッチ 1426714:「相手ターンに１度、」是前提加次數限制,不在物件(超量素材的
     所屬卡)裡。"""
     cards = [card(SHADOW_LICH, name_ja="No.48 シャドー・リッチ", type=XYZ_MONSTER, level=3,
@@ -225,7 +225,7 @@ WAKE_CUP_KURO_TEXT = (
     "そのモンスターを表側守備表示にする。")
 
 
-class WakeCupKuroTest(_Golden):
+class WakeCupKuroTest(GoldenCase):
     """WAKE CUP！ クロ 6361316 ③:「自分・相手ターンに、」沒有規則認得,那一段標
     解析不出;但物件不帶這截字面,後面的「そのモンスター」照常指回它、判得了。"""
     cards = [

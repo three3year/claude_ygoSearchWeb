@@ -4,7 +4,7 @@
 比較對象是別的物件(そのモンスターとはカード名が異なる〜)時照引用比較,先求被引用物件的候選卡。
 接縫只有查詢判斷(`run_query`)與反向檢查(`check_card`);官方文本逐字寫在測試裡。
 """
-from test_anaphora_this_card import _WithArchetypes
+from test_anaphora_this_card import ArchetypeGoldenCase
 from test_golden import SPELL, TRAP, card, faq
 from test_object_boundary import BLACK_MAGICIAN, NORMAL_MONSTER, POT_OF_GREED
 
@@ -17,7 +17,7 @@ ZANJI = 95519486             # 六武衆－ザンジ:戰士族、光、攻 1800
 XYZ_MONSTER = 0x800021
 
 
-class _Cards(_WithArchetypes):
+class _Cards(ArchetypeGoldenCase):
     def assertJudgedMiss(self, cid, **query):
         """判得了、不命中:不在命中組,也不落進未解析組。"""
         self.assertNotIn(cid, self.hits(**query))

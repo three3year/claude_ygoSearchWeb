@@ -26,7 +26,7 @@ SPIRIT_RING_TEXT = (
 YATA_GARASU = 3078576   # 八汰烏:靈魂怪獸
 
 
-class _Golden(unittest.TestCase):
+class GoldenCase(unittest.TestCase):
     cards = []
     faq = []
     archetypes = None
@@ -63,7 +63,7 @@ class _Golden(unittest.TestCase):
         self.assertEqual(check_card(structure), [])
 
 
-class SpiritRingTest(_Golden):
+class SpiritRingTest(GoldenCase):
     """霊魂の円環 276357:「スピリットモンスター」的子類型字面(使用者故事 25)。"""
     cards = [
         card(SPIRIT_RING, name_ja="霊魂の円環", type=CONTINUOUS_TRAP),
@@ -99,7 +99,7 @@ KURIBOH = 40640057            # クリボー:闇、攻 300
 LUSTER_DRAGON = 11091375      # サファイアドラゴン:風、攻 1900
 ATK_UNKNOWN = 10000           # 万物創世龍:攻擊力「？」(卡片總表記 -2)
 
-_STAT_CARDS = [
+STAT_CARDS = [
     card(KURIBOH, name_ja="クリボー", level=1, race=0x8, attribute=0x20, atk=300, **{"def": 200}),
     card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", type=NORMAL_MONSTER, level=7,
          race=0x2, attribute=0x20, atk=2500, **{"def": 2100}),
@@ -111,10 +111,10 @@ _STAT_CARDS = [
 ]
 
 
-class DarkBurstTest(_Golden):
+class DarkBurstTest(GoldenCase):
     """ダーク・バースト 674561:「攻撃力１５００以下の闇属性モンスター１体」(使用者故事 23)。
     加入手牌那一段的物件是「その闇属性モンスター」(回指),這裡只驗取對象的那一段。"""
-    cards = [card(DARK_BURST, name_ja="ダーク・バースト", type=SPELL)] + _STAT_CARDS
+    cards = [card(DARK_BURST, name_ja="ダーク・バースト", type=SPELL)] + STAT_CARDS
     faq = [faq(DARK_BURST, "ダーク・バースト", DARK_BURST_TEXT)]
 
     def test_targets_a_dark_monster_with_1500_or_less_attack(self):
@@ -130,10 +130,10 @@ class DarkBurstTest(_Golden):
         self.assertWritesBack(DARK_BURST, "自分の墓地の攻撃力１５００以下の闇属性モンスター１体を対象として")
 
 
-class SanganTest(_Golden):
+class SanganTest(GoldenCase):
     """クリッター 26202165:「デッキから攻撃力１５００以下のモンスター１体を手札に加える」。"""
     cards = [card(SANGAN, name_ja="クリッター", level=3, race=0x8, attribute=0x20, atk=1000,
-                  **{"def": 600})] + _STAT_CARDS
+                  **{"def": 600})] + STAT_CARDS
     faq = [faq(SANGAN, "クリッター", SANGAN_TEXT)]
 
     def test_add_to_hand_hits_for_a_monster_with_1500_or_less_attack(self):
@@ -189,7 +189,7 @@ SQUIRE = 73125233          # 冥帝従騎エイドス:攻 800 守 1000
 ALL_POLARITIES = ("做", "不能", "不會", "可以", "只能", "必須")
 
 
-class NumberAttributeTest(_Golden):
+class NumberAttributeTest(GoldenCase):
     """數值屬性的列舉與並列:「レベル７・８の」「レベル２・ランク２・リンク２の」是或,「攻撃力８００／守備力１０００の」是且。"""
     cards = [
         card(DRAGON_PALADIN, name_ja="巨竜の聖騎士", level=4, race=0x1, attribute=0x10, atk=1700),
@@ -207,7 +207,7 @@ class NumberAttributeTest(_Golden):
              attribute=0x4, atk=1400, **{"def": None}),
         card(SQUIRE, name_ja="冥帝従騎エイドス", level=2, race=0x2, attribute=0x20, atk=800,
              **{"def": 1000}),
-    ] + _STAT_CARDS
+    ] + STAT_CARDS
     faq = [faq(DRAGON_PALADIN, "巨竜の聖騎士", DRAGON_PALADIN_TEXT),
            faq(SPRIGHT_STARTER, "スプライト・スターター", SPRIGHT_STARTER_TEXT),
            faq(REBEL_MONARCH, "叛逆の帝王", REBEL_MONARCH_TEXT)]
@@ -276,7 +276,7 @@ DDD_CAESAR = 44186624          # DDD制覇王カイゼル:DDD、靈擺、等級 
 DDD_HELL_ARMAGEDDON = 47198668  # DDD死偉王ヘル・アーマゲドン:DDD、靈擺、等級 8
 
 
-class DDThomasTest(_Golden):
+class DDThomasTest(GoldenCase):
     """DD魔導賢者トーマス 41546:區域字面「Pゾーン」「エクストラデッキ」(使用者故事 30)。"""
     archetypes = DD_ARCHETYPES
     cards = [
@@ -337,10 +337,10 @@ DARK_DIMENSION_WARRIOR_TEXT = (
 SYNCHRO_MONSTER = 0x2021
 
 
-class DarkDimensionWarriorTest(_Golden):
+class DarkDimensionWarriorTest(GoldenCase):
     """闇次元の戦士 109401:連體子句「除外されている自分の」(使用者故事 24)。"""
     cards = [card(DARK_DIMENSION_WARRIOR, name_ja="闇次元の戦士", type=SYNCHRO_MONSTER, level=5,
-                  race=0x1, attribute=0x20, atk=1200)] + _STAT_CARDS
+                  race=0x1, attribute=0x20, atk=1200)] + STAT_CARDS
     faq = [faq(DARK_DIMENSION_WARRIOR, "闇次元の戦士", DARK_DIMENSION_WARRIOR_TEXT)]
 
     def test_targets_a_dark_monster(self):
@@ -389,13 +389,13 @@ KASHTIRA_SOLITARY_TEXT = (
     "自分の除外状態のモンスター１体を対象として発動できる。そのモンスターを手札に加える。")
 
 
-class RelativeClauseTest(_Golden):
+class RelativeClauseTest(GoldenCase):
     """連體子句:「特殊召喚された」「セットされた」「除外状態の」。"""
     cards = [card(LURKING_G, name_ja="潜伏するG", level=7, race=0x800, attribute=0x1, atk=1300),
              card(GRANMARG, name_ja="地帝グランマーグ", level=6, race=0x100, attribute=0x1,
                   atk=2400),
              card(KASHTIRA_SOLITARY, name_ja="孤高除獣", level=4, race=0x4000, attribute=0x20,
-                  atk=1700)] + _STAT_CARDS
+                  atk=1700)] + STAT_CARDS
     faq = [faq(LURKING_G, "潜伏するG", LURKING_G_TEXT),
            faq(GRANMARG, "地帝グランマーグ", GRANMARG_TEXT),
            faq(KASHTIRA_SOLITARY, "孤高除獣", KASHTIRA_SOLITARY_TEXT)]
@@ -440,13 +440,13 @@ COUNTER_TRAP = 0x100004
 LIGHT_MONSTER = 89631139   # 青眼の白龍:光屬性
 
 
-class ExceptNounTest(_Golden):
+class ExceptNounTest(GoldenCase):
     """「<名詞短語>以外の」→ 非(那個名詞短語的條件)。"""
     cards = [card(PEERLESS_FIST, name_ja="天威無双の拳", type=COUNTER_TRAP),
              card(SHINE_SPIRITS, name_ja="シャインスピリッツ", level=7, race=0x80000,
                   attribute=0x10, atk=2000),
              card(LIGHT_MONSTER, name_ja="青眼の白龍", type=NORMAL_MONSTER, level=8, race=0x2000,
-                  attribute=0x10, atk=3000)] + _STAT_CARDS
+                  attribute=0x10, atk=3000)] + STAT_CARDS
     faq = [faq(PEERLESS_FIST, "天威無双の拳", PEERLESS_FIST_TEXT),
            faq(SHINE_SPIRITS, "シャインスピリッツ", SHINE_SPIRITS_TEXT)]
 
@@ -476,12 +476,12 @@ SERIOUS_DUEL_TEXT = (
     "その発動を無効にし破壊する。")
 
 
-class EffectHeadNounTest(_Golden):
+class EffectHeadNounTest(GoldenCase):
     """「魔法・罠・モンスターの効果」「モンスターの効果・魔法・罠カード」:被發動的是效果(物件種類 效果),
     條件式是「誰的效果」;指定卡代入時比那張卡。"""
     cards = [card(WATTGIRAFFE, name_ja="エレキリン", level=4, race=0x1000, attribute=0x10,
                   atk=1200),
-             card(SERIOUS_DUEL, name_ja="真剣勝負", type=COUNTER_TRAP)] + _STAT_CARDS
+             card(SERIOUS_DUEL, name_ja="真剣勝負", type=COUNTER_TRAP)] + STAT_CARDS
     faq = [faq(WATTGIRAFFE, "エレキリン", WATTGIRAFFE_TEXT),
            faq(SERIOUS_DUEL, "真剣勝負", SERIOUS_DUEL_TEXT)]
 
@@ -526,7 +526,7 @@ ORCUST_CYMBAL = 21441617          # オルフェゴール・ディヴェル
 WORLD_LEGACY_MONSTER = 55787576   # 星遺物－『星杯』
 
 
-class EnumerationTest(_Golden):
+class EnumerationTest(GoldenCase):
     """「AまたはB」:用既有的 或。"""
     archetypes = ORCUST_ARCHETYPES
     cards = [card(BLIZZARD, name_ja="猛吹雪", type=TRAP),
@@ -535,7 +535,7 @@ class EnumerationTest(_Golden):
              card(ORCUST_CYMBAL, name_ja="オルフェゴール・ディヴェル", level=4, race=0x20,
                   attribute=0x20, atk=1700, setcode=ORCUST),
              card(WORLD_LEGACY_MONSTER, name_ja="星遺物－『星杯』", level=5, race=0x20,
-                  attribute=0x10, atk=0, setcode=WORLD_LEGACY)] + _STAT_CARDS
+                  attribute=0x10, atk=0, setcode=WORLD_LEGACY)] + STAT_CARDS
     faq = [faq(BLIZZARD, "猛吹雪", BLIZZARD_TEXT),
            faq(ORCUST_ATTACK, "オルフェゴール・アタック", ORCUST_ATTACK_TEXT),
            faq(TOO_DEEP_GRAVE, "深すぎた墓穴", TOO_DEEP_GRAVE_TEXT)]

@@ -11,7 +11,17 @@
 **Status:** ready-for-agent
 
 - [ ] (站主)18 張標準卡的全部斷言通過、整張通過反向檢查(ディーナ 只驗 ③ 後半;全庫產物逐張核對);各票斷言的站主核可清單在摘要
-- [ ] 三份全庫報告重出,同一輸入兩次產出相同
-- [ ] 全建置鏈與既有各組測試全綠
-- [ ] 前後對比表產出,數字由統計腳本重跑、附出處
+- [x] 三份全庫報告重出,同一輸入兩次產出相同
+- [x] 全建置鏈與既有各組測試全綠
+- [x] 前後對比表產出,數字由統計腳本重跑、附出處
 - [ ] 摘要交站主(鏡像網址記進 mirrors.json;站主看完決定下一步:**待站主**)
+
+## Comments
+
+實作者註記(2026-11-10,m2/14):
+
+- 摘要正本:`.scratch/action-structure-m2/report/milestone-2-summary.md`(審核關卡;`cli.mjs` 無錯。鏡像由主會話另派發布,第五條未勾)。
+- 18 張標準卡:測試全過,夾具卡文與官方 DB 文本逐字相同;全庫產物逐張 `check_card`:15 張整張通過、ディーナ ③ 後半段通過;使い捨て学習装置(票 08,② 兩句)與 竜姫神サフィラ(票 09,降臨與「及び、」)不通過,原因在摘要「標準卡狀態」。核對腳本 `stats/golden_check.py`。第一條是(站主),未勾。
+- 全建置鏈兩次:產物與四份報告逐位元組相同,且與整合分支 eb4c414 已 commit 的內容相同(只差工作樹 CRLF)。
+- 測試:action_structure 495、card_list 66、faq_info 43、tag_card 379、text_format 55、text_glossary 37、web 104、`node --test` 121,全綠。
+- 前後對比:`stats/m2_stats.py` 對 c349dc1 與 eb4c414 產物各跑一次(前的輸出與 `stats/m2_stats.txt` 逐位元組相同,後存 `stats/m2_stats_after.txt`),`stats/side_by_side.py` 逐節並列;總數字與查詢實況由新腳本 `stats/m2_compare.py`(前用 c349dc1 的程式讀 c349dc1 的產物,輸出 `m2_compare_before.txt` / `m2_compare_after.txt`);剩下的未解析寫法由 `stats/m2_residue.py`(輸出 `m2_residue_after.txt`)。

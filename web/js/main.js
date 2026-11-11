@@ -49,12 +49,12 @@ function onHashChange() {
 function renderSources() {
   const line = $('dataSources');
   line.append('資料來源：');
-  Sources.FOOTER.forEach((s, i) => {
+  Sites.FOOTER.forEach((s, i) => {
     if (i) line.append(' · ');
     const a = document.createElement('a');
     a.href = s.url;
     a.target = '_blank';
-    a.rel = 'noopener noreferrer';
+    a.rel = Sites.LINK_REL;
     a.title = `資料來源：${s.site}`;
     a.textContent = s.label;
     line.append(a);

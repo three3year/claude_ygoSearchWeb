@@ -3,7 +3,7 @@
 const View = (() => {
 const { DB, META, CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH,
         LM_ZH, LM_CODES, SUB_ZH, BAN_ZH, $, esc, pad8, byId } = Util;
-const { cardPageUrl, cardImageUrl } = Sources;
+const { cardPageUrl, cardImageUrl, LINK_REL } = Sites;
 
 const MAT_KINDS = ['ritual', 'fusion', 'synchro', 'xyz', 'link'];
 
@@ -79,7 +79,7 @@ function cardHtml(e, hl) {
     <div class="card-body">
       <div class="card-head">
         <a class="card-name" href="${cardPageUrl(c.id)}"
-           target="_blank" rel="noopener">${esc(c.n)}</a>
+           target="_blank" rel="${LINK_REL}">${esc(c.n)}</a>
         ${c.ra ? `<span class="card-rarity ra-${esc(c.ra)}"
            title="Master Duel 稀有度">${esc(c.ra)}</span>` : ''}
         ${otHtml(c)}

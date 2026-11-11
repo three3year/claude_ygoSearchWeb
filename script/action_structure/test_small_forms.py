@@ -415,8 +415,8 @@ CRYSTAL_BEASTS = [{"setcode": 0x1034, "hex": "0x1034", "names_ja": ["宝玉獣"]
 
 
 class PlaceAndRemoveStemTest(unittest.TestCase):
-    """放置、去除是單字幹(置、取り除)加カ行的語尾;被動「置かれた」、不能「取り除けない」解析得出;
-    字幹假朋友(位置、装置、置換)不算放置的字面。"""
+    """放置、去除是單字幹(置、取り除)加カ行的語尾;被動「置かれた」解析得出(「取り除けない」
+    m3b 票 07 起不收);字幹假朋友(位置、装置、置換)不算放置的字面。"""
 
     def test_crystal_brilliance_card_placed_in_spell_trap_zone(self):
         """③「自分の魔法＆罠ゾーンに「宝玉獣」カードが置かれた場合」:條件段命中「放置,到我方魔陷區」(被動)。"""
@@ -437,18 +437,18 @@ class PlaceAndRemoveStemTest(unittest.TestCase):
         self.assertEqual(failures, [])
 
     def test_crystal_core_cannot_remove_condition(self):
-        """④「取り除けない場合、このカードを破壊する」:條件段命中去除(極性 不能),④ 通過反向檢查。"""
+        """④「取り除けない場合、このカードを破壊する」:m3b 票 07 起「けない」不在語尾表,
+        條件段不命中去除(極性 不能);前一句的去除照舊命中。"""
         cards = [card(CRYSTAL_CORE, name_ja="巨大戦艦 クリスタル・コア", level=5, race=0x20,
                       attribute=0x2, atk=2100, setcode=0x15)]
         structures = build(cards, [faq(CRYSTAL_CORE, "巨大戦艦 クリスタル・コア",
                                        CRYSTAL_CORE_TEXT)])
-        seg, = hit_segments(structures, cards, CRYSTAL_CORE, actions=["去除"],
-                            polarities=["不能"], kinds=["條件"], include_condition=True)
-        self.assertEqual(seg["text"], "取り除けない場合")
+        self.assertEqual(hit_segments(structures, cards, CRYSTAL_CORE, actions=["去除"],
+                                      polarities=["不能"], kinds=["條件"],
+                                      include_condition=True), [])
         removes = hit_segments(structures, cards, CRYSTAL_CORE, actions=["去除"],
                                include_condition=True, kinds=["條件", "效果"])
         self.assertEqual([s["text"] for s in removes], ["このカードのカウンターを１つ取り除く"])
-        self.assertEqual(block_failures(own(structures, CRYSTAL_CORE), "④"), [])
 
     def test_existing_forms_keep_their_reading(self):
         """各語尾(終止、可能、連用、て形、被動)照舊命中那個動作詞的段,整張寫回原文相符

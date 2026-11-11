@@ -389,10 +389,15 @@ def parse_predicate(pred):
     return None, REASON_PREDICATE
 
 
+# 述語串接的連用形語尾:「無効にし破壊する」與被動「破壊され墓地へ送られた」「破壊され除外される」
+# (m3b 票 03,不限後面接哪個述語)。
+CONTINUATIVE_TAILS = ("し", "され", "られ")
+
+
 def parse_predicates(pred):
-    """て形串接的述語字面(めくられて墓地へ送られた)、連用形串接(無効にし破壊する)→
-    ([Predicate], None) 或 (None, 原因)。單一述語也走這裡;串接時前面的語尾必須是
-    て/で 或連用形的「し」。"""
+    """て形串接的述語字面(めくられて墓地へ送られた)、連用形串接(無効にし破壊する、
+    破壊され墓地へ送られた)→ ([Predicate], None) 或 (None, 原因)。單一述語也走這裡;
+    串接時前面的語尾必須是 て/で 或 `CONTINUATIVE_TAILS`。"""
     parsed, reason = parse_predicate(pred)
     if parsed is not None:
         return [parsed], None
@@ -410,7 +415,7 @@ def parse_predicates(pred):
         if rest.startswith(MATERIAL_AS_TAIL) and action in (MATERIAL_ACTION, XYZ_ATTACH_ACTION):
             return None, REASON_PREDICATE   # 同 `parse_predicate`:「〜素材として」不是て形串接的前一個述語
         for tail in _TAILS_LONGEST_FIRST:
-            if tail and (tail.endswith(("て", "で")) or tail == "し") \
+            if tail and (tail.endswith(("て", "で")) or tail in CONTINUATIVE_TAILS) \
                     and rest.startswith(tail) and len(rest) > len(tail):
                 following, reason = parse_predicates(rest[len(tail):])
                 if following is not None:

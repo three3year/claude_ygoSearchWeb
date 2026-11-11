@@ -1,0 +1,92 @@
+模組 test_damage_recover, test_detach, test_display_placement, test_draw, test_embedded_effects, test_resistance_restriction, test_select_and_do, test_stat_modify:跑 171 個,失敗 0、錯誤 0
+  test_damage_recover.CauseWrittenTwiceTest: 1 個,不過 0
+  test_damage_recover.DamageModifyTest: 5 個,不過 0
+  test_damage_recover.DamageTemplateTest: 1 個,不過 0
+  test_damage_recover.EcoForestSpiritTest: 4 個,不過 0
+  test_damage_recover.FlamvellDevilTest: 3 個,不過 0
+  test_damage_recover.SelfDamageAndRecoverTest: 3 個,不過 0
+  test_detach.KingJackalTest: 2 個,不過 0
+  test_detach.LightDragonTest: 5 個,不過 0
+  test_detach.MaterialAttachedIsOutOfScopeTest: 1 個,不過 0
+  test_detach.MaterialLineAndJoinerTest: 3 個,不過 0
+  test_detach.OldStyleDetachCostTest: 1 個,不過 0
+  test_detach.PlaceCounterTest: 2 個,不過 0
+  test_detach.ShadowMakerTest: 7 個,不過 0
+  test_detach.SpaceCycloneTest: 2 個,不過 0
+  test_display_placement.AlternativesTest: 2 個,不過 0
+  test_display_placement.AncientGearTest: 3 個,不過 0
+  test_display_placement.CenturionTest: 2 個,不過 0
+  test_display_placement.DisplayChangeTest: 4 個,不過 0
+  test_display_placement.FaceUpKagiriPremiseTest: 1 個,不過 0
+  test_display_placement.GustaFalcoTest: 3 個,不過 0
+  test_display_placement.RoundTripTest: 1 個,不過 0
+  test_display_placement.SetTest: 1 個,不過 0
+  test_display_placement.TreatBeforeFromTest: 1 個,不過 0
+  test_display_placement.WhiteMaidenTest: 4 個,不過 0
+  test_draw.AddedToHandExceptByDrawTest: 3 個,不過 0
+  test_draw.DarkWorldDealingsTest: 4 個,不過 0
+  test_draw.DrawObjectWrittenOrNotTest: 1 個,不過 0
+  test_draw.DrawPatternTest: 6 個,不過 0
+  test_draw.TsuppaReachTest: 4 個,不過 0
+  test_embedded_effects.BraveStrixTest: 1 個,不過 0
+  test_embedded_effects.DScannanTest: 4 個,不過 0
+  test_embedded_effects.DarkWorldBrainwashTest: 4 個,不過 0
+  test_embedded_effects.FullArmoredXyzTest: 6 個,不過 0
+  test_embedded_effects.LeadingClauseBeforeHeaderTest: 2 個,不過 0
+  test_resistance_restriction.AttackFamilyTest: 7 個,不過 0
+  test_resistance_restriction.KinoTest: 4 個,不過 0
+  test_resistance_restriction.LockTest: 4 個,不過 0
+  test_resistance_restriction.TargetingImmunityTest: 3 個,不過 0
+  test_resistance_restriction.WaterStageTest: 4 個,不過 0
+  test_select_and_do.DinaTest: 3 個,不過 0
+  test_select_and_do.HarpieElegantTest: 2 個,不過 0
+  test_select_and_do.IgniteBurstTest: 5 個,不過 0
+  test_select_and_do.IgniteDragunovTest: 3 個,不過 0
+  test_select_and_do.SaffiraTest: 6 個,不過 0
+  test_select_and_do.SelectPatternTest: 7 個,不過 0
+  test_stat_modify.CipherScouterTest: 4 個,不過 0
+  test_stat_modify.DisposableLearnerDeviceTest: 5 個,不過 0
+  test_stat_modify.GagagaGirlTest: 3 個,不過 0
+  test_stat_modify.LeadingFormulaTest: 1 個,不過 0
+  test_stat_modify.MetalReflectArmorTest: 6 個,不過 0
+  test_stat_modify.UrbonusTest: 7 個,不過 0
+
+夾具卡文 vs 官方 DB 文本:
+  75416738 キノの蟲惑魔: 夾具 1 種,與官方逐字相同 1 種
+  29047353 水舞台: 夾具 1 種,與官方逐字相同 1 種
+  31557782 古代の歯車: 夾具 1 種,與官方逐字相同 1 種
+  46044841 ガスタ・ファルコ: 夾具 1 種,與官方逐字相同 1 種
+  91711547 フレムベル・デビル: 夾具 1 種,與官方逐字相同 1 種
+  4192696 森の聖霊 エーコ: 夾具 1 種,與官方逐字相同 1 種
+  47077697 呪念の化身ウルボヌス: 夾具 1 種,與官方逐字相同 1 種
+  79853073 サイファー・スカウター: 夾具 1 種,與官方逐字相同 1 種
+  42149850 使い捨て学習装置: 夾具 1 種,與官方逐字相同 1 種
+  68540058 メタル化・魔法反射装甲: 夾具 1 種,與官方逐字相同 1 種
+  39733924 フル・アーマード・エクシーズ: 夾具 1 種,與官方逐字相同 1 種
+  65872270 イグナイト・バースト: 夾具 1 種,與官方逐字相同 1 種
+  56350972 竜姫神サフィラ: 夾具 1 種,與官方逐字相同 1 種
+  59581480 耀聖の波詩ディーナ: 夾具 1 種,與官方逐字相同 1 種
+  74117290 暗黒界の取引: 夾具 1 種,與官方逐字相同 1 種
+  20216608 ツッパリーチ: 夾具 1 種,與官方逐字相同 1 種
+  69655484 Em影絵師シャドー・メイカー: 夾具 1 種,與官方逐字相同 1 種
+  61399402 ライトドラゴン＠イグニスター: 夾具 1 種,與官方逐字相同 1 種
+
+全庫產物 check_card:
+  75416738 キノの蟲惑魔(票 04):段 5,通過
+  29047353 水舞台(票 04):段 6,通過
+  31557782 古代の歯車(票 05):段 1,通過
+  46044841 ガスタ・ファルコ(票 05):段 2,通過
+  91711547 フレムベル・デビル(票 06):段 2,通過
+  4192696 森の聖霊 エーコ(票 06):段 4,通過
+  47077697 呪念の化身ウルボヌス(票 08):段 5,通過
+  79853073 サイファー・スカウター(票 08):段 2,通過
+  42149850 使い捨て学習装置(票 08):段 6,通過
+  68540058 メタル化・魔法反射装甲(票 08):段 4,通過
+  39733924 フル・アーマード・エクシーズ(票 12):段 8,通過
+  65872270 イグナイト・バースト(票 09):段 5,通過
+  56350972 竜姫神サフィラ(票 09):段 7,通過
+  59581480 耀聖の波詩ディーナ(票 09,只驗 ③ 後半段 ['b159.s58']):段 6,通過
+  74117290 暗黒界の取引(票 10):段 2,通過
+  20216608 ツッパリーチ(票 10):段 9,通過
+  69655484 Em影絵師シャドー・メイカー(票 11):段 9,通過
+  61399402 ライトドラゴン＠イグニスター(票 11):段 7,通過

@@ -98,12 +98,10 @@ def source_segment(earlier_blocks, earlier_segments, label, actions):
 
 
 def is_own_effect(text):
-    """原因字面是不是本卡自己的效果(「この効果で」「この方法で」「このカードの①の効果で」)。"""
     return bool(_SELF_EFFECT_RE.match(text))
 
 
 def own_effect_pending(cause):
-    """子句前文記了本卡自己的效果、還沒找指的段(`segment` 是 None)。"""
     return bool(cause) and "segment" in cause and cause["segment"] is None
 
 

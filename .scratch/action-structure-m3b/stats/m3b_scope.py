@@ -61,7 +61,6 @@ def card_text(card):
 
 
 class Tally:
-    """一種寫法:段數、張數、解析出/解析不出、解析不出的原因。"""
 
     def __init__(self, name):
         self.name = name

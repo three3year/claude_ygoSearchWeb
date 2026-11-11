@@ -11,42 +11,42 @@ from reverse_check import check_card
 from structure_shape import REASON_REF
 from test_golden import SPELL, card, faq
 
-GRAVEKEEPER_PRIEST = 3825890   # 墓守の大神官(召喚條件:「墓守の」怪獸をリリースして召喚できる)
+GRAVEKEEPER_PRIEST = 3825890
 GRAVEKEEPER_PRIEST_TEXT = (
     "このカードは「墓守の」と名のついたモンスター１体をリリースして召喚できる。このカードの攻撃力は、"
     "自分の墓地の「墓守の」と名のついたモンスターの数×２００ポイントアップする。また、フィールド上に"
     "表側表示で存在するこのカードが破壊される場合、代わりに手札から「墓守の」と名のついたモンスター１体を"
     "捨てる事ができる。")
-ROOKLORD = 10060427   # コアキメイル・ルークロード(召喚條件:「コアキメイル」怪獸をリリースしてアドバンス召喚できる)
+ROOKLORD = 10060427
 ROOKLORD_TEXT = (
     "このカードのコントローラーは自分のエンドフェイズ毎に、手札から「コアキメイルの鋼核」１枚を墓地へ送るか、"
     "手札の戦士族モンスター１体を相手に見せる。または、どちらも行わずにこのカードを破壊する。"
     "このカードは「コアキメイル」と名のついたモンスター１体をリリースしてアドバンス召喚できる。"
     "このカードが召喚に成功した時、自分の墓地の「コアキメイル」と名のついたカード１枚をゲームから除外する事で、"
     "相手フィールド上のカードを２枚まで選択して破壊する。")
-FENRIR = 218704   # フェンリル(召喚條件:水屬性怪獸をゲームから除外して特殊召喚する)
+FENRIR = 218704
 FENRIR_TEXT = (
     "このカードは通常召喚できない。自分の墓地の水属性モンスター２体をゲームから除外して特殊召喚する。"
     "このカードが戦闘によって相手モンスターを破壊した場合、次の相手ターンのドローフェイズをスキップする。")
-GAZER_SHARK = 23536866   # ゲイザー・シャーク(不切:効果を無効にして特殊召喚し)
+GAZER_SHARK = 23536866
 GAZER_SHARK_TEXT = (
     "墓地のこのカードをゲームから除外し、「ゲイザー・シャーク」以外の自分の墓地の水属性・レベル５モンスター"
     "２体を選択して発動できる。選択したモンスター２体の効果を無効にして特殊召喚し、その２体のみを素材として"
     "水属性のエクシーズモンスター１体をエクシーズ召喚する。「ゲイザー・シャーク」の効果は１ターンに１度しか"
     "使用できない。")
-LETHAL_WEAPON = 45450218   # A・O・J リーサル・ウェポン(不切:相手に見せて特殊召喚できる)
+LETHAL_WEAPON = 45450218
 LETHAL_WEAPON_TEXT = (
     "このカードが戦闘によって光属性モンスターを破壊し墓地へ送った時、デッキからカードを１枚ドローする。"
     "さらに、この効果でドローしたカードがレベル４以下の闇属性モンスターだった場合、そのカードを相手に見せて"
     "特殊召喚できる。")
-CROSSING_SOULS = 5253985   # 交差する魂(魔法卡;右半沒寫主語,指回前面那次 A召喚的怪獸)
+CROSSING_SOULS = 5253985
 CROSSING_SOULS_TEXT = (
     "このカード名のカードは１ターンに１枚しか発動できない。\n①：自分・相手のメインフェイズに発動できる。"
     "幻神獣族モンスター１体のA召喚を行う。その際、自分フィールドのモンスターの代わりに相手フィールドの"
     "モンスターをリリースする事もできる。相手フィールドのモンスターをリリースしてA召喚した場合、"
     "以下の効果を適用する。\n●このカードの発動後、次のターンの終了時まで自分は幻神獣族モンスター以外の"
     "魔法・罠・モンスターの効果を１ターンに１度しか発動できない。")
-GETSUGA = 76930964   # 黄昏の忍者将軍－ゲツガ(整張通過的替代卡:「忍者」怪獸をリリースしてアドバンス召喚できる)
+GETSUGA = 76930964
 GETSUGA_TEXT = (
     "このカードは「忍者」モンスター１体をリリースしてアドバンス召喚できる。「黄昏の忍者将軍－ゲツガ」の効果は"
     "１ターンに１度しか使用できない。①：このカードがフィールドに攻撃表示で存在する場合、"
@@ -55,22 +55,22 @@ GETSUGA_TEXT = (
 # 交差する魂拿掉前面「幻神獣族モンスター１体のA召喚を行う」那幾句的改寫(全庫沒有這種真實卡文,只驗找不到時的規則)。
 ORPHAN_SOULS = 9001
 ORPHAN_SOULS_TEXT = "①：相手フィールドのモンスターをリリースしてA召喚した場合、以下の効果を適用する。"
-ARMY_GENEX = 93211836   # アーミー・ジェネクス(整張通過的替代卡;條件段:このカードが〜をリリースしてアドバンス召喚した時)
+ARMY_GENEX = 93211836
 ARMY_GENEX_TEXT = (
     "①：このカードが「ジェネクス」モンスターをリリースしてアドバンス召喚した時、相手フィールドのカード１枚を"
     "対象として発動できる。その相手のカードを破壊する。")
-ADVANCE_FORCE = 38589847   # アドバンス・フォース(永續魔法;主語「レベル７以上のモンスターは」寫在左半前)
+ADVANCE_FORCE = 38589847
 ADVANCE_FORCE_TEXT = ("このカードがフィールド上に存在する限り、レベル７以上のモンスターはレベル５以上の"
                       "モンスター１体をリリースしてアドバンス召喚する事ができる。")
-GRAVEKEEPER = 2001   # 「墓守の」怪獸(代入用)
-NINJA = 2002   # 「忍者」怪獸(代入用)
-CORE = 2003   # 「コアキメイル」怪獸(代入用)
-GENEX = 2004   # 「ジェネクス」怪獸(代入用)
-PLAIN = 2005   # 沒有字段的地屬性戰士族怪獸(代入用)
-WATER = 2006   # 水屬性怪獸(代入用)
-DIVINE = 2007   # 幻神獸族怪獸(代入用)
-LEVEL_8 = 2008   # 等級 8 怪獸(代入用)
-LEVEL_6 = 2009   # 等級 6 怪獸(代入用)
+GRAVEKEEPER = 2001
+NINJA = 2002
+CORE = 2003
+GENEX = 2004
+PLAIN = 2005
+WATER = 2006
+DIVINE = 2007
+LEVEL_8 = 2008
+LEVEL_6 = 2009
 DIVINE_BEAST = 0x200000
 WATER_ATTRIBUTE = 0x2
 ARCHETYPES = [
@@ -84,7 +84,6 @@ ARCHETYPES = [
 
 
 class MoveThenSummonFixture(unittest.TestCase):
-    """固定夾:移走 + 召喚的真實卡、不切的對照卡與代入用的怪獸。"""
 
     @classmethod
     def setUpClass(cls):
@@ -139,7 +138,6 @@ class MoveThenSummonFixture(unittest.TestCase):
         return [hit["id"] for hit in self.run_query(**query)["hits"]]
 
     def hit_segments(self, cid, **query):
-        """那張卡的命中段 id;沒命中回 None。"""
         return next((hit["segments"] for hit in self.run_query(**query)["hits"]
                      if hit["id"] == cid), None)
 
@@ -148,10 +146,10 @@ class MoveThenSummonFixture(unittest.TestCase):
 
 
 class ReleasedMonsterIsNotSummonedTest(MoveThenSummonFixture):
-    """被解放(除外)的怪獸記在移走那一段,不再標成被召喚(spec 使用者故事 17–21)。"""
+    """被解放(除外)的怪獸記在移走那一段,不標成被召喚。"""
 
     def test_summon_does_not_hit_with_the_released_monster(self):
-        """墓守の大神官「〜「墓守の」と名のついたモンスター１体をリリースして召喚できる」:查「召喚」照舊命中,
+        """墓守の大神官「〜「墓守の」と名のついたモンスター１体をリリースして召喚できる」:查「召喚」命中,
         被召喚的是此卡;指定另一張「墓守の」怪獸時不因為那一段命中。"""
         self.assertIn(GRAVEKEEPER_PRIEST, self.hits(actions=["召喚"]))
         self.assertIn(GRAVEKEEPER_PRIEST, self.hits(actions=["召喚"], card=GRAVEKEEPER_PRIEST))
@@ -159,7 +157,7 @@ class ReleasedMonsterIsNotSummonedTest(MoveThenSummonFixture):
 
     def test_release_hits_with_the_released_monster(self):
         """墓守の大神官:查「解放」命中。「墓守の」不是字段名(字段是「墓守」),被解放的物件解析不出,
-        指定卡代入判不了:指定「墓守の」怪獸或非「墓守の」的怪獸都不命中,而是列進未解析組(票外的寫法)。"""
+        指定卡代入判不了:指定「墓守の」怪獸或非「墓守の」的怪獸都不命中,而是列進未解析組。"""
         self.assertIn(GRAVEKEEPER_PRIEST, self.hits(actions=["解放"]))
         for cid in (GRAVEKEEPER, PLAIN):
             result = self.run_query(actions=["解放"], card=cid)
@@ -207,7 +205,7 @@ class ReleasedMonsterIsNotSummonedTest(MoveThenSummonFixture):
 
 
 class NonMovingChainStaysOneSegmentTest(MoveThenSummonFixture):
-    """左半是不移走卡的動作詞(無效、展示)時照舊一段共用一條線(spec 使用者故事 22)。"""
+    """左半是不移走卡的動作詞(無效、展示)時一段共用一條線。"""
 
     def test_negate_and_special_summon_share_one_segment(self):
         """ゲイザー・シャーク「選択したモンスター２体の効果を無効にして特殊召喚し」:查「特殊召喚」命中,
@@ -227,7 +225,7 @@ class NonMovingChainStaysOneSegmentTest(MoveThenSummonFixture):
 
 
 class SummonHalfOfASpellTest(MoveThenSummonFixture):
-    """右半沒寫主語、此卡不是怪獸:指回同一區塊前面那次召喚的怪獸(spec 使用者故事 44)。"""
+    """右半沒寫主語、此卡不是怪獸:指回同一區塊前面那次召喚的怪獸。"""
 
     CONDITION = {"actions": ["上級召喚"], "kinds": ["條件"], "include_condition": True}
 
@@ -257,7 +255,6 @@ class SplitHalvesWriteBackTest(MoveThenSummonFixture):
     """切開的兩段接回一句,寫回原文相符(spec「述語的串接」最後一條)。"""
 
     def assert_segments_pass(self, cid, *texts):
-        """那張卡原文是 `texts` 的段都解析得出、反向檢查通過。"""
         card_ = self.structure(cid)
         failed = {f["segment"] for f in check_card(card_)}
         found = {seg["text"]: seg for block in card_["blocks"] for seg in block["segments"]}
@@ -267,12 +264,11 @@ class SplitHalvesWriteBackTest(MoveThenSummonFixture):
             self.assertNotIn(found[text]["id"], failed, text)
 
     def test_standard_cards_pass_whole(self):
-        """替代標準卡 黄昏の忍者将軍－ゲツガ(召喚條件)、アーミー・ジェネクス(條件段)整張通過。"""
         for cid in (GETSUGA, ARMY_GENEX):
             self.assertEqual(check_card(self.structure(cid)), [], cid)
 
     def test_candidate_halves_pass(self):
-        """候選卡卡在票外的寫法,只驗切開的兩段:各自解析得出、寫回原文相符。"""
+        """候選卡整張不通過,只驗切開的兩段:各自解析得出、寫回原文相符。"""
         self.assert_segments_pass(ROOKLORD, "このカードは「コアキメイル」と名のついたモンスター１体をリリースして",
                                   "アドバンス召喚できる")
         self.assert_segments_pass(FENRIR, "自分の墓地の水属性モンスター２体をゲームから除外して", "特殊召喚する")

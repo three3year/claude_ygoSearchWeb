@@ -72,8 +72,6 @@ def split_clause(state, clause):
 
 
 def _leaves_field(replaced):
-    """被代替段是離場:動作詞只有離場;解析不出的(「この効果が適用されたこのカードはフィールド上から
-    離れた場合、」)看原述語字面含離場的字幹。"""
     if replaced["unparsed"]:
         return re.search(_LEAVE, replaced["predicate"] or "") is not None
     return replaced["actions"] == [LEAVE_ACTION]

@@ -416,7 +416,7 @@ CRYSTAL_BEASTS = [{"setcode": 0x1034, "hex": "0x1034", "names_ja": ["宝玉獣"]
 
 class PlaceAndRemoveStemTest(unittest.TestCase):
     """放置、去除是單字幹(置、取り除)加カ行的語尾;被動「置かれた」解析得出(「取り除けない」
-    m3b 票 07 起不收);字幹假朋友(位置、装置、置換)不算放置的字面。"""
+    不收);字幹假朋友(位置、装置、置換)不算放置的字面。"""
 
     def test_crystal_brilliance_card_placed_in_spell_trap_zone(self):
         """③「自分の魔法＆罠ゾーンに「宝玉獣」カードが置かれた場合」:條件段命中「放置,到我方魔陷區」(被動)。"""
@@ -437,8 +437,8 @@ class PlaceAndRemoveStemTest(unittest.TestCase):
         self.assertEqual(failures, [])
 
     def test_crystal_core_cannot_remove_condition(self):
-        """④「取り除けない場合、このカードを破壊する」:m3b 票 07 起「けない」不在語尾表,
-        條件段不命中去除(極性 不能);前一句的去除照舊命中。"""
+        """④「取り除けない場合、このカードを破壊する」:「けない」不在語尾表,
+        條件段不命中去除(極性 不能);前一句的去除命中。"""
         cards = [card(CRYSTAL_CORE, name_ja="巨大戦艦 クリスタル・コア", level=5, race=0x20,
                       attribute=0x2, atk=2100, setcode=0x15)]
         structures = build(cards, [faq(CRYSTAL_CORE, "巨大戦艦 クリスタル・コア",

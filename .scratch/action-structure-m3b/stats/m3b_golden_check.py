@@ -1,4 +1,4 @@
-"""m3b 標準卡核對(票 08):各票的候選卡、替代卡與另寫斷言的卡在全庫產物上整張通不通過。
+"""m3b 標準卡核對:各票的候選卡、替代卡與另寫斷言的卡在全庫產物上整張通不通過。
 
 跑法(repo 根):python -X utf8 .scratch/action-structure-m3b/stats/m3b_golden_check.py > .scratch/action-structure-m3b/stats/m3b_golden_check.txt
 只讀 data/action_structure.json;用 repo 的 reverse_check.check_card。輸出決定性。

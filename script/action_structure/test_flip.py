@@ -1,4 +1,4 @@
-"""動作詞 反轉 的查詢層與反向檢查斷言(m3b 票 02):輸入真實卡的官方 DB 文本與卡片參數,看查詢結果。
+"""動作詞 反轉 的查詢層與反向檢查斷言:輸入真實卡的官方 DB 文本與卡片參數,看查詢結果。
 
 只驗接縫一(查詢判斷)與接縫二(反向檢查),不驗結構內部的格。
 """
@@ -9,36 +9,36 @@ from card_structure import build_structures
 from reverse_check import check_card
 from test_golden import TRAP, card, faq
 
-FLIP_MONSTER = 0x200021   # 效果怪獸 + 反轉
+FLIP_MONSTER = 0x200021
 CONTINUOUS_TRAP = 0x20004
 
-HIITA = 759393   # 火霊使いヒータ(新式:このカードがリバースした場合)
+HIITA = 759393
 HIITA_TEXT = (
     "①：このカードがリバースした場合、相手フィールドの炎属性モンスター１体を対象として発動する。"
     "このモンスターが表側表示で存在する間、対象のモンスターのコントロールを得る。")
-GEARGIARMOR = 923596   # ギアギアーマー(新式:このカードがリバースした時)
+GEARGIARMOR = 923596
 GEARGIARMOR_TEXT = (
     "このカードは１ターンに１度だけ裏側守備表示にする事ができる。このカードがリバースした時、"
     "デッキから「ギアギアーマー」以外の「ギアギア」と名のついたモンスター１体を手札に加える事ができる。")
-DES_LACOODA = 2326738   # デス・ラクーダ(反転召喚に成功した場合:反轉召喚,不是反轉)
+DES_LACOODA = 2326738
 DES_LACOODA_TEXT = (
     "①：自分メインフェイズに発動できる。このカードを裏側守備表示にする（１ターンに１度のみ）。"
     "②：このカードが反転召喚に成功した場合に発動する。自分はデッキから１枚ドローする。")
-SUBTERROR_LEGACY = 73575650   # サブテラーの継承(解析不出的段寫「リバースモンスター」:卡片子類型)
+SUBTERROR_LEGACY = 73575650
 SUBTERROR_LEGACY_TEXT = (
     "このカード名のカードは１ターンに１枚しか発動できない。①：以下の効果から１つを選択して発動できる。"
     "発動後このカードは墓地へ送らず、そのままセットする。●手札及び自分フィールドの表側表示モンスターの中から、"
     "モンスター１体を選んで墓地へ送り、同じ属性でカード名が異なるリバースモンスター１体をデッキから手札に"
     "加える。●手札及び自分フィールドの表側表示モンスターの中から、リバースモンスター１体を選んで墓地へ送り、"
     "同じ属性で元々のレベルが低いモンスター１体をデッキから手札に加える。")
-ROYAL_DECREE = 33950246   # 王宮の号令(解析不出的段寫「リバース効果モンスター」)
+ROYAL_DECREE = 33950246
 ROYAL_DECREE_TEXT = "このカードがフィールド上に存在する限り、全てのリバース効果モンスターの発動及び効果は無効化される。"
-BATTEL = 14824019   # 魔導書士 バテル(列舉:このカードが召喚・リバースした場合)
+BATTEL = 14824019
 BATTEL_TEXT = ("①：このカードが召喚・リバースした場合に発動する。デッキから「魔導書」魔法カード１枚を"
                "手札に加える。")
-WHITE_NINJA = 1571945   # 白い忍者(舊式標示:リバース：X)
+WHITE_NINJA = 1571945
 WHITE_NINJA_TEXT = "リバース：フィールド上の守備表示モンスター１体を破壊する。"
-WORM_APOCALYPSE = 88650530   # ワーム・アポカリプス(標示後的效果段帶舊式取對象「選択して」)
+WORM_APOCALYPSE = 88650530
 WORM_APOCALYPSE_TEXT = "リバース：フィールド上の魔法・罠カード１枚を選択して破壊する。"
 ARCHETYPES = [
     {"setcode": 0x72, "hex": "0x72", "names_ja": ["ギアギア"], "name_zh": "齒輪齒輪",
@@ -49,7 +49,6 @@ ARCHETYPES = [
 
 
 class FlipFixture(unittest.TestCase):
-    """固定夾:各種反轉寫法的真實卡。"""
 
     @classmethod
     def setUpClass(cls):
@@ -87,7 +86,6 @@ class FlipFixture(unittest.TestCase):
         return [hit["id"] for hit in self.run_query(**query)["hits"]]
 
     def hit_segments(self, cid, **query):
-        """那張卡的命中段 id;沒命中回 None。"""
         return next((hit["segments"] for hit in self.run_query(**query)["hits"]
                      if hit["id"] == cid), None)
 
@@ -96,7 +94,7 @@ class FlipFixture(unittest.TestCase):
 
 
 class NewStyleFlipTest(FlipFixture):
-    """「Xがリバースした場合/時」:條件段,動作詞 反轉,X 是被反轉的卡(故事 7)。"""
+    """「Xがリバースした場合/時」:條件段,動作詞 反轉,X 是被反轉的卡。"""
 
     def test_flipped_this_card_hits_flip_with_condition_on(self):
         """火霊使いヒータ「このカードがリバースした場合」、ギアギアーマー「このカードがリバースした時」:
@@ -107,12 +105,11 @@ class NewStyleFlipTest(FlipFixture):
             self.assertNotIn(cid, self.hits(actions=["反轉"]), cid)
 
     def test_geargiarmor_passes_reverse_check(self):
-        """ギアギアーマー 整張通過反向檢查。"""
         self.assertEqual(check_card(self.structure(GEARGIARMOR)), [])
 
 
 class OldStyleFlipLabelTest(FlipFixture):
-    """舊式標示「リバース：X」:條件段(反轉,此卡,觸發形 場合)加上 X 的段(故事 8、9、13)。"""
+    """舊式標示「リバース：X」:條件段(反轉,此卡,觸發形 場合)加上 X 的段。"""
 
     def test_label_hits_flip_with_condition_on(self):
         """白い忍者:開條件段查「反轉」命中,指定此卡也命中;條件段關時不命中;
@@ -149,7 +146,7 @@ class OldStyleFlipLabelTest(FlipFixture):
 
 
 class EnumeratedFlipTest(FlipFixture):
-    """「召喚・リバースした」:一段多個動作詞,同「召喚・特殊召喚に成功した」(故事 12)。"""
+    """「召喚・リバースした」:一段多個動作詞,同「召喚・特殊召喚に成功した」。"""
 
     def test_summon_and_flip_hit_the_same_segment(self):
         """魔導書士 バテル「このカードが召喚・リバースした場合」:開條件段查「召喚」與查「反轉」命中同一段,
@@ -163,12 +160,11 @@ class EnumeratedFlipTest(FlipFixture):
             self.assertNotIn(BATTEL, self.hits(actions=[action], include_condition=True), action)
 
     def test_battel_passes_reverse_check(self):
-        """魔導書士 バテル 整張通過反向檢查。"""
         self.assertEqual(check_card(self.structure(BATTEL)), [])
 
 
 class FlipIsNotFlipSummonOrFlipMonsterTest(FlipFixture):
-    """反轉、反轉召喚、反轉怪獸是三個不一樣的東西(站主裁定;故事 10、11)。"""
+    """反轉、反轉召喚、反轉怪獸是三個不一樣的東西(站主裁定)。"""
 
     ALL = {"polarities": ["做", "不能", "不會", "可以", "只能", "必須"]}
 
@@ -186,7 +182,7 @@ class FlipIsNotFlipSummonOrFlipMonsterTest(FlipFixture):
 
     def test_flip_monster_literal_is_not_the_flip_action(self):
         """サブテラーの継承「リバースモンスター１体を選んで墓地へ送り」、王宮の号令「リバース効果モンスター」
-        (段解析不出):查「反轉」不命中,也不因這兩個字面列進未解析組;查「送墓」照舊列 サブテラーの継承。"""
+        (段解析不出):查「反轉」不命中,也不因這兩個字面列進未解析組;查「送墓」列 サブテラーの継承。"""
         for query in ({}, {"include_condition": True}):
             result = self.run_query(actions=["反轉"], **self.ALL, **query)
             for cid in (SUBTERROR_LEGACY, ROYAL_DECREE):

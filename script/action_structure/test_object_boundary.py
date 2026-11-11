@@ -227,7 +227,7 @@ WAKE_CUP_KURO_TEXT = (
 
 class WakeCupKuroTest(GoldenCase):
     """WAKE CUP！ クロ 6361316 ③:物件不帶「自分・相手ターンに、」這截字面,後面的「そのモンスター」
-    照常指回它、判得了。m3b 票 01 起「自分・相手ターンに、」是遊戲狀態前提(回合方 任一方),那一段也解析得出。"""
+    照常指回它、判得了。「自分・相手ターンに、」是遊戲狀態前提(回合方 任一方),那一段也解析得出。"""
     cards = [
         card(WAKE_CUP_KURO, name_ja="WAKE CUP！ クロ", level=7, race=0x40, attribute=0x8, atk=400),
         card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", type=NORMAL_MONSTER, level=7,
@@ -244,8 +244,7 @@ class WakeCupKuroTest(GoldenCase):
         self.assertNotIn(WAKE_CUP_KURO, self.hits(card=POT_OF_GREED, **self.QUERY))
 
     def test_the_segment_with_the_either_turn_front_is_written_back(self):
-        """m3b 票 01 改:「自分・相手ターンに、」那一段寫回原文相符(原本前文認不得、不通過);
-        指回它物件的下一段寫回原文相符。"""
+        """「自分・相手ターンに、」那一段與指回它物件的下一段都寫回原文相符。"""
         self.assertWritesBack(WAKE_CUP_KURO, "自分・相手ターンに、フィールドの裏側守備表示モンスター１体を対象として")
         self.assertWritesBack(WAKE_CUP_KURO, "そのモンスターを表側守備表示にする")
 

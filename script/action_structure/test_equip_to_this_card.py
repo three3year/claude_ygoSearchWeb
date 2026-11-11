@@ -1,4 +1,4 @@
-"""裝備到此卡(m3b 票 06)。
+"""裝備到此卡。
 
 「Xをこのカードに装備する」:裝備段的受方是此卡;X 是對象線,條件式、從、取對象照字面與既有規則
 (X 是回指時指回前面被取對象的物件)。方式字面「装備カード扱いとして」「装備魔法カード扱いで」。
@@ -43,15 +43,14 @@ ZOROA_TEXT = (
     "③：自分フィールドの「マギストス」カード１枚を対象として発動できる。"
     "そのカードを破壊し、このカードを墓地から特殊召喚する。")
 MILLENNIUM_EQUIP = "その相手の効果モンスターを装備カード扱いとしてこのカードに装備する"
-ARTEMIS = 34755994          # 聖魔の乙女アルテミス:「マギストス」連結怪獸(效果怪獸)
-BLACK_MAGICIAN = 46986414   # ブラック・マジシャン:通常怪獸,不是「マギストス」
+ARTEMIS = 34755994
+BLACK_MAGICIAN = 46986414
 
 MAGISTUS_ARCHETYPES = [{"setcode": MAGISTUS, "hex": "0x150", "names_ja": ["マギストス"],
                         "name_zh": "偉魔", "source": "strings.conf"}]
 
 
 class EquipToThisCardTest(GoldenCase):
-    """千年眼納祭、幻惑眼納祭、偉魔代蒙 絕火之瑣羅亞(使用者故事 36–39)。"""
     cards = [
         card(MILLENNIUM_EYES, name_ja="ミレニアム・アイズ・サクリファイス", type=FUSION_MONSTER,
              level=1, race=0x2, attribute=0x20, atk=0, **{"def": 0}),
@@ -104,7 +103,7 @@ class EquipToThisCardTest(GoldenCase):
         self.assertIn(ZOROA, self.hits(actions=["裝備"], card=ARTEMIS))
 
     def test_equip_with_a_normal_monster_misses_millennium_eyes(self):
-        """千年眼納祭 只裝效果怪獸。它的③「このカードの効果で装備したモンスターと〜」照舊解析不出,
+        """千年眼納祭 只裝效果怪獸。它的③「このカードの効果で装備したモンスターと〜」解析不出,
         所以整張仍在未解析組;裝備那一段本身判得了、不命中。"""
         query = dict(actions=["裝備"], card=BLACK_MAGICIAN)
         self.assertNotIn(MILLENNIUM_EYES, self.hits(**query))
@@ -129,7 +128,6 @@ SCISSOR_BEAR_TEXT = (
 
 
 class WholeCardPassTest(GoldenCase):
-    """三張標準卡都卡在這張票以外的寫法(見票檔 Comments),整張通過改用這張票之後才整張通過的卡。"""
     cards = [
         card(DRAGUNITY_DUX, name_ja="ドラグニティ－ドゥクス", level=4, race=0x200, attribute=0x8,
              atk=1500, setcode=DRAGUNITY),

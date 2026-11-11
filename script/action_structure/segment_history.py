@@ -51,7 +51,6 @@ def previous_segment(seg, card):
 
 
 def next_segment(seg, card):
-    """同一區塊裡緊接在這一段後面的段;這一段是區塊的最後一段、或找不到時回 None。"""
     block_id = seg["id"].split(".")[0]
     for block in all_blocks(card):
         if block["id"] != block_id:

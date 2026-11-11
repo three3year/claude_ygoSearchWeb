@@ -91,7 +91,7 @@ EXTRA_DECK_BITS = (SUBTYPE_BITS["融合"] | SUBTYPE_BITS["同步"] | SUBTYPE_BIT
 STAT_FIELDS = {"攻擊力": "atk", "守備力": "def"}
 COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
                "≤": operator.le, ">": operator.gt, "<": operator.lt}
-EQUIP_WORD = "装備"   # 陷阱能不能成為裝備卡:看它自己的官方日文有沒有這兩個字
+EQUIP_WORD = "装備"
 REASON_REF_MISSING = "引用的物件找不到"
 REASON_SAME_DIFFERENT = "異同判不了"
 _RANGE_END_RE = re.compile(r"^(?P<prefix>.*?)(?P<num>\d+)$")
@@ -127,12 +127,11 @@ def _can_be_equip_card(condition, view):
 
 class StateAtom(NamedTuple):
     """狀態原子的代入規則。"""
-    fits: Callable[[dict, "CardView"], bool]   # (原子, 代入的卡) → 指定卡代入時符不符合
+    fits: Callable[[dict, "CardView"], bool]
     generic: bool                        # 算不算泛用原子(條件式只有大類與泛用原子的物件是泛用物件)
 
 
 # 狀態原子的代入規則:狀態(在哪、誰控制、表側裏側、被裝備…)不是卡的屬性,卡片總表查不到,
-# 指定卡或物件條件代入時照這張表判;大多數是「任何卡都代得進去」,少數看這張卡可不可能處在那個狀態。
 # 新的狀態原子在這裡加一列(抽取與模板在 `condition_atoms`);沒列在這裡、`eval_condition` 也沒有
 # 專門判法的原子一律判不了(None),那個物件會進未解析組。
 STATE_ATOMS = {
@@ -144,10 +143,8 @@ STATE_ATOMS = {
     EQUIPPED: StateAtom(_any_card, generic=False),
     TARGETING_THIS: StateAtom(_any_card, generic=False),
     "曾被特殊召喚": StateAtom(_summoned_from_fits, generic=False),
-    # 怎麼被召喚出來的、被本卡效果做過什麼,都是狀態。
     SUMMON_METHOD: StateAtom(_any_card, generic=False),
     ACTED_BY_EFFECT: StateAtom(_any_card, generic=False),
-    # 是不是正裝備在怪獸上(「装備されている」「装備カード」…):只有可能成為裝備卡的卡代得進去。
     EQUIPPED_ON: StateAtom(_can_be_equip_card, generic=False),
 }
 GENERIC_ATOMS = ("大類",) + tuple(op for op, rule in STATE_ATOMS.items() if rule.generic)
@@ -208,7 +205,6 @@ def compare_attr(condition, entry, binding):
 
 
 def _atoms(condition, op):
-    """條件式裡(且、或、非裡面也算)運算子是 `op` 的原子。"""
     if condition is None:
         return
     if condition["op"] == op:

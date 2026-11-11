@@ -281,7 +281,7 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
         start += len(clause) - len(cost.group("rest"))
         clause, seg_start = cost.group("rest"), None
     pieces = split_continuative(clause)
-    right_halves = set()   # 移走 + 召喚切開後的右半在 pieces 裡的位置
+    right_halves = set()
     i = -1
     while i + 1 < len(pieces):
         i += 1
@@ -322,8 +322,6 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
                 piece_replaces = left["id"]
         cut = simple_clause.move_summon_cut(piece)
         if cut is not None:
-            # 移走 + 召喚的て形串接(「Xをリリースして召喚できる」):左半是移走的段,右半排成下一截、
-            # 連接「同時」,照主語省略的子句解析。
             pieces.insert(i + 1, (piece_start - start + cut, piece[cut:]))
             right_halves.add(i + 1)
             piece = piece[:cut]

@@ -694,7 +694,7 @@ def _render_recipient(recipient, seg, card, objects, names, self_id):
                 raise NoTemplate("省略的受方無模板")
             return ""
         if obj is not None and not recipient.get("ref") and recipient["object"] == self_id:
-            return render_object(obj, seg, card, names, self_id=self_id) + "に"   # 裝備到此卡
+            return render_object(obj, seg, card, names, self_id=self_id) + "に"
         if obj is None or not recipient.get("ref"):
             raise NoTemplate("受方的物件找不到")
         return render_ref(recipient["ref"], obj, seg, card) + "に"

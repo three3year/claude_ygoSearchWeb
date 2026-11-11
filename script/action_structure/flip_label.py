@@ -1,4 +1,4 @@
-"""舊式反轉效果的標示「リバース：X」(m3b 票 02,站主裁定)。
+"""舊式反轉效果的標示「リバース：X」(站主裁定)。
 
 「リバース：」等於新式的「このカードがリバースした場合、」:標示自己切成一個條件段——動作詞 反轉、
 物件是此卡(原文沒寫,對象線標省略)、觸發形 場合(照官方再錄的寫法)、原述語字面記「リバース：」;
@@ -15,7 +15,6 @@ FLIP_TRIGGER = "場合"
 
 
 def label_segment(state, start, end):
-    """句子(區塊原文的 [start, end))以標示開頭 → 標示的條件段;不是回 None。"""
     if not state.block["text"].startswith(FLIP_LABEL, start, end):
         return None
     seg = segment_at(state, "條件", start, start + len(FLIP_LABEL))
@@ -31,7 +30,6 @@ def is_label(seg):
 
 
 def render_label(t):
-    """標示段 → 「リバース：」。格要正是 `label_segment` 填的那一組,否則是無模板(不抄字面)。"""
     seg = t.seg
     if ((seg["kind"], seg["actions"], seg["trigger"], seg["voice"])
             != ("條件", [FLIP_ACTION], FLIP_TRIGGER, "主動")

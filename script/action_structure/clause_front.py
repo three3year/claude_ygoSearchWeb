@@ -132,7 +132,6 @@ def fill_front(ctx, front):
                 if m.group("marker") == "は":
                     state.subject = obj_id
         elif kind == "原因" and is_own_effect(m.group()):
-            # 指的段要看本體的動作詞,本體解析完才找(`cause_phrase.point_own_effect`)。
             seg["cause"] = {"kind": "效果", "text": m.group(), "segment": None, "placement": "名詞前"}
         elif kind == "原因":
             reason = fill_cause(seg, state, m.group(), start, placement="名詞前")

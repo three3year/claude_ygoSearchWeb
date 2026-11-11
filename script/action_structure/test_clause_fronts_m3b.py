@@ -1,4 +1,4 @@
-"""m3b 票 01 前文:回合方任一方、本卡效果的原因。只走接縫一(查詢判斷)與接縫二(反向檢查)。
+"""前文:回合方任一方、本卡效果的原因。只走接縫一(查詢判斷)與接縫二(反向檢查)。
 
 - 「自分・相手ターンに」是遊戲狀態前提(回合方 任一方),規則同「相手ターンに」:句首帶讀點、
   不帶讀點直接接後文、單獨成段都認得,後面的段照常解析;「自分・相手ターンに１度、」的「１度、」進略過文本。
@@ -46,14 +46,13 @@ def failures_on(structure, fragment):
 
 
 def assert_segment_writes_back(test, structure, fragment):
-    """原文含 fragment 的段都解析得出,而且反向檢查沒有與它有關的不通過。"""
     segs = [s for b in structure["blocks"] for s in b["segments"] if fragment in s["text"]]
     test.assertTrue(segs, fragment)
     test.assertEqual([s["unparsed"] for s in segs], [None] * len(segs))
     test.assertEqual(failures_on(structure, fragment), [])
 
 
-ABC_DRAGON_BUSTER = 1561110     # ABC－ドラゴン・バスター
+ABC_DRAGON_BUSTER = 1561110
 ABC_DRAGON_BUSTER_TEXT = (
     "「A－アサルト・コア」＋「B－バスター・ドレイク」＋「C－クラッシュ・ワイバーン」\n"
     "自分のフィールド・墓地の上記のカードを除外した場合のみEXデッキから特殊召喚できる。\n"
@@ -63,7 +62,7 @@ ABC_DRAGON_BUSTER_TEXT = (
     "対象として発動できる（同名カードは１枚まで）。そのモンスターを特殊召喚する。")
 
 
-ORICHALCOS_SWORD = 847217     # オレイカルコスの魔封剣(裝備魔法)
+ORICHALCOS_SWORD = 847217
 ORICHALCOS_SWORD_TEXT = (
     "このカード名の②の効果は１ターンに１度しか使用できない。\n"
     "①：装備モンスターの効果は無効化される。\n"
@@ -71,10 +70,10 @@ ORICHALCOS_SWORD_TEXT = (
     "発動できる。その効果モンスターは相手ターン終了時まで以下の効果を得る。\n"
     "●自分・相手ターンに１度、手札を１枚墓地へ送り、フィールドの表側表示カード１枚を対象として"
     "発動できる。その表側表示カードを破壊する。")
-DD_CROW = 24508238     # D.D.クロウ
+DD_CROW = 24508238
 DD_CROW_TEXT = ("①：自分・相手ターンに、このカードを手札から墓地へ捨て、相手の墓地のカード１枚を"
                 "対象として発動できる。そのカードを除外する。")
-TORNADO_DRAGON = 6983839     # 竜巻竜
+TORNADO_DRAGON = 6983839
 TORNADO_DRAGON_TEXT = (
     "レベル４モンスター×２\n"
     "①：自分・相手ターンに１度、このカードのX素材を１つ取り除き、フィールドの魔法・罠カード１枚を"
@@ -94,7 +93,7 @@ class EitherTurnTest(unittest.TestCase):
         self.assertIn(ABC_DRAGON_BUSTER, hits(cards, structures, actions=["捨棄"]))
 
     def test_dd_crow_passes_whole_and_discard_hits(self):
-        """D.D.クロウ「自分・相手ターンに、このカードを手札から墓地へ捨て」(候選卡卡在票外寫法時的整張通過替代卡):
+        """D.D.クロウ「自分・相手ターンに、このカードを手札から墓地へ捨て」:
         整張通過反向檢查;查「捨棄」從手牌、指定此卡命中。"""
         cards = [card(DD_CROW, name_ja="D.D.クロウ", level=1, race=0x200, attribute=0x20, atk=100),
                  card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7, race=0x2, attribute=0x20)]
@@ -103,7 +102,7 @@ class EitherTurnTest(unittest.TestCase):
         self.assertIn(DD_CROW, hits(cards, structures, actions=["捨棄"], from_zones=["手牌"], card=DD_CROW))
 
     def test_tornado_dragon_passes_whole_and_detach_hits(self):
-        """竜巻竜「自分・相手ターンに１度、このカードのX素材を１つ取り除き」(整張通過替代卡):
+        """竜巻竜「自分・相手ターンに１度、このカードのX素材を１つ取り除き」:
         整張通過反向檢查;查「去除」命中。"""
         cards = [card(TORNADO_DRAGON, name_ja="竜巻竜", type=0x800021, level=4, race=0x800000,
                       attribute=0x8, atk=2100),
@@ -114,7 +113,7 @@ class EitherTurnTest(unittest.TestCase):
 
     def test_either_turn_once_in_a_granted_effect_hits(self):
         """オレイカルコスの魔封剣 ②給的效果「●自分・相手ターンに１度、手札を１枚墓地へ送り」:
-        那一段解析得出,查「送墓」從手牌命中。整張卡在票外的「以下の効果を得る」,不要求整張通過。"""
+        那一段解析得出,查「送墓」從手牌命中。整張卡另有「以下の効果を得る」,不要求整張通過。"""
         cards = [card(ORICHALCOS_SWORD, name_ja="オレイカルコスの魔封剣", type=0x40002),
                  card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7, race=0x2, attribute=0x20)]
         structures = build(cards, [faq(ORICHALCOS_SWORD, "オレイカルコスの魔封剣", ORICHALCOS_SWORD_TEXT)])
@@ -140,7 +139,7 @@ class EitherTurnTest(unittest.TestCase):
     def test_either_turn_without_comma_before_cost_writes_back(self):
         """「自分・相手ターンに墓地のこのカードを除外して発動できる」(ネクロ・ガードナー 4906301 的
         「相手ターンに」換成「自分・相手ターンに」):不帶讀點直接接後文,那一段解析得出、寫回原文相符,
-        查「除外」從墓地命中。全庫不帶讀點的只有「魔弾」8 張,卡在這輪不收的「自分は〜を手札から発動できる」
+        查「除外」從墓地命中。全庫不帶讀點的只有「魔弾」8 張,卡在解析不出的「自分は〜を手札から発動できる」
         (換成「相手ターンに」也一樣),所以用這個句型驗。"""
         cards = [card(SELF, name_ja="甲"),
                  card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7, race=0x2, attribute=0x20)]
@@ -151,7 +150,7 @@ class EitherTurnTest(unittest.TestCase):
         self.assertIn(SELF, hits(cards, structures, actions=["除外"], from_zones=["墓地"], card=SELF))
 
 
-HYOSUITEI_AEGIROCASSIS = 1295442     # 氷水艇エーギロカシス
+HYOSUITEI_AEGIROCASSIS = 1295442
 HYOSUITEI_AEGIROCASSIS_TEXT = (
     "このカード名の①③の効果は１ターンに１度、いずれか１つしか使用できない。\n"
     "①：自分・相手ターンに、このカードが手札・墓地に存在する場合、自分フィールドの「氷水」モンスター"
@@ -160,7 +159,7 @@ HYOSUITEI_AEGIROCASSIS_TEXT = (
     "③：このカードが装備されている場合に発動できる。このカードを特殊召喚する。")
 
 
-FUTATSU_NO_KOKORO = 24749710     # 二つの心(永續陷阱)
+FUTATSU_NO_KOKORO = 24749710
 FUTATSU_NO_KOKORO_TEXT = (
     "このカード名の、①の効果は１ターンに１度しか使用できず、①②の効果は同一チェーン上では発動できない。\n"
     "①：自分・相手ターンに発動できる。デッキから「光と闇の儀式」のカード名が記されたモンスター１体を"
@@ -170,19 +169,18 @@ FUTATSU_NO_KOKORO_TEXT = (
     "モンスター１体を手札から召喚条件を無視して特殊召喚する。")
 
 def one_card(cid, name_ja, text, **kw):
-    """只有這張卡(加一張對照怪獸)的卡庫 → 這張卡的結構。"""
     cards = [card(cid, name_ja=name_ja, **kw),
              card(BLACK_MAGICIAN, name_ja="ブラック・マジシャン", level=7, race=0x2, attribute=0x20)]
     return own(build(cards, [faq(cid, name_ja, text)]), cid)
 
 
-SERIAL_KILLER = 33776843     # CNo.15 ギミック・パペット－シリアルキラー
+SERIAL_KILLER = 33776843
 SERIAL_KILLER_TEXT = (
     "レベル９モンスター×３\n"
     "①：１ターンに１度、このカードのX素材を１つ取り除き、相手フィールドのカード１枚を対象として"
     "発動できる。そのカードを破壊する。この効果でモンスターを破壊した場合、さらにそのモンスターの"
     "元々の攻撃力分のダメージを相手に与える。")
-BERSERK_DAEMON = 13744068     # バーサーク・デーモン
+BERSERK_DAEMON = 13744068
 BERSERK_DAEMON_TEXT = (
     "このカード名の①の効果は１ターンに１度しか使用できない。\n"
     "①：悪魔族モンスターを含む自分フィールドの表側表示モンスターを２体まで対象として発動できる。"
@@ -190,12 +188,12 @@ BERSERK_DAEMON_TEXT = (
     "②：このカードの①の効果でモンスターを破壊した時、その数だけ相手フィールドの表側表示モンスターを"
     "対象として発動できる。このカードの攻撃力は次の自分ターンの終了時まで、対象のモンスターの"
     "元々の攻撃力の合計分アップする。")
-MASK_CHANGE = 21143940     # マスク・チェンジ(速攻魔法)
+MASK_CHANGE = 21143940
 MASK_CHANGE_TEXT = (
     "①：自分フィールドの「HERO」モンスター１体を対象として発動できる。そのモンスターの属性を確認し、"
     "墓地へ送る。この効果でそのモンスターがフィールドから離れた場合、さらに同じ属性を持つ"
     "「M・HERO」モンスター１体をEXデッキから特殊召喚する。")
-BUSOU_HOUKI = 21056275     # 武装蜂起(通常魔法)
+BUSOU_HOUKI = 21056275
 BUSOU_HOUKI_TEXT = (
     "このカード名のカードは１ターンに１枚しか発動できない。\n"
     "①：手札・デッキから攻撃力１０００以下の昆虫族モンスター１体を特殊召喚する。"
@@ -203,9 +201,9 @@ BUSOU_HOUKI_TEXT = (
     "このカードの発動後、ターン終了時まで自分は昆虫族モンスターしか特殊召喚できない。\n"
     "②：このカードが墓地に存在する状態で、自分フィールドの表側表示の昆虫族Sモンスターが戦闘・効果で"
     "破壊された場合、このカードを除外して発動できる。デッキから「一斉蜂起」１枚を手札に加える。")
-INSECT = 10000302     # 測試用:攻擊力 1000 的昆蟲族怪獸
+INSECT = 10000302
 ISSEI_HOUKI = 52838896     # 一斉蜂起(②的「」名稱)
-ABDUCTION = 21846145     # アブダクション(通常陷阱)
+ABDUCTION = 21846145
 ABDUCTION_TEXT = (
     "このカード名のカードは１ターンに１枚しか発動できない。\n"
     "①：相手フィールドの表側表示モンスター１体を対象として発動できる。元々の種族と元々の属性と"

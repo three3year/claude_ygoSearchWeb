@@ -1,4 +1,4 @@
-"""連用形被動串接(m3b 票 03):述語的串接語尾加「され」「られ」,不限後面接哪個述語;
+"""連用形被動串接:述語的串接語尾加「され」「られ」,不限後面接哪個述語;
 讀法同て形串接,一段兩個動作詞共用一條線。只走接縫一(查詢判斷)與接縫二(反向檢查)。
 官方文本逐字寫在測試裡(`data/sources/` 不入版控)。
 """
@@ -11,7 +11,7 @@ from test_golden import card, faq
 
 LINK_MONSTER = 0x4000021
 
-ZENMAICON = 1735088   # 発条補修ゼンマイコン
+ZENMAICON = 1735088
 ZENMAICON_TEXT = (
     "「ゼンマイ」モンスター２体\nこのカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。"
     "①：このカードがリンク召喚に成功した場合に発動できる。デッキから「ゼンマイ」カード１枚を手札に加える。"
@@ -27,7 +27,6 @@ def own(structures, cid):
 
 
 def hit_texts(cards, structures, cid, **query):
-    """命中的段裡屬於 `cid` 那張卡的段原文。"""
     structure = own(structures, cid)
     texts = {s["id"]: s["text"] for b in structure["blocks"] for s in b["segments"]}
     result = run_query(structures, cards, query)
@@ -60,7 +59,6 @@ class ZenmaiconTest(unittest.TestCase):
                     include_condition=True, card=ZENMAICON))
 
     def test_condition_is_not_hit_without_including_conditions(self):
-        """預設(條件段關)不因為那一段命中。"""
         self.assertNotIn(ZENMAICON_DESTROYED, hit_texts(
             self.cards, self.structures, ZENMAICON, actions=["破壞"]))
 
@@ -68,7 +66,7 @@ class ZenmaiconTest(unittest.TestCase):
         self.assertNotIn(ZENMAICON_DESTROYED, failed_texts(own(self.structures, ZENMAICON)))
 
 
-TG_WEREWOLF = 293542        # TG ワーウルフ
+TG_WEREWOLF = 293542
 TG_WEREWOLF_TEXT = (
     "①：レベル４以下のモンスターが特殊召喚された時に発動できる。このカードを手札から特殊召喚する。\n"
     "②：フィールドのこのカードが破壊され墓地へ送られたターンのエンドフェイズに発動できる。"
@@ -90,7 +88,6 @@ class TgWerewolfTest(unittest.TestCase):
             archetypes=TG_ARCHETYPES)
 
     def test_destroyed_turn_writes_back(self):
-        """那一段解析得出、寫回原文相符;整張通過。"""
         self.assertEqual(check_card(own(self.structures, TG_WEREWOLF)), [])
 
     def test_condition_hits_destroy_from_the_field(self):
@@ -103,13 +100,13 @@ class TgWerewolfTest(unittest.TestCase):
             include_condition=True, card=TG_WEREWOLF))
 
 
-DARK_DIMENSION_RELEASE = 31550470   # 闇次元の解放
+DARK_DIMENSION_RELEASE = 31550470
 DARK_DIMENSION_RELEASE_TEXT = (
     "①：除外されている自分の闇属性モンスター１体を対象としてこのカードを発動できる。"
     "そのモンスターを特殊召喚する。このカードがフィールドから離れた時にそのモンスターは破壊され"
     "除外される。そのモンスターが破壊された時にこのカードは破壊される。")
 DARK_DIMENSION_DESTROYED = "そのモンスターは破壊され除外される"
-DARK_MONSTER = 10001301             # 合成卡:闇屬性怪獸
+DARK_MONSTER = 10001301
 
 
 class DestroyedThenBanishedTest(unittest.TestCase):

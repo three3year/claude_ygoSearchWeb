@@ -46,6 +46,24 @@ function onHashChange() {
   restore();
 }
 
+/* 頁尾第二行:「資料來源：」後接各來源的連結,以「 · 」分隔。
+   開新分頁,回來時搜尋條件與捲動位置還在;noopener 讓外站拿不到本頁的 window.opener。
+   文字一律走 textContent:清單是資料,不拼 HTML 字串。 */
+function renderSources() {
+  const line = $('dataSources');
+  line.append('資料來源：');
+  Sources.FOOTER.forEach((s, i) => {
+    if (i) line.append(' · ');
+    const a = document.createElement('a');
+    a.href = s.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.title = `資料來源：${s.site}`;
+    a.textContent = s.label;
+    line.append(a);
+  });
+}
+
 function init() {
   $('dbInfo').textContent =
     `${META.cards || DB.length} 張卡・${META.clauses || 0} 個效果句`;
@@ -54,6 +72,7 @@ function init() {
     updated.textContent = `資料更新時間：${fmtTime(META.data_updated_at)}`;
     updated.hidden = false;
   }
+  renderSources();
   Query.init();
   View.initAltArt();
   View.initEffKind();

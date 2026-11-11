@@ -99,12 +99,14 @@
 
 <!-- 頁尾聲明兩行:資料更新一行、來源一行(2026-08-21 使用者裁示;
      2026-08-22 使用者裁示移除 KONAMI 免責一行)。
-     靜態文案住 HTML;唯一動態的是第一行的資料更新時間——值來自 META,由
-     main.js 填入,META 沒有該欄位(建置機從未跑過更新流程)時整行維持 hidden。
-     時間未知就不顯示,不顯示錯的。 -->
+     兩行都由 main.js 填入,HTML 只留空殼。
+     第一行資料更新時間的值來自 META;META 沒有該欄位(建置機從未跑過更新流程)
+     時整行維持 hidden——時間未知就不顯示,不顯示錯的。
+     第二行的來源連結由 sources.js 的頁尾清單組出來:增減來源只改清單,
+     不必回來改 HTML(2026-11-11 頁尾資料來源改成連結)。 -->
 <footer class="site-footer">
   <p id="dataUpdated" hidden></p>
-  <p>資料來源：查牌網（中文卡文・卡圖）・ygopro-database（日英卡名・日文卡文）・Master Duel Meta（MD 稀有度・MD 禁限）・YGOPRODeck（Genesys 點數・OCG/TCG 禁限）・Yu-Gi-Oh! Neuron（效果類型）</p>
+  <p id="dataSources"></p>
 </footer>
 
 <!-- 零建置協定(ADR-0007):沒有 bundler、沒有 ES modules,<script> 依序載入,

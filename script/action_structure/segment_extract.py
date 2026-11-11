@@ -47,7 +47,7 @@ import simple_clause
 import stat_modify
 from block_state import (ClauseContext, INTERVAL_RE, INTERVAL_REASON, INTERVAL_SCOPE,
                          INTERVAL_TIMES, KIND_PROCEDURE, KIND_RESTRICTION, segment_at)
-from cause_phrase import DESCENT_TAIL
+from cause_phrase import DESCENT_TAIL, own_effect_pending, point_own_effect
 from clause_join import JOIN, split_continuative
 from names_attributes import parse_treat_as
 from object_boundary import REASON_FRONT, find_cut
@@ -191,6 +191,9 @@ def _fill_after_front(ctx, clause_text, cut, fill_body):
         seg["unparsed"] = unparsed(simple_clause.REASON_FROM)
     front_failure, seg["unparsed"] = seg["unparsed"], None
     fill_body(replace(ctx, sentence_start=ctx.sentence_start + cut), clause_text[cut:])
+    if own_effect_pending(seg["cause"]):
+        reason = point_own_effect(seg, ctx.state)
+        seg["unparsed"] = seg["unparsed"] or (unparsed(reason) if reason else None)
     seg["unparsed"] = seg["unparsed"] or front_failure
 
 

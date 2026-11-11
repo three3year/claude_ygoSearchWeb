@@ -54,6 +54,8 @@ PHASE_WORDS = (("メインフェイズ１", "主要階段1"), ("メインフェ�
                ("エンドフェイズ", "結束階段"), ("スタンバイフェイズ", "準備階段"),
                ("ドローフェイズ", "抽牌階段"))
 SIDE_PREFIX = {"自分": "我方", "相手": "對手", "自分・相手の": "任一方"}
+# 回合方的字面:任一方寫成「自分・相手ターン」(沒有「の」;階段的任一方是「自分・相手の」)。
+TURN_SIDE_PREFIX = {"自分": "我方", "相手": "對手", "自分・相手": "任一方"}
 # 遊戲狀態原子的 form(後面的助詞,帶不帶讀點都照原文記)。「時に」「時」只出現在
 # 「〜したターンの〈階段〉時(に)」(舊式;`turn_phase`),句首的遊戲狀態前提只認「に」。
 GAME_STATE_FORMS = ("に", "に、", "時に", "時に、", "時", "時、")
@@ -63,11 +65,12 @@ TURN_OF = "の"
 TIMEPOINT_OR_FORMS = ("及び、", "及び")
 _PHASE_TEXT = {value: word for word, value in PHASE_WORDS}
 _SIDE_TEXT = {value: word for word, value in SIDE_PREFIX.items()}
+_TURN_SIDE_TEXT = {value: word for word, value in TURN_SIDE_PREFIX.items()}
 
 # 遊戲狀態後面的讀點有寫、沒寫都有(「相手ターンに、」「相手ターンに自分フィールドに」),
 # 沒有句型層級的規則可判,所以把「に」或「に、」記進原子的 form,模板照它寫。
 _GAME_STATE_RE = re.compile(
-    "^(?P<side>自分・相手の|自分|相手)?"
+    "^(?P<side>自分・相手の?|自分|相手)?"
     "(?P<what>ターン|" + "|".join(w for w, _ in PHASE_WORDS) + "|ダメージステップ)"
     "(?P<form>に、?)")
 # 位置/存在原子的形式:「限り」是持續的前提(段的期間記持續,
@@ -137,14 +140,16 @@ _HELD_RE = re.compile(
 
 def parse_game_state(text):
     """開頭的遊戲狀態短語 → (原子, 字面長度);不是就回 (None, 0)。
-    「ターンに」一定帶方(回合方沒有「任一方」:那就不是條件)。"""
+    「ターンに」一定帶方(「自分・相手ターンに」是任一方);階段的方照 `SIDE_PREFIX`。"""
     m = _GAME_STATE_RE.match(text)
     if not m:
         return None, 0
-    side = SIDE_PREFIX.get(m.group("side"))
-    what = m.group("what")
+    what, side_word = m.group("what", "side")
+    side = (TURN_SIDE_PREFIX if what == "ターン" else SIDE_PREFIX).get(side_word)
+    if side_word and side is None:
+        return None, 0
     if what == "ターン":
-        if side not in ("我方", "對手"):
+        if side is None:
             return None, 0
         atom = {"op": "遊戲狀態", "state": GAME_STATE_TURN, "value": side}
     elif what == "ダメージステップ":
@@ -400,9 +405,9 @@ def render_game_state(atom, last):
     if last:
         form = form.rstrip("、")
     if state == GAME_STATE_TURN:
-        if atom.get("value") not in ("我方", "對手"):
+        if atom.get("value") not in _TURN_SIDE_TEXT:
             raise NoTemplate("回合方無模板")
-        return _SIDE_TEXT[atom["value"]] + "ターン" + form
+        return _TURN_SIDE_TEXT[atom["value"]] + "ターン" + form
     if state == GAME_STATE_DAMAGE_STEP:
         return "ダメージステップ" + form
     if state == GAME_STATE_PHASE:

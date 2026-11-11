@@ -5,7 +5,7 @@
 (召喚方式)、「Xとの戦闘では」(戰鬥的對手)、「Xの(効果を受けない)」(誰的效果)、
 「ドロー以外の方法で」(方法)、「「X」により(降臨)」(物件)。
 也收:「「X」モンスターの効果で/によって」(物件是名詞短語)、
-「この効果で/この方法で/このカードの①の効果で(〜召喚に成功した)」(本卡自己的效果,指向做那次召喚的段)。
+「この効果で/この方法で/このカードの①の効果で(〜した)」(本卡自己的效果,指向之前做同一個動作的段)。
 - 抽取:`parse_cause_phrase`;`CAUSE_ALT` 是各句型共用的原因槽正規式片段。
 - 模板:`render_cause_phrase`。
 """
@@ -43,10 +43,11 @@ _OBJECT_EFFECT_CAUSE = ("(?!戦闘)(?:「[^「」]*」|または|(?!から)[^を
                         "の効果(?:によって|で)")
 _OBJECT_EFFECT_RE = re.compile(
     f"^(?P<phrase>.+?(?:モンスター|カード))(?P<tail>{'|'.join(EFFECT_OF_TAILS)})$")
-# 本卡自己的效果當原因:「この効果で/この方法で/このカードの①の効果で 特殊召喚に成功した」。
-# 只在後面是「〜召喚に成功」時認(「この効果で特殊召喚したモンスター」是動作回指,不走這裡)。
-_SELF_EFFECT_CAUSE = ("(?:このカードの[①-⑳]の|この)(?:効果|方法)(?:によって|で)"
-                      "(?=[^、。]*召喚に成功)")
+# 本卡自己的效果當原因:「この効果で/この方法で/このカードの①の効果で」,寫在任何動作詞前
+# (「この効果で特殊召喚に成功した」「この効果でデッキから特殊召喚した」「Xをこの効果で除外した」);
+# 寫在物件前的(「この効果でモンスターを破壊した場合」)由物件切點切成子句前文(`clause_front`)。
+# 連體的「この効果で特殊召喚したモンスター」是物件短語(動作回指),句型先把它當物件,不走這裡。
+_SELF_EFFECT_CAUSE = "(?:このカードの[①-⑳]の|この)(?:効果|方法)(?:によって|で)"
 _SELF_EFFECT_RE = re.compile(
     "^(?:このカードの(?P<label>[①-⑳])の|この)(?:効果|方法)(?:によって|で)$")
 # 「「トリックスター」LモンスターのL素材として(墓地へ送られた)」:作為素材,帶被召喚怪獸的物件。
@@ -79,8 +80,8 @@ def _related(action, other):
 
 
 def source_segment(earlier_blocks, earlier_segments, label, actions):
-    """「この効果/この方法/このカードの①の効果(で〜召喚に成功した)」指的那一段:寫了編號就在那個編號的
-    區塊裡找,沒寫就從這一段往前找(同區塊先前的段,再往前面的區塊);取最近一個做了那種召喚的段
+    """「この効果/この方法/このカードの①の効果(で〜した)」指的那一段:寫了編號就在那個編號的
+    區塊裡找,沒寫就從這一段往前找(同區塊先前的段,再往前面的區塊);取最近一個做了同一個動作的段
     (動作詞與 `actions` 有上下位關係;條件段與不能/不會的段不是「做了」)。找不到回 None。
     抽取與模板共用這一把尺。"""
     if label:
@@ -91,9 +92,31 @@ def source_segment(earlier_blocks, earlier_segments, label, actions):
         candidates.extend(earlier_segments)
     for seg in reversed(candidates):
         if (seg["kind"] not in ("條件", "被代替") and seg["polarity"] not in ("不能", "不會")
-                and any(is_summon(a) and _related(a, wanted)
-                        for a in seg["actions"] for wanted in actions)):
+                and any(_related(a, wanted) for a in seg["actions"] for wanted in actions)):
             return seg
+    return None
+
+
+def is_own_effect(text):
+    """原因字面是不是本卡自己的效果(「この効果で」「この方法で」「このカードの①の効果で」)。"""
+    return bool(_SELF_EFFECT_RE.match(text))
+
+
+def own_effect_pending(cause):
+    """子句前文記了本卡自己的效果、還沒找指的段(`segment` 是 None)。"""
+    return bool(cause) and "segment" in cause and cause["segment"] is None
+
+
+def point_own_effect(seg, state):
+    """子句前文填的本卡自己的效果(`clause_front` 只記字面):動作詞要等子句本體解析完才知道,
+    所以這時才找指的段,寫進原因的 `segment`;找不到就拿掉原因、回 `REASON_REF`。"""
+    own = _SELF_EFFECT_RE.match(seg["cause"]["text"])
+    source = source_segment(state.card["blocks"], state.block["segments"], own.group("label"),
+                            seg["actions"])
+    if source is None:
+        seg["cause"] = None
+        return REASON_REF
+    seg["cause"]["segment"] = source["id"]
     return None
 
 

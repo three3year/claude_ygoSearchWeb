@@ -416,6 +416,10 @@ def fill_clause(ctx, clause_text):
         if obj_id is None:
             seg["unparsed"] = unparsed(reason)
             return
+        if obj_id == state.self_id and ref is None and EQUIP_ACTION not in seg["actions"]:
+            # 受方是此卡只收裝備段(「Xをこのカードに装備する」)。
+            seg["unparsed"] = unparsed(REASON_CLAUSE)
+            return
         seg["recipient"] = {"object": obj_id, "ref": ref}
     elif EQUIP_ACTION in seg["actions"] and not elided and state.declared_object() is not None:
         # 「Xを対象とし、このカードを装備魔法カード扱いで装備する」:沒寫出來的裝備對象
@@ -694,7 +698,8 @@ def _render_recipient(recipient, seg, card, objects, names, self_id):
             if recipient.get("ref") or not declared_earlier(obj["id"], seg, card):
                 raise NoTemplate("省略的受方無模板")
             return ""
-        if obj is not None and not recipient.get("ref") and recipient["object"] == self_id:
+        if (obj is not None and not recipient.get("ref") and recipient["object"] == self_id
+                and EQUIP_ACTION in seg["actions"]):
             return render_object(obj, seg, card, names, self_id=self_id) + "に"
         if obj is None or not recipient.get("ref"):
             raise NoTemplate("受方的物件找不到")

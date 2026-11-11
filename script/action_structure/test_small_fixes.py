@@ -237,5 +237,107 @@ class ScannerDestinationTest(unittest.TestCase):
         self.assertEqual(hit_segments(self.structures, self.cards, SCANNER, actions=["除外"]), [])
 
 
+SALAMANGREAT_SANCTUARY = 1295111   # 転生炎獣の聖域
+SALAMANGREAT_SANCTUARY_TEXT = (
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。\n"
+    "①：このカードがフィールドゾーンに存在する限り、自分が「サラマングレイト」LモンスターをL召喚する場合、"
+    "自分フィールドの同名の「サラマングレイト」Lモンスター１体のみを素材としてL召喚できる。\n"
+    "②：自分のモンスターが戦闘を行うダメージ計算時に、１０００LPを払い、自分フィールドのLモンスター１体を"
+    "対象として発動できる。そのモンスターの攻撃力を０にし、そのモンスターの元々の攻撃力分だけ自分のLPを"
+    "回復する。")
+SALAMANGREAT_REVIVE = 19027895     # サラマングレイト・リヴァイブ
+SALAMANGREAT_REVIVE_TEXT = (
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。\n"
+    "①：自分の墓地の炎属性モンスター１体を対象として発動できる。そのモンスターを特殊召喚する。\n"
+    "②：墓地のこのカードを除外し、自分フィールドの「サラマングレイト」モンスター１体と、"
+    "自分の墓地の同名モンスター１体を対象として発動できる。その墓地のモンスターをデッキに戻し、"
+    "その自分フィールドのモンスターの攻撃力はターン終了時まで自身の元々の攻撃力分アップする。")
+MASK_CHANGE = 21143940             # マスク・チェンジ
+MASK_CHANGE_TEXT = (
+    "①：自分フィールドの「HERO」モンスター１体を対象として発動できる。そのモンスターの属性を確認し、"
+    "墓地へ送る。この効果でそのモンスターがフィールドから離れた場合、さらに同じ属性を持つ「M・HERO」"
+    "モンスター１体をEXデッキから特殊召喚する。")
+CARD_OF_FATE = 856784              # 運命のドロー
+CARD_OF_FATE_TEXT = (
+    "このカード名のカードは１ターンに１枚しか発動できない。①：自分のLPが相手より少なく、フィールドの"
+    "攻撃力が一番高いモンスターが相手フィールドに存在する場合に発動できる。デッキからカード名が異なる"
+    "カード３枚を選んで相手に見せ、その３枚をシャッフルしてデッキの上に戻す。その後、自分はデッキから"
+    "１枚ドローする。このカードの発動後、ターン終了時まで自分は魔法・罠カードをセットできず、"
+    "魔法・罠・モンスターの効果を１度しか発動できない。")
+SALAMANGREAT_LINK = 10002101       # 合成卡:「サラマングレイト」連結怪獸
+MASKED_HERO = 10002102             # 合成卡:「M・HERO」融合怪獸
+SAME_DIFFERENT_ARCHETYPES = [
+    {"setcode": 0x119, "hex": "0x119", "names_ja": ["サラマングレイト"], "name_zh": "轉生炎獸",
+     "source": "strings.conf"},
+    {"setcode": 0x8, "hex": "0x8", "names_ja": ["HERO"], "name_zh": "英雄", "source": "strings.conf"},
+    {"setcode": 0xa008, "hex": "0xa008", "names_ja": ["M・HERO"], "name_zh": "假面英雄",
+     "source": "strings.conf"}]
+REASON_SAME_DIFFERENT = "異同判不了"
+
+
+class SingleSameDifferentTest(unittest.TestCase):
+    """異同原子沒寫比較對象、所在物件的數量恰好一張時,比的是沒寫在短語裡的東西:指定卡代入判不了,
+    那一段列進未解析組;沒寫數量、兩張以上的照舊讀成同群成員之間,單張卡代入一律符合。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [
+            card(SALAMANGREAT_SANCTUARY, name_ja="転生炎獣の聖域", type=0x80002, setcode=0x119),
+            card(SALAMANGREAT_REVIVE, name_ja="サラマングレイト・リヴァイブ", type=0x4,
+                 setcode=0x119),
+            card(MASK_CHANGE, name_ja="マスク・チェンジ", type=0x10002, setcode=0xa5),
+            card(CARD_OF_FATE, name_ja="運命のドロー", type=0x2),
+            card(SALAMANGREAT_LINK, name_ja="転生炎獣ベイルリンクス", type=0x4000021, level=1,
+                 attribute=0x4, race=0x4000, setcode=0x119),
+            card(MASKED_HERO, name_ja="M・HERO ダーク・ロウ", type=0x41, level=6, attribute=0x20,
+                 race=0x2000, setcode=0xa008)]
+        cls.structures = build(cls.cards, [
+            faq(SALAMANGREAT_SANCTUARY, "転生炎獣の聖域", SALAMANGREAT_SANCTUARY_TEXT),
+            faq(SALAMANGREAT_REVIVE, "サラマングレイト・リヴァイブ", SALAMANGREAT_REVIVE_TEXT),
+            faq(MASK_CHANGE, "マスク・チェンジ", MASK_CHANGE_TEXT),
+            faq(CARD_OF_FATE, "運命のドロー", CARD_OF_FATE_TEXT)],
+            archetypes=SAME_DIFFERENT_ARCHETYPES)
+
+    def unresolved(self, cid, **query):
+        """查詢結果未解析組裡這張卡列出的 (原因, 段原文)。"""
+        result = run_query(self.structures, self.cards, query)
+        entry = next((u for u in result["unparsed"] if u["id"] == cid), None)
+        return [(s["reason"], s["text"]) for s in entry["segments"]] if entry else []
+
+    def assert_undecidable(self, cid, text, **query):
+        self.assertEqual(hit_segments(self.structures, self.cards, cid, **query), [])
+        self.assertEqual(self.unresolved(cid, **query), [(REASON_SAME_DIFFERENT, text)])
+
+    def test_sanctuary_single_same_name_material_is_undecidable(self):
+        """転生炎獣の聖域「同名の「サラマングレイト」Lモンスター１体」:指定卡代入時列進未解析組、不命中;
+        只給動作詞照舊命中。"""
+        text = "自分フィールドの同名の「サラマングレイト」Lモンスター１体のみを素材としてL召喚できる"
+        self.assert_undecidable(SALAMANGREAT_SANCTUARY, text, actions=["L召喚"],
+                                card=SALAMANGREAT_LINK)
+        self.assertEqual([s["text"] for s in hit_segments(
+            self.structures, self.cards, SALAMANGREAT_SANCTUARY, actions=["L召喚"])], [text])
+
+    def test_mask_change_single_same_attribute_is_undecidable(self):
+        """マスク・チェンジ「同じ属性を持つ「M・HERO」モンスター１体」:指定卡代入時列進未解析組、不命中。"""
+        self.assert_undecidable(MASK_CHANGE, "同じ属性を持つ「M・HERO」モンスター１体をEXデッキから特殊召喚する",
+                                actions=["特殊召喚"], card=MASKED_HERO)
+
+    def test_revive_single_same_name_target_is_undecidable(self):
+        """サラマングレイト・リヴァイブ「自分の墓地の同名モンスター１体」:回指它的返回段指定卡代入時
+        列進未解析組、不命中。"""
+        self.assert_undecidable(SALAMANGREAT_REVIVE, "その墓地のモンスターをデッキに戻し",
+                                actions=["返回"], card=SALAMANGREAT_LINK)
+
+    def test_card_of_fate_group_comparison_still_fits(self):
+        """運命のドロー「カード名が異なるカード３枚」:照舊讀成同群成員之間,指定卡代入時符合。"""
+        self.assertEqual([s["text"] for s in hit_segments(
+            self.structures, self.cards, CARD_OF_FATE, actions=["展示"], card=MASKED_HERO)],
+            ["デッキからカード名が異なるカード３枚を選んで相手に見せ"])
+
+    def test_revive_passes_reverse_check(self):
+        """サラマングレイト・リヴァイブ整張通過反向檢查(其餘三張卡在票外的寫法,只驗段)。"""
+        self.assertEqual(check_card(own(self.structures, SALAMANGREAT_REVIVE)), [])
+
+
 if __name__ == "__main__":
     unittest.main()

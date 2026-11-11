@@ -253,7 +253,7 @@ class TgWerewolfTest(unittest.TestCase):
 
     def test_destroyed_turn_is_a_condition_not_a_cost(self):
         """「破壊され墓地へ送られたターン」是條件段:查「破壞」預設(不看條件段)時這張卡不在命中組
-        也不在未解析組;開條件段才列出(命中,或連用形被動串接解析不出時列進未解析組)。"""
+        也不在未解析組;開條件段才列出。"""
         self.assertNotIn(TG_WEREWOLF, self.listed(actions=["破壞"]))
         self.assertIn(TG_WEREWOLF, self.listed(actions=["破壞"], include_condition=True))
 
@@ -264,8 +264,8 @@ class TgWerewolfTest(unittest.TestCase):
                                            from_zones=["牌組"], card=TG_WEREWOLF))
 
     def test_activation_sentence_is_parsed_and_the_phase_writes_back(self):
-        """發動句不標「發動句解析不出」;「のエンドフェイズに」那一段寫回原文相符。沒過的只剩
-        條件段的述語「破壊され墓地へ送られた」(連用形被動串接)。"""
+        """發動句不標「發動句解析不出」;「のエンドフェイズに」那一段寫回原文相符。條件段的
+        連用形被動串接「破壊され墓地へ送られた」見 `test_passive_continuative`。"""
         details = [f["detail"] for f in check_card(self.own)]
         self.assertNotIn("段解析不出:發動句解析不出", details)
         self.assertLessEqual(set(failed_texts(self.own)), {TG_DESTROYED})

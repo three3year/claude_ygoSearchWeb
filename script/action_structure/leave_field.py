@@ -71,30 +71,40 @@ def split_clause(state, clause):
     return None
 
 
+def _leaves_field(replaced):
+    """被代替段是離場:動作詞只有離場;解析不出的(「この効果が適用されたこのカードはフィールド上から
+    離れた場合、」)看原述語字面含離場的字幹。"""
+    if replaced["unparsed"]:
+        return re.search(_LEAVE, replaced["predicate"] or "") is not None
+    return replaced["actions"] == [LEAVE_ACTION]
+
+
 def replaced_leave(seg, card):
     """這一段是自我限制句裡做代替的段(去處)時,回它代替的離場段;不是回 None。
-    只看結構:它代替的是緊接在前面、動作詞只有離場的被代替段。"""
+    只看結構:它代替的是緊接在前面、離場的被代替段。"""
     if not seg["replaces"]:
         return None
     replaced = previous_segment(seg, card)
     if (replaced is None or replaced["id"] != seg["replaces"]
-            or replaced["kind"] != KIND_REPLACED or replaced["actions"] != [LEAVE_ACTION]):
+            or replaced["kind"] != KIND_REPLACED or not _leaves_field(replaced)):
         return None
     return replaced
 
 
 def render_destination(t):
     """做代替的段(去處)的模板:沒有「代わりに」,只有主語省略的子句本體(「除外される」「デッキの一番下に戻る」)。
-    省略的主語要是被代替段裡離場的那個物件;這個句型沒有寫前提、期間的位置(前提與句首期間的字面都在
-    被代替段上,這一段只能有沒有字面的期間:承襲的本回合、「〜限り、」的持續)。"""
+    省略的主語要是被代替段裡離場的那個物件(被代替段解析不出時沒有對象線可比,只要求主語省略);
+    這個句型沒有寫前提、期間的位置(前提與句首期間的字面都在被代替段上,這一段只能有沒有字面的期間:
+    承襲的本回合、「〜限り、」的持續)。"""
     seg = t.seg
     replaced = replaced_leave(seg, t.card)
-    if replaced["trigger"] != RESTRICTION_TRIGGER or replaced["unparsed"]:
+    if replaced["trigger"] != RESTRICTION_TRIGGER:
         raise NoTemplate("離場的去處無模板:被代替段")
     if seg["premise"] is not None or split_duration(seg["duration"]) != ("", None):
         raise NoTemplate("離場的去處無模板:前提或期間")
+    if len(seg["lines"]) != 1 or not seg["lines"][0].get("elided"):
+        raise NoTemplate("離場的去處無模板:主語不是離場的物件")
     leaving = [line["object"] for line in replaced["lines"]]
-    if (len(leaving) != 1 or len(seg["lines"]) != 1 or not seg["lines"][0].get("elided")
-            or seg["lines"][0]["object"] != leaving[0]):
+    if not replaced["unparsed"] and leaving != [seg["lines"][0]["object"]]:
         raise NoTemplate("離場的去處無模板:主語不是離場的物件")
     return simple_clause.render_clause(t._replace(inner_duration=None))

@@ -203,5 +203,39 @@ class PrivateSelectionTest(unittest.TestCase):
                 self.assertEqual(check_card(own(self.structures, cid)), [])
 
 
+SCANNER = 75198893              # スキヤナー
+SCANNER_TEXT = (
+    "ゲームから除外されている相手のモンスター１体を選択して発動する。このカードはエンドフェイズ時まで"
+    "選択したモンスターと同名カードとして扱い、選択したモンスターと同じ属性・レベル・攻撃力・守備力になる。"
+    "この効果は１ターンに１度しか使用できない。この効果が適用されたこのカードはフィールド上から離れた場合、"
+    "ゲームから除外される。")
+
+
+class ScannerDestinationTest(unittest.TestCase):
+    """舊式、有讀點的「〜離れた場合、ゲームから除外される」照代替記;離場那一段解析不出時,
+    去處寫回原文也不多寫「代わりに」。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(SCANNER, name_ja="スキヤナー", type=0x21, level=1, race=0x20,
+                          attribute=0x10, atk=-2)]
+        cls.structures = build(cls.cards, [faq(SCANNER, "スキヤナー", SCANNER_TEXT)])
+
+    def test_no_literal_mismatch(self):
+        """整張沒有字面不符(去處「ゲームから除外される」寫回原文相符)。"""
+        failures = check_card(own(self.structures, SCANNER))
+        self.assertEqual([f for f in failures if f["reason"] == "字面不符"], [])
+        destination = next(s for b in own(self.structures, SCANNER)["blocks"]
+                           for _, s in iter_segments(b) if s["text"] == "ゲームから除外される")
+        self.assertEqual([f for f in failures if f["segment"] == destination["id"]], [])
+
+    def test_banish_still_hits_with_replacement(self):
+        """開代替查「除外」照舊命中「ゲームから除外される」;不開代替不命中。"""
+        segs = hit_segments(self.structures, self.cards, SCANNER, actions=["除外"],
+                            replacement=True)
+        self.assertEqual([s["text"] for s in segs], ["ゲームから除外される"])
+        self.assertEqual(hit_segments(self.structures, self.cards, SCANNER, actions=["除外"]), [])
+
+
 if __name__ == "__main__":
     unittest.main()

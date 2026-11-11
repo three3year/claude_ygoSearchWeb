@@ -89,35 +89,47 @@ EXTRA_DECK_BITS = (SUBTYPE_BITS["融合"] | SUBTYPE_BITS["同步"] | SUBTYPE_BIT
 STAT_FIELDS = {"攻擊力": "atk", "守備力": "def"}
 COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
                "≤": operator.le, ">": operator.gt, "<": operator.lt}
+EQUIP_WORD = "装備"   # 陷阱能不能成為裝備卡:看它自己的官方日文有沒有這兩個字
 REASON_REF_MISSING = "引用的物件找不到"
 _RANGE_END_RE = re.compile(r"^(?P<prefix>.*?)(?P<num>\d+)$")
 # 條件式裡的名稱字面對幾千張卡反覆折疊,記住結果。
 _fold = functools.lru_cache(maxsize=None)(fold_width)
 
 
-def _any_card(condition, entry):
+def _any_card(condition, view):
     return True
 
 
-def _no_card(condition, entry):
+def _no_card(condition, view):
     return False
 
 
-def _summoned_from_fits(condition, entry):
+def _summoned_from_fits(condition, view):
     """從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。"""
     if any(z["zone"] == "額外牌組" for z in condition.get("zones", ())):
-        return bool(entry["type"] & EXTRA_DECK_BITS)
+        return bool(view.entry["type"] & EXTRA_DECK_BITS)
     return True
+
+
+def _can_be_equip_card(condition, view):
+    """這張卡有沒有可能正當成裝備卡裝在怪獸上:怪獸一律可能;魔法只有裝備魔法;陷阱只有自己的官方日文
+    寫到「装備」的(會變成裝備卡的陷阱一定寫得到,寫到的不一定會變)。"""
+    kind = view.entry["type"]
+    if kind & CATEGORY_BITS["怪獸"]:
+        return True
+    if kind & CATEGORY_BITS["魔法"]:
+        return bool(kind & SPELL_TRAP_SUBTYPE_BITS["裝備"])
+    return EQUIP_WORD in view.text
 
 
 class StateAtom(NamedTuple):
     """狀態原子的代入規則。"""
-    fits: Callable[[dict, dict], bool]   # (原子, 卡片總表條目) → 指定卡代入時符不符合
+    fits: Callable[[dict, "CardView"], bool]   # (原子, 代入的卡) → 指定卡代入時符不符合
     generic: bool                        # 算不算泛用原子(條件式只有大類與泛用原子的物件是泛用物件)
 
 
 # 狀態原子的代入規則:狀態(在哪、誰控制、表側裏側、被裝備…)不是卡的屬性,卡片總表查不到,
-# 指定卡或物件條件代入時照這張表判,不看卡片參數;大多數是「任何卡都代得進去」。
+# 指定卡或物件條件代入時照這張表判;大多數是「任何卡都代得進去」,少數看這張卡可不可能處在那個狀態。
 # 新的狀態原子在這裡加一列(抽取與模板在 `condition_atoms`);沒列在這裡、`eval_condition` 也沒有
 # 專門判法的原子一律判不了(None),那個物件會進未解析組。
 STATE_ATOMS = {
@@ -129,10 +141,11 @@ STATE_ATOMS = {
     EQUIPPED: StateAtom(_any_card, generic=False),
     TARGETING_THIS: StateAtom(_any_card, generic=False),
     "曾被特殊召喚": StateAtom(_summoned_from_fits, generic=False),
-    # 怎麼被召喚出來的、被本卡效果做過什麼、是不是正裝備在怪獸上,都是狀態。
+    # 怎麼被召喚出來的、被本卡效果做過什麼,都是狀態。
     SUMMON_METHOD: StateAtom(_any_card, generic=False),
     ACTED_BY_EFFECT: StateAtom(_any_card, generic=False),
-    EQUIPPED_ON: StateAtom(_any_card, generic=False),
+    # 是不是正裝備在怪獸上(「装備されている」「装備カード」…):只有可能成為裝備卡的卡代得進去。
+    EQUIPPED_ON: StateAtom(_can_be_equip_card, generic=False),
 }
 GENERIC_ATOMS = ("大類",) + tuple(op for op, rule in STATE_ATOMS.items() if rule.generic)
 
@@ -414,7 +427,7 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
             return True
         return condition["value"] in view.categories(from_zones)
     if op in STATE_ATOMS:
-        return STATE_ATOMS[op].fits(condition, view.entry)
+        return STATE_ATOMS[op].fits(condition, view)
     if op == "屬性比較":
         return compare_attr(condition, view.entry, binding)
     if op == SAME_DIFFERENT:

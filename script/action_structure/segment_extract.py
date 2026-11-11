@@ -13,11 +13,14 @@
 - 效果子句以「代わりに」開頭的是代替(票 08):條件段改標「被代替」(不更新位置)、效果段記 `replaces`。
 - 離場(`leave_field`):「Xがフィールドから離れた時に Yは破壊される」(觸發形後沒有讀點)在觸發形切成
   條件段加效果段;「Xは、フィールドから離れた場合に除外される」照代替記(被代替段加做代替的段,沒有「代わりに」)。
+- 舊式反轉標示「リバース：X」:標示切成條件段(`flip_label`),X 照一般句子解析。
 - 其他句子是效果段;連用形串接(「〜に戻り、その攻撃力は〜になる」「〜手札に加え、〜に戻す」)切成
   多段、連接「同時」、後段與前段同一時機(`clause_join`);性質變更句「その攻撃力は〜倍になる」
   走 `segment_fields.parse_modify`。極性由述語語尾判(できない → 不能…);「〜を…できる」是可選的
   效果(可選格 `optional`,極性仍是做,查詢預設算命中),「〜は…できる」是永續的許可(極性 可以)
   (`segment_fields.resolve_polarity`)。
+- 移走 + 召喚的て形串接(「Xをリリースして召喚できる」「Xをリリースしてアドバンス召喚した場合」):效果子句與
+  條件子句都切成兩段、連接「同時」(`simple_clause.move_summon_cut`),段類別照所在的句子。
 - 延遲(票 08):「次のスタンバイフェイズに」記時機延遲;序列中段出現條件段之後的段也算延遲(沒有字面);
   延遲段指回被點名物件的線不標取對象。
 - 發動句的代價子句也可連用形串接(「〜を墓地へ送り、〜を対象として発動できる」,票 06),
@@ -40,6 +43,7 @@ import clause_front
 import damage
 import draw
 import existence_clause
+import flip_label
 import leave_field
 import material_line
 import material_summon
@@ -214,14 +218,26 @@ def _fill_effect(ctx, clause):
 
 def _condition_and_rest(state, seg_start, clause_start, body, trig, segs, kind="條件"):
     """觸發子句 → 條件段(範圍從 seg_start 起算:前面可能有前提;「〜場合、代わりに」的是被代替段,
-    不更新位置);回傳 (剩下的子句, 它的起點)。"""
-    cond_end = clause_start + len(trig.group("cond"))
+    不更新位置);回傳 (剩下的子句, 它的起點, 與前一段連接「同時」的段 id 或 None)。
+    移走 + 召喚的て形串接(「Xをリリースして召喚した場合」)切成兩個條件段:左半沒有觸發形,
+    右半帶觸發形、與左半連接「同時」。"""
+    cond = trig.group("cond")
+    cond_end = clause_start + len(cond)
+    cond_start = clause_start
+    cut = simple_clause.move_summon_cut(cond)
+    after_move = cut is not None
+    if after_move:
+        left = segment_at(state, kind, seg_start, cond_start + cut)
+        fill_clause(ClauseContext(left, state, cond_start), cond[:cut])
+        segs.append(left)
+        seg_start, cond_start, cond = cond_start + cut, cond_start + cut, cond[cut:]
     seg = segment_at(state, kind, seg_start, cond_end + len(trig.group("trig")))
     seg["trigger"] = trig.group("trig")
-    fill_clause(ClauseContext(seg, state, clause_start), trig.group("cond"))
+    fill_clause(ClauseContext(seg, state, cond_start, after_move=after_move), cond)
     segs.append(seg)
     rest = trig.group("rest")
-    return rest, clause_start + body.rfind(rest) if rest else None
+    return (rest, clause_start + body.rfind(rest) if rest else None,
+            seg["id"] if after_move else None)
 
 
 def _battle_timing(state, body, body_start, seg_start, segs):
@@ -262,6 +278,7 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
         start += len(clause) - len(cost.group("rest"))
         clause, seg_start = cost.group("rest"), None
     pieces = split_continuative(clause)
+    right_halves = set()   # 移走 + 召喚切開後的右半在 pieces 裡的位置
     i = -1
     while i + 1 < len(pieces):
         i += 1
@@ -300,10 +317,18 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
             first_start, join, same_time = piece_start, None, False
             if leave.replaced:
                 piece_replaces = left["id"]
+        cut = simple_clause.move_summon_cut(piece)
+        if cut is not None:
+            # 移走 + 召喚的て形串接(「Xをリリースして召喚できる」):左半是移走的段,右半排成下一截、
+            # 連接「同時」,照主語省略的子句解析。
+            pieces.insert(i + 1, (piece_start - start + cut, piece[cut:]))
+            right_halves.add(i + 1)
+            piece = piece[:cut]
         seg = segment_at(state, "效果", first_start, piece_start + len(piece))
         if piece_replaces:
             seg["replaces"] = piece_replaces
-        ctx = ClauseContext(seg, state, piece_start, segs[-1][0]["timing"] if same_time else None)
+        ctx = ClauseContext(seg, state, piece_start, segs[-1][0]["timing"] if same_time else None,
+                            after_move=i in right_halves)
         _fill_effect(ctx, piece)
         if ctx.split_at is not None:
             # 「Xを融合素材とし、Yを融合召喚する」的 X 解不出:不併段,照連用形串接切成兩段——
@@ -357,6 +382,15 @@ def _apply_duration(segs, duration):
 
 
 def parse_sentence(state, start, end, activation_lead=False):
+    """一句 → [(段, 與前一段的連接)];舊式標示「リバース：X」先切出標示的條件段(`flip_label`),
+    X 照一般的句子解析(`_parse_sentence`)。"""
+    label = flip_label.label_segment(state, start, end)
+    if label is None:
+        return _parse_sentence(state, start, end, activation_lead)
+    return [(label, None)] + _parse_sentence(state, label["span"][1], end, activation_lead)
+
+
+def _parse_sentence(state, start, end, activation_lead=False):
     """一句 → [(段, 與前一段的連接)](發動句可產生條件段 + 代價段;舊式條件句產生條件段 + 效果段;
     舊式代價句產生代價段 + 效果段;連用形串接的效果句、代價子句切成多段、連接「同時」)。
     句首的前提先剝掉,掛在第一個段上、段的範圍從前提起算;「〜場合、代わりに〜」的條件段改標
@@ -454,10 +488,11 @@ def parse_sentence(state, start, end, activation_lead=False):
         trig.group("rest").startswith(REPLACEMENT_PREFIX)
         or (not act
             and leave_field.is_self_restriction(state, *trig.group("cond", "trig", "rest"))))
+    joined = None
     if trig:
-        rest, rest_start = _condition_and_rest(state, seg_from, clause_start, body,
-                                               trig, segs,
-                                               "被代替" if replaced else "條件")
+        rest, rest_start, joined = _condition_and_rest(state, seg_from, clause_start, body,
+                                                       trig, segs,
+                                                       "被代替" if replaced else "條件")
         seg_start = rest_start
         timing = (_battle_timing(state, rest, rest_start, rest_start, segs)
                   if act and rest else None)
@@ -466,7 +501,7 @@ def parse_sentence(state, start, end, activation_lead=False):
         seg_start = rest_start
     if segs and state.block["segments"] and not summon_block:
         state.delayed = True
-    segs = [(seg, None) for seg in segs]
+    segs = [(seg, JOIN if seg["id"] == joined else None) for seg in segs]
     if rest and not act:
         if replaced and rest.startswith(REPLACEMENT_PREFIX):
             rest_start += len(REPLACEMENT_PREFIX)

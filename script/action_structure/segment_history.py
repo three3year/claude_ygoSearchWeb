@@ -50,6 +50,18 @@ def previous_segment(seg, card):
     return own[-1] if own else None
 
 
+def next_segment(seg, card):
+    """同一區塊裡緊接在這一段後面的段;這一段是區塊的最後一段、或找不到時回 None。"""
+    block_id = seg["id"].split(".")[0]
+    for block in all_blocks(card):
+        if block["id"] != block_id:
+            continue
+        ids = [other["id"] for other in block["segments"]]
+        if seg["id"] in ids and ids.index(seg["id"]) + 1 < len(ids):
+            return block["segments"][ids.index(seg["id"]) + 1]
+    return None
+
+
 def last_action_on(obj_id, seg, card):
     """同一區塊裡、這一段之前最後一個作用在該物件上的動作詞(動作回指「めくったカード」用)。"""
     block_id = seg["id"].split(".")[0]

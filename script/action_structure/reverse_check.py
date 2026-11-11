@@ -29,6 +29,7 @@ import clause_front
 import damage
 import draw
 import existence_clause
+import flip_label
 import leave_field
 import material_line
 import material_summon
@@ -115,6 +116,7 @@ WHOLE_TEMPLATES = (
     SegmentTemplate("衍生的性質變更", lambda t: t.seg["derived_from"] is not None,
                     stat_modify.render_derived),
     SegmentTemplate("修飾", lambda t: t.seg["kind"] == "修飾", treat_as.render_treat_as_segment),
+    SegmentTemplate("反轉標示", lambda t: flip_label.is_label(t.seg), flip_label.render_label),
     SegmentTemplate("素材行",
                     lambda t: bool(t.seg["lines"]) and not t.seg["actions"]
                     and all(line["role"] == "素材" for line in t.seg["lines"]),
@@ -208,7 +210,8 @@ def render_segment(seg, card, self_id="o0"):
     if inner_duration is not None and template.inner_route == INNER_NONE:
         raise NoTemplate("期間無模板:句中")
     text = template.render(t)
-    if seg["kind"] in ("條件", "被代替") and not seg["trigger"]:
+    if (seg["kind"] in ("條件", "被代替") and not seg["trigger"]
+            and not simple_clause.is_move_half(seg, card)):
         raise NoTemplate("條件段無觸發形")
     if seg["trigger"]:
         text += seg["trigger"]   # 召喚手續的「〜した場合」也帶觸發形(票 09)

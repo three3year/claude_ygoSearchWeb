@@ -34,7 +34,8 @@ hit 的 `segments` 是空的,`via` 列經由的卡與它的命中段(展開到�
 未解析組(spec「解析不出的段怎麼呈現」):不靜默略過。兩種來源:
 - 整張無官方日文的卡:任何查詢都列,`reason` = 無官方日文、`segments` 為空。
 - 字面含查詢動作詞、但結構不完整所以沒命中的段:段本身標解析不出,或段的對象線
-  引用的物件標解析不出(指定卡代入時判不了),或所在區塊標解析不出。
+  引用的物件標解析不出(指定卡代入時判不了),或所在區塊標解析不出;查詢要代入卡(指定卡、只給條件)時,
+  物件數量恰好一張又有沒寫比較對象的異同原子也判不了(原因 異同判不了)。
   「字面」比的是整段原文而不是只比原述語字面:子句切錯時原述語字面也是錯的
   (「このカードが特殊召喚に成功した時、…めくる事ができる」切出的述語是「めくる…」),
   多列總比漏列好。動作詞經同義表換成述語字面(「破壞」→「破壊」)再比。
@@ -51,7 +52,8 @@ name_ja 與 setcode。名稱比對雙方先全半形折疊。
 X 只要能在候選卡裡找到一組讓全部條件成立就符合(spec 使用者故事 15);被引用物件解析不出
 就判不了,列進未解析組。
 異同原子(「與某物件的某屬性相同/不同」)的比較對象是別的物件時同樣照引用比;比較對象是
-同一個物件群的其他成員時,單張卡代入一律符合(`same_different_fits`)。
+同一個物件群的其他成員時,單張卡代入一律符合(`same_different_fits`);但物件的數量恰好一張時
+沒有「同群的其他成員」,判不了(`same_different_undecidable`)。
 """
 import functools
 import itertools
@@ -91,6 +93,7 @@ COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
                "≤": operator.le, ">": operator.gt, "<": operator.lt}
 EQUIP_WORD = "装備"   # 陷阱能不能成為裝備卡:看它自己的官方日文有沒有這兩個字
 REASON_REF_MISSING = "引用的物件找不到"
+REASON_SAME_DIFFERENT = "異同判不了"
 _RANGE_END_RE = re.compile(r"^(?P<prefix>.*?)(?P<num>\d+)$")
 # 條件式裡的名稱字面對幾千張卡反覆折疊,記住結果。
 _fold = functools.lru_cache(maxsize=None)(fold_width)
@@ -204,8 +207,29 @@ def compare_attr(condition, entry, binding):
     return None if op is None else op(lhs, rhs)
 
 
+def _atoms(condition, op):
+    """條件式裡(且、或、非裡面也算)運算子是 `op` 的原子。"""
+    if condition is None:
+        return
+    if condition["op"] == op:
+        yield condition
+    for arg in condition.get("args", ()):
+        yield from _atoms(arg, op)
+    if "arg" in condition:
+        yield from _atoms(condition["arg"], op)
+
+
+def same_different_undecidable(obj):
+    """物件的數量恰好一張(數量值 1、比較是等於)、條件式有沒寫比較對象的異同原子:一張卡沒有「同群的
+    其他成員」,比的是前文沒寫在這個短語裡的東西,指定卡代入判不了(「同名の「サラマングレイト」Lモンスター１体」)。"""
+    count = obj.get("count") or {}
+    return (count.get("value") == 1 and count.get("cmp") == "="
+            and any("ref" not in atom for atom in _atoms(obj["condition"], SAME_DIFFERENT)))
+
+
 def same_different_fits(condition, view, from_zones, binding):
-    """異同原子對一張卡:比較對象是同群的其他成員(沒有 `ref`)時單張卡代入一律符合;
+    """異同原子對一張卡:比較對象是同群的其他成員(沒有 `ref`)時單張卡代入一律符合(數量恰好一張的物件
+    在這之前就判不了,見 `same_different_undecidable`);
     是別的物件時照引用比較——那個物件沒綁定候選卡就判不了(None),綁了就逐個屬性比:相同是每個屬性都相同、
     不同是每個屬性都不同,任一邊沒有那個屬性的值就不符。"""
     ref = condition.get("ref")
@@ -534,7 +558,8 @@ class _Judge:
 
     def card_fits(self, entry, obj, owner, names, from_zones):
         # 效果物件的條件式是「誰的效果」:指定卡代入時比那張卡(與「Xの効果を発動」的 X 是卡物件同一個判法)。
-        if obj["unparsed"] or obj["kind"] not in SUBSTITUTABLE_KINDS:
+        if (obj["unparsed"] or obj["kind"] not in SUBSTITUTABLE_KINDS
+                or same_different_undecidable(obj)):
             return False
         if is_this_card(obj, self.objects_of(owner)):
             # 此卡只有這張卡代得進去;帶狀態的此卡另照下面的條件式判狀態(物件0 沒有條件式)。
@@ -722,9 +747,10 @@ def _has_stem(stem, text):
     return stem in text
 
 
-def incomplete_reason(seg, objects):
+def incomplete_reason(seg, objects, substituting=False):
     """段沒命中時,它結構不完整的原因;結構完整(只是不符查詢)回 None。
-    先看段自己,再看對象線引用的物件(物件解析不出時指定卡代入判不了)。"""
+    先看段自己,再看對象線引用的物件(物件解析不出時指定卡代入判不了);查詢要把卡代入物件
+    (`substituting`:指定卡或只給條件)時,數量一張又沒寫比較對象的異同也判不了。"""
     if seg["unparsed"]:
         return seg["unparsed"]["reason"]
     for line in seg["lines"]:
@@ -733,6 +759,8 @@ def incomplete_reason(seg, objects):
             continue
         if obj["unparsed"]:
             return obj["unparsed"]["reason"]
+        if substituting and same_different_undecidable(obj):
+            return REASON_SAME_DIFFERENT
         # 條件式引用的物件(等級 = 物件1.階級)解析不出,代入也判不了。
         for ref_id in referenced_objects(obj["condition"]):
             ref = objects.get(ref_id)
@@ -740,6 +768,8 @@ def incomplete_reason(seg, objects):
                 return REASON_REF_MISSING
             if ref["unparsed"]:
                 return ref["unparsed"]["reason"]
+            if substituting and same_different_undecidable(ref):
+                return REASON_SAME_DIFFERENT
     return None
 
 
@@ -838,6 +868,7 @@ def run_query(structures, cards, query):
     q = _normalise(query)
     judge = _Judge(cards, structures, q)
     literals = action_literals(q["actions"])
+    substituting = q["card"] is not None or q["condition"] is not None
     direct, block_hits, incomplete_of = {}, {}, {}
     for card in structures:
         if card["unparsed"]:
@@ -866,7 +897,7 @@ def run_query(structures, cards, query):
                 if not segment_in_scope(seg, q):
                     continue
                 reason = (block["unparsed"]["reason"] if skipped
-                          else incomplete_reason(seg, objects))
+                          else incomplete_reason(seg, objects, substituting))
                 if reason and literal_has_actions(seg["text"], literals):
                     incomplete.append({"segment": seg["id"], "reason": reason,
                                        "text": seg["text"]})

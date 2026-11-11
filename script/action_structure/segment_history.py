@@ -27,21 +27,28 @@ def _with_embedded(block):
             yield from _with_embedded(node["block"])
 
 
-def segments_before(seg, card):
-    """(這一段所在的頂層區塊之前的各頂層區塊, 同一區塊裡這一段之前的段);段找不到回兩個空列表。
-    與抽取當下看得到的範圍相同:前面的區塊已抽完,自己的區塊只抽到這一段之前。"""
+def _locate(seg, card):
+    """(這一段所在的頂層區塊的索引, 這一段所在的區塊);找不到回 (None, None)。"""
     block_id = seg["id"].split(".")[0]
     for index, top in enumerate(card["blocks"]):
         for block in _with_embedded(top):
-            if block["id"] != block_id:
-                continue
-            own = []
-            for other in block["segments"]:
-                if other["id"] == seg["id"]:
-                    break
-                own.append(other)
-            return card["blocks"][:index], own
-    return [], []
+            if block["id"] == block_id:
+                return index, block
+    return None, None
+
+
+def segments_before(seg, card):
+    """(這一段所在的頂層區塊之前的各頂層區塊, 同一區塊裡這一段之前的段);段找不到回兩個空列表。
+    與抽取當下看得到的範圍相同:前面的區塊已抽完,自己的區塊只抽到這一段之前。"""
+    index, block = _locate(seg, card)
+    if block is None:
+        return [], []
+    own = []
+    for other in block["segments"]:
+        if other["id"] == seg["id"]:
+            break
+        own.append(other)
+    return card["blocks"][:index], own
 
 
 def previous_segment(seg, card):
@@ -51,14 +58,11 @@ def previous_segment(seg, card):
 
 
 def next_segment(seg, card):
-    block_id = seg["id"].split(".")[0]
-    for block in all_blocks(card):
-        if block["id"] != block_id:
-            continue
-        ids = [other["id"] for other in block["segments"]]
-        if seg["id"] in ids and ids.index(seg["id"]) + 1 < len(ids):
-            return block["segments"][ids.index(seg["id"]) + 1]
-    return None
+    """同一區塊裡緊接在這一段後面的段;這一段是區塊的最後一段、或找不到時回 None。"""
+    _, block = _locate(seg, card)
+    segments = block["segments"] if block else []
+    return next((following for other, following in zip(segments, segments[1:])
+                 if other["id"] == seg["id"]), None)
 
 
 def last_action_on(obj_id, seg, card):

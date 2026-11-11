@@ -46,9 +46,6 @@ function onHashChange() {
   restore();
 }
 
-/* 頁尾第二行:「資料來源：」後接各來源的連結,以「 · 」分隔。
-   開新分頁,回來時搜尋條件與捲動位置還在;noopener 讓外站拿不到本頁的 window.opener。
-   文字一律走 textContent:清單是資料,不拼 HTML 字串。 */
 function renderSources() {
   const line = $('dataSources');
   line.append('資料來源：');

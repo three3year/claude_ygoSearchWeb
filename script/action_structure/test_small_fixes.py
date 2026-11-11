@@ -73,5 +73,59 @@ class CannotRemoveTest(unittest.TestCase):
         self.assertEqual([s["text"] for s in removes], ["このカードのカウンターを１つ取り除く"])
 
 
+FALLEN_PLEASURE = 55289183      # 享楽の堕天使
+FALLEN_PLEASURE_TEXT = (
+    "このカード名の①②の効果はそれぞれ１ターンに１度しか使用できない。"
+    "①：自分・相手のメインフェイズに発動できる。天使族モンスター１体を表側表示でアドバンス召喚する。"
+    "②：このカードが墓地へ送られた場合に発動できる。相手フィールドの全てのモンスターの攻撃力・守備力は"
+    "ターン終了時まで、フィールドの天使族モンスターの数×５００ダウンする。")
+GHOSTRICK_YETI = 84472026       # ゴーストリック・イエティ
+GHOSTRICK_YETI_TEXT = (
+    "自分フィールドに「ゴーストリック」モンスターが存在する場合のみ、このカードは表側表示で召喚できる。"
+    "①：自分メインフェイズに発動できる。このカードを裏側守備表示にする（１ターンに１度のみ）。"
+    "②：このカードがリバースした時、フィールドの「ゴーストリック」モンスター１体を対象として発動できる。"
+    "そのモンスターはこのターン戦闘・効果では破壊されない。")
+GHOSTRICK = [{"setcode": 0x8d, "hex": "0x8d", "names_ja": ["ゴーストリック"],
+              "name_zh": "鬼計", "source": "strings.conf"}]
+REASON_DISPLAY = "表示形式沒有到"
+
+
+class SummonInferredToFieldTest(unittest.TestCase):
+    """推得表有召喚、通常召喚、上級召喚、反轉召喚 → 場上:「表側表示で〜召喚」沒寫到哪裡也不再標
+    「表示形式沒有到」,開推得查「召喚,到 場上」命中。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(FALLEN_PLEASURE, name_ja="享楽の堕天使", type=0x21, level=4, race=0x4,
+                          attribute=0x20, atk=0, setcode=0xef),
+                     card(GHOSTRICK_YETI, name_ja="ゴーストリック・イエティ", type=0x21, level=3,
+                          race=0x10, attribute=0x20, atk=300, setcode=0x8d)]
+        cls.structures = build(cls.cards, [
+            faq(FALLEN_PLEASURE, "享楽の堕天使", FALLEN_PLEASURE_TEXT),
+            faq(GHOSTRICK_YETI, "ゴーストリック・イエティ", GHOSTRICK_YETI_TEXT)],
+            archetypes=GHOSTRICK)
+
+    def test_tribute_summon_face_up_reaches_field_when_inferred(self):
+        """享楽の堕天使 ①:開推得查「召喚,到 場上」命中「天使族モンスター１体を表側表示でアドバンス召喚する」;
+        不開推得不命中。"""
+        query = dict(actions=["召喚"], to_zones=["場上"])
+        segs = hit_segments(self.structures, self.cards, FALLEN_PLEASURE,
+                            include_inferred=True, **query)
+        self.assertEqual([s["text"] for s in segs], ["天使族モンスター１体を表側表示でアドバンス召喚する"])
+        self.assertEqual(hit_segments(self.structures, self.cards, FALLEN_PLEASURE, **query), [])
+
+    def test_fallen_pleasure_passes_reverse_check(self):
+        self.assertEqual(check_card(own(self.structures, FALLEN_PLEASURE)), [])
+
+    def test_ghostrick_face_up_summon_no_longer_lacks_destination(self):
+        """ゴーストリック・イエティ「〜場合のみ、このカードは表側表示で召喚できる」:不再標
+        「表示形式沒有到」;前文「〜場合のみ、」這輪不收,那一段照舊解析不出。"""
+        structure = own(self.structures, GHOSTRICK_YETI)
+        seg = next(s for b in structure["blocks"] for _, s in iter_segments(b)
+                   if s["text"].endswith("このカードは表側表示で召喚できる"))
+        self.assertIsNotNone(seg["unparsed"])
+        self.assertNotEqual(seg["unparsed"]["reason"], REASON_DISPLAY)
+
+
 if __name__ == "__main__":
     unittest.main()

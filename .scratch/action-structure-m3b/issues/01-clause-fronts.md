@@ -13,7 +13,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** needs-info
 
 - [ ] (站主)從 ABC－ドラゴン・バスター 1561110、氷水艇エーギロカシス 1295442、オレイカルコスの魔封剣 847217 與認不得的前文「この効果で」的段各挑 1–3 張寫斷言,列在 Comments「待站主核可」
 - [x] 查「捨棄」命中 ABC－ドラゴン・バスター「自分・相手ターンに１度、手札を１枚捨て」

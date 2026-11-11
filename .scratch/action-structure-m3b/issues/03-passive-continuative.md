@@ -12,7 +12,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] (站主)從 TG ワーウルフ 293542、発条補修ゼンマイコン 1735088、SPYRAL－ボルテックス 35699 挑 1–3 張寫斷言,列在 Comments「待站主核可」
 - [x] 開條件段查「破壞」、開條件段查「送墓」都命中 発条補修ゼンマイコン「このカードが破壊され墓地へ送られた場合」

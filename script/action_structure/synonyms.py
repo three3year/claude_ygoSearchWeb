@@ -12,6 +12,8 @@
 - 召喚:單獨的「召喚」是動作詞 召喚,上位詞 通常召喚(通常召喚還含覆蓋);上級召喚
   (アドバンス召喚、生け贄召喚、A召喚)的上位詞是 召喚;反轉召喚獨立;P召喚的上位詞是 特殊召喚。
   「召喚・特殊召喚に成功した」這種列舉是一段多個動作詞(`parse_predicates`)。
+- 反轉(リバース,m3b 票 02):沒有上下位詞、不進推得表;與反轉召喚、反轉怪獸(卡片子類型)互相獨立。
+  可寫在召喚的列舉裡(「召喚・リバースした」);舊式標示「リバース：」在 `flip_label`。
 - 素材:召喚時拿卡當素材是 作為素材(「〜素材にできない」「〜素材とする」「X召喚の素材とする」);
   效果把卡疊到超量怪獸下面是 成為超量素材(「Yの下に重ねてX素材とする」「YのX素材とする/にする」),機制不同、分開。
   兩者字面只差前面的「Yの」「重ねて」:成為超量素材的字幹連這一截一起寫,查表前由 `parse_material_predicates`
@@ -60,6 +62,8 @@ MATERIAL_AS_TAIL = "して"
 LEAVE_ACTION = "離場"
 LEAVE_VERB = "離れ"
 LEAVE_FROM = "場上"
+FLIP_STEM = "リバース"
+FLIP_ACTION = "反轉"
 LEAVE_STEMS = tuple(f"{word}から{LEAVE_VERB}" for word, name in ZONE_WORDS if name == LEAVE_FROM)
 # 述語本身寫明的出發地(動作詞 → 區域),對應 `PREDICATE_STEMS` 第三欄的終點。
 PREDICATE_FROM = {LEAVE_ACTION: LEAVE_FROM}
@@ -144,6 +148,9 @@ PREDICATE_STEMS = (
     ("召喚を行", "召喚", None), ("A召喚を行", "上級召喚", None),
     ("アドバンス召喚を行", "上級召喚", None),
     ("反転召喚", "反轉召喚", None),
+    # 反轉(「このカードがリバースした場合」;舊式標示「リバース：」見 `flip_label`):沒有上下位詞、
+    # 不進推得表,與 反轉召喚、反轉怪獸 互相獨立。
+    (FLIP_STEM, FLIP_ACTION, None),
     ("P召喚", "P召喚", None), ("ペンデュラム召喚", "P召喚", None),
     ("リンク召喚", "L召喚", None), ("シンクロ召喚", "S召喚", None),
     ("エクシーズ召喚", "X召喚", None),
@@ -166,7 +173,9 @@ _STEMS_LONGEST_FIRST = sorted(PREDICATE_STEMS, key=lambda row: len(row[0]), reve
 # 字幹出現在別的詞裡、不是那個動作的字面(查詢未解析組比字面時扣掉)。
 STEM_FALSE_FRIENDS = {"攻撃": ("攻撃力", "攻撃表示", "攻撃対象"), "ドロー": ("ドローフェイズ",),
                       # 官方文本裡「置」不是「置く」的只有這三個詞(「〜装置」「置換融合」是卡名)。
-                      "置": ("位置", "装置", "置換")}
+                      "置": ("位置", "装置", "置換"),
+                      # 反轉怪獸(卡片子類型)與反轉效果不是動作詞 反轉(站主裁定:三者互相獨立)。
+                      FLIP_STEM: ("リバースモンスター", "リバース効果")}
 # 素材的字幹互相包含:「素材と」落在「X素材と」裡、「X素材と」落在成為超量素材的「のX素材と」「重ねてX素材と」裡,
 # 查 作為素材 的未解析組比字面時扣掉後者;「〜素材として」是原因(作為素材 被送墓)或持有狀態(X素材としている),
 # 不是這兩個動作的字面。
@@ -232,9 +241,16 @@ _OTHER_SUMMON_STEMS = tuple(
 STEM_FALSE_FRIENDS[BARE_SUMMON_STEM] = _OTHER_SUMMON_STEMS + SUMMON_WORDS_NOT_ACTIONS
 # 「召喚を行」同樣落在別種召喚的「X召喚を行う」裡(「儀式召喚を行う」「S召喚を行う」):扣掉同一批召喚字面。
 STEM_FALSE_FRIENDS["召喚を行"] = tuple(stem + "を行" for stem in _OTHER_SUMMON_STEMS)
-# 召喚的列舉(「召喚・特殊召喚に成功した」「召喚・反転召喚・特殊召喚できない」):一段多個動作詞,
-# 語尾只寫在最後一個。只收召喚系的字幹,別的「A・B」不是動作的列舉。
+# 召喚的列舉(「召喚・特殊召喚に成功した」「召喚・反転召喚・特殊召喚できない」「召喚・リバースした」):
+# 一段多個動作詞,語尾只寫在最後一個。只收召喚系與反轉的字幹,別的「A・B」不是動作的列舉。
 SUMMON_JOINER = "・"
+
+
+def is_enumerable(action):
+    """動作詞能不能寫在召喚的列舉裡:召喚系,加上 反轉(「召喚・特殊召喚・リバースした」)。"""
+    return is_summon(action) or action == FLIP_ACTION
+
+
 _SUMMON_STEM_ALT = "|".join(SUMMON_STEMS)
 # 後面緊接「〜召喚(・〜召喚)に成功」的位置(lookahead):句型用它認「モンスターの特殊召喚に成功」的「の」
 # (對象線的助詞)與「墓地からの特殊召喚に成功」的「からの」(從)。
@@ -400,11 +416,11 @@ def parse_predicates(pred):
         if not pred.startswith(stem):
             continue
         rest = pred[len(stem):]
-        if rest.startswith(SUMMON_JOINER) and is_summon(action):
+        if rest.startswith(SUMMON_JOINER) and is_enumerable(action):
             following, reason = parse_predicates(rest[len(SUMMON_JOINER):])
             if following is None:
                 return None, reason
-            if not is_summon(following[0].action):
+            if not is_enumerable(following[0].action):
                 return None, REASON_PREDICATE
             return [following[0]._replace(action=action, to=to)] + following, None
         if rest.startswith(MATERIAL_AS_TAIL) and action in (MATERIAL_ACTION, XYZ_ATTACH_ACTION):

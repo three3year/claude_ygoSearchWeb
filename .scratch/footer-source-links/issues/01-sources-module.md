@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] 新增前端來源模組，照零建置協定（ADR-0007）寫成掛在全域的 IIFE，在呈現模組之前載入。script 標籤寫成 `<script src="…">`，`src` 是第一個屬性。
 - [x] 模組公開頁尾來源清單，五項依現行頁尾順序，連結文字、站名、網址與規格「來源清單」表逐字相符。

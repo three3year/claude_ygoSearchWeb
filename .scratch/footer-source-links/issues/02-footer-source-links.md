@@ -14,7 +14,7 @@
 
 **Blocked by:** 01 — 來源模組（頁尾依它的清單組出來）
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] 頁面骨架的第二行改成空段落，由主流程在初始化時依來源清單填入：開頭是純文字「資料來源：」，後接五個連結，連結之間以「 · 」分隔。
 - [x] 每個連結開新分頁（`target="_blank"`），並帶 `rel="noopener noreferrer"`。

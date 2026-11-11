@@ -40,6 +40,9 @@
   「XをYのX素材とする」是 成為超量素材,線的到是 Y 的超量素材物件;「XをYのL素材とする場合」是 作為素材,
   Y 記在受方。「Xも融合素材とする事ができる」的「も」是助詞。素材寫在召喚句裡的(「Xを素材としてS召喚する」)
   不走這裡,在 `material_summon`。
+- 移走 + 召喚:「XをリリースしてY召喚する」(移走的動作詞て形 + 召喚系)由呼叫端在 `move_summon_cut` 切成兩個子句,
+  右半是主語省略的召喚段;右半沒寫主語、此卡又不是怪獸時不退回此卡,指回同一區塊前面那次召喚的物件
+  (`_summoned_earlier`)。條件子句切出的左半沒有觸發形,模板照 `is_move_half` 放行。
 - 離場:「フィールドから離れた」的「フィールドから」是述語的一部分(字幹連出發地一起寫),不佔述語前的「從」;
   對象線的從是述語寫明的 場上(明寫、沒有字面),主語另寫了位置(「自分フィールドの〜が」)就用那個位置。
 """
@@ -55,7 +58,7 @@ from agent_phrase import AGENT_PATTERN, agent_side, fill_agent, render_agent
 from block_state import (INFERENCE_TABLE, INTERVAL_PATTERN, INTERVAL_REASON, OBJECT_COUNTER,
                          update_positions)
 from cause_phrase import (CAUSE_ALT, EXCLUDE_METHOD_PATTERN, fill_cause, render_cause_phrase,
-                          summoned_by)
+                          source_segment, summoned_by)
 from clause_front import (PLACEMENT_AFTER_SUBJECT, front_duration, front_timing,
                           render_front_duration, render_front_timing, subject_line)
 from condition_atoms import TARGETING_THIS_FORMS
@@ -68,7 +71,7 @@ from segment_fields import (CLAUSE_DURATION_PATTERN, DISPLAY_PATTERN, EFFECT_HOL
                             TREAT_PATTERN, is_delayed, parse_cause, parse_duration, parse_per_turn,
                             parse_placement_form, parse_timing, render_display, render_per_turn,
                             render_placement_form, render_timing, resolve_polarity)
-from segment_history import declared_earlier, targeted_earlier
+from segment_history import declared_earlier, next_segment, targeted_earlier
 from structure_shape import (DISPLAY_WORD, FULLWIDTH_DIGITS, REASON_CLAUSE, REASON_REF,
                              REASON_TWICE, TO_FULLWIDTH_DIGITS, NoTemplate, new_line, position,
                              unparsed, zone, zone_names)
@@ -76,7 +79,7 @@ from synonyms import (ACTION_PAST, ATTACK_PREFIX_PATTERN, LEAVE_VERB, ONLY_MARKE
                       PREDICATE_FROM, PREDICATE_NOUN_PATTERN, SELECT_PREFIX, SUMMON_NOUNS,
                       SUMMON_SUCCESS_AHEAD, TARGETING_PATTERN, TARGET_REF, XYZ_ATTACH_ACTION,
                       action_ancestors, attack_times, is_summon, merged_voice,
-                      parse_material_predicates, parse_predicates)
+                      move_then_summon_cut, parse_material_predicates, parse_predicates)
 from zone_phrase import (FROM_PARTICLES, SIDE_TEXT, SIDE_WORDS, ZONE_PHRASE, ZONE_PHRASE_RE,
                          parse_from, render_zone_text)
 
@@ -208,6 +211,7 @@ EQUIP_ACTION = "裝備"
 REASON_FROM = "從解析不出"
 REASON_TO = "到解析不出"
 REASON_DISPLAY = "表示形式沒有到"
+MONSTER = "怪獸"
 
 
 def split_objects(phrase):
@@ -228,6 +232,24 @@ def split_objects(phrase):
             buf += ch
     parts.append(buf)
     return [p for p in parts if p]
+
+
+def is_move_half(seg, card):
+    """這一段是移走 + 召喚切開後的左半(「Xをリリースして」):下一段緊接著它,兩段的原述語字面接起來
+    照 `move_then_summon_cut` 正好切在這一段結尾。條件子句切出的左半沒有觸發形,模板據此放行。"""
+    following = next_segment(seg, card)
+    return (following is not None and following["span"][0] == seg["span"][1]
+            and bool(seg["predicate"]) and bool(following["predicate"])
+            and move_then_summon_cut(seg["predicate"] + following["predicate"])
+            == len(seg["predicate"]))
+
+
+def _summoned_earlier(state, actions):
+    """移走 + 召喚的右半沒寫主語、此卡又不是怪獸(「相手フィールドのモンスターをリリースしてA召喚した場合」):
+    被召喚的是同一區塊前面最近一個做同一種召喚(上下位詞也算)的段召喚的物件;找來源段同「この効果で」
+    (`cause_phrase.source_segment`),那一段要恰好一條被召喚的線(`summoned_by`)。找不到回 None。"""
+    source = source_segment([], state.block["segments"], None, actions)
+    return summoned_by(source) if source is not None else None
 
 
 def _segment_by_id(state, seg_id):
@@ -287,6 +309,17 @@ def _match_clause(clause_text):
     return m
 
 
+def move_summon_cut(clause_text):
+    """「XをリリースしてY召喚する」這種移走 + 召喚的て形串接 → 右半在子句裡的起點;不是回 None。
+    切開後左半「Xをリリースして」是移走的段,右半「Y召喚する」是主語省略的召喚段(spec「述語的串接」)。"""
+    m = _match_clause(clause_text)
+    if not m or not m.group("pred"):
+        return None
+    pred, _, parsed, _ = _clause_predicate(m)
+    cut = move_then_summon_cut(pred) if parsed else None
+    return None if cut is None else len(clause_text) - len(pred) + cut
+
+
 def swallowed_front(state, clause_text):
     """句型的物件槽往前吞進了多少不屬於物件的字面(從子句開頭起算的字數;0 = 沒有)。
     物件短語照現有規則認得全就不找(`BlockState.parses_cleanly`);切點在 `object_boundary.find_cut`。"""
@@ -322,10 +355,13 @@ def fill_clause(ctx, clause_text):
             seg["unparsed"] = unparsed(REASON_CLAUSE)
             return
         elided = state.elided_subject()
+        pred, to_phrase, parsed, reason = _clause_predicate(m)
+        if ctx.after_move and parsed and elided == state.self_id and state.subject is None \
+                and state.self_category() != MONSTER:
+            elided = _summoned_earlier(state, [p.action for p in parsed])
         if elided is None:
             seg["unparsed"] = unparsed(REASON_REF)
             return
-        pred, to_phrase, parsed, reason = _clause_predicate(m)
     else:
         pred, to_phrase, parsed, reason = _clause_predicate(m)
         whole = _SUBJECTLESS_RE.match(clause_text) if parsed is None and pred else None

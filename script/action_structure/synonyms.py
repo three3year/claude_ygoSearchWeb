@@ -421,6 +421,30 @@ def parse_predicates(pred):
     return None, reason
 
 
+# 把卡移走的動作詞:て形串接的左半是它們、右半是召喚系時,移走的卡不可能同時被召喚,切成兩段
+# (`move_then_summon_cut`)。展示、無效不移走卡,照舊一段共用一條線。
+MOVE_ACTIONS = ("解放", "除外", "送墓", "捨棄", "返回", "破壞")
+TE_FORM_ENDINGS = ("て", "で")
+
+
+def move_then_summon_cut(pred):
+    """原述語字面是「移走的動作詞て + 召喚系述語」(「リリースしてアドバンス召喚できる」「ゲームから除外して
+    特殊召喚する」)→ 左半字面的長度(切點);不是回 None。抽取與模板共用這一把尺。"""
+    for stem, action, _ in _STEMS_LONGEST_FIRST:
+        if not pred.startswith(stem) or action not in MOVE_ACTIONS:
+            continue
+        rest = pred[len(stem):]
+        for tail in _TAILS_LONGEST_FIRST:
+            if not (tail.endswith(TE_FORM_ENDINGS) and rest.startswith(tail)
+                    and len(rest) > len(tail)):
+                continue
+            following, _ = parse_predicates(rest[len(tail):])
+            if following and all(is_summon(p.action) for p in following):
+                return len(stem) + len(tail)
+        return None
+    return None
+
+
 def parse_material_predicates(pred, owned):
     """素材句型的原述語字面(「X素材とする」「重ねてX素材とする」「L素材とする」)→ 同義表的查表結果。
     `owned`:句型在述語前切出了所屬(「このカードの」「その」)而沒有「下に」——所屬的「の」接回去再查,

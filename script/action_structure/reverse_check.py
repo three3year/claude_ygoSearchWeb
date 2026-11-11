@@ -208,7 +208,8 @@ def render_segment(seg, card, self_id="o0"):
     if inner_duration is not None and template.inner_route == INNER_NONE:
         raise NoTemplate("期間無模板:句中")
     text = template.render(t)
-    if seg["kind"] in ("條件", "被代替") and not seg["trigger"]:
+    if (seg["kind"] in ("條件", "被代替") and not seg["trigger"]
+            and not simple_clause.is_move_half(seg, card)):
         raise NoTemplate("條件段無觸發形")
     if seg["trigger"]:
         text += seg["trigger"]   # 召喚手續的「〜した場合」也帶觸發形(票 09)

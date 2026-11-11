@@ -203,7 +203,17 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/web/engine.test.js` | 前端查詢引擎的接縫測試(`node:test`,合成資料集) |
 | `script/action_structure/structure_shape.py` | 卡片結構的形狀:值域、各層工廠函式、走訪 |
 | `script/action_structure/block_split.py` | 區塊切分(純函式):官方 DB 文本 → 區塊 + 略過文本 |
-| `script/action_structure/segment_extract.py` | 段抽取(純函式):區塊 → 段、段樹、物件;同義表、推得表、位置自動規則 |
+| `script/action_structure/segment_extract.py` | 段抽取(純函式):區塊的一句 → 段(條件/代價/效果、代替、連用形串接);子句照句型分派表 `CLAUSE_FORMS` 交給各句型模組 |
+| `script/action_structure/simple_clause.py`、`existence_clause.py`、`battle_clause.py`、`stat_modify.py`、`damage.py`、`draw.py`、`material_line.py`、`treat_as.py` | 各句型(簡單子句、存在前提、戰鬥、性質變更、傷害與回復、抽牌、素材行、〜として扱う):句型、填格與句型模板成對放在同一個模組 |
+| `script/action_structure/material_summon.py`、`xyz_material.py` | 素材的句型(m3 票 09):素材寫在召喚的句子裡(召喚段帶角色 素材 的線);簡單子句裡「誰的素材」那一格(成為超量素材的到、作為素材的受方) |
+| `script/action_structure/object_boundary.py`、`clause_front.py` | 物件切點(物件短語前面吞進來的前文從哪裡切)與切出去的子句前文(交給前提、期間、時機、誰/主語、原因的規則;抽取與句型模板成對) |
+| `script/action_structure/turn_phase.py` | 時點「Xした/されたターンの〈階段〉に」(可列舉)的抽取:動作子句成條件段,階段成後面那一段的前提;模板在 `premise.py` |
+| `script/action_structure/leave_field.py` | 離場的兩個句型(m3 票 10):連動「Xがフィールドから離れた時に Yは破壊される」(條件段加效果段)、自我限制「Xは、フィールドから離れた場合に除外される」(照代替記:被代替段加做代替的段);切點與做代替的段的模板成對 |
+| `script/action_structure/block_state.py` | 區塊抽取時的工作狀態 `BlockState`(物件短語 → 物件、目前位置、主語)、推得表、位置自動規則、各句型共用的子句 context |
+| `script/action_structure/noun_phrase.py`、`zone_phrase.py`、`quantity.py`、`agent_phrase.py`、`cause_phrase.py`、`predicate_literal.py` | 子句各格的字面(名詞短語 ↔ 條件式、區域、數量、誰、原因、原述語字面):抽取與句型模板成對 |
+| `script/action_structure/anaphora.py`、`state_atoms.py` | 物件短語「指誰」的寫法:帶修飾語的回指、帶狀態的此卡(字面規則),與「他の」、召喚方式等狀態原子(抽取與句型模板成對) |
+| `script/action_structure/same_different.py` | 異同原子(m3 票 06):「カード名が異なる」「同名」「Xとは属性が異なり、」——與某物件的某屬性相同/不同(抽取與句型模板成對) |
+| `script/action_structure/synonyms.py` | 同義表:述語字面 → 動作詞、語尾 → 態與極性、下位詞 |
 | `script/action_structure/archetype_table.py` | 字段表(純函式):strings.conf 的 `!setname` + 補丁 + 中文「」引用配對 → 字段列;setcode 比對規則 |
 | `script/action_structure/build_archetypes.py` | 字段表 CLI 薄殼(讀 strings.conf、補丁、總表、官方 DB 文本 → 寫 data/archetypes.json 與報告;`--fetch` 下載上游) |
 | `script/action_structure/names_attributes.py` | 名稱表與卡片屬性表(純函式):「」引用 → 名稱表;總表參數與「〜として扱う」句 → 帶位置條件的屬性列 |
@@ -212,7 +222,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/build_structure.py` | 建置 CLI 薄殼(讀檔 → 寫 data/action_structure.json → 印報告) |
 | `script/action_structure/coverage_report.py` | 覆蓋報告(純函式):全庫結構 → 依區塊種類、段類別、各格、物件計數,依原因附卡號;略過文本依原因計處數與張數 → markdown |
 | `script/action_structure/build_report.py` | 覆蓋報告 CLI 薄殼(讀產物與總表 → 寫 .scratch/action-structure/report/coverage.md) |
-| `script/action_structure/reverse_check.py` | 反向檢查(純函式):結構 → 句型模板 → 日文,與原文比對;`check_card` 給標準卡驗收 |
+| `script/action_structure/reverse_check.py` | 反向檢查(純函式):結構 → 句型模板 → 日文,與原文比對;`check_card` 給標準卡驗收;段模板的分流表 `WHOLE_TEMPLATES`、`CLAUSE_TEMPLATES`(模板本身在各句型模組) |
+| `script/action_structure/object_render.py`、`segment_history.py` | 反向檢查的物件模板,與回指要對照的「這一段之前的段」 |
 | `script/action_structure/build_reverse_check.py` | 反向檢查 CLI 薄殼(讀產物 → 寫 .scratch/action-structure/report/reverse_check.md) |
 | `data/cards.json` | 卡片總表(一卡一行,git diff 可讀) |
 | `data/action_structure.json` | 動作搜尋的卡片結構(建置產物,**入版控**,一卡一行;產物省略空格,讀回用 `card_structure.load_structures`) |

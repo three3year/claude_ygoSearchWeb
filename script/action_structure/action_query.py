@@ -8,7 +8,7 @@
                     (查詢側的原子不帶名稱表,直接寫值:{"op": "字段", "setcodes": [...]}、
                     {"op": "卡名"|"卡名包含"|"記載", "text": ...}、{"op": "卡名範圍", "texts": [A, B]}、
                     {"op": "屬性比較", "attr", "cmp", "value"})
-  targeting         True 時只算有標取對象的線
+  targeting         True 時只算有標取對象的線;受方是被取對象的物件(裝備對象)的段也算
   kinds             段類別範圍(預設 效果、代價、召喚手續)
   block_kinds       區塊種類範圍(預設全部)
   include_condition 條件段開關(預設關)
@@ -46,34 +46,47 @@ hit 的 `segments` 是空的,`via` 列經由的卡與它的命中段(展開到�
 (官方卡名、setcode,加「〜として扱う」的列);帶位置條件的列只在該對象線的「從」落在
 該位置時算,「從」沒寫就只算任何位置的列。無官方日文的卡沒有結構,退回卡片總表的
 name_ja 與 setcode。名稱比對雙方先全半形折疊。
+帶狀態的此卡(母體是物件0 的子集)只有這張卡自己代得進去,狀態照條件式判;它不是泛用物件。
 條件式含引用(等級 = 物件1.階級)時:先求被引用物件的候選卡(卡片總表裡滿足它條件式的卡),
 X 只要能在候選卡裡找到一組讓全部條件成立就符合(spec 使用者故事 15);被引用物件解析不出
 就判不了,列進未解析組。
+異同原子(「與某物件的某屬性相同/不同」)的比較對象是別的物件時同樣照引用比;比較對象是
+同一個物件群的其他成員時,單張卡代入一律符合(`same_different_fits`)。
 """
 import functools
 import itertools
 import json
 import operator
 import re
+from typing import Callable, NamedTuple
 
 from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from effect_reference import card_references, is_reference, iter_references, selected_blocks
 from condition_atoms import EQUIPPED, SAME_CARD, TARGETING_THIS, referenced_objects
-from structure_shape import ZONE_PARENT, iter_nodes, iter_segments
+from same_different import KIND_ATTR, NAME_ATTR, SAME, SAME_DIFFERENT
+from state_atoms import ACTED_BY_EFFECT, EQUIPPED_ON, SUMMON_METHOD
+from structure_shape import iter_nodes, iter_segments, zone_names
 from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
+SUBSTITUTABLE_KINDS = ("卡", "效果")   # 指定卡代得進去的物件種類(超量素材、計數器代不進去)
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
-GENERIC_ATOMS = ("大類", "位置", "控制方", "表示形式")
 MODIFIED_KEYS = ("attr", "form", "value")
+# 雙方對等的動作詞:施事線與受事線一樣當被比的物件(`_is_doer`)。
+SYMMETRIC_ACTION = "戰鬥"
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
-                "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10}
-# 魔陷的子類型位元(速攻、永續、裝備、場地、反擊、儀式):一個都沒有的是「通常」。
-SPELL_TRAP_SUBTYPE_BITS = 0x10000 | 0x20000 | 0x40000 | 0x80000 | 0x100000 | 0x80
+                "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10,
+                "效果": 0x20, "反轉": 0x200000, "二重": 0x800, "靈魂": 0x200,
+                "聯合": 0x400, "卡通": 0x400000}
+# 魔陷的子類型位元(與怪獸是不同值域:0x80 在怪獸、魔法都是儀式,其餘只在魔陷有意義);
+# 一個都沒有的是「通常」。
+SPELL_TRAP_SUBTYPE_BITS = {"速攻": 0x10000, "永續": 0x20000, "裝備": 0x40000, "場地": 0x80000,
+                           "反擊": 0x100000, "儀式": 0x80}
 EXTRA_DECK_BITS = (SUBTYPE_BITS["融合"] | SUBTYPE_BITS["同步"] | SUBTYPE_BITS["超量"]
                    | SUBTYPE_BITS["連結"] | SUBTYPE_BITS["靈擺"])
+STAT_FIELDS = {"攻擊力": "atk", "守備力": "def"}
 COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
                "≤": operator.le, ">": operator.gt, "<": operator.lt}
 REASON_REF_MISSING = "引用的物件找不到"
@@ -82,20 +95,67 @@ _RANGE_END_RE = re.compile(r"^(?P<prefix>.*?)(?P<num>\d+)$")
 _fold = functools.lru_cache(maxsize=None)(fold_width)
 
 
+def _any_card(condition, entry):
+    return True
+
+
+def _no_card(condition, entry):
+    return False
+
+
+def _summoned_from_fits(condition, entry):
+    """從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。"""
+    if any(z["zone"] == "額外牌組" for z in condition.get("zones", ())):
+        return bool(entry["type"] & EXTRA_DECK_BITS)
+    return True
+
+
+class StateAtom(NamedTuple):
+    """狀態原子的代入規則。"""
+    fits: Callable[[dict, dict], bool]   # (原子, 卡片總表條目) → 指定卡代入時符不符合
+    generic: bool                        # 算不算泛用原子(條件式只有大類與泛用原子的物件是泛用物件)
+
+
+# 狀態原子的代入規則:狀態(在哪、誰控制、表側裏側、被裝備…)不是卡的屬性,卡片總表查不到,
+# 指定卡或物件條件代入時照這張表判,不看卡片參數;大多數是「任何卡都代得進去」。
+# 新的狀態原子在這裡加一列(抽取與模板在 `condition_atoms`);沒列在這裡、`eval_condition` 也沒有
+# 專門判法的原子一律判不了(None),那個物件會進未解析組。
+STATE_ATOMS = {
+    "位置": StateAtom(_any_card, generic=True),
+    "控制方": StateAtom(_any_card, generic=True),
+    "表示形式": StateAtom(_any_card, generic=True),
+    # 代入的是卡而不是那一張實體:「同一張」永遠不符,所以包在外面的「非」(此卡以外)永遠符合。
+    SAME_CARD: StateAtom(_no_card, generic=False),
+    EQUIPPED: StateAtom(_any_card, generic=False),
+    TARGETING_THIS: StateAtom(_any_card, generic=False),
+    "曾被特殊召喚": StateAtom(_summoned_from_fits, generic=False),
+    # 怎麼被召喚出來的、被本卡效果做過什麼、是不是正裝備在怪獸上,都是狀態。
+    SUMMON_METHOD: StateAtom(_any_card, generic=False),
+    ACTED_BY_EFFECT: StateAtom(_any_card, generic=False),
+    EQUIPPED_ON: StateAtom(_any_card, generic=False),
+}
+GENERIC_ATOMS = ("大類",) + tuple(op for op, rule in STATE_ATOMS.items() if rule.generic)
+
+
 def card_attr(entry, attr):
-    """代入的卡在卡片總表的屬性值;沒有這個值(魔陷的種族、非超量怪獸的階級)回 None。
+    """代入的卡在卡片總表的屬性值;沒有這個值(魔陷的種族、非超量怪獸的階級、「？」的攻擊力)回 None。
     等級與階級、連結值同存在 `level` 欄,照 type 位元分開。"""
     kind = entry["type"]
     if not kind & 0x1:
         if attr == "卡片子類型":
-            if kind & SPELL_TRAP_SUBTYPE_BITS:
-                return {"儀式"} if kind & SUBTYPE_BITS["儀式"] else set()
-            return {"通常"}
+            return {name for name, bit in SPELL_TRAP_SUBTYPE_BITS.items()
+                    if kind & bit} or {"通常"}
         return None
     if attr == "等級":
         return None if kind & (SUBTYPE_BITS["超量"] | SUBTYPE_BITS["連結"]) else entry["level"]
     if attr == "階級":
         return entry["level"] if kind & SUBTYPE_BITS["超量"] else None
+    if attr == "連結值":
+        return entry["level"] if kind & SUBTYPE_BITS["連結"] else None
+    if attr in STAT_FIELDS:
+        # 攻擊力、守備力「？」在卡片總表記負數,沒有數值可比;連結怪獸沒有守備力(None)。
+        value = entry[STAT_FIELDS[attr]]
+        return None if value is None or value < 0 else value
     if attr == "種族":
         return entry["race"]
     if attr == "屬性":
@@ -131,6 +191,39 @@ def compare_attr(condition, entry, binding):
     return None if op is None else op(lhs, rhs)
 
 
+def same_different_fits(condition, view, from_zones, binding):
+    """異同原子對一張卡:比較對象是同群的其他成員(沒有 `ref`)時單張卡代入一律符合;
+    是別的物件時照引用比較——那個物件沒綁定候選卡就判不了(None),綁了就逐個屬性比:相同是每個屬性都相同、
+    不同是每個屬性都不同,任一邊沒有那個屬性的值就不符。"""
+    ref = condition.get("ref")
+    if ref is None:
+        return True
+    bound = (binding or {}).get(ref["object"])
+    if bound is None:
+        return None
+    for attr in condition["attrs"]:
+        mine = _compared_values(condition, attr, view.entry, view, from_zones)
+        theirs = _compared_values(condition, attr, bound)
+        if not mine or not theirs or bool(mine & theirs) != (condition["cmp"] == SAME):
+            return False
+    return True
+
+
+def _compared_values(condition, attr, entry, view=None, from_zones=None):
+    """異同原子要比的那個屬性在一張卡上的值(集合;沒有值是空集合)。卡名:代入的卡照卡片屬性表
+    (「〜として扱う」的列看位置),寫了「元々の」或是被引用物件的候選卡只看官方卡名;種類:括號裡列的
+    大類與卡片子類型裡這張卡是哪幾種。"""
+    if attr == NAME_ATTR:
+        if view is not None and not condition.get("original"):
+            return {name for name in view.names(from_zones) if name}
+        return {_fold(entry["name_ja"])} if entry["name_ja"] else set()
+    if attr == KIND_ATTR:
+        kinds = {name for name, bit in CATEGORY_BITS.items() if entry["type"] & bit}
+        return (kinds | card_attr(entry, "卡片子類型")) & set(condition.get("kinds", ()))
+    value = card_attr(entry, attr)
+    return set() if value is None else {value}
+
+
 @functools.lru_cache(maxsize=None)
 def _name_range(lo_text, hi_text):
     """範圍兩端 → (前綴樣式, 下限, 上限);兩端寫法對不上回 None。整次查詢對幾千張卡
@@ -158,15 +251,6 @@ def name_in_range(view, texts, from_zones):
     return False
 
 
-def _zone_names(name):
-    """一個區域與它的全部上位區域:線上寫「牌組頂」,查「牌組」也要對得上。"""
-    names = [name]
-    while name in ZONE_PARENT:
-        name = ZONE_PARENT[name]
-        names.append(name)
-    return names
-
-
 def _as_zone(spec):
     return spec if isinstance(spec, dict) else {"zone": spec, "side": None}
 
@@ -178,7 +262,7 @@ def zones_match(query_zones, pos, include_inferred):
         return False
     for want in map(_as_zone, query_zones):
         for have in pos["zones"]:
-            if want["zone"] in _zone_names(have["zone"]) and (
+            if want["zone"] in zone_names(have["zone"]) and (
                     want["side"] is None or want["side"] == have["side"]):
                 return True
     return False
@@ -232,7 +316,7 @@ class CardView:
             if not from_zones:
                 continue
             if have is None:
-                have = {name for z in from_zones for name in _zone_names(z["zone"])}
+                have = {name for z in from_zones for name in zone_names(z["zone"])}
             if where & have:
                 out.append(value)
         return out
@@ -269,6 +353,8 @@ def _position_sensitive(condition):
         if not isinstance(node, dict):
             continue
         if node.get("op") in ("卡名", "卡名包含", "字段", "卡名範圍"):
+            return True
+        if node.get("op") == SAME_DIFFERENT and NAME_ATTR in node["attrs"]:
             return True
         stack.extend(node.get("args", ()))
         if "arg" in node:
@@ -327,20 +413,12 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
         if condition["value"] == "卡":
             return True
         return condition["value"] in view.categories(from_zones)
-    if op in ("位置", "控制方", "表示形式"):
-        # 位置、控制方與表示形式不是卡的屬性:任何卡都代得進去(泛用原子)。
-        return True
-    if op == SAME_CARD:
-        return False
-    if op in (EQUIPPED, TARGETING_THIS):
-        return True
-    if op == "曾被特殊召喚":
-        # 從額外牌組特殊召喚的只能是額外牌組的怪獸(融合/同步/超量/連結/靈擺);其他出發地任何卡都算。
-        if any(z["zone"] == "額外牌組" for z in condition.get("zones", ())):
-            return bool(view.entry["type"] & EXTRA_DECK_BITS)
-        return True
+    if op in STATE_ATOMS:
+        return STATE_ATOMS[op].fits(condition, view.entry)
     if op == "屬性比較":
         return compare_attr(condition, view.entry, binding)
+    if op == SAME_DIFFERENT:
+        return same_different_fits(condition, view, from_zones, binding)
     if op == "卡名範圍":
         texts = condition.get("texts") or [
             _name_text({"name": n}, names) for n in condition.get("names", ())]
@@ -367,9 +445,36 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
     return None
 
 
-def is_generic(obj):
-    """泛用物件:條件式裡除大類、位置、控制方外沒有任何條件;物件0 是特定的卡。"""
-    if obj["unparsed"] or obj["source"]["kind"] == "自己":
+def _fits_apart_from_references(condition, view, names, from_zones):
+    """「且」裡不含引用的那幾個條件成不成立:有一個不成立,綁哪張候選卡都不會符合,不必逐張試
+    (被引用物件的候選卡可以有幾千張)。頂層不是「且」就不先篩。"""
+    if condition.get("op") != "且":
+        return True
+    return all(eval_condition(arg, view, names, from_zones) is True
+               for arg in condition["args"] if not referenced_objects(arg))
+
+
+def _same_atom_on(condition, ref_id):
+    """條件式頂層(本身或「且」的一項)對 `ref_id` 這個物件的 異同 相同 原子;沒有回 None。"""
+    for atom in condition["args"] if condition.get("op") == "且" else [condition]:
+        if (atom.get("op") == SAME_DIFFERENT and atom["cmp"] == SAME
+                and (atom.get("ref") or {}).get("object") == ref_id):
+            return atom
+    return None
+
+
+def is_this_card(obj, objects):
+    """物件是不是這張卡自己:物件0,或母體是它的子集(帶狀態的此卡)。"""
+    if obj["source"]["kind"] == "自己":
+        return True
+    container = objects.get(obj["source"].get("of")) if obj["source"]["kind"] == "子集" else None
+    return container is not None and container["source"]["kind"] == "自己"
+
+
+def is_generic(obj, objects):
+    """泛用物件:條件式裡除大類、位置、控制方外沒有任何條件;此卡(含帶狀態的此卡)是特定的卡。
+    `objects` 是這張卡的物件表(id → 物件)。"""
+    if obj["unparsed"] or is_this_card(obj, objects):
         return False
     return _only_generic_atoms(obj["condition"])
 
@@ -402,9 +507,11 @@ class _Judge:
         self.exists_cache: dict[str, bool] = {}
         # (卡號, 物件 id) → 該物件的候選卡(卡片總表條目)。
         self.candidate_cache: dict[tuple[int, str], list[dict]] = {}
-        # (卡號, 物件 id) → [(被引用物件 id, 候選卡列表)];None = 被引用物件找不到或解析不出。
-        self.pool_cache: dict[tuple[int, str], list[tuple[str, list[dict]]] | None] = {}
+        # (卡號, 物件 id) → 條件式引用到的物件;None = 被引用物件找不到或解析不出。
+        self.referenced_cache: dict[tuple[int, str], list[dict] | None] = {}
         self.objects_cache: dict[int, dict[str, dict]] = {}
+        # (卡號, 物件 id, 被引用物件 id) → (異同 相同 的原子, 候選卡照那個屬性的值分的組);沒有那種原子是 (None, None)。
+        self.sharing_cache: dict[tuple[int, str, str], tuple[dict | None, dict | None]] = {}
 
     def view(self, entry):
         if entry["id"] not in self.views:
@@ -413,41 +520,71 @@ class _Judge:
         return self.views[entry["id"]]
 
     def card_fits(self, entry, obj, owner, names, from_zones):
-        if obj["unparsed"] or obj["kind"] != "卡":
+        # 效果物件的條件式是「誰的效果」:指定卡代入時比那張卡(與「Xの効果を発動」的 X 是卡物件同一個判法)。
+        if obj["unparsed"] or obj["kind"] not in SUBSTITUTABLE_KINDS:
             return False
-        if obj["source"]["kind"] == "自己":
-            return entry["id"] == owner["id"] or entry["id"] in owner.get(
-                "alt_ids", ())
-        pools = self.reference_pools(obj, owner, names)
-        if pools is None:
+        if is_this_card(obj, self.objects_of(owner)):
+            # 此卡只有這張卡代得進去;帶狀態的此卡另照下面的條件式判狀態(物件0 沒有條件式)。
+            if entry["id"] != owner["id"] and entry["id"] not in owner.get("alt_ids", ()):
+                return False
+            if obj["source"]["kind"] == "自己":
+                return True
+        referenced = self.referenced(obj, owner)
+        if referenced is None:
             return False
-        if not pools:
+        if not referenced:
             return eval_condition(obj["condition"], self.view(entry), names,
                                   from_zones) is True
-        # 引用:在每個被引用物件的候選卡裡找得到一組讓全部條件成立即可。
+        # 引用:在每個被引用物件的候選卡裡找得到一組讓全部條件成立即可。不含引用的條件先判——
+        # 不成立就不必求候選卡(每個被引用物件要掃一次總表)。
         view = self.view(entry)
-        for combo in itertools.product(*(pool for _, pool in pools)):
-            binding = {ref_id: bound for (ref_id, _), bound in zip(pools, combo)}
+        if not _fits_apart_from_references(obj["condition"], view, names, from_zones):
+            return False
+        narrowed = [self.sharing_pool(owner, obj, ref_obj["id"],
+                                      self.candidates(owner, ref_obj, names), view, from_zones)
+                    for ref_obj in referenced]
+        for combo in itertools.product(*narrowed):
+            binding = {ref_obj["id"]: bound for ref_obj, bound in zip(referenced, combo)}
             if eval_condition(obj["condition"], view, names, from_zones,
                               binding) is True:
                 return True
         return False
 
-    def reference_pools(self, obj, owner, names):
-        """物件條件式引用到的每個物件與它的候選卡 [(物件 id, 候選卡列表)];沒有引用是空列表,
-        被引用物件找不到或解析不出是 None(判不了)。每個物件整次查詢只算一次:
-        只給條件的查詢會對幾千張卡反覆代入同一個物件。"""
+    def sharing_pool(self, owner, obj, ref_id, pool, view, from_zones):
+        """候選卡裡只留與代入的卡「相同」得起來的:條件式頂層有對這個物件的 異同 相同時,
+        候選卡照那個屬性的值分好組(整次查詢只分一次),只取代入的卡那幾個值的組——不必把幾千張候選卡
+        逐張試。沒有這種原子就原樣回傳。"""
+        key = (owner["id"], obj["id"], ref_id)
+        if key not in self.sharing_cache:
+            atom = _same_atom_on(obj["condition"], ref_id)
+            groups = None
+            if atom is not None:
+                groups = {}
+                for bound in pool:
+                    for value in _compared_values(atom, atom["attrs"][0], bound):
+                        groups.setdefault(value, []).append(bound)
+            self.sharing_cache[key] = (atom, groups)
+        atom, groups = self.sharing_cache[key]
+        if atom is None:
+            return pool
+        mine = _compared_values(atom, atom["attrs"][0], view.entry, view, from_zones)
+        return [bound for value in mine for bound in groups.get(value, ())]
+
+    def referenced(self, obj, owner):
+        """物件條件式引用到的物件(列表);沒有引用是空列表,被引用物件找不到或解析不出是 None(判不了)。
+        每個物件整次查詢只查一次:只給條件的查詢會對幾千張卡反覆代入同一個物件。候選卡(`candidates`)
+        等代入的卡過了不含引用的條件才求。"""
         key = (owner["id"], obj["id"])
-        if key not in self.pool_cache:
-            pools = []
+        if key not in self.referenced_cache:
+            found = []
             for ref_id in referenced_objects(obj["condition"]):
                 ref_obj = self.objects_of(owner).get(ref_id)
                 if ref_obj is None or ref_obj["unparsed"]:
-                    pools = None
+                    found = None
                     break
-                pools.append((ref_id, self.candidates(owner, ref_obj, names)))
-            self.pool_cache[key] = pools
-        return self.pool_cache[key]
+                found.append(ref_obj)
+            self.referenced_cache[key] = found
+        return self.referenced_cache[key]
 
     def candidates(self, owner, ref_obj, names):
         """被引用物件的候選卡:卡片總表裡滿足它條件式的卡(不看位置)。先放空列表,
@@ -475,6 +612,14 @@ class _Judge:
         if q["condition"] is not None:
             if obj["unparsed"]:
                 return False
+            if is_this_card(obj, self.objects_of(owner)):
+                # 此卡只有這張卡自己代得進去:「存在一張實卡」就是「它自己滿不滿足查詢條件」,直接判。
+                # 不走下面的存在性快取:那個快取是讓條件式相同的物件共用一次總表掃描,鍵不帶卡號
+                # (此卡的條件式與來源每張卡都一樣);讓鍵帶卡號等於每張卡各掃一次總表,答案仍只看它自己。
+                entry = self.by_id.get(owner["id"])
+                return (entry is not None
+                        and eval_condition(q["condition"], self.view(entry)) is True
+                        and self.card_fits(entry, obj, owner, names, from_zones))
             # 快取鍵只看條件式本身(名稱換成字面)與來源:幾千張卡的「モンスター１体」只對
             # 總表掃一次;「從」只在條件式有看位置的原子(卡名、字段)時才進鍵;
             # 引用的物件 id 是這張卡的,有引用時卡號也進鍵。
@@ -634,6 +779,14 @@ def modified_matches(want, have):
     return True
 
 
+def _is_doer(line, seg):
+    """做動作的主語線(「このカードが戦闘によって相手モンスターを破壊した」的このカード):查詢指定的
+    卡、物件條件、從/到比的是被作用的物件,段裡另有受詞時主語不比。戰鬥的雙方對等(「Xが Yと 戦闘を
+    行う」),施事照比;只有主語的段(「このカードが相手に戦闘ダメージを与えた」)也照比。"""
+    return (line["role"] == "施事" and SYMMETRIC_ACTION not in seg["actions"]
+            and any(other["role"] != "施事" for other in seg["lines"]))
+
+
 def segment_hit_lines(seg, card, q, judge, objects, names):
     """段命中時回傳命中的對象線(可為空列表);不命中回 None。
     未結構化的段(重複到停為止)沒有動作詞,也不當空查詢的命中。"""
@@ -646,8 +799,12 @@ def segment_hit_lines(seg, card, q, judge, objects, names):
     if not q["line_constrained"]:
         return list(seg["lines"])
     hit = []
+    # 受方是被取對象的物件(裝備對象)時,這一段算有取對象:被裝備上去的卡那條線照常比其餘條件。
+    recipient_targeted = isinstance(seg["recipient"], dict) and seg["recipient"].get("targeting")
     for line in seg["lines"]:
-        if q["targeting"] and not line["targeting"]:
+        if _is_doer(line, seg):
+            continue
+        if q["targeting"] and not (line["targeting"] or recipient_targeted):
             continue
         if q["from_zones"] and not zones_match(q["from_zones"], line["from"],
                                                q["include_inferred"]):
@@ -689,7 +846,7 @@ def run_query(structures, cards, query):
                     if seg["kind"] == "被代替":
                         replaced_hits.add(seg["id"])
                     # 泛用 = 只靠泛用物件命中;沒有物件的段(支付 LP)不算泛用。
-                    if not lines or not all(is_generic(objects[l["object"]])
+                    if not lines or not all(is_generic(objects[l["object"]], objects)
                                             for l in lines):
                         generic = False
                     continue
@@ -807,7 +964,7 @@ def resolve_references(structures, cards):
             if node.get("unparsed"):
                 continue
             obj = objects[node["reference"]["object"]]
-            if is_generic(obj):
+            if is_generic(obj, objects):
                 node["any"] = True
             node["reference"]["candidates"] = sorted(
                 {entry["id"] for entry in judge.candidates(card, obj, names)})

@@ -9,7 +9,7 @@ from card_structure import build_structures
 from test_golden import SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT, card, faq
 
 TAIL_UNKNOWN = 11111111   # 述語語尾「させる」(使役)同義表沒收:段解析不出
-MODS_UNKNOWN = 22222222   # 物件修飾「攻撃力１０００以下の」目前解析不出
+MODS_UNKNOWN = 22222222   # 物件修飾「攻撃力が一番高い」解析不出(群體的最高,不收)
 NO_TEXT = 33333333        # 無官方日文
 BLACK_MAGICIAN = 46986414
 
@@ -27,7 +27,7 @@ def fixtures():
         faq(TAIL_UNKNOWN, "語尾不明",
             "①：手札からモンスター１体を特殊召喚させる。"),
         faq(MODS_UNKNOWN, "修飾不明",
-            "①：手札から攻撃力１０００以下のモンスター１体を特殊召喚する。"),
+            "①：手札から攻撃力が一番高いモンスター１体を特殊召喚する。"),
     ]
     return cards, entries
 
@@ -95,6 +95,34 @@ class UnparsedGroupTest(unittest.TestCase):
         result = self.query(actions=["捨棄"], card=SINGULARITY_FIEND)
         self.assertIn(SINGULARITY_FIEND, result["groups"]["全部"])
         self.assertNotIn(SINGULARITY_FIEND, result["groups"]["未解析"])
+
+
+WEAK_SELF_SUMMONER = 44444444    # 攻擊力 500
+STRONG_SELF_SUMMONER = 55555555  # 攻擊力 3000
+SELF_SUMMON_TEXT = "①：このカードを特殊召喚する。"
+ATK_AT_MOST_1500 = {"op": "屬性比較", "attr": "攻擊力", "cmp": "≤", "value": 1500}
+
+
+class ConditionOnlyThisCardTest(unittest.TestCase):
+    """只給條件的查詢,物件是此卡的線:只有這張卡自己代得進去,每張卡各自判。"""
+
+    def hits(self, cards):
+        entries = [faq(c["id"], c["name_ja"], SELF_SUMMON_TEXT) for c in cards]
+        structures, _ = build_structures(cards, entries)
+        return run_query(structures, cards, dict(
+            actions=["特殊召喚"], condition=ATK_AT_MOST_1500))["groups"]["全部"]
+
+    def test_only_the_card_that_fits_the_condition_hits(self):
+        """兩張卡文相同、都特殊召喚自己:攻擊力 500 的命中,3000 的不命中。"""
+        weak = card(WEAK_SELF_SUMMONER, name_ja="弱者", atk=500)
+        strong = card(STRONG_SELF_SUMMONER, name_ja="強者", atk=3000)
+        self.assertEqual(self.hits([weak, strong]), [WEAK_SELF_SUMMONER])
+
+    def test_result_does_not_depend_on_card_order(self):
+        """不符條件的那張排在前面,符合的那張照樣命中。"""
+        weak = card(WEAK_SELF_SUMMONER, name_ja="弱者", atk=500)
+        strong = card(STRONG_SELF_SUMMONER, name_ja="強者", atk=3000)
+        self.assertEqual(self.hits([strong, weak]), [WEAK_SELF_SUMMONER])
 
 
 if __name__ == "__main__":

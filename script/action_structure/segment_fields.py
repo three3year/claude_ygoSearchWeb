@@ -4,7 +4,7 @@
   "text": 字面, "side": 我方/對手(效果含誰的,有寫才有)}`;字面只認閉集 `CAUSE_FORMS`,模板照字面寫。
   帶「は」的字面(効果では、戦闘及び効果では…)、誰的效果(`OWNER_FORMS`、`OWNER_PATTERN`)。
 - 每回合次數(`per_turn`):抗性的「(それぞれ)１ターンに１度だけ」→ {"value", "text"}。
-- 極性(`polarity`):述語語尾給的極性(`segment_extract.TAILS`)之外,「Xは〜できる」(助詞は)是
+- 極性(`polarity`):述語語尾給的極性(`synonyms.TAILS`)之外,「Xは〜できる」(助詞は)是
   永續的許可(直接攻撃できる)→ 極性「可以」、不是可選的動作;「Xを〜できる」仍是可選的「做」
   (票 10 的決定)。`resolve_polarity` 是抽取與反向檢查共用的一把尺。
 - 時機(`timing`):「次のスタンバイフェイズに」「このターンのエンドフェイズに」→
@@ -33,9 +33,9 @@
 import re
 
 from premise import PHASE_WORDS
-from structure_shape import (AMOUNT_FORMULA, DISPLAY_WORD, DURATION_KINDS,
-                             PLACEMENT_DISPLAY_WORD, NoTemplate, display_value,
-                             placement_form)
+from structure_shape import (AMOUNT_FORMULA, DISPLAY_WORD, DURATION_KINDS, FULLWIDTH_DIGITS,
+                             PLACEMENT_DISPLAY_WORD, TO_FULLWIDTH_DIGITS, NoTemplate,
+                             display_value, placement_form)
 from synonyms import ATTACK_FAMILY, MODIFY_PREDICATE, ONLY, ONLY_MARKER
 
 # 字面 → (種類, 方);閉集,反向檢查只認這些。
@@ -64,6 +64,8 @@ CAUSE_FORMS = {
     "戦闘または効果で": ("戰鬥或效果", None),
     # ガスタ・ファルコ「戦闘以外によって墓地へ送られた時」。
     "戦闘以外によって": ("戰鬥以外", None), "戦闘以外で": ("戰鬥以外", None),
+    # 站主裁定:「相手によって(フィールドから離れた)」= 對手的攻擊或對手的卡片效果。
+    "相手によって": ("戰鬥或效果", "對手"),
 }
 # 作為X素材(票 09):「S素材として墓地へ送られた」→ {"kind": "作為素材", "text": 字面, "summon": 卡片子類型}
 # (「素材として」沒寫哪種召喚就沒有 summon)。
@@ -72,12 +74,13 @@ MATERIAL_FORMS = {
     "融合素材として": "融合", "S素材として": "同步", "シンクロ素材として": "同步",
     "X素材として": "超量", "エクシーズ素材として": "超量", "L素材として": "連結",
     "リンク素材として": "連結", "素材として": None,
+    "シンクロ召喚の素材として": "同步",   # 舊式寫全「召喚の」
 }
 CAUSE_PATTERN = "|".join(sorted(map(re.escape, [*CAUSE_FORMS, *MATERIAL_FORMS]),
                                 key=len, reverse=True))
 # 誰的效果:「〜の効果を受けない」「〜の効果の対象にならない」的「〜の」是原因,
 # 「効果を受け」「効果の対象に」留在述語。方的字面閉集記 side;其餘是物件短語(「A及びB」多個),
-# 原因記 {"kind": 效果, "text": "の", "objects": [...]}(`segment_extract.BlockState.cause_at`)。
+# 原因記 {"kind": 效果, "text": "の", "objects": [...]}(`cause_phrase.parse_cause_phrase`)。
 OWNER_FORMS = {"相手の": "對手", "自分の": "我方", "カードの": None,
                "相手のカードの": "對手", "自分のカードの": "我方"}
 OWNER_TEXT = "の"
@@ -151,7 +154,7 @@ _PER_TURN_RE = re.compile("^(?:それぞれ)?１ターンに(?P<n>[１-９])度�
 def parse_per_turn(text):
     """「１ターンに１度だけ」→ {"value", "text"}。"""
     m = _PER_TURN_RE.match(text)
-    return {"value": int(m.group("n").translate(_FULLWIDTH_DIGITS)), "text": text}
+    return {"value": int(m.group("n").translate(FULLWIDTH_DIGITS)), "text": text}
 
 
 def render_per_turn(per_turn):
@@ -159,7 +162,7 @@ def render_per_turn(per_turn):
     if not per_turn:
         return ""
     m = _PER_TURN_RE.match(per_turn.get("text") or "")
-    if not m or int(m.group("n").translate(_FULLWIDTH_DIGITS)) != per_turn.get("value"):
+    if not m or int(m.group("n").translate(FULLWIDTH_DIGITS)) != per_turn.get("value"):
         raise NoTemplate("每回合次數無模板")
     return per_turn["text"]
 
@@ -224,10 +227,12 @@ ORDER_FORMS = ("好きな順番で",)
 TREAT_PATTERN = ("(?:" + "|".join(map(re.escape, sorted(TREAT_FORMS, key=len, reverse=True)))
                  + ")、?")
 ORDER_PATTERN = "|".join(map(re.escape, ORDER_FORMS))
-# 放置形式的表示形式寫在述語前:「表側表示で」「表側攻撃表示か裏側守備表示で」(二選一)。
-DISPLAY_PATTERN = f"{PLACEMENT_DISPLAY_WORD}(?:か{PLACEMENT_DISPLAY_WORD})?で"
+# 放置形式的表示形式寫在述語前:「表側表示で」「表側攻撃表示か裏側守備表示で」(二選一;
+# 「表側守備表示または裏側守備表示で」同)。
+_DISPLAY_OR = "(?:か|または)"
+DISPLAY_PATTERN = f"{PLACEMENT_DISPLAY_WORD}(?:{_DISPLAY_OR}{PLACEMENT_DISPLAY_WORD})?で"
 _DISPLAY_RE = re.compile(
-    f"^(?P<a>{PLACEMENT_DISPLAY_WORD})(?:か(?P<b>{PLACEMENT_DISPLAY_WORD}))?で$")
+    f"^(?P<a>{PLACEMENT_DISPLAY_WORD})(?:{_DISPLAY_OR}(?P<b>{PLACEMENT_DISPLAY_WORD}))?で$")
 
 
 # 「以下の効果を持つ装備魔法カード扱いで」:被當成裝備卡的物件帶後面 ● 列舉的效果
@@ -305,7 +310,10 @@ LEADING_DURATIONS = {
     "このターン、": None,
     "この効果の発動後、ターン終了時まで、": "發動後",
     "この効果の発動後、ターン終了時まで": "發動後",
+    "このカードの発動後、ターン終了時まで、": "發動後",
+    "このカードの発動後、ターン終了時まで": "發動後",
     "このカードを発動するターン、": "整回合",
+    "このターン中、": None,
     "この効果を発動するターン、": "整回合",
 }
 _LEADING_DURATION_RE = re.compile(
@@ -412,7 +420,7 @@ _ATTRS = f"(?:{_STAT_ALT})(?:{STAT_JOINER}(?:{_STAT_ALT}))*"
 # 倍/半分的基準只有攻守(「元々の攻撃力の倍」)。
 _BASE_ALT = "元々の(?:攻撃力|守備力)"
 # 提及的字面:「その攻撃力」的その是回指(物件是最近的物件),「このカードの」是物件0。
-# 其餘主語是「物件短語 + の」,物件照一般規則解析(`segment_extract._modify_subject`)。
+# 其餘主語是「物件短語 + の」,物件照一般規則解析(`stat_modify._modify_subject`)。
 MENTION_FORMS = ("その", "それらの", "このカードの", "そのモンスターの", "そのカードの",
                  "それらのモンスターの", "それらのカードの")
 # 屬性後的助詞:「攻撃力は、」的讀點記進對象線的助詞字面(同「自分フィールドの、」記進從的字面)。
@@ -424,8 +432,6 @@ DELTA_TAILS = ("する", "し")
 DELTA_UNIT = "ポイント"
 # 「Nになる」的目標值可以是引用其他值的算式字面「そのモンスターと同じ」。
 SAME_AS = "と同じ"
-_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
-_TO_FULLWIDTH_DIGITS = str.maketrans("0123456789", "０１２３４５６７８９")
 # 差量寫在主語前(「その差分×５００だけこのカードの攻撃力はアップする」):算式字面以「だけ」收尾,
 # 可帶讀點;value 另記 placement 主語前。
 LEADING_FORMULA = "主語前"
@@ -457,7 +463,7 @@ def parse_modify(clause):
     if m.group("direction"):
         modified["form"] = DELTA_WORDS[m.group("direction")]
         if m.group("delta"):
-            modified["value"] = int(m.group("delta").translate(_FULLWIDTH_DIGITS))
+            modified["value"] = int(m.group("delta").translate(FULLWIDTH_DIGITS))
             if m.group("unit"):
                 modified["unit"] = m.group("unit")
         elif m.group("formula"):
@@ -475,7 +481,7 @@ def parse_modify(clause):
         else:
             modified["form"] = "數值"
             modified["value"] = (
-                int(m.group("value").translate(_FULLWIDTH_DIGITS)) if m.group("value")
+                int(m.group("value").translate(FULLWIDTH_DIGITS)) if m.group("value")
                 else {"kind": AMOUNT_FORMULA, "text": m.group("same")})
         if m.group("lead"):
             return None
@@ -531,7 +537,7 @@ def _render_value(value, unit, allow_none):
     if value is None and allow_none:
         return ""
     if isinstance(value, int) and unit in (None, DELTA_UNIT):
-        return str(value).translate(_TO_FULLWIDTH_DIGITS) + (unit or "")
+        return str(value).translate(TO_FULLWIDTH_DIGITS) + (unit or "")
     if isinstance(value, dict) and value.get("kind") == AMOUNT_FORMULA and value.get("text") \
             and unit is None:
         return value["text"]
@@ -568,7 +574,7 @@ def parse_treat_delta(treat_text):
     if not m:
         return None
     modified = {"attr": _attrs(m.group("attr")), "form": DELTA_WORDS[m.group("direction")],
-                "value": int(m.group("delta").translate(_FULLWIDTH_DIGITS))}
+                "value": int(m.group("delta").translate(FULLWIDTH_DIGITS))}
     if m.group("unit"):
         modified["unit"] = m.group("unit")
     return m.group()[:-1], modified, m.group("direction")

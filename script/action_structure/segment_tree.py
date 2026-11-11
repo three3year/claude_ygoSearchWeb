@@ -28,15 +28,18 @@
 import re
 
 from block_split import body_start
-from clause_join import JOIN, split_continuative
+from block_state import BlockState, INTERVAL_RE, INTERVAL_REASON
+from clause_join import JOIN, is_continuative, split_continuative
 from effect_reference import is_reference, match_reference, reference_node, render_reference
-from premise import render_premise, split_premises
+from object_boundary import find_cut
+from premise import render_premise, split_premises, timepoint_glue
+from segment_extract import fill_clause, limit_note, parse_sentence, sentences
 from segment_fields import EFFECT_HOLDER_PREFIX
-from segment_extract import (INTERVAL_REASON, INTERVAL_RE, BlockState, parse_from,
-                             parse_sentence, sentences, zone_literal)
-from structure_shape import (DISPLAY_WORD, NoTemplate, branch_node, display_value,
-                             display_word, embedded_node, new_block, segment_node, swap_sides,
-                             unparsed)
+from structure_shape import (DISPLAY_WORD, NoTemplate, branch_node, display_value, display_word,
+                             embedded_node, new_block, segment_node, swap_sides, unparsed)
+from synonyms import ACTIVATION_SUFFIXES
+from turn_phase import build_timepoints, match_timepoints
+from zone_phrase import parse_from, zone_literal
 
 # ● 分歧的引導句(閉集):「以下の効果」後的字面 → (方式, 選者)。模板由方式 + form 寫回。
 BRANCH_HEADERS = (
@@ -67,7 +70,7 @@ EMBED_TAIL = "以下の効果を得る"
 EMBED_HEADER = "は" + EMBED_TAIL
 # 句首的接著詞 → 與前一節點的連接:「その後、」先後;「さらに、」同時(追加處理與前面同時進行)。
 # 反向檢查把兩者都當固定接著詞(`reverse_check.GLUE`)。
-SENTENCE_JOINS = (("その後、", "先後"), ("さらに、", JOIN))
+SENTENCE_JOINS = (("その後、", "先後"), ("さらに、", JOIN), ("さらに", JOIN))
 
 
 def extract_block(block, card, lookups=None, self_id="o0"):
@@ -110,7 +113,7 @@ def extract_block(block, card, lookups=None, self_id="o0"):
             nodes.append(node)
             block["tree"]["items"] = nodes
             return block
-        nodes.append(_branch(state, [], _parse_items(state, items)))
+        nodes.extend(_branch(state, [], _parse_items(state, items)))
         block["tree"]["items"] = nodes
         return block
     if headers and headers[-1][0] == "內嵌":
@@ -133,10 +136,34 @@ def extract_block(block, card, lookups=None, self_id="o0"):
             block["tree"]["items"] = nodes
             return block
         headers = []
+    # 引導句前面整個是時點的先認;不是時點才看連用形串接的子句。
+    timepoints = _header_timepoints(state, headers)
+    if timepoints is None:
+        lead_nodes, headers = _lead_in(state, headers)
+        nodes.extend(lead_nodes)
     branches = _parse_items(state, items)
-    nodes.append(_branch(state, headers, branches))
+    nodes.extend(_branch(state, headers, branches, timepoints))
     block["tree"]["items"] = nodes
     return block
+
+
+def _lead_in(state, headers):
+    """引導句前面連用形串接的子句(「Xを対象とし、以下の効果から１つを選択して発動できる」):
+    先照一般子句解析成段——宣告的對象要在各支之前點名,各支的回指(対象のモンスター、そのモンスター)
+    才指得回它;引導句只剩「以下の効果〜」,與前面的段同時。發動句的引導句(〜発動できる)前面是代價子句。
+    回傳 (段節點, 引導句列表);不是這種引導句時原樣交回。"""
+    if len(headers) != 1 or headers[0][0] != "分歧":
+        return [], headers
+    kind, pre, form, start, join = headers[0]
+    clause = pre[:-1] if pre.endswith("、") else ""
+    if not is_continuative(clause):
+        return [], headers
+    nodes = []
+    for seg, seg_join in parse_sentence(state, start, start + len(clause),
+                                        activation_lead=form.endswith(ACTIVATION_SUFFIXES)):
+        state.block["segments"].append(seg)
+        nodes.append(segment_node(seg["id"], seg_join or (None if nodes else join)))
+    return nodes, [(kind, "", form, start + len(pre), JOIN)]
 
 
 def _parse_run(state, spans):
@@ -251,6 +278,12 @@ def _split_headers(state, spans):
         if text.startswith("その後、"):
             join, text, start = "先後", text[4:], start + 4
         header = _header_of(text)
+        note = limit_note(text)
+        if header is None and note:
+            # 分歧引導句後的括號版次數限制:扣掉注記再認;注記在 `_branch` 進略過文本。
+            header = _header_of(text[:note.start()])
+            if header is not None and header[0] != "分歧":
+                header = None
         if header is None:
             break
         headers.insert(0, header + (start, join))
@@ -270,13 +303,22 @@ def _strip_interval(state, pre, start):
 def _parse_items(state, items):
     """● 列舉的每一支:各自一份狀態,支內句子成序列;回傳各支 {"premise", "items"}。"""
     text = state.block["text"]
-    bounds = []
+    bounds, labels = [], []
     for i, start in enumerate(items):
         end = items[i + 1] - 1 if i + 1 < len(items) else len(text)
-        bounds.append((start, end))
+        # 「●２体以上：」「●自分：」:● 後到「：」是依值分歧的標籤,不屬於後面的句子。
+        label = _LABEL_RE.match(text, start, end)
+        labels.append([start, label.end()] if label else None)
+        bounds.append((label.end() if label else start, end))
     runs = [lambda s=start, e=end: _parse_run(state, sentences(text, s, e))
             for start, end in bounds]
-    return [{"premise": None, "items": nodes} for nodes in fork_state(state, runs)]
+    branches = []
+    for nodes, label in zip(fork_state(state, runs), labels):
+        branch = {"premise": None, "items": nodes}
+        if label:
+            branch["label"] = label
+        branches.append(branch)
+    return branches
 
 
 def fork_state(state, runs):
@@ -326,12 +368,29 @@ def _union_positions(state, base, branches):
     return merged
 
 
-def _branch(state, headers, branches):
-    """引導句 + 各支 → 分歧節點。"""
+def _branch(state, headers, branches, timepoints=None):
+    """引導句 + 各支 → [分歧節點];引導句的前提是時點(「〜したターンの〈階段〉に、以下の効果から〜」,
+    `timepoints` 是 `_header_timepoints` 先解析好的)時,各時點的條件段排在分歧節點前面。
+    各支帶標籤(「●２体以上：」)的是依值分歧:標籤的值只認得內嵌效果的表示形式
+    (`_extract_labelled`),這裡的一律前提解析不出;引導句照一般句子解析(時點已先成條件段的,
+    只記引導句的範圍,不重複解析)。"""
+    if any(branch.get("label") for branch in branches):
+        turn_segs = timepoints[1] if timepoints is not None else []
+        node = branch_node("依前提", None, branches,
+                           None if turn_segs or not headers else headers[0][4])
+        node["form"] = LABEL_FORM
+        node["unparsed"] = unparsed(REASON_BRANCH_PREMISE)
+        if timepoints is None:
+            for header in headers:
+                _parse_header_as_sentence(state, header)
+        else:
+            node["span"] = _headers_span(state, headers)
+        return [segment_node(seg["id"], headers[0][4] if i == 0 else None)
+                for i, seg in enumerate(turn_segs)] + [node]
     if not headers:
         node = branch_node(None, branches=branches)
         node["unparsed"] = unparsed(REASON_BRANCH_MODE)
-        return node
+        return [node]
     if len(headers) == 1:
         kind, pre, form, start, join = headers[0]
         pre, start = _strip_interval(state, pre, start)
@@ -342,26 +401,65 @@ def _branch(state, headers, branches):
         node = branch_node(mode, chooser, branches, join)
         node["form"] = form
         node["span"] = _headers_span(state, headers)
-        return node
+        _omit_header_notes(state, headers)
+        return [node]
     # 依前提:每個引導句帶前提,各成一支、支內是那個方式的分歧(● 列舉共用)。
     outer = []
     previous = None
+    turn_segs = []
     for _, pre, form, start, join in headers:
-        premise = _header_premise(state, pre, start, previous)
+        if timepoints is not None:
+            premise, turn_segs = timepoints
+        else:
+            premise = _header_premise(state, pre, start, previous)
         if premise is None:
             node = branch_node(None, branches=branches, join=headers[0][4])
             node["unparsed"] = unparsed(REASON_BRANCH_PREMISE)
             for header in headers:
                 _parse_header_as_sentence(state, header)
-            return node
+            return [node]
         previous = premise
         mode, chooser = _HEADER_FORMS[form]
         inner = branch_node(mode, chooser, branches)
         inner["form"] = form
         outer.append({"premise": premise, "items": [inner]})
-    node = branch_node("依前提", None, outer, headers[0][4])
+    nodes = [segment_node(seg["id"], headers[0][4] if i == 0 else None)
+             for i, seg in enumerate(turn_segs)]
+    node = branch_node("依前提", None, outer, None if turn_segs else headers[0][4])
     node["span"] = _headers_span(state, headers)
-    return node
+    _omit_header_notes(state, headers)
+    return nodes + [node]
+
+
+def _header_timepoints(state, headers):
+    """單一分歧引導句的前提字面整個是時點(`turn_phase`,可列舉;開頭可有「１ターンに１度、」)→
+    (條件式, 各時點的條件段);不是就回 None、不開段。條件段在這裡就寫進區塊的扁平列表:時點的動作
+    發生在各支之前,要在解析各支之前填格(條件段動過的位置傳給各支,各支動過的位置不倒流回條件段),
+    所以由 `extract_block` 在 `_parse_items` 前呼叫。引導句有兩句以上(依前提的多支)時不認。"""
+    if len(headers) != 1 or headers[0][0] != "分歧":
+        return None
+    _, pre, _, start, _ = headers[0]
+    interval = INTERVAL_RE.match(pre)
+    skip = interval.end() if interval else 0
+    matched = match_timepoints(pre[skip:])
+    if matched is None or matched[-1] != len(pre) - skip:
+        return None
+    points = build_timepoints(state, pre[skip:], start + skip, matched, fill_clause,
+                              parse_from, zone_literal)
+    state.block["segments"].extend(points.segs)
+    premise = points.atoms[0] if len(points.atoms) == 1 else {"op": "且", "args": points.atoms}
+    return premise, points.segs
+
+
+def _omit_header_notes(state, headers):
+    """認成分歧的引導句,句尾的括號版次數限制(「〜発動できる（このカード名の以下の効果はそれぞれ
+    １ターンに１度しか選択できない）」)進略過文本。引導句認不成分歧時照一般句子解析,由 `parse_sentence` 剝。"""
+    text = state.block["text"]
+    for _, _, _, start, _ in headers:
+        end = text.find("。", start)
+        note = limit_note(text[start:len(text) if end < 0 else end])
+        if note:
+            state.omit(start + note.start(), note.group(), INTERVAL_REASON)
 
 
 def _headers_span(state, headers):
@@ -421,7 +519,10 @@ def _embedded(state, subject, start, join, lookups, by=None):
     """「Xは以下の効果を得る」→ 內嵌效果節點:綁定 自己 = X,內容是 ● 列舉組成的區塊;
     X 解析不出回 None(引導句已照一般句子解析)。依值分支型(「Xは表示形式によって〜」,`by`)
     的內容區塊是依前提分歧,每個 ● 的標籤是那一支的前提(`_extract_labelled`)。"""
-    obj_id, ref, reason = state.object_at(subject, start)
+    # 主語前面吞進了前文(「〜の数によって、このカードは以下の効果を得る」,物件切點):這種引導句
+    # 認不成內嵌效果,照一般句子解析,不拿吞了前文的字面去建物件。
+    swallowed = not state.parses_cleanly(subject) and find_cut(subject)
+    obj_id, ref, reason = (None, None, None) if swallowed else state.object_at(subject, start)
     if obj_id is None:
         _parse_header_as_sentence(state, (None, None, None, start, None))
         return None
@@ -592,6 +693,7 @@ def _branch_headers(node, render_premise_text):
                 raise NoTemplate(f"段樹無模板:{inner['unparsed']['reason']}")
             out.append(render_premise_text(branch["premise"])
                        + _header_text(inner))
+            out.extend(timepoint_glue(branch["premise"]))
         return out
     if node.get("form") is None and mode == "各自可以":
         return []   # 內嵌效果裡的 ● 列舉:引導句在內嵌效果節點上
@@ -608,7 +710,7 @@ def _header_text(node):
     return "以下の効果" + form
 
 
-def render_premise_prefix(premise, render_zones, render_object):
+def render_premise_prefix(premise, render_zones, render_object, count_of):
     """依前提各支的前提字面(後面接引導句,所以帶讀點)。"""
     return render_premise(premise, render_zones,
-                          render_object, followed=True)
+                          render_object, followed=True, count_of=count_of)

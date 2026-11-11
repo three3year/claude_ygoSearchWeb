@@ -9,13 +9,22 @@
 - 抗性與限制用既有動作詞加極性:受到效果影響、攻擊家族(攻擊 > 直接攻擊、多次攻擊、
   全體攻擊;次數與「全てに１回ずつ」寫在述語「攻撃」前,`attack_times`)、選為攻擊對象、取對象
   (只有非「做」的語尾)、作為素材、變更表示形式、變更控制權;「無効化」= 無效。
+- 召喚:單獨的「召喚」是動作詞 召喚,上位詞 通常召喚(通常召喚還含覆蓋);上級召喚
+  (アドバンス召喚、生け贄召喚、A召喚)的上位詞是 召喚;反轉召喚獨立;P召喚的上位詞是 特殊召喚。
+  「召喚・特殊召喚に成功した」這種列舉是一段多個動作詞(`parse_predicates`)。
+- 素材:召喚時拿卡當素材是 作為素材(「〜素材にできない」「〜素材とする」「X召喚の素材とする」);
+  效果把卡疊到超量怪獸下面是 成為超量素材(「Yの下に重ねてX素材とする」「YのX素材とする/にする」),機制不同、分開。
+  兩者字面只差前面的「Yの」「重ねて」:成為超量素材的字幹連這一截一起寫,查表前由 `parse_material_predicates`
+  把句型切在述語外的「の」接回去。
+- 離場:「フィールド(上)から離れた」,只比字面(沒有上下位詞、不進推得表);字幹連「フィールドから」
+  一起寫,出發地 場上 由述語寫明(`PREDICATE_FROM`)。
 各舊式用語在官方 DB 文本上的出現次數見 `.scratch/action-structure/report/old_style_phrases.md`
 (`stats/old_style_phrases.py` 可重跑)。
 """
 import re
 from typing import NamedTuple
 
-from structure_shape import DISPLAY_WORDS, VOICE_MIXED
+from structure_shape import DISPLAY_WORDS, FULLWIDTH_DIGITS, VOICE_MIXED, ZONE_WORDS
 
 
 class Predicate(NamedTuple):
@@ -27,6 +36,33 @@ class Predicate(NamedTuple):
     optional: bool
 
 
+# 傷害的字幹連受詞「ダメージを」一起寫:單獨的「与え」「受け」太短,查詢未解析組比字面時會誤中。
+# 傷害句型卻把「ダメージを」切在述語外(傷害名詞要帶原因與數量),原述語字面只留「与えた」「受ける」;
+# 查這張表前要把受詞接回去,抽取與模板都只走 `damage.parse_damage_predicates`。
+DAMAGE_OBJECT = "ダメージを"
+BARE_SUMMON_STEM = "召喚"
+# 素材。超量素材的名詞(物件「(Xの)X素材」與 成為超量素材 的述語共用這個閉集)。
+XYZ_MATERIAL_WORDS = ("X素材", "エクシーズ素材")
+XYZ_ATTACH_ACTION = "成為超量素材"
+MATERIAL_ACTION = "作為素材"
+# 哪種召喚的素材留在原述語字面:「融合素材」「S素材」…與沒寫種類的「素材」。
+MATERIAL_NOUNS = ("融合素材", "シンクロ素材", "S素材", "エクシーズ素材", "X素材", "リンク素材",
+                  "L素材", "素材")
+# 「X召喚の素材とする」「エクシーズ召喚の素材にできない」:寫全「召喚の」的素材名詞。
+MATERIAL_SUMMON_KINDS = ("X召喚", "エクシーズ召喚", "S召喚", "シンクロ召喚", "L召喚", "リンク召喚",
+                         "融合召喚")
+# 「このカードのX素材とする」的「の」:句型把它切進所屬(Y)那一格,成為超量素材的字幹卻要它才分得出來。
+MATERIAL_OWNER_PARTICLE = "の"
+# 素材字幹(〜素材と)後面接「して」是原因「〜素材として」,不是述語的て形。
+MATERIAL_AS_TAIL = "して"
+# 離場:從場上離開、去哪裡沒寫。字幹連出發地一起寫(「フィールドから離れ」「フィールド上から離れ」):
+# 單獨的「離れ」會比中「墓地から離れた」與故事文;出發地「場上」由述語本身寫明(`PREDICATE_FROM`)。
+LEAVE_ACTION = "離場"
+LEAVE_VERB = "離れ"
+LEAVE_FROM = "場上"
+LEAVE_STEMS = tuple(f"{word}から{LEAVE_VERB}" for word, name in ZONE_WORDS if name == LEAVE_FROM)
+# 述語本身寫明的出發地(動作詞 → 區域),對應 `PREDICATE_STEMS` 第三欄的終點。
+PREDICATE_FROM = {LEAVE_ACTION: LEAVE_FROM}
 # ── 述語字面 → 動作詞;第三欄是述語本身寫明的終點(「墓地へ送る」「ゲームから除外する」)。
 # 比對時取最長的字幹(`_STEMS_LONGEST_FIRST`;「攻撃対象に選択」不能被「攻撃」先吃掉)。
 PREDICATE_STEMS = (
@@ -66,6 +102,11 @@ PREDICATE_STEMS = (
     # 表示形式字面留在原述語字面裡。
     *((f"{word}に", "變更表示形式", None) for word, _, _ in DISPLAY_WORDS),
     *((f"{word}にな", "變更表示形式", None) for word, _, _ in DISPLAY_WORDS),
+    # 「〜を表側守備表示に変更し」「(Xの)表示形式を表側攻撃表示に変更する」「(Xの)表示形式が表側守備表示に
+    # 変更された」;「守備表示にならない」是上一列的字幹加語尾「らない」。
+    *((f"{word}に変更", "變更表示形式", None) for word, _, _ in DISPLAY_WORDS),
+    *((f"表示形式を{word}に変更", "變更表示形式", None) for word, _, _ in DISPLAY_WORDS),
+    *((f"表示形式が{word}に変更", "變更表示形式", None) for word, _, _ in DISPLAY_WORDS),
     # 攻擊家族。「攻撃をする」的を是述語的一部分(句型層 `PREDICATE_NOUNS`)。
     ("攻撃対象に選択", "選為攻擊對象", None),
     ("攻撃宣言", "攻擊", None),
@@ -79,28 +120,62 @@ PREDICATE_STEMS = (
     ("無効化", "無效", None),           # 「無効化されない」併進無效
     ("無効に", "無效", None),           # 票 09:その発動を無効にし破壊する(し 串接)
     ("通常召喚", "通常召喚", None),     # 票 09:召喚條件句「このカードは通常召喚できない」
-    ("ダメージを与え", "傷害", None),
-    ("ダメージを受け", "傷害", None),
+    (DAMAGE_OBJECT + "与え", "傷害", None),
+    (DAMAGE_OBJECT + "受け", "傷害", None),
     ("回復", "回復", None),
     ("戦闘を行", "戰鬥", None),
-    ("置く", "放置", None),
-    ("置き", "放置", None),             # 連用形串接「〜に表側表示で置き、」
-    ("置い", "放置", None),             # 置いて、置いた
+    # 放置(置く)、去除(取り除く):單字幹,活用在 `TAILS` 的カ行五段(く、き、いて、かれた…);
+    # 「置」會出現在別的詞裡(位置、装置),查詢未解析組比字面時扣掉(STEM_FALSE_FRIENDS)。
+    ("置", "放置", None),
     ("セット", "覆蓋", None),
-    # 去除(取り除く)。字幹連語尾一起寫(同 置く);被動「取り除かれた」的語尾 れた/れる。
-    ("取り除く", "去除", None),
-    ("取り除き", "去除", None),         # 連用形串接「〜を１つ取り除き、」
-    ("取り除い", "去除", None),         # 取り除いて、取り除いた
-    ("取り除か", "去除", None),         # 取り除かれた、取り除かれる
+    ("取り除", "去除", None),
     # 抽牌(「通常のドローをした」的を接在字幹裡);「ドローフェイズ」是階段字面,
     # 查詢未解析組比字面時扣掉(STEM_FALSE_FRIENDS)。自動詞「手札に加わ」併進加入手牌。
     ("ドローを", "抽牌", None),
     ("ドロー", "抽牌", None),
     ("手札に加わ", "加入手牌", "手牌"),
+    # 單獨的「召喚」(通常召喚的下位詞;通常召喚還含覆蓋)、上級召喚、反轉召喚、P召喚;
+    # 片假名全寫的 リンク/シンクロ/エクシーズ召喚 與字母寫法同一個詞。「召喚」落在別種召喚的字面裡
+    # (特殊召喚、通常召喚…)不算,查詢未解析組比字面時扣掉(STEM_FALSE_FRIENDS)。
+    (BARE_SUMMON_STEM, "召喚", None),
+    ("アドバンス召喚", "上級召喚", None), ("生け贄召喚", "上級召喚", None),
+    ("A召喚", "上級召喚", None),            # 字母寫法(同 S/X/L/P召喚)
+    # 「モンスター１体の召喚を行う」「〜１体のA召喚を行う」:同「X召喚を行う」(物件 + 助詞「の」)。
+    ("召喚を行", "召喚", None), ("A召喚を行", "上級召喚", None),
+    ("アドバンス召喚を行", "上級召喚", None),
+    ("反転召喚", "反轉召喚", None),
+    ("P召喚", "P召喚", None), ("ペンデュラム召喚", "P召喚", None),
+    ("リンク召喚", "L召喚", None), ("シンクロ召喚", "S召喚", None),
+    ("エクシーズ召喚", "X召喚", None),
+    # 作為素材 的「〜素材とする」「〜素材とし」(「このカードをS素材とする場合」「〜も融合素材とする事ができる」),
+    # 與「X召喚の素材とする/にできない」這種寫全「召喚の」的。
+    *((f"{noun}と", "作為素材", None) for noun in MATERIAL_NOUNS),
+    *((f"{kind}の素材{particle}", "作為素材", None) for kind in MATERIAL_SUMMON_KINDS
+      for particle in "とに"),
+    # 成為超量素材(效果把卡疊到超量怪獸下面):「Yの下に重ねてX素材とする」的述語是「重ねてX素材とする」;
+    # 「YのX素材とする/にする」與 作為素材 只差所屬的「の」,字幹連「の」一起寫(`parse_material_predicates`)。
+    *((f"重ねて{word}と", XYZ_ATTACH_ACTION, None) for word in XYZ_MATERIAL_WORDS),
+    *((f"{MATERIAL_OWNER_PARTICLE}{word}{particle}", XYZ_ATTACH_ACTION, None)
+      for word in XYZ_MATERIAL_WORDS for particle in "とに"),
+    # 舊式儀式怪獸的召喚手續「「X」により降臨」:降臨 = 儀式召喚。
+    ("降臨", "儀式召喚", None),
+    # 離場「フィールド(上)から離れた」;沒有上下位詞、不進推得表。
+    *((stem, LEAVE_ACTION, None) for stem in LEAVE_STEMS),
 )
 _STEMS_LONGEST_FIRST = sorted(PREDICATE_STEMS, key=lambda row: len(row[0]), reverse=True)
 # 字幹出現在別的詞裡、不是那個動作的字面(查詢未解析組比字面時扣掉)。
-STEM_FALSE_FRIENDS = {"攻撃": ("攻撃力", "攻撃表示", "攻撃対象"), "ドロー": ("ドローフェイズ",)}
+STEM_FALSE_FRIENDS = {"攻撃": ("攻撃力", "攻撃表示", "攻撃対象"), "ドロー": ("ドローフェイズ",),
+                      # 官方文本裡「置」不是「置く」的只有這三個詞(「〜装置」「置換融合」是卡名)。
+                      "置": ("位置", "装置", "置換")}
+# 素材的字幹互相包含:「素材と」落在「X素材と」裡、「X素材と」落在成為超量素材的「のX素材と」「重ねてX素材と」裡,
+# 查 作為素材 的未解析組比字面時扣掉後者;「〜素材として」是原因(作為素材 被送墓)或持有狀態(X素材としている),
+# 不是這兩個動作的字面。
+_ATTACH_STEMS = tuple(stem for stem, action, _ in PREDICATE_STEMS if action == XYZ_ATTACH_ACTION)
+for _stem, _action, _ in PREDICATE_STEMS:
+    if _action in (MATERIAL_ACTION, XYZ_ATTACH_ACTION) and _stem.endswith(("素材と", "素材に")):
+        STEM_FALSE_FRIENDS[_stem] = tuple(
+            longer for longer in _ATTACH_STEMS if _stem in longer and longer != _stem
+        ) + ((_stem + "して",) if _stem.endswith("と") else ())
 MODIFY_ACTION = "性質變更"
 MODIFY_PREDICATE = "になる"
 # 動作回指(「めくったカード」「特殊召喚したモンスター」)用的過去形。
@@ -116,6 +191,8 @@ ACTION_PAST = {"翻開": "めくった", "特殊召喚": "特殊召喚した", "
 # 推得表與角色也照上位詞算(票 07)。
 ACTION_PARENT = {"融合召喚": "特殊召喚", "S召喚": "特殊召喚", "X召喚": "特殊召喚",
                  "L召喚": "特殊召喚", "儀式召喚": "特殊召喚",
+                 # 上級召喚 → 召喚 → 通常召喚(兩層);P召喚是特殊召喚的下位;反轉召喚沒有上位詞。
+                 "召喚": "通常召喚", "上級召喚": "召喚", "P召喚": "特殊召喚",
                  # 攻擊 > 直接攻擊、多次攻擊、全體攻擊(spec「攻擊系只做兩層夠嗎?」)
                  "直接攻擊": "攻擊", "多次攻擊": "攻擊", "全體攻擊": "攻擊"}
 ATTACK = "攻擊"
@@ -133,6 +210,37 @@ def action_ancestors(action):
     return out
 
 
+# 召喚系的根:這三個詞與它們的下位詞都是把怪獸叫出來,對象線的角色是 被召喚。
+SUMMON_ROOTS = ("特殊召喚", "通常召喚", "反轉召喚")
+
+
+def is_summon(action):
+    """動作詞是不是召喚系(根或它們的下位詞):融合召喚、召喚、上級召喚、反轉召喚…。"""
+    return any(a in SUMMON_ROOTS for a in action_ancestors(action))
+
+
+# 召喚系的述語字幹(長的在前),給句型認「〜召喚に成功した」前面的助詞用。
+SUMMON_STEMS = tuple(stem for stem, action, _ in _STEMS_LONGEST_FIRST
+                     if stem.endswith(BARE_SUMMON_STEM) and is_summon(action))
+# 別種召喚的字面與含「召喚」的名詞裡的「召喚」不是動作詞 召喚:查「召喚」的未解析組比字面時扣掉。
+# 召喚自己的下位詞(アドバンス召喚、生け贄召喚)不扣。
+SUMMON_WORDS_NOT_ACTIONS = ("召喚条件", "召喚獣", "召喚師", "召喚魔術", "召喚士", "召喚神",
+                            "デーモンの召喚")
+_OTHER_SUMMON_STEMS = tuple(
+    stem for stem, action, _ in _STEMS_LONGEST_FIRST
+    if stem.endswith(BARE_SUMMON_STEM) and "召喚" not in action_ancestors(action))
+STEM_FALSE_FRIENDS[BARE_SUMMON_STEM] = _OTHER_SUMMON_STEMS + SUMMON_WORDS_NOT_ACTIONS
+# 「召喚を行」同樣落在別種召喚的「X召喚を行う」裡(「儀式召喚を行う」「S召喚を行う」):扣掉同一批召喚字面。
+STEM_FALSE_FRIENDS["召喚を行"] = tuple(stem + "を行" for stem in _OTHER_SUMMON_STEMS)
+# 召喚的列舉(「召喚・特殊召喚に成功した」「召喚・反転召喚・特殊召喚できない」):一段多個動作詞,
+# 語尾只寫在最後一個。只收召喚系的字幹,別的「A・B」不是動作的列舉。
+SUMMON_JOINER = "・"
+_SUMMON_STEM_ALT = "|".join(SUMMON_STEMS)
+# 後面緊接「〜召喚(・〜召喚)に成功」的位置(lookahead):句型用它認「モンスターの特殊召喚に成功」的「の」
+# (對象線的助詞)與「墓地からの特殊召喚に成功」的「からの」(從)。
+SUMMON_SUCCESS_AHEAD = (f"(?=(?:{_SUMMON_STEM_ALT})(?:{SUMMON_JOINER}(?:{_SUMMON_STEM_ALT}))*"
+                        "に成功)")
+
 
 # 述語語尾 → (態, 極性[, 可選])。語尾不在表內的述語標「述語語尾不明」,不猜。
 # 「〜できる」「〜事ができる」「〜する事ができる」(舊式)都是可選的效果,極性仍是做(票 10 的決定)。
@@ -147,7 +255,12 @@ TAILS = {
     "されて": ("被動", "做"),
     "られる": ("被動", "做"), "られた": ("被動", "做"), "られ": ("被動", "做"),
     "られて": ("被動", "做"),
-    "れた": ("被動", "做"), "れる": ("被動", "做"),   # 取り除かれた
+    # カ行五段(置く、取り除く;字幹只寫到「置」「取り除」):置く、置き、置いて、置いた、
+    # 置く事ができる;被動 置かれた、取り除かれた;不能 取り除けない。
+    "く": ("主動", "做"), "き": ("主動", "做"), "いて": ("主動", "做"), "いた": ("主動", "做"),
+    "く事ができる": ("主動", "做", True),
+    "かれた": ("被動", "做"), "かれる": ("被動", "做"),
+    "けない": ("主動", "不能"),
     "に成功した": ("被動", "做"), "に成功する": ("被動", "做"),
     "できる": ("主動", "做", True), "る事ができる": ("主動", "做", True),
     "する事ができる": ("主動", "做", True), "事ができる": ("主動", "做", True),
@@ -159,6 +272,8 @@ TAILS = {
     # 「手札に加える事ができず、」(連用形串接的不能)。
     "る事ができず": ("主動", "不能"), "する事ができず": ("主動", "不能"),
     "す事ができず": ("主動", "不能"), "う事ができず": ("主動", "不能"),
+    # 「〜を除外して融合素材とする事もできる」「シンクロ素材とする事もできない」:「も」只是「也」。
+    "する事もできる": ("主動", "做", True), "する事もできない": ("主動", "不能"),
     # 舊式「〜事はできない」= 「〜できない」
     "する事はできない": ("主動", "不能"), "る事はできない": ("主動", "不能"),
     "す事はできない": ("主動", "不能"), "う事はできない": ("主動", "不能"),
@@ -169,6 +284,7 @@ TAILS = {
     # 「効果を受けない/受けず」「効果の対象にならない/ならず」
     "ない": ("主動", "不會"), "ず": ("主動", "不會"),
     "ならない": ("主動", "不會"), "ならず": ("主動", "不會"),
+    "らない": ("主動", "不會"),                # 「守備表示にならない」(字幹「〜表示にな」)
     "されず": ("被動", "不會"), "られず": ("被動", "不會"),   # 「効果では破壊されず、〜」
 }
 _TAILS_LONGEST_FIRST = sorted(TAILS, key=len, reverse=True)
@@ -176,7 +292,13 @@ _TAILS_LONGEST_FIRST = sorted(TAILS, key=len, reverse=True)
 # ── 取對象:述語前的字面(「Xを選択して破壊する」「Xを対象として発動できる」)。
 # 舊式「選択して」與新式「対象として」同一機制;「以下の効果から１つを選択して」是分歧(票 06),
 # 物件短語解析不出就不會標成取對象。
-TARGETING_PREFIXES = ("選択して", "対象として")
+# 連用形的取對象字面:連用形串接切開後的左半「Xを選択し、」「Xを対象とし、」,述語空、
+# 沒有動作詞的宣告;右半省略的物件指回它(`BlockState.declare`)。排在て形後面:先試長的。
+# 後面接「た」的不是(「選択したモンスター」是回指),句型與拆字面都用 `TARGETING_PATTERN`。
+TARGETING_CONTINUATIVE = ("選択し", "対象とし")
+TARGETING_PREFIXES = ("選択して", "対象として") + TARGETING_CONTINUATIVE
+TARGETING_PATTERN = "|".join(prefix + ("(?!た)" if prefix in TARGETING_CONTINUATIVE else "")
+                             for prefix in TARGETING_PREFIXES)
 # 指回取對象物件的回指字面(「選択したモンスター」;新式用「そのモンスター」,或「対象のモンスター」,
 # 「〜を対象として発動できる。〜を対象のモンスターに装備する」)。
 TARGET_REF = "(?:選択した|対象の)"
@@ -204,11 +326,6 @@ ONLY_MARKER = "しか"
 SELECT_PREFIX = "選んで"
 
 
-def split_select(pred):
-    """述語字面 → (選取字面或 None, 其餘述語)。「選んで破壊する」→ ("選んで", "破壊する")。"""
-    if pred.startswith(SELECT_PREFIX):
-        return SELECT_PREFIX, pred[len(SELECT_PREFIX):]
-    return None, pred
 # 攻擊的下位詞寫在述語「攻撃」前面的字面(閉集):次數 → 多次攻擊(段的 `times`,
 # 「もう１度」是第二次攻擊,記 2);「相手モンスター全てに１回ずつ」→ 全體攻擊。字面留在原述語字面裡,
 # 反向檢查照 `attack_times` 驗段的 `times`。
@@ -222,11 +339,11 @@ ATTACK_PREFIX_PATTERN = re.sub(r"\(\?P<\w+>", "(?:",
                                f"(?:{TIMES_PATTERN}|{ALL_ATTACK_PATTERN})(?=攻撃)")
 # 述語本身含「を/は」的動作:句型的述語槽不收「を」,這幾個「名詞+を/は」字面例外,
 # 寫在述語開頭(攻撃をする、効果を受けない、表示形式を変更、コントロールは変更)。
-SUMMON_NOUNS = ("融合召喚を", "S召喚を", "X召喚を", "L召喚を")
+SUMMON_NOUNS = ("融合召喚を", "S召喚を", "X召喚を", "L召喚を",
+                "召喚を", "A召喚を", "アドバンス召喚を")
 PREDICATE_NOUNS = ("攻撃を", "効果を", "表示形式を", "表示形式は", "コントロールを",
                    "コントロールは") + SUMMON_NOUNS
 PREDICATE_NOUN_PATTERN = "|".join(PREDICATE_NOUNS)
-_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
 
 
 def attack_times(pred):
@@ -234,17 +351,8 @@ def attack_times(pred):
     m = _ATTACK_PREFIX_RE.match(pred or "")
     if not m or not m.group("times"):
         return None
-    value = int(m.group("n").translate(_FULLWIDTH_DIGITS)) if m.group("n") else 2
+    value = int(m.group("n").translate(FULLWIDTH_DIGITS)) if m.group("n") else 2
     return {"value": value, "text": m.group("times")}
-
-
-def split_targeting(pred):
-    """述語字面 → (取對象字面或 None, 其餘述語)。「選択して破壊する」→ ("選択して", "破壊する");
-    單獨的「選択して」(發動句的取對象宣告)→ ("選択して", "")。"""
-    for prefix in TARGETING_PREFIXES:
-        if pred.startswith(prefix):
-            return prefix, pred[len(prefix):]
-    return None, pred
 
 
 def parse_predicate(pred):
@@ -271,6 +379,9 @@ def parse_predicate(pred):
     for stem, action, to in _STEMS_LONGEST_FIRST:
         if pred.startswith(stem):
             tail = pred[len(stem):]
+            if tail.startswith(MATERIAL_AS_TAIL) and action in (MATERIAL_ACTION, XYZ_ATTACH_ACTION):
+                # 「〜素材として(墓地へ送られた)」是原因字面,不是 作為素材 的述語。
+                return None, REASON_PREDICATE
             if tail not in TAILS:
                 return None, REASON_TAIL
             voice, polarity, *optional = TAILS[tail]
@@ -289,6 +400,15 @@ def parse_predicates(pred):
         if not pred.startswith(stem):
             continue
         rest = pred[len(stem):]
+        if rest.startswith(SUMMON_JOINER) and is_summon(action):
+            following, reason = parse_predicates(rest[len(SUMMON_JOINER):])
+            if following is None:
+                return None, reason
+            if not is_summon(following[0].action):
+                return None, REASON_PREDICATE
+            return [following[0]._replace(action=action, to=to)] + following, None
+        if rest.startswith(MATERIAL_AS_TAIL) and action in (MATERIAL_ACTION, XYZ_ATTACH_ACTION):
+            return None, REASON_PREDICATE   # 同 `parse_predicate`:「〜素材として」不是て形串接的前一個述語
         for tail in _TAILS_LONGEST_FIRST:
             if tail and (tail.endswith(("て", "で")) or tail == "し") \
                     and rest.startswith(tail) and len(rest) > len(tail):
@@ -301,6 +421,18 @@ def parse_predicates(pred):
     return None, reason
 
 
+def parse_material_predicates(pred, owned):
+    """素材句型的原述語字面(「X素材とする」「重ねてX素材とする」「L素材とする」)→ 同義表的查表結果。
+    `owned`:句型在述語前切出了所屬(「このカードの」「その」)而沒有「下に」——所屬的「の」接回去再查,
+    「YのX素材とする」才查得到 成為超量素材;查不到(「YのL素材とする場合」是 作為素材)就照原字面查。
+    抽取與模板都走這一支(同 `damage.parse_damage_predicates` 的做法)。"""
+    if owned:
+        parsed, _ = parse_predicates(MATERIAL_OWNER_PARTICLE + pred)
+        if parsed is not None:
+            return parsed, None
+    return parse_predicates(pred)
+
+
 def merged_voice(parsed):
     """串接的多個述語的態:全部相同就是那個態,不同是「混合」;沒有述語(取對象宣告)是 None。
     抽取與反向檢查共用這一把尺。"""
@@ -308,4 +440,3 @@ def merged_voice(parsed):
     if len(voices) == 1:
         return voices.pop()
     return VOICE_MIXED if voices else None
-

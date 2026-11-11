@@ -231,11 +231,10 @@ class GodanTailTest(unittest.TestCase):
         self.assertIn(DEMON_GIANT, [hit["id"] for hit in result["hits"]])
 
     def test_perform_summon_with_u_tail_is_still_that_summon(self):
-        """述語認得出(S召喚),未解析組列的是物件(「〜のみを素材として」),不是語尾不明。"""
+        """述語認得出(S召喚):查「S召喚」命中「〜のみを素材としてS召喚を行う事ができる」那一段。"""
         result = run_query(self.structures, self.cards, {"actions": ["S召喚"]})
-        reasons = [seg["reason"] for entry in result["unparsed"] if entry["id"] == MELFFY_LASSY
-                   for seg in entry["segments"]]
-        self.assertEqual(reasons, ["物件解析不出"])
+        self.assertIn(MELFFY_LASSY, [hit["id"] for hit in result["hits"]])
+        self.assertNotIn(MELFFY_LASSY, result["groups"]["未解析"])
 
 
 if __name__ == "__main__":

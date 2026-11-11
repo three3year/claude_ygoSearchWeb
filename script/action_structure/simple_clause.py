@@ -62,6 +62,7 @@ from cause_phrase import (CAUSE_ALT, EXCLUDE_METHOD_PATTERN, fill_cause, render_
 from clause_front import (PLACEMENT_AFTER_SUBJECT, front_duration, front_timing,
                           render_front_duration, render_front_timing, subject_line)
 from condition_atoms import TARGETING_THIS_FORMS
+from noun_phrase import HEAD_CATEGORY
 from object_boundary import find_cut
 from object_render import render_object, render_ref
 from predicate_literal import join_predicate_literal, render_predicate
@@ -212,7 +213,6 @@ EQUIP_ACTION = "裝備"
 REASON_FROM = "從解析不出"
 REASON_TO = "到解析不出"
 REASON_DISPLAY = "表示形式沒有到"
-MONSTER = "怪獸"
 
 
 def split_objects(phrase):
@@ -357,8 +357,9 @@ def fill_clause(ctx, clause_text):
             return
         elided = state.elided_subject()
         pred, to_phrase, parsed, reason = _clause_predicate(m)
-        if ctx.move_summon_right_half and parsed and elided == state.self_id \
-                and state.subject is None and state.self_category() != MONSTER:
+        if (ctx.move_summon_right_half and parsed and elided == state.self_id
+                and state.subject is None
+                and state.self_category() != HEAD_CATEGORY["モンスター"]):
             elided = _summoned_earlier(state, [p.action for p in parsed])
         if elided is None:
             seg["unparsed"] = unparsed(REASON_REF)

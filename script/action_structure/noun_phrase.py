@@ -16,13 +16,18 @@ from attribute_atoms import (EXCEPT, SEPARATORS, is_param_atom, joiner,
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from condition_atoms import parse_modifier as parse_atom_modifier, quoted_name, render_atom
 from same_different import elided_backed, link_elided
+from state_atoms import EQUIPPED_ON
 from structure_shape import NoTemplate
 
 
 HEAD_CATEGORY = {"モンスター": "怪獸", "魔法カード": "魔法", "罠カード": "陷阱",
                  "魔法・罠カード": ("魔法", "陷阱"), "カード": "卡"}
 # 帶子類型的頭名詞:大類 且 屬性比較(卡片子類型 = 協調,與 condition_atoms 的 Xモンスター 同一種原子)。
-HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調")}
+# 「装備魔法カード」的「装備」是子類型,不是「装備モンスター」那個 被裝備者(m3b 站主裁定)。
+HEAD_SUBTYPE = {"チューナー": ("怪獸", "協調"), "装備魔法カード": ("魔法", "裝備")}
+# 帶狀態的頭名詞:狀態原子 且 大類。「装備カード」= 正當成裝備卡裝在怪獸上的卡(`裝備中`,與
+# 「装備されている」同一個原子;m3b 站主裁定),「装備」只在這個頭名詞前這樣讀。
+HEAD_STATE = {"装備カード": ({"op": EQUIPPED_ON, "text": "装備"}, "卡")}
 # 「效果」的頭名詞:被發動、被無效的是效果,不是卡——「魔法・罠・モンスター(の効果)」
 # 「魔法・罠・効果モンスター(の効果)」「モンスターの効果・魔法・罠カード」。物件種類記 效果,條件式是
 # 「誰的效果」:各項的或,照字面順序;項是大類,或 (大類, 子類型)。
@@ -31,8 +36,8 @@ EFFECT_HEADS = {"魔法・罠・モンスター": ("魔法", "陷阱", "怪獸")
                 "モンスターの効果・魔法・罠カード": ("怪獸", "魔法", "陷阱")}
 # 頭名詞的另一種寫法:條件式同正規寫法,另帶 `text` 記字面。
 HEAD_VARIANTS = {"魔法または罠カード": "魔法・罠カード", "モンスターカード": "モンスター"}
-_HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE) + list(EFFECT_HEADS)
-                         + list(HEAD_VARIANTS), key=len, reverse=True))
+_HEADS = "|".join(sorted(list(HEAD_CATEGORY) + list(HEAD_SUBTYPE) + list(HEAD_STATE)
+                         + list(EFFECT_HEADS) + list(HEAD_VARIANTS), key=len, reverse=True))
 NOUN_RE = re.compile(
     f"^(?P<mods>.*?)(?P<head>{_HEADS})"
     "(?P<count>[０-９]+(?P<unit>体|枚)(?P<upto>まで)?)?$")
@@ -111,6 +116,9 @@ def category_condition(head):
         return {**category_condition(HEAD_VARIANTS[head]), "text": head}
     if head in HEAD_SUBTYPE:
         return _subtype_condition(*HEAD_SUBTYPE[head])
+    if head in HEAD_STATE:
+        state, category = HEAD_STATE[head]
+        return {"op": "且", "args": [dict(state), {"op": "大類", "value": category}]}
     if head in EFFECT_HEADS:
         return _effect_condition(head)
     value = HEAD_CATEGORY[head]
@@ -313,14 +321,15 @@ def _render_atom(atom, names):
 
 
 def _render_head(condition):
-    """大類(與 魔法・罠 的或)、大類 且 子類型(チューナー)、效果的頭名詞 → 頭名詞;不是頭名詞回 None。"""
+    """大類(與 魔法・罠 的或)、大類 且 子類型(チューナー)、狀態 且 大類(装備カード)、效果的頭名詞
+    → 頭名詞;不是頭名詞回 None。"""
     op = condition.get("op")
     if "text" in condition:
         variant = condition["text"]
         return variant if (variant in HEAD_VARIANTS
                            and condition == category_condition(variant)) else None
-    for head in EFFECT_HEADS:
-        if condition == _effect_condition(head):
+    for head in list(EFFECT_HEADS) + list(HEAD_STATE):
+        if condition == category_condition(head):
             return head
     if op == "大類":
         return _HEAD_TEXT[condition["value"]]

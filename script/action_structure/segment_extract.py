@@ -13,6 +13,7 @@
 - 效果子句以「代わりに」開頭的是代替(票 08):條件段改標「被代替」(不更新位置)、效果段記 `replaces`。
 - 離場(`leave_field`):「Xがフィールドから離れた時に Yは破壊される」(觸發形後沒有讀點)在觸發形切成
   條件段加效果段;「Xは、フィールドから離れた場合に除外される」照代替記(被代替段加做代替的段,沒有「代わりに」)。
+- 舊式反轉標示「リバース：X」:標示切成條件段(`flip_label`),X 照一般句子解析。
 - 其他句子是效果段;連用形串接(「〜に戻り、その攻撃力は〜になる」「〜手札に加え、〜に戻す」)切成
   多段、連接「同時」、後段與前段同一時機(`clause_join`);性質變更句「その攻撃力は〜倍になる」
   走 `segment_fields.parse_modify`。極性由述語語尾判(できない → 不能…);「〜を…できる」是可選的
@@ -40,6 +41,7 @@ import clause_front
 import damage
 import draw
 import existence_clause
+import flip_label
 import leave_field
 import material_line
 import material_summon
@@ -357,6 +359,15 @@ def _apply_duration(segs, duration):
 
 
 def parse_sentence(state, start, end, activation_lead=False):
+    """一句 → [(段, 與前一段的連接)];舊式標示「リバース：X」先切出標示的條件段(`flip_label`),
+    X 照一般的句子解析(`_parse_sentence`)。"""
+    label = flip_label.label_segment(state, start, end)
+    if label is None:
+        return _parse_sentence(state, start, end, activation_lead)
+    return [(label, None)] + _parse_sentence(state, label["span"][1], end, activation_lead)
+
+
+def _parse_sentence(state, start, end, activation_lead=False):
     """一句 → [(段, 與前一段的連接)](發動句可產生條件段 + 代價段;舊式條件句產生條件段 + 效果段;
     舊式代價句產生代價段 + 效果段;連用形串接的效果句、代價子句切成多段、連接「同時」)。
     句首的前提先剝掉,掛在第一個段上、段的範圍從前提起算;「〜場合、代わりに〜」的條件段改標

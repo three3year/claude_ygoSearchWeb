@@ -250,7 +250,7 @@ class BlockState:
             if restated and contradicts(obj, restated,
                                         (self.current_position(obj_id) or {}).get("zones")):
                 continue
-            category = (self._self_category() if obj["source"]["kind"] == "自己"
+            category = (self.self_category() if obj["source"]["kind"] == "自己"
                         else category_of(obj["condition"]))
             if want == "卡" or category == want:
                 if not restated or states(obj, restated):
@@ -258,7 +258,8 @@ class BlockState:
                 fitting.append(obj_id)
         return fitting[0] if fitting else None
 
-    def _self_category(self):
+    def self_category(self):
+        """此卡的大類(卡片總表的第一列:怪獸、魔法、陷阱);沒有回 None。"""
         rows = self.card["attributes"]["category"]
         return rows[0]["value"] if rows else None
 
@@ -579,6 +580,9 @@ class ClauseContext:
     # 句型的回話:這個子句其實該在這個位置(相對於子句)切成兩段——左半已標解析不出,右半請呼叫端另成一段
     # (`material_summon`:「Xを融合素材とし、〜」的 X 解不出時)。只有效果子句的串接(`_cost_and_effect`)理會。
     split_at: int | None = None
+    # 這個子句是「Xをリリースして召喚する」切開後的右半(召喚段):主語沒寫、此卡又不是怪獸時不退回此卡
+    # (`simple_clause.fill_clause`)。
+    after_move: bool = False
 
     @property
     def kind(self):

@@ -753,19 +753,26 @@ def incomplete_reason(seg, objects, substituting=False):
         obj = objects.get(line["object"])
         if obj is None:
             continue
-        if obj["unparsed"]:
-            return obj["unparsed"]["reason"]
-        if substituting and same_different_undecidable(obj):
-            return REASON_SAME_DIFFERENT
+        reason = _object_incomplete_reason(obj, substituting)
+        if reason is not None:
+            return reason
         # 條件式引用的物件(等級 = 物件1.階級)解析不出,代入也判不了。
         for ref_id in referenced_objects(obj["condition"]):
             ref = objects.get(ref_id)
             if ref is None:
                 return REASON_REF_MISSING
-            if ref["unparsed"]:
-                return ref["unparsed"]["reason"]
-            if substituting and same_different_undecidable(ref):
-                return REASON_SAME_DIFFERENT
+            reason = _object_incomplete_reason(ref, substituting)
+            if reason is not None:
+                return reason
+    return None
+
+
+def _object_incomplete_reason(obj, substituting):
+    """物件解析不出,或要代入卡時數量一張又沒寫比較對象的異同:判不了的原因;判得了回 None。"""
+    if obj["unparsed"]:
+        return obj["unparsed"]["reason"]
+    if substituting and same_different_undecidable(obj):
+        return REASON_SAME_DIFFERENT
     return None
 
 

@@ -25,7 +25,7 @@ def label_segment(state, start, end):
     return seg
 
 
-def is_label(seg):
+def is_flip_label_segment(seg):
     return seg["predicate"] == FLIP_LABEL
 
 

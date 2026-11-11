@@ -40,7 +40,7 @@
   「XをYのX素材とする」是 成為超量素材,線的到是 Y 的超量素材物件;「XをYのL素材とする場合」是 作為素材,
   Y 記在受方。「Xも融合素材とする事ができる」的「も」是助詞。素材寫在召喚句裡的(「Xを素材としてS召喚する」)
   不走這裡,在 `material_summon`。
-- 移走 + 召喚:「XをリリースしてY召喚する」(移走的動作詞て形 + 召喚系)由呼叫端在 `move_summon_cut` 切成兩個子句,
+- 移走 + 召喚:「XをリリースしてY召喚する」(移走的動作詞て形 + 召喚系)由呼叫端在 `clause_move_summon_cut` 切成兩個子句,
   右半是主語省略的召喚段;右半沒寫主語、此卡又不是怪獸時不退回此卡,指回同一區塊前面那次召喚的物件
   (`_summoned_earlier`)。條件子句切出的左半沒有觸發形,模板照 `is_move_half` 放行。
 - 離場:「フィールドから離れた」的「フィールドから」是述語的一部分(字幹連出發地一起寫),不佔述語前的「從」;
@@ -79,7 +79,7 @@ from synonyms import (ACTION_PAST, ATTACK_PREFIX_PATTERN, LEAVE_VERB, ONLY_MARKE
                       PREDICATE_FROM, PREDICATE_NOUN_PATTERN, SELECT_PREFIX, SUMMON_NOUNS,
                       SUMMON_SUCCESS_AHEAD, TARGETING_PATTERN, TARGET_REF, XYZ_ATTACH_ACTION,
                       action_ancestors, attack_times, is_summon, merged_voice,
-                      move_then_summon_cut, parse_material_predicates, parse_predicates)
+                      parse_material_predicates, parse_predicates, predicate_move_summon_cut)
 from zone_phrase import (FROM_PARTICLES, SIDE_TEXT, SIDE_WORDS, ZONE_PHRASE, ZONE_PHRASE_RE,
                          parse_from, render_zone_text)
 
@@ -237,11 +237,11 @@ def split_objects(phrase):
 
 def is_move_half(seg, card):
     """這一段是移走 + 召喚切開後的左半(「Xをリリースして」):下一段緊接著它,兩段的原述語字面接起來
-    照 `move_then_summon_cut` 正好切在這一段結尾。條件子句切出的左半沒有觸發形,模板據此放行。"""
+    照 `predicate_move_summon_cut` 正好切在這一段結尾。條件子句切出的左半沒有觸發形,模板據此放行。"""
     following = next_segment(seg, card)
     return (following is not None and following["span"][0] == seg["span"][1]
             and bool(seg["predicate"]) and bool(following["predicate"])
-            and move_then_summon_cut(seg["predicate"] + following["predicate"])
+            and predicate_move_summon_cut(seg["predicate"] + following["predicate"])
             == len(seg["predicate"]))
 
 
@@ -310,14 +310,14 @@ def _match_clause(clause_text):
     return m
 
 
-def move_summon_cut(clause_text):
+def clause_move_summon_cut(clause_text):
     """「XをリリースしてY召喚する」這種移走 + 召喚的て形串接 → 右半在子句裡的起點;不是回 None。
     切開後左半「Xをリリースして」是移走的段,右半「Y召喚する」是主語省略的召喚段(spec「述語的串接」)。"""
     m = _match_clause(clause_text)
     if not m or not m.group("pred"):
         return None
     pred, _, parsed, _ = _clause_predicate(m)
-    cut = move_then_summon_cut(pred) if parsed else None
+    cut = predicate_move_summon_cut(pred) if parsed else None
     return None if cut is None else len(clause_text) - len(pred) + cut
 
 
@@ -357,8 +357,8 @@ def fill_clause(ctx, clause_text):
             return
         elided = state.elided_subject()
         pred, to_phrase, parsed, reason = _clause_predicate(m)
-        if ctx.after_move and parsed and elided == state.self_id and state.subject is None \
-                and state.self_category() != MONSTER:
+        if ctx.move_summon_right_half and parsed and elided == state.self_id \
+                and state.subject is None and state.self_category() != MONSTER:
             elided = _summoned_earlier(state, [p.action for p in parsed])
         if elided is None:
             seg["unparsed"] = unparsed(REASON_REF)

@@ -116,7 +116,8 @@ WHOLE_TEMPLATES = (
     SegmentTemplate("衍生的性質變更", lambda t: t.seg["derived_from"] is not None,
                     stat_modify.render_derived),
     SegmentTemplate("修飾", lambda t: t.seg["kind"] == "修飾", treat_as.render_treat_as_segment),
-    SegmentTemplate("反轉標示", lambda t: flip_label.is_label(t.seg), flip_label.render_label),
+    SegmentTemplate("反轉標示", lambda t: flip_label.is_flip_label_segment(t.seg),
+                    flip_label.render_label),
     SegmentTemplate("素材行",
                     lambda t: bool(t.seg["lines"]) and not t.seg["actions"]
                     and all(line["role"] == "素材" for line in t.seg["lines"]),

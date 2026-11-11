@@ -452,11 +452,11 @@ def parse_predicates(pred):
 
 
 # 把卡移走的動作詞:て形串接的左半是它們、右半是召喚系時,移走的卡不可能同時被召喚,切成兩段
-# (`move_then_summon_cut`)。展示、無效不移走卡,一段共用一條線。
+# (`predicate_move_summon_cut`)。展示、無效不移走卡,一段共用一條線。
 MOVE_ACTIONS = ("解放", "除外", "送墓", "捨棄", "返回", "破壞")
 
 
-def move_then_summon_cut(pred):
+def predicate_move_summon_cut(pred):
     """原述語字面是「移走的動作詞て + 召喚系述語」(「リリースしてアドバンス召喚できる」「ゲームから除外して
     特殊召喚する」)→ 左半字面的長度(切點);不是回 None。抽取與模板共用這一把尺。"""
     for stem, action, _, rest in _stems_at(pred):

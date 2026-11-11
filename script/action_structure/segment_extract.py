@@ -20,7 +20,7 @@
   效果(可選格 `optional`,極性仍是做,查詢預設算命中),「〜は…できる」是永續的許可(極性 可以)
   (`segment_fields.resolve_polarity`)。
 - 移走 + 召喚的て形串接(「Xをリリースして召喚できる」「Xをリリースしてアドバンス召喚した場合」):效果子句與
-  條件子句都切成兩段、連接「同時」(`simple_clause.move_summon_cut`),段類別照所在的句子。
+  條件子句都切成兩段、連接「同時」(`simple_clause.clause_move_summon_cut`),段類別照所在的句子。
 - 延遲(票 08):「次のスタンバイフェイズに」記時機延遲;序列中段出現條件段之後的段也算延遲(沒有字面);
   延遲段指回被點名物件的線不標取對象。
 - 發動句的代價子句也可連用形串接(「〜を墓地へ送り、〜を対象として発動できる」,票 06),
@@ -227,20 +227,20 @@ def _condition_and_rest(state, seg_start, clause_start, body, trig, segs, kind="
     cond = trig.group("cond")
     cond_end = clause_start + len(cond)
     cond_start = clause_start
-    cut = simple_clause.move_summon_cut(cond)
-    after_move = cut is not None
-    if after_move:
+    cut = simple_clause.clause_move_summon_cut(cond)
+    right_half = cut is not None
+    if right_half:
         left = segment_at(state, kind, seg_start, cond_start + cut)
         fill_clause(ClauseContext(left, state, cond_start), cond[:cut])
         segs.append(left)
         seg_start, cond_start, cond = cond_start + cut, cond_start + cut, cond[cut:]
     seg = segment_at(state, kind, seg_start, cond_end + len(trig.group("trig")))
     seg["trigger"] = trig.group("trig")
-    fill_clause(ClauseContext(seg, state, cond_start, after_move=after_move), cond)
+    fill_clause(ClauseContext(seg, state, cond_start, move_summon_right_half=right_half), cond)
     segs.append(seg)
     rest = trig.group("rest")
     return (rest, clause_start + body.rfind(rest) if rest else None,
-            seg["id"] if after_move else None)
+            seg["id"] if right_half else None)
 
 
 def _battle_timing(state, body, body_start, seg_start, segs):
@@ -281,7 +281,6 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
         start += len(clause) - len(cost.group("rest"))
         clause, seg_start = cost.group("rest"), None
     pieces = split_continuative(clause)
-    right_halves = set()
     i = -1
     while i + 1 < len(pieces):
         i += 1
@@ -320,30 +319,33 @@ def _cost_and_effect(state, clause, start, seg_start, replaces=None):
             first_start, join, same_time = piece_start, None, False
             if leave.replaced:
                 piece_replaces = left["id"]
-        cut = simple_clause.move_summon_cut(piece)
-        if cut is not None:
-            pieces.insert(i + 1, (piece_start - start + cut, piece[cut:]))
-            right_halves.add(i + 1)
-            piece = piece[:cut]
-        seg = segment_at(state, "效果", first_start, piece_start + len(piece))
-        if piece_replaces:
-            seg["replaces"] = piece_replaces
-        ctx = ClauseContext(seg, state, piece_start, segs[-1][0]["timing"] if same_time else None,
-                            after_move=i in right_halves)
-        _fill_effect(ctx, piece)
-        if ctx.split_at is not None:
-            # 「Xを融合素材とし、Yを融合召喚する」的 X 解不出:不併段,照連用形串接切成兩段——
-            # 這一段縮到左半、標解析不出,右半排成下一截照常解析。
-            pieces.insert(i + 1, (piece_start - start + ctx.split_at, piece[ctx.split_at:]))
-            piece = piece[:ctx.split_at].rstrip("、")
-            seg["span"][1] = piece_start + len(piece)
-            seg["text"] = state.block["text"][seg["span"][0]:seg["span"][1]]
-            seg["duration"] = find_battle_duration(piece)
-        _hold_topic(seg, piece, state, piece_start)
-        segs.append((seg, join))
-        derived = stat_modify.derived_segment(seg, state)
-        if derived is not None:
-            segs.append((derived, JOIN))
+        cut = simple_clause.clause_move_summon_cut(piece)
+        halves = ((piece_start, piece),) if cut is None else (
+            (piece_start, piece[:cut]), (piece_start + cut, piece[cut:]))
+        for summon_half, (piece_start, piece) in enumerate(halves):
+            if summon_half:
+                # 移走 + 召喚切開的右半:與左半連接「同時」、同一時機(同連用形串接的後一截)。
+                first_start, join, same_time, piece_replaces = piece_start, JOIN, True, replaces
+            seg = segment_at(state, "效果", first_start, piece_start + len(piece))
+            if piece_replaces:
+                seg["replaces"] = piece_replaces
+            ctx = ClauseContext(seg, state, piece_start,
+                                segs[-1][0]["timing"] if same_time else None,
+                                move_summon_right_half=bool(summon_half))
+            _fill_effect(ctx, piece)
+            if ctx.split_at is not None:
+                # 「Xを融合素材とし、Yを融合召喚する」的 X 解不出:不併段,照連用形串接切成兩段——
+                # 這一段縮到左半、標解析不出,右半排成下一截照常解析。
+                pieces.insert(i + 1, (piece_start - start + ctx.split_at, piece[ctx.split_at:]))
+                piece = piece[:ctx.split_at].rstrip("、")
+                seg["span"][1] = piece_start + len(piece)
+                seg["text"] = state.block["text"][seg["span"][0]:seg["span"][1]]
+                seg["duration"] = find_battle_duration(piece)
+            _hold_topic(seg, piece, state, piece_start)
+            segs.append((seg, join))
+            derived = stat_modify.derived_segment(seg, state)
+            if derived is not None:
+                segs.append((derived, JOIN))
     return segs
 
 

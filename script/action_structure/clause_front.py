@@ -10,7 +10,8 @@
 - 誰(玩家字面)記段的 `agent`;主語是物件的(「このカードが」「相手モンスターは」)成一條角色施事的
   對象線,助詞記在線上;「Xは」同時是後面主語省略的子句的主語。
 - 原因(「戦闘によって」)記段的 `cause`,`placement` 名詞前;本卡自己的效果(「この効果で」)指的段要看
-  子句本體的動作詞,由呼叫端在本體解析完後找(`cause_phrase.point_own_effect`)。
+  子句本體的動作詞,這裡先記成待決(`cause_phrase.defer_own_effect`),由呼叫端在本體解析完後解
+  (`cause_phrase.resolve_own_effect`)。
 認不得(字面不在這些規則裡、順序不同、同一格已有值)就在段上標 `REASON_FRONT`,段的格不動;子句本體
 由呼叫端照常解析(`segment_extract.fill_clause`),物件不帶吞進來的字面,但這一段算解析不出。
 模板:期間 `render_front_duration`、時機 `render_front_timing`、主語線 `subject_line`(由簡單子句的
@@ -20,7 +21,7 @@ import re
 
 from agent_phrase import AGENT_PATTERN, fill_agent
 from block_state import INTERVAL_REASON, INTERVAL_SCOPE, INTERVAL_TIMES
-from cause_phrase import CAUSE_ALT, fill_cause, is_own_effect
+from cause_phrase import CAUSE_ALT, defer_own_effect, fill_cause, is_own_effect
 from object_boundary import REASON_FRONT
 from premise import PHASE_WORDS, parse_game_state
 from segment_fields import (BATTLE_DURATION_PATTERN, CLAUSE_DURATION_PATTERN, DELAY, parse_duration,
@@ -132,7 +133,7 @@ def fill_front(ctx, front):
                 if m.group("marker") == "は":
                     state.subject = obj_id
         elif kind == "原因" and is_own_effect(m.group()):
-            seg["cause"] = {"kind": "效果", "text": m.group(), "segment": None, "placement": "名詞前"}
+            defer_own_effect(seg, m.group(), "名詞前")
         elif kind == "原因":
             reason = fill_cause(seg, state, m.group(), start, placement="名詞前")
         if reason:

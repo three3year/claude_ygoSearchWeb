@@ -101,21 +101,24 @@ def is_own_effect(text):
     return bool(_SELF_EFFECT_RE.match(text))
 
 
+# 子句前文的本卡自己的效果(「この効果でXを破壊した場合」):指的段要看子句本體的動作詞,前文先把原因記成
+# 待決(只帶字面與位置),本體解析完再由 `resolve_own_effect` 照一般原因的寫法解成指向那一段的原因。
+# 待決期間段的原因格有值,本體的句型再填原因照樣是「同一格寫了兩處」。
+CAUSE_PENDING = "待決"
+
+
+def defer_own_effect(seg, text, placement):
+    seg["cause"] = {"kind": CAUSE_PENDING, "text": text, "placement": placement}
+
+
 def own_effect_pending(cause):
-    return bool(cause) and "segment" in cause and cause["segment"] is None
+    return bool(cause) and cause.get("kind") == CAUSE_PENDING
 
 
-def point_own_effect(seg, state):
-    """子句前文填的本卡自己的效果(`clause_front` 只記字面):動作詞要等子句本體解析完才知道,
-    所以這時才找指的段,寫進原因的 `segment`;找不到就拿掉原因、回 `REASON_REF`。"""
-    own = _SELF_EFFECT_RE.match(seg["cause"]["text"])
-    source = source_segment(state.card["blocks"], state.block["segments"], own.group("label"),
-                            seg["actions"])
-    if source is None:
-        seg["cause"] = None
-        return REASON_REF
-    seg["cause"]["segment"] = source["id"]
-    return None
+def resolve_own_effect(seg, state):
+    """待決的本卡效果 → 照 `fill_cause` 解成指向那一段的原因;回傳解析不出的原因(找不到那一段時原因格清空)。"""
+    pending, seg["cause"] = seg["cause"], None
+    return fill_cause(seg, state, pending["text"], None, seg["actions"], pending["placement"])
 
 
 def summoned_by(source):

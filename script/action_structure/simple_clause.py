@@ -84,9 +84,11 @@ from zone_phrase import (FROM_PARTICLES, SIDE_TEXT, SIDE_WORDS, ZONE_PHRASE, ZON
                          parse_from, render_zone_text)
 
 
-# 受方可以是物件的回指(「この効果で特殊召喚したモンスターに装備できる」)。
+# 受方可以是物件的回指(「この効果で特殊召喚したモンスターに装備できる」),或裝備段的此卡
+# (「Xをこのカードに装備する」:被裝上去的 X 是對象線;只收緊接「装備」的,「このカードに１体のみ装備」不收)。
 _RECIPIENT_REF = ("(?:この効果で)?(?:その|それらの|" + "|".join(ACTION_PAST.values())
-                  + f")(?:モンスター|カード)|{TARGET_REF}(?:モンスター|カード)")
+                  + f")(?:モンスター|カード)|{TARGET_REF}(?:モンスター|カード)"
+                  + "|このカード(?=に装備)")
 # 主語省略的子句(「〜できず、「X」の効果でのみ特殊召喚できる」「〜した場合にEXデッキから特殊召喚できる」):
 # 沒有物件與助詞,主語是前一個「は」子句的物件或このカード,對象線標 elided。
 # 述語槽開頭可帶攻擊次數/全體(「２回攻撃」「相手モンスター全てに１回ずつ攻撃」)與含「を/は」的
@@ -680,7 +682,7 @@ def _render_to(lines, predicate_to):
 
 
 def _render_recipient(recipient, seg, card, objects, names, self_id):
-    """受方:我方/對手寫「自分に/相手に」;物件的回指(裝備的對象)照回指字面;
+    """受方:我方/對手寫「自分に/相手に」;物件的回指(裝備的對象)照回指字面;裝備到此卡寫「このカードに」;
     作為素材的受方(要召喚的怪獸)寫物件 +「の」。"""
     if isinstance(recipient, dict):
         if recipient.get("particle"):
@@ -691,6 +693,8 @@ def _render_recipient(recipient, seg, card, objects, names, self_id):
             if recipient.get("ref") or not declared_earlier(obj["id"], seg, card):
                 raise NoTemplate("省略的受方無模板")
             return ""
+        if obj is not None and not recipient.get("ref") and recipient["object"] == self_id:
+            return render_object(obj, seg, card, names, self_id=self_id) + "に"   # 裝備到此卡
         if obj is None or not recipient.get("ref"):
             raise NoTemplate("受方的物件找不到")
         return render_ref(recipient["ref"], obj, seg, card) + "に"

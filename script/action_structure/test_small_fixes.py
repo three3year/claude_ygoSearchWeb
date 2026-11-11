@@ -127,5 +127,81 @@ class SummonInferredToFieldTest(unittest.TestCase):
         self.assertNotEqual(seg["unparsed"]["reason"], REASON_DISPLAY)
 
 
+RAINBOW_PATH = 7617253          # 虹の行方
+RAINBOW_PATH_TEXT = (
+    "相手モンスターの攻撃宣言時に、自分の魔法＆罠カードゾーンに存在する「宝玉獣」と名のついたカード１枚を"
+    "選択して墓地へ送り発動する。相手モンスター１体の攻撃を無効にし、自分のデッキから「究極宝玉神」と"
+    "名のついたカード１枚を選択して手札に加える事ができる。")
+EXTRA_GATE = 7405310            # エクストラゲート
+EXTRA_GATE_TEXT = (
+    "１から１２までの任意のレベルを宣言して発動する。相手はエクストラデッキに存在する宣言されたレベルを"
+    "持つモンスター１体をゲームから除外する。宣言したレベルを持つモンスターが相手のエクストラデッキに"
+    "無かった場合、自分の手札を１枚選択して捨てる。")
+ERASER_TRAP = 3055837           # 黒板消しの罠
+ERASER_TRAP_TEXT = (
+    "ダメージを与える効果が発動した時に発動する事ができる。"
+    "自分が受けるその効果ダメージを無効にし、相手は手札を１枚選択して捨てる。")
+GRACEFUL_CHARITY = 79571449     # 天使の施し
+GRACEFUL_CHARITY_TEXT = "自分のデッキからカードを３枚ドローし、その後手札を２枚選択して捨てる。"
+DAWN_KNIGHT = 6351548           # 曙光の騎士
+DAWN_KNIGHT_TEXT = (
+    "フィールド上のこのカードが墓地へ送られた場合、デッキから光属性モンスター１体を墓地へ送る事ができる。"
+    "また、このカードがデッキから墓地へ送られた場合、自分の墓地の光属性モンスター１体を選択して"
+    "デッキの一番上に置く。「曙光の騎士」の効果は１ターンに１度しか使用できない。")
+CRYSTAL_BEASTS = [{"setcode": 0x1034, "hex": "0x1034", "names_ja": ["宝玉獣"],
+                   "name_zh": "寶玉獸", "source": "strings.conf"},
+                  {"setcode": 0x2034, "hex": "0x2034", "names_ja": ["究極宝玉神"],
+                   "name_zh": "究極寶玉神", "source": "strings.conf"}]
+
+
+class PrivateSelectionTest(unittest.TestCase):
+    """「選択して」而且明寫的出發地含牌組、手牌或額外牌組時是選擇,對象線不標取對象
+    (與「選択し」同一把尺);明寫的出發地只有墓地或場上的照舊標取對象。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(RAINBOW_PATH, name_ja="虹の行方", type=0x4),
+                     card(EXTRA_GATE, name_ja="エクストラゲート", type=0x10002),
+                     card(ERASER_TRAP, name_ja="黒板消しの罠", type=0x100004),
+                     card(GRACEFUL_CHARITY, name_ja="天使の施し", type=0x2),
+                     card(DAWN_KNIGHT, name_ja="曙光の騎士", type=0x21, level=4, race=0x1,
+                          attribute=0x10, atk=1400)]
+        cls.structures = build(cls.cards, [
+            faq(RAINBOW_PATH, "虹の行方", RAINBOW_PATH_TEXT),
+            faq(EXTRA_GATE, "エクストラゲート", EXTRA_GATE_TEXT),
+            faq(ERASER_TRAP, "黒板消しの罠", ERASER_TRAP_TEXT),
+            faq(GRACEFUL_CHARITY, "天使の施し", GRACEFUL_CHARITY_TEXT),
+            faq(DAWN_KNIGHT, "曙光の騎士", DAWN_KNIGHT_TEXT)], archetypes=CRYSTAL_BEASTS)
+
+    def texts(self, cid, **query):
+        return [s["text"] for s in hit_segments(self.structures, self.cards, cid, **query)]
+
+    def test_selecting_from_deck_is_not_targeting(self):
+        """虹の行方:查「加入手牌」並只看取對象不命中;只給動作詞照舊命中。"""
+        self.assertEqual(self.texts(RAINBOW_PATH, actions=["加入手牌"], targeting=True), [])
+        self.assertEqual(self.texts(RAINBOW_PATH, actions=["加入手牌"]),
+                         ["自分のデッキから「究極宝玉神」と名のついたカード１枚を選択して手札に加える事ができる"])
+
+    def test_selecting_from_hand_is_not_targeting(self):
+        """エクストラゲート、黒板消しの罠、天使の施し:查「捨棄」並只看取對象不命中;只給動作詞照舊命中。"""
+        for cid, text in ((EXTRA_GATE, "自分の手札を１枚選択して捨てる"),
+                          (ERASER_TRAP, "相手は手札を１枚選択して捨てる"),
+                          (GRACEFUL_CHARITY, "手札を２枚選択して捨てる")):
+            with self.subTest(cid=cid):
+                self.assertEqual(self.texts(cid, actions=["捨棄"], targeting=True), [])
+                self.assertEqual([t[-len(text):] for t in self.texts(cid, actions=["捨棄"])], [text])
+
+    def test_selecting_from_graveyard_is_still_targeting(self):
+        """曙光の騎士「自分の墓地の光属性モンスター１体を選択してデッキの一番上に置く」:只看取對象時照舊命中。"""
+        self.assertEqual(self.texts(DAWN_KNIGHT, actions=["放置"], targeting=True),
+                         ["自分の墓地の光属性モンスター１体を選択してデッキの一番上に置く"])
+
+    def test_standard_cards_pass_reverse_check(self):
+        """天使の施し、曙光の騎士整張通過反向檢查(其餘三張卡在票外的寫法,只驗段)。"""
+        for cid in (GRACEFUL_CHARITY, DAWN_KNIGHT):
+            with self.subTest(cid=cid):
+                self.assertEqual(check_card(own(self.structures, cid)), [])
+
+
 if __name__ == "__main__":
     unittest.main()

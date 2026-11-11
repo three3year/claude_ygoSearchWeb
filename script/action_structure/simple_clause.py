@@ -18,8 +18,8 @@
   發動句的取對象宣告,代價段、沒有動作詞。之後效果段裡指回被點名物件的線(そのモンスター、
   舊式 選択したモンスター)也標取對象。「選択」不是動作詞。
   連用形的「Xを選択し、」「Xを対象とし、」是連用形串接左半的取對象宣告:同一句後面省略的
-  物件、沒寫出來的裝備對象(段的受方)指回它;出發地是牌組、手牌的「選択し」是選擇,不標取對象
-  (`is_private_selection`)。
+  物件、沒寫出來的裝備對象(段的受方)指回它;出發地是牌組、手牌、額外牌組的「選択し」「選択して」
+  是選擇,不標取對象(`is_private_selection`)。
 - 「選んで」:不另成段,字面留在原述語字面開頭、不標取對象;區域當物件(「自分の手札を
   １枚選んで捨てる」)新建沒有條件的卡物件、從 = 那個區域;對象線加 pick(ランダムに)、count 的
   each(それぞれ/ずつ)與算式(任意の数だけ、〜した数だけ);到的方可為持有者(持ち主の);述語前的
@@ -199,11 +199,10 @@ COUNT_AFTER_OBJECT = "物件後"
 # 單位閉集:「LP」與舊式全寫「ライフポイント」,單位字面留在數量格的 `unit`。
 AMOUNT_UNITS = ("LP", "ライフポイント")
 _AMOUNT_RE = re.compile(f"^(?P<digits>[０-９]+)(?P<unit>{'|'.join(AMOUNT_UNITS)})$")
-# 不能取對象的區域(spec 預設 11):「デッキから/手札から〜を選択し、」是選擇,不是取對象宣告——
-# 字面一樣留在原述語字面,對象線不標取對象、物件不進被取對象的清單。只收連用形的「選択し」;
-# 「選択して」照取對象字面判。
+# 不能取對象的區域(spec 預設 11):「デッキから/手札から〜を選択し、」「〜を選択して捨てる」是選擇,
+# 不是取對象——字面一樣留在原述語字面,對象線不標取對象、物件不進被取對象的清單。
 PRIVATE_ZONES = ("牌組", "手牌", "額外牌組")
-SELECTION_LITERAL = "選択し"
+SELECTION_LITERALS = ("選択し", "選択して")
 EQUIP_ACTION = "裝備"
 REASON_FROM = "從解析不出"
 REASON_TO = "到解析不出"
@@ -237,9 +236,9 @@ def _segment_by_id(state, seg_id):
 
 
 def is_private_selection(literal, zones):
-    """取對象字面其實是選擇:「選択し」而且明寫的出發地含牌組、手牌或額外牌組。
+    """取對象字面其實是選擇:「選択し」「選択して」而且明寫的出發地含牌組、手牌或額外牌組。
     抽取與模板共用這一把尺(`zones` 是明寫的從的區域列,沒寫是 None)。"""
-    return literal == SELECTION_LITERAL and any(z["zone"] in PRIVATE_ZONES for z in zones or ())
+    return literal in SELECTION_LITERALS and any(z["zone"] in PRIVATE_ZONES for z in zones or ())
 
 
 def _placed_on_card(obj):

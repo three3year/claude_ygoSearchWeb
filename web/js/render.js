@@ -3,10 +3,8 @@
 const View = (() => {
 const { DB, META, CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH,
         LM_ZH, LM_CODES, SUB_ZH, BAN_ZH, $, esc, pad8, byId } = Util;
+const { cardPageUrl, cardImageUrl } = Sources;
 
-/* 卡圖:salix5/query-data 的 CDN,檔名就是不補零的卡片密碼 */
-const PIC = 'https://cdn.jsdelivr.net/gh/salix5/query-data@master/pics/';
-const QUERY = 'https://salix5.github.io/query/?code=';
 const MAT_KINDS = ['ritual', 'fusion', 'synchro', 'xyz', 'link'];
 
 const state = { page: 1, perPage: 100,
@@ -80,7 +78,7 @@ function cardHtml(e, hl) {
     </div>
     <div class="card-body">
       <div class="card-head">
-        <a class="card-name" href="${QUERY}${c.id}"
+        <a class="card-name" href="${cardPageUrl(c.id)}"
            target="_blank" rel="noopener">${esc(c.n)}</a>
         ${c.ra ? `<span class="card-rarity ra-${esc(c.ra)}"
            title="Master Duel 稀有度">${esc(c.ra)}</span>` : ''}
@@ -104,7 +102,7 @@ function cardHtml(e, hl) {
 function imgHtml(id) {
   return `<img class="card-img" loading="lazy" decoding="async"
     width="180" height="262" alt=""
-    src="${PIC}${id}.jpg" onerror="this.style.visibility='hidden'">`;
+    src="${cardImageUrl(id)}" onerror="this.style.visibility='hidden'">`;
 }
 
 function altNavHtml(c) {
@@ -333,8 +331,8 @@ function initAltArt() {
     const done = () => img.classList.remove('img-loading');
     img.addEventListener('load', done, { once: true });
     img.addEventListener('error', done, { once: true });
-    img.src = PIC + ids[i] + '.jpg';
-    new Image().src = PIC + ids[(i + step + ids.length) % ids.length] + '.jpg';
+    img.src = cardImageUrl(ids[i]);
+    new Image().src = cardImageUrl(ids[(i + step + ids.length) % ids.length]);
   });
 }
 

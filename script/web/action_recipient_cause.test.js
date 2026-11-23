@@ -48,7 +48,7 @@ test('原因選效果:戰鬥或效果、戰鬥以外都算效果', () => {
 
 test('沒寫原因的被動句要勾「含不限定的」才命中;主動句勾了也不命中', () => {
   assert.deepStrictEqual(
-    ids({ actions: ['破壞'], kinds: COND, cause: { kind: '戰鬥' }, unrestricted: true }),
+    ids({ actions: ['破壞'], kinds: COND, cause: { kind: '戰鬥' }, include_unrestricted: true }),
     [511, 512, 514, 519]);
 });
 
@@ -81,7 +81,7 @@ test('介面到查詢:受方換成 recipient,原因換成 cause({ kind, side })'
   assert.strictEqual('cause' in base, false);
   assert.deepStrictEqual(
     harness.rowQuery(sandbox, { actions: ['破壞'], recipient: '對手',
-                                cause: { kind: '效果', side: '對手' }, unrestricted: true }),
+                                cause: { kind: '效果', side: '對手' }, include_unrestricted: true }),
     { ...base, recipient: '對手', cause: { kind: '效果', side: '對手' },
       include_unrestricted: true });
   assert.deepStrictEqual(harness.rowQuery(sandbox, { actions: ['破壞'], cause: { kind: '戰鬥' } }),
@@ -94,7 +94,7 @@ const DOM_SORT = { key: 'dom', dir: '' };
 test('受方與原因跟著存進瀏覽紀錄,還原後相同', () => {
   const st = { q: EMPTY_Q, sort: DOM_SORT,
                act: { actions: ['破壞'], recipient: '對手',
-                      cause: { kind: '效果', side: '我方' }, unrestricted: true } };
+                      cause: { kind: '效果', side: '我方' }, include_unrestricted: true } };
   const saved = JSON.parse(JSON.stringify(harness.savedState(sandbox, st.q, st.sort, st.act)));
   assert.deepStrictEqual(harness.restoreSaved(sandbox, saved), st);
 });

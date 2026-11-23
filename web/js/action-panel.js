@@ -24,7 +24,7 @@ let pol = Action.DEFAULT_POL;
 const KIND_LABELS = { eff: '效果', cost: '代價', cond: '觸發條件' };
 const POL_LABELS = { do: '會做', limit: '限制', resist: '抗性' };
 let agent = '';
-let unrestricted = false;
+let includeUnrestricted = false;
 let recipient = '';
 let cause = { kind: '', side: '' };
 
@@ -95,7 +95,7 @@ function wordsHtml() {
     <p class="action-hint">多選時,要在同一段裡全部都有</p>`;
 }
 
-const TARGET_MODES = [['none', '不指定'], ['self', '這張卡自己'], ['card', '指定一張卡'],
+const TARGET_MODES = [['none', '不指定'], ['this_card', '這張卡自己'], ['card', '指定一張卡'],
                       ['cond', '給條件']];
 
 function cardName(id) {
@@ -232,10 +232,11 @@ function causeHtml() {
 }
 
 /* 「含不限定的」勾選(票 10,預設關;票 11 起誰與原因共用)。 */
-function unrestrictedHtml() {
+function includeUnrestrictedHtml() {
   return `<label class="mat-toggle"
       title="卡文沒寫是誰的觸發條件與被動句(例如「モンスターが手札に戻った場合」)、沒寫原因的被動句(例如「破壊された場合」)也算">
-      <input type="checkbox" data-unrestricted="1"${unrestricted ? ' checked' : ''}>含不限定的
+      <input type="checkbox" data-include-unrestricted="1"${
+        includeUnrestricted ? ' checked' : ''}>含不限定的
     </label>`;
 }
 
@@ -243,7 +244,7 @@ function fieldsHtml() {
   return index
     ? wordsHtml() + zoneHtml('from', '從哪裡', from) + zoneHtml('to', '到哪裡', to)
       + targetHtml() + kindsHtml() + polHtml() + agentHtml() + recipientHtml() + causeHtml()
-      + unrestrictedHtml()
+      + includeUnrestrictedHtml()
     : '';
 }
 
@@ -263,7 +264,7 @@ function paint() {
 const zoneCond = z => (z.zone ? { zone: z.zone, side: z.side } : null);
 
 function target() {
-  if (targetMode === 'self') return 'self';
+  if (targetMode === 'this_card') return 'this_card';
   if (targetMode === 'card' && targetCard != null) return { card: targetCard };
   if (targetMode === 'cond') return { condition: given };
   return null;
@@ -271,7 +272,8 @@ function target() {
 
 function read() {
   return Action.condOf({ actions: selected, from: zoneCond(from), to: zoneCond(to), kinds, pol,
-                         agent, unrestricted, target: target(), recipient,
+                         agent, recipient, target: target(),
+                         include_unrestricted: includeUnrestricted,
                          cause: cause.kind ? { kind: cause.kind, side: cause.side } : null });
 }
 
@@ -284,11 +286,11 @@ function write(act) {
   kinds = cond.kinds || Action.DEFAULT_KINDS;
   pol = cond.pol || Action.DEFAULT_POL;
   agent = cond.agent || '';
-  unrestricted = !!cond.unrestricted;
+  includeUnrestricted = !!cond.include_unrestricted;
   recipient = cond.recipient || '';
   cause = { kind: '', side: '', ...cond.cause };
   const t = cond.target;
-  targetMode = t === 'self' ? 'self' : t && t.condition ? 'cond' : t ? 'card' : 'none';
+  targetMode = t === 'this_card' ? 'this_card' : t && t.condition ? 'cond' : t ? 'card' : 'none';
   targetCard = t && t.card != null ? t.card : null;
   given = t && t.condition ? { ...t.condition } : {};
   typed = '';
@@ -304,7 +306,7 @@ function clear() {
   agent = '';
   recipient = '';
   cause = { kind: '', side: '' };
-  unrestricted = false;
+  includeUnrestricted = false;
   from = NO_ZONE();
   to = NO_ZONE();
   kinds = Action.DEFAULT_KINDS;
@@ -380,8 +382,8 @@ function init() {
       z.side = el.value;
     } else if (el.dataset.kind) {
       kinds = Action.toggleKind(kinds, el.dataset.kind);
-    } else if (el.dataset.unrestricted) {
-      unrestricted = el.checked;
+    } else if (el.dataset.includeUnrestricted) {
+      includeUnrestricted = el.checked;
     } else if (el.dataset.causeKind) {
       cause.kind = el.value;
     } else if (el.dataset.causeSide) {

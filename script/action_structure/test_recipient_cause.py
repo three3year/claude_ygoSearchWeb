@@ -303,12 +303,12 @@ PARITY_CONDS = [
     {"actions": ["裝備"], "recipient": "我方"},
     {"actions": ["展示"], "recipient": "對手"},
     {"actions": ["破壞"], "kinds": CONDITION, "cause": {"kind": "戰鬥"}},
-    {"actions": ["破壞"], "kinds": CONDITION, "cause": {"kind": "戰鬥"}, "unrestricted": True},
+    {"actions": ["破壞"], "kinds": CONDITION, "cause": {"kind": "戰鬥"}, "include_unrestricted": True},
     {"actions": ["破壞"], "kinds": CONDITION, "cause": {"kind": "效果"}},
     {"actions": ["破壞"], "pol": "resist", "cause": {"kind": "效果", "side": "對手"}},
     {"actions": ["破壞"], "pol": "resist", "cause": {"kind": "效果", "side": "我方"}},
     {"actions": ["破壞"], "kinds": CONDITION, "cause": {"kind": "效果"}, "recipient": "對手"},
-    {"actions": ["特殊召喚"], "cause": {"kind": "戰鬥"}, "unrestricted": True},
+    {"actions": ["特殊召喚"], "cause": {"kind": "戰鬥"}, "include_unrestricted": True},
 ]
 
 

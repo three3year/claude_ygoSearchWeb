@@ -34,9 +34,9 @@ function causeOf(raw) {
   return c;
 }
 
-const TARGET_SELF = 'self';
+const THIS_CARD = 'this_card';
 function targetOf(raw) {
-  if (raw === TARGET_SELF) return TARGET_SELF;
+  if (raw === THIS_CARD) return THIS_CARD;
   if (isObj(raw) && Number.isInteger(raw.card) && raw.card > 0) return { card: raw.card };
   const condition = isObj(raw) ? givenOf(raw.condition) : null;
   return condition ? { condition } : null;
@@ -94,13 +94,13 @@ function condOf(raw) {
   const cause = causeOf(raw.cause);
   if (cause) c.cause = cause;
   if (!Object.keys(c).length) return null;
-  if (raw.unrestricted === true) c.unrestricted = true;
+  if (raw.include_unrestricted === true) c.include_unrestricted = true;
   return c;
 }
 
 function count(cond) {
   const c = condOf(cond);
-  return c ? Object.keys(c).filter(k => k !== 'unrestricted').length : 0;
+  return c ? Object.keys(c).filter(k => k !== 'include_unrestricted').length : 0;
 }
 
 function kindsOf(raw) {
@@ -122,8 +122,8 @@ function rowQuery(cond, index) {
   if (c.from) rq.from_zones = zoneQuery(c.from);
   if (c.to) rq.to_zones = zoneQuery(c.to);
   if (c.agent) rq.agent = c.agent;
-  if (c.unrestricted) rq.include_unrestricted = true;
-  if (c.target === TARGET_SELF) rq.this_card = true;
+  if (c.include_unrestricted) rq.include_unrestricted = true;
+  if (c.target === THIS_CARD) rq.this_card = true;
   else if (c.target && c.target.condition) rq.condition = conditionQuery(c.target.condition, index);
   else if (c.target) rq.card = c.target.card;
   if (c.recipient) rq.recipient = c.recipient;

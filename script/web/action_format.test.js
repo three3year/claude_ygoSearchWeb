@@ -32,7 +32,7 @@ const OTHER_FORMAT = {
 const QUERIES = [
   { actions: ['特殊召喚'], from: { zone: '墓地', side: '對手' } },
   { actions: ['特殊召喚'], from: { zone: '墓地', side: '我方' } },
-  { actions: ['破壞'], target: 'self' },
+  { actions: ['破壞'], target: 'this_card' },
   { actions: ['破壞'], target: { card: 602 } },
   { actions: ['破壞'], target: { card: 605 } },
 ];

@@ -69,8 +69,8 @@ CONDS = [
     {"actions": ["特殊召喚"], "kinds": ["eff", "cond"], "agent": "對手"},
     {"actions": ["特殊召喚"], "kinds": ["eff", "cond"], "agent": "我方"},
     {"actions": ["破壞"], "pol": "resist", "agent": "對手"},
-    {"actions": ["破壞"], "pol": "resist", "agent": "對手", "unrestricted": True},
-    {"actions": ["通常召喚"], "pol": "limit", "agent": "我方", "unrestricted": True},
+    {"actions": ["破壞"], "pol": "resist", "agent": "對手", "include_unrestricted": True},
+    {"actions": ["通常召喚"], "pol": "limit", "agent": "我方", "include_unrestricted": True},
     {"agent": "對手", "kinds": ["cond"]},
 ] + [
     {"actions": ["展示"], "recipient": "對手"},
@@ -83,7 +83,7 @@ CONDS = [
     {"actions": ["破壞"], "pol": "resist", "cause": {"kind": "效果", "side": "對手"}},
     {"actions": ["破壞"], "cause": {"kind": "效果"}},
     {"actions": ["召喚"], "kinds": ["cond"], "cause": {"kind": "戰鬥"}},
-    {"actions": ["召喚"], "kinds": ["cond"], "cause": {"kind": "戰鬥"}, "unrestricted": True},
+    {"actions": ["召喚"], "kinds": ["cond"], "cause": {"kind": "戰鬥"}, "include_unrestricted": True},
 ]
 LOOP_A, LOOP_B = 11, 12
 LOOP_TEXT = ("①：手札から通常罠カード１枚を墓地へ送って発動できる。"
@@ -228,9 +228,9 @@ class WebParityTest(unittest.TestCase):
                         - of({"actions": ["特殊召喚"], "kinds": ["eff", "cond"], "agent": "我方"}))
         self.assertFalse(of({"actions": ["破壞"], "pol": "resist", "agent": "對手"}))
         self.assertEqual(of({"actions": ["破壞"], "pol": "resist", "agent": "對手",
-                             "unrestricted": True}), {6511113})
+                             "include_unrestricted": True}), {6511113})
         self.assertEqual(of({"actions": ["通常召喚"], "pol": "limit", "agent": "我方",
-                             "unrestricted": True}), {MASTER_MONK})
+                             "include_unrestricted": True}), {MASTER_MONK})
         self.assertTrue(of({"agent": "對手", "kinds": ["cond"]}))
 
     def test_recipient_and_cause_ask_something(self):
@@ -249,7 +249,7 @@ class WebParityTest(unittest.TestCase):
                          {FRESHIA})
         self.assertFalse(of({"actions": ["召喚"], "kinds": ["cond"], "cause": {"kind": "戰鬥"}}))
         self.assertIn(DESTROYER, of({"actions": ["召喚"], "kinds": ["cond"],
-                                     "cause": {"kind": "戰鬥"}, "unrestricted": True}))
+                                     "cause": {"kind": "戰鬥"}, "include_unrestricted": True}))
 
     def test_kinds_and_polarity_become_the_row_query(self):
         front = front_end(self.text, self.cards,
@@ -283,7 +283,7 @@ class ObjectParityTest(unittest.TestCase):
                                           [{"id": entry["id"]} for entry in cls.cards], archetypes)
         assert not report["problems"], report["problems"]
         cls.conds = [{"actions": actions, "target": target} for actions in OBJECT_ACTIONS
-                     for target in ["self"] + [{"card": entry["id"]} for entry in cls.cards]]
+                     for target in ["this_card"] + [{"card": entry["id"]} for entry in cls.cards]]
         cls.front = front_end(text, cls.cards, cls.conds)
 
     def test_object_conditions_hit_the_same_cards(self):
@@ -295,15 +295,15 @@ class ObjectParityTest(unittest.TestCase):
                 self.assertEqual(sorted(front["unsure"]), sorted(python["groups"]["未解析"]))
         found = [(cond, set(front["ids"]), set(front["unsure"]))
                  for cond, front in zip(self.conds, self.front)]
-        self.assertTrue(any(ids for cond, ids, _ in found if cond["target"] == "self"))
-        card_hits = [ids for cond, ids, _ in found if cond["target"] != "self"]
+        self.assertTrue(any(ids for cond, ids, _ in found if cond["target"] == "this_card"))
+        card_hits = [ids for cond, ids, _ in found if cond["target"] != "this_card"]
         self.assertTrue(any(card_hits))
         generic = set(run_query(self.structures, self.cards, {"actions": ["破壞"]})["groups"]["泛用"])
         self.assertTrue(generic & set().union(*card_hits))
         no_text = {entry["id"] for entry in self.cards} - {s["id"] for s in self.structures
                                                           if not s["unparsed"]}
         self.assertTrue(any(unsure - no_text for cond, _, unsure in found
-                            if cond["target"] != "self"))
+                            if cond["target"] != "this_card"))
 
     def test_object_condition_becomes_the_row_query(self):
         self.assertEqual(self.front[0]["rowQuery"]["this_card"], True)

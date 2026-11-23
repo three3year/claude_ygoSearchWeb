@@ -265,10 +265,10 @@ PARITY_CONDS = [
     {"actions": ["抽牌"], "agent": "對手"},
     {"actions": ["捨棄"], "agent": "對手"},
     {"actions": ["無效"], "agent": "對手"},
-    {"actions": ["無效"], "agent": "對手", "unrestricted": True},
-    {"actions": ["無效"], "unrestricted": True},
+    {"actions": ["無效"], "agent": "對手", "include_unrestricted": True},
+    {"actions": ["無效"], "include_unrestricted": True},
     {"actions": ["特殊召喚"], "agent": "我方"},
-    {"actions": ["特殊召喚"], "agent": "對手", "unrestricted": True},
+    {"actions": ["特殊召喚"], "agent": "對手", "include_unrestricted": True},
     {"actions": ["除外"], "agent": "我方"},
 ]
 

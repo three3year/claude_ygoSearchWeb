@@ -29,9 +29,9 @@ test('誰選對手:寫明對手、雙方各自命中;算我方與不限定不命
 });
 
 test('勾「含不限定的」:不限定的段也命中;算我方不是不限定,查對手照樣不命中', () => {
-  assert.deepStrictEqual(ids({ actions: ['抽牌'], agent: '我方', unrestricted: true }),
+  assert.deepStrictEqual(ids({ actions: ['抽牌'], agent: '我方', include_unrestricted: true }),
                          [401, 403, 404, 405, 406]);
-  assert.deepStrictEqual(ids({ actions: ['抽牌'], agent: '對手', unrestricted: true }),
+  assert.deepStrictEqual(ids({ actions: ['抽牌'], agent: '對手', include_unrestricted: true }),
                          [402, 403, 405, 406]);
 });
 
@@ -43,7 +43,7 @@ test('誰比的是段:對手寫在另一段時不命中', () => {
 test('沒選誰:結果與以前相同,勾不勾「含不限定的」都一樣', () => {
   const all = [401, 402, 403, 404, 405, 406];
   assert.deepStrictEqual(ids({ actions: ['抽牌'] }), all);
-  assert.deepStrictEqual(ids({ actions: ['抽牌'], unrestricted: true }), all);
+  assert.deepStrictEqual(ids({ actions: ['抽牌'], include_unrestricted: true }), all);
 });
 
 test('介面到查詢:誰換成 agent,「含不限定的」換成不限定開關', () => {
@@ -51,7 +51,7 @@ test('介面到查詢:誰換成 agent,「含不限定的」換成不限定開關
   assert.strictEqual('agent' in base, false);
   assert.strictEqual('include_unrestricted' in base, false);
   assert.deepStrictEqual(harness.rowQuery(sandbox, { actions: ['抽牌'], agent: '對手',
-                                                     unrestricted: true }),
+                                                     include_unrestricted: true }),
                          { ...base, agent: '對手', include_unrestricted: true });
 });
 
@@ -60,7 +60,7 @@ const DOM_SORT = { key: 'dom', dir: '' };
 
 test('誰與「含不限定的」跟著存進瀏覽紀錄,還原後相同', () => {
   const st = { q: EMPTY_Q, sort: DOM_SORT,
-               act: { actions: ['抽牌'], agent: '對手', unrestricted: true } };
+               act: { actions: ['抽牌'], agent: '對手', include_unrestricted: true } };
   const saved = JSON.parse(JSON.stringify(harness.savedState(sandbox, st.q, st.sort, st.act)));
   assert.deepStrictEqual(harness.restoreSaved(sandbox, saved), st);
 });
@@ -70,8 +70,9 @@ test('瀏覽紀錄裡認不得的誰或開關值忽略,其餘照常還原', () =
   for (const act of [{ actions: ['抽牌'], agent: '雙方各自' },
                      { actions: ['抽牌'], agent: 'me' },
                      { actions: ['抽牌'], agent: ['我方'] },
-                     { actions: ['抽牌'], unrestricted: 1 },
-                     { actions: ['抽牌'], unrestricted: false }]) {
+                     { actions: ['抽牌'], include_unrestricted: 1 },
+                     { actions: ['抽牌'], include_unrestricted: false },
+                     { actions: ['抽牌'], unrestricted: true }]) {
     assert.deepStrictEqual(harness.restoreSaved(sandbox, { ...good, act }), good,
                            JSON.stringify(act));
   }
@@ -80,7 +81,7 @@ test('瀏覽紀錄裡認不得的誰或開關值忽略,其餘照常還原', () =
 test('摺疊鈕的條件數:選了誰多算一條;「含不限定的」不另算', () => {
   assert.strictEqual(harness.critCount(sandbox, EMPTY_Q, { actions: ['抽牌'], agent: '我方' }), 2);
   assert.strictEqual(harness.critCount(sandbox, EMPTY_Q,
-                                       { actions: ['抽牌'], agent: '我方', unrestricted: true }), 2);
-  assert.strictEqual(harness.critCount(sandbox, EMPTY_Q, { actions: ['抽牌'], unrestricted: true }),
+                                       { actions: ['抽牌'], agent: '我方', include_unrestricted: true }), 2);
+  assert.strictEqual(harness.critCount(sandbox, EMPTY_Q, { actions: ['抽牌'], include_unrestricted: true }),
                      1);
 });

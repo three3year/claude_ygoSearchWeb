@@ -12,6 +12,9 @@ const state = { page: 1, perPage: 100,
 
 let lastResult = null;
 
+/* 等動作索引載完的那段時間:改排序、換頁、改每頁張數都只重畫結果區,不能把「載入中」蓋成閒置畫面。 */
+let loading = false;
+
 let paintSort = () => {};
 
 function setSort(key, dir) {
@@ -50,11 +53,16 @@ function renderUnsure(n) {
   line.hidden = !n;
 }
 
-function render(result = lastResult) {
-  lastResult = result;
-  if (!result) return renderIdle();
-  renderUnsure((result.unsure || []).length);
-  const entries = Sort.sort(result.cards, state.sortKey, state.sortDir);
+function render(result) {
+  if (result !== undefined) {
+    lastResult = result;
+    loading = false;
+  }
+  if (loading) return paintLoading();
+  if (!lastResult) return renderIdle();
+  const { cards, marks, unsure } = lastResult;
+  renderUnsure((unsure || []).length);
+  const entries = Sort.sort(cards, state.sortKey, state.sortDir);
   const per = state.perPage;
   const total = entries.length;
   const pages = Math.max(1, Math.ceil(total / per));
@@ -64,7 +72,7 @@ function render(result = lastResult) {
     ? `共 ${total} 張，第 ${page}/${pages} 頁`
     : '沒有符合條件的卡片';
 
-  const hl = highlight(result.marks);
+  const hl = highlight(marks);
   const slice = entries.slice((page - 1) * per, page * per);
   $('results').innerHTML = slice.map(e => cardHtml(e, hl)).join('');
   renderPager('pagerTop', pages, page);
@@ -83,6 +91,11 @@ function renderIdle() {
 
 function renderLoading() {
   lastResult = null;
+  loading = true;
+  paintLoading();
+}
+
+function paintLoading() {
   $('resultInfo').textContent = '';
   renderUnsure(0);
   $('results').innerHTML = `<div class="idle">

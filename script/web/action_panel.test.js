@@ -106,3 +106,16 @@ test('段類別至少勾一個:只剩一個時取消不掉', () => {
   panel.toggle('觸發條件');
   assert.deepStrictEqual(panel.read().kinds, ['cond']);
 });
+
+test('動作索引載入中改排序,結果區仍是載入中;結果到了才換成清單', () => {
+  const page = loadedPage();
+  page.results.initSort();
+  page.results.loading();
+  assert.match(page.results.text(), /動作索引載入中/);
+  const [, other] = page.sortKeys();
+  page.results.sortBy(other);
+  assert.match(page.results.text(), /動作索引載入中/);
+  page.results.show({}, { actions: ['破壞'] });
+  assert.doesNotMatch(page.results.text(), /載入中/);
+  assert.match(page.results.text(), /破壞卡甲/);
+});

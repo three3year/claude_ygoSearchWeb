@@ -12,6 +12,8 @@
   actions           動作詞列表,全部都要在段內
   from_zones / to_zones  區域(字串,或 {"zone", "side"}),逐條對象線比;子區域算在上位區域內
   card              指定卡(卡片密碼),代入對象物件
+  this_card         這張卡自己(True):只算物件是此卡(物件0 或帶狀態的此卡)的對象線;物件是條件式、
+                    這張卡剛好滿足的不算。this_card、card、condition 三者擇一,給兩個以上拋 ValueError
   condition         只給條件:卡片總表裡存在一張實卡同時滿足查詢條件與物件條件
                     (查詢側的原子不帶名稱表,直接寫值:{"op": "字段", "setcodes": [...]}、
                     {"op": "卡名"|"卡名包含"|"記載", "text": ...}、{"op": "卡名範圍", "texts": [A, B]}、

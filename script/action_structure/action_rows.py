@@ -8,7 +8,8 @@
   動作詞(上位詞已展開)、被改的屬性、原文位置(`Place`,效果對應用)。
 - 線的欄(`Line`):做動作的一方(查詢比的是被動作的卡,這條線不比)、取對象(受方是被取對象的物件的段,
   每條線都算)、從、到(子區域算在上位區域內,推得值另標)、物件。
-- 物件(`LineObject`):是不是泛用物件、候選卡。候選卡以對象線為單位(同一個物件在不同線上「從」不同,
+- 物件(`LineObject`):是不是泛用物件、種類、候選卡。種類分得出此卡、候選卡集合、判不了、代不進去
+  (物件表裡找不到 = 沒有物件,`Line.object` 為 None)。候選卡以對象線為單位(同一個物件在不同線上「從」不同,
   卡名與字段的位置條件就不同),用到才算(`Candidates`),同一份攤平裡算過的不再算。
 
 另外三種列(票 04):
@@ -24,7 +25,8 @@
 import json
 from typing import NamedTuple
 
-from action_query import is_generic, same_different_undecidable
+from action_query import (SUBSTITUTABLE_KINDS, is_generic, is_this_card,
+                          same_different_undecidable)
 from candidate_cards import CandidateCards
 from condition_atoms import referenced_objects
 from effect_reference import is_reference, iter_reference_sites, selected_blocks
@@ -35,6 +37,12 @@ from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 SYMMETRIC_ACTION = "戰鬥"
 REASON_REF_MISSING = "引用的物件找不到"
 REASON_SAME_DIFFERENT = "異同判不了"
+
+# 被動作的卡(物件)的種類(spec「動作索引」欄位表;沒有物件是 `Line.object` 為 None)。
+OBJECT_THIS = "此卡"                 # 物件0,或帶狀態的此卡
+OBJECT_CANDIDATES = "候選卡集合"     # 條件式:代得進去的卡是候選卡
+OBJECT_UNDECIDABLE = "判不了"        # 物件或它引用的物件解析不出、引用的物件找不到、異同判不了
+OBJECT_UNSUBSTITUTABLE = "代不進去"  # 不是卡(超量素材、計數器…):指定卡、給條件都代不進去
 
 
 class Position(NamedTuple):
@@ -62,6 +70,7 @@ class Candidates:
 class LineObject(NamedTuple):
     generic: bool
     candidates: Candidates
+    kind: str = OBJECT_CANDIDATES    # OBJECT_* 之一;此卡的候選卡照舊是這張卡(指定卡比得到)
 
 
 class Line(NamedTuple):
@@ -363,7 +372,26 @@ def _line(index, card, objects, seg, line, recipient_targeted):
                 from_=_position(line["from"]), to=_position(line["to"]),
                 object=None if obj is None else LineObject(
                     generic=is_generic(obj, objects),
-                    candidates=Candidates(index, card, line)))
+                    candidates=Candidates(index, card, line),
+                    kind=object_kind(obj, objects)))
+
+
+def object_kind(obj, objects):
+    """物件的種類,判法與候選卡計算(`candidate_cards._fitting`)同序:判不了、代不進去的候選卡是空的;
+    被引用物件判不了照未解析組代入卡時的原因(`incomplete_reason`)算。"""
+    if obj["unparsed"]:
+        return OBJECT_UNDECIDABLE
+    if obj["kind"] not in SUBSTITUTABLE_KINDS:
+        return OBJECT_UNSUBSTITUTABLE
+    if same_different_undecidable(obj):
+        return OBJECT_UNDECIDABLE
+    if is_this_card(obj, objects):
+        return OBJECT_THIS
+    for ref_id in referenced_objects(obj["condition"]):
+        ref = objects.get(ref_id)
+        if ref is None or _object_incomplete_reason(ref, substituting=True) is not None:
+            return OBJECT_UNDECIDABLE
+    return OBJECT_CANDIDATES
 
 
 def _position(pos):

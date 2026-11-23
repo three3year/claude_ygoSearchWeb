@@ -17,7 +17,9 @@
   - 區塊:[區塊種類]…,照卡片結構的頂層區塊順序;段與引用列用位置指它。
   - 段:[段 id, 區塊, 段類別, 極性, 是不是做代替的段, [動作詞], [線], 被改的屬性(有才寫)]。
   - 線:[旗標(1 做動作的一方、2 取對象), 從, 到, 物件];從、到是 0(沒有)或 [推得, 區域碼…],
-    區域碼 = 區域位置 × 8 + 方的位置;物件是 0(物件表裡找不到)或 [泛用, 集合鍵]。
+    區域碼 = 區域位置 × 8 + 方的位置;物件是 0(物件表裡找不到:沒有物件)或 [泛用, 集合鍵, 種類];
+    種類只在不是候選卡集合時寫(票 12,加在最後一格):1 此卡、2 判不了、3 代不進去。此卡的集合照舊是
+    這張卡(指定卡比得到),判不了、代不進去的集合是空的。
   - 未解析的來源:[段類別, 極性, 區塊種類, 旗標, [原文字面的動作詞]];旗標 1 做代替的段、
     2 區塊種類判不出、4 不代入卡時判不了、8 代入卡時判不了、16 引用節點(段類別、極性為 null)。
     字面不含任何動作詞的不寫(帶動作詞的查詢才看未解析組,字面要含查詢的全部動作詞)。
@@ -34,7 +36,8 @@ import hashlib
 import json
 import time
 
-from action_rows import flatten
+from action_rows import (OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
+                         OBJECT_UNSUBSTITUTABLE, flatten)
 from archetype_table import setcode_matches
 from clause_map import NUMBER, POSITION, ClauseMap
 
@@ -46,6 +49,8 @@ _B36 = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 FLAG_DOER, FLAG_TARGETING = 1, 2
 U_REPLACING, U_BLOCK, U_REASON, U_REASON_SUBSTITUTING, U_REFERENCE = 1, 2, 4, 8, 16
+OBJECT_CODES = {OBJECT_THIS: 1, OBJECT_UNDECIDABLE: 2, OBJECT_UNSUBSTITUTABLE: 3}
+OBJECT_KINDS = {code: kind for kind, code in OBJECT_CODES.items()}
 
 
 def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=(),
@@ -352,6 +357,8 @@ class _Encoder:
         obj = 0
         if line.object is not None:
             obj = [int(line.object.generic), self.set_of_mask(line.object.candidates.mask)]
+            if line.object.kind != OBJECT_CANDIDATES:
+                obj.append(OBJECT_CODES[line.object.kind])
         return [flags, self.position(line.from_), self.position(line.to), obj]
 
     def position(self, pos):
@@ -483,8 +490,9 @@ def decode_action_index(text):
         flags, frm, to, obj = value
         return {"doer": bool(flags & FLAG_DOER), "targeting": bool(flags & FLAG_TARGETING),
                 "from": position(frm), "to": position(to),
-                "object": None if obj == 0 else {"generic": bool(obj[0]),
-                                                 "candidates": sets[obj[1]]}}
+                "object": None if obj == 0 else {
+                    "generic": bool(obj[0]), "candidates": sets[obj[1]],
+                    "kind": OBJECT_KINDS[obj[2]] if len(obj) > 2 else OBJECT_CANDIDATES}}
 
     def segment(value):
         sid, block, kind, pol, replacing, acts, lines, *modified = value

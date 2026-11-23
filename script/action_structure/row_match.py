@@ -9,6 +9,7 @@ import itertools
 from operator import attrgetter
 
 from action_query import eval_condition
+from action_rows import OBJECT_THIS
 
 REPLACED = "被代替"
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
@@ -19,7 +20,7 @@ VIA_GENERIC = "經泛用引用"
 
 def _normalise(query):
     q = {"actions": [], "from_zones": None, "to_zones": None, "card": None,
-         "condition": None, "targeting": False, "kinds": None,
+         "condition": None, "this_card": False, "targeting": False, "kinds": None,
          "block_kinds": None, "include_condition": False,
          "include_inferred": False, "replacement": False,
          "polarities": ("做",), "generic_only": False, "modified": None,
@@ -28,6 +29,8 @@ def _normalise(query):
     if unknown:
         raise KeyError(f"查詢有不認得的欄位: {sorted(unknown)}")
     q.update(query)
+    if sum((bool(q["this_card"]), q["card"] is not None, q["condition"] is not None)) > 1:
+        raise ValueError("被動作的卡三者擇一:this_card、card、condition 只能給一個")
     # 條件段看開關:沒指定段類別時,開關開就把條件段加進預設範圍;
     # 指定了段類別仍受開關閘門,開關關就不看條件段。
     kinds = set(q["kinds"] or DEFAULT_KINDS)
@@ -46,7 +49,7 @@ def _normalise(query):
     if q["modified"] is not None and set(q["modified"]) - set(MODIFIED_KEYS):
         raise KeyError(f"modified 有不認得的鍵: {sorted(set(q['modified']) - set(MODIFIED_KEYS))}")
     q["line_constrained"] = any((q["from_zones"], q["to_zones"],
-                                 q["card"] is not None,
+                                 q["card"] is not None, q["this_card"],
                                  q["condition"] is not None, q["targeting"]))
     return q
 
@@ -314,10 +317,12 @@ def _reachable(index, block_hits, q):
 
 
 class _Wanted:
-    """查詢要代入物件的卡:指定卡是總表的一個位置,給條件是滿足查詢條件的卡的位元集。"""
+    """查詢要代入物件的卡:指定卡是總表的一個位置,給條件是滿足查詢條件的卡的位元集。
+    這張卡自己不代入:只比物件是不是此卡(條件式剛好讓這張卡滿足的不算)。"""
 
     def __init__(self, index, q):
         self.mask = None
+        self.this_card = bool(q["this_card"])
         if q["card"] is not None:
             at = index.position.get(q["card"])
             self.mask = 0 if at is None else 1 << at
@@ -326,4 +331,6 @@ class _Wanted:
                 q["condition"], lambda view: eval_condition(q["condition"], view) is True)
 
     def fits(self, obj):
+        if self.this_card:
+            return obj.kind == OBJECT_THIS
         return self.mask is None or bool(obj.candidates.mask & self.mask)

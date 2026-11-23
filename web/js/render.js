@@ -68,6 +68,18 @@ function renderIdle() {
   renderPager('pagerBottom', 1, 1);
 }
 
+/* 搜尋帶動作條件、動作索引還沒載完:先說在等什麼,載完由主流程重查。 */
+function renderLoading() {
+  lastResult = null;
+  $('resultInfo').textContent = '';
+  $('results').innerHTML = `<div class="idle">
+    <p class="idle-title">動作索引載入中…</p>
+    <p>載完會自動出結果</p>
+  </div>`;
+  renderPager('pagerTop', 1, 1);
+  renderPager('pagerBottom', 1, 1);
+}
+
 function cardHtml(e, hl) {
   const c = e.card;
   const names = [c.nj, c.ne, c.ax ? '※' + c.ax : ''].filter(Boolean);
@@ -383,7 +395,7 @@ function goto(page) {
 }
 
   return Object.freeze({
-    render, initAltArt, initEffKind, initOgToggle, initSort,
+    render, renderLoading, initAltArt, initEffKind, initOgToggle, initSort,
     cardHtml,
     page: () => state.page,
     perPage: () => state.perPage,

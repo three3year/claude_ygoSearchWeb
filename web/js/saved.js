@@ -1,12 +1,12 @@
 'use strict';
 
-/* 存在瀏覽紀錄裡的查詢狀態(action-search-web 票01):`{ q, sort }`。
+/* 存在瀏覽紀錄裡的查詢狀態(action-search-web 票01):`{ q, sort, act }`。
    網址不帶任何參數;每次搜尋把狀態存進瀏覽紀錄新增的那一筆,上一頁、下一頁、
    重新整理從那一筆還原。
    那一筆可能是舊版網站寫的(欄位改名、值域變了),甚至不是本站寫的:還原時
    **認不得的欄位或值忽略,其餘照常還原**——一個欄位對不上不該讓整頁壞掉。
-   之後加的條件(動作條件,票08)是 `{ q, sort }` 旁邊多一個鍵,舊的一筆沒有它
-   就是沒有那組條件。 */
+   動作條件(票08)是 `{ q, sort }` 旁邊的 `act`,正規形由 `Action.condOf` 定;沒有動作條件
+   時不寫這個鍵,舊的一筆沒有它就是沒有那組條件。 */
 const Saved = (() => {
 const { VOCAB } = Util;
 
@@ -88,12 +88,15 @@ function queryOf(raw) {
 
 function restore(raw) {
   const st = isObj(raw) ? raw : {};
-  return { q: queryOf(st.q), sort: sortOf(st.sort) };
+  const out = { q: queryOf(st.q), sort: sortOf(st.sort) };
+  const act = Action.condOf(st.act);
+  if (act) out.act = act;
+  return out;
 }
 
 /* 存進去的就是還原後的正規形:兩筆相同的查詢存成同一個樣子。 */
-function snapshot(q, sort) {
-  return restore({ q, sort });
+function snapshot(q, sort, act) {
+  return restore({ q, sort, act });
 }
 
   return Object.freeze({ snapshot, restore });

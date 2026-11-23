@@ -35,7 +35,7 @@ python -m unittest discover -s script/faq_info
 python -m unittest discover -s script/tag_card
 python -m unittest discover -s script/text_format
 python -m unittest discover -s script/web
-python -X utf8 -m unittest discover -s script/action_structure   # 動作搜尋的卡片結構
+python -X utf8 -m unittest discover -s script/action_structure   # 動作搜尋的卡片結構(含「兩邊答案一致」,需要 node)
 node --test                       # 前端查詢引擎(node 內建,零 npm 依賴)
 ```
 

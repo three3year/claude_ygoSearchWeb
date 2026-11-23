@@ -149,8 +149,11 @@ function clauseRows(c, parts, kindSel, optSel, matOn) {
   return rows;
 }
 
-function runQuery(db, q) {
+/* 動作條件(票 08)是另一組條件,和卡片條件取且:卡要同時命中動作索引裡的段。
+   沒有動作條件時不碰動作索引(還沒載入也沒關係),結果與沒有這組條件時相同。 */
+function runQuery(db, q, act, actionIndex) {
   q = q || {};
+  const acted = Action.count(act) ? Action.match(actionIndex, Action.rowQuery(act)) : null;
   const name = term(q.name);
   const code = term(q.code);
   const codeOk = DIGITS.test(code);
@@ -167,6 +170,7 @@ function runQuery(db, q) {
     if (name && !nameHit(c, name, q.nameLang)) continue;
     if (code && !(codeOk && idHit(c, code))) continue;
     if (!paramHit(c, q)) continue;
+    if (acted && !acted.has(c.id)) continue;
     let rows = null;
     if (marks.length) {
       rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);

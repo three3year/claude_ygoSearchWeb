@@ -219,14 +219,16 @@ function read() {
   return q;
 }
 
-function count(q) {
+/* 生效中的條件數:卡片條件一軸算一條,加上動作條件(`Action.count`)。 */
+function count(q, act) {
   const isSet = v => {
     if (v == null || v === '') return false;
     if (typeof v !== 'object') return true;
     return Object.keys(v).some(k => v[k] != null);
   };
   return Object.keys(q || {})
-    .filter(k => k !== 'nameLang' && k !== 'textMat' && isSet(q[k])).length;
+    .filter(k => k !== 'nameLang' && k !== 'textMat' && isSet(q[k])).length
+    + Action.count(act);
 }
 
 function blockKey(f) {
@@ -317,8 +319,8 @@ function isOpen() {
   return $('btnFilters').getAttribute('aria-expanded') === 'true';
 }
 
-function summarize(q) {
-  const n = count(q);
+function summarize(q, act) {
+  const n = count(q, act);
   $('btnFilters').textContent = n ? `篩選條件・${n} 項` : '篩選條件';
 }
 

@@ -9,15 +9,37 @@ let applied = '';
 
 let appliedQuery = null;
 
+let appliedAct = null;
+
+/* 每次查詢一個序號:索引載入中又按了搜尋,載完只跑最後那一次。 */
+let runs = 0;
+
+/* 帶動作條件、動作索引還沒載完:先顯示載入中,載完自動查。載入失敗時動作條件不生效,
+   其他條件照常(區塊裡有說明)。 */
 function run() {
   appliedQuery = Query.read();
-  Query.summarize(appliedQuery);
-  View.render(Engine.runQuery(DB, appliedQuery));
+  appliedAct = ActionPanel.read();
+  Query.summarize(appliedQuery, appliedAct);
+  const seq = ++runs;
+  if (appliedAct && !ActionPanel.index() && !ActionPanel.failed()) {
+    View.renderLoading();
+    ActionPanel.load().then(() => { if (seq === runs) show(); });
+    return;
+  }
+  show();
+}
+
+/* 索引載入失敗時動作條件不生效:摺疊鈕上的條件數也不算它。 */
+function show() {
+  const index = ActionPanel.index();
+  const act = index && appliedAct;
+  Query.summarize(appliedQuery, act);
+  View.render(Engine.runQuery(DB, appliedQuery, act, index));
 }
 
 /* 網址不帶任何參數:不給第三個引數,網址維持原樣。雙擊開啟(file://)也能用。 */
 function push() {
-  const state = Saved.snapshot(appliedQuery, View.sort());
+  const state = Saved.snapshot(appliedQuery, View.sort(), appliedAct);
   const json = JSON.stringify(state);
   if (json === applied) return;
   applied = json;
@@ -36,10 +58,13 @@ function restore(raw) {
   const state = Saved.restore(raw);
   applied = JSON.stringify(state);
   Query.write(state.q);
+  ActionPanel.write(state.act);
   View.setSort(state.sort.key, state.sort.dir);
   View.setPage(1);
-  if (Query.count(state.q)) { run(); return; }
+  if (Query.count(state.q, state.act)) { run(); return; }
+  runs++;
   appliedQuery = state.q;
+  appliedAct = null;
   Query.summarize(appliedQuery);
   View.render(null);
 }
@@ -76,12 +101,13 @@ function init() {
   }
   renderSources();
   Query.init();
+  ActionPanel.init();
   View.initAltArt();
   View.initEffKind();
   View.initOgToggle();
   View.initSort(push);
   $('btnSearch').addEventListener('click', search);
-  $('btnClear').addEventListener('click', () => Query.clear());
+  $('btnClear').addEventListener('click', () => { Query.clear(); ActionPanel.clear(); });
   $('perPage').addEventListener('change', e => {
     View.setPerPage(+e.target.value);
     View.render();

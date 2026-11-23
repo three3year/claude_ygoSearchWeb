@@ -47,8 +47,14 @@ function scriptSrcs() {
 /* 驅動函式與前端程式同作用域,把接縫的回傳值壓成 JSON——Set 與物件跨 realm
    帶出去要看 prototype 臉色,字串不必。 */
 const DRIVER = `
+;var __actionIndex = null;
+;function __index() {
+  if (!__actionIndex && window.ACTION_DATA) __actionIndex = Action.prepare(window.ACTION_DATA);
+  return __actionIndex;
+}
 ;function __runQuery(json) {
-  var result = Engine.runQuery(window.CARD_DATA, JSON.parse(json));
+  var a = JSON.parse(json);
+  var result = Engine.runQuery(window.CARD_DATA, a.q, a.act, a.act ? __index() : null);
   return JSON.stringify({
     cards: result.cards.map(function (e) {
       return {
@@ -59,13 +65,15 @@ const DRIVER = `
     marks: result.marks,
   });
 }
+;function __rowQuery(json) { return JSON.stringify(Action.rowQuery(JSON.parse(json))); }
 ;function __axes() { return JSON.stringify(Query.axes()); }
 ;function __nextState(json) {
   var a = JSON.parse(json);
   return Query.nextState(a.st, a.states);
 }
 ;function __optAvail(json) { return JSON.stringify(Query.optionalAvailable(JSON.parse(json))); }
-;function __critCount(json) { return Query.count(JSON.parse(json)); }
+;function __critCount(json) { var a = JSON.parse(json); return Query.count(a.q, a.act); }
+;function __actionOptions() { return JSON.stringify(Action.options(__index())); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
 ;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
@@ -78,7 +86,7 @@ const DRIVER = `
 ;function __sortKeys() { return JSON.stringify(Sort.KEYS); }
 ;function __saved(json) {
   var a = JSON.parse(json);
-  return JSON.stringify(Saved.snapshot(a.q, a.sort));
+  return JSON.stringify(Saved.snapshot(a.q, a.sort, a.act));
 }
 ;function __restore(json) { return JSON.stringify(Saved.restore(JSON.parse(json))); }
 ;function __fmtTime(v) { return Util.fmtTime(v); }
@@ -87,9 +95,12 @@ const DRIVER = `
 
 /**
  * 載入前端程式碼,回傳沙箱。
- * fixture:{ cards, vocab, meta } —— 合成的 window.CARD_DATA / VOCAB / META。
+ * fixture:{ cards, vocab, meta, action } —— 合成的 window.CARD_DATA / VOCAB / META,
+ * 與動作索引 window.ACTION_DATA。action 是物件(測試照描述寫的小索引)或
+ * `action-data.js` 的全文(Python 建置的產物,照網站載入它的方式在沙箱裡執行)。
+ * 動作索引不在 index.html 的 `<script>` 裡(第一次打開動作搜尋才載入),所以另外餵。
  */
-function load({ cards = [], vocab = {}, meta = {} } = {}) {
+function load({ cards = [], vocab = {}, meta = {}, action = null } = {}) {
   const sandbox = {
     console, setTimeout, clearTimeout,
     document: {
@@ -109,6 +120,8 @@ function load({ cards = [], vocab = {}, meta = {} } = {}) {
   sandbox.VOCAB = vocab;
   sandbox.META = meta;
   vm.createContext(sandbox);
+  if (typeof action === 'string') vm.runInContext(action, sandbox, { filename: 'action-data.js' });
+  else if (action) sandbox.ACTION_DATA = action;
   for (const src of scriptSrcs()) {
     if (src === DATA) continue;
     const code = fs.readFileSync(path.join(WEB, src), 'utf8');
@@ -118,19 +131,42 @@ function load({ cards = [], vocab = {}, meta = {} } = {}) {
   return sandbox;
 }
 
-/** 接縫 3:查詢條件 → [{ id, rows }],rows 是該卡命中的效果句索引(沒有句層條件時為 null) */
-function search(sandbox, query) {
-  return JSON.parse(sandbox.__runQuery(JSON.stringify(query))).cards;
+function runQuery(sandbox, query, act) {
+  return JSON.parse(sandbox.__runQuery(JSON.stringify({ q: query, act: act || null })));
+}
+
+/**
+ * 接縫 3:(查詢條件, 動作條件) → [{ id, rows }],rows 是該卡命中的效果句索引(沒有句層
+ * 條件時為 null)。動作條件省略即沒有動作條件——那時引擎不碰動作索引。
+ */
+function search(sandbox, query, act) {
+  return runQuery(sandbox, query, act).cards;
 }
 
 /** 只要命中的卡片密碼清單(順序即引擎回傳序) */
-function ids(sandbox, query) {
-  return search(sandbox, query).map(e => e.id);
+function ids(sandbox, query, act) {
+  return search(sandbox, query, act).map(e => e.id);
 }
 
 /** 生效中的句層條件(呈現層照它寫命中行的 badge) */
-function marks(sandbox, query) {
-  return JSON.parse(sandbox.__runQuery(JSON.stringify(query))).marks;
+function marks(sandbox, query, act) {
+  return runQuery(sandbox, query, act).marks;
+}
+
+/**
+ * 動作條件換成的列查詢(鍵名與值照 Python 的 `run_query`):「兩邊答案一致」的測試把它
+ * 交給 Python,兩邊比的是同一個問題。
+ */
+function rowQuery(sandbox, act) {
+  return JSON.parse(sandbox.__rowQuery(JSON.stringify(act || null)));
+}
+
+/**
+ * 動作詞的選項:`{ shown, more }`,依列數排,前面一批直接顯示、其餘收在「更多」。
+ * 與 `axes()` 同一個理由:沙箱裡沒有真的 DOM,區塊只是照這份清單擺按鈕。
+ */
+function actionOptions(sandbox) {
+  return JSON.parse(sandbox.__actionOptions());
 }
 
 /**
@@ -164,8 +200,8 @@ function nextState(sandbox, st, states) {
  * 生效中的條件數(票09:窄螢幕的側欄摺起來之後,摺疊鈕上寫的就是它)。
  * 與 `optionalAvailable()` 同一個理由:規則是純的,DOM 那一層只是把數字寫上去。
  */
-function critCount(sandbox, q) {
-  return sandbox.__critCount(JSON.stringify(q || {}));
+function critCount(sandbox, q, act) {
+  return sandbox.__critCount(JSON.stringify({ q: q || {}, act: act || null }));
 }
 
 /**
@@ -209,15 +245,17 @@ function sortKeys(sandbox) {
 }
 
 /**
- * 存進瀏覽紀錄的查詢狀態(action-search-web 票01):`(條件, 排序) → 那一筆存的物件`。
+ * 存進瀏覽紀錄的查詢狀態(action-search-web 票01):`(條件, 排序, 動作條件) → 那一筆存的物件`。
  * 寫入時機與 `popstate` 測不到(沙箱裡沒有瀏覽紀錄),走人工驗收。
  */
-function savedState(sandbox, q, sort) {
-  return JSON.parse(sandbox.__saved(JSON.stringify({ q: q || {}, sort: sort || {} })));
+function savedState(sandbox, q, sort, act) {
+  return JSON.parse(sandbox.__saved(JSON.stringify({ q: q || {}, sort: sort || {},
+                                                     act: act || null })));
 }
 
 /**
- * 從瀏覽紀錄的一筆還原成 `{ q, sort }`(q 就是接縫 3 吃的查詢條件形狀)。
+ * 從瀏覽紀錄的一筆還原成 `{ q, sort, act }`(q 就是接縫 3 吃的查詢條件形狀;沒有動作條件
+ * 時沒有 act)。
  * raw 可能是舊版網站寫的、甚至不是物件:認不得的欄位或值忽略,其餘照常還原。
  */
 function restoreSaved(sandbox, raw) {
@@ -233,6 +271,6 @@ function cardHtml(sandbox, entry) {
   return sandbox.__cardHtml(JSON.stringify(entry));
 }
 
-module.exports = { load, search, ids, marks, axes, optionalAvailable, nextState,
+module.exports = { load, search, ids, marks, rowQuery, actionOptions, axes, optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, savedState, restoreSaved, cardHtml };

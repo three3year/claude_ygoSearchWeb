@@ -196,6 +196,18 @@ header h1 { font-size: 22px; color: var(--accent); letter-spacing: 1px; }
   text-decoration: line-through;
 }
 
+/* ─── 動作搜尋區塊(action-search-web 票 08) ─────────────────
+   框起來與卡片條件分開:這一塊篩的是「卡文裡有這個動作」,和上下的軸是不同種類的條件。
+   動作詞的按鈕借三態鈕的樣子(只有選與不選兩態),「更多」用虛線框分出它不是一個詞。 */
+.action-box {
+  border: 1px solid var(--accent-dim); border-radius: 8px;
+  padding: 4px 8px; margin-bottom: 12px;
+}
+.action-head { color: var(--accent); font-weight: bold; font-size: 13px; }
+.action-hint { color: var(--muted); font-size: 11px; opacity: .75; }
+.action-status { color: var(--gold); font-size: 12px; }
+.tri.tri-more { border-style: dashed; color: var(--muted); }
+
 .range { margin-bottom: 6px; }
 .range-row { display: flex; align-items: center; gap: 5px; }
 .range-sep { color: var(--muted); font-size: 12px; }

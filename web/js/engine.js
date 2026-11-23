@@ -150,10 +150,15 @@ function clauseRows(c, parts, kindSel, optSel, matOn) {
 }
 
 /* 動作條件(票 08)是另一組條件,和卡片條件取且:卡要同時命中動作索引裡的段。
-   沒有動作條件時不碰動作索引(還沒載入也沒關係),結果與沒有這組條件時相同。 */
+   沒有動作條件時不碰動作索引(還沒載入也沒關係),結果與沒有這組條件時相同。
+   無法確認的卡(票 15,`unsure`,照 db 的順序):未解析組裡同時滿足卡片條件的卡;
+   句層條件要滿足,但不做同一效果的判斷。沒有動作條件時是空的。 */
 function runQuery(db, q, act, actionIndex) {
   q = q || {};
-  const acted = Action.count(act) ? Action.match(actionIndex, Action.rowQuery(act)) : null;
+  const rq = Action.count(act) ? Action.rowQuery(act) : null;
+  const acted = rq ? Action.match(actionIndex, rq) : null;
+  const unresolved = rq ? Action.unsure(actionIndex, rq, acted) : null;
+  const unsure = [];
   const name = term(q.name);
   const code = term(q.code);
   const codeOk = DIGITS.test(code);
@@ -170,15 +175,17 @@ function runQuery(db, q, act, actionIndex) {
     if (name && !nameHit(c, name, q.nameLang)) continue;
     if (code && !(codeOk && idHit(c, code))) continue;
     if (!paramHit(c, q)) continue;
-    if (acted && !acted.has(c.id)) continue;
+    const confirmed = !acted || acted.has(c.id);
+    if (!confirmed && !unresolved.has(c.id)) continue;
     let rows = null;
     if (marks.length) {
       rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
       if (!rows.length) continue;
     }
-    cards.push({ card: c, rows });
+    if (confirmed) cards.push({ card: c, rows });
+    else unsure.push(c.id);
   }
-  return { cards, marks };
+  return { cards, marks, unsure };
 }
 
   return Object.freeze({ runQuery, likeParts, likeRanges });

@@ -54,11 +54,14 @@ function prepare(raw) {
     actionAt: at(raw.actions.map(a => a[0])),
     kindAt: at(raw.kinds),
     polarityAt: at(raw.polarities),
-    cards: raw.cards.map(([id, , segments]) => ({
+    cards: raw.cards.map(([id, , segments, unresolved]) => ({
       id,
       segments: segments.map(([seg, , kind, polarity, replacing, actions]) =>
         ({ id: seg, kind, polarity, replacing: !!replacing, actions })),
+      unresolved: (unresolved || []).map(([kind, polarity, , flags, actions]) =>
+        ({ kind, polarity, flags, actions })),
     })),
+    noText: raw.noText || [],
   };
 }
 
@@ -96,5 +99,38 @@ function match(index, rq) {
   return hits;
 }
 
-  return Object.freeze({ condOf, count, rowQuery, prepare, options, match });
+/* 未解析的來源的旗標(`action_index.py` 的 U_*)。 */
+const U_REPLACING = 1, U_REASON = 4, U_REASON_SUBSTITUTING = 8, U_REFERENCE = 16;
+
+/* 列查詢 → 未解析組的卡號(Set)。判法照 `row_match._unparsed`:無官方日文的卡一律列;
+   查詢有動作詞時,沒命中(不在 found 裡)的卡裡,字面含查詢的全部動作詞、在這個查詢下
+   判不了的未解析的來源。段類別、極性(與代替)的篩選照樣生效,引用節點不看這兩欄;
+   誰、受方、原因、從、到這些欄未解析的來源沒有,不比。查詢要代入卡(指定卡、給條件)時
+   看「代入卡時判不了」的旗標,物件判不了的線在這時才判不了。
+   found:命中的卡(有 `has` 就好),任一段命中的卡只在命中的清單。 */
+function unsure(index, rq, found) {
+  const out = new Set(index.noText.filter(id => !found.has(id)));
+  if (!rq.actions.length) return out;
+  const wanted = positions(index.actionAt, rq.actions);
+  if (wanted.some(a => a === undefined)) return out;
+  const kinds = new Set(positions(index.kindAt, rq.kinds));
+  const polarities = new Set(positions(index.polarityAt, rq.polarities));
+  const substituting = rq.card != null || rq.condition != null;
+  const reason = substituting ? U_REASON_SUBSTITUTING : U_REASON;
+  for (const card of index.cards) {
+    if (found.has(card.id)) continue;
+    for (const u of card.unresolved) {
+      if (!(u.flags & reason) || !wanted.every(a => u.actions.indexOf(a) >= 0)) continue;
+      if (!(u.flags & U_REFERENCE)) {
+        if (u.flags & U_REPLACING && !rq.replacement) continue;
+        if (!kinds.has(u.kind) || !polarities.has(u.polarity)) continue;
+      }
+      out.add(card.id);
+      break;
+    }
+  }
+  return out;
+}
+
+  return Object.freeze({ condOf, count, rowQuery, prepare, options, match, unsure });
 })();

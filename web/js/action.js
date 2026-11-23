@@ -353,6 +353,22 @@ function zoneOptions(index) {
   return byRows(index.zones);
 }
 
+/* 還原的條件裡,索引的選項沒有的動作詞、區域、原因忽略(spec「認不得的欄位或值忽略」):
+   資料重建後拿掉的值不該留成一顆按不出結果的按鈕,也不該讓整個查詢落空。 */
+function knownOf(index, cond) {
+  const c = condOf(cond);
+  if (!c) return null;
+  const opts = options(index);
+  const words = opts.shown.concat(opts.more);
+  const zones = zoneOptions(index);
+  const known = { ...c };
+  if (c.actions) known.actions = c.actions.filter(w => words.indexOf(w) >= 0);
+  if (c.from && zones.indexOf(c.from.zone) < 0) delete known.from;
+  if (c.to && zones.indexOf(c.to.zone) < 0) delete known.to;
+  if (c.cause && causeOptions(index).indexOf(c.cause.kind) < 0) delete known.cause;
+  return condOf(known);
+}
+
 function toggleKind(kinds, kind) {
   const now = kindsOf(kinds);
   if (now.indexOf(kind) < 0) return kindsOf(now.concat(kind));
@@ -491,7 +507,7 @@ function reaches(index, blockHits, cid, part, visiting) {
   return found;
 }
 
-  return Object.freeze({ condOf, count, rowQuery, suggest, prepare, options, match, unsure,
+  return Object.freeze({ condOf, count, rowQuery, suggest, prepare, options, match, unsure, knownOf,
     SIDES, DEFAULT_KINDS, DEFAULT_POL, zoneOptions, causeOptions, toggleKind,
     conditionOptions, archetypeSuggest });
 })();

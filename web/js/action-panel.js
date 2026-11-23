@@ -42,6 +42,7 @@ function load() {
         window.ACTION_DATA = undefined;
       }
       failed = !ok;
+      if (index) forgetUnknown();
       paint();
       resolve();
     };
@@ -85,12 +86,11 @@ function wordsHtml() {
   const extra = moreOpen
     ? opts.more
     : opts.more.filter(w => selected.indexOf(w) >= 0);
-  const unknown = selected.filter(w => known.indexOf(w) < 0);
   const toggle = opts.more.length
     ? `<button type="button" class="tri tri-more" data-more="1">${
       moreOpen ? '收起' : `更多(共 ${known.length} 個)`}</button>` : '';
   return `<span class="group-label">動作</span>
-    <div class="tri-row">${opts.shown.concat(extra, unknown).map(chip).join('')}${
+    <div class="tri-row">${opts.shown.concat(extra).map(chip).join('')}${
       toggle}</div>
     <p class="action-hint">多選時,要在同一段裡全部都有</p>`;
 }
@@ -169,10 +169,8 @@ function targetHtml() {
 const option = (value, label, cur) =>
   `<option value="${esc(value)}"${value === cur ? ' selected' : ''}>${esc(label)}</option>`;
 
-/* 從、到:區域選項由索引的表生成;還原的區域索引裡沒有時也列出來,才看得到、取消得掉。 */
 function zoneHtml(key, label, cur) {
   const zones = Action.zoneOptions(index);
-  if (cur.zone && zones.indexOf(cur.zone) < 0) zones.push(cur.zone);
   return `<span class="group-label">${label}</span>
     <div class="range-row">
       <select class="range-in" data-zone="${key}">${option('', '不限', cur.zone)}${
@@ -218,10 +216,8 @@ function recipientHtml() {
     <p class="action-hint">例如傷害、回復落在哪一方;受方是卡的不算</p>`;
 }
 
-/* 原因(票 11):種類的選項由索引的原因表生成;還原的種類索引裡沒有時也列出來。 */
 function causeHtml() {
   const kinds = Action.causeOptions(index);
-  if (cause.kind && kinds.indexOf(cause.kind) < 0) kinds.push(cause.kind);
   return `<span class="group-label">因為什麼</span>
     <div class="range-row">
       <select class="range-in" data-cause-kind="1">${option('', '不限', cause.kind)}${
@@ -270,6 +266,15 @@ function target() {
   return null;
 }
 
+/* 索引載進來之後,動作詞、區域、原因只留索引有的(`Action.knownOf`)。 */
+function forgetUnknown() {
+  const known = Action.knownOf(index, read()) || {};
+  selected = known.actions || [];
+  if (!known.from) from = NO_ZONE();
+  if (!known.to) to = NO_ZONE();
+  if (!known.cause) cause = { kind: '', side: '' };
+}
+
 function read() {
   return Action.condOf({ actions: selected, from: zoneCond(from), to: zoneCond(to), kinds, pol,
                          agent, recipient, target: target(),
@@ -295,6 +300,7 @@ function write(act) {
   given = t && t.condition ? { ...t.condition } : {};
   typed = '';
   setTyped = '';
+  if (index) forgetUnknown();
   if (Object.keys(cond).length) setOpen(true);
   paint();
 }

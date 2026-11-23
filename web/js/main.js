@@ -26,7 +26,7 @@ function run() {
 
 function show() {
   const index = ActionPanel.index();
-  const act = index && appliedAct;
+  const act = index && Action.knownOf(index, appliedAct);
   Query.summarize(appliedQuery, act);
   View.render(Engine.runQuery(DB, appliedQuery, act, index));
 }

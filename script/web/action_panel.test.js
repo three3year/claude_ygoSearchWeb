@@ -107,6 +107,26 @@ test('段類別至少勾一個:只剩一個時取消不掉', () => {
   assert.deepStrictEqual(panel.read().kinds, ['cond']);
 });
 
+const STALE = { actions: ['破壞', '已經沒有的動作'], from: { zone: '異次元', side: '我方' },
+                to: { zone: '手牌' }, cause: { kind: '已經沒有的原因' } };
+
+test('還原的動作詞、區域、原因索引裡沒有的,索引載完就丟掉,不留成按鈕或選項', () => {
+  const { panel } = open({ cards: CARDS, action: ACTION });
+  panel.init();
+  panel.write(STALE);
+  panel.finishLoading();
+  assert.deepStrictEqual(panel.read(), { actions: ['破壞'], to: { zone: '手牌' } });
+  assert.ok(!panel.buttons().includes('已經沒有的動作'));
+  assert.ok(!panel.selects().flat().includes('異次元'));
+  assert.ok(!panel.selects().flat().includes('已經沒有的原因'));
+});
+
+test('索引已經載好時還原,認不得的值同樣丟掉', () => {
+  const { panel } = loadedPage();
+  panel.write(STALE);
+  assert.deepStrictEqual(panel.read(), { actions: ['破壞'], to: { zone: '手牌' } });
+});
+
 test('動作索引載入中改排序,結果區仍是載入中;結果到了才換成清單', () => {
   const page = loadedPage();
   page.results.initSort();

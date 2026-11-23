@@ -76,6 +76,20 @@ CONDS = [
     {"actions": ["直接攻擊"], "pol": "limit"},
     {"actions": ["特殊召喚"], "pol": "limit", "kinds": ["eff", "cond"]},
     {"actions": ["攻擊"], "pol": "limit", "kinds": ["cost"]},
+] + [
+    # 票 10:誰與「含不限定的」。夾具裡:暗黒界の取引的抽牌是雙方各自、「ドローしたプレイヤーは
+    # …捨てる」指回它;奈落の落とし穴、特異点の悪魔的條件段寫對手;フレシアの蟲惑魔的
+    # 「効果では破壊されない」是不限定;其餘效果段、代價段、召喚手續段沒寫誰,算我方。
+    {"actions": ["抽牌"], "agent": "對手"},
+    {"actions": ["捨棄"], "agent": "對手"},
+    {"actions": ["破壞"], "agent": "對手"},
+    {"actions": ["破壞"], "agent": "我方"},
+    {"actions": ["特殊召喚"], "kinds": ["eff", "cond"], "agent": "對手"},
+    {"actions": ["特殊召喚"], "kinds": ["eff", "cond"], "agent": "我方"},
+    {"actions": ["破壞"], "pol": "resist", "agent": "對手"},
+    {"actions": ["破壞"], "pol": "resist", "agent": "對手", "unrestricted": True},
+    {"actions": ["通常召喚"], "pol": "limit", "agent": "我方", "unrestricted": True},
+    {"agent": "對手", "kinds": ["cond"]},
 ]
 LOOP_A, LOOP_B = 11, 12
 LOOP_TEXT = ("①：手札から通常罠カード１枚を墓地へ送って発動できる。"
@@ -216,6 +230,28 @@ class WebParityTest(unittest.TestCase):
         self.assertNotIn(6511113, run_query(self.structures, self.cards, default)["groups"]["全部"])
         self.assertEqual(of({"actions": ["通常召喚"], "pol": "limit"}), {MASTER_MONK})
         self.assertFalse(of({"actions": ["通常召喚"]}))
+
+    def test_agent_and_unrestricted_ask_something(self):
+        """票 10 的查詢問得出東西:誰篩掉了卡、雙方各自兩邊都算、開關加進不限定的段。"""
+        hits = {json.dumps(c, ensure_ascii=False, sort_keys=True): set(f["ids"])
+                for c, f in zip(CONDS, self.front)}
+
+        def of(cond):
+            return hits[json.dumps(cond, ensure_ascii=False, sort_keys=True)]
+        self.assertIn(DARK_WORLD_DEALINGS, of({"actions": ["抽牌"], "agent": "對手"}))
+        self.assertIn(DARK_WORLD_DEALINGS, of({"actions": ["捨棄"], "agent": "對手"}))
+        self.assertTrue(of({"actions": ["破壞"], "agent": "我方"}))
+        self.assertFalse(of({"actions": ["破壞"], "agent": "對手"}))
+        on_condition = of({"actions": ["特殊召喚"], "kinds": ["eff", "cond"], "agent": "對手"})
+        self.assertTrue(on_condition)
+        self.assertTrue(on_condition
+                        - of({"actions": ["特殊召喚"], "kinds": ["eff", "cond"], "agent": "我方"}))
+        self.assertFalse(of({"actions": ["破壞"], "pol": "resist", "agent": "對手"}))
+        self.assertEqual(of({"actions": ["破壞"], "pol": "resist", "agent": "對手",
+                             "unrestricted": True}), {6511113})
+        self.assertEqual(of({"actions": ["通常召喚"], "pol": "limit", "agent": "我方",
+                             "unrestricted": True}), {MASTER_MONK})
+        self.assertTrue(of({"agent": "對手", "kinds": ["cond"]}))
 
     def test_kinds_and_polarity_become_the_row_query(self):
         """介面選項到查詢的對應(spec「玩家介面」對應表):勾觸發條件連條件段開關一起開。"""

@@ -9,13 +9,15 @@ import itertools
 from operator import attrgetter
 
 from action_query import eval_condition
-from action_rows import OBJECT_THIS
+from action_rows import IMPLIED_SELF, OBJECT_THIS, UNRESTRICTED
 
 REPLACED = "被代替"
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 MODIFIED_KEYS = ("attr", "form", "value")
 VIA_GROUP = "經引用"
 VIA_GENERIC = "經泛用引用"
+AGENTS = ("我方", "對手")
+BOTH_SIDES = "雙方各自"
 
 
 def _normalise(query):
@@ -24,7 +26,7 @@ def _normalise(query):
          "block_kinds": None, "include_condition": False,
          "include_inferred": False, "replacement": False,
          "polarities": ("做",), "generic_only": False, "modified": None,
-         "generic_reference": False}
+         "generic_reference": False, "agent": None, "include_unrestricted": False}
     unknown = set(query) - set(q)
     if unknown:
         raise KeyError(f"查詢有不認得的欄位: {sorted(unknown)}")
@@ -46,6 +48,8 @@ def _normalise(query):
     else:
         kinds.discard("被代替")
     q["allowed_kinds"] = kinds
+    if q["agent"] is not None and q["agent"] not in AGENTS:
+        raise ValueError(f"agent 只能是 {AGENTS}: {q['agent']!r}")
     if q["modified"] is not None and set(q["modified"]) - set(MODIFIED_KEYS):
         raise KeyError(f"modified 有不認得的鍵: {sorted(set(q['modified']) - set(MODIFIED_KEYS))}")
     q["line_constrained"] = any((q["from_zones"], q["to_zones"],
@@ -135,10 +139,22 @@ def _segment_hit_lines(rows, q, wanted):
         return None
     if q["modified"] is not None and not modified_matches(q["modified"], head.modified):
         return None
+    if q["agent"] is not None and not agent_matches(q["agent"], head.agent,
+                                                    q["include_unrestricted"]):
+        return None
     lines = [row.line for row in rows if row.line is not None]
     if not q["line_constrained"]:
         return lines
     return [line for line in lines if _line_matches(line, q, wanted)] or None
+
+
+def agent_matches(want, have, include_unrestricted):
+    """誰:寫明的值相同或是雙方各自命中;算我方只在查我方時命中;不限定只在開關開時命中。"""
+    if have == UNRESTRICTED:
+        return include_unrestricted
+    if have == IMPLIED_SELF:
+        return want == "我方"
+    return have in (want, BOTH_SIDES)
 
 
 def _line_matches(line, q, wanted):

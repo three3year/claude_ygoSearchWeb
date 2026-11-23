@@ -35,6 +35,8 @@ let pol = Action.DEFAULT_POL;
 
 const KIND_LABELS = { eff: '效果', cost: '代價', cond: '觸發條件' };
 const POL_LABELS = { do: '會做', limit: '限制', resist: '抗性' };
+let agent = '';              // 誰(票 10):'' = 不限,或 我方、對手
+let unrestricted = false;    // 「含不限定的」(不限定開關)
 
 /* 載完(或載入失敗)時 resolve,不 reject:失敗時動作條件不生效,其他條件照常查。 */
 function load() {
@@ -173,10 +175,22 @@ function polHtml() {
     <p class="action-hint">限制:不能、只能;抗性:不會被…</p>`;
 }
 
+/* 誰(票 10):不限/我方/對手三選一,加「含不限定的」勾選(預設關)。 */
+function agentHtml() {
+  const opt = (value, label) => `<button type="button" class="tri" data-agent="${value}"
+    data-st="${agent === value ? 'in' : ''}">${label}</button>`;
+  return `<span class="group-label">誰做的</span>
+    <div class="tri-row">${opt('', '不限')}${opt('我方', '我方')}${opt('對手', '對手')}</div>
+    <label class="mat-toggle"
+      title="卡文沒寫是誰的觸發條件與被動句(例如「モンスターが手札に戻った場合」)也算">
+      <input type="checkbox" data-unrestricted="1"${unrestricted ? ' checked' : ''}>含不限定的
+    </label>`;
+}
+
 function fieldsHtml() {
   return index
     ? wordsHtml() + zoneHtml('from', '從哪裡', from) + zoneHtml('to', '到哪裡', to)
-      + targetHtml() + kindsHtml() + polHtml()
+      + targetHtml() + kindsHtml() + polHtml() + agentHtml()
     : '';
 }
 
@@ -199,7 +213,7 @@ function target() {
 
 function read() {
   return Action.condOf({ actions: selected, from: zoneCond(from), to: zoneCond(to), kinds, pol,
-                         target: target() });
+                         agent, unrestricted, target: target() });
 }
 
 /* 還原帶動作條件的查詢時展開區塊(和其他軸一樣看得見設了什麼),也就載入索引。 */
@@ -210,6 +224,8 @@ function write(act) {
   to = { ...NO_ZONE(), ...cond.to };
   kinds = cond.kinds || Action.DEFAULT_KINDS;
   pol = cond.pol || Action.DEFAULT_POL;
+  agent = cond.agent || '';
+  unrestricted = !!cond.unrestricted;
   const t = cond.target;
   targetMode = t === 'self' ? 'self' : t ? 'card' : 'none';
   targetCard = t && t !== 'self' ? t.card : null;
@@ -218,9 +234,11 @@ function write(act) {
   paint();
 }
 
-/* 「清除條件」:動作詞取消,從、到、段類別、極性、被動作的卡回到預設。 */
+/* 「清除條件」:動作詞取消,從、到、段類別、極性、誰、「含不限定的」、被動作的卡回到預設。 */
 function clear() {
   selected = [];
+  agent = '';
+  unrestricted = false;
   from = NO_ZONE();
   to = NO_ZONE();
   kinds = Action.DEFAULT_KINDS;
@@ -246,6 +264,8 @@ function init() {
       targetCard = null;
     } else if (btn.dataset.pol) {
       pol = btn.dataset.pol;
+    } else if (btn.dataset.agent !== undefined) {
+      agent = btn.dataset.agent;
     } else if (btn.dataset.word) {
       const word = btn.dataset.word;
       selected = selected.indexOf(word) >= 0
@@ -268,6 +288,8 @@ function init() {
       z.side = el.value;
     } else if (el.dataset.kind) {
       kinds = Action.toggleKind(kinds, el.dataset.kind);
+    } else if (el.dataset.unrestricted) {
+      unrestricted = el.checked;
     } else {
       return;
     }

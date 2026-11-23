@@ -5,7 +5,7 @@
 列的單位是對象線:每條對象線一列,沒有線的段以段為一列(`line` 為 None)。同一段的列共用 `seq`。
 每一欄都是解讀完的值:
 - 段的欄:卡、段 id、段序號、所在的(頂層)區塊與區塊種類、段類別、極性、是不是做代替的段、
-  動作詞(上位詞已展開)、被改的屬性、原文位置(`Place`,效果對應用)。
+  動作詞(上位詞已展開)、被改的屬性、原文位置(`Place`,效果對應用)、誰(`agent_of`)。
 - 線的欄(`Line`):做動作的一方(查詢比的是被動作的卡,這條線不比)、取對象(受方是被取對象的物件的段,
   每條線都算)、從、到(子區域算在上位區域內,推得值另標)、物件。
 - 物件(`LineObject`):是不是泛用物件、種類、候選卡。種類分得出此卡、候選卡集合、判不了、代不進去
@@ -37,6 +37,10 @@ from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 SYMMETRIC_ACTION = "戰鬥"
 REASON_REF_MISSING = "引用的物件找不到"
 REASON_SAME_DIFFERENT = "異同判不了"
+# 誰(票 10):段寫明的值(我方、對手、雙方各自),或沒寫時的兩種(spec「比對規則」的誰)。
+IMPLIED_SELF = "算我方"
+UNRESTRICTED = "不限定"
+IMPLIED_SELF_KINDS = ("效果", "代價", "召喚手續")
 
 # 被動作的卡(物件)的種類(spec「動作索引」欄位表;沒有物件是 `Line.object` 為 None)。
 OBJECT_THIS = "此卡"                 # 物件0,或帶狀態的此卡
@@ -102,6 +106,7 @@ class Row(NamedTuple):
     modified: dict | None
     place: Place
     line: Line | None
+    agent: str
 
 
 class Unresolved(NamedTuple):
@@ -216,6 +221,7 @@ def flatten(structures, cards):
             index.no_text.append((card["id"], card["unparsed"]["reason"]))
             continue
         objects = {obj["id"]: obj for obj in card["objects"]}
+        segments = {seg["id"]: seg for block in card["blocks"] for _, seg in iter_segments(block)}
         blocks = index.blocks[card["id"]] = []
         index.texts[card["id"]] = _source_texts(card)
         for block in card["blocks"]:
@@ -233,14 +239,15 @@ def flatten(structures, cards):
                         seg["polarity"], bool(seg["replaces"]), frozenset(segment_actions(seg)),
                         seg["modified"], _place(block, inner, seg["span"][0]))
                 seq += 1
+                agent = agent_of(seg, segments)
                 if not seg["lines"]:
-                    index.rows.append(Row(*head, None))
+                    index.rows.append(Row(*head, None, agent))
                     continue
                 recipient_targeted = bool(isinstance(seg["recipient"], dict)
                                           and seg["recipient"].get("targeting"))
                 for line in seg["lines"]:
                     index.rows.append(Row(*head, _line(index, card, objects, seg, line,
-                                                       recipient_targeted)))
+                                                       recipient_targeted), agent))
             for reason, text in _unparsed_references(block):
                 index.unresolved.append(Unresolved(
                     card["id"], block["kind"], block_reason, None, None, None, False,
@@ -277,6 +284,26 @@ def _source_texts(card):
 def segment_actions(seg):
     """段的動作詞連同上位詞:段寫「融合召喚」,查「特殊召喚」也要對得上。"""
     return {a for action in seg["actions"] for a in action_ancestors(action)}
+
+
+def agent_of(seg, segments):
+    """段的誰:寫明的值(我方、對手、雙方各自;玩家字面取它的方);沒寫時,效果段、代價段、召喚手續段的
+    主動句算我方,其餘(條件段、被動句、限制段、修飾段)不限定。沒有述語的段(取對象宣言)不是被動句。
+    指向玩家的動作回指(「ドローしたプレイヤーは」)是它指回的那一段的誰。"""
+    agent = seg["agent"]
+    if isinstance(agent, dict):
+        if "ref" in agent:
+            referred = segments.get(agent["segment"])
+            if referred is not None:
+                return agent_of(referred, segments)
+            agent = None
+        else:
+            agent = agent["side"]
+    if agent is not None:
+        return agent
+    if seg["kind"] in IMPLIED_SELF_KINDS and seg["voice"] != "被動":
+        return IMPLIED_SELF
+    return UNRESTRICTED
 
 
 def _is_doer(line, seg):

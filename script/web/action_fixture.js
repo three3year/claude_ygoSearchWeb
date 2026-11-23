@@ -1,7 +1,7 @@
 /**
  * action_fixture.js — 接縫三測試用的小動作索引(零 npm 依賴)
  *
- * 把讀得懂的描述 `[{ id, segs: [{ kind, pol, acts, replacing, clause }], unres: [未解析的來源],
+ * 把讀得懂的描述 `[{ id, segs: [{ kind, pol, acts, replacing, clause, agent }], unres: [未解析的來源],
  * refs: [引用列] }]` 寫成
  * `web/action-data.js` 的格式(`script/action_structure/action_index.py` 的模組說明)。
  * 測試只寫「這張卡有哪些段、段裡有哪些動作詞」,不手抄編碼;格式由 Python 的建置
@@ -48,12 +48,13 @@ function unresOf(raw) {
 /**
  * cards:[{ id, blocks = 1,
  *          segs: [{ kind = '效果', pol = '做', acts = [], replacing = false, clause = null,
- *                   block = 0, lines = [線的描述] }],
+ *                   block = 0, lines = [線的描述], agent = '算我方' }],
  *          unres: [{ kind = '效果', pol = '做', acts = [], replacing = false,
  *                    reference = false, reason = true, substituting = true }],
  *          refs: [引用列] }]
  *   blocks:頂層區塊數;段的 block 是它在第幾個區塊。
  *   clause:段對回的效果句序號(前端索引 `tx` 的位置),null 是對不回(票 07 的「效果」格)。
+ *   agent:段的誰(票 10):我方、對手、雙方各自、算我方、不限定。
  *   unres 是未解析的來源(票 15):acts 是原文字面的動作詞;reason / substituting 是
  *   不代入卡時 / 代入卡(指定卡、給條件)時判不判得了(true = 判不了,進未解析組);
  *   reference 是解析不出的引用節點。
@@ -71,6 +72,7 @@ function actionData(cards, ids, noText) {
   const actions = vocabOf(segs.flatMap(s => s.acts).concat(unres.flatMap(u => u.acts)));
   const kinds = vocabOf(segs.map(s => s.kind).concat(unres.map(u => u.kind).filter(k => k)));
   const polarities = vocabOf(segs.map(s => s.pol).concat(unres.map(u => u.pol).filter(p => p)));
+  const agents = vocabOf(segs.map(s => s.agent || '算我方'));
   const rows = {};
   segs.forEach(s => s.acts.forEach(a => { rows[a] = (rows[a] || 0) + (s.rows || 1); }));
   const lineList = segs.flatMap(s => s.lines || []);
@@ -133,6 +135,7 @@ function actionData(cards, ids, noText) {
     }),
     (c.refs || []).map(reference),
     c.segs.map(s => (s.clause == null ? null : s.clause)),
+    c.segs.map(s => agents.indexOf(s.agent || '算我方')),
   ]);
   return {
     ids: order,
@@ -142,6 +145,7 @@ function actionData(cards, ids, noText) {
     kinds,
     polarities,
     blockKinds: ['編號效果'],
+    agents,
     noText: noText || [],
     parts,
     archetypes: [],

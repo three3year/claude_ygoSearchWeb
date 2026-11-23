@@ -23,6 +23,13 @@ const DEFAULT_KINDS = ['eff', 'cost'];
 const POLARITIES = { do: ['做', '可以', '必須'], limit: ['不能', '只能'], resist: ['不會'] };
 const DEFAULT_POL = 'do';
 
+/* 誰(票 10):玩家介面可選的值,和 Python `run_query` 的 `agent` 相同。段那一邊的值
+   (寫明的、算我方、不限定)攤平時已經定好,這裡只比對。 */
+const AGENTS = ['我方', '對手'];
+const BOTH_SIDES = '雙方各自';
+const IMPLIED_SELF = '算我方';
+const UNRESTRICTED = '不限定';
+
 /* 「更多」以外直接顯示的動作詞數:常用的一屏看得完,其餘收起來。 */
 const SHOWN_WORDS = 14;
 
@@ -64,15 +71,19 @@ function condOf(raw) {
   const kinds = kindsOf(raw.kinds);
   if (kinds.join() !== DEFAULT_KINDS.join()) c.kinds = kinds;
   if (raw.pol !== DEFAULT_POL && POLARITIES[raw.pol]) c.pol = raw.pol;
+  if (AGENTS.indexOf(raw.agent) >= 0) c.agent = raw.agent;
   const target = targetOf(raw.target);
   if (target) c.target = target;
-  return Object.keys(c).length ? c : null;
+  if (!Object.keys(c).length) return null;
+  // 「含不限定的」只放寬誰(之後也放寬原因),自己不篩東西:不單獨成為條件、不算條件數
+  if (raw.unrestricted === true) c.unrestricted = true;
+  return c;
 }
 
 /* 生效中的動作條件數(窄螢幕摺疊鈕上的數字):一個欄位算一條,動作詞選幾個都是一條。 */
 function count(cond) {
   const c = condOf(cond);
-  return c ? Object.keys(c).length : 0;
+  return c ? Object.keys(c).filter(k => k !== 'unrestricted').length : 0;
 }
 
 /* 段類別勾選的正規形:照 KIND_KEYS 的順序;認不得的勾選忽略,一個都沒有就是預設
@@ -97,6 +108,8 @@ function rowQuery(cond) {
   if (kinds.indexOf('cond') >= 0) rq.include_condition = true;
   if (c.from) rq.from_zones = zoneQuery(c.from);
   if (c.to) rq.to_zones = zoneQuery(c.to);
+  if (c.agent) rq.agent = c.agent;
+  if (c.unrestricted) rq.include_unrestricted = true;
   if (c.target === TARGET_SELF) rq.this_card = true;
   else if (c.target) rq.card = c.target.card;
   return rq;
@@ -165,11 +178,12 @@ function prepare(raw) {
     polarityAt: at(raw.polarities),
     zoneAt: at(raw.zones.map(z => z[0])),
     sideAt: at(raw.sides),
-    cards: raw.cards.map(([id, , segments, unresolved, , clauses]) => ({
+    cards: raw.cards.map(([id, , segments, unresolved, , clauses, agents]) => ({
       id,
       segments: segments.map(([seg, block, kind, polarity, replacing, actions, lines], i) =>
         ({ id: seg, block, kind, polarity, replacing: !!replacing, actions,
-           lines: lines.map(lineOf), clause: clauseAt(clauses, i) })),
+           lines: lines.map(lineOf), clause: clauseAt(clauses, i),
+           agent: raw.agents[agents[i]] })),
       unresolved: (unresolved || []).map(([kind, polarity, , flags, actions]) =>
         ({ kind, polarity, flags, actions })),
     })),
@@ -222,6 +236,14 @@ function options(index) {
     .sort((a, b) => b.rows - a.rows || a.i - b.i)
     .map(w => w.word);
   return { shown: words.slice(0, SHOWN_WORDS), more: words.slice(SHOWN_WORDS) };
+}
+
+/* 誰(spec「比對規則」):寫明的值相同或是雙方各自命中;算我方只在查我方時命中;
+   不限定只在不限定開關開時命中。 */
+function agentMatches(want, have, includeUnrestricted) {
+  if (have === UNRESTRICTED) return includeUnrestricted;
+  if (have === IMPLIED_SELF) return want === '我方';
+  return have === want || have === BOTH_SIDES;
 }
 
 /* 從、到的區域選項:索引的區域表依列數排(同列數照索引的順序)。 */
@@ -300,6 +322,7 @@ function match(index, rq) {
       if (seg.replacing || !kinds.has(seg.kind) || !polarities.has(seg.polarity)) continue;
       if (!wanted.every(a => seg.actions.indexOf(a) >= 0)) continue;
       if (lineFits && !seg.lines.some(lineFits)) continue;
+      if (rq.agent && !agentMatches(rq.agent, seg.agent, !!rq.include_unrestricted)) continue;
       if (!hits.has(card.id)) hits.set(card.id, []);
       hits.get(card.id).push(seg);
     }

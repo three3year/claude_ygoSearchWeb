@@ -3,6 +3,8 @@
 (() => {
 const { DB, META, $, fmtTime } = Util;
 
+/* 目前這一筆瀏覽紀錄存的查詢狀態(正規形的 JSON)。搜尋與它相同時不新增一筆,
+   上一頁才不會停在同一個查詢上。 */
 let applied = '';
 
 let appliedQuery = null;
@@ -13,11 +15,13 @@ function run() {
   View.render(Engine.runQuery(DB, appliedQuery));
 }
 
+/* 網址不帶任何參數:不給第三個引數,網址維持原樣。雙擊開啟(file://)也能用。 */
 function push() {
-  const hash = Hash.stringify({ q: appliedQuery, sort: View.sort() });
-  applied = hash;
-  if (hash === String(location.hash).replace(/^#/, '')) return;
-  location.hash = hash;           // 指派即 pushState 語意:上一頁回得到前一次
+  const state = Saved.snapshot(appliedQuery, View.sort());
+  const json = JSON.stringify(state);
+  if (json === applied) return;
+  applied = json;
+  history.pushState(state, '');
 }
 
 function search() {
@@ -28,8 +32,9 @@ function search() {
   window.scrollTo(0, 0);
 }
 
-function restore() {
-  const state = Hash.parse(location.hash);
+function restore(raw) {
+  const state = Saved.restore(raw);
+  applied = JSON.stringify(state);
   Query.write(state.q);
   View.setSort(state.sort.key, state.sort.dir);
   View.setPage(1);
@@ -39,11 +44,11 @@ function restore() {
   View.render(null);
 }
 
-function onHashChange() {
-  const hash = Hash.canon(location.hash);
-  if (hash === applied) return;
-  applied = hash;
-  restore();
+/* 舊版網站把條件寫在網址上(`#attr=dark…`),那種網址不解讀:顯示首頁、把參數
+   清掉。只換網址、保留這一筆存的狀態——重新整理時狀態還在。 */
+function clearUrl() {
+  if (!location.search && !location.hash) return;
+  history.replaceState(history.state, '', location.href.split(/[?#]/)[0]);
 }
 
 function renderSources() {
@@ -84,9 +89,9 @@ function init() {
   $('sidebar').addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT') search();
   });
-  window.addEventListener('hashchange', onHashChange);
-  applied = Hash.canon(location.hash);
-  restore();
+  window.addEventListener('popstate', e => { clearUrl(); restore(e.state); });
+  clearUrl();
+  restore(history.state);
 }
 
 document.addEventListener('DOMContentLoaded', init);

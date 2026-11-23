@@ -46,6 +46,12 @@ function rowQuery(cond) {
   };
 }
 
+/* 段對回的效果句序號(前端索引 `tx` 的位置,票 07 的「效果」格);對不回或舊產物沒有這格是 null。 */
+function clauseAt(clauses, i) {
+  const c = clauses && clauses[i];
+  return c == null ? null : c;
+}
+
 /* 產物 → 比對用的形狀:值的清單換成「值 → 位置」,段只留比對要用的欄。 */
 function prepare(raw) {
   const at = list => new Map(list.map((v, i) => [v, i]));
@@ -54,10 +60,11 @@ function prepare(raw) {
     actionAt: at(raw.actions.map(a => a[0])),
     kindAt: at(raw.kinds),
     polarityAt: at(raw.polarities),
-    cards: raw.cards.map(([id, , segments]) => ({
+    cards: raw.cards.map(([id, , segments, , , clauses]) => ({
       id,
-      segments: segments.map(([seg, , kind, polarity, replacing, actions]) =>
-        ({ id: seg, kind, polarity, replacing: !!replacing, actions })),
+      segments: segments.map(([seg, , kind, polarity, replacing, actions], i) =>
+        ({ id: seg, kind, polarity, replacing: !!replacing, actions,
+           clause: clauseAt(clauses, i) })),
     })),
   };
 }

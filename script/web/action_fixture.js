@@ -1,7 +1,8 @@
 /**
  * action_fixture.js — 接縫三測試用的小動作索引(零 npm 依賴)
  *
- * 把讀得懂的描述 `[{ id, segs: [{ kind, pol, acts, replacing, clause, agent }], unres: [未解析的來源],
+ * 把讀得懂的描述 `[{ id, segs: [{ kind, pol, acts, replacing, clause, agent, recipient, cause }],
+ * unres: [未解析的來源],
  * refs: [引用列] }]` 寫成
  * `web/action-data.js` 的格式(`script/action_structure/action_index.py` 的模組說明)。
  * 測試只寫「這張卡有哪些段、段裡有哪些動作詞」,不手抄編碼;格式由 Python 的建置
@@ -48,13 +49,16 @@ function unresOf(raw) {
 /**
  * cards:[{ id, blocks = 1,
  *          segs: [{ kind = '效果', pol = '做', acts = [], replacing = false, clause = null,
- *                   block = 0, lines = [線的描述], agent = '算我方' }],
+ *                   block = 0, lines = [線的描述], agent = '算我方', recipient = null,
+ *                   cause = null }],
  *          unres: [{ kind = '效果', pol = '做', acts = [], replacing = false,
  *                    reference = false, reason = true, substituting = true }],
  *          refs: [引用列] }]
  *   blocks:頂層區塊數;段的 block 是它在第幾個區塊。
  *   clause:段對回的效果句序號(前端索引 `tx` 的位置),null 是對不回(票 07 的「效果」格)。
  *   agent:段的誰(票 10):我方、對手、雙方各自、算我方、不限定。
+ *   recipient:段的受方(票 11):我方、對手、雙方各自,null 是受方是卡或沒有受方。
+ *   cause:段的原因(票 11):[種類, 方或 null];沒寫原因的被動句 ['不限定', null],主動句 null。
  *   unres 是未解析的來源(票 15):acts 是原文字面的動作詞;reason / substituting 是
  *   不代入卡時 / 代入卡(指定卡、給條件)時判不判得了(true = 判不了,進未解析組);
  *   reference 是解析不出的引用節點。
@@ -78,7 +82,14 @@ function actionData(cards, ids, noText, archetypes) {
   segs.forEach(s => s.acts.forEach(a => { rows[a] = (rows[a] || 0) + (s.rows || 1); }));
   const lineList = segs.flatMap(s => s.lines || []);
   const zones = vocabOf(lineList.flatMap(l => lineZones(l).map(z => z[0])));
-  const sides = vocabOf(lineList.flatMap(l => lineZones(l).map(z => z[1])));
+  // 方的清單和建置一樣 null 排最前;受方與原因的方也在這份清單裡(票 11)
+  const sides = [null].concat(vocabOf(lineList.flatMap(l => lineZones(l).map(z => z[1]))
+    .concat(segs.map(s => s.recipient), segs.map(s => s.cause && s.cause[1]))
+    .filter(v => v != null)));
+  const causes = [null].concat(vocabOf(segs.filter(s => s.cause).map(s => s.cause[0])));
+  const causeRows = {};
+  segs.forEach(s => { const k = s.cause ? s.cause[0] : null; causeRows[k] = (causeRows[k] || 0) + 1; });
+  const causeCode = c => causes.indexOf(c ? c[0] : null) * 8 + sides.indexOf(c ? c[1] : null);
   const zoneRows = {};
   lineList.forEach(l => new Set(lineZones(l).map(z => z[0]))
     .forEach(z => { zoneRows[z] = (zoneRows[z] || 0) + 1; }));
@@ -137,6 +148,8 @@ function actionData(cards, ids, noText, archetypes) {
     (c.refs || []).map(reference),
     c.segs.map(s => (s.clause == null ? null : s.clause)),
     c.segs.map(s => agents.indexOf(s.agent || '算我方')),
+    c.segs.map(s => sides.indexOf(s.recipient == null ? null : s.recipient)),
+    c.segs.map(s => causeCode(s.cause)),
   ]);
   return {
     ids: order,
@@ -147,6 +160,7 @@ function actionData(cards, ids, noText, archetypes) {
     polarities,
     blockKinds: ['編號效果'],
     agents,
+    causes: causes.map(k => [k, causeRows[k] || 0]),
     noText: noText || [],
     parts,
     archetypes: (archetypes || []).map(a => [a.code, a.zh, setOf(a.members)]),

@@ -9,11 +9,12 @@
 版控的差異看得出是哪張卡、哪個集合變了。不帶時間與來源雜湊,同樣的輸入兩次產出逐位元組相同。
 
 - `ids`:前端索引的卡號,照前端索引的順序。候選卡集合與字段成員存的是這個順序的位置。
-- `actions` `zones` `sides` `kinds` `polarities` `blockKinds` `agents`:值的清單(照字串排序,新值只插進一格),
-  列裡存的是在清單裡的位置;`actions` `zones` 帶列數:[值, 列數]。
+- `actions` `zones` `sides` `kinds` `polarities` `blockKinds` `agents` `causes`:值的清單(照字串排序,
+  新值只插進一格),列裡存的是在清單裡的位置;`actions` `zones` `causes` 帶列數:[值, 列數]。
+  `causes` 是原因的種類,另含 null(沒寫原因的主動句)與「不限定」(沒寫原因的被動句)。
 - `sets`:候選卡集合,鍵是內容的雜湊(內容相同共用一份,別的集合增減不會改到它的鍵)。
   值是位置的清單,或位元集(第 i 位 = 位置 i,little-endian,base64),兩種取短的。
-- `cards`:一張卡一行 [卡號, 區塊, 段, 未解析的來源, 引用列, 效果, 誰],只列有東西的卡。
+- `cards`:一張卡一行 [卡號, 區塊, 段, 未解析的來源, 引用列, 效果, 誰, 受方, 原因],只列有東西的卡。
   - 區塊:[區塊種類]…,照卡片結構的頂層區塊順序;段與引用列用位置指它。
   - 段:[段 id, 區塊, 段類別, 極性, 是不是做代替的段, [動作詞], [線], 被改的屬性(有才寫)]。
   - 線:[旗標(1 做動作的一方、2 取對象), 從, 到, 物件];從、到是 0(沒有)或 [推得, 區域碼…],
@@ -28,6 +29,9 @@
     引用列的效果是引用節點所在的效果句。兩者都加在最後一格,先前的讀法照舊。
   - 誰(票 10):與段同序的清單,每段的誰在 `agents` 的位置;值是寫明的(我方、對手、雙方各自)、
     算我方或不限定(`action_rows.agent_of`)。
+  - 受方(票 11):與段同序的清單,每段的受方在 `sides` 的位置;受方是卡、沒有受方的是 null 的位置。
+  - 原因(票 11):與段同序的清單,每段的原因碼 = 種類在 `causes` 的位置 × 8 + 方在 `sides` 的位置
+    (沒寫方是 null 的位置),同區域碼。
 - `parts`:[效果, [[位置, [區塊]]…]]…:引用列的候選卡上,指定的部分不是整張的卡與它的區塊;沒列的看整張。
 - `archetypes`:[setcode, 中文名, 集合鍵]…,成員照卡片屬性表(位置條件不設限的列),沒有成員的不寫。
 - `noText`:無官方日文的卡號。
@@ -185,13 +189,18 @@ class _Encoder:
     def encode(self, archetypes):
         index = self.index
         vocab = {name: _Vocab() for name in
-                 ("actions", "zones", "sides", "kinds", "polarities", "blockKinds", "agents")}
+                 ("actions", "zones", "sides", "kinds", "polarities", "blockKinds", "agents",
+                  "causes")}
         self.vocab = vocab
         for row in index.rows:
             vocab["kinds"].add(row.kind)
             vocab["polarities"].add(row.polarity)
             vocab["blockKinds"].add(row.block_kind)
             vocab["agents"].add(row.agent)
+            vocab["sides"].add(row.recipient)
+            kind, side = row.cause or (None, None)
+            vocab["causes"].add(kind, 1)
+            vocab["sides"].add(side)
             for action in row.actions:
                 vocab["actions"].add(action, 1)
             zones = set()
@@ -232,6 +241,7 @@ class _Encoder:
             ("polarities", vocab["polarities"].items),
             ("blockKinds", vocab["blockKinds"].items),
             ("agents", vocab["agents"].items),
+            ("causes", [[c, vocab["causes"].count[c]] for c in vocab["causes"].items]),
             ("noText", [cid for cid, _ in index.no_text]),
             ("parts", parts),
             ("archetypes", _Lines([keyed(row) for row in archetype_rows])),
@@ -284,7 +294,8 @@ class _Encoder:
                 by_card[card] = {"blocks": {bid: i for i, (bid, _) in enumerate(blocks)},
                                  "kinds": [vocab["blockKinds"][k] for _, k in blocks],
                                  "segments": [], "unresolved": [], "references": [],
-                                 "clauses": [], "agents": []}
+                                 "clauses": [], "agents": [], "recipients": [],
+                                 "causes": []}
             return by_card[card]
 
         mapping = {NUMBER: 0, POSITION: 0, None: 0}
@@ -299,6 +310,9 @@ class _Encoder:
                     unmapped_cards.add(row.card)
                 e["clauses"].append(clause)
                 e["agents"].append(vocab["agents"][row.agent])
+                e["recipients"].append(vocab["sides"][row.recipient])
+                kind, side = row.cause or (None, None)
+                e["causes"].append(vocab["causes"][kind] * SIDE_SLOTS + vocab["sides"][side])
                 segment = [row.segment, e["blocks"][row.block], vocab["kinds"][row.kind],
                            vocab["polarities"][row.polarity], int(row.replacing),
                            sorted(vocab["actions"][a] for a in row.actions), []]
@@ -349,7 +363,7 @@ class _Encoder:
         for card in sorted(by_card, key=lambda cid: self.at[cid]):
             e = by_card[card]
             lines.append([card, e["kinds"], e["segments"], e["unresolved"], e["references"],
-                          e["clauses"], e["agents"]])
+                          e["clauses"], e["agents"], e["recipients"], e["causes"]])
         self.mapping = {"segments": sum(mapping.values()), "by_number": mapping[NUMBER],
                         "by_position": mapping[POSITION], "unmapped": mapping[None],
                         "unmapped_cards": sorted(unmapped_cards, key=lambda cid: self.at[cid]),
@@ -470,7 +484,8 @@ def decode_action_index(text):
      "cards": {卡號: {"blocks": [區塊種類], "segments": [段], "unresolved": [...],
                       "references": [...]}}}
     段與引用列的 `clause` 是對回的效果句序號(前端索引 `tx` 的位置),對不回是 None。
-    段的 `agent` 是誰(寫明的值、算我方或不限定)。
+    段的 `agent` 是誰(寫明的值、算我方或不限定);`recipient` 是受方是玩家時的方(否則 None);
+    `cause` 是 (種類, 方或 None),沒寫原因的被動句是 (不限定, None)、主動句是 None。
     """
     if not (text.startswith(GLOBAL) and text.endswith(";\n")):
         raise ValueError("不是動作索引")
@@ -481,6 +496,12 @@ def decode_action_index(text):
     actions = [a for a, _ in raw["actions"]]
     kinds, polarities, block_kinds = raw["kinds"], raw["polarities"], raw["blockKinds"]
     agents = raw["agents"]
+    causes = [c for c, _ in raw["causes"]]
+
+    def cause(code):
+        kind, side = causes[code // SIDE_SLOTS], sides[code % SIDE_SLOTS]
+        return None if kind is None else (kind, side)
+
     sets = {key: _decode_set(value, ids) for key, value in raw["sets"].items()}
     parts = [(effect, {ids[p]: blocks for p, blocks in entries})
              for effect, entries in raw["parts"]]
@@ -526,10 +547,12 @@ def decode_action_index(text):
                 "effect": effect, "parts": blocks, "clause": clause}
 
     cards = {}
-    for cid, blocks, segs, unres, refs, clauses, segment_agents in raw["cards"]:
+    for cid, blocks, segs, unres, refs, clauses, segment_agents, recipients, seg_causes             in raw["cards"]:
         cards[cid] = {"blocks": [block_kinds[k] for k in blocks],
-                      "segments": [dict(segment(v), clause=c, agent=agents[a])
-                                   for v, c, a in zip(segs, clauses, segment_agents)],
+                      "segments": [dict(segment(v), clause=c, agent=agents[a],
+                                        recipient=sides[r], cause=cause(k))
+                                   for v, c, a, r, k in zip(segs, clauses, segment_agents,
+                                                            recipients, seg_causes)],
                       "unresolved": [unresolved(v) for v in unres],
                       "references": [reference(v) for v in refs]}
     return {"ids": ids,

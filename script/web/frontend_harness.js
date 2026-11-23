@@ -79,6 +79,7 @@ const DRIVER = `
 ;function __conditionOptions() { return JSON.stringify(Action.conditionOptions()); }
 ;function __archetypeSuggest(text) { return JSON.stringify(Action.archetypeSuggest(__index(), text)); }
 ;function __zoneOptions() { return JSON.stringify(Action.zoneOptions(__index())); }
+;function __causeOptions() { return JSON.stringify(Action.causeOptions(__index())); }
 ;function __toggleKind(json) { var a = JSON.parse(json); return JSON.stringify(Action.toggleKind(a.kinds, a.kind)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
@@ -187,6 +188,11 @@ function actionOptions(sandbox) {
 /** 從、到的區域選項(票 09):索引的區域表依列數排。 */
 function zoneOptions(sandbox) {
   return JSON.parse(sandbox.__zoneOptions());
+}
+
+/** 原因的選項(票 11):索引的原因表依列數排,不列戰鬥或效果、戰鬥以外與沒寫的兩種。 */
+function causeOptions(sandbox) {
+  return JSON.parse(sandbox.__causeOptions());
 }
 
 /** 段類別勾選點一下之後的勾選(票 09):只剩一個勾著時不能取消。 */
@@ -317,6 +323,7 @@ module.exports = { load, search, ids, unsure, unsureText, marks, rowQuery, actio
                    sortedIds, sortKeys, savedState, restoreSaved, cardHtml };
 module.exports.zoneOptions = zoneOptions;          // 票 09
 module.exports.toggleKind = toggleKind;            // 票 09
+module.exports.causeOptions = causeOptions;        // 票 11
 
 /**
  * 給條件的大類、屬性、種族選項(票 13):`{ cat, attr, race }`,各是 [{ code, zh }]。

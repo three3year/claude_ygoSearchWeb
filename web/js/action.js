@@ -7,6 +7,7 @@
      count、rowQuery 加一行。
      `target` 是被動作的卡(票 12):'self'(這張卡自己)、`{ card: 卡號 }`(指定一張卡)或
      `{ condition: 給條件 }`(票 13);一個欄位只放得下一種,三者擇一由形狀保證。
+     `recipient` 是受方(票 11):我方或對手;`cause` 是原因(票 11):`{ kind }` 或 `{ kind, side }`。
    - 列查詢:動作條件換成比對列用的查詢,鍵名與值照 Python 的 `run_query`(`row_match`)。
      玩家介面不露出的選項在這裡用固定值;「兩邊答案一致」的測試把同一份列查詢交給
      `run_query`,所以兩邊比的是同一個問題。
@@ -30,6 +31,10 @@ const BOTH_SIDES = '雙方各自';
 const IMPLIED_SELF = '算我方';
 const UNRESTRICTED = '不限定';
 
+/* 原因(票 11):寫「戰鬥或效果」的段查戰鬥、查效果都命中,寫「戰鬥以外」的查效果命中;
+   其餘寫什麼比什麼(照 `row_match.CAUSE_COVERS`)。這兩種不列成選項。 */
+const CAUSE_COVERS = { '戰鬥或效果': ['戰鬥', '效果'], '戰鬥以外': ['效果'] };
+
 /* 「更多」以外直接顯示的動作詞數:常用的一屏看得完,其餘收起來。 */
 const SHOWN_WORDS = 14;
 
@@ -46,6 +51,17 @@ function zoneOf(raw) {
   const z = { zone: raw.zone.trim() };
   if (SIDES.indexOf(raw.side) >= 0) z.side = raw.side;
   return z;
+}
+
+/* 原因的正規形(票 11):`{ kind }` 或 `{ kind, side }`;種類不是字串(或是「不限定」這個
+   沒寫原因的記號)就整欄不算,方認不得就不限。 */
+function causeOf(raw) {
+  if (!isObj(raw) || typeof raw.kind !== 'string' || !raw.kind.trim()) return null;
+  const kind = raw.kind.trim();
+  if (kind === UNRESTRICTED) return null;
+  const c = { kind };
+  if (SIDES.indexOf(raw.side) >= 0) c.side = raw.side;
+  return c;
 }
 
 /* 被動作的卡的正規形:'self'、`{ card: 正整數卡號 }` 或 `{ condition: 給條件 }`;其餘(舊版網站
@@ -126,8 +142,11 @@ function condOf(raw) {
   if (AGENTS.indexOf(raw.agent) >= 0) c.agent = raw.agent;
   const target = targetOf(raw.target);
   if (target) c.target = target;
+  if (AGENTS.indexOf(raw.recipient) >= 0) c.recipient = raw.recipient;
+  const cause = causeOf(raw.cause);
+  if (cause) c.cause = cause;
   if (!Object.keys(c).length) return null;
-  // 「含不限定的」只放寬誰(之後也放寬原因),自己不篩東西:不單獨成為條件、不算條件數
+  // 「含不限定的」只放寬誰與原因,自己不篩東西:不單獨成為條件、不算條件數
   if (raw.unrestricted === true) c.unrestricted = true;
   return c;
 }
@@ -165,6 +184,8 @@ function rowQuery(cond) {
   if (c.target === TARGET_SELF) rq.this_card = true;
   else if (c.target && c.target.condition) rq.condition = conditionQuery(c.target.condition);
   else if (c.target) rq.card = c.target.card;
+  if (c.recipient) rq.recipient = c.recipient;
+  if (c.cause) rq.cause = { ...c.cause };
   return rq;
 }
 
@@ -232,6 +253,13 @@ function clauseAt(clauses, i) {
   return c == null ? null : c;
 }
 
+/* 段的原因(票 11):原因碼 = 種類在 `causes` 的位置 × 8 + 方在 `sides` 的位置。
+   沒寫原因的主動句(種類 null)是 null;被動句是 { kind: '不限定', side: null }。 */
+function causeAt(raw, code) {
+  const kind = raw.causes[Math.floor(code / SIDE_SLOTS)][0];
+  return kind === null ? null : { kind, side: raw.sides[code % SIDE_SLOTS] };
+}
+
 /* 產物 → 比對用的形狀:值的清單換成「值 → 位置」,段只留比對要用的欄。
    db 是前端索引的卡(給條件時算滿足條件的卡用,票 13);卡的位置照產物的 `ids`。 */
 function prepare(raw, db) {
@@ -274,12 +302,14 @@ function prepare(raw, db) {
     polarityAt: at(raw.polarities),
     zoneAt: at(raw.zones.map(z => z[0])),
     sideAt: at(raw.sides),
-    cards: raw.cards.map(([id, , segments, unresolved, , clauses, agents]) => ({
+    causes: raw.causes,
+    cards: raw.cards.map(([id, , segments, unresolved, , clauses, agents, recipients, causes]) => ({
       id,
       segments: segments.map(([seg, block, kind, polarity, replacing, actions, lines], i) =>
         ({ id: seg, block, kind, polarity, replacing: !!replacing, actions,
            lines: lines.map(lineOf), clause: clauseAt(clauses, i),
-           agent: raw.agents[agents[i]] })),
+           agent: raw.agents[agents[i]], recipient: raw.sides[recipients[i]],
+           cause: causeAt(raw, causes[i]) })),
       unresolved: (unresolved || []).map(([kind, polarity, , flags, actions]) =>
         ({ kind, polarity, flags, actions })),
     })),
@@ -384,6 +414,27 @@ function agentMatches(want, have, includeUnrestricted) {
   return have === want || have === BOTH_SIDES;
 }
 
+/* 原因(spec「比對規則」):沒寫原因的主動句不命中,被動句(不限定)只在開關開時命中;
+   種類相同或寫的涵蓋查的;查詢給了方時,段沒寫方、方相同或是雙方各自命中。 */
+function causeMatches(want, have, includeUnrestricted) {
+  if (!have) return false;
+  if (have.kind === UNRESTRICTED) return includeUnrestricted;
+  if (have.kind !== want.kind && (CAUSE_COVERS[have.kind] || []).indexOf(want.kind) < 0) {
+    return false;
+  }
+  return !want.side || have.side == null || have.side === want.side || have.side === BOTH_SIDES;
+}
+
+/* 原因的選項(票 11):索引的原因表依列數排(同列數照索引的順序);沒寫的兩種(null、不限定)
+   與「戰鬥或效果」「戰鬥以外」不列。 */
+function causeOptions(index) {
+  return index.causes
+    .map((c, i) => ({ kind: c[0], rows: c[1], i }))
+    .filter(c => c.kind !== null && c.kind !== UNRESTRICTED && !CAUSE_COVERS[c.kind])
+    .sort((a, b) => b.rows - a.rows || a.i - b.i)
+    .map(c => c.kind);
+}
+
 /* 從、到的區域選項:索引的區域表依列數排(同列數照索引的順序)。 */
 function zoneOptions(index) {
   return index.zones.map((z, i) => ({ zone: z[0], rows: z[1], i }))
@@ -470,6 +521,8 @@ function match(index, rq) {
       if (!wanted.every(a => seg.actions.indexOf(a) >= 0)) continue;
       if (lineFits && !seg.lines.some(lineFits)) continue;
       if (rq.agent && !agentMatches(rq.agent, seg.agent, !!rq.include_unrestricted)) continue;
+      if (rq.recipient && seg.recipient !== rq.recipient && seg.recipient !== BOTH_SIDES) continue;
+      if (rq.cause && !causeMatches(rq.cause, seg.cause, !!rq.include_unrestricted)) continue;
       if (!hits.has(card.id)) hits.set(card.id, []);
       hits.get(card.id).push(seg);
     }
@@ -553,6 +606,6 @@ function reaches(index, blockHits, cid, part, visiting) {
 }
 
   return Object.freeze({ condOf, count, rowQuery, suggest, prepare, options, match, unsure,
-    SIDES, DEFAULT_KINDS, DEFAULT_POL, zoneOptions, toggleKind,
+    SIDES, DEFAULT_KINDS, DEFAULT_POL, zoneOptions, causeOptions, toggleKind,
     conditionOptions, archetypeSuggest });
 })();

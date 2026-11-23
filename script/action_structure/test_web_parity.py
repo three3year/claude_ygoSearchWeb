@@ -4,7 +4,7 @@ Python 的 `run_query` 與網站的前端查詢引擎命中同一批卡。
 測試內建的卡片結構建成動作索引(`build_action_index`),連同前端索引的卡與一批動作條件交給
 node(`script/web/action_parity.js`,在接縫三的沙箱裡載入 `web/` 底下真實的前端檔)。前端把每條
 動作條件換成列查詢、查出命中的卡;同一份列查詢交給 `run_query`,比命中的卡號(特定、泛用、
-經引用的聯集,票 14;無法確認的卡由票 15 加)。之後每張加篩選的票都往 `CONDS` 加查詢。
+經引用的聯集,票 14)與無法確認的卡號(未解析組,票 15)。之後每張加篩選的票都往 `CONDS` 加查詢。
 
 這組測試需要機器上有 node(spec「測試從哪幾個接縫驗」的決定)。
 """
@@ -141,6 +141,20 @@ class WebParityTest(unittest.TestCase):
         self.assertNotIn(BLACK_PANTHER, hits[("破壞",)])
         self.assertFalse({LOOP_A, LOOP_B} & hits[("直接攻擊",)])
         self.assertLessEqual({LOOP_A, LOOP_B}, via[("加入手牌",)])
+
+    def test_cannot_confirm_cards_are_the_unparsed_group(self):
+        """前端的無法確認的卡號與 `run_query` 的未解析組相同(spec 測試決策,票 15)。"""
+        for cond, front in zip(CONDS, self.front):
+            with self.subTest(cond=cond):
+                python = run_query(self.structures, self.cards, front["rowQuery"])
+                self.assertEqual(sorted(front["unsure"]), sorted(python["groups"]["未解析"]))
+        # 夾具要問得出東西:有無官方日文以外的未解析卡;マスターモンク的解放命中,另有一段
+        # 字面含解放的段解析不出,只在命中的清單
+        unsure = {tuple(c["actions"]): set(f["unsure"]) for c, f in zip(CONDS, self.front)}
+        hits = {tuple(c["actions"]): set(f["ids"]) for c, f in zip(CONDS, self.front)}
+        self.assertTrue(unsure[("破壞",)] - unsure[("不存在的動作",)])
+        self.assertIn(MASTER_MONK, hits[("解放",)])
+        self.assertNotIn(MASTER_MONK, unsure[("解放",)])
 
 
 if __name__ == "__main__":

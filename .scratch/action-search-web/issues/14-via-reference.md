@@ -49,3 +49,11 @@
 - 例:破壞 全部 2,183 + 經引用 17 = 前端 2,200;特殊召喚 4,759 + 16 = 4,775;儀式召喚 230 + 11 = 241;返回 1,231 + 19 = 1,250;破壞+除外 10 + 8 = 18。
 - 前端 47 條查詢(含載入兩份產物)約 3.4 秒。
 
+
+### 合併整合分支(票 15、16 已在)
+
+- **和票 16 的接法(已接)**:經引用的卡在 `Action.match` 的 Map 裡,值是 `{ via: true, block, clause }`,`clause` 是引用列第 5 格(引用節點所在的效果句);票 16 的 `sameClause`/`hitClauses` 只看 `clause`,引擎沒改。接縫三新增一項:只有動作條件時經引用的卡標引用節點所在的那一句(對不回的不標);和效果類型一起用時,引用節點所在的句要是那個效果類型(引用節點在 ② 啟動效果的卡,查誘發即時效果不收)。把 `clause` 換成 null 時這項變紅。
+- **和票 15 的接法(已接)**:經引用的卡在同一個 Map 裡,`Action.unsure(index, rq, found)` 收到的 `found` 已含經引用,經引用命中的卡不算無法確認(和 Python 的未解析組相同)。接縫三新增一項。
+- 合併時衝突在 `action.js`(`prepare` 的段同時帶 `block`、`clause`,卡帶 `unresolved`、索引帶 `noText`、`refs`;`unsure` 與 `viaHits` 都留)、`action_fixture.js`(兩邊的欄都留:`blocks`、段的 `block`/`clause`、`unres`、`refs`、`noText`)、`test_web_parity.py`(兩項新檢查都留)。排序那一項改成「標記與只有直接命中時相同」(票 16 起只有動作條件時 `marks` 多 `action`、`rows` 是命中的效果句)。
+- 合併後:`node --test` 151 項全過;`python -X utf8 -m unittest discover -s script/web` 104 項全過;`python -X utf8 -m unittest discover -s script/action_structure` 984 項全過。
+- 全庫重跑上面 47 條:命中的卡 47 條都與「全部 ∪ 經引用」相同,無法確認的卡 47 條都與未解析組相同。票 15 記的「特殊召喚前端多 3 張無法確認」(41209827、67926903、97769122)已一致:特殊召喚 未解析 1,703 = 無法確認 1,703。

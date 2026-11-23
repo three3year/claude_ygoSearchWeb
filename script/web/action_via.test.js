@@ -106,7 +106,7 @@ test('已經直接命中的卡不重複列;經引用的卡照樣要滿足卡片�
   assert.deepStrictEqual(harness.ids(box, { cat: { t: 1 } }, { actions: ['破壞'] }), [481]);
 });
 
-test('清單不分組、不加標記;經引用的卡照現有規則排序', () => {
+test('清單不分組、不加經引用的標記;經引用的卡照現有規則排序', () => {
   const data = actionData([
     { id: 491, segs: [{ acts: ['破壞'] }] },
     { id: 492, segs: [], refs: [{ to: [491] }] },
@@ -117,9 +117,61 @@ test('清單不分組、不加標記;經引用的卡照現有規則排序', () =
                  card(492, { n: '乙', atk: 3000 }), card(491, { n: '甲', atk: 1000 })];
   const box = harness.load({ cards, action: data });
   const act = { actions: ['破壞'] };
-  assert.deepStrictEqual(harness.search(box, {}, act),
-                         [493, 492, 491].map(id => ({ id, rows: null })));
-  assert.deepStrictEqual(harness.marks(box, {}, act), []);
+  assert.deepStrictEqual(harness.ids(box, {}, act), [493, 492, 491]);
+  // 標記與只有直接命中時相同(票 16 的動作底色),沒有分組或經引用的標記
+  const direct = harness.load({ cards, action: actionData([
+    { id: 491, segs: [{ acts: ['破壞'] }] }, { id: 493, segs: [{ acts: ['破壞'] }] }]) });
+  assert.deepStrictEqual(harness.marks(box, {}, act), harness.marks(direct, {}, act));
   assert.deepStrictEqual(harness.sortedIds(box, {}, 'atk', 'desc', act), [492, 491, 493]);
   assert.deepStrictEqual(harness.sortedIds(box, {}, 'atk', 'asc', act), [493, 491, 492]);
+});
+
+/* ── 和票 16(同一個效果、標出命中的效果)的接法 ────────────────
+   經引用的命中算在引用節點所在的效果上(spec「效果對應」)。 */
+
+const KIND_VOCAB = {
+  kind: { zh: '效果類型', items: [{ code: 'q', zh: '誘發即時效果(2速)' },
+                                   { code: 'i', zh: '啟動效果' }] },
+};
+
+test('經引用的命中算在引用節點所在的效果上:標出那一句、和句層條件取同一句', () => {
+  const data = actionData([
+    // 501 的 ② 引用 503;502 的 ① 引用 503;503 有破壞
+    { id: 501, segs: [{ acts: ['除外'], clause: 0 }], refs: [{ to: [503], clause: 1 }] },
+    { id: 502, segs: [], refs: [{ to: [503], clause: 0 }] },
+    { id: 503, segs: [{ acts: ['破壞'], clause: 0 }] },
+    // 504 的引用節點對不回效果
+    { id: 504, segs: [], refs: [{ to: [503], clause: null }] },
+  ]);
+  const cards = [
+    { id: 501, n: '②引用', c: 't', tx: ['①：除外。', '②：同一效果。'], k: ['q', 'i'] },
+    { id: 502, n: '①引用', c: 't', tx: ['①：同一效果。', '②：抽牌。'], k: ['q', 'i'] },
+    { id: 503, n: '被引用', c: 't', tx: ['①：破壞。'], k: ['i'] },
+    { id: 504, n: '對不回', c: 't', tx: ['①：同一效果。'], k: ['q'] },
+  ];
+  const box = harness.load({ cards, vocab: KIND_VOCAB, meta: {}, action: data });
+  const destroy = { actions: ['破壞'] };
+  const rows = q => harness.search(box, q, destroy).map(e => [e.id, e.rows]);
+  // 只有動作條件:經引用的卡標引用節點所在的那一句;對不回的不標
+  assert.deepStrictEqual(rows({}), [[501, [1]], [502, [0]], [503, [0]], [504, []]]);
+  // 效果類型「誘發即時效果」:502 的 ① 是誘發即時、引用節點也在 ①;501 的 ② 是啟動效果
+  assert.deepStrictEqual(rows({ kind: { q: 1 } }), [[502, [0]], [504, []]]);
+  // 504 沒有啟動效果的句:句層條件本身沒命中,照樣不命中
+  assert.deepStrictEqual(rows({ kind: { i: 1 } }), [[501, [1]], [503, [0]]]);
+});
+
+
+/* ── 和票 15(無法確認的張數)的接法 ──────────────────────── */
+
+test('經引用命中的卡不算無法確認', () => {
+  // 511 有一段解析不出、字面含破壞,但經引用 512 命中:只在命中的清單(Python 的未解析組同樣不收)
+  const data = actionData([
+    { id: 511, unres: [{ acts: ['破壞'] }], refs: [{ to: [512] }] },
+    { id: 512, segs: [{ acts: ['破壞'] }] },
+    { id: 513, unres: [{ acts: ['破壞'] }] },
+  ]);
+  const box = harness.load({ cards: [card(511), card(512), card(513)], action: data });
+  const destroy = { actions: ['破壞'] };
+  assert.deepStrictEqual(harness.ids(box, {}, destroy), [511, 512]);
+  assert.deepStrictEqual(harness.unsure(box, {}, destroy), [513]);
 });

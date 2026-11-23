@@ -149,11 +149,35 @@ function clauseRows(c, parts, kindSel, optSel, matOn) {
   return rows;
 }
 
+/* 同一個效果(票 16):句層條件命中的效果句 rows 和動作命中的段要落在同一句。
+   段對不回效果(clause 是 null)時當作符合,但它不標出效果句。
+   回 null 表示這張卡不命中;回 [] 表示命中、但沒有可標的效果句。 */
+function sameClause(rows, segments) {
+  if (!rows.length) return null;
+  const at = new Set(segments.map(s => s.clause));
+  const same = rows.filter(i => at.has(i));
+  return same.length || at.has(null) ? same : null;
+}
+
+/* 只有動作條件時命中的效果句:動作命中的段對回的那幾句(對不回的段不標)。 */
+function hitClauses(segments) {
+  const at = new Set(segments.map(s => s.clause));
+  at.delete(null);
+  return Array.from(at).sort((a, b) => a - b);
+}
+
 /* 動作條件(票 08)是另一組條件,和卡片條件取且:卡要同時命中動作索引裡的段。
-   沒有動作條件時不碰動作索引(還沒載入也沒關係),結果與沒有這組條件時相同。 */
+   沒有動作條件時不碰動作索引(還沒載入也沒關係),結果與沒有這組條件時相同。
+   有動作條件時(票 16)句層條件要和動作命中的段落在同一個效果句,rows 是那幾句;
+   只有動作條件時 rows 是動作命中的段對回的效果句。marks 多一個 action(只加底色)。
+   無法確認的卡(票 15,`unsure`,照 db 的順序):未解析組裡同時滿足卡片條件的卡;
+   句層條件要有符合的效果句,但不做同一效果的判斷。沒有動作條件時是空的。 */
 function runQuery(db, q, act, actionIndex) {
   q = q || {};
-  const acted = Action.count(act) ? Action.match(actionIndex, Action.rowQuery(act)) : null;
+  const rq = Action.count(act) ? Action.rowQuery(act) : null;
+  const acted = rq ? Action.match(actionIndex, rq) : null;
+  const unresolved = rq ? Action.unsure(actionIndex, rq, acted) : null;
+  const unsure = [];
   const name = term(q.name);
   const code = term(q.code);
   const codeOk = DIGITS.test(code);
@@ -165,20 +189,31 @@ function runQuery(db, q, act, actionIndex) {
   if (textParts.length) marks.push({ type: 'text', value: text });
   if (kindSel) marks.push({ type: 'kind' });
   if (optSel) marks.push({ type: 'opt' });
+  const sentenced = marks.length > 0;
+  if (acted) marks.push({ type: 'action' });
   const cards = [];
   for (const c of db) {
     if (name && !nameHit(c, name, q.nameLang)) continue;
     if (code && !(codeOk && idHit(c, code))) continue;
     if (!paramHit(c, q)) continue;
-    if (acted && !acted.has(c.id)) continue;
+    if (acted && !acted.has(c.id)) {
+      if (unresolved.has(c.id)
+          && (!sentenced || clauseRows(c, textParts, kindSel, optSel, !!q.textMat).length)) {
+        unsure.push(c.id);
+      }
+      continue;
+    }
     let rows = null;
-    if (marks.length) {
+    if (sentenced) {
       rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
-      if (!rows.length) continue;
+      rows = acted ? sameClause(rows, acted.get(c.id)) : (rows.length ? rows : null);
+      if (!rows) continue;
+    } else if (acted) {
+      rows = hitClauses(acted.get(c.id));
     }
     cards.push({ card: c, rows });
   }
-  return { cards, marks };
+  return { cards, marks, unsure };
 }
 
   return Object.freeze({ runQuery, likeParts, likeRanges });

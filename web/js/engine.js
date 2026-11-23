@@ -150,10 +150,9 @@ function clauseRows(c, parts, kindSel, optSel, matOn) {
 }
 
 function sameClause(rows, segments) {
-  if (!rows.length) return null;
   const at = new Set(segments.map(s => s.clause));
   const same = rows.filter(i => at.has(i));
-  return same.length || at.has(null) ? same : null;
+  return { fits: same.length > 0 || (rows.length > 0 && at.has(null)), rows: same };
 }
 
 function hitClauses(segments) {
@@ -196,8 +195,13 @@ function runQuery(db, q, act, actionIndex) {
     let rows = null;
     if (sentenced) {
       rows = clauseRows(c, textParts, kindSel, optSel, !!q.textMat);
-      rows = acted ? sameClause(rows, acted.get(c.id)) : (rows.length ? rows : null);
-      if (!rows) continue;
+      if (acted) {
+        const same = sameClause(rows, acted.get(c.id));
+        if (!same.fits) continue;
+        rows = same.rows;
+      } else if (!rows.length) {
+        continue;
+      }
     } else if (acted) {
       rows = hitClauses(acted.get(c.id));
     }

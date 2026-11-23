@@ -36,6 +36,8 @@ function esc(s) {
 
 const pad8 = id => String(id).padStart(8, '0');
 
+const isObj = v => v != null && typeof v === 'object' && !Array.isArray(v);
+
 function fmtTime(v) {
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):\d{2}\+0800$/
     .exec(typeof v === 'string' ? v : '');
@@ -49,6 +51,6 @@ const byId = id => INDEX.get(+id);
     DB, META, VOCAB,
     CAT_ZH, KIND_ZH, ATTR_ZH, RACE_ZH, ROLE_ZH, OPT_ZH, OT_ZH, LM_ZH, LM_CODES,
     SUB_ZH, BAN_ZH,
-    zhTable, codesOf, $, esc, pad8, byId, fmtTime,
+    zhTable, codesOf, $, esc, pad8, byId, fmtTime, isObj,
   });
 })();

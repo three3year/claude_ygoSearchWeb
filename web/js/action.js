@@ -1,6 +1,7 @@
 'use strict';
 
 const Action = (() => {
+const { isObj } = Util;
 
 const KINDS = { eff: ['效果', '召喚手續', '限制'], cost: ['代價'], cond: ['條件'] };
 const KIND_KEYS = Object.keys(KINDS);
@@ -8,7 +9,7 @@ const DEFAULT_KINDS = ['eff', 'cost'];
 const POLARITIES = { do: ['做', '可以', '必須'], limit: ['不能', '只能'], resist: ['不會'] };
 const DEFAULT_POL = 'do';
 
-const AGENTS = ['我方', '對手'];
+const SIDES = ['我方', '對手'];
 const BOTH_SIDES = '雙方各自';
 const IMPLIED_SELF = '算我方';
 const UNRESTRICTED = '不限定';
@@ -17,9 +18,6 @@ const CAUSE_COVERS = { '戰鬥或效果': ['戰鬥', '效果'], '戰鬥以外': 
 
 const SHOWN_WORDS = 14;
 
-const isObj = v => v != null && typeof v === 'object' && !Array.isArray(v);
-
-const SIDES = ['我方', '對手'];
 const SIDE_SLOTS = 8;
 
 function zoneOf(raw) {
@@ -100,10 +98,10 @@ function condOf(raw) {
   const kinds = kindsOf(raw.kinds);
   if (kinds.join() !== DEFAULT_KINDS.join()) c.kinds = kinds;
   if (raw.pol !== DEFAULT_POL && POLARITIES[raw.pol]) c.pol = raw.pol;
-  if (AGENTS.indexOf(raw.agent) >= 0) c.agent = raw.agent;
+  if (SIDES.indexOf(raw.agent) >= 0) c.agent = raw.agent;
   const target = targetOf(raw.target);
   if (target) c.target = target;
-  if (AGENTS.indexOf(raw.recipient) >= 0) c.recipient = raw.recipient;
+  if (SIDES.indexOf(raw.recipient) >= 0) c.recipient = raw.recipient;
   const cause = causeOf(raw.cause);
   if (cause) c.cause = cause;
   if (!Object.keys(c).length) return null;
@@ -183,13 +181,29 @@ function lineOf([flags, from, to, obj]) {
            object: obj === 0 ? null : { set: obj[1], kind: obj[2] || 0 } };
 }
 
-function memberTest(value) {
+function members(value) {
   if (Array.isArray(value)) {
     const set = new Set(value);
-    return p => set.has(p);
+    return { has: p => set.has(p), meets: bits => value.some(p => (bits[p >> 3] >> (p & 7)) & 1),
+             positions: () => value };
   }
   const bytes = atob(value);
-  return p => (p >> 3) < bytes.length && ((bytes.charCodeAt(p >> 3) >> (p & 7)) & 1) === 1;
+  return {
+    has: p => (p >> 3) < bytes.length && ((bytes.charCodeAt(p >> 3) >> (p & 7)) & 1) === 1,
+    meets(bits) {
+      const n = Math.min(bytes.length, bits.length);
+      for (let i = 0; i < n; i++) if (bytes.charCodeAt(i) & bits[i]) return true;
+      return false;
+    },
+    positions() {
+      const out = [];
+      for (let i = 0; i < bytes.length; i++) {
+        const b = bytes.charCodeAt(i);
+        for (let k = 0; k < 8; k++) if (b >> k & 1) out.push(i * 8 + k);
+      }
+      return out;
+    },
+  };
 }
 
 function clauseAt(clauses, i) {
@@ -204,16 +218,17 @@ function causeAt(raw, code) {
 
 function prepare(raw, db) {
   const at = list => new Map(list.map((v, i) => [v, i]));
-  const tests = new Map();
+  const decoded = new Map();
+  const setAt = key => {
+    if (!decoded.has(key)) decoded.set(key, members(raw.sets[key]));
+    return decoded.get(key);
+  };
   const cardAt = at(raw.ids);
   const front = (db || []).map(c => [cardAt.get(c.id), c]).filter(([p]) => p !== undefined);
   const archetypes = new Map((raw.archetypes || []).map(([code, , key]) => [code, key]));
   const index = {
     cardAt,
-    inSet(key, p) {
-      if (!tests.has(key)) tests.set(key, memberTest(raw.sets[key]));
-      return tests.get(key)(p);
-    },
+    inSet: (key, p) => setAt(key).has(p),
     archetypes: (raw.archetypes || []).map(([code, zh]) => ({ code, zh: zh || '' })),
     inArchetype: (code, p) => archetypes.has(code) && index.inSet(archetypes.get(code), p),
     satisfying(condition) {
@@ -223,14 +238,7 @@ function prepare(raw, db) {
       }
       return bits;
     },
-    meets(key, bits) {
-      const value = raw.sets[key];
-      if (Array.isArray(value)) return value.some(p => (bits[p >> 3] >> (p & 7)) & 1);
-      const bytes = atob(value);
-      const n = Math.min(bytes.length, bits.length);
-      for (let i = 0; i < n; i++) if (bytes.charCodeAt(i) & bits[i]) return true;
-      return false;
-    },
+    meets: (key, bits) => setAt(key).meets(bits),
     words: raw.actions,
     zones: raw.zones,
     actionAt: at(raw.actions.map(a => a[0])),
@@ -250,7 +258,7 @@ function prepare(raw, db) {
         ({ kind, polarity, flags, actions })),
     })),
     noText: raw.noText || [],
-    refs: references(raw),
+    refs: references(raw, setAt),
   };
   return index;
 }
@@ -290,7 +298,7 @@ function fitsCondition(index, cond, card, p) {
   }
 }
 
-function references(raw) {
+function references(raw, setAt) {
   const of = new Map();
   for (const [id, , , , refs] of raw.cards) {
     if (refs && refs.length) {
@@ -305,28 +313,20 @@ function references(raw) {
     of,
     blocksOf: (id, part) => parts[part].get(id) || null,
     candidates(key) {
-      if (!decoded.has(key)) decoded.set(key, decodeSet(raw.sets[key], raw.ids));
+      if (!decoded.has(key)) decoded.set(key, setAt(key).positions().map(p => raw.ids[p]));
       return decoded.get(key);
     },
   };
 }
 
-function decodeSet(value, ids) {
-  if (Array.isArray(value)) return value.map(p => ids[p]);
-  const bytes = atob(value);
-  const out = [];
-  for (let i = 0; i < bytes.length; i++) {
-    const b = bytes.charCodeAt(i);
-    for (let k = 0; k < 8; k++) if (b >> k & 1) out.push(ids[i * 8 + k]);
-  }
-  return out;
+function byRows(counted) {
+  return counted.map(([value, rows], i) => ({ value, rows, i }))
+    .sort((a, b) => b.rows - a.rows || a.i - b.i)
+    .map(c => c.value);
 }
 
 function options(index) {
-  const words = index.words.filter(w => w[1] > 0)
-    .map((w, i) => ({ word: w[0], rows: w[1], i }))
-    .sort((a, b) => b.rows - a.rows || a.i - b.i)
-    .map(w => w.word);
+  const words = byRows(index.words.filter(w => w[1] > 0));
   return { shown: words.slice(0, SHOWN_WORDS), more: words.slice(SHOWN_WORDS) };
 }
 
@@ -346,17 +346,12 @@ function causeMatches(want, have, includeUnrestricted) {
 }
 
 function causeOptions(index) {
-  return index.causes
-    .map((c, i) => ({ kind: c[0], rows: c[1], i }))
-    .filter(c => c.kind !== null && c.kind !== UNRESTRICTED && !CAUSE_COVERS[c.kind])
-    .sort((a, b) => b.rows - a.rows || a.i - b.i)
-    .map(c => c.kind);
+  return byRows(index.causes)
+    .filter(kind => kind !== null && kind !== UNRESTRICTED && !CAUSE_COVERS[kind]);
 }
 
 function zoneOptions(index) {
-  return index.zones.map((z, i) => ({ zone: z[0], rows: z[1], i }))
-    .sort((a, b) => b.rows - a.rows || a.i - b.i)
-    .map(z => z.zone);
+  return byRows(index.zones);
 }
 
 function toggleKind(kinds, kind) {
@@ -411,12 +406,18 @@ function lineTest(index, rq) {
     && (!from || from(line.from)) && (!to || to(line.to)) && (!object || object(line.object));
 }
 
+function segmentScope(index, rq) {
+  const wanted = positions(index.actionAt, rq.actions);
+  if (wanted.some(a => a === undefined)) return null;
+  return { wanted, kinds: kindSet(index, rq),
+           polarities: new Set(positions(index.polarityAt, rq.polarities)) };
+}
+
 function match(index, rq) {
   const hits = new Map();
-  const wanted = positions(index.actionAt, rq.actions);
-  if (wanted.some(a => a === undefined)) return hits;
-  const kinds = kindSet(index, rq);
-  const polarities = new Set(positions(index.polarityAt, rq.polarities));
+  const scope = segmentScope(index, rq);
+  if (!scope) return hits;
+  const { wanted, kinds, polarities } = scope;
   const lineFits = lineTest(index, rq);
   for (const card of index.cards) {
     for (const seg of card.segments) {
@@ -439,10 +440,9 @@ const U_REPLACING = 1, U_REASON = 4, U_REASON_SUBSTITUTING = 8, U_REFERENCE = 16
 function unsure(index, rq, found) {
   const out = new Set(index.noText.filter(id => !found.has(id)));
   if (!rq.actions.length) return out;
-  const wanted = positions(index.actionAt, rq.actions);
-  if (wanted.some(a => a === undefined)) return out;
-  const kinds = kindSet(index, rq);
-  const polarities = new Set(positions(index.polarityAt, rq.polarities));
+  const scope = segmentScope(index, rq);
+  if (!scope) return out;
+  const { wanted, kinds, polarities } = scope;
   const substituting = rq.card != null || rq.condition != null;
   const reason = substituting ? U_REASON_SUBSTITUTING : U_REASON;
   for (const card of index.cards) {

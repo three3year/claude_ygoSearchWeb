@@ -1,7 +1,7 @@
 'use strict';
 
 const Saved = (() => {
-const { VOCAB } = Util;
+const { VOCAB, isObj } = Util;
 
 const TEXTS = ['name', 'code', 'text'];
 
@@ -23,8 +23,6 @@ function schema() {
 }
 
 const SCHEMA = schema();
-
-const isObj = v => v != null && typeof v === 'object' && !Array.isArray(v);
 
 function langOf(v) {
   return (Query.LANGS.find(l => l.v === v) || Query.LANGS[0]).v;

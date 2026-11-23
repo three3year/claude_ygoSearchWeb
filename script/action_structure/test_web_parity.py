@@ -90,6 +90,22 @@ CONDS = [
     {"actions": ["破壞"], "pol": "resist", "agent": "對手", "unrestricted": True},
     {"actions": ["通常召喚"], "pol": "limit", "agent": "我方", "unrestricted": True},
     {"agent": "對手", "kinds": ["cond"]},
+] + [
+    # 票 11:受方與原因。夾具裡:ツッパリーチ、星逢の天河的代價段「…を相手に見せて」受方是對手;
+    # ツッパリーチ的條件段「通常のドローをした時」寫規則、「自分が効果でカードをドローした時」寫效果;
+    # フレシアの蟲惑魔「戦闘・効果では破壊されず」寫戰鬥或效果(不會);破壊者「このカードが召喚に
+    # 成功した時」是沒寫原因的被動句(不限定)。
+    {"actions": ["展示"], "recipient": "對手"},
+    {"actions": ["展示"], "recipient": "我方"},
+    {"recipient": "對手", "kinds": ["cost"]},
+    {"actions": ["抽牌"], "kinds": ["eff", "cond"], "cause": {"kind": "效果"}},
+    {"actions": ["抽牌"], "kinds": ["eff", "cond"], "cause": {"kind": "規則"}},
+    {"actions": ["抽牌"], "kinds": ["eff", "cond"], "cause": {"kind": "效果", "side": "對手"}},
+    {"actions": ["破壞"], "pol": "resist", "cause": {"kind": "戰鬥"}},
+    {"actions": ["破壞"], "pol": "resist", "cause": {"kind": "效果", "side": "對手"}},
+    {"actions": ["破壞"], "cause": {"kind": "效果"}},
+    {"actions": ["召喚"], "kinds": ["cond"], "cause": {"kind": "戰鬥"}},
+    {"actions": ["召喚"], "kinds": ["cond"], "cause": {"kind": "戰鬥"}, "unrestricted": True},
 ]
 LOOP_A, LOOP_B = 11, 12
 LOOP_TEXT = ("①：手札から通常罠カード１枚を墓地へ送って発動できる。"
@@ -252,6 +268,26 @@ class WebParityTest(unittest.TestCase):
         self.assertEqual(of({"actions": ["通常召喚"], "pol": "limit", "agent": "我方",
                              "unrestricted": True}), {MASTER_MONK})
         self.assertTrue(of({"agent": "對手", "kinds": ["cond"]}))
+
+    def test_recipient_and_cause_ask_something(self):
+        """票 11 的查詢問得出東西:受方分得出兩方、原因的種類與方、寫得比查詢寬的、開關加進
+        沒寫原因的被動句。"""
+        hits = {json.dumps(c, ensure_ascii=False, sort_keys=True): set(f["ids"])
+                for c, f in zip(CONDS, self.front)}
+
+        def of(cond):
+            return hits[json.dumps(cond, ensure_ascii=False, sort_keys=True)]
+        self.assertLessEqual({TSUPPA_REACH, HOSHIAI}, of({"actions": ["展示"], "recipient": "對手"}))
+        self.assertFalse(of({"actions": ["展示"], "recipient": "我方"}))
+        draw = {"actions": ["抽牌"], "kinds": ["eff", "cond"]}
+        self.assertIn(TSUPPA_REACH, of({**draw, "cause": {"kind": "效果"}}))
+        self.assertIn(TSUPPA_REACH, of({**draw, "cause": {"kind": "規則"}}))
+        self.assertIn(TSUPPA_REACH, of({**draw, "cause": {"kind": "效果", "side": "對手"}}))
+        self.assertEqual(of({"actions": ["破壞"], "pol": "resist", "cause": {"kind": "戰鬥"}}),
+                         {FRESHIA})
+        self.assertFalse(of({"actions": ["召喚"], "kinds": ["cond"], "cause": {"kind": "戰鬥"}}))
+        self.assertIn(DESTROYER, of({"actions": ["召喚"], "kinds": ["cond"],
+                                     "cause": {"kind": "戰鬥"}, "unrestricted": True}))
 
     def test_kinds_and_polarity_become_the_row_query(self):
         """介面選項到查詢的對應(spec「玩家介面」對應表):勾觸發條件連條件段開關一起開。"""

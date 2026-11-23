@@ -36,7 +36,9 @@ let pol = Action.DEFAULT_POL;
 const KIND_LABELS = { eff: '效果', cost: '代價', cond: '觸發條件' };
 const POL_LABELS = { do: '會做', limit: '限制', resist: '抗性' };
 let agent = '';              // 誰(票 10):'' = 不限,或 我方、對手
-let unrestricted = false;    // 「含不限定的」(不限定開關)
+let unrestricted = false;    // 「含不限定的」(不限定開關;誰與原因共用)
+let recipient = '';          // 受方(票 11):'' = 不限,或 我方、對手
+let cause = { kind: '', side: '' };   // 原因(票 11):種類 '' = 不限;方 '' = 不限哪一方
 
 /* 載完(或載入失敗)時 resolve,不 reject:失敗時動作條件不生效,其他條件照常查。 */
 function load() {
@@ -175,14 +177,41 @@ function polHtml() {
     <p class="action-hint">限制:不能、只能;抗性:不會被…</p>`;
 }
 
-/* 誰(票 10):不限/我方/對手三選一,加「含不限定的」勾選(預設關)。 */
+/* 不限/我方/對手三選一的按鈕列(誰、受方共用寫法)。 */
+function sideButtons(key, cur) {
+  const opt = (value, label) => `<button type="button" class="tri" data-${key}="${value}"
+    data-st="${cur === value ? 'in' : ''}">${label}</button>`;
+  return `<div class="tri-row">${opt('', '不限')}${opt('我方', '我方')}${opt('對手', '對手')}</div>`;
+}
+
+/* 誰(票 10):不限/我方/對手三選一。 */
 function agentHtml() {
-  const opt = (value, label) => `<button type="button" class="tri" data-agent="${value}"
-    data-st="${agent === value ? 'in' : ''}">${label}</button>`;
-  return `<span class="group-label">誰做的</span>
-    <div class="tri-row">${opt('', '不限')}${opt('我方', '我方')}${opt('對手', '對手')}</div>
-    <label class="mat-toggle"
-      title="卡文沒寫是誰的觸發條件與被動句(例如「モンスターが手札に戻った場合」)也算">
+  return `<span class="group-label">誰做的</span>${sideButtons('agent', agent)}`;
+}
+
+/* 受方(票 11):不限/我方/對手三選一;只比受方是玩家的段。 */
+function recipientHtml() {
+  return `<span class="group-label">落在誰身上</span>${sideButtons('recipient', recipient)}
+    <p class="action-hint">例如傷害、回復落在哪一方;受方是卡的不算</p>`;
+}
+
+/* 原因(票 11):種類的選項由索引的原因表生成;還原的種類索引裡沒有時也列出來。 */
+function causeHtml() {
+  const kinds = Action.causeOptions(index);
+  if (cause.kind && kinds.indexOf(cause.kind) < 0) kinds.push(cause.kind);
+  return `<span class="group-label">因為什麼</span>
+    <div class="range-row">
+      <select class="range-in" data-cause-kind="1">${option('', '不限', cause.kind)}${
+        kinds.map(k => option(k, k, cause.kind)).join('')}</select>
+      <select class="range-in" data-cause-side="1">${option('', '不限哪一方', cause.side)}${
+        Action.SIDES.map(sd => option(sd, `${sd}的`, cause.side)).join('')}</select>
+    </div>`;
+}
+
+/* 「含不限定的」勾選(票 10,預設關;票 11 起誰與原因共用)。 */
+function unrestrictedHtml() {
+  return `<label class="mat-toggle"
+      title="卡文沒寫是誰的觸發條件與被動句(例如「モンスターが手札に戻った場合」)、沒寫原因的被動句(例如「破壊された場合」)也算">
       <input type="checkbox" data-unrestricted="1"${unrestricted ? ' checked' : ''}>含不限定的
     </label>`;
 }
@@ -190,7 +219,8 @@ function agentHtml() {
 function fieldsHtml() {
   return index
     ? wordsHtml() + zoneHtml('from', '從哪裡', from) + zoneHtml('to', '到哪裡', to)
-      + targetHtml() + kindsHtml() + polHtml() + agentHtml()
+      + targetHtml() + kindsHtml() + polHtml() + agentHtml() + recipientHtml() + causeHtml()
+      + unrestrictedHtml()
     : '';
 }
 
@@ -213,7 +243,8 @@ function target() {
 
 function read() {
   return Action.condOf({ actions: selected, from: zoneCond(from), to: zoneCond(to), kinds, pol,
-                         agent, unrestricted, target: target() });
+                         agent, unrestricted, target: target(), recipient,
+                         cause: cause.kind ? { kind: cause.kind, side: cause.side } : null });
 }
 
 /* 還原帶動作條件的查詢時展開區塊(和其他軸一樣看得見設了什麼),也就載入索引。 */
@@ -226,6 +257,8 @@ function write(act) {
   pol = cond.pol || Action.DEFAULT_POL;
   agent = cond.agent || '';
   unrestricted = !!cond.unrestricted;
+  recipient = cond.recipient || '';
+  cause = { kind: '', side: '', ...cond.cause };
   const t = cond.target;
   targetMode = t === 'self' ? 'self' : t ? 'card' : 'none';
   targetCard = t && t !== 'self' ? t.card : null;
@@ -234,10 +267,13 @@ function write(act) {
   paint();
 }
 
-/* 「清除條件」:動作詞取消,從、到、段類別、極性、誰、「含不限定的」、被動作的卡回到預設。 */
+/* 「清除條件」:動作詞取消,從、到、段類別、極性、誰、受方、原因、「含不限定的」、被動作的卡
+   回到預設。 */
 function clear() {
   selected = [];
   agent = '';
+  recipient = '';
+  cause = { kind: '', side: '' };
   unrestricted = false;
   from = NO_ZONE();
   to = NO_ZONE();
@@ -266,6 +302,8 @@ function init() {
       pol = btn.dataset.pol;
     } else if (btn.dataset.agent !== undefined) {
       agent = btn.dataset.agent;
+    } else if (btn.dataset.recipient !== undefined) {
+      recipient = btn.dataset.recipient;
     } else if (btn.dataset.word) {
       const word = btn.dataset.word;
       selected = selected.indexOf(word) >= 0
@@ -290,6 +328,10 @@ function init() {
       kinds = Action.toggleKind(kinds, el.dataset.kind);
     } else if (el.dataset.unrestricted) {
       unrestricted = el.checked;
+    } else if (el.dataset.causeKind) {
+      cause.kind = el.value;
+    } else if (el.dataset.causeSide) {
+      cause.side = el.value;
     } else {
       return;
     }

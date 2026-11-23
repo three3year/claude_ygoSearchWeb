@@ -5,7 +5,8 @@
 列的單位是對象線:每條對象線一列,沒有線的段以段為一列(`line` 為 None)。同一段的列共用 `seq`。
 每一欄都是解讀完的值:
 - 段的欄:卡、段 id、段序號、所在的(頂層)區塊與區塊種類、段類別、極性、是不是做代替的段、
-  動作詞(上位詞已展開)、被改的屬性、原文位置(`Place`,效果對應用)、誰(`agent_of`)。
+  動作詞(上位詞已展開)、被改的屬性、原文位置(`Place`,效果對應用)、誰(`agent_of`)、
+  受方(`recipient_of`)、原因(`cause_of`)。
 - 線的欄(`Line`):做動作的一方(查詢比的是被動作的卡,這條線不比)、取對象(受方是被取對象的物件的段,
   每條線都算)、從、到(子區域算在上位區域內,推得值另標)、物件。
 - 物件(`LineObject`):是不是泛用物件、種類、候選卡。種類分得出此卡、候選卡集合、判不了、代不進去
@@ -41,6 +42,8 @@ REASON_SAME_DIFFERENT = "異同判不了"
 IMPLIED_SELF = "算我方"
 UNRESTRICTED = "不限定"
 IMPLIED_SELF_KINDS = ("效果", "代價", "召喚手續")
+# 原因(票 11):沒寫原因的被動句是不限定(和誰共用不限定開關),記成這個種類。
+PASSIVE = "被動"
 
 # 被動作的卡(物件)的種類(spec「動作索引」欄位表;沒有物件是 `Line.object` 為 None)。
 OBJECT_THIS = "此卡"                 # 物件0,或帶狀態的此卡
@@ -107,6 +110,8 @@ class Row(NamedTuple):
     place: Place
     line: Line | None
     agent: str
+    recipient: str | None    # 受方是玩家時的方;受方是卡、沒有受方時 None
+    cause: tuple | None      # (種類, 方或 None);沒寫:被動句 (不限定, None)、主動句 None
 
 
 class Unresolved(NamedTuple):
@@ -239,15 +244,15 @@ def flatten(structures, cards):
                         seg["polarity"], bool(seg["replaces"]), frozenset(segment_actions(seg)),
                         seg["modified"], _place(block, inner, seg["span"][0]))
                 seq += 1
-                agent = agent_of(seg, segments)
+                tail = (agent_of(seg, segments), recipient_of(seg), cause_of(seg))
                 if not seg["lines"]:
-                    index.rows.append(Row(*head, None, agent))
+                    index.rows.append(Row(*head, None, *tail))
                     continue
                 recipient_targeted = bool(isinstance(seg["recipient"], dict)
                                           and seg["recipient"].get("targeting"))
                 for line in seg["lines"]:
                     index.rows.append(Row(*head, _line(index, card, objects, seg, line,
-                                                       recipient_targeted), agent))
+                                                       recipient_targeted), *tail))
             for reason, text in _unparsed_references(block):
                 index.unresolved.append(Unresolved(
                     card["id"], block["kind"], block_reason, None, None, None, False,
@@ -304,6 +309,26 @@ def agent_of(seg, segments):
     if seg["kind"] in IMPLIED_SELF_KINDS and seg["voice"] != "被動":
         return IMPLIED_SELF
     return UNRESTRICTED
+
+
+def recipient_of(seg):
+    """段的受方是玩家時是哪一方(我方、對手、雙方各自;玩家字面取它的方);受方是卡(物件回指)或沒有受方
+    時 None。"""
+    recipient = seg["recipient"]
+    if isinstance(recipient, dict):
+        return recipient.get("side")
+    return recipient
+
+
+def cause_of(seg):
+    """段的原因:(種類, 方);沒寫方時方是 None。沒寫原因時,被動句是 (不限定, None),主動句(與沒有述語的段)
+    是 None。"""
+    cause = seg["cause"]
+    if cause is not None:
+        return cause["kind"], cause.get("side")
+    if seg["voice"] == PASSIVE:
+        return UNRESTRICTED, None
+    return None
 
 
 def _is_doer(line, seg):

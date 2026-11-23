@@ -18,6 +18,9 @@ VIA_GROUP = "經引用"
 VIA_GENERIC = "經泛用引用"
 AGENTS = ("我方", "對手")
 BOTH_SIDES = "雙方各自"
+# 原因的種類(票 11):寫戰鬥或效果的兩邊都算,寫戰鬥以外的算效果;其餘寫什麼比什麼。
+CAUSE_KINDS = ("戰鬥", "效果", "戰鬥或效果", "戰鬥以外", "作為素材", "召喚方式", "方法", "規則")
+CAUSE_COVERS = {"戰鬥或效果": ("戰鬥", "效果"), "戰鬥以外": ("效果",)}
 
 
 def _normalise(query):
@@ -26,7 +29,8 @@ def _normalise(query):
          "block_kinds": None, "include_condition": False,
          "include_inferred": False, "replacement": False,
          "polarities": ("做",), "generic_only": False, "modified": None,
-         "generic_reference": False, "agent": None, "include_unrestricted": False}
+         "generic_reference": False, "agent": None, "include_unrestricted": False,
+         "recipient": None, "cause": None}
     unknown = set(query) - set(q)
     if unknown:
         raise KeyError(f"查詢有不認得的欄位: {sorted(unknown)}")
@@ -50,12 +54,29 @@ def _normalise(query):
     q["allowed_kinds"] = kinds
     if q["agent"] is not None and q["agent"] not in AGENTS:
         raise ValueError(f"agent 只能是 {AGENTS}: {q['agent']!r}")
+    if q["recipient"] is not None and q["recipient"] not in AGENTS:
+        raise ValueError(f"recipient 只能是 {AGENTS}: {q['recipient']!r}")
+    q["cause"] = _normalise_cause(q["cause"])
     if q["modified"] is not None and set(q["modified"]) - set(MODIFIED_KEYS):
         raise KeyError(f"modified 有不認得的鍵: {sorted(set(q['modified']) - set(MODIFIED_KEYS))}")
     q["line_constrained"] = any((q["from_zones"], q["to_zones"],
                                  q["card"] is not None, q["this_card"],
                                  q["condition"] is not None, q["targeting"]))
     return q
+
+
+def _normalise_cause(cause):
+    """查詢的原因:種類,或 {"kind": 種類, "side": 我方/對手(可省)} → (種類, 方或 None)。"""
+    if cause is None:
+        return None
+    kind, side = (cause, None) if isinstance(cause, str) else (cause["kind"], cause.get("side"))
+    if isinstance(cause, dict) and set(cause) - {"kind", "side"}:
+        raise KeyError(f"cause 有不認得的鍵: {sorted(set(cause) - {'kind', 'side'})}")
+    if kind not in CAUSE_KINDS:
+        raise ValueError(f"cause 的種類只能是 {CAUSE_KINDS}: {kind!r}")
+    if side is not None and side not in AGENTS:
+        raise ValueError(f"cause 的方只能是 {AGENTS}: {side!r}")
+    return kind, side
 
 
 def modified_matches(want, have):
@@ -142,6 +163,11 @@ def _segment_hit_lines(rows, q, wanted):
     if q["agent"] is not None and not agent_matches(q["agent"], head.agent,
                                                     q["include_unrestricted"]):
         return None
+    if q["recipient"] is not None and head.recipient not in (q["recipient"], BOTH_SIDES):
+        return None
+    if q["cause"] is not None and not cause_matches(q["cause"], head.cause,
+                                                    q["include_unrestricted"]):
+        return None
     lines = [row.line for row in rows if row.line is not None]
     if not q["line_constrained"]:
         return lines
@@ -155,6 +181,19 @@ def agent_matches(want, have, include_unrestricted):
     if have == IMPLIED_SELF:
         return want == "我方"
     return have in (want, BOTH_SIDES)
+
+
+def cause_matches(want, have, include_unrestricted):
+    """原因:種類相同,或寫的種類涵蓋查的(戰鬥或效果涵蓋兩者、戰鬥以外涵蓋效果);查詢給了方時,段沒寫方、
+    方相同或是雙方各自命中。沒寫原因的被動句(不限定)只在開關開時命中,主動句不命中。"""
+    if have is None:
+        return False
+    kind, side = have
+    if kind == UNRESTRICTED:
+        return include_unrestricted
+    if kind != want[0] and want[0] not in CAUSE_COVERS.get(kind, ()):
+        return False
+    return want[1] is None or side in (None, want[1], BOTH_SIDES)
 
 
 def _line_matches(line, q, wanted):

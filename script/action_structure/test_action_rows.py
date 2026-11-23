@@ -1,6 +1,7 @@
 """攤平成列的比對路徑(action-search-web 票 03):只走接縫一 `run_query(..., path="rows")`。
 
-新路徑先做直接命中(特定、泛用、全部三組與命中段);未解析組、經引用、代替留給票 04。
+票 03 做直接命中(特定、泛用、全部三組與命中段);票 04 補未解析組、經引用、代替,
+這些多半由現有的查詢測試驗(`run_query` 預設已走新路徑),這裡補現有測試沒有的。
 """
 import unittest
 
@@ -110,6 +111,40 @@ class RowsPathTest(unittest.TestCase):
     def test_unknown_path_is_rejected(self):
         with self.assertRaises(ValueError):
             run_query(self.structures, self.cards, {}, path="其他")
+
+
+PREAMBLE_CARD = 30000002   # 測試用:新式怪獸卡前言有一句區塊種類判不出
+
+
+class UnknownBlockKindTest(unittest.TestCase):
+    """區塊種類判不出的區塊(票 04):被區塊種類篩掉時,它的段照樣進未解析組,原因是區塊種類判不出;
+    沒被篩掉時照段自己的原因。種類判得出的區塊被篩掉就不列。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards = [card(PREAMBLE_CARD, name_ja="前言カード", level=4, race=0x1)]
+        cls.structures, _ = build_structures(cls.cards, [faq(PREAMBLE_CARD, "前言カード", (
+            "このカードの効果を発動するターン、自分はモンスターを特殊召喚できない。\n"
+            "①：相手フィールドのカード１枚を対象として発動できる。そのカードを破壊する。"))])
+
+    def query(self, **query):
+        return run_query(self.structures, self.cards, query, path="rows")
+
+    def test_filtered_out_unknown_block_is_listed_with_the_block_reason(self):
+        result = self.query(actions=["特殊召喚"], block_kinds=["召喚條件"])
+        self.assertEqual(result["groups"]["未解析"], [PREAMBLE_CARD])
+        self.assertEqual(result["unparsed"], [{"id": PREAMBLE_CARD, "reason": None, "segments": [{
+            "segment": "b0.s0", "reason": "區塊種類判不出",
+            "text": "このカードの効果を発動するターン、自分はモンスターを特殊召喚できない"}]}])
+
+    def test_kept_unknown_block_is_listed_with_the_segment_reason(self):
+        result = self.query(actions=["特殊召喚"])
+        self.assertEqual([s["reason"] for s in result["unparsed"][0]["segments"]], ["子句解析不出"])
+
+    def test_filtered_out_known_block_is_not_listed(self):
+        result = self.query(actions=["破壞"], block_kinds=["召喚條件"])
+        self.assertEqual(result["groups"]["全部"], [])
+        self.assertEqual(result["groups"]["未解析"], [])
 
 
 if __name__ == "__main__":

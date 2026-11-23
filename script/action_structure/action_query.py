@@ -873,15 +873,16 @@ PATH_STRUCTURE = "structure"   # 讀卡片結構(舊的讀法)
 PATH_ROWS = "rows"             # 攤平成列再比對列
 
 
-def run_query(structures, cards, query, path=PATH_STRUCTURE):
+def run_query(structures, cards, query, path=PATH_ROWS):
     """全庫結構 + 卡片總表 + 查詢 → 命中結果;一張卡任一分支、任一段命中即命中。
     直接沒命中的卡,引用節點指定的被引用卡部分命中時進「經引用」組。
-    `path`:預設讀卡片結構(舊的讀法,重構期間的標準答案);`PATH_ROWS` 先攤平成列再比對列
-    (`action_rows`、`row_match`;目前只做直接命中,未解析組、經引用、代替還沒有)。"""
+    `path`:預設先攤平成列再比對列(`action_rows`、`row_match`);同一份輸入(同一個物件)重複查詢時
+    攤平與候選卡共用,輸入在兩次呼叫之間不可就地修改。`PATH_STRUCTURE` 是舊的讀法,
+    留到票 05 當標準答案。"""
     if path == PATH_ROWS:
-        from action_rows import flatten
+        from action_rows import index_of
         from row_match import match_rows
-        return match_rows(flatten(structures, cards), query)
+        return match_rows(index_of(structures, cards), query)
     if path != PATH_STRUCTURE:
         raise ValueError(f"認不得的查詢路徑: {path}")
     q = _normalise(query)

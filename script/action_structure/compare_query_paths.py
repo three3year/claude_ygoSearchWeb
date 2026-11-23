@@ -3,7 +3,8 @@
     python -X utf8 script/action_structure/compare_query_paths.py [--structures ...] [--cards ...]
 
 全庫只攤平一次,候選卡全部先算好(分開計時),之後每個查詢兩條路徑各跑一次。
-比的是直接命中:特定、泛用、全部三組(逐張)與每張卡的命中段;未解析組、經引用、代替還沒搬到新路徑(票 04)。
+比的是:特定、泛用、全部、經引用、未解析五組(逐張),每張命中卡的明細(命中段、組、`via`、`mark`、
+`replaced_by`),每張未解析卡的明細(原因、段、原文),最後整份結果(含順序)逐項相同。
 有任何差異時結束碼 1。
 """
 import argparse
@@ -15,7 +16,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from action_query import VIA_GROUP, run_query  # noqa: E402
+from action_query import PATH_STRUCTURE, VIA_GROUP, run_query  # noqa: E402
 from action_rows import flatten  # noqa: E402
 from card_structure import load_structures  # noqa: E402
 from row_match import match_rows  # noqa: E402
@@ -23,7 +24,7 @@ from row_match import match_rows  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DEFAULT_STRUCTURES = os.path.join(ROOT, "data", "action_structure.json")
 DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
-GROUPS = ("特定", "泛用", "全部")
+GROUPS = ("特定", "泛用", "全部", VIA_GROUP, "未解析")
 
 BLACK_MAGICIAN = 46986414
 BLACK_MAGICIAN_ALT = 46986415   # 異圖的卡片密碼
@@ -88,25 +89,53 @@ QUERIES = [
                            "condition": MONSTER, "targeting": True}),
     ("合併:指定卡+到+推得", {"actions": ["送墓"], "card": BLUE_EYES, "to_zones": ["墓地"],
                        "include_inferred": True}),
+    # 票 04:未解析組(解析不出的段、物件判不了、異同判不了、解析不出的引用節點、區塊種類判不出)
+    ("未解析 動作詞 召喚", {"actions": ["召喚"]}),
+    ("未解析 動作詞 無效", {"actions": ["無效"]}),
+    ("未解析 動作詞 加入手牌", {"actions": ["加入手牌"]}),
+    ("未解析 認不得的動作詞", {"actions": ["不存在的動作詞"]}),
+    ("未解析 指定卡代入(異同判不了)", {"actions": ["特殊召喚"], "card": BLUE_EYES}),
+    ("未解析 給條件代入", {"actions": ["除外"], "condition": MONSTER}),
+    ("未解析 區塊種類篩掉(種類判不出)", {"actions": ["發動"], "block_kinds": ["召喚條件"]}),
+    ("未解析 區塊種類篩掉 特殊召喚", {"actions": ["特殊召喚"], "block_kinds": ["素材"]}),
+    ("未解析 段類別與極性篩選", {"actions": ["特殊召喚"], "kinds": ["限制"], "polarities": ["不能"]}),
+    ("未解析 只查泛用", {"actions": ["破壞"], "generic_only": True, "from_zones": ["場上"]}),
+    # 票 04:經引用(via、mark、泛用引用開關)
+    ("經引用 儀式召喚", {"actions": ["儀式召喚"]}),
+    ("經引用 儀式召喚 泛用引用開", {"actions": ["儀式召喚"], "generic_reference": True}),
+    ("經引用 破壞 泛用引用開", {"actions": ["破壞"], "generic_reference": True}),
+    ("經引用 除外 泛用引用開+區塊種類", {"actions": ["除外"], "generic_reference": True,
+                                  "block_kinds": ["編號效果"]}),
+    ("經引用 指定卡 泛用引用開", {"actions": ["破壞"], "card": BLUE_EYES,
+                           "generic_reference": True}),
+    # 票 04:代替(被代替段、做代替的段、replaced_by)
+    ("代替 破壞", {"actions": ["破壞"], "replacement": True}),
+    ("代替 除外", {"actions": ["除外"], "replacement": True}),
+    ("代替 送墓", {"actions": ["送墓"], "replacement": True}),
+    ("代替 段類別 被代替", {"actions": ["破壞"], "replacement": True, "kinds": ["被代替"]}),
+    ("代替 條件段開關", {"actions": ["破壞"], "replacement": True, "include_condition": True}),
+    ("代替 空查詢", {"replacement": True}),
 ]
 
 
-def direct_hits(result):
-    """卡號 → (組, 命中段);經引用組不算。"""
-    return {hit["id"]: (hit["group"], hit["segments"]) for hit in result["hits"]
-            if hit["group"] != VIA_GROUP}
-
-
 def compare(old, new):
-    """兩條路徑的結果 → 每組的差異:{組: (只在舊, 只在新)},外加命中段不同的卡。"""
+    """兩條路徑的結果 → 每組的差異 {組: (只在舊, 只在新)},外加明細不同的卡
+    (命中明細:命中段、組、via、mark、replaced_by;未解析明細:原因、段、原文)與整份結果是否相同。"""
     diff = {}
     for group in GROUPS:
         a, b = set(old["groups"][group]), set(new["groups"][group])
         diff[group] = (sorted(a - b), sorted(b - a))
-    old_hits, new_hits = direct_hits(old), direct_hits(new)
-    diff["命中段"] = sorted(cid for cid in old_hits.keys() & new_hits.keys()
-                         if old_hits[cid][1] != new_hits[cid][1])
+    for key, label in (("hits", "命中明細"), ("unparsed", "未解析明細")):
+        a = {item["id"]: item for item in old[key]}
+        b = {item["id"]: item for item in new[key]}
+        diff[label] = sorted(cid for cid in a.keys() & b.keys() if a[cid] != b[cid])
+    diff["整份"] = old == new
     return diff
+
+
+def same(diff):
+    return (diff["整份"] and not diff["命中明細"] and not diff["未解析明細"]
+            and all(not a and not b for a, b in (diff[g] for g in GROUPS)))
 
 
 def main(argv=None):
@@ -133,7 +162,7 @@ def main(argv=None):
     total_old = total_new = 0.0
     for name, query in QUERIES:
         start = time.perf_counter()
-        old = run_query(structures, cards, query)
+        old = run_query(structures, cards, query, path=PATH_STRUCTURE)
         old_seconds = time.perf_counter() - start
         start = time.perf_counter()
         new = match_rows(index, query)
@@ -141,19 +170,24 @@ def main(argv=None):
         total_old += old_seconds
         total_new += new_seconds
         diff = compare(old, new)
-        same = not diff["命中段"] and all(not a and not b for a, b in
-                                         (diff[g] for g in GROUPS))
-        failed += not same
+        ok = same(diff)
+        failed += not ok
         counts = " ".join(f"{g} {len(old['groups'][g])}" for g in GROUPS)
-        print(f"{'相同' if same else '不同'} | {name} | {counts} | 舊 {old_seconds:.2f} 秒 新 {new_seconds:.2f} 秒"
+        counts += (f" 未解析段 {sum(len(u['segments']) for u in old['unparsed'])}"
+                   f" mark {sum('mark' in h for h in old['hits'])}"
+                   f" replaced_by {sum('replaced_by' in h for h in old['hits'])}")
+        print(f"{'相同' if ok else '不同'} | {name} | {counts} | 舊 {old_seconds:.2f} 秒 新 {new_seconds:.2f} 秒"
               f" | {json.dumps(query, ensure_ascii=False)}")
-        if not same:
+        if not ok:
             for group in GROUPS:
                 only_old, only_new = diff[group]
                 if only_old or only_new:
                     print(f"    {group}:只在舊 {only_old} 只在新 {only_new}")
-            if diff["命中段"]:
-                print(f"    命中段不同的卡:{diff['命中段']}")
+            for label in ("命中明細", "未解析明細"):
+                if diff[label]:
+                    print(f"    {label}不同的卡:{diff[label]}")
+            if not diff["整份"]:
+                print("    整份結果不同(含順序)")
     print(f"{len(QUERIES)} 個查詢,不同 {failed} 個;查詢合計 舊 {total_old:.1f} 秒 新 {total_new:.1f} 秒")
     return 1 if failed else 0
 

@@ -79,7 +79,7 @@ const DRIVER = `
 ;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
 ;function __sortedIds(json) {
   var a = JSON.parse(json);
-  var result = Engine.runQuery(window.CARD_DATA, a.query || {});
+  var result = Engine.runQuery(window.CARD_DATA, a.query || {}, a.act, a.act ? __index() : null);
   return JSON.stringify(Sort.sort(result.cards, a.key, a.dir)
     .map(function (e) { return e.card.id; }));
 }
@@ -102,7 +102,7 @@ const DRIVER = `
  */
 function load({ cards = [], vocab = {}, meta = {}, action = null } = {}) {
   const sandbox = {
-    console, setTimeout, clearTimeout,
+    console, setTimeout, clearTimeout, atob,
     document: {
       getElementById: () => stubEl(),
       querySelector: () => null,
@@ -230,13 +230,14 @@ function expandedAxes(sandbox, q) {
 
 /**
  * 命中的卡片密碼清單,**照 key/dir 排序後**的順序(key 省略即預設的領域序)。
+ * act 是動作條件(省略即沒有)。
  *
  * 走的是搜尋 → 排序這條真實的路徑:排序吃的是接縫 3 的回傳形狀,而不是另外
  * 拼一份卡片陣列——「排序切換不重跑搜尋」在這裡看得到,重排的輸入就是同一份結果。
  */
-function sortedIds(sandbox, query, key, dir) {
+function sortedIds(sandbox, query, key, dir, act) {
   return JSON.parse(sandbox.__sortedIds(
-    JSON.stringify({ query: query || {}, key: key || '', dir: dir || '' })));
+    JSON.stringify({ query: query || {}, key: key || '', dir: dir || '', act: act || null })));
 }
 
 /** 排序選單的鍵清單(選單的選項由它生成,比較函式也由它決定取哪個欄位) */

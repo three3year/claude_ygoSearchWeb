@@ -56,10 +56,47 @@ function prepare(raw) {
     polarityAt: at(raw.polarities),
     cards: raw.cards.map(([id, , segments]) => ({
       id,
-      segments: segments.map(([seg, , kind, polarity, replacing, actions]) =>
-        ({ id: seg, kind, polarity, replacing: !!replacing, actions })),
+      segments: segments.map(([seg, block, kind, polarity, replacing, actions]) =>
+        ({ id: seg, block, kind, polarity, replacing: !!replacing, actions })),
     })),
+    refs: references(raw),
   };
+}
+
+/* 引用列(票 14):卡號 → 它的引用列 [{ block, generic, key, part, clause }];
+   候選卡集合用到才解碼(泛用引用的集合上千張,固定關,不解碼)。
+   指定的部分:`parts[part]` 列了的候選卡只看那幾個區塊,沒列的看整張(blocksOf 回 null)。 */
+function references(raw) {
+  const of = new Map();
+  for (const [id, , , , refs] of raw.cards) {
+    if (refs && refs.length) {
+      of.set(id, refs.map(([block, generic, key, part, clause]) =>
+        ({ block, generic: !!generic, key, part, clause })));
+    }
+  }
+  const parts = raw.parts.map(([, entries]) =>
+    new Map(entries.map(([p, blocks]) => [raw.ids[p], blocks])));
+  const decoded = new Map();
+  return {
+    of,
+    blocksOf: (id, part) => parts[part].get(id) || null,
+    candidates(key) {
+      if (!decoded.has(key)) decoded.set(key, decodeSet(raw.sets[key], raw.ids));
+      return decoded.get(key);
+    },
+  };
+}
+
+/* 候選卡集合 → 卡號:位置的清單,或位元集(第 i 位 = 位置 i,little-endian,base64)。 */
+function decodeSet(value, ids) {
+  if (Array.isArray(value)) return value.map(p => ids[p]);
+  const bytes = atob(value);
+  const out = [];
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes.charCodeAt(i);
+    for (let k = 0; k < 8; k++) if (b >> k & 1) out.push(ids[i * 8 + k]);
+  }
+  return out;
 }
 
 /* 動作詞的選項:依列數排(同列數照索引的順序),前面一批直接顯示、其餘收在「更多」。
@@ -76,8 +113,8 @@ function positions(map, values) {
   return values.map(v => map.get(v));
 }
 
-/* 列查詢 → 命中的卡:Map(卡號 → 命中的段)。判法照 `row_match`:段類別、極性在範圍裡,
-   查詢的動作詞全部在同一段裡。做代替的段只在查詢含代替時看(玩家介面不看代替)。
+/* 列查詢 → 命中的卡:Map(卡號 → 命中的段;經引用的卡是引到命中的引用列,見 viaHits)。
+   判法照 `row_match`:段類別、極性在範圍裡,查詢的動作詞全部在同一段裡。做代替的段只在查詢含代替時看(玩家介面不看代替)。
    索引裡沒有的動作詞沒有卡命中。 */
 function match(index, rq) {
   const hits = new Map();
@@ -93,7 +130,48 @@ function match(index, rq) {
       hits.get(card.id).push(seg);
     }
   }
+  for (const [id, refs] of viaHits(index, hits)) hits.set(id, refs);
   return hits;
+}
+
+/* ── 經引用(票 14)────────────────────────────────────────
+   直接沒命中、有引用列的卡,沿引用列展開到底(被引用卡指定的部分裡有命中段就算),
+   走到這條路上走過的卡就停;判法照 Python 的 `row_match._Expansion`。泛用引用固定關。
+   命中的卡回「引到命中的引用列」:經引用的命中算在引用節點所在的效果上(`clause`)。
+   被引用卡指定的部分看的是它的命中段;之後加區塊種類篩選時,被篩掉的段仍要算進
+   blockHits(Python 同樣不看查詢的區塊種類),起點卡的引用列才照區塊種類篩。 */
+function viaHits(index, direct) {
+  const blockHits = new Map();
+  for (const [id, segs] of direct) blockHits.set(id, new Set(segs.map(s => s.block)));
+  const out = new Map();
+  for (const [id, refs] of index.refs.of) {
+    if (direct.has(id)) continue;
+    const led = refs.filter(ref => leads(index, blockHits, ref, new Set([id])));
+    if (led.length) {
+      out.set(id, led.map(ref => ({ via: true, block: ref.block, clause: ref.clause })));
+    }
+  }
+  return out;
+}
+
+/* 這條引用列走不走得到命中段;visiting 是這條路上走過的卡。 */
+function leads(index, blockHits, ref, visiting) {
+  if (ref.generic) return false;
+  return index.refs.candidates(ref.key).some(cid =>
+    !visiting.has(cid) && reaches(index, blockHits, cid, ref.part, visiting));
+}
+
+function reaches(index, blockHits, cid, part, visiting) {
+  const blocks = index.refs.blocksOf(cid, part);
+  const inPart = block => blocks === null || blocks.indexOf(block) >= 0;
+  const hit = blockHits.get(cid);
+  if (hit && Array.from(hit).some(inPart)) return true;
+  const refs = (index.refs.of.get(cid) || []).filter(ref => inPart(ref.block));
+  if (!refs.length) return false;
+  visiting.add(cid);
+  const found = refs.some(ref => leads(index, blockHits, ref, visiting));
+  visiting.delete(cid);
+  return found;
 }
 
   return Object.freeze({ condOf, count, rowQuery, prepare, options, match });

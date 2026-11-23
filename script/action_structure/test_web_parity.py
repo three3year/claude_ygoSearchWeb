@@ -39,6 +39,12 @@ CONDS = [
     {"actions": ["解放", "特殊召喚"]},      # 同一張卡、不同段
     {"actions": ["破壞", "特殊召喚"]},
     {"actions": ["不存在的動作"]},
+    # 誰與「含不限定的」(票 10;夾具裡效果段、代價段、召喚手續段都是算我方,
+    # 不限定的段與寫明對手的段另在 `test_agent_unrestricted.AgentParityTest` 的夾具)
+    {"actions": ["破壞"], "agent": "我方"},
+    {"actions": ["破壞"], "agent": "對手"},
+    {"actions": ["破壞"], "agent": "對手", "unrestricted": True},
+    {"actions": ["解放"], "agent": "我方", "unrestricted": True},
 ]
 
 
@@ -96,7 +102,8 @@ class WebParityTest(unittest.TestCase):
                 python = run_query(self.structures, self.cards, front["rowQuery"])
                 self.assertEqual(sorted(front["ids"]), sorted(python["groups"]["全部"]))
         # 夾具要問得出東西:有命中、也有「同一張卡分在兩段」被擋掉的
-        hits = {tuple(c["actions"]): set(f["ids"]) for c, f in zip(CONDS, self.front)}
+        hits = {tuple(c["actions"]): set(f["ids"]) for c, f in zip(CONDS, self.front)
+                if set(c) == {"actions"}}
         self.assertTrue(hits[("破壞",)])
         both = hits[("解放",)] & hits[("特殊召喚",)]
         self.assertTrue(both)

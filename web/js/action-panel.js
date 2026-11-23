@@ -19,6 +19,8 @@ let failed = false;
 let loading = null;
 let selected = [];
 let moreOpen = false;
+let agent = '';              // 誰(票 10):'' = 不限,或 我方、對手
+let unrestricted = false;    // 「含不限定的」(不限定開關)
 
 /* 載完(或載入失敗)時 resolve,不 reject:失敗時動作條件不生效,其他條件照常查。 */
 function load() {
@@ -89,8 +91,20 @@ function wordsHtml() {
     <p class="action-hint">多選時,要在同一段裡全部都有</p>`;
 }
 
+/* 誰(票 10):不限/我方/對手三選一,加「含不限定的」勾選(預設關)。 */
+function agentHtml() {
+  const opt = (value, label) => `<button type="button" class="tri" data-agent="${value}"
+    data-st="${agent === value ? 'in' : ''}">${label}</button>`;
+  return `<span class="group-label">誰做的</span>
+    <div class="tri-row">${opt('', '不限')}${opt('我方', '我方')}${opt('對手', '對手')}</div>
+    <label class="mat-toggle"
+      title="卡文沒寫是誰的觸發條件與被動句(例如「モンスターが手札に戻った場合」)也算">
+      <input type="checkbox" data-unrestricted="1"${unrestricted ? ' checked' : ''}>含不限定的
+    </label>`;
+}
+
 function fieldsHtml() {
-  return index ? wordsHtml() : '';
+  return index ? wordsHtml() + agentHtml() : '';
 }
 
 function paint() {
@@ -103,19 +117,23 @@ function paint() {
 }
 
 function read() {
-  return Action.condOf({ actions: selected });
+  return Action.condOf({ actions: selected, agent, unrestricted });
 }
 
 /* 還原帶動作條件的查詢時展開區塊(和其他軸一樣看得見設了什麼),也就載入索引。 */
 function write(act) {
   const cond = Action.condOf(act);
   selected = cond ? cond.actions : [];
+  agent = (cond && cond.agent) || '';
+  unrestricted = !!(cond && cond.unrestricted);
   if (cond) setOpen(true);
   paint();
 }
 
 function clear() {
   selected = [];
+  agent = '';
+  unrestricted = false;
   paint();
 }
 
@@ -126,12 +144,17 @@ function init() {
     if (!btn) return;
     if (btn.dataset.more) {
       moreOpen = !moreOpen;
+    } else if (btn.dataset.agent !== undefined) {
+      agent = btn.dataset.agent;
     } else if (btn.dataset.word) {
       const word = btn.dataset.word;
       selected = selected.indexOf(word) >= 0
         ? selected.filter(w => w !== word) : selected.concat(word);
     }
     paint();
+  });
+  $('actionFields').addEventListener('change', e => {
+    if (e.target.dataset.unrestricted) unrestricted = e.target.checked;
   });
   paint();
 }

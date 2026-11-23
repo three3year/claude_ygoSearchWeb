@@ -1,7 +1,7 @@
 /**
  * action_fixture.js — 接縫三測試用的小動作索引(零 npm 依賴)
  *
- * 把讀得懂的描述 `[{ id, segs: [{ kind, pol, acts, replacing }] }]` 寫成
+ * 把讀得懂的描述 `[{ id, segs: [{ kind, pol, acts, replacing, agent }] }]` 寫成
  * `web/action-data.js` 的格式(`script/action_structure/action_index.py` 的模組說明)。
  * 測試只寫「這張卡有哪些段、段裡有哪些動作詞」,不手抄編碼;格式由 Python 的建置
  * 產出、前端讀回,兩邊是否一致由「兩邊答案一致」的 Python 測試守住。
@@ -13,7 +13,8 @@ function vocabOf(values) {
 }
 
 /**
- * cards:[{ id, segs: [{ kind = '效果', pol = '做', acts = [], replacing = false }] }]
+ * cards:[{ id, segs: [{ kind = '效果', pol = '做', acts = [], replacing = false,
+ *                       agent = '算我方' }] }]
  * ids:前端索引的卡號順序(省略時照 cards)。
  */
 function actionData(cards, ids) {
@@ -21,6 +22,7 @@ function actionData(cards, ids) {
   const actions = vocabOf(segs.flatMap(s => s.acts));
   const kinds = vocabOf(segs.map(s => s.kind));
   const polarities = vocabOf(segs.map(s => s.pol));
+  const agents = vocabOf(segs.map(s => s.agent || '算我方'));
   const rows = {};
   segs.forEach(s => s.acts.forEach(a => { rows[a] = (rows[a] || 0) + (s.rows || 1); }));
   return {
@@ -31,6 +33,7 @@ function actionData(cards, ids) {
     kinds,
     polarities,
     blockKinds: ['編號效果'],
+    agents,
     noText: [],
     parts: [],
     archetypes: [],
@@ -44,6 +47,8 @@ function actionData(cards, ids) {
                 []];
       }),
       [], [],
+      c.segs.map(() => null),
+      c.segs.map(s => agents.indexOf(s.agent || '算我方')),
     ]),
   };
 }

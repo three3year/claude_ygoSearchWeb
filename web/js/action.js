@@ -17,6 +17,13 @@ const Action = (() => {
 const KINDS = { eff: ['效果', '召喚手續', '限制'], cost: ['代價'] };
 const POLARITIES = { do: ['做', '可以', '必須'] };
 
+/* 誰(票 10):玩家介面可選的值,和 Python `run_query` 的 `agent` 相同。段那一邊的值
+   (寫明的、算我方、不限定)攤平時已經定好,這裡只比對。 */
+const AGENTS = ['我方', '對手'];
+const BOTH_SIDES = '雙方各自';
+const IMPLIED_SELF = '算我方';
+const UNRESTRICTED = '不限定';
+
 /* 「更多」以外直接顯示的動作詞數:常用的一屏看得完,其餘收起來。 */
 const SHOWN_WORDS = 14;
 
@@ -28,22 +35,30 @@ function condOf(raw) {
   if (!isObj(raw) || !Array.isArray(raw.actions)) return null;
   const actions = Array.from(new Set(
     raw.actions.filter(a => typeof a === 'string' && a.trim()).map(a => a.trim()))).sort();
-  return actions.length ? { actions } : null;
+  if (!actions.length) return null;
+  const c = { actions };
+  if (AGENTS.indexOf(raw.agent) >= 0) c.agent = raw.agent;
+  if (raw.unrestricted === true) c.unrestricted = true;
+  return c;
 }
 
 /* 生效中的動作條件數(窄螢幕摺疊鈕上的數字):一個欄位算一條,動作詞選幾個都是一條。 */
 function count(cond) {
   const c = condOf(cond);
-  return c ? 1 : 0;
+  if (!c) return 0;
+  return 1 + (c.agent ? 1 : 0);
 }
 
 function rowQuery(cond) {
   const c = condOf(cond) || { actions: [] };
-  return {
+  const rq = {
     actions: c.actions,
     kinds: KINDS.eff.concat(KINDS.cost),
     polarities: POLARITIES.do,
   };
+  if (c.agent) rq.agent = c.agent;
+  if (c.unrestricted) rq.include_unrestricted = true;
+  return rq;
 }
 
 /* 產物 → 比對用的形狀:值的清單換成「值 → 位置」,段只留比對要用的欄。 */
@@ -54,10 +69,12 @@ function prepare(raw) {
     actionAt: at(raw.actions.map(a => a[0])),
     kindAt: at(raw.kinds),
     polarityAt: at(raw.polarities),
-    cards: raw.cards.map(([id, , segments]) => ({
+    agents: raw.agents,
+    cards: raw.cards.map(([id, , segments, , , , agents]) => ({
       id,
-      segments: segments.map(([seg, , kind, polarity, replacing, actions]) =>
-        ({ id: seg, kind, polarity, replacing: !!replacing, actions })),
+      segments: segments.map(([seg, , kind, polarity, replacing, actions], i) =>
+        ({ id: seg, kind, polarity, replacing: !!replacing, actions,
+           agent: raw.agents[agents[i]] })),
     })),
   };
 }
@@ -70,6 +87,14 @@ function options(index) {
     .sort((a, b) => b.rows - a.rows || a.i - b.i)
     .map(w => w.word);
   return { shown: words.slice(0, SHOWN_WORDS), more: words.slice(SHOWN_WORDS) };
+}
+
+/* 誰(spec「比對規則」):寫明的值相同或是雙方各自命中;算我方只在查我方時命中;
+   不限定只在不限定開關開時命中。 */
+function agentMatches(want, have, includeUnrestricted) {
+  if (have === UNRESTRICTED) return includeUnrestricted;
+  if (have === IMPLIED_SELF) return want === '我方';
+  return have === want || have === BOTH_SIDES;
 }
 
 function positions(map, values) {
@@ -89,6 +114,7 @@ function match(index, rq) {
     for (const seg of card.segments) {
       if (seg.replacing || !kinds.has(seg.kind) || !polarities.has(seg.polarity)) continue;
       if (!wanted.every(a => seg.actions.indexOf(a) >= 0)) continue;
+      if (rq.agent && !agentMatches(rq.agent, seg.agent, !!rq.include_unrestricted)) continue;
       if (!hits.has(card.id)) hits.set(card.id, []);
       hits.get(card.id).push(seg);
     }

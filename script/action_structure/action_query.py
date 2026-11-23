@@ -363,6 +363,10 @@ class CardView:
     def categories(self, from_zones):
         return self._pick(self._categories, from_zones)
 
+    def rows(self):
+        """卡名、setcode、大類各自的 (值, 位置條件) 列;位置條件 None = 任何位置。候選卡預篩與共用答案用。"""
+        return {"卡名": self._names, "字段": self._codes, "大類": self._categories}
+
 
 def _card_text(structure):
     """卡片結構裡的全部原文:各區塊(含內嵌效果的區塊)的原文與略過文本。「」引用

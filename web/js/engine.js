@@ -149,9 +149,6 @@ function clauseRows(c, parts, kindSel, optSel, matOn) {
   return rows;
 }
 
-/* 同一個效果(票 16):句層條件命中的效果句 rows 和動作命中的段要落在同一句。
-   段對不回效果(clause 是 null)時當作符合,但它不標出效果句。
-   回 null 表示這張卡不命中;回 [] 表示命中、但沒有可標的效果句。 */
 function sameClause(rows, segments) {
   if (!rows.length) return null;
   const at = new Set(segments.map(s => s.clause));
@@ -159,19 +156,12 @@ function sameClause(rows, segments) {
   return same.length || at.has(null) ? same : null;
 }
 
-/* 只有動作條件時命中的效果句:動作命中的段對回的那幾句(對不回的段不標)。 */
 function hitClauses(segments) {
   const at = new Set(segments.map(s => s.clause));
   at.delete(null);
   return Array.from(at).sort((a, b) => a - b);
 }
 
-/* 動作條件(票 08)是另一組條件,和卡片條件取且:卡要同時命中動作索引裡的段。
-   沒有動作條件時不碰動作索引(還沒載入也沒關係),結果與沒有這組條件時相同。
-   有動作條件時(票 16)句層條件要和動作命中的段落在同一個效果句,rows 是那幾句;
-   只有動作條件時 rows 是動作命中的段對回的效果句。marks 多一個 action(只加底色)。
-   無法確認的卡(票 15,`unsure`,照 db 的順序):未解析組裡同時滿足卡片條件的卡;
-   句層條件要有符合的效果句,但不做同一效果的判斷。沒有動作條件時是空的。 */
 function runQuery(db, q, act, actionIndex) {
   q = q || {};
   const rq = Action.count(act) ? Action.rowQuery(act) : null;

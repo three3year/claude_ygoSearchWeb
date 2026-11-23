@@ -101,13 +101,6 @@ const DRIVER = `
 ;function __cardHtml(json) { return View.cardHtml(JSON.parse(json), null); }
 `;
 
-/**
- * 載入前端程式碼,回傳沙箱。
- * fixture:{ cards, vocab, meta, action } —— 合成的 window.CARD_DATA / VOCAB / META,
- * 與動作索引 window.ACTION_DATA。action 是物件(測試照描述寫的小索引)或
- * `action-data.js` 的全文(Python 建置的產物,照網站載入它的方式在沙箱裡執行)。
- * 動作索引不在 index.html 的 `<script>` 裡(第一次打開動作搜尋才載入),所以另外餵。
- */
 function load({ cards = [], vocab = {}, meta = {}, action = null } = {}) {
   const sandbox = {
     console, setTimeout, clearTimeout, atob,
@@ -143,10 +136,6 @@ function runQuery(sandbox, query, act) {
   return JSON.parse(sandbox.__runQuery(JSON.stringify({ q: query, act: act || null })));
 }
 
-/**
- * 接縫 3:(查詢條件, 動作條件) → [{ id, rows }],rows 是該卡命中的效果句索引(沒有句層
- * 條件時為 null)。動作條件省略即沒有動作條件——那時引擎不碰動作索引。
- */
 function search(sandbox, query, act) {
   return runQuery(sandbox, query, act).cards;
 }
@@ -156,10 +145,6 @@ function ids(sandbox, query, act) {
   return search(sandbox, query, act).map(e => e.id);
 }
 
-/**
- * 無法確認的卡號(票 15):未解析組裡同時滿足卡片條件的卡,照前端索引的順序。
- * 介面只顯示張數;測試驗卡號。
- */
 function unsure(sandbox, query, act) {
   return runQuery(sandbox, query, act).unsure;
 }
@@ -169,41 +154,26 @@ function marks(sandbox, query, act) {
   return runQuery(sandbox, query, act).marks;
 }
 
-/**
- * 動作條件換成的列查詢(鍵名與值照 Python 的 `run_query`):「兩邊答案一致」的測試把它
- * 交給 Python,兩邊比的是同一個問題。
- */
 function rowQuery(sandbox, act) {
   return JSON.parse(sandbox.__rowQuery(JSON.stringify(act || null)));
 }
 
-/**
- * 動作詞的選項:`{ shown, more }`,依列數排,前面一批直接顯示、其餘收在「更多」。
- * 與 `axes()` 同一個理由:沙箱裡沒有真的 DOM,區塊只是照這份清單擺按鈕。
- */
 function actionOptions(sandbox) {
   return JSON.parse(sandbox.__actionOptions());
 }
 
-/** 從、到的區域選項(票 09):索引的區域表依列數排。 */
 function zoneOptions(sandbox) {
   return JSON.parse(sandbox.__zoneOptions());
 }
 
-/** 原因的選項(票 11):索引的原因表依列數排,不列戰鬥或效果、戰鬥以外與沒寫的兩種。 */
 function causeOptions(sandbox) {
   return JSON.parse(sandbox.__causeOptions());
 }
 
-/** 段類別勾選點一下之後的勾選(票 09):只剩一個勾著時不能取消。 */
 function toggleKind(sandbox, kinds, kind) {
   return JSON.parse(sandbox.__toggleKind(JSON.stringify({ kinds, kind })));
 }
 
-/**
- * 指定一張卡時的卡名建議清單(票 12):`輸入的字 → [{ id, n, nj }]`,名字短的排前面。
- * 同一個理由:沙箱裡沒有真的 DOM,區塊只是照這份清單擺建議。
- */
 function cardSuggest(sandbox, text) {
   return JSON.parse(sandbox.__cardSuggest(text));
 }
@@ -259,21 +229,10 @@ function treeCounts(sandbox, q) {
   return JSON.parse(sandbox.__treeCounts(JSON.stringify(q || {})));
 }
 
-/**
- * 還原展開判定(票14):`查詢條件 → 該展開的區塊鍵清單`。還原查詢時 DOM 照這份
- * 清單開軸——有已選條件的軸連同**祖先鏈**,以及連動出現的必發/選發軸。
- */
 function expandedAxes(sandbox, q) {
   return JSON.parse(sandbox.__expandedAxes(JSON.stringify(q || {})));
 }
 
-/**
- * 命中的卡片密碼清單,**照 key/dir 排序後**的順序(key 省略即預設的領域序)。
- * act 是動作條件(省略即沒有)。
- *
- * 走的是搜尋 → 排序這條真實的路徑:排序吃的是接縫 3 的回傳形狀,而不是另外
- * 拼一份卡片陣列——「排序切換不重跑搜尋」在這裡看得到,重排的輸入就是同一份結果。
- */
 function sortedIds(sandbox, query, key, dir, act) {
   return JSON.parse(sandbox.__sortedIds(
     JSON.stringify({ query: query || {}, key: key || '', dir: dir || '', act: act || null })));
@@ -284,20 +243,11 @@ function sortKeys(sandbox) {
   return JSON.parse(sandbox.__sortKeys());
 }
 
-/**
- * 存進瀏覽紀錄的查詢狀態(action-search-web 票01):`(條件, 排序, 動作條件) → 那一筆存的物件`。
- * 寫入時機與 `popstate` 測不到(沙箱裡沒有瀏覽紀錄),走人工驗收。
- */
 function savedState(sandbox, q, sort, act) {
   return JSON.parse(sandbox.__saved(JSON.stringify({ q: q || {}, sort: sort || {},
                                                      act: act || null })));
 }
 
-/**
- * 從瀏覽紀錄的一筆還原成 `{ q, sort, act }`(q 就是接縫 3 吃的查詢條件形狀;沒有動作條件
- * 時沒有 act)。
- * raw 可能是舊版網站寫的、甚至不是物件:認不得的欄位或值忽略,其餘照常還原。
- */
 function restoreSaved(sandbox, raw) {
   return JSON.parse(sandbox.__restore(JSON.stringify(raw === undefined ? null : raw)));
 }
@@ -311,9 +261,6 @@ function cardHtml(sandbox, entry) {
   return sandbox.__cardHtml(JSON.stringify(entry));
 }
 
-/**
- * 清單下方「無法確認」那一行的字(票 15):張數 → 字;0 張是空字串(不顯示這一行)。
- */
 function unsureText(sandbox, n) {
   return sandbox.__unsureText(n);
 }
@@ -321,22 +268,17 @@ function unsureText(sandbox, n) {
 module.exports = { load, search, ids, unsure, unsureText, marks, rowQuery, actionOptions, cardSuggest, axes, optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, savedState, restoreSaved, cardHtml };
-module.exports.zoneOptions = zoneOptions;          // 票 09
-module.exports.toggleKind = toggleKind;            // 票 09
-module.exports.causeOptions = causeOptions;        // 票 11
+module.exports.zoneOptions = zoneOptions;
+module.exports.toggleKind = toggleKind;
+module.exports.causeOptions = causeOptions;
 
-/**
- * 給條件的大類、屬性、種族選項(票 13):`{ cat, attr, race }`,各是 [{ code, zh }]。
- * 與 `axes()` 同一個理由:沙箱裡沒有真的 DOM,區塊只是照這份清單擺按鈕。
- */
 function conditionOptions(sandbox) {
   return JSON.parse(sandbox.__conditionOptions());
 }
 
-/** 給條件選字段時的建議清單(票 13):`輸入的字 → [{ code, zh }]`,名字短的排前面。 */
 function archetypeSuggest(sandbox, text) {
   return JSON.parse(sandbox.__archetypeSuggest(text));
 }
 
-module.exports.conditionOptions = conditionOptions;  // 票 13
-module.exports.archetypeSuggest = archetypeSuggest;  // 票 13
+module.exports.conditionOptions = conditionOptions;
+module.exports.archetypeSuggest = archetypeSuggest;

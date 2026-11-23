@@ -16,10 +16,6 @@
   <!-- 左側常駐條件側欄:邊看結果邊調條件,不必來回捲動。
        後面幾張票的條件軸(效果文、卡片參數、效果類型)各自往這裡加一段。 -->
   <aside class="sidebar" id="sidebar">
-    <!-- 摺疊鈕只在窄螢幕出現(桌機由 CSS 收起來):手機一屏只有 600 多點高,
-         常駐的條件區會把結果整個推到摺線以下。摺起來看不見條件,所以鈕面上寫著
-         目前有幾條條件在生效——重新整理或上一頁還原的查詢在手機上是摺著的,不寫的話
-         使用者看到的是一批被篩過、卻沒有任何理由的結果。 -->
     <button type="button" id="btnFilters" class="sidebar-toggle"
             aria-expanded="false" aria-controls="sidebarBody">篩選條件</button>
 
@@ -61,9 +57,6 @@
       </div>
     </div>
 
-    <!-- 動作搜尋(action-search-web 票 08):和其他條件取且。預設收起;第一次展開才載入
-         動作索引(另一個檔),只查卡的人不必下載它。動作詞的按鈕由動作索引帶的表生成
-         (action-panel.js),HTML 一個詞都不知道。 -->
     <div class="action-box" id="actionBox">
       <div class="axis-hrow"><button type="button" class="axis-head action-head"
         id="actionHead" aria-expanded="false"><span class="axis-name">動作搜尋</span>
@@ -107,7 +100,6 @@
 
     <div class="pager" id="pagerTop"></div>
     <div id="results"></div>
-    <!-- 動作搜尋的「另有 N 張無法確認」(票 15):只寫張數、不能點,0 張時藏起來。 -->
     <p class="unsure-info" id="unsureInfo" hidden></p>
     <div class="pager" id="pagerBottom"></div>
   </main>
@@ -125,9 +117,7 @@
 <!-- 零建置協定(ADR-0007):沒有 bundler、沒有 ES modules,<script> 依序載入,
      模組是掛在全域的 IIFE 閉包。索引是 window.CARD_DATA=… 的 .js 而不是 .json,
      因為 file:// 下 fetch 會被 CORS 擋而 <script src> 不會。
-     順序即相依:資料 → 工具 → 排序 → 動作條件 → 引擎 → 輸入 → 瀏覽紀錄 → 外部站 → 呈現
-     → 動作搜尋區塊 → 主流程。動作索引(action-data.js)不在這裡:第一次打開動作搜尋才由
-     action-panel.js 載入。 -->
+     順序即相依。 -->
 <script src="data.js"></script>
 <script src="js/util.js"></script>
 <script src="js/sort.js"></script>

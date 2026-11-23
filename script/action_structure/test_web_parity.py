@@ -1,13 +1,3 @@
-"""兩邊答案一致(action-search-web spec 測試決策;票 08 起):同一份動作索引、同一批查詢,
-Python 的 `run_query` 與網站的前端查詢引擎命中同一批卡。
-
-測試內建的卡片結構建成動作索引(`build_action_index`),連同前端索引的卡與一批動作條件交給
-node(`script/web/action_parity.js`,在接縫三的沙箱裡載入 `web/` 底下真實的前端檔)。前端把每條
-動作條件換成列查詢、查出命中的卡;同一份列查詢交給 `run_query`,比命中的卡號(特定、泛用、
-經引用的聯集,票 14)與無法確認的卡號(未解析組,票 15)。之後每張加篩選的票都往 `CONDS` 加查詢。
-
-這組測試需要機器上有 node(spec「測試從哪幾個接縫驗」的決定)。
-"""
 import json
 import os
 import shutil
@@ -33,12 +23,6 @@ from test_resistance_restriction import (ELEKIRIN, ELEKIRIN_TEXT, MASTER_MONK, M
 
 PARITY_JS = os.path.join(os.path.dirname(__file__), "..", "web", "action_parity.js")
 
-# 玩家介面的動作條件。夾具裡:破壞在效果段、代價段、條件段與「不會」的段都有;特殊召喚在條件段
-# 與效果段;解放在代價段(大皇帝ペンギン,與效果段的特殊召喚分在兩段)與召喚手續段(マスターモンク);
-# 直接攻撃是「可以」(エレキリン)與「不能」(幻獣機サーバルホーク)。
-# 經引用(票 14):フレシアの蟲惑魔 引用落とし穴、奈落の落とし穴(破壞、除外);星逢の天河 只引用
-# 氷魔鏡含儀式召喚的區塊(儀式召喚收、返回不收);甲、乙的候選卡是甲、乙、星逢の天河(成環;
-# 加入手牌時經星逢 ① 收);Ｎ・ブラック・パンサー 是泛用引用(破壞者有破壞,泛用引用固定關,不收)。
 CONDS = [
     {"actions": ["破壞"]},
     {"actions": ["特殊召喚"]},
@@ -46,21 +30,17 @@ CONDS = [
     {"actions": ["直接攻擊"]},
     {"actions": ["通常召喚"]},
     {"actions": ["除外"]},
-    {"actions": ["破壞", "除外"]},          # 同一段裡兩個都有
-    {"actions": ["解放", "特殊召喚"]},      # 同一張卡、不同段
+    {"actions": ["破壞", "除外"]},
+    {"actions": ["解放", "特殊召喚"]},
     {"actions": ["破壞", "特殊召喚"]},
     {"actions": ["不存在的動作"]},
     {"actions": ["儀式召喚"]},
     {"actions": ["返回"]},
     {"actions": ["加入手牌"]},
 ] + [
-    # 票 09:從、到(含哪一方、子區域、推得的不算)、段類別勾選、極性三選一。夾具裡:
-    # 特殊召喚從我方牌組(大皇帝ペンギン);除外從墓地到除外(幻獣機サーバルホーク);
-    # 送墓是代價、從我方牌組到墓地(特異点の悪魔);抽牌從我方牌組(ツッパリーチ)與
-    # 雙方各自的牌組(暗黒界の取引);ツッパリーチ回到牌組底(子區域,查牌組也算)。
     {"actions": ["特殊召喚"], "from": {"zone": "牌組", "side": "我方"}},
     {"actions": ["特殊召喚"], "from": {"zone": "牌組", "side": "對手"}},
-    {"actions": ["特殊召喚"], "to": {"zone": "場上"}},              # 到場上全是推得的
+    {"actions": ["特殊召喚"], "to": {"zone": "場上"}},
     {"actions": ["除外"], "from": {"zone": "墓地"}, "to": {"zone": "除外"}},
     {"actions": ["破壞"], "from": {"zone": "場上"}},
     {"to": {"zone": "墓地"}},
@@ -81,9 +61,6 @@ CONDS = [
     {"actions": ["特殊召喚"], "pol": "limit", "kinds": ["eff", "cond"]},
     {"actions": ["攻擊"], "pol": "limit", "kinds": ["cost"]},
 ] + [
-    # 票 10:誰與「含不限定的」。夾具裡:暗黒界の取引的抽牌是雙方各自、「ドローしたプレイヤーは
-    # …捨てる」指回它;奈落の落とし穴、特異点の悪魔的條件段寫對手;フレシアの蟲惑魔的
-    # 「効果では破壊されない」是不限定;其餘效果段、代價段、召喚手續段沒寫誰,算我方。
     {"actions": ["抽牌"], "agent": "對手"},
     {"actions": ["捨棄"], "agent": "對手"},
     {"actions": ["破壞"], "agent": "對手"},
@@ -95,10 +72,6 @@ CONDS = [
     {"actions": ["通常召喚"], "pol": "limit", "agent": "我方", "unrestricted": True},
     {"agent": "對手", "kinds": ["cond"]},
 ] + [
-    # 票 11:受方與原因。夾具裡:ツッパリーチ、星逢の天河的代價段「…を相手に見せて」受方是對手;
-    # ツッパリーチ的條件段「通常のドローをした時」寫規則、「自分が効果でカードをドローした時」寫效果;
-    # フレシアの蟲惑魔「戦闘・効果では破壊されず」寫戰鬥或效果(不會);破壊者「このカードが召喚に
-    # 成功した時」是沒寫原因的被動句(不限定)。
     {"actions": ["展示"], "recipient": "對手"},
     {"actions": ["展示"], "recipient": "我方"},
     {"recipient": "對手", "kinds": ["cost"]},
@@ -147,11 +120,8 @@ def parity_fixture():
 
 
 def front_end(action_text, cards, conds, front=None):
-    """動作條件 → 前端那一邊的 [{"rowQuery", "ids"}]。`front` 是真的前端索引(`webindex.build_index`
-    的 index:卡與值域正典);沒給時前端的卡只有卡號與中文名(不看卡片參數的查詢夠用)。"""
     node = shutil.which("node")
     if node is None:
-        # 不跳過:跳過的話少了這組檢查也是綠的(spec 接受「這組測試需要 node」)
         raise RuntimeError("機器上沒有 node:「兩邊答案一致」的測試需要 node")
     payload = {"actionData": action_text,
                "cards": front["cards"] if front else
@@ -177,20 +147,16 @@ class WebParityTest(unittest.TestCase):
         cls.front = front_end(text, cls.cards, CONDS)
 
     def test_player_defaults_become_the_row_query(self):
-        """玩家介面的預設(spec「玩家介面」對應表):勾效果與代價、極性「會做」。"""
         self.assertEqual(self.front[0]["rowQuery"],
                          {"actions": ["破壞"], "kinds": ["效果", "召喚手續", "限制", "代價"],
                           "polarities": ["做", "可以", "必須"]})
 
     def test_action_words_hit_the_same_cards(self):
-        """同一批動作詞查詢(單一、同一段多個、經引用),Python 與前端引擎命中的卡號相同:
-        特定、泛用、經引用的聯集(網站的清單不分組)。"""
         for cond, front in zip(CONDS, self.front):
             with self.subTest(cond=cond):
                 python = run_query(self.structures, self.cards, front["rowQuery"])
                 self.assertEqual(sorted(front["ids"]),
                                  sorted(python["groups"]["全部"] + python["groups"]["經引用"]))
-        # 夾具要問得出東西:有命中、也有「同一張卡分在兩段」被擋掉的
         hits = {tuple(c["actions"]): set(f["ids"]) for c, f in zip(CONDS, self.front)
                 if set(c) == {"actions"}}
         self.assertTrue(hits[("破壞",)])
@@ -199,7 +165,6 @@ class WebParityTest(unittest.TestCase):
         self.assertFalse(both & hits[("解放", "特殊召喚")])
 
     def test_via_reference_cases_are_asked(self):
-        """夾具要問得出經引用:有經引用才收的卡、只看指定的部分、環、泛用引用不展開。"""
         hits = {tuple(c["actions"]): set(f["ids"]) for c, f in zip(CONDS, self.front)
                 if set(c) == {"actions"}}
         via = {tuple(c["actions"]): set(run_query(self.structures, self.cards,
@@ -216,13 +181,10 @@ class WebParityTest(unittest.TestCase):
         self.assertLessEqual({LOOP_A, LOOP_B}, via[("加入手牌",)])
 
     def test_cannot_confirm_cards_are_the_unparsed_group(self):
-        """前端的無法確認的卡號與 `run_query` 的未解析組相同(spec 測試決策,票 15)。"""
         for cond, front in zip(CONDS, self.front):
             with self.subTest(cond=cond):
                 python = run_query(self.structures, self.cards, front["rowQuery"])
                 self.assertEqual(sorted(front["unsure"]), sorted(python["groups"]["未解析"]))
-        # 夾具要問得出東西:有無官方日文以外的未解析卡;マスターモンク的解放命中,另有一段
-        # 字面含解放的段解析不出,只在命中的清單
         unsure = {tuple(c["actions"]): set(f["unsure"]) for c, f in zip(CONDS, self.front)
                 if set(c) == {"actions"}}
         hits = {tuple(c["actions"]): set(f["ids"]) for c, f in zip(CONDS, self.front)
@@ -232,7 +194,6 @@ class WebParityTest(unittest.TestCase):
         self.assertNotIn(MASTER_MONK, unsure[("解放",)])
 
     def test_zones_kinds_polarity_ask_something(self):
-        """票 09 的查詢問得出東西:哪一方、子區域、推得的不算、觸發條件、抗性與限制各有分別。"""
         hits = {json.dumps(c, ensure_ascii=False, sort_keys=True): set(f["ids"])
                 for c, f in zip(CONDS, self.front)}
 
@@ -241,21 +202,16 @@ class WebParityTest(unittest.TestCase):
         self.assertEqual(of({"actions": ["特殊召喚"], "from": {"zone": "牌組", "side": "我方"}}),
                          {6836211})
         self.assertFalse(of({"actions": ["特殊召喚"], "from": {"zone": "牌組", "side": "對手"}}))
-        # 到場上全是推得的:不算
         self.assertFalse(of({"actions": ["特殊召喚"], "to": {"zone": "場上"}}))
-        # 牌組底算在牌組內(另有經引用收進來的リチュアの氷魔鏡)
         self.assertIn(TSUPPA_REACH, of({"actions": ["返回"], "to": {"zone": "牌組"}}))
-        # 勾觸發條件才查到條件段;抗性、限制查得到預設不命中的段
         self.assertTrue(of({"actions": ["特殊召喚"], "kinds": ["cond"]}) - of({"actions": ["特殊召喚"]}))
         self.assertEqual(of({"actions": ["破壞"], "pol": "resist"}), {6511113})
-        # 預設的「會做」不直接命中它(它另有經引用的命中,所以看 run_query 的直接命中)
         default = next(f["rowQuery"] for c, f in zip(CONDS, self.front) if c == {"actions": ["破壞"]})
         self.assertNotIn(6511113, run_query(self.structures, self.cards, default)["groups"]["全部"])
         self.assertEqual(of({"actions": ["通常召喚"], "pol": "limit"}), {MASTER_MONK})
         self.assertFalse(of({"actions": ["通常召喚"]}))
 
     def test_agent_and_unrestricted_ask_something(self):
-        """票 10 的查詢問得出東西:誰篩掉了卡、雙方各自兩邊都算、開關加進不限定的段。"""
         hits = {json.dumps(c, ensure_ascii=False, sort_keys=True): set(f["ids"])
                 for c, f in zip(CONDS, self.front)}
 
@@ -277,8 +233,6 @@ class WebParityTest(unittest.TestCase):
         self.assertTrue(of({"agent": "對手", "kinds": ["cond"]}))
 
     def test_recipient_and_cause_ask_something(self):
-        """票 11 的查詢問得出東西:受方分得出兩方、原因的種類與方、寫得比查詢寬的、開關加進
-        沒寫原因的被動句。"""
         hits = {json.dumps(c, ensure_ascii=False, sort_keys=True): set(f["ids"])
                 for c, f in zip(CONDS, self.front)}
 
@@ -297,7 +251,6 @@ class WebParityTest(unittest.TestCase):
                                      "cause": {"kind": "戰鬥"}, "unrestricted": True}))
 
     def test_kinds_and_polarity_become_the_row_query(self):
-        """介面選項到查詢的對應(spec「玩家介面」對應表):勾觸發條件連條件段開關一起開。"""
         front = front_end(self.text, self.cards,
                           [{"actions": ["破壞"], "kinds": ["eff", "cost", "cond"], "pol": "resist"},
                            {"actions": ["破壞"], "kinds": ["cost"], "pol": "limit"}])
@@ -308,9 +261,6 @@ class WebParityTest(unittest.TestCase):
                          {"actions": ["破壞"], "kinds": ["代價"], "polarities": ["不能", "只能"]})
 
 
-# 被動作的卡(票 12):這張卡自己、指定一張卡。夾具是上面的夾具加票 12 的標準卡(ドラゴンメイド・
-# ルフト、スターダスト・シフル、チョバムアーマー・ドラゴン、聖導騎士イシュザーク);指定卡的條件
-# 在測試裡對每張卡各問一次。
 OBJECT_ACTIONS = [["破壞"], ["特殊召喚"], ["解放"], ["除外"], []]
 
 
@@ -336,15 +286,12 @@ class ObjectParityTest(unittest.TestCase):
         cls.front = front_end(text, cls.cards, cls.conds)
 
     def test_object_conditions_hit_the_same_cards(self):
-        """這張卡自己、指定一張卡:命中的卡號(特定、泛用、經引用的聯集)與無法確認的卡號,
-        Python 與前端引擎相同。"""
         for cond, front in zip(self.conds, self.front):
             with self.subTest(cond=cond):
                 python = run_query(self.structures, self.cards, front["rowQuery"])
                 self.assertEqual(sorted(front["ids"]),
                                  sorted(python["groups"]["全部"] + python["groups"]["經引用"]))
                 self.assertEqual(sorted(front["unsure"]), sorted(python["groups"]["未解析"]))
-        # 夾具要問得出東西:這張卡自己與指定卡都有命中;指定卡命中泛用組的卡;判不了的線進無法確認
         found = [(cond, set(front["ids"]), set(front["unsure"]))
                  for cond, front in zip(self.conds, self.front)]
         self.assertTrue(any(ids for cond, ids, _ in found if cond["target"] == "self"))
@@ -362,10 +309,6 @@ class ObjectParityTest(unittest.TestCase):
         self.assertEqual(self.front[1]["rowQuery"]["card"], self.conds[1]["target"]["card"])
 
 
-
-# 給條件(票 13):大類、屬性、種族、等級、字段、卡名包含六種,各自與合起來。夾具同上一組(水族的
-# ペンギン、植物族的超量怪獸フレシアの蟲惑魔、龍族、戰士族、獸族;字段有成員的全部問一次);
-# 前端的卡用真的前端索引建(`webindex.build_index`),值域正典也是那一份。
 CONDITION_ACTIONS = [["特殊召喚"], ["破壞"], ["除外"], ["加入手牌"], []]
 CONDITIONS = [
     {"cat": "m"}, {"cat": "s"}, {"cat": "t"},
@@ -373,7 +316,7 @@ CONDITIONS = [
     {"race": "aqua"}, {"race": "plant"}, {"race": "dragon"}, {"race": "warrior"},
     {"race": "beast"},
     {"lvMin": 5}, {"lvMax": 4}, {"lvMin": 4, "lvMax": 4}, {"lvMin": 12},
-    {"race": "plant", "lvMax": 4},          # 植物族只有超量怪獸フレシア:階級不是等級
+    {"race": "plant", "lvMax": 4},
     {"name": "ペンギン"}, {"name": "ドラゴン"}, {"name": "N・"}, {"name": "落とし穴"},
     {"name": "沒有這張"},
     {"race": "dragon", "lvMin": 5}, {"cat": "m", "attr": "water", "name": "ペンギン"},
@@ -382,7 +325,6 @@ CONDITIONS = [
 
 
 def web_index():
-    """`script/web` 的前端索引建置(值域正典與卡片參數的短碼都照網站真的那一份)。"""
     here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web")
     if here not in sys.path:
         sys.path.append(here)
@@ -409,8 +351,6 @@ class ConditionParityTest(unittest.TestCase):
         cls.front = front_end(text, cls.cards, cls.conds, cls.front_index)
 
     def test_given_conditions_hit_the_same_cards(self):
-        """六種條件各自與合起來:命中的卡號(特定、泛用、經引用的聯集)與無法確認的卡號,
-        Python 的只給條件查詢與前端引擎相同。"""
         for cond, front in zip(self.conds, self.front):
             with self.subTest(cond=cond):
                 python = run_query(self.structures, self.cards, front["rowQuery"])
@@ -419,7 +359,6 @@ class ConditionParityTest(unittest.TestCase):
                 self.assertEqual(sorted(front["unsure"]), sorted(python["groups"]["未解析"]))
 
     def test_given_conditions_ask_something(self):
-        """夾具要問得出東西:每一種條件都有命中、也都篩掉了卡;合起來比單項少。"""
         hits = {json.dumps(c, ensure_ascii=False, sort_keys=True): set(f["ids"])
                 for c, f in zip(self.conds, self.front)}
 
@@ -437,13 +376,10 @@ class ConditionParityTest(unittest.TestCase):
         self.assertTrue(both)
         self.assertTrue(of({"race": "dragon"}, ()) - both)
         self.assertTrue(of({"lvMin": 5}, ()) - both)
-        # 故事 30:特殊召喚、種族龍族 → 能特殊召喚龍族的卡。チョバムアーマー・ドラゴン 特殊召喚
-        # 自己(龍族);大皇帝ペンギン 特殊召喚的是ペンギン(水族)
         self.assertEqual(of({"race": "dragon"}), {CHOBHAM})
         self.assertIn(EMPEROR_PENGUIN, of({"race": "aqua"}))
 
     def test_archetype_members_are_what_python_calls_members(self):
-        """字段的選項來自索引的字段成員表:每個字段的成員與 Python 判「這張卡屬於這個字段」相同。"""
         structure = {s["id"]: s for s in self.structures}
         self.assertTrue(self.archetypes)
         for code, row in self.archetypes.items():
@@ -454,8 +390,6 @@ class ConditionParityTest(unittest.TestCase):
             self.assertEqual(set(row["members"]), members, hex(code))
 
     def test_every_canon_button_asks_python_the_same_value(self):
-        """大類、屬性、種族的每顆按鈕(值域正典的每個碼)換成的列查詢,Python 讀到的是同一個值:
-        換碼的表漏一個碼,那顆按鈕就查不到東西。"""
         python_value = {"cat": CATEGORY_BITS, "attr": ATTRIBUTE_JA, "race": RACE_JA}
         domains = {"cat": self.vocab.CAT, "attr": self.vocab.ATTR, "race": self.vocab.RACE}
         conds = [{"target": {"condition": {key: e["code"]}}}
@@ -470,7 +404,6 @@ class ConditionParityTest(unittest.TestCase):
                 self.assertEqual(python_value[key].get(atom["value"]), bit)
 
     def test_given_condition_becomes_the_row_query(self):
-        """給條件換成 Python 的只給條件查詢(`condition` 鍵),與這張卡自己、指定卡三者擇一。"""
         rq = self.front[0]["rowQuery"]
         self.assertEqual(rq["condition"], {"op": "大類", "value": "怪獸"})
         self.assertNotIn("card", rq)

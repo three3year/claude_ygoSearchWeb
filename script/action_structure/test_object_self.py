@@ -1,9 +1,3 @@
-"""被動作的卡:這張卡自己(action-search-web 票 12;接縫一 `run_query`,物件的種類另走接縫二)。
-
-查詢鍵 `this_card`(True):只命中物件是此卡的對象線(物件0,或帶狀態的此卡)。物件是條件式、
-這張卡剛好滿足的不算;做動作的線不算。和指定卡(`card`)、給條件(`condition`)三者擇一。
-官方文本逐字寫在測試裡。標準卡待站主核可(票 12 的 Comments)。
-"""
 import unittest
 
 from action_index import build_action_index, decode_action_index
@@ -13,10 +7,10 @@ from action_rows import (OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
 from card_structure import build_structures
 from test_golden import ARCHETYPES, card, faq
 
-DRAGONMAID_LUFT = 15848542      # ドラゴンメイド・ルフト:自己不會被效果破壞
-STARDUST_SIFR = 26268488        # 聖珖神竜 スターダスト・シフル:自分フィールドのカード(含自己)不會被破壞
-CHOBHAM = 27352108              # チョバムアーマー・ドラゴン:帶狀態的此卡不會被戰鬥破壞
-ISHZARK = 57902462              # 聖導騎士イシュザーク:此卡是破壞的一方(做動作的線)
+DRAGONMAID_LUFT = 15848542
+STARDUST_SIFR = 26268488
+CHOBHAM = 27352108
+ISHZARK = 57902462
 
 LUFT_TEXT = (
     "このカード名の①③の効果はそれぞれ１ターンに１度しか使用できない。\n"
@@ -83,33 +77,25 @@ class ThisCardTest(unittest.TestCase):
         return run_query(self.structures, self.cards, query)["groups"]["全部"]
 
     def test_self_resistance_hits_and_granted_resistance_does_not(self):
-        """「這張卡自己、破壞、極性 不會」:ドラゴンメイド・ルフト「このカードは効果では破壊されない」
-        命中;聖珖神竜 スターダスト・シフル 給的是「自分フィールドのカード」,不命中。"""
-        self.assertIn(STARDUST_SIFR, self.hits(**RESIST_DESTROY))   # 不限定被動作的卡時兩張都有
+        self.assertIn(STARDUST_SIFR, self.hits(**RESIST_DESTROY))
         self.assertIn(DRAGONMAID_LUFT, self.hits(**RESIST_DESTROY))
         found = self.hits(**RESIST_DESTROY, this_card=True)
         self.assertIn(DRAGONMAID_LUFT, found)
         self.assertNotIn(STARDUST_SIFR, found)
 
     def test_condition_the_card_happens_to_satisfy_is_not_this_card(self):
-        """スターダスト・シフル 自己也是「自分フィールドのカード」:指定它這張卡時命中,「這張卡自己」不命中。"""
         self.assertIn(STARDUST_SIFR, self.hits(**RESIST_DESTROY, card=STARDUST_SIFR))
         self.assertNotIn(STARDUST_SIFR, self.hits(**RESIST_DESTROY, this_card=True))
 
     def test_this_card_with_a_state_counts(self):
-        """チョバムアーマー・ドラゴン「この効果で特殊召喚したこのカードは戦闘では破壊されず」:
-        帶狀態的此卡也是此卡。"""
         self.assertIn(CHOBHAM, self.hits(**RESIST_DESTROY, this_card=True))
 
     def test_doer_line_does_not_count(self):
-        """聖導騎士イシュザーク「このカードが戦闘によってモンスターを破壊した時」:此卡是破壞的一方,
-        被破壞的是別的怪獸,「這張卡自己」不命中。"""
         destroyed = {"actions": ["破壞"], "include_condition": True}
         self.assertIn(ISHZARK, self.hits(**destroyed))
         self.assertNotIn(ISHZARK, self.hits(**destroyed, this_card=True))
 
     def test_this_card_card_and_condition_are_exclusive(self):
-        """這張卡自己、指定卡、給條件三者擇一:同時給兩個以上是錯的查詢。"""
         condition = {"op": "屬性比較", "attr": "種族", "cmp": "=", "value": "ドラゴン族"}
         for extra in ({"this_card": True, "card": DRAGONMAID_LUFT},
                       {"this_card": True, "condition": condition},
@@ -128,7 +114,6 @@ class ThisCardTest(unittest.TestCase):
 
 
 class ObjectKindIndexTest(unittest.TestCase):
-    """接縫二:被動作的卡的五種(沒有物件、此卡、候選卡集合、判不了、代不進去)從動作索引讀得回來。"""
 
     def test_object_kinds_round_trip(self):
         from test_web_parity import parity_fixture

@@ -1,19 +1,5 @@
 'use strict';
 
-/* 側欄的「動作搜尋」區塊(action-search-web 票 08):動作索引的載入、動作條件的輸入。
-
-   - 動作索引是另一個檔(`action-data.js`,約 5 MB),兩種時候才載入、載過不再載:第一次展開
-     這個區塊;或從瀏覽紀錄還原的查詢帶著動作條件(`write`)。用 `<script>` 載而不是 fetch:
-     雙擊開啟(file://)時 fetch 會被擋(ADR-0007)。
-   - 輸入的狀態只放在這裡的 `selected`,畫面照它重畫;索引還沒載完時還原的條件也先放這裡,
-     載完再畫出按鈕。
-   - 之後的票加的欄位(段類別、極性、從/到…)各自在 `fieldsHtml` 加一段、在 `read`/`write`
-     多帶一個鍵;條件的正規形與比對在 `Action`。
-   - 被動作的卡(票 12):不指定、這張卡自己、指定一張卡三選一;指定卡時輸入卡名、從建議清單
-     (`Action.suggest`,名字短的排前面)點一張。
-   - 給條件(票 13):大類、屬性、種族的按鈕由值域正典生成(`Action.conditionOptions`),同一列
-     點已選的那顆是取消;等級下限、上限與卡名包含是輸入框;字段輸入名字、從索引的字段成員表的
-     建議清單(`Action.archetypeSuggest`)點一個。一項都沒填時不算條件。 */
 const ActionPanel = (() => {
 const { $, esc, DB, byId } = Util;
 
@@ -23,17 +9,12 @@ let index = null;
 let failed = false;
 let loading = null;
 let selected = [];
-/* 被動作的卡(票 12):選法 'none' | 'self' | 'card';指定卡時選中的卡號(還沒從建議清單選是 null)
-   與輸入框裡的字。輸入框打字時只重畫建議清單,不重畫整個區塊(焦點才不會跑掉)。 */
 let targetMode = 'none';
 let targetCard = null;
 let typed = '';
-/* 給條件(票 13):填了的項(鍵同 `Action.condOf` 的 target.condition)與字段輸入框裡的字。
-   輸入框打字時只改狀態與數字,不重畫整個區塊(焦點才不會跑掉)。 */
 let given = {};
 let setTyped = '';
 let moreOpen = false;
-/* 票 09:從、到({ zone, side },空字串是不限)、段類別勾選、極性。 */
 const NO_ZONE = () => ({ zone: '', side: '' });
 let from = NO_ZONE();
 let to = NO_ZONE();
@@ -42,12 +23,12 @@ let pol = Action.DEFAULT_POL;
 
 const KIND_LABELS = { eff: '效果', cost: '代價', cond: '觸發條件' };
 const POL_LABELS = { do: '會做', limit: '限制', resist: '抗性' };
-let agent = '';              // 誰(票 10):'' = 不限,或 我方、對手
-let unrestricted = false;    // 「含不限定的」(不限定開關;誰與原因共用)
-let recipient = '';          // 受方(票 11):'' = 不限,或 我方、對手
-let cause = { kind: '', side: '' };   // 原因(票 11):種類 '' = 不限;方 '' = 不限哪一方
+let agent = '';
+let unrestricted = false;
+let recipient = '';
+let cause = { kind: '', side: '' };
 
-/* 載完(或載入失敗)時 resolve,不 reject:失敗時動作條件不生效,其他條件照常查。 */
+/* 用 `<script>` 載而不是 fetch:雙擊開啟(file://)時 fetch 會被擋(ADR-0007)。 */
 function load() {
   if (loading) return loading;
   loading = new Promise(resolve => {
@@ -58,7 +39,7 @@ function load() {
         } catch (err) {
           ok = false;
         }
-        window.ACTION_DATA = undefined;      // 讀成比對用的形狀之後,原始的那份不必留著
+        window.ACTION_DATA = undefined;
       }
       failed = !ok;
       paint();
@@ -98,8 +79,6 @@ function chip(word) {
     data-st="${on ? 'in' : ''}">${esc(word)}</button>`;
 }
 
-/* 「更多」收著時,選了的詞照樣看得到(還原的條件、或展開時選的);索引裡沒有的詞
-   (舊網站存的紀錄)也列出來,才取消得掉。 */
 function wordsHtml() {
   const opts = Action.options(index);
   const known = opts.shown.concat(opts.more);

@@ -1,51 +1,27 @@
 'use strict';
 
-/* 動作條件與動作索引(action-search-web 票 08 起)。
-
-   - 動作條件:玩家介面填的東西,`{ actions: [動作詞…], from, to: { zone, side }, kinds: [勾選],
-     pol, target }`(從起的四個是票 09);之後的票各往這裡加一個欄位(誰…),各自在 condOf、
-     count、rowQuery 加一行。
-     `target` 是被動作的卡(票 12):'self'(這張卡自己)、`{ card: 卡號 }`(指定一張卡)或
-     `{ condition: 給條件 }`(票 13);一個欄位只放得下一種,三者擇一由形狀保證。
-     `recipient` 是受方(票 11):我方或對手;`cause` 是原因(票 11):`{ kind }` 或 `{ kind, side }`。
-   - 列查詢:動作條件換成比對列用的查詢,鍵名與值照 Python 的 `run_query`(`row_match`)。
-     玩家介面不露出的選項在這裡用固定值;「兩邊答案一致」的測試把同一份列查詢交給
-     `run_query`,所以兩邊比的是同一個問題。
-   - 動作索引:`web/action-data.js` 的 `window.ACTION_DATA`(格式見
-     `script/action_structure/action_index.py`);prepare 讀成比對用的形狀,match 只比對列,
-     不解讀卡片結構。 */
 const Action = (() => {
 
-/* 玩家介面的段類別三個勾選與極性三選一(spec「玩家介面」的對應表;票 09)。召喚手續、限制
-   跟著效果算。預設勾效果與代價、極性「會做」;正規形不寫預設值。 */
 const KINDS = { eff: ['效果', '召喚手續', '限制'], cost: ['代價'], cond: ['條件'] };
 const KIND_KEYS = Object.keys(KINDS);
 const DEFAULT_KINDS = ['eff', 'cost'];
 const POLARITIES = { do: ['做', '可以', '必須'], limit: ['不能', '只能'], resist: ['不會'] };
 const DEFAULT_POL = 'do';
 
-/* 誰(票 10):玩家介面可選的值,和 Python `run_query` 的 `agent` 相同。段那一邊的值
-   (寫明的、算我方、不限定)攤平時已經定好,這裡只比對。 */
 const AGENTS = ['我方', '對手'];
 const BOTH_SIDES = '雙方各自';
 const IMPLIED_SELF = '算我方';
 const UNRESTRICTED = '不限定';
 
-/* 原因(票 11):寫「戰鬥或效果」的段查戰鬥、查效果都命中,寫「戰鬥以外」的查效果命中;
-   其餘寫什麼比什麼(照 `row_match.CAUSE_COVERS`)。這兩種不列成選項。 */
 const CAUSE_COVERS = { '戰鬥或效果': ['戰鬥', '效果'], '戰鬥以外': ['效果'] };
 
-/* 「更多」以外直接顯示的動作詞數:常用的一屏看得完,其餘收起來。 */
 const SHOWN_WORDS = 14;
 
 const isObj = v => v != null && typeof v === 'object' && !Array.isArray(v);
 
-/* 從、到可以再指定的方(票 09):玩家介面只問我方或對手。 */
 const SIDES = ['我方', '對手'];
-/* 產物的區域碼 = 區域位置 × 8 + 方的位置(`action_index.SIDE_SLOTS`)。 */
 const SIDE_SLOTS = 8;
 
-/* 從、到的正規形:`{ zone }` 或 `{ zone, side }`;區域不是字串就整欄不算,方認不得就不限。 */
 function zoneOf(raw) {
   if (!isObj(raw) || typeof raw.zone !== 'string' || !raw.zone.trim()) return null;
   const z = { zone: raw.zone.trim() };
@@ -53,8 +29,6 @@ function zoneOf(raw) {
   return z;
 }
 
-/* 原因的正規形(票 11):`{ kind }` 或 `{ kind, side }`;種類不是字串(或是「不限定」這個
-   沒寫原因的記號)就整欄不算,方認不得就不限。 */
 function causeOf(raw) {
   if (!isObj(raw) || typeof raw.kind !== 'string' || !raw.kind.trim()) return null;
   const kind = raw.kind.trim();
@@ -64,8 +38,6 @@ function causeOf(raw) {
   return c;
 }
 
-/* 被動作的卡的正規形:'self'、`{ card: 正整數卡號 }` 或 `{ condition: 給條件 }`;其餘(舊版網站
-   存的、壞掉的)是 null。給條件一項都沒填時等於不指定。 */
 const TARGET_SELF = 'self';
 function targetOf(raw) {
   if (raw === TARGET_SELF) return TARGET_SELF;
@@ -74,12 +46,6 @@ function targetOf(raw) {
   return condition ? { condition } : null;
 }
 
-/* ── 給條件(票 13)────────────────────────────────────────
-   玩家介面開放六種:大類、屬性、種族(值域正典的短碼)、等級(下限、上限)、字段(setcode)、
-   卡名包含。列查詢換成 Python `run_query` 的 `condition`(只給條件的查詢,原子照
-   `action_query.eval_condition`):大類的值是中文(與值域正典的中文名同字),種族、屬性是官方
-   日文字面(`attribute_words` 的 RACE_JA、ATTRIBUTE_JA;值域正典的中文名對不到日文)。
-   這幾張表漏一個碼,那顆按鈕就查不到東西;「兩邊答案一致」的測試逐碼對值域正典與 Python 的表。 */
 const CAT_VALUES = { m: '怪獸', s: '魔法', t: '陷阱' };
 const ATTR_JA = { earth: '地', water: '水', fire: '炎', wind: '風', light: '光', dark: '闇',
                   divine: '神' };
@@ -95,8 +61,6 @@ const RACE_JA = {
 const has = (table, key) => typeof key === 'string' && Object.prototype.hasOwnProperty.call(table, key);
 const level = v => (Number.isInteger(v) && v >= 0 ? v : null);
 
-/* 給條件的正規形:`{ cat, attr, race, lvMin, lvMax, set, name }` 填了的才寫,照這個順序;
-   認不得的值忽略,一項都沒有是 null。 */
 function givenOf(raw) {
   if (!isObj(raw)) return null;
   const g = {};
@@ -110,7 +74,6 @@ function givenOf(raw) {
   return Object.keys(g).length ? g : null;
 }
 
-/* 給條件 → Python 的條件式:一項是那個原子本身,多項是「且」。 */
 function conditionQuery(g) {
   const compare = (attr, cmp, value) => ({ op: '屬性比較', attr, cmp, value });
   const atoms = [];
@@ -124,8 +87,6 @@ function conditionQuery(g) {
   return atoms.length === 1 ? atoms[0] : { op: '且', args: atoms };
 }
 
-/* 正規形:同一組條件只有一種寫法(動作詞去重、照字串排),瀏覽紀錄比得出「這次搜尋與
-   上一筆相同」。認不得的欄位或值忽略;一個欄位都沒有就是 null(沒有動作條件)。 */
 function condOf(raw) {
   if (!isObj(raw)) return null;
   const c = {};
@@ -146,25 +107,20 @@ function condOf(raw) {
   const cause = causeOf(raw.cause);
   if (cause) c.cause = cause;
   if (!Object.keys(c).length) return null;
-  // 「含不限定的」只放寬誰與原因,自己不篩東西:不單獨成為條件、不算條件數
   if (raw.unrestricted === true) c.unrestricted = true;
   return c;
 }
 
-/* 生效中的動作條件數(窄螢幕摺疊鈕上的數字):一個欄位算一條,動作詞選幾個都是一條。 */
 function count(cond) {
   const c = condOf(cond);
   return c ? Object.keys(c).filter(k => k !== 'unrestricted').length : 0;
 }
 
-/* 段類別勾選的正規形:照 KIND_KEYS 的順序;認不得的勾選忽略,一個都沒有就是預設
-   (介面不讓全部取消,舊紀錄或壞掉的值才會走到這裡)。 */
 function kindsOf(raw) {
   const kinds = Array.isArray(raw) ? KIND_KEYS.filter(k => raw.indexOf(k) >= 0) : [];
   return kinds.length ? kinds : DEFAULT_KINDS;
 }
 
-/* 從、到換成 `run_query` 的 from_zones / to_zones:沒指定方時只比區域。 */
 const zoneQuery = z => [{ zone: z.zone, side: z.side || null }];
 
 function rowQuery(cond) {
@@ -175,7 +131,6 @@ function rowQuery(cond) {
     kinds: kinds.flatMap(k => KINDS[k]),
     polarities: POLARITIES[c.pol || DEFAULT_POL],
   };
-  // Python 的條件段開關關著時會把 條件 從段類別拿掉,所以勾觸發條件要連開關一起開
   if (kinds.indexOf('cond') >= 0) rq.include_condition = true;
   if (c.from) rq.from_zones = zoneQuery(c.from);
   if (c.to) rq.to_zones = zoneQuery(c.to);
@@ -189,8 +144,6 @@ function rowQuery(cond) {
   return rq;
 }
 
-/* 卡名的建議清單(指定一張卡,票 12):中文名、日文名、英文名或別名含輸入字的卡,名字短的
-   排前面(比對上的那個名字的長度;同長照前端索引的順序),最多 `limit` 張。 */
 const SUGGESTIONS = 12;
 function suggest(db, text, limit) {
   const word = String(text || '').trim().toLowerCase();
@@ -206,14 +159,11 @@ function suggest(db, text, limit) {
     .map(f => ({ id: f.c.id, n: f.c.n, nj: f.c.nj || '' }));
 }
 
-/* 給條件的大類、屬性、種族按鈕(票 13):由值域正典(`window.VOCAB`)生成,順序照它的宣告序。 */
 function conditionOptions() {
   const items = name => ((Util.VOCAB[name] || {}).items || []).map(e => ({ code: e.code, zh: e.zh }));
   return { cat: items('cat'), attr: items('attr'), race: items('race') };
 }
 
-/* 字段的建議清單(票 13):動作索引的字段成員表裡中文名含輸入字的字段,名字短的排前面
-   (同長照表的順序),最多 `limit` 個。 */
 function archetypeSuggest(index, text, limit) {
   const word = foldName(String(text || '').trim());
   if (!word) return [];
@@ -225,19 +175,14 @@ function archetypeSuggest(index, text, limit) {
     .map(({ a }) => ({ code: a.code, zh: a.zh }));
 }
 
-/* 物件的種類碼(`action_index.OBJECT_CODES`,票 12;沒寫是候選卡集合)。 */
 const OBJECT_THIS = 1;
 
-/* 線:[旗標, 從, 到, 物件];從、到是 0 或 [推得, 區域碼…],物件是 0(找不到:沒有物件)或
-   [泛用, 集合鍵, 種類](種類只在不是候選卡集合時寫)。 */
 function lineOf([flags, from, to, obj]) {
   const position = p => (p === 0 ? null : { inferred: !!p[0], codes: p.slice(1) });
   return { doer: !!(flags & 1), from: position(from), to: position(to),
            object: obj === 0 ? null : { set: obj[1], kind: obj[2] || 0 } };
 }
 
-/* 候選卡集合 → 測「前端位置 p 在不在裡面」的函式(票 12 的指定卡):清單是位置的陣列;
-   位元集是 base64(第 i 位 = 位置 i,little-endian),不必展開成卡號。 */
 function memberTest(value) {
   if (Array.isArray(value)) {
     const set = new Set(value);
@@ -247,21 +192,16 @@ function memberTest(value) {
   return p => (p >> 3) < bytes.length && ((bytes.charCodeAt(p >> 3) >> (p & 7)) & 1) === 1;
 }
 
-/* 段對回的效果句序號(前端索引 `tx` 的位置,票 07 的「效果」格);對不回或舊產物沒有這格是 null。 */
 function clauseAt(clauses, i) {
   const c = clauses && clauses[i];
   return c == null ? null : c;
 }
 
-/* 段的原因(票 11):原因碼 = 種類在 `causes` 的位置 × 8 + 方在 `sides` 的位置。
-   沒寫原因的主動句(種類 null)是 null;被動句是 { kind: '不限定', side: null }。 */
 function causeAt(raw, code) {
   const kind = raw.causes[Math.floor(code / SIDE_SLOTS)][0];
   return kind === null ? null : { kind, side: raw.sides[code % SIDE_SLOTS] };
 }
 
-/* 產物 → 比對用的形狀:值的清單換成「值 → 位置」,段只留比對要用的欄。
-   db 是前端索引的卡(給條件時算滿足條件的卡用,票 13);卡的位置照產物的 `ids`。 */
 function prepare(raw, db) {
   const at = list => new Map(list.map((v, i) => [v, i]));
   const tests = new Map();
@@ -270,15 +210,12 @@ function prepare(raw, db) {
   const archetypes = new Map((raw.archetypes || []).map(([code, , key]) => [code, key]));
   const index = {
     cardAt,
-    /* 候選卡集合 `key` 裡有沒有前端位置 p 的卡;集合用到才讀。 */
     inSet(key, p) {
       if (!tests.has(key)) tests.set(key, memberTest(raw.sets[key]));
       return tests.get(key)(p);
     },
-    /* 字段成員表(票 13):setcode → 成員的集合鍵;沒有成員的字段不在表裡。 */
     archetypes: (raw.archetypes || []).map(([code, zh]) => ({ code, zh: zh || '' })),
     inArchetype: (code, p) => archetypes.has(code) && index.inSet(archetypes.get(code), p),
-    /* 滿足條件式的卡 → 位元集(Uint8Array,第 p 位 = 前端位置 p)。 */
     satisfying(condition) {
       const bits = new Uint8Array((raw.ids.length + 7) >> 3);
       for (const [p, c] of front) {
@@ -286,7 +223,6 @@ function prepare(raw, db) {
       }
       return bits;
     },
-    /* 候選卡集合 `key` 與位元集 bits 有沒有交集;位元集的集合逐位元組比,不展開。 */
     meets(key, bits) {
       const value = raw.sets[key];
       if (Array.isArray(value)) return value.some(p => (bits[p >> 3] >> (p & 7)) & 1);
@@ -319,12 +255,6 @@ function prepare(raw, db) {
   return index;
 }
 
-/* 給條件的判斷(票 13):列查詢的條件式對前端索引的一張卡(位置 p),照 Python
-   `action_query.eval_condition` 對玩家介面產生得出的那幾種原子;其餘原子不符。
-   - 等級:超量、連結怪獸沒有等級(Python `card_attr`),魔陷沒有 lv。
-   - 卡名包含:全形英數折成半形(Python `fold_width`)。Python 比日文卡名(含卡片屬性表裡
-     不設位置的「〜として扱う」卡名);前端另比中文名、英文名與別名,大小寫不分,
-     與卡名建議清單比的名字相同。 */
 const invert = table => Object.fromEntries(Object.entries(table).map(([k, v]) => [v, k]));
 const CAT_CODE = invert(CAT_VALUES);
 const ATTR_CODE = invert(ATTR_JA);
@@ -360,9 +290,6 @@ function fitsCondition(index, cond, card, p) {
   }
 }
 
-/* 引用列(票 14):卡號 → 它的引用列 [{ block, generic, key, part, clause }];
-   候選卡集合用到才解碼(泛用引用的集合上千張,固定關,不解碼)。
-   指定的部分:`parts[part]` 列了的候選卡只看那幾個區塊,沒列的看整張(blocksOf 回 null)。 */
 function references(raw) {
   const of = new Map();
   for (const [id, , , , refs] of raw.cards) {
@@ -384,7 +311,6 @@ function references(raw) {
   };
 }
 
-/* 候選卡集合 → 卡號:位置的清單,或位元集(第 i 位 = 位置 i,little-endian,base64)。 */
 function decodeSet(value, ids) {
   if (Array.isArray(value)) return value.map(p => ids[p]);
   const bytes = atob(value);
@@ -396,8 +322,6 @@ function decodeSet(value, ids) {
   return out;
 }
 
-/* 動作詞的選項:依列數排(同列數照索引的順序),前面一批直接顯示、其餘收在「更多」。
-   0 列的詞只出現在解析不出的段的字面裡,選了也沒有卡命中,不列。 */
 function options(index) {
   const words = index.words.filter(w => w[1] > 0)
     .map((w, i) => ({ word: w[0], rows: w[1], i }))
@@ -406,16 +330,12 @@ function options(index) {
   return { shown: words.slice(0, SHOWN_WORDS), more: words.slice(SHOWN_WORDS) };
 }
 
-/* 誰(spec「比對規則」):寫明的值相同或是雙方各自命中;算我方只在查我方時命中;
-   不限定只在不限定開關開時命中。 */
 function agentMatches(want, have, includeUnrestricted) {
   if (have === UNRESTRICTED) return includeUnrestricted;
   if (have === IMPLIED_SELF) return want === '我方';
   return have === want || have === BOTH_SIDES;
 }
 
-/* 原因(spec「比對規則」):沒寫原因的主動句不命中,被動句(不限定)只在開關開時命中;
-   種類相同或寫的涵蓋查的;查詢給了方時,段沒寫方、方相同或是雙方各自命中。 */
 function causeMatches(want, have, includeUnrestricted) {
   if (!have) return false;
   if (have.kind === UNRESTRICTED) return includeUnrestricted;
@@ -425,8 +345,6 @@ function causeMatches(want, have, includeUnrestricted) {
   return !want.side || have.side == null || have.side === want.side || have.side === BOTH_SIDES;
 }
 
-/* 原因的選項(票 11):索引的原因表依列數排(同列數照索引的順序);沒寫的兩種(null、不限定)
-   與「戰鬥或效果」「戰鬥以外」不列。 */
 function causeOptions(index) {
   return index.causes
     .map((c, i) => ({ kind: c[0], rows: c[1], i }))
@@ -435,14 +353,12 @@ function causeOptions(index) {
     .map(c => c.kind);
 }
 
-/* 從、到的區域選項:索引的區域表依列數排(同列數照索引的順序)。 */
 function zoneOptions(index) {
   return index.zones.map((z, i) => ({ zone: z[0], rows: z[1], i }))
     .sort((a, b) => b.rows - a.rows || a.i - b.i)
     .map(z => z.zone);
 }
 
-/* 段類別勾選點一下:勾上或取消;只剩一個勾著時不能取消(spec 第二題,裁定 (a))。 */
 function toggleKind(kinds, kind) {
   const now = kindsOf(kinds);
   if (now.indexOf(kind) < 0) return kindsOf(now.concat(kind));
@@ -453,15 +369,11 @@ function positions(map, values) {
   return values.map(v => map.get(v));
 }
 
-/* 列查詢的段類別 → 位置的集合。條件段開關關著時拿掉 條件(照 `row_match._normalise`;
-   命中與未解析組共用)。 */
 function kindSet(index, rq) {
   return new Set(positions(index.kindAt, rq.include_condition
     ? rq.kinds : rq.kinds.filter(k => k !== '條件')));
 }
 
-/* 從、到的查詢 → 這一欄要的區域碼判斷;索引裡沒有的區域或方什麼都不中。
-   推得的值不算(玩家介面的推得終點開關固定關)。 */
 function zoneTest(index, want) {
   if (!want) return null;
   const fits = want.map(({ zone, side }) => {
@@ -475,12 +387,9 @@ function zoneTest(index, want) {
   return pos => !!pos && !pos.inferred && pos.codes.some(code => fits.some(f => f(code)));
 }
 
-/* 被動作的卡(票 12)→ 線的物件判斷:這張卡自己只認物件是此卡的線(條件式剛好讓這張卡滿足的
-   不算);指定卡是那張卡在線的候選卡裡(判不了、代不進去的集合是空的)。沒有時回 null。 */
 function objectTest(index, rq) {
   if (rq.this_card) return obj => obj.kind === OBJECT_THIS;
   if (rq.condition != null) {
-    // 給條件(票 13):滿足條件的卡與線的候選卡有交集;同一個集合只比一次
     const fits = index.satisfying(rq.condition);
     const seen = new Map();
     return obj => {
@@ -493,8 +402,6 @@ function objectTest(index, rq) {
   return obj => p !== undefined && index.inSet(obj.set, p);
 }
 
-/* 線的條件(從、到、被動作的卡…)要落在同一條線上:做動作的一方那條線、物件表裡找不到的線
-   不算(照 `row_match._line_matches`)。沒有線的條件時回 null,段不必看線。 */
 function lineTest(index, rq) {
   const from = zoneTest(index, rq.from_zones);
   const to = zoneTest(index, rq.to_zones);
@@ -504,10 +411,6 @@ function lineTest(index, rq) {
     && (!from || from(line.from)) && (!to || to(line.to)) && (!object || object(line.object));
 }
 
-/* 列查詢 → 命中的卡:Map(卡號 → 命中的段;經引用的卡是引到命中的引用列,見 viaHits)。
-   判法照 `row_match`:段類別、極性在範圍裡,查詢的動作詞全部在同一段裡。
-   做代替的段只在查詢含代替時看(玩家介面不看代替)。
-   索引裡沒有的動作詞沒有卡命中。 */
 function match(index, rq) {
   const hits = new Map();
   const wanted = positions(index.actionAt, rq.actions);
@@ -531,16 +434,8 @@ function match(index, rq) {
   return hits;
 }
 
-/* 未解析的來源的旗標(`action_index.py` 的 U_*)。 */
 const U_REPLACING = 1, U_REASON = 4, U_REASON_SUBSTITUTING = 8, U_REFERENCE = 16;
 
-/* 列查詢 → 未解析組的卡號(Set)。判法照 `row_match._unparsed`:無官方日文的卡一律列;
-   查詢有動作詞時,沒命中(不在 found 裡)的卡裡,字面含查詢的全部動作詞、在這個查詢下
-   判不了的未解析的來源。段類別、極性(與代替)的篩選照樣生效,引用節點不看這兩欄;
-   誰、受方、原因、從、到這些欄未解析的來源沒有,不比。查詢要代入卡(指定卡、給條件)時
-   看「代入卡時判不了」的旗標,物件判不了的線在這時才判不了。這張卡自己不代入卡(與 Python
-   相同),看「不代入卡時判不了」的旗標:物件解析不出、引用的物件找不到的線照樣算(票 12)。
-   found:命中的卡(有 `has` 就好),任一段命中的卡只在命中的清單。 */
 function unsure(index, rq, found) {
   const out = new Set(index.noText.filter(id => !found.has(id)));
   if (!rq.actions.length) return out;
@@ -565,12 +460,6 @@ function unsure(index, rq, found) {
   return out;
 }
 
-/* ── 經引用(票 14)────────────────────────────────────────
-   直接沒命中、有引用列的卡,沿引用列展開到底(被引用卡指定的部分裡有命中段就算),
-   走到這條路上走過的卡就停;判法照 Python 的 `row_match._Expansion`。泛用引用固定關。
-   命中的卡回「引到命中的引用列」:經引用的命中算在引用節點所在的效果上(`clause`)。
-   被引用卡指定的部分看的是它的命中段;之後加區塊種類篩選時,被篩掉的段仍要算進
-   blockHits(Python 同樣不看查詢的區塊種類),起點卡的引用列才照區塊種類篩。 */
 function viaHits(index, direct) {
   const blockHits = new Map();
   for (const [id, segs] of direct) blockHits.set(id, new Set(segs.map(s => s.block)));
@@ -585,7 +474,6 @@ function viaHits(index, direct) {
   return out;
 }
 
-/* 這條引用列走不走得到命中段;visiting 是這條路上走過的卡。 */
 function leads(index, blockHits, ref, visiting) {
   if (ref.generic) return false;
   return index.refs.candidates(ref.key).some(cid =>

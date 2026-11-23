@@ -1,36 +1,31 @@
 """動作索引:攤平出來的列 → 網站讀的 `web/action-data.js`(spec「動作索引」「建置與門檻」、ADR-0013)。
 
-單一接縫:`build_action_index(卡片結構, 卡片總表, 前端索引的卡, 字段表, tag_cards=效果標記表)
-→ (文字, 報告)`;
-`decode_action_index(文字)` 是格式的唯一讀法(測試與之後的工具用它,不各自解碼)。
-讀檔、寫檔、印報告在薄殼 `build_action_index.py`。
-
-格式:`window.ACTION_DATA={…};`,JSON 物件,每個鍵一行;候選卡集合一個一行、卡一張一行,
-版控的差異看得出是哪張卡、哪個集合變了。不帶時間與來源雜湊,同樣的輸入兩次產出逐位元組相同。
+格式:`window.ACTION_DATA={…};`,JSON 物件,每個鍵一行;候選卡集合一個一行、卡一張一行。
+不帶時間與來源雜湊,同樣的輸入兩次產出逐位元組相同。
 
 - `ids`:前端索引的卡號,照前端索引的順序。候選卡集合與字段成員存的是這個順序的位置。
-- `actions` `zones` `sides` `kinds` `polarities` `blockKinds` `agents` `causes`:值的清單(照字串排序,
-  新值只插進一格),列裡存的是在清單裡的位置;`actions` `zones` `causes` 帶列數:[值, 列數]。
+- `actions` `zones` `sides` `kinds` `polarities` `blockKinds` `agents` `causes`:值的清單(照字串排序),
+  列裡存的是在清單裡的位置;`actions` `zones` `causes` 帶列數:[值, 列數]。
   `causes` 是原因的種類,另含 null(沒寫原因的主動句)與「不限定」(沒寫原因的被動句)。
-- `sets`:候選卡集合,鍵是內容的雜湊(內容相同共用一份,別的集合增減不會改到它的鍵)。
+- `sets`:候選卡集合,鍵是內容的雜湊。
   值是位置的清單,或位元集(第 i 位 = 位置 i,little-endian,base64),兩種取短的。
 - `cards`:一張卡一行 [卡號, 區塊, 段, 未解析的來源, 引用列, 效果, 誰, 受方, 原因],只列有東西的卡。
   - 區塊:[區塊種類]…,照卡片結構的頂層區塊順序;段與引用列用位置指它。
   - 段:[段 id, 區塊, 段類別, 極性, 是不是做代替的段, [動作詞], [線], 被改的屬性(有才寫)]。
   - 線:[旗標(1 做動作的一方、2 取對象), 從, 到, 物件];從、到是 0(沒有)或 [推得, 區域碼…],
     區域碼 = 區域位置 × 8 + 方的位置;物件是 0(物件表裡找不到:沒有物件)或 [泛用, 集合鍵, 種類];
-    種類只在不是候選卡集合時寫(票 12,加在最後一格):1 此卡、2 判不了、3 代不進去。此卡的集合照舊是
-    這張卡(指定卡比得到),判不了、代不進去的集合是空的。
+    種類只在不是候選卡集合時寫:1 此卡、2 判不了、3 代不進去。此卡的集合是
+    這張卡,判不了、代不進去的集合是空的。
   - 未解析的來源:[段類別, 極性, 區塊種類, 旗標, [原文字面的動作詞]];旗標 1 做代替的段、
     2 區塊種類判不出、4 不代入卡時判不了、8 代入卡時判不了、16 引用節點(段類別、極性為 null)。
-    字面不含任何動作詞的不寫(帶動作詞的查詢才看未解析組,字面要含查詢的全部動作詞)。
+    字面不含任何動作詞的不寫。
   - 引用列:[區塊, 泛用, 集合鍵, 指定的部分, 效果];指定的部分是 `parts` 的位置。
   - 效果:與段同序的清單,每段對回前端索引的效果句序號(`tx` 的位置),對不回是 null(`clause_map`);
-    引用列的效果是引用節點所在的效果句。兩者都加在最後一格,先前的讀法照舊。
-  - 誰(票 10):與段同序的清單,每段的誰在 `agents` 的位置;值是寫明的(我方、對手、雙方各自)、
+    引用列的效果是引用節點所在的效果句。
+  - 誰:與段同序的清單,每段的誰在 `agents` 的位置;值是寫明的(我方、對手、雙方各自)、
     算我方或不限定(`action_rows.agent_of`)。
-  - 受方(票 11):與段同序的清單,每段的受方在 `sides` 的位置;受方是卡、沒有受方的是 null 的位置。
-  - 原因(票 11):與段同序的清單,每段的原因碼 = 種類在 `causes` 的位置 × 8 + 方在 `sides` 的位置
+  - 受方:與段同序的清單,每段的受方在 `sides` 的位置;受方是卡、沒有受方的是 null 的位置。
+  - 原因:與段同序的清單,每段的原因碼 = 種類在 `causes` 的位置 × 8 + 方在 `sides` 的位置
     (沒寫方是 null 的位置),同區域碼。
 - `parts`:[效果, [[位置, [區塊]]…]]…:引用列的候選卡上,指定的部分不是整張的卡與它的區塊;沒列的看整張。
 - `archetypes`:[setcode, 中文名, 集合鍵]…,成員照卡片屬性表(位置條件不設限的列),沒有成員的不寫。
@@ -49,8 +44,8 @@ from clause_map import NUMBER, POSITION, ClauseMap
 
 GLOBAL = "window.ACTION_DATA="
 DEFAULT_SIZE_LIMIT = 8_000_000      # spec Q12:8 MB
-SIDE_SLOTS = 8                       # 區域碼裡方的位置佔的格數
-KEY_LENGTH = 6                       # 集合鍵的起始長度;撞了就整份加長
+SIDE_SLOTS = 8
+KEY_LENGTH = 6
 _B36 = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 FLAG_DOER, FLAG_TARGETING = 1, 2
@@ -78,7 +73,7 @@ def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=
     started = time.perf_counter()
     for row in index.rows:
         if row.line is not None and row.line.object is not None:
-            row.line.object.candidates.mask      # 全部對象線的候選卡先算好
+            row.line.object.candidates.mask
     timings["候選卡"] = time.perf_counter() - started
 
     started = time.perf_counter()
@@ -102,7 +97,6 @@ def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=
 
 
 def _missing(structures, cards, at):
-    """卡片結構或卡片總表的卡不在前端索引裡:候選卡與列對不到網站上的卡,建置失敗。"""
     problems = []
     for label, ids in (("卡片結構", [s["id"] for s in structures]),
                        ("卡片總表", [entry["id"] for entry in cards])):
@@ -115,7 +109,6 @@ def _missing(structures, cards, at):
 
 
 def _clause_counts(frontend_cards, tag_cards):
-    """效果句的序號是前端索引 `tx` 的位置:每張卡的效果句數要和效果標記表相同,否則序號對不上。"""
     counts = {entry["id"]: len(entry.get("clauses") or []) for entry in tag_cards}
     wrong = [f"{entry['id']}(前端索引 {len(entry.get('tx') or [])}、效果標記表 "
              f"{counts.get(entry['id'], 0)})"
@@ -128,7 +121,6 @@ def _clause_counts(frontend_cards, tag_cards):
 
 
 class _Vocab:
-    """值 → 在清單裡的位置;清單照字串排序(None 排最前),所以要先收齊再編號。"""
 
     def __init__(self):
         self.count = {}
@@ -152,14 +144,11 @@ class _Encoder:
         self.order = order
         self.at = at
         self.problems = []
-        # 卡片總表位置 → 前端索引位置;順序相同時位元集不必重排。
         self.remap = [at[entry["id"]] for entry in cards]
         self.identity = self.remap == list(range(len(cards)))
         self.cards = cards
-        self._mask_sets = {}       # 卡片總表位置的位元集 → 前端位置的 tuple
-        self.sets = {}             # 前端位置的 tuple → 集合鍵(最後才定)
-
-    # -- 候選卡集合 --------------------------------------------------------
+        self._mask_sets = {}
+        self.sets = {}
 
     def set_of_mask(self, mask):
         if mask not in self._mask_sets:
@@ -183,8 +172,6 @@ class _Encoder:
             else:
                 self.problems.append(f"{what}的卡 {cid} 不在前端索引裡")
         return self.add_set(tuple(sorted(positions)))
-
-    # -- 整份 --------------------------------------------------------------
 
     def encode(self, archetypes):
         index = self.index
@@ -277,7 +264,7 @@ class _Encoder:
     def encode_set(self, positions):
         listed = "[" + ",".join(map(str, positions)) + "]"
         bits = bytearray((len(self.order) + 7) // 8)
-        if len(listed) <= 4 * len(bits) // 3 + 4:   # 清單比位元集短就不必做位元集
+        if len(listed) <= 4 * len(bits) // 3 + 4:
             return list(positions)
         for p in positions:
             bits[p >> 3] |= 1 << (p & 7)
@@ -388,7 +375,6 @@ class _Encoder:
         return [int(pos.inferred), *codes]
 
     def archetypes(self, archetypes):
-        """字段的成員:卡片屬性表裡位置條件不設限的 setcode 列(與查詢「給條件 字段」同一判法)。"""
         wants = {}
         for row in archetypes:
             wants.setdefault(row["setcode"] & 0x0FFF, []).append(row["setcode"])
@@ -412,7 +398,6 @@ class _Encoder:
 
 
 def _bits(mask):
-    """位元集 → 設了的位(由小到大)。"""
     text = bin(mask)[:1:-1]
     out = []
     i = text.find("1")
@@ -423,7 +408,6 @@ def _bits(mask):
 
 
 def _keys(sets):
-    """集合(位置的 tuple)→ 鍵:內容雜湊的 base36 前綴。撞了就整份加長一格,鍵仍只看內容。"""
     digests = {}
     for positions in sets:
         raw = hashlib.sha1(",".join(map(str, positions)).encode("ascii")).digest()
@@ -440,7 +424,6 @@ def _keys(sets):
 
 
 def _replace_sets(value, keys):
-    """列裡暫放的集合(tuple)換成鍵。"""
     if isinstance(value, tuple):
         return keys[value]
     if isinstance(value, list):
@@ -473,8 +456,6 @@ def _section(name, value):
 def _serialize(sections):
     return GLOBAL + "{\n" + ",\n".join(_section(n, v) for n, v in sections) + "\n};\n"
 
-
-# -- 讀回 --------------------------------------------------------------------
 
 def decode_action_index(text):
     """產物文字 → 讀好的動作索引(卡號、值都換回來,候選卡是卡號的 frozenset)。

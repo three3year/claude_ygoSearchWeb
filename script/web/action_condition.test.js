@@ -1,12 +1,3 @@
-/**
- * action_condition.test.js — 接縫三:被動作的卡「給條件」(action-search-web 票 13)
- *
- * 跑法:`node --test script/web/`
- *
- * 與 action_object.test.js 同一個沙箱:載入 `web/` 底下真實的前端檔,餵合成的卡片資料與一份小的
- * 動作索引(`action_fixture.js`)。判法:滿足查詢條件的卡與這條線的候選卡有交集就命中;
- * 滿足條件的卡由前端索引的卡與動作索引的字段成員表算出。不斷言 DOM 結構與 CSS class。
- */
 'use strict';
 
 const test = require('node:test');
@@ -18,7 +9,6 @@ const CARDS = [
   { id: 501, n: '龍族怪獸', nj: 'ドラゴン', c: 'm', s: ['effect'], at: 'dark', r: 'dragon', lv: 4 },
   { id: 502, n: '戰士怪獸', nj: 'ＥＭウォリアー', c: 'm', s: ['effect'], at: 'light', r: 'warrior',
     lv: 8 },
-  // 超量怪獸的 lv 是階級、連結怪獸沒有 lv:兩張都不算有等級
   { id: 503, n: '超量龍', nj: 'エクシーズ・ドラゴン', c: 'm', s: ['effect', 'xyz'], at: 'dark',
     r: 'dragon', lv: 4 },
   { id: 504, n: '連結龍', c: 'm', s: ['effect', 'link'], at: 'dark', r: 'dragon', lk: 2 },
@@ -32,13 +22,10 @@ const CARDS = [
 ];
 
 const ACTION = actionData([
-  // 「モンスター１体を特殊召喚する」:候選卡是全部怪獸
   { id: 511, segs: [{ acts: ['特殊召喚'], lines: [{ obj: [501, 502, 503, 504, 514] }] }] },
   { id: 512, segs: [{ acts: ['特殊召喚'], lines: [{ obj: [502] }] }] },
   { id: 513, segs: [{ acts: ['破壞'], lines: [{ obj: [505] }] }] },
-  // 「このカードを特殊召喚する」:此卡的候選卡是這張卡自己
   { id: 514, segs: [{ acts: ['特殊召喚'], lines: [{ obj: 'self' }] }] },
-  // 物件判不了:只在代入卡(指定卡、給條件)時判不了
   { id: 515, segs: [{ acts: ['特殊召喚'], lines: [{ obj: 'undecidable' }] }],
     unres: [{ acts: ['特殊召喚'], reason: false, substituting: true }] },
   { id: 516, segs: [{ acts: ['特殊召喚'], lines: [{ obj: [503] }] }] },
@@ -63,7 +50,6 @@ test('大類、屬性:各自生效', () => {
 
 test('等級:下限、上限;超量與連結怪獸沒有等級', () => {
   assert.deepStrictEqual(ids(given({ lvMin: 5 })), [511, 512, 514]);
-  // 超量龍(503)的 lv 4 是階級:只有它的 516 不命中
   assert.deepStrictEqual(ids(given({ lvMax: 4 })), [511]);
   assert.deepStrictEqual(ids(given({ lvMin: 7, lvMax: 7 })), [511, 514]);
 });
@@ -71,7 +57,6 @@ test('等級:下限、上限;超量與連結怪獸沒有等級', () => {
 test('字段:成員照動作索引的字段成員表', () => {
   assert.deepStrictEqual(ids(given({ set: 0x10 })), [511, 516]);
   assert.deepStrictEqual(ids(given({ set: 0x1010 })), [511, 516]);
-  // 表裡沒有的字段沒有成員
   assert.deepStrictEqual(ids(given({ set: 0x99 })), []);
 });
 
@@ -119,8 +104,6 @@ test('給條件換成列查詢的 condition:一項是原子本身,多項是「�
   assert.ok(!('card' in rq) && !('this_card' in rq));
 });
 
-/* ── 瀏覽紀錄、摺疊鈕、選項 ─────────────────────────────── */
-
 const EMPTY_Q = { name: '', nameLang: 'zh', code: '', text: '' };
 const DOM_SORT = { key: 'dom', dir: '' };
 
@@ -140,7 +123,6 @@ test('瀏覽紀錄裡認不得的條件值忽略,其餘照常還原', () => {
                       set: '0x10', name: 3, extra: 1 });
   assert.deepStrictEqual(harness.restoreSaved(sandbox, { q: EMPTY_Q, sort: DOM_SORT, act: raw }),
                          { q: EMPTY_Q, sort: DOM_SORT, act: given({ race: 'dragon' }) });
-  // 一項都認不得:被動作的卡不指定
   assert.deepStrictEqual(
     harness.restoreSaved(sandbox, { q: EMPTY_Q, sort: DOM_SORT, act: given({ race: 'x' }) }),
     { q: EMPTY_Q, sort: DOM_SORT, act: { actions: ['特殊召喚'] } });

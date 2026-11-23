@@ -1,14 +1,3 @@
-/**
- * action_recipient_cause.test.js — 接縫三:動作條件的「受方」與「原因」(action-search-web 票 11)
- *
- * 跑法:`node --test script/web/`
- *
- * 與 action_agent.test.js 同一個沙箱與小索引寫法(`action_fixture.js`,段多帶 `recipient`、`cause`)。
- * 段的受方是玩家的方或 null(受方是卡、沒有受方);原因是 [種類, 方或 null]、
- * 沒寫原因的被動句 ['不限定', null]、主動句 null(攤平時定好,見
- * `script/action_structure/action_rows.py` 的 `recipient_of`、`cause_of`)。前端只比對。
- * 規則與 Python 的 `run_query` 相同,兩邊一致由 `test_web_parity.py` 守住。
- */
 'use strict';
 
 const test = require('node:test');
@@ -20,21 +9,18 @@ const IDS = [501, 502, 503, 504, 511, 512, 513, 514, 515, 516, 517, 518, 519];
 const CARDS = IDS.map(id => ({ id, n: `卡${id}`, c: 'm' }));
 
 const ACTION = actionData([
-  // 受方
   { id: 501, segs: [{ acts: ['傷害'], recipient: '對手' }] },
   { id: 502, segs: [{ acts: ['傷害'], recipient: '我方' }] },
   { id: 503, segs: [{ acts: ['傷害'], recipient: '雙方各自' }] },
-  { id: 504, segs: [{ acts: ['裝備'] }] },                       // 受方是卡:null
-  // 原因(破壞的條件段)
+  { id: 504, segs: [{ acts: ['裝備'] }] },
   { id: 511, segs: [{ kind: '條件', acts: ['破壞'], cause: ['戰鬥', null] }] },
   { id: 512, segs: [{ kind: '條件', acts: ['破壞'], cause: ['戰鬥或效果', null] }] },
   { id: 513, segs: [{ kind: '條件', acts: ['破壞'], cause: ['戰鬥以外', null] }] },
   { id: 514, segs: [{ kind: '條件', acts: ['破壞'], cause: ['不限定', null] }] },
-  { id: 515, segs: [{ acts: ['破壞'] }] },                       // 主動句沒寫原因
+  { id: 515, segs: [{ acts: ['破壞'] }] },
   { id: 516, segs: [{ pol: '不會', acts: ['破壞'], cause: ['效果', '對手'] }] },
   { id: 517, segs: [{ pol: '不會', acts: ['破壞'], cause: ['效果', null] }] },
   { id: 518, segs: [{ kind: '條件', acts: ['特殊召喚'], cause: ['作為素材', null] }] },
-  // 原因比的是段:戰鬥寫在另一段
   { id: 519, segs: [{ kind: '條件', acts: ['特殊召喚'], cause: ['戰鬥', null] },
                     { kind: '條件', acts: ['破壞'], cause: ['不限定', null] }] },
 ]);
@@ -86,7 +72,6 @@ test('沒選受方、原因:結果與以前相同', () => {
 });
 
 test('原因的選項由索引的表生成,不列戰鬥或效果、戰鬥以外與沒寫的兩種', () => {
-  // 列數:戰鬥 2(511、519)、效果 2(516、517)、作為素材 1;同列數照索引的順序(字串排序)
   assert.deepStrictEqual(harness.causeOptions(sandbox), ['戰鬥', '效果', '作為素材']);
 });
 
@@ -102,8 +87,6 @@ test('介面到查詢:受方換成 recipient,原因換成 cause({ kind, side })'
   assert.deepStrictEqual(harness.rowQuery(sandbox, { actions: ['破壞'], cause: { kind: '戰鬥' } }),
                          { ...base, cause: { kind: '戰鬥' } });
 });
-
-/* ── 瀏覽紀錄與摺疊鈕 ───────────────────────────────────── */
 
 const EMPTY_Q = { name: '', nameLang: 'zh', code: '', text: '' };
 const DOM_SORT = { key: 'dom', dir: '' };

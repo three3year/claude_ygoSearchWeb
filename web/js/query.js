@@ -219,7 +219,6 @@ function read() {
   return q;
 }
 
-/* 生效中的條件數:卡片條件一軸算一條,加上動作條件(`Action.count`)。 */
 function count(q, act) {
   const isSet = v => {
     if (v == null || v === '') return false;

@@ -133,7 +133,6 @@ def iter_references(block):
 
 
 def iter_reference_sites(block):
-    """同 `iter_references`,另帶節點直屬的區塊(頂層區塊或內嵌效果的區塊;節點的 span 相對於它)。"""
     for node in iter_nodes(block["tree"]["items"]):
         if is_reference(node):
             yield block, node

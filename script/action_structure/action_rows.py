@@ -1,28 +1,3 @@
-"""攤平:卡片結構 + 卡片總表 → 完整的列(spec「動作索引」)。
-
-解讀卡片結構的程式只在這裡;比對(`row_match`)只讀攤平出來的列。
-
-列的單位是對象線:每條對象線一列,沒有線的段以段為一列(`line` 為 None)。同一段的列共用 `seq`。
-每一欄都是解讀完的值:
-- 段的欄:卡、段 id、段序號、所在的(頂層)區塊與區塊種類、段類別、極性、是不是做代替的段、
-  動作詞(上位詞已展開)、被改的屬性、原文位置(`Place`,效果對應用)、誰(`agent_of`)、
-  受方(`recipient_of`)、原因(`cause_of`)。
-- 線的欄(`Line`):做動作的一方(查詢比的是被動作的卡,這條線不比)、取對象(受方是被取對象的物件的段,
-  每條線都算)、從、到(子區域算在上位區域內,推得值另標)、物件。
-- 物件(`LineObject`):是不是泛用物件、種類、候選卡。種類分得出此卡、候選卡集合、判不了、代不進去
-  (物件表裡找不到 = 沒有物件,`Line.object` 為 None)。候選卡以對象線為單位(同一個物件在不同線上「從」不同,
-  卡名與字段的位置條件就不同),用到才算(`Candidates`),同一份攤平裡算過的不再算。
-
-另外三種列(票 04):
-- 未解析組的來源(`Unresolved`):可能進未解析組的段(段解析不出、對象線的物件判不了、所在區塊種類判不出)
-  與解析不出的引用節點,帶原文字面含的動作詞、原因、原文。無官方日文的卡另列(`no_text`)。
-- 引用節點(`Reference`):引用它的卡與區塊、被引用物件的候選卡、指定的部分、是不是泛用引用。
-- 代替的連結(`replacements`):被代替段 → 做代替的段。
-
-未結構化的段(重複到停為止)不命中,不出命中用的列。
-
-同一份輸入(同一個物件)重複查詢時用 `index_of`:攤平與算過的候選卡跨呼叫共用。
-"""
 import json
 from typing import NamedTuple
 
@@ -34,33 +9,27 @@ from effect_reference import is_reference, iter_reference_sites, selected_blocks
 from structure_shape import iter_nodes, iter_segments, zone_names
 from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 
-# 雙方對等的動作詞:施事線與受事線一樣當被比的物件(`_is_doer`)。
 SYMMETRIC_ACTION = "戰鬥"
 REASON_REF_MISSING = "引用的物件找不到"
 REASON_SAME_DIFFERENT = "異同判不了"
-# 誰(票 10):段寫明的值(我方、對手、雙方各自),或沒寫時的兩種(spec「比對規則」的誰)。
 IMPLIED_SELF = "算我方"
 UNRESTRICTED = "不限定"
 IMPLIED_SELF_KINDS = ("效果", "代價", "召喚手續")
-# 原因(票 11):沒寫原因的被動句是不限定(和誰共用不限定開關),記成這個種類。
 PASSIVE = "被動"
 
-# 被動作的卡(物件)的種類(spec「動作索引」欄位表;沒有物件是 `Line.object` 為 None)。
-OBJECT_THIS = "此卡"                 # 物件0,或帶狀態的此卡
-OBJECT_CANDIDATES = "候選卡集合"     # 條件式:代得進去的卡是候選卡
-OBJECT_UNDECIDABLE = "判不了"        # 物件或它引用的物件解析不出、引用的物件找不到、異同判不了
-OBJECT_UNSUBSTITUTABLE = "代不進去"  # 不是卡(超量素材、計數器…):指定卡、給條件都代不進去
+OBJECT_THIS = "此卡"
+OBJECT_CANDIDATES = "候選卡集合"
+OBJECT_UNDECIDABLE = "判不了"
+OBJECT_UNSUBSTITUTABLE = "代不進去"
 
 
 class Position(NamedTuple):
-    """從或到:`zones` 是 (區域, 方) 的集合,區域含全部上位區域;`names` 是只看區域時的集合。"""
     zones: frozenset
     names: frozenset
-    inferred: bool          # 推得值或繼承自推得值
+    inferred: bool
 
 
 class Candidates:
-    """一條對象線上物件的候選卡:卡片總表位置的位元集(第 i 位 = 總表第 i 張卡),第一次用到才算。"""
     __slots__ = ("_index", "_owner", "_line", "_mask")
 
     def __init__(self, index, owner, line):
@@ -77,7 +46,7 @@ class Candidates:
 class LineObject(NamedTuple):
     generic: bool
     candidates: Candidates
-    kind: str = OBJECT_CANDIDATES    # OBJECT_* 之一;此卡的候選卡照舊是這張卡(指定卡比得到)
+    kind: str = OBJECT_CANDIDATES
 
 
 class Line(NamedTuple):
@@ -85,12 +54,10 @@ class Line(NamedTuple):
     targeting: bool
     from_: Position | None
     to: Position | None
-    object: LineObject | None   # 物件表裡找不到時 None
+    object: LineObject | None
 
 
 class Place(NamedTuple):
-    """段或引用節點在原文裡的位置:來源(card_text / pen_effect)、頂層區塊的編號(①②③,沒有是 None)、
-    在來源原文裡的起點(內嵌效果的區塊 span 本來就是來源的位置)。效果對應用它對回效果句。"""
     source: str
     label: str | None
     start: int
@@ -110,66 +77,62 @@ class Row(NamedTuple):
     place: Place
     line: Line | None
     agent: str
-    recipient: str | None    # 受方是玩家時的方;受方是卡、沒有受方時 None
-    cause: tuple | None      # (種類, 方或 None);沒寫:被動句 (不限定, None)、主動句 None
+    recipient: str | None
+    cause: tuple | None
 
 
 class Unresolved(NamedTuple):
-    """未解析組的來源:一段,或一個解析不出的引用節點(`segment` 為 None,不看段類別與極性)。"""
     card: int
     block_kind: str
-    block_reason: str | None    # 所在區塊種類判不出:區塊被區塊種類篩掉時用這個原因
+    block_reason: str | None
     segment: str | None
     kind: str | None
     polarity: str | None
     replacing: bool
-    reason: str | None          # 不代入卡時的原因
-    reason_substituting: str | None   # 代入卡(指定卡、給條件)時的原因
-    literal_actions: frozenset  # 原文字面含的動作詞(經同義表,上位詞已展開)
+    reason: str | None
+    reason_substituting: str | None
+    literal_actions: frozenset
     text: str
 
 
 class Reference(NamedTuple):
-    """解析出的引用節點:`card` 的 `block`(頂層區塊)裡,引用 `candidates` 這些卡的 `effect` 部分。"""
     card: int
     block: str
-    generic: bool               # 被引用物件是泛用物件(泛用引用開關開才展開)
+    generic: bool
     candidates: tuple
-    effect: str                 # 指定的部分(效果的 JSON);`ActionIndex.part` 換成被引用卡的區塊
-    place: Place                # 引用節點所在的位置(經引用的命中算在這個效果上)
+    effect: str
+    place: Place
 
 
 class ActionIndex:
-    """攤平的結果:列,加上比對「指定卡」「給條件」要用的卡片總表位置與代入用的卡(CardView)。"""
 
     def __init__(self, cards, structures):
         self.cards = cards
         self._judge = CandidateCards(cards, structures)
-        self.position = {}       # 卡片密碼(含別號)→ 總表位置
+        self.position = {}
         for i, entry in enumerate(cards):
             self.position[entry["id"]] = i
         for i, entry in enumerate(cards):
             for alt in entry.get("alt_ids", ()):
                 self.position.setdefault(alt, i)
         self.views = [self._judge.view(entry) for entry in cards]
-        self._masks = {}         # id(候選卡清單)→ (清單, 位元集);清單留著,id 才不會被重用
-        self._shared = {}        # 位元集 → 同一個位元集(內容相同的共用一份)
-        self._condition_masks = {}   # 查詢條件的 JSON → 滿足它的卡的位元集
+        self._masks = {}         # 清單留著,id 才不會被重用
+        self._shared = {}
+        self._condition_masks = {}
         self.rows = []
-        self.card_order = {}     # 卡片密碼 → 在卡片結構裡的順序(回傳照這個順序)
-        self.no_text = []        # 無官方日文的卡:(卡片密碼, 原因)
-        self.blocks = {}         # 有結構的卡 → [(頂層區塊 id, 區塊種類)]
-        self.texts = {}          # 有結構的卡 → {來源: 原文}(區塊與略過文本拼回,沒蓋到的只有空白)
+        self.card_order = {}
+        self.no_text = []
+        self.blocks = {}
+        self.texts = {}
         self.unresolved = []
-        self.references = {}     # (卡, 頂層區塊 id)→ [Reference]
-        self.referencing = set()  # 有解析出的引用節點的卡
-        self.replacements = {}   # 卡 → [(被代替段 id, 做代替的段 id)]
+        self.references = {}
+        self.referencing = set()
+        self.replacements = {}
         self._structure_by_id = {s["id"]: s for s in structures}
-        self._effects = {}       # 效果的 JSON → 效果
-        self._parts = {}         # (卡, 效果的 JSON)→ 指定的部分(頂層區塊 id)
+        self._effects = {}
+        self._parts = {}
 
     def mask_of(self, positions):
-        """總表位置 → 位元集。"""
         bits = bytearray((len(self.cards) + 7) // 8)
         for i in positions:
             bits[i >> 3] |= 1 << (i & 7)
@@ -183,7 +146,6 @@ class ActionIndex:
         return self._masks[id(found)][1]
 
     def condition_mask(self, condition, fits):
-        """滿足查詢條件的卡的位元集;`fits(view)` 判一張卡。同一個條件只算一次。"""
         key = json.dumps(condition, sort_keys=True, ensure_ascii=False)
         if key not in self._condition_masks:
             self._condition_masks[key] = self.mask_of(
@@ -191,7 +153,6 @@ class ActionIndex:
         return self._condition_masks[key]
 
     def part(self, card_id, effect):
-        """被引用卡上引用節點指定的部分:頂層區塊 id(找不到指定的部分時是整張)。"""
         key = (card_id, effect)
         if key not in self._parts:
             self._parts[key] = tuple(block["id"] for block in selected_blocks(
@@ -199,13 +160,11 @@ class ActionIndex:
         return self._parts[key]
 
 
-_CACHE = []          # [(卡片結構, 卡片總表, ActionIndex)],最近用的在最後
+_CACHE = []
 _CACHE_SIZE = 2
 
 
 def index_of(structures, cards):
-    """同一份輸入(同一個物件)的攤平只做一次,候選卡也跨呼叫共用。輸入在兩次呼叫之間不可就地修改。
-    快取留著輸入本身,物件 id 才不會被別的輸入重用。"""
     for i, (s, c, index) in enumerate(_CACHE):
         if s is structures and c is cards:
             _CACHE.append(_CACHE.pop(i))
@@ -217,7 +176,6 @@ def index_of(structures, cards):
 
 
 def flatten(structures, cards):
-    """全庫卡片結構 + 卡片總表 → ActionIndex。"""
     index = ActionIndex(cards, structures)
     seq = 0
     for order, card in enumerate(structures):
@@ -267,12 +225,10 @@ def flatten(structures, cards):
 
 
 def _place(block, inner, offset):
-    """`inner`(頂層區塊或它的內嵌效果)裡 `offset` 處:頂層區塊的編號,加上在來源原文裡的位置。"""
     return Place(block["source"], block["label"], inner["span"][0] + offset)
 
 
 def _source_texts(card):
-    """區塊與略過文本照 span 拼回各來源的原文;兩者之間沒蓋到的只有換行等空白,補空白。"""
     pieces = {}
     for part in [*card["blocks"], *card["omitted"]]:
         pieces.setdefault(part["source"], []).append(part)
@@ -287,14 +243,10 @@ def _source_texts(card):
 
 
 def segment_actions(seg):
-    """段的動作詞連同上位詞:段寫「融合召喚」,查「特殊召喚」也要對得上。"""
     return {a for action in seg["actions"] for a in action_ancestors(action)}
 
 
 def agent_of(seg, segments):
-    """段的誰:寫明的值(我方、對手、雙方各自;玩家字面取它的方);沒寫時,效果段、代價段、召喚手續段的
-    主動句算我方,其餘(條件段、被動句、限制段、修飾段)不限定。沒有述語的段(取對象宣言)不是被動句。
-    指向玩家的動作回指(「ドローしたプレイヤーは」)是它指回的那一段的誰。"""
     agent = seg["agent"]
     if isinstance(agent, dict):
         if "ref" in agent:
@@ -312,8 +264,6 @@ def agent_of(seg, segments):
 
 
 def recipient_of(seg):
-    """段的受方是玩家時是哪一方(我方、對手、雙方各自;玩家字面取它的方);受方是卡(物件回指)或沒有受方
-    時 None。"""
     recipient = seg["recipient"]
     if isinstance(recipient, dict):
         return recipient.get("side")
@@ -321,8 +271,6 @@ def recipient_of(seg):
 
 
 def cause_of(seg):
-    """段的原因:(種類, 方);沒寫方時方是 None。沒寫原因時,被動句是 (不限定, None),主動句(與沒有述語的段)
-    是 None。"""
     cause = seg["cause"]
     if cause is not None:
         return cause["kind"], cause.get("side")
@@ -332,17 +280,11 @@ def cause_of(seg):
 
 
 def _is_doer(line, seg):
-    """做動作的主語線(「このカードが戦闘によって相手モンスターを破壊した」的このカード):查詢指定的
-    卡、物件條件、從/到比的是被作用的物件,段裡另有受詞時主語不比。戰鬥的雙方對等(「Xが Yと 戦闘を
-    行う」),施事照比;只有主語的段(「このカードが相手に戦闘ダメージを与えた」)也照比。"""
     return (line["role"] == "施事" and SYMMETRIC_ACTION not in seg["actions"]
             and any(other["role"] != "施事" for other in seg["lines"]))
 
 
 def incomplete_reason(seg, objects, substituting=False):
-    """段沒命中時,它結構不完整的原因;結構完整(只是不符查詢)回 None。
-    先看段自己,再看對象線引用的物件(物件解析不出時指定卡代入判不了);查詢要把卡代入物件
-    (`substituting`:指定卡或只給條件)時,數量一張又沒寫比較對象的異同也判不了。"""
     if seg["unparsed"]:
         return seg["unparsed"]["reason"]
     for line in seg["lines"]:
@@ -352,7 +294,6 @@ def incomplete_reason(seg, objects, substituting=False):
         reason = _object_incomplete_reason(obj, substituting)
         if reason is not None:
             return reason
-        # 條件式引用的物件(等級 = 物件1.階級)解析不出,代入也判不了。
         for ref_id in referenced_objects(obj["condition"]):
             ref = objects.get(ref_id)
             if ref is None:
@@ -364,7 +305,6 @@ def incomplete_reason(seg, objects, substituting=False):
 
 
 def _object_incomplete_reason(obj, substituting):
-    """物件解析不出,或要代入卡時數量一張又沒寫比較對象的異同:判不了的原因;判得了回 None。"""
     if obj["unparsed"]:
         return obj["unparsed"]["reason"]
     if substituting and same_different_undecidable(obj):
@@ -373,7 +313,6 @@ def _object_incomplete_reason(obj, substituting):
 
 
 def _add_unresolved_segment(index, card_id, block_kind, block_reason, seg, objects):
-    """段可能進未解析組時記一列:段解析不出、對象線的物件判不了,或所在區塊種類判不出。"""
     reason = incomplete_reason(seg, objects)
     reason_substituting = incomplete_reason(seg, objects, substituting=True)
     if not (block_reason or reason or reason_substituting):
@@ -385,7 +324,6 @@ def _add_unresolved_segment(index, card_id, block_kind, block_reason, seg, objec
 
 
 def _unparsed_references(block):
-    """區塊(含內嵌效果的區塊、分歧各支)裡解析不出的引用節點:(原因, 原文);原文相對於節點所在的區塊。"""
     for node in iter_nodes(block["tree"]["items"]):
         if node.get("node") == "內嵌效果" and node.get("block"):
             yield from _unparsed_references(node["block"])
@@ -402,8 +340,6 @@ def _reference(index, card_id, block_id, node, place):
 
 
 def _literal_actions(text):
-    """原文字面含的動作詞:字面含某個述語字面,那個述語的動作詞連同上位詞都算(查「特殊召喚」
-    的字面也含「融合召喚」)。"""
     found = set()
     for stem, action, _ in PREDICATE_STEMS:
         if _has_stem(stem, text):
@@ -429,8 +365,6 @@ def _line(index, card, objects, seg, line, recipient_targeted):
 
 
 def object_kind(obj, objects):
-    """物件的種類,判法與候選卡計算(`candidate_cards._fitting`)同序:判不了、代不進去的候選卡是空的;
-    被引用物件判不了照未解析組代入卡時的原因(`incomplete_reason`)算。"""
     if obj["unparsed"]:
         return OBJECT_UNDECIDABLE
     if obj["kind"] not in SUBSTITUTABLE_KINDS:

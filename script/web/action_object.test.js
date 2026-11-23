@@ -1,12 +1,3 @@
-/**
- * action_object.test.js — 接縫三:被動作的卡(action-search-web 票 12:這張卡自己、指定一張卡)
- *
- * 跑法:`node --test script/web/`
- *
- * 與 action.test.js 同一個沙箱:載入 `web/` 底下真實的前端檔,餵合成的卡片資料與一份小的
- * 動作索引(`action_fixture.js` 照描述寫成產物的格式)。不斷言 DOM 結構與 CSS class;
- * 卡名建議清單怎麼點、區塊的文字走站主人工驗收(票 12 的 Comments)。
- */
 'use strict';
 
 const test = require('node:test');
@@ -27,41 +18,31 @@ const CARDS = [
 ];
 
 const ACTION = actionData([
-  // 「このカードを破壊する」
   { id: 401, segs: [{ acts: ['破壞'], lines: [{ obj: 'self' }] }] },
-  // 「自分フィールドのカードを破壊する」:條件式,這張卡自己也在候選卡裡
   { id: 402, segs: [{ acts: ['破壞'], lines: [{ obj: [401, 402, 403, 406] }] }] },
-  // 「このカードが相手モンスターを破壊した」:此卡是做動作的一方
   { id: 403, segs: [{ acts: ['破壞'], lines: [{ doer: true, obj: 'self' },
                                               { obj: [406, 407] }] }] },
-  // 物件解析不出:這一段同時是未解析的來源,代不代入卡都判不了
   { id: 404, segs: [{ acts: ['破壞'], lines: [{ obj: 'undecidable' }] }],
     unres: [{ acts: ['破壞'], reason: true, substituting: true }] },
   { id: 405, segs: [{ acts: ['破壞'], lines: [{ obj: 'unsub' }] }] },
-  // 「このカードとそのモンスターを破壊する」:此卡一條線、黑魔導女孩一條線
   { id: 406, segs: [{ acts: ['破壞'], lines: [{ obj: 'self' }, { obj: [407] }] }] },
   { id: 408, segs: [{ acts: ['破壞'], lines: [{ obj: null }] }] },
-  // 「同名の…１体」:異同只在代入卡時判不了
   { id: 409, segs: [{ acts: ['破壞'], lines: [{ obj: 'undecidable' }] }],
     unres: [{ acts: ['破壞'], reason: false, substituting: true }] },
-], CARDS.map(c => c.id));   // ids 是前端索引的全部卡,沒有段的卡(407)也在
+], CARDS.map(c => c.id));
 
 const sandbox = harness.load({ cards: CARDS, meta: {}, action: ACTION });
 const ids = act => harness.ids(sandbox, {}, act);
 
 test('這張卡自己:只命中物件是此卡的線', () => {
   assert.deepStrictEqual(ids({ actions: ['破壞'], target: 'self' }), [401, 406]);
-  // 物件是條件式、這張卡剛好在候選卡裡(402)不算;做動作的線(403)不算;判不了、代不進去、沒有物件不算
   assert.deepStrictEqual(ids({ actions: ['破壞'] }), [401, 402, 403, 404, 405, 406, 408, 409]);
 });
 
 test('指定一張卡:這張卡在線的候選卡裡就命中(此卡的線是那張卡自己)', () => {
   assert.deepStrictEqual(ids({ actions: ['破壞'], target: { card: 407 } }), [403, 406]);
-  // 黑魔導自己:406 的此卡線;403 的另一條線候選卡有它;403 做動作的線不算
   assert.deepStrictEqual(ids({ actions: ['破壞'], target: { card: 406 } }), [402, 403, 406]);
-  // 402 自己在它的條件式的候選卡裡:指定它就命中(這是和「這張卡自己」不同的地方)
   assert.deepStrictEqual(ids({ actions: ['破壞'], target: { card: 402 } }), [402]);
-  // 判不了、代不進去、沒有物件的線不命中;候選卡裡沒有的卡沒有命中
   assert.deepStrictEqual(ids({ actions: ['破壞'], target: { card: 405 } }), []);
 });
 
@@ -69,7 +50,6 @@ test('物件判不了的線不命中,算進無法確認:指定卡看代入卡時
   const unsure = act => harness.unsure(sandbox, {}, act);
   assert.deepStrictEqual(unsure({ actions: ['破壞'], target: 'self' }), [404]);
   assert.deepStrictEqual(unsure({ actions: ['破壞'], target: { card: 407 } }), [404, 409]);
-  // 不指定被動作的卡時,判不了的線所在的段照樣命中(只比動作詞),不在無法確認裡
   assert.deepStrictEqual(unsure({ actions: ['破壞'] }), []);
 });
 
@@ -89,8 +69,6 @@ test('卡名的建議清單:名字短的排前面', () => {
   assert.deepStrictEqual(harness.cardSuggest(sandbox, ''), []);
   assert.deepStrictEqual(harness.cardSuggest(sandbox, '沒有這張'), []);
 });
-
-/* ── 瀏覽紀錄與摺疊鈕 ───────────────────────────────────── */
 
 const EMPTY_Q = { name: '', nameLang: 'zh', code: '', text: '' };
 const DOM_SORT = { key: 'dom', dir: '' };

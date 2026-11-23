@@ -26,7 +26,7 @@ const MARK_ZH = {
   text: () => '',
   kind: (c, i) => KIND_ZH[(c.k || [])[i]],
   opt: (c, i) => OPT_ZH[(c.o || [])[i]],
-  action: () => '',      // 動作條件只給命中的效果句加底色,不加標籤、不標到字(票 16)
+  action: () => '',
 };
 
 function highlight(marks) {
@@ -40,7 +40,6 @@ function badgeText(marks, c, i) {
     .filter(Boolean).join('・');
 }
 
-/* 清單下方那一行(票 15):未解析組裡滿足卡片條件的張數。只寫張數、不能點;0 張不顯示。 */
 function unsureText(n) {
   return n ? `另有 ${n} 張無法確認` : '';
 }
@@ -82,7 +81,6 @@ function renderIdle() {
   renderPager('pagerBottom', 1, 1);
 }
 
-/* 搜尋帶動作條件、動作索引還沒載完:先說在等什麼,載完由主流程重查。 */
 function renderLoading() {
   lastResult = null;
   $('resultInfo').textContent = '';

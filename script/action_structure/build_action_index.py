@@ -1,16 +1,9 @@
-"""建置動作索引的 CLI 薄殼:讀卡片結構、卡片總表、前端索引、字段表、效果標記表 → action_index
-→ 寫 web/action-data.js。
+"""建置動作索引:讀卡片結構、卡片總表、前端索引、字段表、效果標記表 → 寫 web/action-data.js。
+建置失敗(前端索引對不上、超過體積門檻)時不寫檔、結束碼非 0。
 
-薄殼只做四件事:讀檔 → 呼叫 → 寫檔 → 印報告,並依 report 的 problems 決定 exit code
-(前端索引對不上、超過體積門檻都是建置失敗,不寫檔)。來源雜湊只印不寫進產物,
-所以同樣的輸入兩次產出逐位元組相同。
-
-用法(於 repo 任意位置執行皆可,預設路徑以 repo 根為準):
+用法:
     python -X utf8 script/action_structure/build_action_index.py
     python -X utf8 script/action_structure/build_action_index.py --no-write   # 只驗證,不寫檔
-
-輸入是建好的產物:卡片結構(build_structure.py)、前端索引(script/web/build_index.py),
-加上效果標記表(data/tag_cards.json,效果對應用:效果句的日文原文)。任何一份變了,動作索引要跟著重建。
 """
 import argparse
 import json
@@ -40,7 +33,6 @@ def _read(path):
 
 
 def frontend_cards(text):
-    """前端索引 `web/data.js` 的卡片那一段(`window.CARD_DATA=[…];`)→ 卡的列表。"""
     if not text.startswith(FRONTEND_HEAD) or FRONTEND_TAIL not in text:
         raise ValueError("前端索引開頭不是 window.CARD_DATA=[")
     return json.loads(text[len(FRONTEND_HEAD) - 2:text.index(FRONTEND_TAIL) + 2])

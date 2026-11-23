@@ -1,10 +1,3 @@
-"""比對列:攤平出來的列(`action_rows.flatten`)+ 查詢 → `run_query` 的結果。
-
-只讀列,不讀卡片結構。查詢的鍵、判法與回傳照 `action_query` 的模組說明;查詢鍵的預設值與正規化在這裡:
-先算每張卡直接命中的段(特定、泛用),命中的被代替段帶 `replaced_by`;
-直接沒命中的卡沿引用節點的列展開到底(經引用組,`via`、`mark`);
-都沒命中的卡,字面含查詢動作詞、結構又不完整的段進未解析組。
-"""
 import itertools
 from operator import attrgetter
 
@@ -18,7 +11,6 @@ VIA_GROUP = "經引用"
 VIA_GENERIC = "經泛用引用"
 AGENTS = ("我方", "對手")
 BOTH_SIDES = "雙方各自"
-# 原因的種類(票 11):寫戰鬥或效果的兩邊都算,寫戰鬥以外的算效果;其餘寫什麼比什麼。
 CAUSE_KINDS = ("戰鬥", "效果", "戰鬥或效果", "戰鬥以外", "作為素材", "召喚方式", "方法", "規則")
 CAUSE_COVERS = {"戰鬥或效果": ("戰鬥", "效果"), "戰鬥以外": ("效果",)}
 
@@ -37,15 +29,12 @@ def _normalise(query):
     q.update(query)
     if sum((bool(q["this_card"]), q["card"] is not None, q["condition"] is not None)) > 1:
         raise ValueError("被動作的卡三者擇一:this_card、card、condition 只能給一個")
-    # 條件段看開關:沒指定段類別時,開關開就把條件段加進預設範圍;
-    # 指定了段類別仍受開關閘門,開關關就不看條件段。
     kinds = set(q["kinds"] or DEFAULT_KINDS)
     if q["include_condition"]:
         if q["kinds"] is None:
             kinds.add("條件")
     else:
         kinds.discard("條件")
-    # 代替:被代替段與做代替的段(帶「代替誰」)都只在查詢含「代替」時看。
     if q["replacement"]:
         if q["kinds"] is None:
             kinds.add("被代替")
@@ -66,7 +55,6 @@ def _normalise(query):
 
 
 def _normalise_cause(cause):
-    """查詢的原因:種類,或 {"kind": 種類, "side": 我方/對手(可省)} → (種類, 方或 None)。"""
     if cause is None:
         return None
     kind, side = (cause, None) if isinstance(cause, str) else (cause["kind"], cause.get("side"))
@@ -80,8 +68,6 @@ def _normalise_cause(cause):
 
 
 def modified_matches(want, have):
-    """查詢的 modified(attr/form/value 任一子集)對段的被改屬性:attr 看段的清單含不含它
-    (修飾段的 attr 是單值),其餘相等。"""
     if not have:
         return False
     for key, value in want.items():
@@ -104,7 +90,6 @@ def match_rows(index, query):
         if lines is None:
             continue
         head = rows[0]
-        # 經引用看被引用卡指定部分的命中段,不受查詢的區塊種類篩選。
         block_hits.setdefault((head.card, head.block), []).append(head.segment)
         if _block_skipped(head.block_kind, q):
             continue
@@ -114,7 +99,6 @@ def match_rows(index, query):
         hit["segments"].append(head.segment)
         if head.kind == REPLACED:
             replaced.setdefault(head.card, set()).add(head.segment)
-        # 泛用 = 只靠泛用物件命中;沒有物件的段(支付 LP)不算泛用。
         if not lines or not all(line.object is not None and line.object.generic
                                 for line in lines):
             hit["group"] = "特定"
@@ -145,14 +129,12 @@ def _block_skipped(block_kind, q):
 
 
 def _in_scope(replacing, kind, polarity, q):
-    """段類別、極性、代替的篩選;命中與未解析組共用。做代替的段與被代替段一樣只在查詢含代替時看。"""
     if replacing and not q["replacement"]:
         return False
     return kind in q["allowed_kinds"] and polarity in q["polarities"]
 
 
 def _segment_hit_lines(rows, q, wanted):
-    """一段(同一個段序號的列)命中時回傳命中的線(可為空列表);不命中回 None。區塊種類另外篩。"""
     head = rows[0]
     if not _in_scope(head.replacing, head.kind, head.polarity, q):
         return None
@@ -175,7 +157,6 @@ def _segment_hit_lines(rows, q, wanted):
 
 
 def agent_matches(want, have, include_unrestricted):
-    """誰:寫明的值相同或是雙方各自命中;算我方只在查我方時命中;不限定只在開關開時命中。"""
     if have == UNRESTRICTED:
         return include_unrestricted
     if have == IMPLIED_SELF:
@@ -184,8 +165,6 @@ def agent_matches(want, have, include_unrestricted):
 
 
 def cause_matches(want, have, include_unrestricted):
-    """原因:種類相同,或寫的種類涵蓋查的(戰鬥或效果涵蓋兩者、戰鬥以外涵蓋效果);查詢給了方時,段沒寫方、
-    方相同或是雙方各自命中。沒寫原因的被動句(不限定)只在開關開時命中,主動句不命中。"""
     if have is None:
         return False
     kind, side = have
@@ -219,7 +198,6 @@ def _zones_match(query_zones, pos, include_inferred):
 
 
 def _replaced_by(index, card, replaced):
-    """命中的被代替段 → 做代替的段。"""
     found = {}
     for target, replacing in index.replacements.get(card, ()):
         if target in replaced:
@@ -228,7 +206,6 @@ def _replaced_by(index, card, replaced):
 
 
 def _unparsed(index, q, found):
-    """未解析組:無官方日文的卡,與沒命中(直接或經引用)的卡裡字面含查詢動作詞、結構不完整的段。"""
     out = [{"id": card, "reason": reason, "segments": []} for card, reason in index.no_text]
     if not q["actions"]:
         return out
@@ -247,8 +224,6 @@ def _unparsed(index, q, found):
 
 
 def _unresolved_reason(source, q, substituting):
-    """這一段(或解析不出的引用節點)在這個查詢下進未解析組的原因;不進回 None。
-    被區塊種類篩掉的區塊只有種類判不出的才列,原因是區塊的;引用節點不看段類別、極性。"""
     skipped = _block_skipped(source.block_kind, q)
     if source.segment is None:
         return None if skipped else source.reason
@@ -262,19 +237,13 @@ def _unresolved_reason(source, q, substituting):
 
 
 class _Expansion:
-    """經引用:沿引用節點的列展開到底,走到走過的卡就停。
-
-    展開時「走過的卡」隨路徑不同,結果不能照被引用卡記住;但泛用引用的候選卡上千張,逐張往下展開
-    在全庫上是指數級的(「儀式召喚」開泛用引用約五千萬次)。所以先不管走過的卡、求每個
-    (被引用卡, 指定的部分)走不走得到命中段(`_reachable`):走不到的,不論路徑怎麼走都是空的,
-    先從候選卡裡拿掉;結果與逐張展開相同。"""
 
     def __init__(self, index, block_hits, q):
         self.index = index
         self.block_hits = block_hits
         self.q = q
         self._reachable = _reachable(index, block_hits, q)
-        self._candidates = {}    # id(引用列)→ 走得到命中段的候選卡(順序照原本)
+        self._candidates = {}
 
     def hit(self, card):
         blocks = [(card, block) for block, kind in self.index.blocks[card]
@@ -288,8 +257,6 @@ class _Expansion:
         return hit
 
     def via(self, blocks, visiting):
-        """區塊裡的引用節點經由的卡:[{"id", "segments"(該卡指定部分的命中段), "via"(再往下展開的,
-        有才寫), "generic"(經泛用引用節點,有才寫)}];同一張卡只列一次。"""
         out, seen = [], set()
         for key in blocks:
             for ref in self.index.references.get(key, ()):
@@ -308,7 +275,6 @@ class _Expansion:
         return out
 
     def candidates(self, ref):
-        """引用列的候選卡裡有結構、又走得到命中段的。"""
         if id(ref) not in self._candidates:
             self._candidates[id(ref)] = [cid for cid in ref.candidates
                                          if self._reachable(cid, ref.effect)]
@@ -326,8 +292,6 @@ class _Expansion:
 
 
 def _reachable(index, block_hits, q):
-    """(被引用卡, 指定的部分的 JSON)→ 不管走過的卡,沿引用節點走不走得到命中段。
-    沒有引用節點的卡只看自己指定的部分有沒有命中段;有引用節點的卡(全庫幾十張)求不動點。"""
     hit_blocks = set(block_hits)
     owners = index.referencing
     direct_memo = {}
@@ -342,7 +306,6 @@ def _reachable(index, block_hits, q):
     def followed(ref):
         return not ref.generic or q["generic_reference"]
 
-    # 每個引用列:候選卡裡沒有引用節點的卡有沒有直接命中;有引用節點的卡另列,留給不動點。
     leads = {}
     for refs in index.references.values():
         for ref in filter(followed, refs):
@@ -372,8 +335,6 @@ def _reachable(index, block_hits, q):
 
 
 class _Wanted:
-    """查詢要代入物件的卡:指定卡是總表的一個位置,給條件是滿足查詢條件的卡的位元集。
-    這張卡自己不代入:只比物件是不是此卡(條件式剛好讓這張卡滿足的不算)。"""
 
     def __init__(self, index, q):
         self.mask = None

@@ -1,8 +1,3 @@
-"""動作索引建置(action-search-web 票 06):接縫二 `build_action_index`。
-
-輸入卡片結構、卡片總表、前端索引(卡的順序)與字段表,輸出動作索引的文字與報告。
-不斷言編碼:產物一律用 `decode_action_index` 讀回,比的是讀回來的卡、列與候選卡。
-"""
 import contextlib
 import copy
 import io
@@ -23,7 +18,7 @@ from test_golden import (EMPEROR_PENGUIN, EMPEROR_PENGUIN_TEXT, ODD_EYES_PEN_EFF
                          ODD_EYES_PENDULUM_DRAGON, ODD_EYES_TEXT, PENGUIN_SOLDIER,
                          SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT, SPROUT, SPROUT_TEXT, card, faq)
 
-NO_TEXT_CARD = 30000002   # 測試用:卡片總表有、官方 DB 文本沒有
+NO_TEXT_CARD = 30000002
 
 
 def fixture():
@@ -71,7 +66,6 @@ class ActionIndexTest(unittest.TestCase):
         self.assertEqual(self.report["problems"], [])
 
     def test_line_candidates_round_trip(self):
-        """每條對象線的候選卡:從產物讀回來,和攤平算出來的是同一批卡。"""
         expected = {}
         for row in self.rows.rows:
             lines = expected.setdefault(row.card, {}).setdefault(row.segment, [])
@@ -84,7 +78,6 @@ class ActionIndexTest(unittest.TestCase):
                          for seg in entry["segments"]}
                    for cid, entry in self.index["cards"].items() if entry["segments"]}
         self.assertEqual(decoded, expected)
-        # 夾具裡要真的有大的、小的與空的候選卡集合,三種存法都走過。
         sizes = {len(c) for segs in decoded.values() for lines in segs.values()
                  for c in lines if c is not None}
         self.assertIn(0, sizes)
@@ -92,7 +85,6 @@ class ActionIndexTest(unittest.TestCase):
         self.assertGreaterEqual(max(sizes), len(self.cards) // 2)
 
     def test_reference_rows_round_trip(self):
-        """フレシアの蟲惑魔 ③ 的引用列:被引用物件的候選卡與指定的部分(卡片發動)讀得回來。"""
         ref, = self.index["cards"][FRESHIA]["references"]
         expected, = [r for refs in self.rows.references.values() for r in refs]
         self.assertEqual(ref["candidates"], frozenset(expected.candidates))
@@ -101,7 +93,6 @@ class ActionIndexTest(unittest.TestCase):
         self.assertFalse(ref["generic"])
 
     def test_unresolved_rows_round_trip(self):
-        """未解析組的來源:字面含動作詞的都讀得回來(段類別、極性、四種原因旗標、字面動作詞)。"""
         expected = sorted(
             (s.card, s.kind, s.polarity, bool(s.reason), bool(s.reason_substituting),
              tuple(sorted(s.literal_actions)))
@@ -113,11 +104,9 @@ class ActionIndexTest(unittest.TestCase):
         self.assertEqual(decoded, expected)
 
     def test_no_text_cards_are_listed(self):
-        """ペンギン・ソルジャー 與測試用的卡都沒有官方 DB 文本。"""
         self.assertEqual(sorted(self.index["no_text"]), sorted([NO_TEXT_CARD, PENGUIN_SOLDIER]))
 
     def test_archetype_members(self):
-        """字段與它的成員卡(照卡片屬性表):企鵝、落穴;沒有成員的字段不列。"""
         archetypes = self.index["archetypes"]
         self.assertEqual(archetypes[0x5a]["members"], {EMPEROR_PENGUIN, PENGUIN_SOLDIER})
         self.assertEqual(archetypes[0x5a]["name"], "企鵝")
@@ -125,19 +114,16 @@ class ActionIndexTest(unittest.TestCase):
         self.assertNotIn(0x1bc, archetypes)
 
     def test_action_words_carry_row_counts(self):
-        """動作詞的清單帶列數(介面選項依列數排)。"""
         destroy_rows = sum(1 for row in self.rows.rows if "破壞" in row.actions)
         self.assertGreater(destroy_rows, 0)
         self.assertEqual(self.index["actions"]["破壞"], destroy_rows)
 
     def test_same_input_same_bytes(self):
-        """同樣的輸入(另一份複本)兩次產出逐位元組相同。"""
         text, _ = build_action_index(copy.deepcopy(self.structures), copy.deepcopy(self.cards),
                                      copy.deepcopy(self.frontend), ARCHETYPES_13)
         self.assertEqual(text, self.text)
 
     def test_frontend_order_is_the_card_order(self):
-        """前端索引的卡順序和卡片總表不同時,候選卡照樣讀回同一批卡。"""
         text, report = build_action_index(self.structures, self.cards,
                                           list(reversed(self.frontend)), ARCHETYPES_13)
         self.assertEqual(report["problems"], [])
@@ -147,7 +133,6 @@ class ActionIndexTest(unittest.TestCase):
         self.assertEqual(index["archetypes"], self.index["archetypes"])
 
     def test_card_missing_from_frontend_fails(self):
-        """卡片結構的卡不在前端索引裡:建置失敗,問題寫出卡號。"""
         frontend = [entry for entry in self.frontend if entry["id"] != FRESHIA]
         text, report = build_action_index(self.structures, self.cards, frontend, ARCHETYPES_13)
         self.assertIsNone(text)
@@ -162,7 +147,6 @@ class ActionIndexTest(unittest.TestCase):
         self.assertEqual(report["bytes"], len(text.encode("utf-8")))
 
     def test_report(self):
-        """報告:列數、各種列的數量、集合的數量與大小、產物體積、各階段時間。"""
         report = self.report
         self.assertEqual(report["rows"], len(self.rows.rows))
         self.assertEqual(report["references"], 1)
@@ -177,12 +161,10 @@ class ActionIndexTest(unittest.TestCase):
 
 
 def clause(index, text_ja, section="main"):
-    """效果標記表的一個效果句;效果對應只看編號、來源與日文原文。"""
     return {"index": index, "section": section, "text_ja": text_ja, "text_zh": f"句{index}"}
 
 
 def mapping_fixture():
-    """效果對應的夾具:靈擺卡(兩個來源)、舊式無編號卡、內嵌效果、引用列、對不上的卡。"""
     cards = [
         card(ODD_EYES_PENDULUM_DRAGON, name_ja="オッドアイズ・ペンデュラム・ドラゴン",
              type=0x1000021, level=7, race=0x2000, attribute=0x20, scale=4),
@@ -208,15 +190,12 @@ def mapping_fixture():
     strix_lines = BRAVE_STRIX_TEXT.split("\n")
     freshia_lines = FRESHIA_TEXT.split("\n")
     tag_cards = [
-        # 靈擺卡:效果標記表先列靈擺效果再列主文(與實際資料同序)。主文另有一句 ②,
-        # 靈擺效果的 ② 不能對到它。
         {"id": ODD_EYES_PENDULUM_DRAGON, "clauses": [
             clause("0", pen_lines[0], "pendulum"),
             clause("①", pen_lines[1], "pendulum"),
             clause("②", pen_lines[2], "pendulum"),
             clause("①", ODD_EYES_TEXT),
             clause("②", "②：このカードは主文の②ではない。")]},
-        # 舊式無編號卡:五句拆成四個效果句,區塊 b0 跨了前兩個效果句。
         {"id": SPROUT, "clauses": [
             clause("0", "このカードが特殊召喚に成功した時、自分のデッキの上からカードを２枚まで"
                         "めくる事ができる。"),
@@ -225,14 +204,12 @@ def mapping_fixture():
             clause("2", "また、デッキのこのカードがカードの効果によってめくられて墓地へ送られた"
                         "場合、デッキから植物族・レベル１モンスター１体を特殊召喚できる。"),
             clause("3", "「森羅の神芽 スプラウト」のこの効果は１ターンに１度しか使用できない。")]},
-        # ③ 的「以下の効果を得る」:● 子效果另成一句(③-●1)。
         {"id": BRAVE_STRIX, "clauses": [
             clause("0", strix_lines[0]), clause("0", strix_lines[1]),
             clause("①", strix_lines[2]), clause("②", strix_lines[3]),
             clause("③", strix_lines[4]), clause("③-●1", strix_lines[5])]},
         {"id": FRESHIA, "clauses": [clause("0", freshia_lines[0])]
          + [clause(line[0], line) for line in freshia_lines[1:]]},
-        # 落とし穴:效果標記表的日文是舊的卡文,編號也沒有 ①,兩種對法都對不上。
         {"id": OTOSHIANA, "clauses": [clause("0", "相手が召喚した時に発動できる。")]},
     ]
     frontend = [{"id": entry["id"]} for entry in cards]
@@ -244,7 +221,6 @@ def mapping_fixture():
 
 
 class EffectMappingTest(unittest.TestCase):
-    """效果對應:每一段對回前端索引的哪個效果句(效果句的序號 = 在前端索引 `tx` 裡的位置)。"""
 
     @classmethod
     def setUpClass(cls):
@@ -254,38 +230,32 @@ class EffectMappingTest(unittest.TestCase):
         cls.index = decode_action_index(cls.text)
 
     def clauses(self, cid):
-        """段 id → 效果句的序號。"""
         return {seg["id"]: seg["clause"] for seg in self.index["cards"][cid]["segments"]}
 
     def test_builds_without_problems(self):
         self.assertEqual(self.report["problems"], [])
 
     def test_numbered_pendulum_block_maps_to_the_pendulum_clause(self):
-        """靈擺效果的 ② 區塊對到靈擺效果的 ②(序號 2),不是主文的 ②(序號 4)。"""
         self.assertEqual(self.clauses(ODD_EYES_PENDULUM_DRAGON),
                          {"p72.s2": 2, "p72.s18": 2, "p72.s28": 2})
 
     def test_unnumbered_segments_map_by_position(self):
-        """舊式無編號卡:區塊 b0 的前兩段在第一句、後三段在第二句;區塊 b111 在第三句。"""
         self.assertEqual(self.clauses(SPROUT), {
             "b0.s0": 0, "b0.s17": 0,
             "b0.s44": 1, "b0.s69": 1, "b0.s87": 1,
             "b111.s3": 2, "b111.s38": 2})
 
     def test_embedded_segment_counts_on_its_block(self):
-        """③「以下の効果を得る」裡內嵌效果的段算在 ③ 上;③ 拆出 ● 子效果時落在 ● 那句(序號 5)。"""
         clauses = self.clauses(BRAVE_STRIX)
         self.assertEqual(clauses["b185e39.s1"], 5)
         self.assertEqual(clauses["b49.s25"], 2)
         self.assertEqual(clauses["b108.s51"], 3)
 
     def test_reference_row_counts_on_the_referencing_effect(self):
-        """フレシアの蟲惑魔 的引用列在 ③ 裡:算在 ③(序號 3)。"""
         ref, = self.index["cards"][FRESHIA]["references"]
         self.assertEqual(ref["clause"], 3)
 
     def test_unmapped_segments_are_left_empty_and_reported(self):
-        """落とし穴:效果標記表的日文對不上、也沒有 ①;沒有效果標記表的奈落の落とし穴 也對不上。"""
         for cid in (OTOSHIANA, NARAKU):
             self.assertTrue(self.clauses(cid))
             self.assertEqual(set(self.clauses(cid).values()), {None})
@@ -293,7 +263,6 @@ class EffectMappingTest(unittest.TestCase):
         self.assertEqual(mapping["unmapped_cards"], [OTOSHIANA, NARAKU])
         unmapped = len(self.clauses(OTOSHIANA)) + len(self.clauses(NARAKU))
         self.assertEqual(mapping["unmapped"], unmapped)
-        # 靠位置的:スプラウト 7 段,加兩張超量怪獸素材行(沒有編號的區塊)各 1 段。
         self.assertEqual(self.clauses(BRAVE_STRIX)["b0.s0"], 0)
         self.assertEqual(self.clauses(FRESHIA)["b0.s0"], 0)
         self.assertEqual(mapping["by_position"], 9)
@@ -303,7 +272,6 @@ class EffectMappingTest(unittest.TestCase):
         self.assertEqual((mapping["references"], mapping["unmapped_references"]), (1, 0))
 
     def test_clause_count_mismatch_fails(self):
-        """前端索引的效果句數和效果標記表不同(序號會錯位):建置失敗,問題寫出卡號。"""
         frontend = copy.deepcopy(self.frontend)
         sprout = next(entry for entry in frontend if entry["id"] == SPROUT)
         sprout["tx"].pop()
@@ -322,7 +290,6 @@ class EffectMappingTest(unittest.TestCase):
 
 
 class CommandLineTest(unittest.TestCase):
-    """建置入口:讀檔、寫檔、印報告;只驗證不寫檔的模式;建置失敗時不寫檔、結束碼非 0。"""
 
     @classmethod
     def setUpClass(cls):
@@ -375,7 +342,6 @@ class CommandLineTest(unittest.TestCase):
             self.assertIn(label, printed)
 
     def test_report_lists_unmapped_segments_and_cards(self):
-        """報告印出效果對應三種結果的段數,與留空的段所在的卡號。"""
         code, printed, _ = self.run_cli("--no-write")
         self.assertEqual(code, 0)
         line = next(line for line in printed.splitlines() if line.startswith("效果對應"))

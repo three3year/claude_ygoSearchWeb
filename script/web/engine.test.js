@@ -1048,13 +1048,6 @@ test('排序選單的鍵清單:預設(領域序)沒有方向,單鍵各帶預設�
   assert.strictEqual(keys.find(k => k.key === 'n').dir, 'asc');
 });
 
-/* ── 存在瀏覽紀錄裡的查詢狀態(action-search-web 票01) ──────
-   每次搜尋把查詢狀態(條件、排序)存進瀏覽紀錄新增的那一筆;上一頁、下一頁、
-   重新整理從那一筆還原。網址不帶任何參數。
-   存進去的是結構化複製的物件,這裡用 JSON 走一趟模擬。還原必須容得下舊版網站
-   寫的狀態:認不得的欄位或值忽略,其餘照常還原。寫入時機、`popstate` 與真實
-   瀏覽器的上一頁/下一頁/重新整理在沙箱裡測不到,走站主人工驗收。 */
-
 const saved = (q, sort) => harness.savedState(sandbox, q, sort);
 const restored = raw => harness.restoreSaved(sandbox, raw);
 const viaHistory = (q, sort) => restored(JSON.parse(JSON.stringify(saved(q, sort))));
@@ -1084,7 +1077,6 @@ const STATES = [
   { q: { ...EMPTY_Q, lm: { L: 1, R: -1 }, rarity: { UR: 1 }, ot: { o: -1 },
          gy: { min: 5, max: 20 } },
     sort: { key: 'n', dir: 'asc' } },
-  // 禁限三子軸(spec banlist 票04)
   { q: { ...EMPTY_Q, ban_o: { f: 1, l: 1 }, ban_t: { l: -1 },
          ban_m: { s: 1 } },
     sort: DOM_SORT },
@@ -1099,30 +1091,28 @@ test('查詢狀態存進瀏覽紀錄再還原,條件與排序相等', () => {
 test('舊版網站存的狀態:認不得的欄位或值忽略,其餘照常還原', () => {
   const good = { q: { ...EMPTY_Q, name: '青眼', attr: { dark: 1 } }, sort: DOM_SORT };
   const bad = [
-    { zzz: 1 },                              // 認不得的條件欄位
-    { attr: { dark: 1, nosuchattr: 1 } },    // 值不在值域裡
-    { attr: { dark: 1, earth: 2 } },         // 三態以外的值
-    { cat: { m: -1, t: -1 } },               // 兩態軸(大類)沒有排除
-    { cat: { 'm:fusion': 1 } },              // 帶了不該有的側前綴
-    { sub: { fusion: 1 } },                  // 子類型少了大類前綴
-    { lv: { min: 'abc', max: null } },       // 壞掉的範圍
-    { lv: { min: null, max: null } },        // 兩邊都空的範圍
-    { lv: 4 },                               // 範圍不是物件
-    { atkq: 9 },                             // 攻守 ? 的三態以外的值
-    { textMat: 9 },                          // 素材行開關的壞值
-    { nameLang: 'xx' },                      // 認不得的卡名語言
-    { code: 46986414 },                      // 文字欄位不是字串
-    { ban_o: 'f' },                          // 條件軸不是物件
+    { zzz: 1 },
+    { attr: { dark: 1, nosuchattr: 1 } },
+    { attr: { dark: 1, earth: 2 } },
+    { cat: { m: -1, t: -1 } },
+    { cat: { 'm:fusion': 1 } },
+    { sub: { fusion: 1 } },
+    { lv: { min: 'abc', max: null } },
+    { lv: { min: null, max: null } },
+    { lv: 4 },
+    { atkq: 9 },
+    { textMat: 9 },
+    { nameLang: 'xx' },
+    { code: 46986414 },
+    { ban_o: 'f' },
   ];
   for (const extra of bad) {
     const raw = { ...good, q: { ...good.q, ...extra,
                                 attr: { ...good.q.attr, ...(extra.attr || {}) } } };
     assert.deepStrictEqual(restored(raw), good, JSON.stringify(extra));
   }
-  // 兩態軸丟掉的只是排除那個碼,正選照常
   assert.deepStrictEqual(restored({ ...good, q: { ...good.q, cat: { m: 1, t: -1 } } }).q.cat,
                          { m: 1 });
-  // 整筆層級:多出來的欄位忽略;排序認不得就回預設
   assert.deepStrictEqual(restored({ ...good, v: 99, extra: { a: 1 } }), good);
   assert.deepStrictEqual(restored({ ...good, sort: { key: 'nosuchkey', dir: 'up' } }),
                          good);
@@ -1143,8 +1133,6 @@ test('瀏覽紀錄那一筆是空的或不是本站寫的:還原成空條件,不
 
 test('被建置期拿掉按鈕的效果類型值,還原時視同未知碼忽略', () => {
   // 建置期把跨類型 0 張的值從**分組**拿掉、留在 items 當顯示詞彙表(ADR-0010)
-  // ——還原的合法碼跟著按鈕(分組聯集)走,不跟顯示詞彙表走。「UI 做不出來的
-  // 狀態還原不回來」,與兩態軸丟排除同一條規則
   const trimmed = {
     ...VOCAB,
     kind: { ...VOCAB.kind,
@@ -1162,7 +1150,7 @@ test('被建置期拿掉按鈕的效果類型值,還原時視同未知碼忽略'
 test('存進瀏覽紀錄的條件經還原後,引擎得到同一批卡', () => {
   const q = { ...EMPTY_Q, name: '青眼', cat: { m: 1 }, attr: { light: 1 },
               atk: { min: 2000, max: null } };
-  assert.ok(ids(q).length);              // 空集合的相等問不出東西
+  assert.ok(ids(q).length);
   assert.deepStrictEqual(ids(viaHistory(q, DOM_SORT).q), ids(q));
 });
 
@@ -1190,7 +1178,6 @@ test('條件數算的是軸,不是點亮的按鈕', () => {
   assert.strictEqual(critCount({ ...EMPTY_Q, attr: { dark: 1, light: 1, water: 1 } }), 1);
   // 排除也是設了條件
   assert.strictEqual(critCount({ ...EMPTY_Q, attr: { dark: -1 } }), 1);
-  // 一顆都沒點的軸不算(還原出來的空殼同理)
   assert.strictEqual(critCount({ ...EMPTY_Q, attr: {} }), 0);
   assert.strictEqual(critCount({ ...EMPTY_Q, name: '青眼', text: '墓地',
                                  cat: { m: 1 }, race: { dragon: 1 } }), 4);
@@ -1202,7 +1189,6 @@ test('條件數:只給一邊的範圍與攻守 `?` 各自算一條', () => {
   // 刻度 0 與「攻擊力 0 以上」是真的值,不是「沒設」
   assert.strictEqual(critCount({ ...EMPTY_Q, sc: { min: 0, max: 0 } }), 1);
   assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: 0, max: null } }), 1);
-  // 兩邊都空的範圍不算
   assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: null, max: null } }), 0);
   // `?` 是第三種值、與數值範圍分開的一條
   assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: 2500, max: null }, atkq: 1 }), 2);
@@ -1243,7 +1229,6 @@ test('逐軸已選數:範圍與攻守 `?` 落在同一個區塊,各算一筆', (
   // 刻度 0 是真的值,不是「沒設」
   assert.strictEqual(c.sc, 1);
   assert.strictEqual(c.df, 0);
-  // 兩邊都空的範圍不算
   assert.strictEqual(axisCounts({ ...EMPTY_Q,
     lv: { min: null, max: null } }).lv, 0);
 });
@@ -1302,12 +1287,6 @@ test('逐軸已選數:空條件全零,涵蓋每一個生成的區塊', () => {
     .forEach(k => assert.ok(keys.indexOf(k) >= 0, k));
   keys.forEach(k => assert.strictEqual(c[k], 0, k));
 });
-
-/* ── 還原展開判定(票14,2026-08-17 改檔案總管規矩) ──────
-   還原查詢時哪些軸該展開是一條純規則:有已選條件的軸**連同祖先鏈**(軸是巢狀
-   的,屬性住在 怪獸子類型 住在 大類 裡,祖先不開誰也看不到葉軸),加上承載的
-   效果類型帶出的必發/選發。連動出現但自己沒條件的軸**不**展開(節點收著出現,
-   要看再點開)。展開動作本身是 DOM(走人工驗收),判定在這裡測。 */
 
 const expanded = q => harness.expandedAxes(sandbox, q);
 

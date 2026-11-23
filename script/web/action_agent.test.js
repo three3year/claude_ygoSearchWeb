@@ -1,13 +1,3 @@
-/**
- * action_agent.test.js — 接縫三:動作條件的「誰」與「含不限定的」(action-search-web 票 10)
- *
- * 跑法:`node --test script/web/`
- *
- * 與 action.test.js 同一個沙箱與小索引寫法(`action_fixture.js`,段多帶 `agent`)。
- * 段的誰是三種之一:寫明的(我方、對手、雙方各自)、算我方、不限定(攤平時定好,
- * 見 `script/action_structure/action_rows.py` 的 `agent_of`)。前端只比對,不判段類別或被動句。
- * 規則與 Python 的 `run_query` 相同,兩邊一致由 `test_web_parity.py` 守住。
- */
 'use strict';
 
 const test = require('node:test');
@@ -23,7 +13,6 @@ const ACTION = actionData([
   { id: 403, segs: [{ acts: ['抽牌'], agent: '雙方各自' }] },
   { id: 404, segs: [{ acts: ['抽牌'], agent: '算我方' }] },
   { id: 405, segs: [{ acts: ['抽牌'], agent: '不限定' }] },
-  // 誰比的是段:對手寫在沒有抽牌的那一段
   { id: 406, segs: [{ acts: ['特殊召喚'], agent: '對手' }, { acts: ['抽牌'], agent: '不限定' }] },
   { id: 407, segs: [{ acts: ['特殊召喚'], agent: '對手' }] },
 ]);
@@ -65,8 +54,6 @@ test('介面到查詢:誰換成 agent,「含不限定的」換成不限定開關
                                                      unrestricted: true }),
                          { ...base, agent: '對手', include_unrestricted: true });
 });
-
-/* ── 瀏覽紀錄與摺疊鈕 ───────────────────────────────────── */
 
 const EMPTY_Q = { name: '', nameLang: 'zh', code: '', text: '' };
 const DOM_SORT = { key: 'dom', dir: '' };

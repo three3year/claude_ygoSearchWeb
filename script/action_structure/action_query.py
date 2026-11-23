@@ -1,13 +1,6 @@
 """查詢判斷(純函式):全庫卡片結構 + 卡片總表 + 查詢 → 命中的卡、命中段與分組(`run_query`);
 以及一張卡代不代得進某物件的條件式判斷。
 
-`run_query` 分兩步(spec「查詢判斷」):
-- 攤平(`action_rows`):卡片結構 → 完整的列。解讀卡片結構的程式只在攤平;規則補了新形狀只改那裡。
-- 比對(`row_match`):只讀列,照下面的查詢鍵與規則算出結果。
-這個模組留下的是條件式判斷(`eval_condition`、`CardView`、`_Judge.card_fits`、`is_generic`):
-攤平時算每條對象線的候選卡(`candidate_cards`)、比對「給條件」、建置第二輪求引用節點的候選卡
-(`resolve_references`)都用它。
-
 查詢(spec「查詢判斷」;鍵名英文,值用 GLOSSARY 的詞):
   actions           動作詞列表,全部都要在段內
   from_zones / to_zones  區域(字串,或 {"zone", "side"}),逐條對象線比;子區域算在上位區域內
@@ -358,7 +351,6 @@ class CardView:
         return self._pick(self._categories, from_zones)
 
     def rows(self):
-        """卡名、setcode、大類各自的 (值, 位置條件) 列;位置條件 None = 任何位置。候選卡預篩與共用答案用。"""
         return {"卡名": self._names, "字段": self._codes, "大類": self._categories}
 
 
@@ -487,8 +479,6 @@ def _only_generic_atoms(condition):
 
 
 class _Judge:
-    """卡代入物件的環境:卡片總表索引,與候選卡、引用的快取。候選卡計算(`candidate_cards`)
-    與建置第二輪(`resolve_references`)用。"""
 
     def __init__(self, cards, structures):
         self.cards = cards
@@ -603,10 +593,7 @@ def _objects_by_id(card):
 
 
 def run_query(structures, cards, query):
-    """全庫結構 + 卡片總表 + 查詢 → 命中結果(形狀見模組說明):攤平成列(`action_rows.index_of`)
-    再比對列(`row_match.match_rows`)。同一份輸入(同一個物件)重複查詢時攤平與候選卡共用,
-    輸入在兩次呼叫之間不可就地修改。"""
-    # 攤平(候選卡)與比對都要用這個模組的條件式判斷,放在這裡才 import,免得互相 import 時還沒定義好。
+    """全庫結構 + 卡片總表 + 查詢 → 命中結果(形狀見模組說明)。輸入在兩次呼叫之間不可就地修改。"""
     from action_rows import index_of
     from row_match import match_rows
     return match_rows(index_of(structures, cards), query)

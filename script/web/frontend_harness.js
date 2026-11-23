@@ -76,12 +76,14 @@ const DRIVER = `
 ;function __critCount(json) { var a = JSON.parse(json); return Query.count(a.q, a.act); }
 ;function __actionOptions() { return JSON.stringify(Action.options(__index())); }
 ;function __cardSuggest(text) { return JSON.stringify(Action.suggest(window.CARD_DATA, text)); }
+;function __zoneOptions() { return JSON.stringify(Action.zoneOptions(__index())); }
+;function __toggleKind(json) { var a = JSON.parse(json); return JSON.stringify(Action.toggleKind(a.kinds, a.kind)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
 ;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
 ;function __sortedIds(json) {
   var a = JSON.parse(json);
-  var result = Engine.runQuery(window.CARD_DATA, a.query || {});
+  var result = Engine.runQuery(window.CARD_DATA, a.query || {}, a.act, a.act ? __index() : null);
   return JSON.stringify(Sort.sort(result.cards, a.key, a.dir)
     .map(function (e) { return e.card.id; }));
 }
@@ -105,7 +107,7 @@ const DRIVER = `
  */
 function load({ cards = [], vocab = {}, meta = {}, action = null } = {}) {
   const sandbox = {
-    console, setTimeout, clearTimeout,
+    console, setTimeout, clearTimeout, atob,
     document: {
       getElementById: () => stubEl(),
       querySelector: () => null,
@@ -180,6 +182,16 @@ function actionOptions(sandbox) {
   return JSON.parse(sandbox.__actionOptions());
 }
 
+/** 從、到的區域選項(票 09):索引的區域表依列數排。 */
+function zoneOptions(sandbox) {
+  return JSON.parse(sandbox.__zoneOptions());
+}
+
+/** 段類別勾選點一下之後的勾選(票 09):只剩一個勾著時不能取消。 */
+function toggleKind(sandbox, kinds, kind) {
+  return JSON.parse(sandbox.__toggleKind(JSON.stringify({ kinds, kind })));
+}
+
 /**
  * 指定一張卡時的卡名建議清單(票 12):`輸入的字 → [{ id, n, nj }]`,名字短的排前面。
  * 同一個理由:沙箱裡沒有真的 DOM,區塊只是照這份清單擺建議。
@@ -249,13 +261,14 @@ function expandedAxes(sandbox, q) {
 
 /**
  * 命中的卡片密碼清單,**照 key/dir 排序後**的順序(key 省略即預設的領域序)。
+ * act 是動作條件(省略即沒有)。
  *
  * 走的是搜尋 → 排序這條真實的路徑:排序吃的是接縫 3 的回傳形狀,而不是另外
  * 拼一份卡片陣列——「排序切換不重跑搜尋」在這裡看得到,重排的輸入就是同一份結果。
  */
-function sortedIds(sandbox, query, key, dir) {
+function sortedIds(sandbox, query, key, dir, act) {
   return JSON.parse(sandbox.__sortedIds(
-    JSON.stringify({ query: query || {}, key: key || '', dir: dir || '' })));
+    JSON.stringify({ query: query || {}, key: key || '', dir: dir || '', act: act || null })));
 }
 
 /** 排序選單的鍵清單(選單的選項由它生成,比較函式也由它決定取哪個欄位) */
@@ -300,3 +313,5 @@ function unsureText(sandbox, n) {
 module.exports = { load, search, ids, unsure, unsureText, marks, rowQuery, actionOptions, cardSuggest, axes, optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, savedState, restoreSaved, cardHtml };
+module.exports.zoneOptions = zoneOptions;          // 票 09
+module.exports.toggleKind = toggleKind;            // 票 09

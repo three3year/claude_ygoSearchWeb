@@ -1,4 +1,5 @@
-"""建置動作索引的 CLI 薄殼:讀卡片結構、卡片總表、前端索引、字段表 → action_index → 寫 web/action-data.js。
+"""建置動作索引的 CLI 薄殼:讀卡片結構、卡片總表、前端索引、字段表、效果標記表 → action_index
+→ 寫 web/action-data.js。
 
 薄殼只做四件事:讀檔 → 呼叫 → 寫檔 → 印報告,並依 report 的 problems 決定 exit code
 (前端索引對不上、超過體積門檻都是建置失敗,不寫檔)。來源雜湊只印不寫進產物,
@@ -8,8 +9,8 @@
     python -X utf8 script/action_structure/build_action_index.py
     python -X utf8 script/action_structure/build_action_index.py --no-write   # 只驗證,不寫檔
 
-輸入是建好的產物:卡片結構(build_structure.py)、前端索引(script/web/build_index.py)。
-任何一份變了,動作索引要跟著重建。
+輸入是建好的產物:卡片結構(build_structure.py)、前端索引(script/web/build_index.py),
+加上效果標記表(data/tag_cards.json,效果對應用:效果句的日文原文)。任何一份變了,動作索引要跟著重建。
 """
 import argparse
 import json
@@ -27,6 +28,7 @@ DEFAULT_STRUCTURES = os.path.join(ROOT, "data", "action_structure.json")
 DEFAULT_CARDS = os.path.join(ROOT, "data", "cards.json")
 DEFAULT_FRONTEND = os.path.join(ROOT, "web", "data.js")
 DEFAULT_ARCHETYPES = os.path.join(ROOT, "data", "archetypes.json")
+DEFAULT_TAGS = os.path.join(ROOT, "data", "tag_cards.json")
 DEFAULT_OUTPUT = os.path.join(ROOT, "web", "action-data.js")
 FRONTEND_HEAD = "window.CARD_DATA=[\n"
 FRONTEND_TAIL = "\n];\n"
@@ -62,6 +64,13 @@ def print_report(report, file=None):
         p(f"產物 {report['bytes']:,} 位元組(gzip {report['gzip_bytes']:,});門檻 "
           f"{report['size_limit']:,}")
         p("各部分 " + "、".join(f"{k} {v:,}" for k, v in report["section_bytes"].items()))
+        m = report["clause_mapping"]
+        share = lambda n: f"{n:,}({n / m['segments']:.1%})" if m["segments"] else "0"  # noqa: E731
+        p(f"效果對應 段 {m['segments']:,}:靠編號 {share(m['by_number'])}、靠位置 "
+          f"{share(m['by_position'])}、留空 {share(m['unmapped'])};引用列 {m['references']}"
+          f"(留空 {m['unmapped_references']})")
+        p(f"留空的卡 {len(m['unmapped_cards']):,} 張:"
+          + ", ".join(map(str, m["unmapped_cards"])))
     p("時間 " + "、".join(f"{k} {v:.1f} 秒" for k, v in report["timings"].items()))
     if report["problems"]:
         p(f"**建置失敗**,{len(report['problems'])} 個問題:")
@@ -81,6 +90,8 @@ def main(argv=None):
                         help="前端索引路徑(預設 web/data.js)")
     parser.add_argument("--archetypes", default=DEFAULT_ARCHETYPES,
                         help="字段表路徑(預設 data/archetypes.json)")
+    parser.add_argument("--tags", default=DEFAULT_TAGS,
+                        help="效果標記表路徑(預設 data/tag_cards.json)")
     parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT,
                         help="輸出路徑(預設 web/action-data.js)")
     parser.add_argument("--size-limit", type=int, default=DEFAULT_SIZE_LIMIT,
@@ -89,7 +100,7 @@ def main(argv=None):
                         help="只跑檢查與報告,不寫出索引")
     args = parser.parse_args(argv)
 
-    paths = (args.structures, args.cards, args.frontend, args.archetypes)
+    paths = (args.structures, args.cards, args.frontend, args.archetypes, args.tags)
     for path in paths:
         print(f"來源 {os.path.basename(path)} digest={file_digest(path)}")
     started = time.perf_counter()
@@ -97,9 +108,10 @@ def main(argv=None):
     cards = json.loads(_read(args.cards))
     frontend = frontend_cards(_read(args.frontend))
     archetypes = json.loads(_read(args.archetypes))
+    tag_cards = json.loads(_read(args.tags))
     loading = time.perf_counter() - started
     text, report = build_action_index(structures, cards, frontend, archetypes,
-                                      size_limit=args.size_limit)
+                                      tag_cards=tag_cards, size_limit=args.size_limit)
     report["timings"] = {"讀檔": loading, **report["timings"]}
     print_report(report)
     if report["problems"]:

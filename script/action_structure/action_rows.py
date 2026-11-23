@@ -5,7 +5,7 @@
 列的單位是對象線:每條對象線一列,沒有線的段以段為一列(`line` 為 None)。同一段的列共用 `seq`。
 每一欄都是解讀完的值:
 - 段的欄:卡、段 id、段序號、所在的(頂層)區塊與區塊種類、段類別、極性、是不是做代替的段、
-  動作詞(上位詞已展開)、被改的屬性。
+  動作詞(上位詞已展開)、被改的屬性、原文位置(`Place`,效果對應用)。
 - 線的欄(`Line`):做動作的一方(查詢比的是被動作的卡,這條線不比)、取對象(受方是被取對象的物件的段,
   每條線都算)、從、到(子區域算在上位區域內,推得值另標)、物件。
 - 物件(`LineObject`):是不是泛用物件、候選卡。候選卡以對象線為單位(同一個物件在不同線上「從」不同,
@@ -27,7 +27,7 @@ from typing import NamedTuple
 from action_query import is_generic, same_different_undecidable
 from candidate_cards import CandidateCards
 from condition_atoms import referenced_objects
-from effect_reference import is_reference, iter_references, selected_blocks
+from effect_reference import is_reference, iter_reference_sites, selected_blocks
 from structure_shape import iter_nodes, iter_segments, zone_names
 from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 
@@ -72,6 +72,14 @@ class Line(NamedTuple):
     object: LineObject | None   # 物件表裡找不到時 None
 
 
+class Place(NamedTuple):
+    """段或引用節點在原文裡的位置:來源(card_text / pen_effect)、頂層區塊的編號(①②③,沒有是 None)、
+    在來源原文裡的起點(內嵌效果的區塊 span 本來就是來源的位置)。效果對應用它對回效果句。"""
+    source: str
+    label: str | None
+    start: int
+
+
 class Row(NamedTuple):
     card: int
     segment: str
@@ -83,6 +91,7 @@ class Row(NamedTuple):
     replacing: bool
     actions: frozenset
     modified: dict | None
+    place: Place
     line: Line | None
 
 
@@ -108,6 +117,7 @@ class Reference(NamedTuple):
     generic: bool               # 被引用物件是泛用物件(泛用引用開關開才展開)
     candidates: tuple
     effect: str                 # 指定的部分(效果的 JSON);`ActionIndex.part` 換成被引用卡的區塊
+    place: Place                # 引用節點所在的位置(經引用的命中算在這個效果上)
 
 
 class ActionIndex:
@@ -130,6 +140,7 @@ class ActionIndex:
         self.card_order = {}     # 卡片密碼 → 在卡片結構裡的順序(回傳照這個順序)
         self.no_text = []        # 無官方日文的卡:(卡片密碼, 原因)
         self.blocks = {}         # 有結構的卡 → [(頂層區塊 id, 區塊種類)]
+        self.texts = {}          # 有結構的卡 → {來源: 原文}(區塊與略過文本拼回,沒蓋到的只有空白)
         self.unresolved = []
         self.references = {}     # (卡, 頂層區塊 id)→ [Reference]
         self.referencing = set()  # 有解析出的引用節點的卡
@@ -197,10 +208,11 @@ def flatten(structures, cards):
             continue
         objects = {obj["id"]: obj for obj in card["objects"]}
         blocks = index.blocks[card["id"]] = []
+        index.texts[card["id"]] = _source_texts(card)
         for block in card["blocks"]:
             blocks.append((block["id"], block["kind"]))
             block_reason = block["unparsed"]["reason"] if block["unparsed"] else None
-            for _, seg in iter_segments(block):
+            for inner, seg in iter_segments(block):
                 if seg["replaces"]:
                     index.replacements.setdefault(card["id"], []).append(
                         (seg["replaces"], seg["id"]))
@@ -210,7 +222,7 @@ def flatten(structures, cards):
                     continue
                 head = (card["id"], seg["id"], seq, block["id"], block["kind"], seg["kind"],
                         seg["polarity"], bool(seg["replaces"]), frozenset(segment_actions(seg)),
-                        seg["modified"])
+                        seg["modified"], _place(block, inner, seg["span"][0]))
                 seq += 1
                 if not seg["lines"]:
                     index.rows.append(Row(*head, None))
@@ -224,12 +236,33 @@ def flatten(structures, cards):
                 index.unresolved.append(Unresolved(
                     card["id"], block["kind"], block_reason, None, None, None, False,
                     reason, reason, _literal_actions(text), text))
-            for node in iter_references(block):
+            for inner, node in iter_reference_sites(block):
                 if not node.get("unparsed"):
                     index.referencing.add(card["id"])
                     index.references.setdefault((card["id"], block["id"]), []).append(
-                        _reference(index, card["id"], block["id"], node))
+                        _reference(index, card["id"], block["id"], node,
+                                   _place(block, inner, node["span"][0])))
     return index
+
+
+def _place(block, inner, offset):
+    """`inner`(頂層區塊或它的內嵌效果)裡 `offset` 處:頂層區塊的編號,加上在來源原文裡的位置。"""
+    return Place(block["source"], block["label"], inner["span"][0] + offset)
+
+
+def _source_texts(card):
+    """區塊與略過文本照 span 拼回各來源的原文;兩者之間沒蓋到的只有換行等空白,補空白。"""
+    pieces = {}
+    for part in [*card["blocks"], *card["omitted"]]:
+        pieces.setdefault(part["source"], []).append(part)
+    texts = {}
+    for source, parts in pieces.items():
+        chars = [" "] * max(part["span"][1] for part in parts)
+        for part in parts:
+            start = part["span"][0]
+            chars[start:start + len(part["text"])] = part["text"]
+        texts[source] = "".join(chars)
+    return texts
 
 
 def segment_actions(seg):
@@ -300,11 +333,11 @@ def _unparsed_references(block):
             yield node["unparsed"]["reason"], block["text"][start:end]
 
 
-def _reference(index, card_id, block_id, node):
+def _reference(index, card_id, block_id, node, place):
     effect = json.dumps(node["reference"]["effect"], sort_keys=True, ensure_ascii=False)
     index._effects.setdefault(effect, node["reference"]["effect"])
     return Reference(card_id, block_id, bool(node.get("any")),
-                     tuple(node["reference"]["candidates"]), effect)
+                     tuple(node["reference"]["candidates"]), effect, place)
 
 
 def _literal_actions(text):

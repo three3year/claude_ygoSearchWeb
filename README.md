@@ -154,8 +154,9 @@ python script/web/build_index.py
 # 只跑檢查與報告,不動 data.js
 python script/web/build_index.py --no-write
 
-# 建置動作索引:卡片結構 + 卡片總表 + 前端索引(卡的順序)+ 字段表 → web/action-data.js + 報告
-# (先建好卡片結構與前端索引;任何一份輸入變了都要重建;超過 8 MB 或對不上前端索引就建置失敗、不寫檔)
+# 建置動作索引:卡片結構 + 卡片總表 + 前端索引(卡的順序、效果句的序號)+ 字段表 + 效果標記表(效果句的日文)
+#   → web/action-data.js + 報告(含效果對應:靠編號、靠位置、留空的段數與留空的卡號)
+# (先建好卡片結構與前端索引;任何一份輸入變了都要重建;超過 8 MB、對不上前端索引或效果句數不符就建置失敗、不寫檔)
 python -X utf8 script/action_structure/build_action_index.py
 
 # 只跑檢查與報告,不動 action-data.js
@@ -176,7 +177,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 
 `web/action-data.js` 是動作搜尋的[動作索引](GLOSSARY.md)(ADR-0013,建置產物,**入版控**):
 `window.ACTION_DATA=…`,與前端索引分開,使用者打開動作搜尋才載入。卡片結構在建置期攤平成列、
-物件的候選卡算好存成集合,網站只比對列。一張卡一行、一個候選卡集合一行;不帶時間,
+物件的候選卡算好存成集合,網站只比對列。每一段對回前端索引的一個效果句(`clause_map`,對不回留空)。
+一張卡一行、一個候選卡集合一行;不帶時間,
 同一份輸入兩次建置逐位元組相同。格式的讀法只有 `action_index.decode_action_index` 一處。
 
 ## 目錄
@@ -233,7 +235,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用/經引用分組、未解析組(`run_query` = 攤平成列再比對列);卡代不代得進物件的條件式判斷 |
 | `script/action_structure/action_rows.py`、`row_match.py` | 攤平成列(卡片結構 + 卡片總表 → 每條對象線一列、未解析組的來源、引用節點、代替的連結,候選卡用到才算;解讀卡片結構只在這裡)與比對列(只讀列) |
 | `script/action_structure/build_structure.py` | 建置 CLI 薄殼(讀檔 → 寫 data/action_structure.json → 印報告) |
-| `script/action_structure/action_index.py` | 動作索引(純函式):卡片結構 + 卡片總表 + 前端索引的卡 + 字段表 → `web/action-data.js` 的文字 + 報告(體積門檻、前端索引對不上);格式說明與讀回(`decode_action_index`) |
+| `script/action_structure/action_index.py` | 動作索引(純函式):卡片結構 + 卡片總表 + 前端索引的卡 + 字段表 + 效果標記表 → `web/action-data.js` 的文字 + 報告(體積門檻、前端索引對不上、效果句數不符、效果對應);格式說明與讀回(`decode_action_index`) |
+| `script/action_structure/clause_map.py` | 效果對應:段或引用節點的原文位置 → 前端索引的效果句序號(先看區塊編號、再看原文位置,對不上留空) |
 | `script/action_structure/build_action_index.py` | 動作索引 CLI 薄殼(讀檔 → 寫 web/action-data.js → 印報告與各階段時間 → 依 problems 定 exit code) |
 | `script/action_structure/coverage_report.py` | 覆蓋報告(純函式):全庫結構 → 依區塊種類、段類別、各格、物件計數,依原因附卡號;略過文本依原因計處數與張數 → markdown |
 | `script/action_structure/build_report.py` | 覆蓋報告 CLI 薄殼(讀產物與總表 → 寫 .scratch/action-structure/report/coverage.md) |

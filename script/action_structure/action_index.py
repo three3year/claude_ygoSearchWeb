@@ -1,6 +1,7 @@
 """動作索引:攤平出來的列 → 網站讀的 `web/action-data.js`(spec「動作索引」「建置與門檻」、ADR-0013)。
 
-單一接縫:`build_action_index(卡片結構, 卡片總表, 前端索引的卡, 字段表) → (文字, 報告)`;
+單一接縫:`build_action_index(卡片結構, 卡片總表, 前端索引的卡, 字段表, tag_cards=效果標記表)
+→ (文字, 報告)`;
 `decode_action_index(文字)` 是格式的唯一讀法(測試與之後的工具用它,不各自解碼)。
 讀檔、寫檔、印報告在薄殼 `build_action_index.py`。
 
@@ -12,7 +13,7 @@
   列裡存的是在清單裡的位置;`actions` `zones` 帶列數:[值, 列數]。
 - `sets`:候選卡集合,鍵是內容的雜湊(內容相同共用一份,別的集合增減不會改到它的鍵)。
   值是位置的清單,或位元集(第 i 位 = 位置 i,little-endian,base64),兩種取短的。
-- `cards`:一張卡一行 [卡號, 區塊, 段, 未解析的來源, 引用列],只列有東西的卡。
+- `cards`:一張卡一行 [卡號, 區塊, 段, 未解析的來源, 引用列, 效果],只列有東西的卡。
   - 區塊:[區塊種類]…,照卡片結構的頂層區塊順序;段與引用列用位置指它。
   - 段:[段 id, 區塊, 段類別, 極性, 是不是做代替的段, [動作詞], [線], 被改的屬性(有才寫)]。
   - 線:[旗標(1 做動作的一方、2 取對象), 從, 到, 物件];從、到是 0(沒有)或 [推得, 區域碼…],
@@ -20,7 +21,9 @@
   - 未解析的來源:[段類別, 極性, 區塊種類, 旗標, [原文字面的動作詞]];旗標 1 做代替的段、
     2 區塊種類判不出、4 不代入卡時判不了、8 代入卡時判不了、16 引用節點(段類別、極性為 null)。
     字面不含任何動作詞的不寫(帶動作詞的查詢才看未解析組,字面要含查詢的全部動作詞)。
-  - 引用列:[區塊, 泛用, 集合鍵, 指定的部分];指定的部分是 `parts` 的位置。
+  - 引用列:[區塊, 泛用, 集合鍵, 指定的部分, 效果];指定的部分是 `parts` 的位置。
+  - 效果:與段同序的清單,每段對回前端索引的效果句序號(`tx` 的位置),對不回是 null(`clause_map`);
+    引用列的效果是引用節點所在的效果句。兩者都加在最後一格,先前的讀法照舊。
 - `parts`:[效果, [[位置, [區塊]]…]]…:引用列的候選卡上,指定的部分不是整張的卡與它的區塊;沒列的看整張。
 - `archetypes`:[setcode, 中文名, 集合鍵]…,成員照卡片屬性表(位置條件不設限的列),沒有成員的不寫。
 - `noText`:無官方日文的卡號。
@@ -33,6 +36,7 @@ import time
 
 from action_rows import flatten
 from archetype_table import setcode_matches
+from clause_map import NUMBER, POSITION, ClauseMap
 
 GLOBAL = "window.ACTION_DATA="
 DEFAULT_SIZE_LIMIT = 8_000_000      # spec Q12:8 MB
@@ -44,13 +48,15 @@ FLAG_DOER, FLAG_TARGETING = 1, 2
 U_REPLACING, U_BLOCK, U_REASON, U_REASON_SUBSTITUTING, U_REFERENCE = 1, 2, 4, 8, 16
 
 
-def build_action_index(structures, cards, frontend_cards, archetypes,
+def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=(),
                        size_limit=DEFAULT_SIZE_LIMIT):
-    """→ (產物文字, 報告)。報告的 problems 非空就是建置失敗(前端索引對不上時文字為 None)。"""
+    """→ (產物文字, 報告)。報告的 problems 非空就是建置失敗(前端索引對不上時文字為 None)。
+
+    `tag_cards` 是效果標記表的卡(效果對應用);沒給時每張卡都沒有效果句,段的效果全留空。"""
     timings = {}
     order = [entry["id"] for entry in frontend_cards]
     at = {cid: i for i, cid in enumerate(order)}
-    problems = _missing(structures, cards, at)
+    problems = _missing(structures, cards, at) + _clause_counts(frontend_cards, tag_cards)
     if problems:
         return None, {"problems": problems, "timings": timings}
 
@@ -65,7 +71,7 @@ def build_action_index(structures, cards, frontend_cards, archetypes,
     timings["候選卡"] = time.perf_counter() - started
 
     started = time.perf_counter()
-    encoder = _Encoder(index, cards, order, at)
+    encoder = _Encoder(index, cards, order, at, ClauseMap(tag_cards, index.texts))
     sections, report = encoder.encode(archetypes)
     problems.extend(encoder.problems)
     text = _serialize(sections)
@@ -97,6 +103,19 @@ def _missing(structures, cards, at):
     return problems
 
 
+def _clause_counts(frontend_cards, tag_cards):
+    """效果句的序號是前端索引 `tx` 的位置:每張卡的效果句數要和效果標記表相同,否則序號對不上。"""
+    counts = {entry["id"]: len(entry.get("clauses") or []) for entry in tag_cards}
+    wrong = [f"{entry['id']}(前端索引 {len(entry.get('tx') or [])}、效果標記表 "
+             f"{counts.get(entry['id'], 0)})"
+             for entry in frontend_cards
+             if len(entry.get("tx") or []) != counts.get(entry["id"], 0)]
+    if not wrong:
+        return []
+    return [f"效果句數與前端索引不符 {len(wrong)} 張:" + ", ".join(wrong[:20])
+            + (" …" if len(wrong) > 20 else "")]
+
+
 class _Vocab:
     """值 → 在清單裡的位置;清單照字串排序(None 排最前),所以要先收齊再編號。"""
 
@@ -116,8 +135,9 @@ class _Vocab:
 
 class _Encoder:
 
-    def __init__(self, index, cards, order, at):
+    def __init__(self, index, cards, order, at, clauses):
         self.index = index
+        self.clauses = clauses
         self.order = order
         self.at = at
         self.problems = []
@@ -231,6 +251,7 @@ class _Encoder:
             "archetypes": len(archetype_rows),
             "empty_archetypes": empty_archetypes,
             "vocab": {name: len(v.items) for name, v in vocab.items()},
+            "clause_mapping": self.mapping,
         }
         return sections, report
 
@@ -253,13 +274,21 @@ class _Encoder:
                 blocks = index.blocks.get(card, [])
                 by_card[card] = {"blocks": {bid: i for i, (bid, _) in enumerate(blocks)},
                                  "kinds": [vocab["blockKinds"][k] for _, k in blocks],
-                                 "segments": [], "unresolved": [], "references": []}
+                                 "segments": [], "unresolved": [], "references": [],
+                                 "clauses": []}
             return by_card[card]
 
+        mapping = {NUMBER: 0, POSITION: 0, None: 0}
+        unmapped_cards = set()
         current = None
         for row in index.rows:
             e = entry(row.card)
             if current is None or current[0] != row.seq:
+                clause, how = self.clauses.of(row.card, row.place)
+                mapping[how] += 1
+                if clause is None:
+                    unmapped_cards.add(row.card)
+                e["clauses"].append(clause)
                 segment = [row.segment, e["blocks"][row.block], vocab["kinds"][row.kind],
                            vocab["polarities"][row.polarity], int(row.replacing),
                            sorted(vocab["actions"][a] for a in row.actions), []]
@@ -285,14 +314,17 @@ class _Encoder:
         effects = sorted({ref.effect for refs in index.references.values() for ref in refs})
         effect_at = {effect: i for i, effect in enumerate(effects)}
         part_entries = {effect: {} for effect in effects}
+        unmapped_references = 0
         for (card, _), refs in sorted(index.references.items(),
                                       key=lambda kv: (index.card_order[kv[0][0]], kv[0][1])):
             e = entry(card)
             for ref in refs:
+                clause, _ = self.clauses.of(card, ref.place)
+                unmapped_references += clause is None
                 e["references"].append([
                     e["blocks"][ref.block], int(ref.generic),
                     self.set_of_ids(ref.candidates, f"卡 {card} 的引用列"),
-                    effect_at[ref.effect]])
+                    effect_at[ref.effect], clause])
                 for cid in ref.candidates:
                     if cid not in index.blocks or cid not in self.at:
                         continue
@@ -306,7 +338,13 @@ class _Encoder:
         lines = []
         for card in sorted(by_card, key=lambda cid: self.at[cid]):
             e = by_card[card]
-            lines.append([card, e["kinds"], e["segments"], e["unresolved"], e["references"]])
+            lines.append([card, e["kinds"], e["segments"], e["unresolved"], e["references"],
+                          e["clauses"]])
+        self.mapping = {"segments": sum(mapping.values()), "by_number": mapping[NUMBER],
+                        "by_position": mapping[POSITION], "unmapped": mapping[None],
+                        "unmapped_cards": sorted(unmapped_cards, key=lambda cid: self.at[cid]),
+                        "references": sum(len(refs) for refs in index.references.values()),
+                        "unmapped_references": unmapped_references}
         return lines, parts
 
     def line(self, line):
@@ -419,6 +457,7 @@ def decode_action_index(text):
      "archetypes": {setcode: {"name", "members"}},
      "cards": {卡號: {"blocks": [區塊種類], "segments": [段], "unresolved": [...],
                       "references": [...]}}}
+    段與引用列的 `clause` 是對回的效果句序號(前端索引 `tx` 的位置),對不回是 None。
     """
     if not (text.startswith(GLOBAL) and text.endswith(";\n")):
         raise ValueError("不是動作索引")
@@ -466,15 +505,15 @@ def decode_action_index(text):
                 "literal_actions": frozenset(actions[a] for a in acts)}
 
     def reference(value):
-        block, generic, key, part = value
+        block, generic, key, part, clause = value
         effect, blocks = parts[part]
         return {"block": block, "generic": bool(generic), "candidates": sets[key],
-                "effect": effect, "parts": blocks}
+                "effect": effect, "parts": blocks, "clause": clause}
 
     cards = {}
-    for cid, blocks, segs, unres, refs in raw["cards"]:
+    for cid, blocks, segs, unres, refs, clauses in raw["cards"]:
         cards[cid] = {"blocks": [block_kinds[k] for k in blocks],
-                      "segments": [segment(v) for v in segs],
+                      "segments": [dict(segment(v), clause=c) for v, c in zip(segs, clauses)],
                       "unresolved": [unresolved(v) for v in unres],
                       "references": [reference(v) for v in refs]}
     return {"ids": ids,

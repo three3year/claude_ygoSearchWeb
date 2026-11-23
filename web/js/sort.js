@@ -91,8 +91,7 @@ const VALUE = {
   df: c => stat(c.df),
   lv: c => (c.lv == null ? null : c.lv),
   // 卡名比的是 UTF-16 碼元序而不是 localeCompare:後者的結果隨環境的 ICU 版本與
-  // locale 而變,同一份資料在兩台裝置上會排出不同的順序,而分享出去的網址
-  // 講的就是「同一個查詢在你那邊也長這樣」。
+  // locale 而變,同一份資料在兩台裝置上會排出不同的順序。
   n: c => (c.n == null ? null : c.n),
   id: c => c.id,
 };

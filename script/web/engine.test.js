@@ -1048,15 +1048,16 @@ test('排序選單的鍵清單:預設(領域序)沒有方向,單鍵各帶預設�
   assert.strictEqual(keys.find(k => k.key === 'n').dir, 'asc');
 });
 
-/* ── 網址狀態(票08) ─────────────────────────────────────
-   編解碼是純的,所以測得到:條件物件進去、字串出來、再解析回來還是同一個物件。
-   **往返正是分享出去的網址的全部內容**——在對方那邊還原不回同一個查詢的話,
-   這一票就沒有做到任何事。寫入時機、`hashchange` 與瀏覽器歷史測不到(沙箱裡
-   沒有 location 也沒有歷史),走人工驗收。 */
+/* ── 存在瀏覽紀錄裡的查詢狀態(action-search-web 票01) ──────
+   每次搜尋把查詢狀態(條件、排序)存進瀏覽紀錄新增的那一筆;上一頁、下一頁、
+   重新整理從那一筆還原。網址不帶任何參數。
+   存進去的是結構化複製的物件,這裡用 JSON 走一趟模擬。還原必須容得下舊版網站
+   寫的狀態:認不得的欄位或值忽略,其餘照常還原。寫入時機、`popstate` 與真實
+   瀏覽器的上一頁/下一頁/重新整理在沙箱裡測不到,走站主人工驗收。 */
 
-const hashOf = st => harness.hash(sandbox, st);
-const parseHash = h => harness.parseHash(sandbox, h);
-const canon = h => harness.canonHash(sandbox, h);
+const saved = (q, sort) => harness.savedState(sandbox, q, sort);
+const restored = raw => harness.restoreSaved(sandbox, raw);
+const viaHistory = (q, sort) => restored(JSON.parse(JSON.stringify(saved(q, sort))));
 
 /* 空條件的正規形:三個關鍵字框空著、卡名語言是預設的中文、排序是領域序。
    側欄什麼都沒設時 `Query.read()` 吐的就是這個形狀。 */
@@ -1083,152 +1084,67 @@ const STATES = [
   { q: { ...EMPTY_Q, lm: { L: 1, R: -1 }, rarity: { UR: 1 }, ot: { o: -1 },
          gy: { min: 5, max: 20 } },
     sort: { key: 'n', dir: 'asc' } },
-  // 禁限三子軸(spec banlist 票04):包含與排除都要走得過網址
+  // 禁限三子軸(spec banlist 票04)
   { q: { ...EMPTY_Q, ban_o: { f: 1, l: 1 }, ban_t: { l: -1 },
          ban_m: { s: 1 } },
     sort: DOM_SORT },
 ];
 
-test('任意條件組合序列化後再解析回來相等(往返,含三態排除)', () => {
+test('查詢狀態存進瀏覽紀錄再還原,條件與排序相等', () => {
   for (const st of STATES) {
-    assert.deepStrictEqual(parseHash(hashOf(st)), st);
-    // 字串那一側也要是正規形:同一個狀態只有一種寫法,兩份網址因此比得出來
-    assert.strictEqual(canon(hashOf(st)), hashOf(st));
+    assert.deepStrictEqual(viaHistory(st.q, st.sort), st, JSON.stringify(st));
   }
 });
 
-test('條件經過網址一趟回來,引擎得到同一批卡', () => {
-  // 往返相等的意義在這裡:解析出來的 q 就是接縫 3 吃的形狀,不必再翻譯一次
-  const q = { name: '青眼', cat: { m: 1 }, attr: { light: 1 },
-              atk: { min: 2000, max: null } };
-  const back = parseHash(hashOf({ q, sort: DOM_SORT })).q;
-  assert.ok(ids(q).length);              // 空集合的相等問不出東西
-  assert.deepStrictEqual(ids(back), ids(q));
-});
-
-test('三態的三個狀態雙向可編碼', () => {
-  const h = hashOf({ q: { ...EMPTY_Q, attr: { dark: 1, light: -1 } }, sort: DOM_SORT });
-  // 排除帶 `-` 前綴;碼照值域的宣告序寫(光在闇之前)
-  assert.strictEqual(h, 'attr=-light,dark');
-  const back = parseHash(h).q.attr;
-  assert.deepStrictEqual(back, { light: -1, dark: 1 });
-  // 未選的碼不進網址,也不會在還原時變成「未選」以外的東西
-  assert.ok(!('earth' in back));
-});
-
-test('素材行開關進網址:勾了寫 textMat=1,沒勾不寫、壞值不留殘骸', () => {
-  const h = hashOf({ q: { ...EMPTY_Q, text: '融合', textMat: 1 }, sort: DOM_SORT });
-  assert.strictEqual(h, 'text=' + encodeURIComponent('融合') + '&textMat=1');
-  assert.deepStrictEqual(parseHash(h).q, { ...EMPTY_Q, text: '融合', textMat: 1 });
-  assert.strictEqual(hashOf({ q: { ...EMPTY_Q, text: '融合' }, sort: DOM_SORT }),
-                     'text=' + encodeURIComponent('融合'));
-  assert.ok(!('textMat' in parseHash('textMat=9').q));
-  assert.ok(!('textMat' in parseHash('textMat=').q));
-});
-
-test('兩態軸的排除值在網址還原時被丟掉(票12:大類讀不出排除)', () => {
-  // 大類兩態化之後,`cat=-t` 這種手改出來的段還原不成任何 UI 做得出來的狀態,
-  // 與「值不在值域裡」同一個下場:丟掉該碼,其餘照常
-  const st = parseHash('cat=m,-t&attr=dark');
-  assert.deepStrictEqual(st.q.cat, { m: 1 });
-  assert.deepStrictEqual(st.q.attr, { dark: 1 });
-  // 整段都是排除時,連 cat 這個鍵都不留(空殼不算條件)
-  assert.ok(!('cat' in parseHash('cat=-m,-t').q));
-  // 三態軸不受影響:排除照常還原
-  assert.deepStrictEqual(parseHash('attr=-light').q.attr, { light: -1 });
-});
-
-test('組合鈕的碼進出網址(spec-optional-combo)', () => {
-  // 條件軸由 Query.FIELDS 導出、合法碼跟著分組走:組合碼自動是合法碼
-  const st = { q: { ...EMPTY_Q, opt: { qo: 1, tm: -1 } }, sort: DOM_SORT };
-  assert.strictEqual(hashOf(st), 'opt=qo,-tm');
-  assert.deepStrictEqual(parseHash(hashOf(st)), st);
-  // 全部組與怪獸側組同一個參數(同一軸),照宣告序寫
-  const both = { q: { ...EMPTY_Q, opt: { m: 1, tm: -1 } }, sort: DOM_SORT };
-  assert.strictEqual(hashOf(both), 'opt=m,-tm');
-  // 不在值域裡的碼照舊被丟掉
-  assert.deepStrictEqual(parseHash('opt=zz,tm').q.opt, { tm: 1 });
-  assert.ok(!('opt' in parseHash('opt=zz').q));
-});
-
-test('網址不隨點擊順序而變', () => {
-  // 碼照宣告序寫而不是照使用者點出來的順序:同一組條件只有一個網址,
-  // 兩個人比得出來查的是不是同一件事
-  const of = attr => hashOf({ q: { ...EMPTY_Q, attr }, sort: DOM_SORT });
-  assert.strictEqual(of({ dark: 1, light: 1 }), of({ light: 1, dark: 1 }));
-});
-
-test('排序狀態進網址,預設的領域序不寫', () => {
-  const st = sort => hashOf({ q: EMPTY_Q, sort });
-  assert.strictEqual(st({ key: 'dom', dir: '' }), '');
-  // 方向與該鍵的預設方向相同時省略——網址短一點,而解析時補得回來
-  assert.strictEqual(st({ key: 'atk', dir: 'desc' }), 'sort=atk');
-  assert.strictEqual(st({ key: 'atk', dir: 'asc' }), 'sort=atk&dir=asc');
-  assert.deepStrictEqual(parseHash('sort=atk').sort, { key: 'atk', dir: 'desc' });
-  // 領域序沒有方向:硬寫一個進去也還原不成「領域序＋降序」那種不存在的狀態
-  assert.deepStrictEqual(parseHash('sort=dom&dir=desc').sort, DOM_SORT);
-});
-
-test('空條件的網址是空的', () => {
-  assert.strictEqual(hashOf({ q: EMPTY_Q, sort: DOM_SORT }), '');
-  assert.deepStrictEqual(parseHash(''), { q: EMPTY_Q, sort: DOM_SORT });
-  assert.deepStrictEqual(parseHash('#'), { q: EMPTY_Q, sort: DOM_SORT });
-});
-
-test('壞掉或過期的網址不讓頁面崩掉,忽略該段條件', () => {
-  const good = 'name=' + encodeURIComponent('青眼') + '&attr=dark';
+test('舊版網站存的狀態:認不得的欄位或值忽略,其餘照常還原', () => {
+  const good = { q: { ...EMPTY_Q, name: '青眼', attr: { dark: 1 } }, sort: DOM_SORT };
   const bad = [
-    'zzz=1',                     // 認不得的欄位名
-    'attr=nosuchattr',           // 值不在值域裡
-    'attr=',                     // 空值
-    'attr=-',                    // 只有一個減號
-    'cat=m:fusion',              // 帶了不該有的側前綴
-    'sub=fusion',                // 子類型少了大類前綴(跨側重複的碼因此認不得)
-    'lv=abc', 'lv=', 'atk=x-y',  // 壞掉的範圍
-    'atkq=9',                    // 三態以外的值
-    'sort=nosuchkey', 'dir=sideways',
-    'name=%E9%9D',               // 壞掉的百分比編碼
-    'noequalsign', '', '%', '=1',
+    { zzz: 1 },                              // 認不得的條件欄位
+    { attr: { dark: 1, nosuchattr: 1 } },    // 值不在值域裡
+    { attr: { dark: 1, earth: 2 } },         // 三態以外的值
+    { cat: { m: -1, t: -1 } },               // 兩態軸(大類)沒有排除
+    { cat: { 'm:fusion': 1 } },              // 帶了不該有的側前綴
+    { sub: { fusion: 1 } },                  // 子類型少了大類前綴
+    { lv: { min: 'abc', max: null } },       // 壞掉的範圍
+    { lv: { min: null, max: null } },        // 兩邊都空的範圍
+    { lv: 4 },                               // 範圍不是物件
+    { atkq: 9 },                             // 攻守 ? 的三態以外的值
+    { textMat: 9 },                          // 素材行開關的壞值
+    { nameLang: 'xx' },                      // 認不得的卡名語言
+    { code: 46986414 },                      // 文字欄位不是字串
+    { ban_o: 'f' },                          // 條件軸不是物件
   ];
-  for (const seg of bad) {
-    const st = parseHash(good + '&' + seg);
-    // 壞掉的那一段被忽略,其餘條件照常生效
-    assert.deepStrictEqual(st.q.name, '青眼', seg);
-    assert.deepStrictEqual(st.q.attr, { dark: 1 }, seg);
-    assert.deepStrictEqual(st.sort, DOM_SORT, seg);
-    // 而且忽略是真的忽略:壞掉的段不在條件物件裡留下任何殘骸
-    assert.deepStrictEqual(st, parseHash(good), seg);
+  for (const extra of bad) {
+    const raw = { ...good, q: { ...good.q, ...extra,
+                                attr: { ...good.q.attr, ...(extra.attr || {}) } } };
+    assert.deepStrictEqual(restored(raw), good, JSON.stringify(extra));
+  }
+  // 兩態軸丟掉的只是排除那個碼,正選照常
+  assert.deepStrictEqual(restored({ ...good, q: { ...good.q, cat: { m: 1, t: -1 } } }).q.cat,
+                         { m: 1 });
+  // 整筆層級:多出來的欄位忽略;排序認不得就回預設
+  assert.deepStrictEqual(restored({ ...good, v: 99, extra: { a: 1 } }), good);
+  assert.deepStrictEqual(restored({ ...good, sort: { key: 'nosuchkey', dir: 'up' } }),
+                         good);
+  assert.deepStrictEqual(restored({ ...good, sort: { key: 'atk', dir: 'sideways' } }).sort,
+                         { key: 'atk', dir: 'desc' });
+  // 領域序沒有方向:硬寫一個進去也還原不成「領域序＋降序」那種不存在的狀態
+  assert.deepStrictEqual(restored({ ...good, sort: { key: 'dom', dir: 'desc' } }).sort,
+                         DOM_SORT);
+});
+
+test('瀏覽紀錄那一筆是空的或不是本站寫的:還原成空條件,不出錯', () => {
+  const empty = { q: EMPTY_Q, sort: DOM_SORT };
+  for (const raw of [null, undefined, '', 'attr=dark', 42, [], {}, { q: null },
+                     { q: 'name=x' }, { q: [], sort: 'atk' }]) {
+    assert.deepStrictEqual(restored(raw), empty, JSON.stringify(raw));
   }
 });
 
-test('轉傳途中被動過手腳的網址救得回來(裸 % 與黏進文字的參數段)', () => {
-  // 聊天軟體/信箱常把網址解碼一次再交給瀏覽器:中文被重新編碼,但 %25 還原成
-  // 的裸 % 留了下來。這種段以前整段被丟掉(text 條件無聲消失),現在補回 %25
-  // 再解一次——萬用字元搜尋的網址轉傳一手之後照樣能用
-  const bare = parseHash('text=%E5%A2%93%E5%9C%B0%%E5%8A%A0%E5%85%A5&kind=q,i');
-  assert.strictEqual(bare.q.text, '墓地%加入');
-  assert.deepStrictEqual(bare.q.kind, { q: 1, i: 1 });
-  // & 被轉傳端多編一次成 %26 時,後面的參數段不該黏進文字欄位變成
-  // 「墓地&kind=q,i」——認得的參數名接等號才拆,拆回獨立的段
-  const enc = parseHash('text=%E5%A2%93%E5%9C%B0%26kind=q,i');
-  assert.strictEqual(enc.q.text, '墓地');
-  assert.deepStrictEqual(enc.q.kind, { q: 1, i: 1 });
-  // 手打網址時輸入法吐出的全形 ＆/＝(瀏覽器編成 %EF%BC%86/%EF%BC%9D)同一個下場
-  const wide = parseHash('text=%E5%A2%93%E5%9C%B0%EF%BC%86kind%EF%BC%9Dq,i');
-  assert.strictEqual(wide.q.text, '墓地');
-  assert.deepStrictEqual(wide.q.kind, { q: 1, i: 1 });
-  // 真的想搜含「&kind=」字面的文字不受影響:自家 stringify 把 = 編成 %3D,
-  // 「參數名＋等號」的形狀對不上,往返照舊還原成同一個字串
-  const literal = { q: { ...EMPTY_Q, text: 'A&kind=q' }, sort: DOM_SORT };
-  assert.deepStrictEqual(parseHash(hashOf(literal)), literal);
-  // 補救不是無限上綱:補了 %25 仍解不開的段照舊忽略(上一票的 name=%E9%9D)
-  assert.deepStrictEqual(parseHash('name=%E9%9D'), parseHash(''));
-});
-
-test('被建置期拿掉按鈕的效果類型值,網址視同未知碼忽略', () => {
+test('被建置期拿掉按鈕的效果類型值,還原時視同未知碼忽略', () => {
   // 建置期把跨類型 0 張的值從**分組**拿掉、留在 items 當顯示詞彙表(ADR-0010)
-  // ——網址的合法碼跟著按鈕(分組聯集)走,不跟顯示詞彙表走。「UI 做不出來的
-  // 狀態還原不回來」,與兩態軸丟排除段同一條規則
+  // ——還原的合法碼跟著按鈕(分組聯集)走,不跟顯示詞彙表走。「UI 做不出來的
+  // 狀態還原不回來」,與兩態軸丟排除同一條規則
   const trimmed = {
     ...VOCAB,
     kind: { ...VOCAB.kind,
@@ -1236,31 +1152,18 @@ test('被建置期拿掉按鈕的效果類型值,網址視同未知碼忽略', (
                      { zh: '跨類型魔陷效果', codes: ['se'] }] },
   };
   const box = harness.load({ cards: CARDS, vocab: trimmed, meta: META });
-  // 按鈕也跟著分組走:sp 沒有鈕,se 還在
-  const kindAxis = harness.axes(box).find(a => a.key === 'kind');
-  assert.deepStrictEqual(kindAxis.groups[1].items.map(i => i.code), ['se']);
-  // 網址帶著被拿掉的值:那一個碼丟掉,其餘照常
-  const st = harness.parseHash(box, 'kind=sp,se&attr=dark');
+  const st = harness.restoreSaved(box, { q: { ...EMPTY_Q, kind: { sp: 1, se: 1 },
+                                              attr: { dark: 1 } }, sort: DOM_SORT });
   assert.deepStrictEqual(st.q.kind, { se: 1 });
   assert.deepStrictEqual(st.q.attr, { dark: 1 });
-  assert.ok(!('kind' in harness.parseHash(box, 'kind=sp').q));
+  assert.ok(!('kind' in harness.restoreSaved(box, { q: { kind: { sp: 1 } } }).q));
 });
 
-test('正規化過的網址認得出是同一個狀態(自寫的 hash 不重跑搜尋)', () => {
-  const st = { q: { ...EMPTY_Q, name: '青眼', text: '墓地' },
-               sort: { key: 'atk', dir: 'desc' } };
-  const written = hashOf(st);
-  // 瀏覽器對 hash 的百分比編碼各有各的作法(有的原樣留著、有的編起來),
-  // 拿字串直接比會把自己剛寫進去的那一個看成別人改的——那就是同一次搜尋跑兩遍
-  const raw = decodeURIComponent(written);
-  assert.notStrictEqual(raw, written);
-  assert.strictEqual(canon(raw), written);
-  assert.strictEqual(canon('#' + written), written);
-  // 段的順序不同、寫了可省略的預設值,都收斂到同一個字串
-  assert.strictEqual(
-    canon('nameLang=zh&sort=atk&dir=desc&text=' + encodeURIComponent('墓地')
-          + '&name=' + encodeURIComponent('青眼')),
-    written);
+test('存進瀏覽紀錄的條件經還原後,引擎得到同一批卡', () => {
+  const q = { ...EMPTY_Q, name: '青眼', cat: { m: 1 }, attr: { light: 1 },
+              atk: { min: 2000, max: null } };
+  assert.ok(ids(q).length);              // 空集合的相等問不出東西
+  assert.deepStrictEqual(ids(viaHistory(q, DOM_SORT).q), ids(q));
 });
 
 /* ── 窄螢幕的條件摘要(票09) ───────────────────────────────
@@ -1287,7 +1190,7 @@ test('條件數算的是軸,不是點亮的按鈕', () => {
   assert.strictEqual(critCount({ ...EMPTY_Q, attr: { dark: 1, light: 1, water: 1 } }), 1);
   // 排除也是設了條件
   assert.strictEqual(critCount({ ...EMPTY_Q, attr: { dark: -1 } }), 1);
-  // 一顆都沒點的軸不算(壞掉的網址解出來的空殼同理)
+  // 一顆都沒點的軸不算(還原出來的空殼同理)
   assert.strictEqual(critCount({ ...EMPTY_Q, attr: {} }), 0);
   assert.strictEqual(critCount({ ...EMPTY_Q, name: '青眼', text: '墓地',
                                  cat: { m: 1 }, race: { dragon: 1 } }), 4);
@@ -1299,7 +1202,7 @@ test('條件數:只給一邊的範圍與攻守 `?` 各自算一條', () => {
   // 刻度 0 與「攻擊力 0 以上」是真的值,不是「沒設」
   assert.strictEqual(critCount({ ...EMPTY_Q, sc: { min: 0, max: 0 } }), 1);
   assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: 0, max: null } }), 1);
-  // 兩邊都空的範圍(壞網址的殘骸)不算
+  // 兩邊都空的範圍不算
   assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: null, max: null } }), 0);
   // `?` 是第三種值、與數值範圍分開的一條
   assert.strictEqual(critCount({ ...EMPTY_Q, atk: { min: 2500, max: null }, atkq: 1 }), 2);
@@ -1340,7 +1243,7 @@ test('逐軸已選數:範圍與攻守 `?` 落在同一個區塊,各算一筆', (
   // 刻度 0 是真的值,不是「沒設」
   assert.strictEqual(c.sc, 1);
   assert.strictEqual(c.df, 0);
-  // 兩邊都空的範圍(壞網址的殘骸)不算
+  // 兩邊都空的範圍不算
   assert.strictEqual(axisCounts({ ...EMPTY_Q,
     lv: { min: null, max: null } }).lv, 0);
 });
@@ -1401,7 +1304,7 @@ test('逐軸已選數:空條件全零,涵蓋每一個生成的區塊', () => {
 });
 
 /* ── 還原展開判定(票14,2026-08-17 改檔案總管規矩) ──────
-   網址還原時哪些軸該展開是一條純規則:有已選條件的軸**連同祖先鏈**(軸是巢狀
+   還原查詢時哪些軸該展開是一條純規則:有已選條件的軸**連同祖先鏈**(軸是巢狀
    的,屬性住在 怪獸子類型 住在 大類 裡,祖先不開誰也看不到葉軸),加上承載的
    效果類型帶出的必發/選發。連動出現但自己沒條件的軸**不**展開(節點收著出現,
    要看再點開)。展開動作本身是 DOM(走人工驗收),判定在這裡測。 */
@@ -1443,13 +1346,15 @@ test('還原展開:承載的效果類型連動帶出必發/選發', () => {
   assert.deepStrictEqual(expanded({ ...EMPTY_Q, opt: { m: 1 } }), ['optional']);
 });
 
-test('條件數在網址走一趟之後不變(分享的連結在手機上摺著開)', () => {
+test('條件數在瀏覽紀錄走一趟之後不變(重新整理後在手機上摺著開)', () => {
   for (const st of STATES) {
-    assert.strictEqual(critCount(parseHash(hashOf(st)).q), critCount(st.q),
+    assert.strictEqual(critCount(viaHistory(st.q, st.sort).q), critCount(st.q),
                        JSON.stringify(st.q));
   }
   // 加一條條件軸,摺疊鈕自動算得到它——條件數不必跟著 FIELDS 抄第二份
-  assert.strictEqual(critCount(parseHash('attr=dark&lv=4-&sort=atk').q), 2);
+  assert.strictEqual(critCount(viaHistory({ ...EMPTY_Q, attr: { dark: 1 },
+                                            lv: { min: 4, max: null } },
+                                          { key: 'atk', dir: 'desc' }).q), 2);
 });
 
 /* ── 資料更新時間的顯示格式(footer 票03) ─────────────────── */

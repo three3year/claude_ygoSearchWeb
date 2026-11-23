@@ -1,4 +1,12 @@
-"""查詢判斷(純函式):全庫卡片結構 + 查詢 → 命中的卡、命中段與分組。
+"""查詢判斷(純函式):全庫卡片結構 + 卡片總表 + 查詢 → 命中的卡、命中段與分組(`run_query`);
+以及一張卡代不代得進某物件的條件式判斷。
+
+`run_query` 分兩步(spec「查詢判斷」):
+- 攤平(`action_rows`):卡片結構 → 完整的列。解讀卡片結構的程式只在攤平;規則補了新形狀只改那裡。
+- 比對(`row_match`):只讀列,照下面的查詢鍵與規則算出結果。
+這個模組留下的是條件式判斷(`eval_condition`、`CardView`、`_Judge.card_fits`、`is_generic`):
+攤平時算每條對象線的候選卡(`candidate_cards`)、比對「給條件」、建置第二輪求引用節點的候選卡
+(`resolve_references`)都用它。
 
 查詢(spec「查詢判斷」;鍵名英文,值用 GLOSSARY 的詞):
   actions           動作詞列表,全部都要在段內
@@ -57,26 +65,20 @@ X 只要能在候選卡裡找到一組讓全部條件成立就符合;被引用�
 """
 import functools
 import itertools
-import json
 import operator
 import re
 from typing import Callable, NamedTuple
 
 from archetype_table import fold_width, setcode_matches, split_setcode
 from attribute_words import ATTRIBUTE_JA, RACE_JA
-from effect_reference import card_references, is_reference, iter_references, selected_blocks
+from effect_reference import card_references
 from condition_atoms import EQUIPPED, SAME_CARD, TARGETING_THIS, referenced_objects
 from same_different import KIND_ATTR, NAME_ATTR, SAME, SAME_DIFFERENT
 from state_atoms import ACTED_BY_EFFECT, EQUIPPED_ON, SUMMON_METHOD
-from structure_shape import iter_nodes, iter_segments, zone_names
-from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
+from structure_shape import iter_nodes, zone_names
 
-DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 SUBSTITUTABLE_KINDS = ("卡", "效果")   # 指定卡代得進去的物件種類(超量素材、計數器代不進去)
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
-MODIFIED_KEYS = ("attr", "form", "value")
-# 雙方對等的動作詞:施事線與受事線一樣當被比的物件(`_is_doer`)。
-SYMMETRIC_ACTION = "戰鬥"
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
                 "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10,
@@ -92,8 +94,6 @@ STAT_FIELDS = {"攻擊力": "atk", "守備力": "def"}
 COMPARATORS = {"=": operator.eq, "≠": operator.ne, "≥": operator.ge,
                "≤": operator.le, ">": operator.gt, "<": operator.lt}
 EQUIP_WORD = "装備"
-REASON_REF_MISSING = "引用的物件找不到"
-REASON_SAME_DIFFERENT = "異同判不了"
 _RANGE_END_RE = re.compile(r"^(?P<prefix>.*?)(?P<num>\d+)$")
 # 條件式裡的名稱字面對幾千張卡反覆折疊,記住結果。
 _fold = functools.lru_cache(maxsize=None)(fold_width)
@@ -284,23 +284,6 @@ def name_in_range(view, texts, from_zones):
     return False
 
 
-def _as_zone(spec):
-    return spec if isinstance(spec, dict) else {"zone": spec, "side": None}
-
-
-def zones_match(query_zones, pos, include_inferred):
-    if pos is None:
-        return False
-    if pos["inferred"] and not include_inferred:
-        return False
-    for want in map(_as_zone, query_zones):
-        for have in pos["zones"]:
-            if want["zone"] in zone_names(have["zone"]) and (
-                    want["side"] is None or want["side"] == have["side"]):
-                return True
-    return False
-
-
 class CardView:
     """代入物件的那張卡:卡片總表條目 + 它自己的卡片結構(可無),依位置給出卡名與 setcode。"""
 
@@ -380,41 +363,6 @@ def _card_text(structure):
             if node.get("node") == "內嵌效果" and node.get("block"):
                 stack.append(node["block"])
     return "\n".join(pieces)
-
-
-def _position_sensitive(condition):
-    """條件式裡有沒有看位置的原子(卡名、卡名包含、字段:卡片屬性表的列帶位置條件)。"""
-    stack = [condition]
-    while stack:
-        node = stack.pop()
-        if not isinstance(node, dict):
-            continue
-        if node.get("op") in ("卡名", "卡名包含", "字段", "卡名範圍"):
-            return True
-        if node.get("op") == SAME_DIFFERENT and NAME_ATTR in node["attrs"]:
-            return True
-        stack.extend(node.get("args", ()))
-        if "arg" in node:
-            stack.append(node["arg"])
-    return False
-
-
-def _referenced_names(condition, names):
-    """條件式引用到的名稱 id → 字面(解析不出的給 None),給快取鍵用。"""
-    found = {}
-    stack = [condition]
-    while stack:
-        node = stack.pop()
-        if not isinstance(node, dict):
-            continue
-        if "name" in node:
-            found[node["name"]] = _name_text(node, names)
-        for name_id in node.get("names", ()):
-            found[name_id] = _name_text({"name": name_id}, names)
-        stack.extend(node.get("args", ()))
-        if "arg" in node:
-            stack.append(node["arg"])
-    return found
 
 
 def _name_text(condition, names):
@@ -528,10 +476,10 @@ def _only_generic_atoms(condition):
 
 
 class _Judge:
-    """一次查詢的環境:卡片總表索引與「只給條件」的存在性快取。"""
+    """卡代入物件的環境:卡片總表索引,與候選卡、引用的快取。候選卡計算(`candidate_cards`)
+    與建置第二輪(`resolve_references`)用。"""
 
-    def __init__(self, cards, structures, query):
-        self.query = query
+    def __init__(self, cards, structures):
         self.cards = cards
         self.by_id = {}
         for entry in cards:
@@ -540,8 +488,6 @@ class _Judge:
                 self.by_id.setdefault(alt, entry)
         self.structure_by_id = {s["id"]: s for s in structures}
         self.views: dict[int, CardView] = {}
-        # 只給條件的存在性:快取鍵(條件式、來源、名稱字面、從、卡號的 JSON)→ 有沒有實卡代得進去。
-        self.exists_cache: dict[str, bool] = {}
         # (卡號, 物件 id) → 該物件的候選卡(卡片總表條目)。
         self.candidate_cache: dict[tuple[int, str], list[dict]] = {}
         # (卡號, 物件 id) → 條件式引用到的物件;None = 被引用物件找不到或解析不出。
@@ -640,382 +586,25 @@ class _Judge:
             self.objects_cache[owner["id"]] = _objects_by_id(owner)
         return self.objects_cache[owner["id"]]
 
-    def object_matches(self, obj, owner, names, line):
-        q = self.query
-        from_zones = line["from"]["zones"] if line["from"] else None
-        if q["card"] is not None:
-            entry = self.by_id.get(q["card"])
-            return entry is not None and self.card_fits(entry, obj, owner, names,
-                                                        from_zones)
-        if q["condition"] is not None:
-            if obj["unparsed"]:
-                return False
-            if is_this_card(obj, self.objects_of(owner)):
-                # 此卡只有這張卡自己代得進去:「存在一張實卡」就是「它自己滿不滿足查詢條件」,直接判。
-                # 不走下面的存在性快取:那個快取是讓條件式相同的物件共用一次總表掃描,鍵不帶卡號
-                # (此卡的條件式與來源每張卡都一樣);讓鍵帶卡號等於每張卡各掃一次總表,答案仍只看它自己。
-                entry = self.by_id.get(owner["id"])
-                return (entry is not None
-                        and eval_condition(q["condition"], self.view(entry)) is True
-                        and self.card_fits(entry, obj, owner, names, from_zones))
-            # 快取鍵只看條件式本身(名稱換成字面)與來源:幾千張卡的「モンスター１体」只對
-            # 總表掃一次;「從」只在條件式有看位置的原子(卡名、字段)時才進鍵;
-            # 引用的物件 id 是這張卡的,有引用時卡號也進鍵。
-            referenced = _referenced_names(obj["condition"], names)
-            key = json.dumps([obj["condition"], obj["source"], referenced,
-                              from_zones if _position_sensitive(obj["condition"]) else None,
-                              owner["id"] if referenced_objects(obj["condition"]) else None],
-                             sort_keys=True, ensure_ascii=False)
-            if key not in self.exists_cache:
-                self.exists_cache[key] = any(
-                    self.card_fits(entry, obj, owner, names, from_zones)
-                    for entry in self.query_matches())
-            return self.exists_cache[key]
-        return True
-
-    def query_matches(self):
-        """滿足查詢條件的卡片總表條目,整次查詢只算一次。"""
-        if not hasattr(self, "_query_matches"):
-            self._query_matches = [
-                entry for entry in self.cards
-                if eval_condition(self.query["condition"], self.view(entry)) is True]
-        return self._query_matches
-
-
-def _normalise(query):
-    q = {"actions": [], "from_zones": None, "to_zones": None, "card": None,
-         "condition": None, "targeting": False, "kinds": None,
-         "block_kinds": None, "include_condition": False,
-         "include_inferred": False, "replacement": False,
-         "polarities": ("做",), "generic_only": False, "modified": None,
-         "generic_reference": False}
-    unknown = set(query) - set(q)
-    if unknown:
-        raise KeyError(f"查詢有不認得的欄位: {sorted(unknown)}")
-    q.update(query)
-    # 條件段看開關:沒指定段類別時,開關開就把條件段加進預設範圍;
-    # 指定了段類別仍受開關閘門,開關關就不看條件段。
-    kinds = set(q["kinds"] or DEFAULT_KINDS)
-    if q["include_condition"]:
-        if q["kinds"] is None:
-            kinds.add("條件")
-    else:
-        kinds.discard("條件")
-    # 代替:被代替段與做代替的段(帶「代替誰」)都只在查詢含「代替」時看。
-    if q["replacement"]:
-        if q["kinds"] is None:
-            kinds.add("被代替")
-    else:
-        kinds.discard("被代替")
-    q["allowed_kinds"] = kinds
-    if q["modified"] is not None and set(q["modified"]) - set(MODIFIED_KEYS):
-        raise KeyError(f"modified 有不認得的鍵: {sorted(set(q['modified']) - set(MODIFIED_KEYS))}")
-    q["line_constrained"] = any((q["from_zones"], q["to_zones"],
-                                 q["card"] is not None,
-                                 q["condition"] is not None, q["targeting"]))
-    return q
-
 
 def _objects_by_id(card):
     return {obj["id"]: obj for obj in card["objects"]}
 
 
-def action_literals(actions):
-    """查詢動作詞 → 每個動作詞在同義表裡的述語字面列表(含下位詞的字面:查「特殊召喚」
-    的字面也含「融合召喚」);同義表沒有的動作詞給空列表,字面就不可能含它。"""
-    return [[stem for stem, action, _ in PREDICATE_STEMS
-             if want in action_ancestors(action)]
-            for want in actions]
-
-
-def segment_actions(seg):
-    """段的動作詞連同上位詞:段寫「融合召喚」,查「特殊召喚」也要對得上。"""
-    return {a for action in seg["actions"] for a in action_ancestors(action)}
-
-
-def literal_has_actions(text, literals):
-    """段的原文字面含每一個查詢動作詞(各取任一述語字面)才算「字面含查詢動作詞」;
-    查詢沒給動作詞時沒有字面可比,不算。"""
-    if not literals:
-        return False
-    return all(any(_has_stem(stem, text) for stem in stems) for stems in literals)
-
-
-def _has_stem(stem, text):
-    for word in STEM_FALSE_FRIENDS.get(stem, ()):
-        text = text.replace(word, "")
-    return stem in text
-
-
-def incomplete_reason(seg, objects, substituting=False):
-    """段沒命中時,它結構不完整的原因;結構完整(只是不符查詢)回 None。
-    先看段自己,再看對象線引用的物件(物件解析不出時指定卡代入判不了);查詢要把卡代入物件
-    (`substituting`:指定卡或只給條件)時,數量一張又沒寫比較對象的異同也判不了。"""
-    if seg["unparsed"]:
-        return seg["unparsed"]["reason"]
-    for line in seg["lines"]:
-        obj = objects.get(line["object"])
-        if obj is None:
-            continue
-        reason = _object_incomplete_reason(obj, substituting)
-        if reason is not None:
-            return reason
-        # 條件式引用的物件(等級 = 物件1.階級)解析不出,代入也判不了。
-        for ref_id in referenced_objects(obj["condition"]):
-            ref = objects.get(ref_id)
-            if ref is None:
-                return REASON_REF_MISSING
-            reason = _object_incomplete_reason(ref, substituting)
-            if reason is not None:
-                return reason
-    return None
-
-
-def _object_incomplete_reason(obj, substituting):
-    """物件解析不出,或要代入卡時數量一張又沒寫比較對象的異同:判不了的原因;判得了回 None。"""
-    if obj["unparsed"]:
-        return obj["unparsed"]["reason"]
-    if substituting and same_different_undecidable(obj):
-        return REASON_SAME_DIFFERENT
-    return None
-
-
-def _unparsed_references(block, literals):
-    """解析不出的引用節點沒有段,原文照未解析組規則比字面(spec「未解析組規則不變」);
-    沒有段 id,`segment` 記 None。"""
-    out = []
-    for node in iter_nodes(block["tree"]["items"]):
-        if node.get("node") == "內嵌效果" and node.get("block"):
-            out.extend(_unparsed_references(node["block"], literals))
-        if not is_reference(node) or not node.get("unparsed"):
-            continue
-        start, end = node["span"]   # 相對於節點所在區塊的原文
-        text = block["text"][start:end]
-        if literal_has_actions(text, literals):
-            out.append({"segment": None, "reason": node["unparsed"]["reason"], "text": text})
-    return out
-
-
-def segment_in_scope(seg, q):
-    """段類別、極性、代替的篩選;命中與未解析組共用,被篩掉的段兩邊都不列。
-    做代替的段(「代わりに〜」,帶代替誰)不是卡片自己做的動作,與被代替段一樣只在查詢含代替時看。"""
-    if seg["replaces"] and not q["replacement"]:
-        return False
-    return seg["kind"] in q["allowed_kinds"] and seg["polarity"] in q["polarities"]
-
-
-def replaced_by(matched, card):
-    """命中的被代替段 → 做代替的段(同區塊裡 `replaces` 指向它的段),讓查詢含代替時找得到。"""
-    found = {}
-    for block in card["blocks"]:
-        for _, seg in iter_segments(block):
-            if seg["replaces"] in matched:
-                found[seg["replaces"]] = seg["id"]
-    return found
-
-
-def modified_matches(want, have):
-    """查詢的 modified(attr/form/value 任一子集)對段的被改屬性:attr 看段的清單含不含它
-    (修飾段的 attr 是單值),其餘相等。"""
-    if not have:
-        return False
-    for key, value in want.items():
-        if key == "attr":
-            attrs = have.get("attr")
-            if value not in (attrs if isinstance(attrs, list) else [attrs]):
-                return False
-        elif have.get(key) != value:
-            return False
-    return True
-
-
-def _is_doer(line, seg):
-    """做動作的主語線(「このカードが戦闘によって相手モンスターを破壊した」的このカード):查詢指定的
-    卡、物件條件、從/到比的是被作用的物件,段裡另有受詞時主語不比。戰鬥的雙方對等(「Xが Yと 戦闘を
-    行う」),施事照比;只有主語的段(「このカードが相手に戦闘ダメージを与えた」)也照比。"""
-    return (line["role"] == "施事" and SYMMETRIC_ACTION not in seg["actions"]
-            and any(other["role"] != "施事" for other in seg["lines"]))
-
-
-def segment_hit_lines(seg, card, q, judge, objects, names):
-    """段命中時回傳命中的對象線(可為空列表);不命中回 None。
-    未結構化的段(重複到停為止)沒有動作詞,也不當空查詢的命中。"""
-    if seg["unparsed"] or seg["unstructured"] or not segment_in_scope(seg, q):
-        return None
-    if any(a not in segment_actions(seg) for a in q["actions"]):
-        return None
-    if q["modified"] is not None and not modified_matches(q["modified"], seg["modified"]):
-        return None
-    if not q["line_constrained"]:
-        return list(seg["lines"])
-    hit = []
-    # 受方是被取對象的物件(裝備對象)時,這一段算有取對象:被裝備上去的卡那條線照常比其餘條件。
-    recipient_targeted = isinstance(seg["recipient"], dict) and seg["recipient"].get("targeting")
-    for line in seg["lines"]:
-        if _is_doer(line, seg):
-            continue
-        if q["targeting"] and not (line["targeting"] or recipient_targeted):
-            continue
-        if q["from_zones"] and not zones_match(q["from_zones"], line["from"],
-                                               q["include_inferred"]):
-            continue
-        if q["to_zones"] and not zones_match(q["to_zones"], line["to"],
-                                             q["include_inferred"]):
-            continue
-        obj = objects.get(line["object"])
-        if obj is None or not judge.object_matches(obj, card, names, line):
-            continue
-        hit.append(line)
-    return hit or None
-
-
-PATH_STRUCTURE = "structure"   # 讀卡片結構(舊的讀法)
-PATH_ROWS = "rows"             # 攤平成列再比對列
-
-
-def run_query(structures, cards, query, path=PATH_ROWS):
-    """全庫結構 + 卡片總表 + 查詢 → 命中結果;一張卡任一分支、任一段命中即命中。
-    直接沒命中的卡,引用節點指定的被引用卡部分命中時進「經引用」組。
-    `path`:預設先攤平成列再比對列(`action_rows`、`row_match`);同一份輸入(同一個物件)重複查詢時
-    攤平與候選卡共用,輸入在兩次呼叫之間不可就地修改。`PATH_STRUCTURE` 是舊的讀法,
-    留到票 05 當標準答案。"""
-    if path == PATH_ROWS:
-        from action_rows import index_of
-        from row_match import match_rows
-        return match_rows(index_of(structures, cards), query)
-    if path != PATH_STRUCTURE:
-        raise ValueError(f"認不得的查詢路徑: {path}")
-    q = _normalise(query)
-    judge = _Judge(cards, structures, q)
-    literals = action_literals(q["actions"])
-    substituting = q["card"] is not None or q["condition"] is not None
-    direct, block_hits, incomplete_of = {}, {}, {}
-    for card in structures:
-        if card["unparsed"]:
-            continue
-        objects = _objects_by_id(card)
-        names = {row["id"]: row for row in card["names"]}
-        matched, generic, incomplete, replaced_hits = [], True, [], set()
-        per_block = block_hits[card["id"]] = {}
-        for block in card["blocks"]:
-            skipped = q["block_kinds"] and block["kind"] not in q["block_kinds"]
-            for _, seg in iter_segments(block):
-                lines = segment_hit_lines(seg, card, q, judge, objects, names)
-                if lines is not None:
-                    per_block.setdefault(block["id"], []).append(seg["id"])
-                if skipped and not block["unparsed"]:
-                    continue
-                if lines is not None and not skipped:
-                    matched.append(seg["id"])
-                    if seg["kind"] == "被代替":
-                        replaced_hits.add(seg["id"])
-                    # 泛用 = 只靠泛用物件命中;沒有物件的段(支付 LP)不算泛用。
-                    if not lines or not all(is_generic(objects[l["object"]], objects)
-                                            for l in lines):
-                        generic = False
-                    continue
-                if not segment_in_scope(seg, q):
-                    continue
-                reason = (block["unparsed"]["reason"] if skipped
-                          else incomplete_reason(seg, objects, substituting))
-                if reason and literal_has_actions(seg["text"], literals):
-                    incomplete.append({"segment": seg["id"], "reason": reason,
-                                       "text": seg["text"]})
-            if not skipped:
-                incomplete.extend(_unparsed_references(block, literals))
-        if matched:
-            hit = {"id": card["id"], "segments": matched,
-                   "group": "泛用" if generic else "特定"}
-            if replaced_hits:
-                hit["replaced_by"] = replaced_by(replaced_hits, card)
-            direct[card["id"]] = hit
-        elif incomplete:
-            incomplete_of[card["id"]] = incomplete
-    expand = _Expansion(structures, block_hits, q)
-    hits, unparsed = [], []
-    for card in structures:
-        if card["unparsed"]:
-            unparsed.append({"id": card["id"],
-                             "reason": card["unparsed"]["reason"],
-                             "segments": []})
-            continue
-        hit = direct.get(card["id"])
-        if hit is None:
-            hit = expand.hit(card)
-        if hit is not None:
-            if q["generic_only"] and hit["group"] != "泛用":
-                continue
-            hits.append(hit)
-        elif card["id"] in incomplete_of:
-            unparsed.append({"id": card["id"], "reason": None,
-                             "segments": incomplete_of[card["id"]]})
-    groups = {"特定": [h["id"] for h in hits if h["group"] == "特定"],
-              "泛用": [h["id"] for h in hits if h["group"] == "泛用"],
-              "全部": [h["id"] for h in hits if h["group"] != VIA_GROUP],
-              VIA_GROUP: [h["id"] for h in hits if h["group"] == VIA_GROUP],
-              "未解析": [u["id"] for u in unparsed]}
-    return {"hits": hits, "groups": groups, "unparsed": unparsed}
-
-
-VIA_GROUP = "經引用"
-VIA_GENERIC = "經泛用引用"
-
-
-class _Expansion:
-
-    def __init__(self, structures, block_hits, q):
-        self.by_id = {card["id"]: card for card in structures}
-        self.block_hits = block_hits
-        self.q = q
-
-    def hit(self, card):
-        blocks = [b for b in card["blocks"]
-                  if not self.q["block_kinds"] or b["kind"] in self.q["block_kinds"]]
-        via = self.via(blocks, {card["id"]})
-        if not via:
-            return None
-        hit = {"id": card["id"], "segments": [], "group": VIA_GROUP, "via": via}
-        if all(entry.get("generic") for entry in via):
-            hit["mark"] = VIA_GENERIC
-        return hit
-
-    def via(self, blocks, visiting):
-        """區塊裡的引用節點經由的卡:[{"id", "segments"(該卡指定部分的命中段), "via"(再往下展開的,
-        有才寫), "generic"(經泛用引用節點,有才寫)}];同一張卡只列一次。"""
-        out, seen = [], set()
-        for block in blocks:
-            for node in iter_references(block):
-                if node.get("unparsed") or (node.get("any") and not self.q["generic_reference"]):
-                    continue
-                for cid in node["reference"]["candidates"]:
-                    target = self.by_id.get(cid)
-                    if cid in visiting or cid in seen or target is None or target["unparsed"]:
-                        continue
-                    entry = self.entry(target, node["reference"]["effect"], visiting)
-                    if entry is None:
-                        continue
-                    if node.get("any"):
-                        entry["generic"] = True
-                    seen.add(cid)
-                    out.append(entry)
-        return out
-
-    def entry(self, target, effect, visiting):
-        part = selected_blocks(target, effect)
-        hits = self.block_hits.get(target["id"], {})
-        segments = [seg_id for block in part for seg_id in hits.get(block["id"], ())]
-        if segments:
-            return {"id": target["id"], "segments": segments}
-        nested = self.via(part, visiting | {target["id"]})
-        if nested:
-            return {"id": target["id"], "segments": [], "via": nested}
-        return None
+def run_query(structures, cards, query):
+    """全庫結構 + 卡片總表 + 查詢 → 命中結果(形狀見模組說明):攤平成列(`action_rows.index_of`)
+    再比對列(`row_match.match_rows`)。同一份輸入(同一個物件)重複查詢時攤平與候選卡共用,
+    輸入在兩次呼叫之間不可就地修改。"""
+    # 攤平(候選卡)與比對都要用這個模組的條件式判斷,放在這裡才 import,免得互相 import 時還沒定義好。
+    from action_rows import index_of
+    from row_match import match_rows
+    return match_rows(index_of(structures, cards), query)
 
 
 def resolve_references(structures, cards):
     """建置第二輪:每個解析出的引用節點求被引用物件的候選卡(卡片總表裡滿足它條件式的卡,
     排序的卡號),被引用物件是泛用物件時節點記 `any`。就地改結構。"""
-    judge = _Judge(cards, structures, _normalise({}))
+    judge = _Judge(cards, structures)
     for card in structures:
         if card["unparsed"]:
             continue

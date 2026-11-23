@@ -13,7 +13,7 @@
 import json
 
 from action_query import (SUBSTITUTABLE_KINDS, STATE_ATOMS, _compared_values, _fold, _Judge,
-                          _name_text, _normalise, _referenced_names, card_attr, compare_attr,
+                          _name_text, card_attr, compare_attr,
                           eval_condition, is_this_card, same_different_undecidable)
 from archetype_table import setcode_matches
 from condition_atoms import referenced_objects
@@ -31,7 +31,7 @@ class CandidateCards(_Judge):
     """一份卡片總表與全庫卡片結構上的候選卡計算。"""
 
     def __init__(self, cards, structures):
-        super().__init__(cards, structures, _normalise({}))
+        super().__init__(cards, structures)
         self._index = None
         self._answers = {}     # 整個條件式的 _shared_key → 候選卡(總表條目,照總表順序)
         # 條件式或其中一項的鍵 → 判 True 的卡在總表的位置;ALL_KEY 是整份總表。
@@ -204,6 +204,24 @@ class CandidateCards(_Judge):
         if self._index is None:
             self._index = CardIndex(self.cards, [self.view(entry) for entry in self.cards])
         return self._index
+
+
+def _referenced_names(condition, names):
+    """條件式引用到的名稱 id → 字面(解析不出的給 None),給快取鍵用。"""
+    found = {}
+    stack = [condition]
+    while stack:
+        node = stack.pop()
+        if not isinstance(node, dict):
+            continue
+        if "name" in node:
+            found[node["name"]] = _name_text(node, names)
+        for name_id in node.get("names", ()):
+            found[name_id] = _name_text({"name": name_id}, names)
+        stack.extend(node.get("args", ()))
+        if "arg" in node:
+            stack.append(node["arg"])
+    return found
 
 
 def _distinct_bindings(condition, ref_id, pool):

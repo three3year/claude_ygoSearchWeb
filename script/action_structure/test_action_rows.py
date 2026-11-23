@@ -1,7 +1,7 @@
-"""攤平成列的比對路徑(action-search-web 票 03):只走接縫一 `run_query(..., path="rows")`。
+"""攤平成列再比對(action-search-web 票 03、04):只走接縫一 `run_query`。
 
 票 03 做直接命中(特定、泛用、全部三組與命中段);票 04 補未解析組、經引用、代替,
-這些多半由現有的查詢測試驗(`run_query` 預設已走新路徑),這裡補現有測試沒有的。
+這些多半由現有的查詢測試驗,這裡補現有測試沒有的。
 """
 import unittest
 
@@ -34,7 +34,7 @@ class RowsPathTest(unittest.TestCase):
         cls.structures, _ = build_structures(cls.cards, entries, archetypes=ARCHETYPES)
 
     def query(self, **query):
-        return run_query(self.structures, self.cards, query, path="rows")
+        return run_query(self.structures, self.cards, query)
 
     def test_generic_destroy_is_in_the_generic_group(self):
         """特異点の悪魔「そのモンスターを破壊する」:物件只有大類 → 泛用組,不在特定組。"""
@@ -104,13 +104,9 @@ class RowsPathTest(unittest.TestCase):
 
         def hits(cid):
             return run_query(structures, cards, dict(actions=["破壞"], include_condition=True,
-                                                     card=cid), path="rows")["groups"]["全部"]
+                                                     card=cid))["groups"]["全部"]
         self.assertEqual(hits(BLACK_MAGICIAN), [BATTLE_DESTROYER])
         self.assertEqual(hits(BATTLE_DESTROYER), [])
-
-    def test_unknown_path_is_rejected(self):
-        with self.assertRaises(ValueError):
-            run_query(self.structures, self.cards, {}, path="其他")
 
 
 PREAMBLE_CARD = 30000002   # 測試用:新式怪獸卡前言有一句區塊種類判不出
@@ -128,7 +124,7 @@ class UnknownBlockKindTest(unittest.TestCase):
             "①：相手フィールドのカード１枚を対象として発動できる。そのカードを破壊する。"))])
 
     def query(self, **query):
-        return run_query(self.structures, self.cards, query, path="rows")
+        return run_query(self.structures, self.cards, query)
 
     def test_filtered_out_unknown_block_is_listed_with_the_block_reason(self):
         result = self.query(actions=["特殊召喚"], block_kinds=["召喚條件"])

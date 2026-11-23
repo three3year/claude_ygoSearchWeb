@@ -1,6 +1,6 @@
-"""比對列:攤平出來的列(`action_rows.flatten`)+ 查詢 → 與 `run_query` 同形的結果。
+"""比對列:攤平出來的列(`action_rows.flatten`)+ 查詢 → `run_query` 的結果。
 
-只讀列,不讀卡片結構。查詢的鍵、判法與回傳照 `action_query` 的模組說明:
+只讀列,不讀卡片結構。查詢的鍵、判法與回傳照 `action_query` 的模組說明;查詢鍵的預設值與正規化在這裡:
 先算每張卡直接命中的段(特定、泛用),命中的被代替段帶 `replaced_by`;
 直接沒命中的卡沿引用節點的列展開到底(經引用組,`via`、`mark`);
 都沒命中的卡,字面含查詢動作詞、結構又不完整的段進未解析組。
@@ -8,9 +8,62 @@
 import itertools
 from operator import attrgetter
 
-from action_query import VIA_GENERIC, VIA_GROUP, _normalise, eval_condition, modified_matches
+from action_query import eval_condition
 
 REPLACED = "被代替"
+DEFAULT_KINDS = ("效果", "代價", "召喚手續")
+MODIFIED_KEYS = ("attr", "form", "value")
+VIA_GROUP = "經引用"
+VIA_GENERIC = "經泛用引用"
+
+
+def _normalise(query):
+    q = {"actions": [], "from_zones": None, "to_zones": None, "card": None,
+         "condition": None, "targeting": False, "kinds": None,
+         "block_kinds": None, "include_condition": False,
+         "include_inferred": False, "replacement": False,
+         "polarities": ("做",), "generic_only": False, "modified": None,
+         "generic_reference": False}
+    unknown = set(query) - set(q)
+    if unknown:
+        raise KeyError(f"查詢有不認得的欄位: {sorted(unknown)}")
+    q.update(query)
+    # 條件段看開關:沒指定段類別時,開關開就把條件段加進預設範圍;
+    # 指定了段類別仍受開關閘門,開關關就不看條件段。
+    kinds = set(q["kinds"] or DEFAULT_KINDS)
+    if q["include_condition"]:
+        if q["kinds"] is None:
+            kinds.add("條件")
+    else:
+        kinds.discard("條件")
+    # 代替:被代替段與做代替的段(帶「代替誰」)都只在查詢含「代替」時看。
+    if q["replacement"]:
+        if q["kinds"] is None:
+            kinds.add("被代替")
+    else:
+        kinds.discard("被代替")
+    q["allowed_kinds"] = kinds
+    if q["modified"] is not None and set(q["modified"]) - set(MODIFIED_KEYS):
+        raise KeyError(f"modified 有不認得的鍵: {sorted(set(q['modified']) - set(MODIFIED_KEYS))}")
+    q["line_constrained"] = any((q["from_zones"], q["to_zones"],
+                                 q["card"] is not None,
+                                 q["condition"] is not None, q["targeting"]))
+    return q
+
+
+def modified_matches(want, have):
+    """查詢的 modified(attr/form/value 任一子集)對段的被改屬性:attr 看段的清單含不含它
+    (修飾段的 attr 是單值),其餘相等。"""
+    if not have:
+        return False
+    for key, value in want.items():
+        if key == "attr":
+            attrs = have.get("attr")
+            if value not in (attrs if isinstance(attrs, list) else [attrs]):
+                return False
+        elif have.get(key) != value:
+            return False
+    return True
 
 
 def match_rows(index, query):

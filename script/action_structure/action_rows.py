@@ -24,11 +24,17 @@
 import json
 from typing import NamedTuple
 
-from action_query import _has_stem, _is_doer, incomplete_reason, is_generic, segment_actions
+from action_query import is_generic, same_different_undecidable
 from candidate_cards import CandidateCards
+from condition_atoms import referenced_objects
 from effect_reference import is_reference, iter_references, selected_blocks
 from structure_shape import iter_nodes, iter_segments, zone_names
-from synonyms import PREDICATE_STEMS, action_ancestors
+from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
+
+# 雙方對等的動作詞:施事線與受事線一樣當被比的物件(`_is_doer`)。
+SYMMETRIC_ACTION = "戰鬥"
+REASON_REF_MISSING = "引用的物件找不到"
+REASON_SAME_DIFFERENT = "異同判不了"
 
 
 class Position(NamedTuple):
@@ -226,6 +232,52 @@ def flatten(structures, cards):
     return index
 
 
+def segment_actions(seg):
+    """段的動作詞連同上位詞:段寫「融合召喚」,查「特殊召喚」也要對得上。"""
+    return {a for action in seg["actions"] for a in action_ancestors(action)}
+
+
+def _is_doer(line, seg):
+    """做動作的主語線(「このカードが戦闘によって相手モンスターを破壊した」的このカード):查詢指定的
+    卡、物件條件、從/到比的是被作用的物件,段裡另有受詞時主語不比。戰鬥的雙方對等(「Xが Yと 戦闘を
+    行う」),施事照比;只有主語的段(「このカードが相手に戦闘ダメージを与えた」)也照比。"""
+    return (line["role"] == "施事" and SYMMETRIC_ACTION not in seg["actions"]
+            and any(other["role"] != "施事" for other in seg["lines"]))
+
+
+def incomplete_reason(seg, objects, substituting=False):
+    """段沒命中時,它結構不完整的原因;結構完整(只是不符查詢)回 None。
+    先看段自己,再看對象線引用的物件(物件解析不出時指定卡代入判不了);查詢要把卡代入物件
+    (`substituting`:指定卡或只給條件)時,數量一張又沒寫比較對象的異同也判不了。"""
+    if seg["unparsed"]:
+        return seg["unparsed"]["reason"]
+    for line in seg["lines"]:
+        obj = objects.get(line["object"])
+        if obj is None:
+            continue
+        reason = _object_incomplete_reason(obj, substituting)
+        if reason is not None:
+            return reason
+        # 條件式引用的物件(等級 = 物件1.階級)解析不出,代入也判不了。
+        for ref_id in referenced_objects(obj["condition"]):
+            ref = objects.get(ref_id)
+            if ref is None:
+                return REASON_REF_MISSING
+            reason = _object_incomplete_reason(ref, substituting)
+            if reason is not None:
+                return reason
+    return None
+
+
+def _object_incomplete_reason(obj, substituting):
+    """物件解析不出,或要代入卡時數量一張又沒寫比較對象的異同:判不了的原因;判得了回 None。"""
+    if obj["unparsed"]:
+        return obj["unparsed"]["reason"]
+    if substituting and same_different_undecidable(obj):
+        return REASON_SAME_DIFFERENT
+    return None
+
+
 def _add_unresolved_segment(index, card_id, block_kind, block_reason, seg, objects):
     """段可能進未解析組時記一列:段解析不出、對象線的物件判不了,或所在區塊種類判不出。"""
     reason = incomplete_reason(seg, objects)
@@ -263,6 +315,12 @@ def _literal_actions(text):
         if _has_stem(stem, text):
             found.update(action_ancestors(action))
     return frozenset(found)
+
+
+def _has_stem(stem, text):
+    for word in STEM_FALSE_FRIENDS.get(stem, ()):
+        text = text.replace(word, "")
+    return stem in text
 
 
 def _line(index, card, objects, seg, line, recipient_targeted):

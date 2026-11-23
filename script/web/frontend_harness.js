@@ -66,7 +66,7 @@ const DRIVER = `
     unsure: result.unsure,
   });
 }
-;function __rowQuery(json) { return JSON.stringify(Action.rowQuery(JSON.parse(json))); }
+;function __rowQuery(json) { return JSON.stringify(Action.rowQuery(JSON.parse(json), __index())); }
 ;function __axes() { return JSON.stringify(Query.axes()); }
 ;function __nextState(json) {
   var a = JSON.parse(json);

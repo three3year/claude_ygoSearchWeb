@@ -163,7 +163,7 @@ function hitClauses(segments) {
 
 function runQuery(db, q, act, actionIndex) {
   q = q || {};
-  const rq = Action.count(act) ? Action.rowQuery(act) : null;
+  const rq = Action.count(act) ? Action.rowQuery(act, actionIndex) : null;
   const acted = rq ? Action.match(actionIndex, rq) : null;
   const unresolved = rq ? Action.unsure(actionIndex, rq, acted) : null;
   const unsure = [];

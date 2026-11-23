@@ -3,6 +3,7 @@
 格式:`window.ACTION_DATA={…};`,JSON 物件,每個鍵一行;候選卡集合一個一行、卡一張一行。
 不帶時間與來源雜湊,同樣的輸入兩次產出逐位元組相同。
 
+- `format`:下面各種碼怎麼拆(方的格數、線與未解析來源的旗標位、物件種類碼),前端照它讀,不另抄一份。
 - `ids`:前端索引的卡號,照前端索引的順序。候選卡集合與字段成員存的是這個順序的位置。
 - `actions` `zones` `sides` `kinds` `polarities` `blockKinds` `agents` `causes`:值的清單(照字串排序),
   列裡存的是在清單裡的位置;`actions` `zones` `causes` 帶列數:[值, 列數]。
@@ -29,19 +30,29 @@
     (沒寫方是 null 的位置),同區域碼。
 - `parts`:[效果, [[位置, [區塊]]…]]…:引用列的候選卡上,指定的部分不是整張的卡與它的區塊;沒列的看整張。
 - `archetypes`:[setcode, 中文名, 集合鍵]…,成員照卡片屬性表(位置條件不設限的列),沒有成員的不寫。
+- `givenValues`:{大類、屬性、種族: [[值域正典的碼, 條件式原子帶的值]…]},給條件換成條件式時用(`given_values`)。
 - `noText`:無官方日文的卡號。
 """
 import base64
 import gzip
 import hashlib
 import json
+import os
+import sys
 import time
 
 from action_rows import flatten
 from archetype_table import setcode_matches
+from attribute_words import ATTRIBUTE_JA, RACE_JA
 from clause_map import NUMBER, POSITION, ClauseMap
-from condition_judge import (OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
+from condition_judge import (CATEGORY_BITS, OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
                              OBJECT_UNSUBSTITUTABLE)
+
+# 值域正典住在 script/web(ADR-0008);給條件的值要拿它的碼與位元去接條件式的值。
+_WEB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web")
+if _WEB not in sys.path:
+    sys.path.append(_WEB)
+import vocab as web_vocab  # noqa: E402
 
 GLOBAL = "window.ACTION_DATA="
 DEFAULT_SIZE_LIMIT = 8_000_000      # spec Q12:8 MB
@@ -53,13 +64,24 @@ FLAG_DOER, FLAG_TARGETING = 1, 2
 U_REPLACING, U_BLOCK, U_REASON, U_REASON_SUBSTITUTING, U_REFERENCE = 1, 2, 4, 8, 16
 OBJECT_CODES = {OBJECT_THIS: 1, OBJECT_UNDECIDABLE: 2, OBJECT_UNSUBSTITUTABLE: 3}
 OBJECT_KINDS = {code: kind for kind, code in OBJECT_CODES.items()}
+FORMAT = {"sideSlots": SIDE_SLOTS,
+          "lineFlags": {"doer": FLAG_DOER, "targeting": FLAG_TARGETING},
+          "objectKinds": {"thisCard": OBJECT_CODES[OBJECT_THIS],
+                          "undecidable": OBJECT_CODES[OBJECT_UNDECIDABLE],
+                          "unsubstitutable": OBJECT_CODES[OBJECT_UNSUBSTITUTABLE]},
+          "unresolvedFlags": {"replacing": U_REPLACING, "block": U_BLOCK, "reason": U_REASON,
+                              "reasonSubstituting": U_REASON_SUBSTITUTING,
+                              "reference": U_REFERENCE}}
+GIVEN_WORDS = ((web_vocab.CAT, CATEGORY_BITS), (web_vocab.ATTR, ATTRIBUTE_JA),
+               (web_vocab.RACE, RACE_JA))
 
 
 def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=(),
-                       size_limit=DEFAULT_SIZE_LIMIT):
+                       size_limit=DEFAULT_SIZE_LIMIT, domains=None):
     """→ (產物文字, 報告)。報告的 problems 非空就是建置失敗(前端索引對不上時文字為 None)。
 
-    `tag_cards` 是效果標記表的卡(效果對應用);沒給時每張卡都沒有效果句,段的效果全留空。"""
+    `tag_cards` 是效果標記表的卡(效果對應用);沒給時每張卡都沒有效果句,段的效果全留空。
+    `domains` 是值域正典(預設 repo 裡那一份)。"""
     timings = {}
     order = [entry["id"] for entry in frontend_cards]
     at = {cid: i for i, cid in enumerate(order)}
@@ -77,8 +99,9 @@ def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=
 
     started = time.perf_counter()
     encoder = _Encoder(index, cards, order, at, ClauseMap(tag_cards, index.texts))
-    sections, report = encoder.encode(archetypes)
-    problems.extend(encoder.problems)
+    given, given_problems = given_values(domains)
+    sections, report = encoder.encode(archetypes, given)
+    problems.extend(encoder.problems + given_problems)
     text = _serialize(sections)
     timings["編碼"] = time.perf_counter() - started
 
@@ -93,6 +116,21 @@ def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=
     report["problems"] = problems
     report["timings"] = timings
     return text, report
+
+
+def given_values(domains=None):
+    """給條件的值:值域正典的碼 → 條件式原子帶的值(大類是中文名,屬性、種族是官方日文),照正典宣告序。
+    兩邊靠 cdb 位元接起來;正典有而接不上的碼回報成問題,不讓那顆按鈕無聲查不到(ADR-0008)。"""
+    table, problems = {}, []
+    for name, words in GIVEN_WORDS:
+        by_bit = {bit: word for word, bit in words.items()}
+        table[name] = []
+        for e in web_vocab.entries(name, domains):
+            if e["src"] in by_bit:
+                table[name].append([e["code"], by_bit[e["src"]]])
+            else:
+                problems.append(f"值域 {name} 的 {e['code']} 對不到條件式的值")
+    return table, problems
 
 
 def _missing(structures, cards, at):
@@ -172,7 +210,7 @@ class _Encoder:
                 self.problems.append(f"{what}的卡 {cid} 不在前端索引裡")
         return self.add_set(tuple(sorted(positions)))
 
-    def encode(self, archetypes):
+    def encode(self, archetypes, given):
         index = self.index
         vocab = {name: _Vocab() for name in
                  ("actions", "zones", "sides", "kinds", "polarities", "blockKinds", "agents",
@@ -219,6 +257,7 @@ class _Encoder:
             return _replace_sets(line, keys)
 
         sections = [
+            ("format", FORMAT),
             ("ids", self.order),
             ("actions", [[a, vocab["actions"].count[a]] for a in vocab["actions"].items]),
             ("zones", [[z, vocab["zones"].count[z]] for z in vocab["zones"].items]),
@@ -228,6 +267,7 @@ class _Encoder:
             ("blockKinds", vocab["blockKinds"].items),
             ("agents", vocab["agents"].items),
             ("causes", [[c, vocab["causes"].count[c]] for c in vocab["causes"].items]),
+            ("givenValues", given),
             ("noText", [cid for cid, _ in index.no_text]),
             ("parts", parts),
             ("archetypes", _Lines([keyed(row) for row in archetype_rows])),
@@ -465,6 +505,7 @@ def decode_action_index(text):
     """產物文字 → 讀好的動作索引(卡號、值都換回來,候選卡是卡號的 frozenset)。
 
     {"actions": {動作詞: 列數}, "zones": {區域: 列數}, "no_text": [卡號],
+     "given": {大類、屬性、種族: {值域正典的碼: 條件式原子帶的值}},
      "archetypes": {setcode: {"name", "members"}},
      "cards": {卡號: {"blocks": [區塊種類], "segments": [段], "unresolved": [...],
                       "references": [...]}}}
@@ -542,6 +583,7 @@ def decode_action_index(text):
                       "unresolved": [unresolved(v) for v in unres],
                       "references": [reference(v) for v in refs]}
     return {"ids": ids,
+            "given": {name: dict(map(tuple, pairs)) for name, pairs in raw["givenValues"].items()},
             "actions": dict(map(tuple, raw["actions"])),
             "zones": dict(map(tuple, raw["zones"])),
             "no_text": raw["noText"],

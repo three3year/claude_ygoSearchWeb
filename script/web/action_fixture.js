@@ -16,9 +16,21 @@ function lineZones(line) {
   return [].concat(line.from || [], line.to || []);
 }
 
-const OBJECT_CODES = { self: 1, undecidable: 2, unsub: 3 };
+/* 動作索引的 `format` 段:前端照它拆碼。測試可以換一套數字,證明前端讀的是索引而不是自己的副本。 */
+const FORMAT = {
+  sideSlots: 8,
+  lineFlags: { doer: 1, targeting: 2 },
+  objectKinds: { thisCard: 1, undecidable: 2, unsubstitutable: 3 },
+  unresolvedFlags: { replacing: 1, block: 2, reason: 4, reasonSubstituting: 8, reference: 16 },
+};
 
-const U_REPLACING = 1, U_REASON = 4, U_REASON_SUBSTITUTING = 8, U_REFERENCE = 16;
+/* 值域正典的碼 → 條件式原子帶的值(建置期由 Python 接好,這裡是測試用的一小份)。 */
+const GIVEN_VALUES = {
+  cat: [['m', '怪獸'], ['s', '魔法'], ['t', '陷阱']],
+  attr: [['earth', '地'], ['water', '水'], ['fire', '炎'], ['wind', '風'], ['light', '光'],
+         ['dark', '闇'], ['divine', '神']],
+  race: [['warrior', '戦士族'], ['aqua', '水族'], ['plant', '植物族'], ['dragon', 'ドラゴン族']],
+};
 
 function unresOf(raw) {
   const u = { kind: '效果', pol: '做', acts: [], replacing: false, reference: false,
@@ -27,7 +39,13 @@ function unresOf(raw) {
   return u;
 }
 
-function actionData(cards, ids, noText, archetypes) {
+function actionData(cards, ids, noText, archetypes, options) {
+  const format = { ...FORMAT, ...(options && options.format) };
+  const slots = format.sideSlots;
+  const OBJECT_CODES = { self: format.objectKinds.thisCard,
+                         undecidable: format.objectKinds.undecidable,
+                         unsub: format.objectKinds.unsubstitutable };
+  const flags = format.unresolvedFlags;
   cards = cards.map(c => ({ segs: [], unres: [], ...c }));
   const segs = cards.flatMap(c => c.segs.map(s => ({ kind: '效果', pol: '做', acts: [], ...s })));
   const unres = cards.flatMap(c => c.unres.map(unresOf));
@@ -45,12 +63,12 @@ function actionData(cards, ids, noText, archetypes) {
   const causes = [null].concat(vocabOf(segs.filter(s => s.cause).map(s => s.cause[0])));
   const causeRows = {};
   segs.forEach(s => { const k = s.cause ? s.cause[0] : null; causeRows[k] = (causeRows[k] || 0) + 1; });
-  const causeCode = c => causes.indexOf(c ? c[0] : null) * 8 + sides.indexOf(c ? c[1] : null);
+  const causeCode = c => causes.indexOf(c ? c[0] : null) * slots + sides.indexOf(c ? c[1] : null);
   const zoneRows = {};
   lineList.forEach(l => new Set(lineZones(l).map(z => z[0]))
     .forEach(z => { zoneRows[z] = (zoneRows[z] || 0) + 1; }));
   const position = (list, inferred) => (list
-    ? [inferred ? 1 : 0, ...list.map(([z, s]) => zones.indexOf(z) * 8 + sides.indexOf(s))
+    ? [inferred ? 1 : 0, ...list.map(([z, s]) => zones.indexOf(z) * slots + sides.indexOf(s))
       .sort((x, y) => x - y)]
     : 0);
   const order = ids || cards.map(c => c.id);
@@ -71,7 +89,7 @@ function actionData(cards, ids, noText, archetypes) {
   };
   const line = (owner, raw) => {
     const l = { ...LINE_DEFAULTS, ...raw };
-    return [l.doer ? 1 : 0, position(l.from, l.fromInferred), position(l.to, l.toInferred),
+    return [l.doer ? format.lineFlags.doer : 0, position(l.from, l.fromInferred), position(l.to, l.toInferred),
             objectOf(owner, l.obj)];
   };
   const parts = [];
@@ -97,8 +115,9 @@ function actionData(cards, ids, noText, archetypes) {
       const u = unresOf(raw);
       return [u.kind === null ? null : kinds.indexOf(u.kind),
               u.pol === null ? null : polarities.indexOf(u.pol), 0,
-              (u.replacing ? U_REPLACING : 0) | (u.reason ? U_REASON : 0)
-                | (u.substituting ? U_REASON_SUBSTITUTING : 0) | (u.reference ? U_REFERENCE : 0),
+              (u.replacing ? flags.replacing : 0) | (u.reason ? flags.reason : 0)
+                | (u.substituting ? flags.reasonSubstituting : 0)
+                | (u.reference ? flags.reference : 0),
               u.acts.map(a => actions.indexOf(a)).sort((x, y) => x - y)];
     }),
     (c.refs || []).map(reference),
@@ -108,6 +127,7 @@ function actionData(cards, ids, noText, archetypes) {
     c.segs.map(s => causeCode(s.cause)),
   ]);
   return {
+    format,
     ids: order,
     actions: actions.map(a => [a, rows[a] || 0]),
     zones: zones.map(z => [z, zoneRows[z]]),
@@ -117,6 +137,7 @@ function actionData(cards, ids, noText, archetypes) {
     blockKinds: ['編號效果'],
     agents,
     causes: causes.map(k => [k, causeRows[k] || 0]),
+    givenValues: (options && options.given) || GIVEN_VALUES,
     noText: noText || [],
     parts,
     archetypes: (archetypes || []).map(a => [a.code, a.zh, setOf(a.members)]),

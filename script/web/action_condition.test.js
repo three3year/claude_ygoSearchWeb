@@ -32,7 +32,11 @@ const ACTION = actionData([
 ], CARDS.map(c => c.id), [], [{ code: 0x10, zh: '龍騎', members: [501, 503] },
                                { code: 0x1010, zh: '龍騎士', members: [503] }]);
 
-const sandbox = harness.load({ cards: CARDS, meta: {}, action: ACTION });
+/* 給條件認得哪些碼照值域正典(VOCAB);這裡是測試用的一小份。 */
+const items = codes => ({ items: codes.map(code => ({ code, zh: code })) });
+const VOCAB = { cat: items(['m', 's', 't']), attr: items(['dark', 'light', 'fire']),
+                race: items(['dragon', 'warrior']) };
+const sandbox = harness.load({ cards: CARDS, vocab: VOCAB, meta: {}, action: ACTION });
 const ids = act => harness.ids(sandbox, {}, act);
 const given = (condition, actions) => ({ actions: actions || ['特殊召喚'], target: { condition } });
 

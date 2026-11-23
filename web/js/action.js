@@ -18,8 +18,6 @@ const CAUSE_COVERS = { '戰鬥或效果': ['戰鬥', '效果'], '戰鬥以外': 
 
 const SHOWN_WORDS = 14;
 
-const SIDE_SLOTS = 8;
-
 function zoneOf(raw) {
   if (!isObj(raw) || typeof raw.zone !== 'string' || !raw.zone.trim()) return null;
   const z = { zone: raw.zone.trim() };
@@ -44,27 +42,17 @@ function targetOf(raw) {
   return condition ? { condition } : null;
 }
 
-const CAT_VALUES = { m: '怪獸', s: '魔法', t: '陷阱' };
-const ATTR_JA = { earth: '地', water: '水', fire: '炎', wind: '風', light: '光', dark: '闇',
-                  divine: '神' };
-const RACE_JA = {
-  warrior: '戦士族', spellcaster: '魔法使い族', fairy: '天使族', fiend: '悪魔族',
-  zombie: 'アンデット族', machine: '機械族', aqua: '水族', pyro: '炎族', rock: '岩石族',
-  winged_beast: '鳥獣族', plant: '植物族', insect: '昆虫族', thunder: '雷族',
-  dragon: 'ドラゴン族', beast: '獣族', beast_warrior: '獣戦士族', dinosaur: '恐竜族',
-  fish: '魚族', sea_serpent: '海竜族', reptile: '爬虫類族', psychic: 'サイキック族',
-  divine_beast: '幻神獣族', creator_god: '創造神族', wyrm: '幻竜族', cyberse: 'サイバース族',
-  illusion: '幻想魔族',
-};
-const has = (table, key) => typeof key === 'string' && Object.prototype.hasOwnProperty.call(table, key);
+/* 給條件認得哪些碼照值域正典(VOCAB),換成條件式的值照動作索引的 givenValues:兩份都是建置期產出,
+   前端不另抄(ADR-0008)。 */
+const canon = (name, code) => Util.codesOf(name).indexOf(code) >= 0;
 const level = v => (Number.isInteger(v) && v >= 0 ? v : null);
 
 function givenOf(raw) {
   if (!isObj(raw)) return null;
   const g = {};
-  if (has(CAT_VALUES, raw.cat)) g.cat = raw.cat;
-  if (has(ATTR_JA, raw.attr)) g.attr = raw.attr;
-  if (has(RACE_JA, raw.race)) g.race = raw.race;
+  if (canon('cat', raw.cat)) g.cat = raw.cat;
+  if (canon('attr', raw.attr)) g.attr = raw.attr;
+  if (canon('race', raw.race)) g.race = raw.race;
   if (level(raw.lvMin) !== null) g.lvMin = raw.lvMin;
   if (level(raw.lvMax) !== null) g.lvMax = raw.lvMax;
   if (Number.isInteger(raw.set) && raw.set > 0) g.set = raw.set;
@@ -72,12 +60,13 @@ function givenOf(raw) {
   return Object.keys(g).length ? g : null;
 }
 
-function conditionQuery(g) {
+function conditionQuery(g, index) {
+  const given = (name, code) => index.given[name].get(code);
   const compare = (attr, cmp, value) => ({ op: '屬性比較', attr, cmp, value });
   const atoms = [];
-  if (g.cat) atoms.push({ op: '大類', value: CAT_VALUES[g.cat] });
-  if (g.attr) atoms.push(compare('屬性', '=', ATTR_JA[g.attr]));
-  if (g.race) atoms.push(compare('種族', '=', RACE_JA[g.race]));
+  if (g.cat) atoms.push({ op: '大類', value: given('cat', g.cat) });
+  if (g.attr) atoms.push(compare('屬性', '=', given('attr', g.attr)));
+  if (g.race) atoms.push(compare('種族', '=', given('race', g.race)));
   if (g.lvMin != null) atoms.push(compare('等級', '≥', g.lvMin));
   if (g.lvMax != null) atoms.push(compare('等級', '≤', g.lvMax));
   if (g.set) atoms.push({ op: '字段', setcodes: [g.set] });
@@ -121,7 +110,7 @@ function kindsOf(raw) {
 
 const zoneQuery = z => [{ zone: z.zone, side: z.side || null }];
 
-function rowQuery(cond) {
+function rowQuery(cond, index) {
   const c = condOf(cond) || {};
   const kinds = kindsOf(c.kinds);
   const rq = {
@@ -135,7 +124,7 @@ function rowQuery(cond) {
   if (c.agent) rq.agent = c.agent;
   if (c.unrestricted) rq.include_unrestricted = true;
   if (c.target === TARGET_SELF) rq.this_card = true;
-  else if (c.target && c.target.condition) rq.condition = conditionQuery(c.target.condition);
+  else if (c.target && c.target.condition) rq.condition = conditionQuery(c.target.condition, index);
   else if (c.target) rq.card = c.target.card;
   if (c.recipient) rq.recipient = c.recipient;
   if (c.cause) rq.cause = { ...c.cause };
@@ -173,11 +162,9 @@ function archetypeSuggest(index, text, limit) {
     .map(({ a }) => ({ code: a.code, zh: a.zh }));
 }
 
-const OBJECT_THIS = 1;
-
-function lineOf([flags, from, to, obj]) {
+function lineOf(format, [flags, from, to, obj]) {
   const position = p => (p === 0 ? null : { inferred: !!p[0], codes: p.slice(1) });
-  return { doer: !!(flags & 1), from: position(from), to: position(to),
+  return { doer: !!(flags & format.lineFlags.doer), from: position(from), to: position(to),
            object: obj === 0 ? null : { set: obj[1], kind: obj[2] || 0 } };
 }
 
@@ -212,8 +199,18 @@ function clauseAt(clauses, i) {
 }
 
 function causeAt(raw, code) {
-  const kind = raw.causes[Math.floor(code / SIDE_SLOTS)][0];
-  return kind === null ? null : { kind, side: raw.sides[code % SIDE_SLOTS] };
+  const slots = raw.format.sideSlots;
+  const kind = raw.causes[Math.floor(code / slots)][0];
+  return kind === null ? null : { kind, side: raw.sides[code % slots] };
+}
+
+function givenTables(raw) {
+  const tables = { value: {}, code: {} };
+  for (const [name, pairs] of Object.entries(raw.givenValues)) {
+    tables.value[name] = new Map(pairs);
+    tables.code[name] = new Map(pairs.map(([code, v]) => [v, code]));
+  }
+  return tables;
 }
 
 function prepare(raw, db) {
@@ -226,8 +223,14 @@ function prepare(raw, db) {
   const cardAt = at(raw.ids);
   const front = (db || []).map(c => [cardAt.get(c.id), c]).filter(([p]) => p !== undefined);
   const archetypes = new Map((raw.archetypes || []).map(([code, , key]) => [code, key]));
+  const given = givenTables(raw);
   const index = {
     cardAt,
+    sideSlots: raw.format.sideSlots,
+    objectKinds: raw.format.objectKinds,
+    unresolvedFlags: raw.format.unresolvedFlags,
+    given: given.value,
+    givenCode: given.code,
     inSet: (key, p) => setAt(key).has(p),
     archetypes: (raw.archetypes || []).map(([code, zh]) => ({ code, zh: zh || '' })),
     inArchetype: (code, p) => archetypes.has(code) && index.inSet(archetypes.get(code), p),
@@ -251,7 +254,7 @@ function prepare(raw, db) {
       id,
       segments: segments.map(([seg, block, kind, polarity, replacing, actions, lines], i) =>
         ({ id: seg, block, kind, polarity, replacing: !!replacing, actions,
-           lines: lines.map(lineOf), clause: clauseAt(clauses, i),
+           lines: lines.map(l => lineOf(raw.format, l)), clause: clauseAt(clauses, i),
            agent: raw.agents[agents[i]], recipient: raw.sides[recipients[i]],
            cause: causeAt(raw, causes[i]) })),
       unresolved: (unresolved || []).map(([kind, polarity, , flags, actions]) =>
@@ -263,10 +266,6 @@ function prepare(raw, db) {
   return index;
 }
 
-const invert = table => Object.fromEntries(Object.entries(table).map(([k, v]) => [v, k]));
-const CAT_CODE = invert(CAT_VALUES);
-const ATTR_CODE = invert(ATTR_JA);
-const RACE_CODE = invert(RACE_JA);
 const COMPARE = { '=': (a, b) => a === b, '≥': (a, b) => a >= b, '≤': (a, b) => a <= b };
 const foldName = s => String(s).replace(/[\uFF01-\uFF5E]/g,
   ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, ' ').toLowerCase();
@@ -281,10 +280,10 @@ function cardAttr(card, attr) {
 function fitsCondition(index, cond, card, p) {
   switch (cond.op) {
     case '且': return cond.args.every(a => fitsCondition(index, a, card, p));
-    case '大類': return card.c === CAT_CODE[cond.value];
+    case '大類': return card.c === index.givenCode.cat.get(cond.value);
     case '屬性比較': {
-      const want = cond.attr === '種族' ? RACE_CODE[cond.value]
-        : cond.attr === '屬性' ? ATTR_CODE[cond.value] : cond.value;
+      const want = cond.attr === '種族' ? index.givenCode.race.get(cond.value)
+        : cond.attr === '屬性' ? index.givenCode.attr.get(cond.value) : cond.value;
       const have = cardAttr(card, cond.attr);
       return have != null && want != null && !!COMPARE[cond.cmp] && COMPARE[cond.cmp](have, want);
     }
@@ -376,14 +375,14 @@ function zoneTest(index, want) {
     const s = side == null ? null : index.sideAt.get(side);
     if (z === undefined || s === undefined) return () => false;
     return s === null
-      ? code => Math.floor(code / SIDE_SLOTS) === z
-      : code => code === z * SIDE_SLOTS + s;
+      ? code => Math.floor(code / index.sideSlots) === z
+      : code => code === z * index.sideSlots + s;
   });
   return pos => !!pos && !pos.inferred && pos.codes.some(code => fits.some(f => f(code)));
 }
 
 function objectTest(index, rq) {
-  if (rq.this_card) return obj => obj.kind === OBJECT_THIS;
+  if (rq.this_card) return obj => obj.kind === index.objectKinds.thisCard;
   if (rq.condition != null) {
     const fits = index.satisfying(rq.condition);
     const seen = new Map();
@@ -435,8 +434,6 @@ function match(index, rq) {
   return hits;
 }
 
-const U_REPLACING = 1, U_REASON = 4, U_REASON_SUBSTITUTING = 8, U_REFERENCE = 16;
-
 function unsure(index, rq, found) {
   const out = new Set(index.noText.filter(id => !found.has(id)));
   if (!rq.actions.length) return out;
@@ -444,13 +441,14 @@ function unsure(index, rq, found) {
   if (!scope) return out;
   const { wanted, kinds, polarities } = scope;
   const substituting = rq.card != null || rq.condition != null;
-  const reason = substituting ? U_REASON_SUBSTITUTING : U_REASON;
+  const flags = index.unresolvedFlags;
+  const reason = substituting ? flags.reasonSubstituting : flags.reason;
   for (const card of index.cards) {
     if (found.has(card.id)) continue;
     for (const u of card.unresolved) {
       if (!(u.flags & reason) || !wanted.every(a => u.actions.indexOf(a) >= 0)) continue;
-      if (!(u.flags & U_REFERENCE)) {
-        if (u.flags & U_REPLACING && !rq.replacement) continue;
+      if (!(u.flags & flags.reference)) {
+        if (u.flags & flags.replacing && !rq.replacement) continue;
         if (!kinds.has(u.kind) || !polarities.has(u.polarity)) continue;
       }
       out.add(card.id);

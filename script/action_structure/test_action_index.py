@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 import build_action_index as cli
-from action_index import build_action_index, decode_action_index
+from action_index import build_action_index, decode_action_index, web_vocab
 from action_rows import flatten
 from card_structure import build_structures, serialize_structures
 from test_effect_reference import (ARCHETYPES_13, BLACK_HOLE, BLACK_HOLE_TEXT, FRESHIA,
@@ -112,6 +112,24 @@ class ActionIndexTest(unittest.TestCase):
         self.assertEqual(archetypes[0x5a]["name"], "企鵝")
         self.assertEqual(archetypes[0x4c]["members"], {OTOSHIANA, NARAKU})
         self.assertNotIn(0x1bc, archetypes)
+
+    def test_given_values_come_from_the_canon(self):
+        given = self.index["given"]
+        self.assertEqual(given["cat"], {"m": "怪獸", "s": "魔法", "t": "陷阱"})
+        self.assertEqual(given["attr"]["earth"], "地")
+        self.assertEqual(given["attr"]["dark"], "闇")
+        self.assertEqual(given["race"]["dragon"], "ドラゴン族")
+        self.assertEqual(given["race"]["cyberse"], "サイバース族")
+        self.assertEqual((len(given["attr"]), len(given["race"])), (7, 26))
+
+    def test_canon_code_without_a_condition_value_fails(self):
+        domains = dict(web_vocab.DOMAINS)
+        domains[web_vocab.ATTR] = web_vocab.domain("屬性", web_vocab.SRC_BIT, (
+            *web_vocab.entries(web_vocab.ATTR), web_vocab.entry("void", "虛", 0x80)))
+        _, report = build_action_index(self.structures, self.cards, self.frontend,
+                                       ARCHETYPES_13, domains=domains)
+        self.assertEqual(len(report["problems"]), 1)
+        self.assertIn("void", report["problems"][0])
 
     def test_action_words_carry_row_counts(self):
         destroy_rows = sum(1 for row in self.rows.rows if "破壞" in row.actions)

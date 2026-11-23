@@ -174,3 +174,85 @@ test('摺疊鈕的生效條件數把動作條件算進去', () => {
   assert.strictEqual(harness.critCount(sandbox, EMPTY_Q, { actions: [] }), 0);
   assert.strictEqual(harness.critCount(sandbox, EMPTY_Q, null), 0);
 });
+
+/* ── 無法確認的卡(票 15) ─────────────────────────────────
+   未解析組裡同時滿足卡片條件的卡:無官方日文的卡,與沒命中、但有字面含查詢動作詞的
+   未解析的來源(解析不出的段、物件判不了的段、解析不出的引用節點)的卡。介面只顯示張數。 */
+
+const UNSURE_CARDS = [
+  { id: 401, n: '命中的龍', c: 'm', r: 'dragon', tx: ['破壞'] },
+  { id: 402, n: '解析不出的龍', c: 'm', r: 'dragon', tx: ['破壞'] },
+  { id: 403, n: '解析不出的惡魔', c: 'm', r: 'fiend', tx: ['破壞'] },
+  { id: 404, n: '沒有日文', c: 's' },
+  { id: 405, n: '只寫了除外', c: 'm', r: 'dragon' },
+];
+const UNSURE = actionData([
+  // 401 直接命中,另一段解析不出:只在命中的清單
+  { id: 401, segs: [{ acts: ['破壞'] }], unres: [{ acts: ['破壞'] }] },
+  { id: 402, unres: [{ acts: ['破壞', '除外'] }] },
+  { id: 403, unres: [{ acts: ['破壞'] }] },
+  { id: 405, unres: [{ acts: ['除外'] }] },
+], null, [404]);
+const unsureBox = harness.load({ cards: UNSURE_CARDS, vocab: VOCAB, meta: {}, action: UNSURE });
+const unsure = (q, act) => harness.unsure(unsureBox, q || {}, act);
+
+test('無法確認:字面含查詢動作詞的未解析卡與無官方日文的卡;已命中的卡不算', () => {
+  assert.deepStrictEqual(harness.ids(unsureBox, {}, { actions: ['破壞'] }), [401]);
+  assert.deepStrictEqual(unsure({}, { actions: ['破壞'] }), [402, 403, 404]);
+});
+
+test('無法確認只算滿足卡片條件的卡', () => {
+  assert.deepStrictEqual(unsure({ race: { dragon: 1 } }, { actions: ['破壞'] }), [402]);
+  assert.deepStrictEqual(unsure({ cat: { s: 1 } }, { actions: ['破壞'] }), [404]);
+  assert.deepStrictEqual(unsure({ name: '惡魔' }, { actions: ['破壞'] }), [403]);
+});
+
+test('無法確認:句層條件要滿足,但不做同一效果的判斷', () => {
+  // 效果文「破壞」:402、403 有這個效果句(未解析的段對不回效果,不比同一效果);404 沒有卡文
+  assert.deepStrictEqual(unsure({ text: '破壞' }, { actions: ['破壞'] }), [402, 403]);
+  assert.deepStrictEqual(unsure({ text: '除外' }, { actions: ['破壞'] }), []);
+});
+
+test('無法確認:查詢的動作詞要全部在同一個來源的字面裡', () => {
+  assert.deepStrictEqual(unsure({}, { actions: ['破壞', '除外'] }), [402, 404]);
+  assert.deepStrictEqual(unsure({}, { actions: ['除外'] }), [402, 404, 405]);
+  // 索引裡沒有的動作詞:只有無官方日文的卡
+  assert.deepStrictEqual(unsure({}, { actions: ['不存在的動作'] }), [404]);
+});
+
+test('沒有動作條件時沒有無法確認的卡', () => {
+  assert.deepStrictEqual(unsure({}, null), []);
+  assert.deepStrictEqual(unsure({}, { actions: [] }), []);
+});
+
+test('無法確認:段類別、極性的篩選照樣生效;解析不出的引用節點不看這兩欄', () => {
+  const data = actionData([
+    { id: 501, unres: [{ kind: '效果', acts: ['破壞'] }] },
+    { id: 502, unres: [{ kind: '代價', acts: ['破壞'] }] },
+    { id: 503, unres: [{ kind: '條件', acts: ['破壞'] }] },
+    { id: 504, unres: [{ kind: '修飾', acts: ['破壞'] }] },
+    { id: 505, unres: [{ pol: '不能', acts: ['破壞'] }] },
+    { id: 506, unres: [{ pol: '可以', acts: ['破壞'] }] },
+    { id: 507, unres: [{ reference: true, acts: ['破壞'] }] },
+    { id: 508, unres: [{ replacing: true, acts: ['破壞'] }] },
+  ]);
+  const cards = [501, 502, 503, 504, 505, 506, 507, 508].map(id => ({ id, n: `卡${id}` }));
+  const box = harness.load({ cards, vocab: VOCAB, meta: {}, action: data });
+  assert.deepStrictEqual(harness.unsure(box, {}, { actions: ['破壞'] }), [501, 502, 506, 507]);
+});
+
+test('無法確認:只有代入卡(指定卡、給條件)時才判不了的來源,沒代入卡時不算', () => {
+  // 例如物件數量恰好一張又沒寫比較對象(異同判不了):不代入卡時照常命中或不命中
+  const data = actionData([
+    { id: 601, unres: [{ acts: ['破壞'], reason: false, substituting: true }] },
+    { id: 602, unres: [{ acts: ['破壞'], reason: true, substituting: true }] },
+  ]);
+  const cards = [601, 602].map(id => ({ id, n: `卡${id}` }));
+  const box = harness.load({ cards, vocab: VOCAB, meta: {}, action: data });
+  assert.deepStrictEqual(harness.unsure(box, {}, { actions: ['破壞'] }), [602]);
+});
+
+test('清單下方那一行只寫張數,0 張時不顯示', () => {
+  assert.strictEqual(harness.unsureText(unsureBox, 3), '另有 3 張無法確認');
+  assert.strictEqual(harness.unsureText(unsureBox, 0), '');
+});

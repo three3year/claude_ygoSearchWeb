@@ -26,6 +26,7 @@ const MARK_ZH = {
   text: () => '',
   kind: (c, i) => KIND_ZH[(c.k || [])[i]],
   opt: (c, i) => OPT_ZH[(c.o || [])[i]],
+  action: () => '',      // 動作條件只給命中的效果句加底色,不加標籤、不標到字(票 16)
 };
 
 function highlight(marks) {
@@ -39,9 +40,21 @@ function badgeText(marks, c, i) {
     .filter(Boolean).join('・');
 }
 
+/* 清單下方那一行(票 15):未解析組裡滿足卡片條件的張數。只寫張數、不能點;0 張不顯示。 */
+function unsureText(n) {
+  return n ? `另有 ${n} 張無法確認` : '';
+}
+
+function renderUnsure(n) {
+  const line = $('unsureInfo');
+  line.textContent = unsureText(n);
+  line.hidden = !n;
+}
+
 function render(result = lastResult) {
   lastResult = result;
   if (!result) return renderIdle();
+  renderUnsure((result.unsure || []).length);
   const entries = Sort.sort(result.cards, state.sortKey, state.sortDir);
   const per = state.perPage;
   const total = entries.length;
@@ -61,6 +74,7 @@ function render(result = lastResult) {
 
 function renderIdle() {
   $('resultInfo').textContent = '';
+  renderUnsure(0);
   $('results').innerHTML = `<div class="idle">
     <p class="idle-title">設定條件後按「搜尋」</p>
   </div>`;
@@ -72,6 +86,7 @@ function renderIdle() {
 function renderLoading() {
   lastResult = null;
   $('resultInfo').textContent = '';
+  renderUnsure(0);
   $('results').innerHTML = `<div class="idle">
     <p class="idle-title">動作索引載入中…</p>
     <p>載完會自動出結果</p>
@@ -396,7 +411,7 @@ function goto(page) {
 
   return Object.freeze({
     render, renderLoading, initAltArt, initEffKind, initOgToggle, initSort,
-    cardHtml,
+    cardHtml, unsureText,
     page: () => state.page,
     perPage: () => state.perPage,
     sort: () => ({ key: state.sortKey, dir: state.sortDir }),

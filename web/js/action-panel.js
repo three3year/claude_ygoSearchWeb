@@ -8,9 +8,11 @@
    - 輸入的狀態只放在這裡的 `selected`,畫面照它重畫;索引還沒載完時還原的條件也先放這裡,
      載完再畫出按鈕。
    - 之後的票加的欄位(段類別、極性、從/到…)各自在 `fieldsHtml` 加一段、在 `read`/`write`
-     多帶一個鍵;條件的正規形與比對在 `Action`。 */
+     多帶一個鍵;條件的正規形與比對在 `Action`。
+   - 被動作的卡(票 12):不指定、這張卡自己、指定一張卡三選一;指定卡時輸入卡名、從建議清單
+     (`Action.suggest`,名字短的排前面)點一張。 */
 const ActionPanel = (() => {
-const { $, esc } = Util;
+const { $, esc, DB, byId } = Util;
 
 const SRC = 'action-data.js';
 
@@ -18,6 +20,11 @@ let index = null;
 let failed = false;
 let loading = null;
 let selected = [];
+/* 被動作的卡(票 12):選法 'none' | 'self' | 'card';指定卡時選中的卡號(還沒從建議清單選是 null)
+   與輸入框裡的字。輸入框打字時只重畫建議清單,不重畫整個區塊(焦點才不會跑掉)。 */
+let targetMode = 'none';
+let targetCard = null;
+let typed = '';
 let moreOpen = false;
 
 /* 載完(或載入失敗)時 resolve,不 reject:失敗時動作條件不生效,其他條件照常查。 */
@@ -89,8 +96,42 @@ function wordsHtml() {
     <p class="action-hint">多選時,要在同一段裡全部都有</p>`;
 }
 
+const TARGET_MODES = [['none', '不指定'], ['self', '這張卡自己'], ['card', '指定一張卡']];
+
+function cardName(id) {
+  const c = byId(id);
+  return c ? c.n : String(id);
+}
+
+function suggestHtml() {
+  return Action.suggest(DB, typed).map(c => `<button type="button" class="tri"
+    data-pick="${c.id}">${esc(c.n)}${c.nj && c.nj !== c.n
+      ? ` <span class="action-sub">${esc(c.nj)}</span>` : ''}</button>`).join('');
+}
+
+/* 指定卡:選中了就顯示那張卡(點了取消);還沒選就是輸入框加建議清單。 */
+function cardPickHtml() {
+  if (targetMode !== 'card') return '';
+  if (targetCard != null) {
+    return `<div class="tri-row"><button type="button" class="tri" data-st="in"
+      data-unpick="1" title="取消這張卡">${esc(cardName(targetCard))} ×</button></div>`;
+  }
+  return `<input type="text" class="action-card-input" id="actionCardInput"
+      placeholder="輸入卡名,從下面選一張" value="${esc(typed)}" autocomplete="off">
+    <div class="tri-row" id="actionSuggest">${suggestHtml()}</div>`;
+}
+
+function targetHtml() {
+  return `<span class="group-label">被動作的卡</span>
+    <p class="action-hint">這裡篩的是被動作的卡,不是有這個效果的卡</p>
+    <div class="tri-row">${TARGET_MODES.map(([mode, label]) => `<button type="button"
+      class="tri" data-mode="${mode}" data-st="${targetMode === mode ? 'in' : ''}">${
+      label}</button>`).join('')}</div>
+    ${cardPickHtml()}`;
+}
+
 function fieldsHtml() {
-  return index ? wordsHtml() : '';
+  return index ? wordsHtml() + targetHtml() : '';
 }
 
 function paint() {
@@ -98,24 +139,37 @@ function paint() {
   $('actionStatus').textContent = status;
   $('actionStatus').hidden = !status;
   $('actionFields').innerHTML = fieldsHtml();
-  const n = selected.length;
+  const n = selected.length + (target() ? 1 : 0);
   $('actionCount').textContent = n ? String(n) : '';
 }
 
+function target() {
+  if (targetMode === 'self') return 'self';
+  if (targetMode === 'card' && targetCard != null) return { card: targetCard };
+  return null;
+}
+
 function read() {
-  return Action.condOf({ actions: selected });
+  return Action.condOf({ actions: selected, target: target() });
 }
 
 /* 還原帶動作條件的查詢時展開區塊(和其他軸一樣看得見設了什麼),也就載入索引。 */
 function write(act) {
   const cond = Action.condOf(act);
-  selected = cond ? cond.actions : [];
+  selected = (cond && cond.actions) || [];
+  const t = cond && cond.target;
+  targetMode = t === 'self' ? 'self' : t ? 'card' : 'none';
+  targetCard = t && t !== 'self' ? t.card : null;
+  typed = '';
   if (cond) setOpen(true);
   paint();
 }
 
 function clear() {
   selected = [];
+  targetMode = 'none';
+  targetCard = null;
+  typed = '';
   paint();
 }
 
@@ -126,12 +180,23 @@ function init() {
     if (!btn) return;
     if (btn.dataset.more) {
       moreOpen = !moreOpen;
+    } else if (btn.dataset.mode) {
+      targetMode = btn.dataset.mode;
+    } else if (btn.dataset.pick) {
+      targetCard = Number(btn.dataset.pick);
+    } else if (btn.dataset.unpick) {
+      targetCard = null;
     } else if (btn.dataset.word) {
       const word = btn.dataset.word;
       selected = selected.indexOf(word) >= 0
         ? selected.filter(w => w !== word) : selected.concat(word);
     }
     paint();
+  });
+  $('actionFields').addEventListener('input', e => {
+    if (e.target.id !== 'actionCardInput') return;
+    typed = e.target.value;
+    $('actionSuggest').innerHTML = suggestHtml();
   });
   paint();
 }

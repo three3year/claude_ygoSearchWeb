@@ -117,5 +117,58 @@ class WebParityTest(unittest.TestCase):
         self.assertNotIn(MASTER_MONK, unsure[("解放",)])
 
 
+# 被動作的卡(票 12):這張卡自己、指定一張卡。夾具是上面的夾具加票 12 的標準卡(ドラゴンメイド・
+# ルフト、スターダスト・シフル、チョバムアーマー・ドラゴン、聖導騎士イシュザーク);指定卡的條件
+# 在測試裡對每張卡各問一次。
+OBJECT_ACTIONS = [["破壞"], ["特殊召喚"], ["解放"], ["除外"], []]
+
+
+def object_parity_fixture():
+    from test_object_self import self_fixture
+    structures, cards, archetypes = parity_fixture()
+    more, more_cards, more_archetypes = self_fixture()
+    rows = {row["setcode"]: row for row in archetypes + more_archetypes}
+    return (sorted(structures + more, key=lambda s: s["id"]),
+            sorted(cards + more_cards, key=lambda entry: entry["id"]), list(rows.values()))
+
+
+class ObjectParityTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.structures, cls.cards, archetypes = object_parity_fixture()
+        text, report = build_action_index(cls.structures, cls.cards,
+                                          [{"id": entry["id"]} for entry in cls.cards], archetypes)
+        assert not report["problems"], report["problems"]
+        cls.conds = [{"actions": actions, "target": target} for actions in OBJECT_ACTIONS
+                     for target in ["self"] + [{"card": entry["id"]} for entry in cls.cards]]
+        cls.front = front_end(text, cls.cards, cls.conds)
+
+    def test_object_conditions_hit_the_same_cards(self):
+        """這張卡自己、指定一張卡:命中的卡號(特定與泛用的聯集)與無法確認的卡號,
+        Python 與前端引擎相同。"""
+        for cond, front in zip(self.conds, self.front):
+            with self.subTest(cond=cond):
+                python = run_query(self.structures, self.cards, front["rowQuery"])
+                self.assertEqual(sorted(front["ids"]), sorted(python["groups"]["全部"]))
+                self.assertEqual(sorted(front["unsure"]), sorted(python["groups"]["未解析"]))
+        # 夾具要問得出東西:這張卡自己與指定卡都有命中;指定卡命中泛用組的卡;判不了的線進無法確認
+        found = [(cond, set(front["ids"]), set(front["unsure"]))
+                 for cond, front in zip(self.conds, self.front)]
+        self.assertTrue(any(ids for cond, ids, _ in found if cond["target"] == "self"))
+        card_hits = [ids for cond, ids, _ in found if cond["target"] != "self"]
+        self.assertTrue(any(card_hits))
+        generic = set(run_query(self.structures, self.cards, {"actions": ["破壞"]})["groups"]["泛用"])
+        self.assertTrue(generic & set().union(*card_hits))
+        no_text = {entry["id"] for entry in self.cards} - {s["id"] for s in self.structures
+                                                          if not s["unparsed"]}
+        self.assertTrue(any(unsure - no_text for cond, _, unsure in found
+                            if cond["target"] != "self"))
+
+    def test_object_condition_becomes_the_row_query(self):
+        self.assertEqual(self.front[0]["rowQuery"]["this_card"], True)
+        self.assertEqual(self.front[1]["rowQuery"]["card"], self.conds[1]["target"]["card"])
+
+
 if __name__ == "__main__":
     unittest.main()

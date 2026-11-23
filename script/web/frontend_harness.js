@@ -75,6 +75,7 @@ const DRIVER = `
 ;function __optAvail(json) { return JSON.stringify(Query.optionalAvailable(JSON.parse(json))); }
 ;function __critCount(json) { var a = JSON.parse(json); return Query.count(a.q, a.act); }
 ;function __actionOptions() { return JSON.stringify(Action.options(__index())); }
+;function __cardSuggest(text) { return JSON.stringify(Action.suggest(window.CARD_DATA, text)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
 ;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
@@ -177,6 +178,14 @@ function rowQuery(sandbox, act) {
  */
 function actionOptions(sandbox) {
   return JSON.parse(sandbox.__actionOptions());
+}
+
+/**
+ * 指定一張卡時的卡名建議清單(票 12):`輸入的字 → [{ id, n, nj }]`,名字短的排前面。
+ * 同一個理由:沙箱裡沒有真的 DOM,區塊只是照這份清單擺建議。
+ */
+function cardSuggest(sandbox, text) {
+  return JSON.parse(sandbox.__cardSuggest(text));
 }
 
 /**
@@ -288,6 +297,6 @@ function unsureText(sandbox, n) {
   return sandbox.__unsureText(n);
 }
 
-module.exports = { load, search, ids, unsure, unsureText, marks, rowQuery, actionOptions, axes, optionalAvailable, nextState,
+module.exports = { load, search, ids, unsure, unsureText, marks, rowQuery, actionOptions, cardSuggest, axes, optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, savedState, restoreSaved, cardHtml };

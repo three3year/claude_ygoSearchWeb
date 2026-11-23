@@ -23,6 +23,7 @@ const CARDS = [
   { id: 406, n: '黑魔導', nj: 'ブラック・マジシャン', c: 'm' },
   { id: 407, n: '黑魔導女孩', nj: 'ブラック・マジシャン・ガール', c: 'm' },
   { id: 408, n: '沒有物件', c: 's' },
+  { id: 409, n: '代入時異同判不了', c: 's' },
 ];
 
 const ACTION = actionData([
@@ -33,12 +34,17 @@ const ACTION = actionData([
   // 「このカードが相手モンスターを破壊した」:此卡是做動作的一方
   { id: 403, segs: [{ acts: ['破壞'], lines: [{ doer: true, obj: 'self' },
                                               { obj: [406, 407] }] }] },
-  { id: 404, segs: [{ acts: ['破壞'], lines: [{ obj: 'undecidable' }] }] },
+  // 物件解析不出:這一段同時是未解析的來源,代不代入卡都判不了
+  { id: 404, segs: [{ acts: ['破壞'], lines: [{ obj: 'undecidable' }] }],
+    unres: [{ acts: ['破壞'], reason: true, substituting: true }] },
   { id: 405, segs: [{ acts: ['破壞'], lines: [{ obj: 'unsub' }] }] },
-  // 「このカードを破壞し、ブラック・マジシャン以外も…」:此卡與指定卡兩條線
+  // 「このカードとそのモンスターを破壊する」:此卡一條線、黑魔導女孩一條線
   { id: 406, segs: [{ acts: ['破壞'], lines: [{ obj: 'self' }, { obj: [407] }] }] },
   { id: 408, segs: [{ acts: ['破壞'], lines: [{ obj: null }] }] },
-]);
+  // 「同名の…１体」:異同只在代入卡時判不了
+  { id: 409, segs: [{ acts: ['破壞'], lines: [{ obj: 'undecidable' }] }],
+    unres: [{ acts: ['破壞'], reason: false, substituting: true }] },
+], CARDS.map(c => c.id));   // ids 是前端索引的全部卡,沒有段的卡(407)也在
 
 const sandbox = harness.load({ cards: CARDS, meta: {}, action: ACTION });
 const ids = act => harness.ids(sandbox, {}, act);
@@ -46,7 +52,7 @@ const ids = act => harness.ids(sandbox, {}, act);
 test('這張卡自己:只命中物件是此卡的線', () => {
   assert.deepStrictEqual(ids({ actions: ['破壞'], target: 'self' }), [401, 406]);
   // 物件是條件式、這張卡剛好在候選卡裡(402)不算;做動作的線(403)不算;判不了、代不進去、沒有物件不算
-  assert.deepStrictEqual(ids({ actions: ['破壞'] }), [401, 402, 403, 404, 405, 406, 408]);
+  assert.deepStrictEqual(ids({ actions: ['破壞'] }), [401, 402, 403, 404, 405, 406, 408, 409]);
 });
 
 test('指定一張卡:這張卡在線的候選卡裡就命中(此卡的線是那張卡自己)', () => {
@@ -57,6 +63,14 @@ test('指定一張卡:這張卡在線的候選卡裡就命中(此卡的線是那
   assert.deepStrictEqual(ids({ actions: ['破壞'], target: { card: 402 } }), [402]);
   // 判不了、代不進去、沒有物件的線不命中;候選卡裡沒有的卡沒有命中
   assert.deepStrictEqual(ids({ actions: ['破壞'], target: { card: 405 } }), []);
+});
+
+test('物件判不了的線不命中,算進無法確認:指定卡看代入卡時、這張卡自己看不代入卡時', () => {
+  const unsure = act => harness.unsure(sandbox, {}, act);
+  assert.deepStrictEqual(unsure({ actions: ['破壞'], target: 'self' }), [404]);
+  assert.deepStrictEqual(unsure({ actions: ['破壞'], target: { card: 407 } }), [404, 409]);
+  // 不指定被動作的卡時,判不了的線所在的段照樣命中(只比動作詞),不在無法確認裡
+  assert.deepStrictEqual(unsure({ actions: ['破壞'] }), []);
 });
 
 test('被動作的卡換成列查詢:這張卡自己、指定卡各一個鍵', () => {

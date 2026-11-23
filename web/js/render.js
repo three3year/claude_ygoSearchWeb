@@ -26,6 +26,7 @@ const MARK_ZH = {
   text: () => '',
   kind: (c, i) => KIND_ZH[(c.k || [])[i]],
   opt: (c, i) => OPT_ZH[(c.o || [])[i]],
+  action: () => '',      // 動作條件只給命中的效果句加底色,不加標籤、不標到字(票 16)
 };
 
 function highlight(marks) {

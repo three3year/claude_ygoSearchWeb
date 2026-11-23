@@ -1,7 +1,8 @@
 /**
  * action_fixture.js — 接縫三測試用的小動作索引(零 npm 依賴)
  *
- * 把讀得懂的描述 `[{ id, segs: [{ kind, pol, acts, replacing }], unres: [未解析的來源] }]` 寫成
+ * 把讀得懂的描述 `[{ id, segs: [{ kind, pol, acts, replacing, clause }], unres: [未解析的來源] }]`
+ * 寫成
  * `web/action-data.js` 的格式(`script/action_structure/action_index.py` 的模組說明)。
  * 測試只寫「這張卡有哪些段、段裡有哪些動作詞」,不手抄編碼;格式由 Python 的建置
  * 產出、前端讀回,兩邊是否一致由「兩邊答案一致」的 Python 測試守住。
@@ -24,9 +25,10 @@ function unresOf(raw) {
 }
 
 /**
- * cards:[{ id, segs: [{ kind = '效果', pol = '做', acts = [], replacing = false }],
+ * cards:[{ id, segs: [{ kind = '效果', pol = '做', acts = [], replacing = false, clause = null }],
  *          unres: [{ kind = '效果', pol = '做', acts = [], replacing = false,
  *                    reference = false, reason = true, substituting = true }] }]
+ *   clause:段對回的效果句序號(前端索引 `tx` 的位置),null 是對不回(票 07 的「效果」格)。
  *   unres 是未解析的來源(票 15):acts 是原文字面的動作詞;reason / substituting 是
  *   不代入卡時 / 代入卡(指定卡、給條件)時判不判得了(true = 判不了,進未解析組);
  *   reference 是解析不出的引用節點。
@@ -70,6 +72,7 @@ function actionData(cards, ids, noText) {
                 u.acts.map(a => actions.indexOf(a)).sort((x, y) => x - y)];
       }),
       [],
+      c.segs.map(s => (s.clause == null ? null : s.clause)),
     ]),
   };
 }

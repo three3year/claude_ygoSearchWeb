@@ -101,10 +101,11 @@ const DRIVER = `
 ;function __cardHtml(json) { return View.cardHtml(JSON.parse(json), null); }
 `;
 
-function load({ cards = [], vocab = {}, meta = {}, action = null } = {}) {
+/* `document` 給了就用它(page_driver.js 的假 DOM:元素照 id 留著、事件記下來),沒給用上面的 stub。 */
+function load({ cards = [], vocab = {}, meta = {}, action = null, document = null } = {}) {
   const sandbox = {
     console, setTimeout, clearTimeout, atob,
-    document: {
+    document: document || {
       getElementById: () => stubEl(),
       querySelector: () => null,
       querySelectorAll: () => [],

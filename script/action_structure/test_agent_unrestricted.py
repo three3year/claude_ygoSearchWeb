@@ -14,9 +14,10 @@ from action_query import run_query
 from action_rows import flatten
 from card_structure import build_structures
 from structure_shape import iter_segments
-from test_web_parity import front_end
+from test_draw import DARK_WORLD_DEALINGS, DARK_WORLD_DEALINGS_TEXT  # 暗黒界の取引
 from test_golden import (ARCHETYPES, DARK_MAGICIAN_OF_DESTRUCTION,
                          DARK_MAGICIAN_OF_DESTRUCTION_TEXT, SPELL, card, faq)
+from test_web_parity import front_end
 
 MAGNUM = 43227               # マグナム・ザ・リリーバー
 NIGHTMARE = 359563           # ヴェルズ・ナイトメア
@@ -25,7 +26,6 @@ ORBITAEL = 44818             # ホーリーナイツ・オルビタエル
 SKY_PUPIL = 122520           # EMスカイ・ピューピル
 METAMORPOT = 33508719        # メタモルポット
 FENRIR = 218704              # フェンリル
-DARK_WORLD_DEALINGS = 74117290  # 暗黒界の取引
 MASKED_SORCERER = 10189126   # 仮面魔道士
 
 MAGNUM_TEXT = (
@@ -68,9 +68,6 @@ FENRIR_TEXT = (
     "このカードは通常召喚できない。自分の墓地の水属性モンスター２体をゲームから除外して"
     "特殊召喚する。このカードが戦闘によって相手モンスターを破壊した場合、"
     "次の相手ターンのドローフェイズをスキップする。")
-DARK_WORLD_DEALINGS_TEXT = (
-    "①：お互いはそれぞれデッキから１枚ドローする。その後、ドローしたプレイヤーは"
-    "自身の手札を１枚選んで捨てる。")
 
 MASKED_SORCERER_TEXT = (
     "このカードが相手ライフに戦闘ダメージを与えた時、自分のデッキからカードを１枚ドローする。")
@@ -333,7 +330,9 @@ class AgentParityTest(AgentCase):
         for cond, front in zip(PARITY_CONDS, self.front):
             with self.subTest(cond=cond):
                 python = run_query(self.structures, self.cards, front["rowQuery"])
-                self.assertEqual(sorted(front["ids"]), sorted(python["groups"]["全部"]))
+                self.assertEqual(sorted(front["ids"]),
+                                 sorted(python["groups"]["全部"] + python["groups"]["經引用"]))
+                self.assertEqual(sorted(front["unsure"]), sorted(python["groups"]["未解析"]))
         # 夾具要問得出東西:誰篩掉了卡、開關加進了卡
         hits = [set(front["ids"]) for front in self.front]
         self.assertIn(MAGNUM, hits[0])

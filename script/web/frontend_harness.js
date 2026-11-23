@@ -63,6 +63,7 @@ const DRIVER = `
       };
     }),
     marks: result.marks,
+    unsure: result.unsure,
   });
 }
 ;function __rowQuery(json) { return JSON.stringify(Action.rowQuery(JSON.parse(json))); }
@@ -81,7 +82,7 @@ const DRIVER = `
 ;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
 ;function __sortedIds(json) {
   var a = JSON.parse(json);
-  var result = Engine.runQuery(window.CARD_DATA, a.query || {});
+  var result = Engine.runQuery(window.CARD_DATA, a.query || {}, a.act, a.act ? __index() : null);
   return JSON.stringify(Sort.sort(result.cards, a.key, a.dir)
     .map(function (e) { return e.card.id; }));
 }
@@ -92,6 +93,7 @@ const DRIVER = `
 }
 ;function __restore(json) { return JSON.stringify(Saved.restore(JSON.parse(json))); }
 ;function __fmtTime(v) { return Util.fmtTime(v); }
+;function __unsureText(n) { return View.unsureText(n); }
 ;function __cardHtml(json) { return View.cardHtml(JSON.parse(json), null); }
 `;
 
@@ -104,7 +106,7 @@ const DRIVER = `
  */
 function load({ cards = [], vocab = {}, meta = {}, action = null } = {}) {
   const sandbox = {
-    console, setTimeout, clearTimeout,
+    console, setTimeout, clearTimeout, atob,
     document: {
       getElementById: () => stubEl(),
       querySelector: () => null,
@@ -148,6 +150,14 @@ function search(sandbox, query, act) {
 /** 只要命中的卡片密碼清單(順序即引擎回傳序) */
 function ids(sandbox, query, act) {
   return search(sandbox, query, act).map(e => e.id);
+}
+
+/**
+ * 無法確認的卡號(票 15):未解析組裡同時滿足卡片條件的卡,照前端索引的順序。
+ * 介面只顯示張數;測試驗卡號。
+ */
+function unsure(sandbox, query, act) {
+  return runQuery(sandbox, query, act).unsure;
 }
 
 /** 生效中的句層條件(呈現層照它寫命中行的 badge) */
@@ -242,13 +252,14 @@ function expandedAxes(sandbox, q) {
 
 /**
  * 命中的卡片密碼清單,**照 key/dir 排序後**的順序(key 省略即預設的領域序)。
+ * act 是動作條件(省略即沒有)。
  *
  * 走的是搜尋 → 排序這條真實的路徑:排序吃的是接縫 3 的回傳形狀,而不是另外
  * 拼一份卡片陣列——「排序切換不重跑搜尋」在這裡看得到,重排的輸入就是同一份結果。
  */
-function sortedIds(sandbox, query, key, dir) {
+function sortedIds(sandbox, query, key, dir, act) {
   return JSON.parse(sandbox.__sortedIds(
-    JSON.stringify({ query: query || {}, key: key || '', dir: dir || '' })));
+    JSON.stringify({ query: query || {}, key: key || '', dir: dir || '', act: act || null })));
 }
 
 /** 排序選單的鍵清單(選單的選項由它生成,比較函式也由它決定取哪個欄位) */
@@ -283,7 +294,14 @@ function cardHtml(sandbox, entry) {
   return sandbox.__cardHtml(JSON.stringify(entry));
 }
 
-module.exports = { load, search, ids, marks, rowQuery, actionOptions, axes, optionalAvailable, nextState,
+/**
+ * 清單下方「無法確認」那一行的字(票 15):張數 → 字;0 張是空字串(不顯示這一行)。
+ */
+function unsureText(sandbox, n) {
+  return sandbox.__unsureText(n);
+}
+
+module.exports = { load, search, ids, unsure, unsureText, marks, rowQuery, actionOptions, axes, optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, savedState, restoreSaved, cardHtml };
 module.exports.zoneOptions = zoneOptions;          // 票 09

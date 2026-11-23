@@ -153,6 +153,13 @@ python script/web/build_index.py
 
 # 只跑檢查與報告,不動 data.js
 python script/web/build_index.py --no-write
+
+# 建置動作索引:卡片結構 + 卡片總表 + 前端索引(卡的順序)+ 字段表 → web/action-data.js + 報告
+# (先建好卡片結構與前端索引;任何一份輸入變了都要重建;超過 8 MB 或對不上前端索引就建置失敗、不寫檔)
+python -X utf8 script/action_structure/build_action_index.py
+
+# 只跑檢查與報告,不動 action-data.js
+python -X utf8 script/action_structure/build_action_index.py --no-write
 ```
 
 網站是**零建置的純靜態站**(ADR-0007):沒有 npm、沒有 bundler、沒有框架、沒有 ES modules。
@@ -166,6 +173,11 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 
 `web/data.js` 是**入版控的建置產物**(GitHub Pages 直接吃 repo 內容,產物不進版控就沒有站),
 一卡一行、git diff 可讀;同一份輸入兩次建置逐位元組相同。
+
+`web/action-data.js` 是動作搜尋的[動作索引](GLOSSARY.md)(ADR-0013,建置產物,**入版控**):
+`window.ACTION_DATA=…`,與前端索引分開,使用者打開動作搜尋才載入。卡片結構在建置期攤平成列、
+物件的候選卡算好存成集合,網站只比對列。一張卡一行、一個候選卡集合一行;不帶時間,
+同一份輸入兩次建置逐位元組相同。格式的讀法只有 `action_index.decode_action_index` 一處。
 
 ## 目錄
 
@@ -221,6 +233,8 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用/經引用分組、未解析組(`run_query` = 攤平成列再比對列);卡代不代得進物件的條件式判斷 |
 | `script/action_structure/action_rows.py`、`row_match.py` | 攤平成列(卡片結構 + 卡片總表 → 每條對象線一列、未解析組的來源、引用節點、代替的連結,候選卡用到才算;解讀卡片結構只在這裡)與比對列(只讀列) |
 | `script/action_structure/build_structure.py` | 建置 CLI 薄殼(讀檔 → 寫 data/action_structure.json → 印報告) |
+| `script/action_structure/action_index.py` | 動作索引(純函式):卡片結構 + 卡片總表 + 前端索引的卡 + 字段表 → `web/action-data.js` 的文字 + 報告(體積門檻、前端索引對不上);格式說明與讀回(`decode_action_index`) |
+| `script/action_structure/build_action_index.py` | 動作索引 CLI 薄殼(讀檔 → 寫 web/action-data.js → 印報告與各階段時間 → 依 problems 定 exit code) |
 | `script/action_structure/coverage_report.py` | 覆蓋報告(純函式):全庫結構 → 依區塊種類、段類別、各格、物件計數,依原因附卡號;略過文本依原因計處數與張數 → markdown |
 | `script/action_structure/build_report.py` | 覆蓋報告 CLI 薄殼(讀產物與總表 → 寫 .scratch/action-structure/report/coverage.md) |
 | `script/action_structure/reverse_check.py` | 反向檢查(純函式):結構 → 句型模板 → 日文,與原文比對;`check_card` 給標準卡驗收;段模板的分流表 `WHOLE_TEMPLATES`、`CLAUSE_TEMPLATES`(模板本身在各句型模組) |
@@ -242,6 +256,7 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `../data_ygoFaqCache/_cache` | 官方 DB 頁面快取:Q&A 頁 `faq_*.html` + 卡片頁 `card_*.html`(repo 外,約 1.1GB) |
 | `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |
 | `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` |
+| `web/action-data.js` | 動作索引(建置產物,**入版控**):`window.ACTION_DATA`,動作搜尋第一次打開才載入 |
 | `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`sort`(領域序與排序鍵,純函式)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`saved`(存進瀏覽紀錄的查詢狀態:條件與排序的正規形,還原時忽略認不得的欄位或值,純函式)、`render`(卡片呈現、異圖切換、排序與分頁)、`main`(主流程與瀏覽紀錄的寫入時機) |
 | `index.html` / `.nojekyll` | GitHub Pages 部署形態(根目錄為來源):轉址到 `web/index.html`、擋掉 Jekyll |
 

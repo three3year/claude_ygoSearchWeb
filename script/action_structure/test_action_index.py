@@ -18,8 +18,10 @@ from card_structure import build_structures, serialize_structures
 from test_effect_reference import (ARCHETYPES_13, BLACK_HOLE, BLACK_HOLE_TEXT, FRESHIA,
                                    FRESHIA_TEXT, NARAKU, NARAKU_TEXT, NORMAL_SPELL, NORMAL_TRAP,
                                    OTOSHIANA, OTOSHIANA_TEXT, XYZ_MONSTER)
-from test_golden import (EMPEROR_PENGUIN, EMPEROR_PENGUIN_TEXT, PENGUIN_SOLDIER,
-                         SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT, card, faq)
+from test_embedded_effects import BRAVE_STRIX, BRAVE_STRIX_TEXT
+from test_golden import (EMPEROR_PENGUIN, EMPEROR_PENGUIN_TEXT, ODD_EYES_PEN_EFFECT,
+                         ODD_EYES_PENDULUM_DRAGON, ODD_EYES_TEXT, PENGUIN_SOLDIER,
+                         SINGULARITY_FIEND, SINGULARITY_FIEND_TEXT, SPROUT, SPROUT_TEXT, card, faq)
 
 NO_TEXT_CARD = 30000002   # 測試用:卡片總表有、官方 DB 文本沒有
 
@@ -174,27 +176,174 @@ class ActionIndexTest(unittest.TestCase):
         self.assertEqual(set(report["timings"]), {"攤平", "候選卡", "編碼"})
 
 
+def clause(index, text_ja, section="main"):
+    """效果標記表的一個效果句;效果對應只看編號、來源與日文原文。"""
+    return {"index": index, "section": section, "text_ja": text_ja, "text_zh": f"句{index}"}
+
+
+def mapping_fixture():
+    """效果對應的夾具:靈擺卡(兩個來源)、舊式無編號卡、內嵌效果、引用列、對不上的卡。"""
+    cards = [
+        card(ODD_EYES_PENDULUM_DRAGON, name_ja="オッドアイズ・ペンデュラム・ドラゴン",
+             type=0x1000021, level=7, race=0x2000, attribute=0x20, scale=4),
+        card(SPROUT, name_ja="森羅の神芽 スプラウト", level=1, race=0x400),
+        card(BRAVE_STRIX, name_ja="RR－ブレイブ・ストリクス", type=0x800021, level=5,
+             race=0x200, attribute=0x20, atk=2000, **{"def": 2500}, setcode=0xba),
+        card(FRESHIA, name_ja="フレシアの蟲惑魔", type=XYZ_MONSTER, level=4, race=0x400,
+             attribute=0x1, atk=300, **{"def": 2500}, setcode=0x108a),
+        card(OTOSHIANA, name_ja="落とし穴", type=NORMAL_TRAP, setcode=0x4c),
+        card(NARAKU, name_ja="奈落の落とし穴", type=NORMAL_TRAP, setcode=0x4c),
+    ]
+    cards.sort(key=lambda entry: entry["id"])
+    structures, _ = build_structures(cards, [
+        faq(ODD_EYES_PENDULUM_DRAGON, "オッドアイズ・ペンデュラム・ドラゴン", ODD_EYES_TEXT,
+            pen_effect=ODD_EYES_PEN_EFFECT),
+        faq(SPROUT, "森羅の神芽 スプラウト", SPROUT_TEXT),
+        faq(BRAVE_STRIX, "RR－ブレイブ・ストリクス", BRAVE_STRIX_TEXT),
+        faq(FRESHIA, "フレシアの蟲惑魔", FRESHIA_TEXT),
+        faq(OTOSHIANA, "落とし穴", OTOSHIANA_TEXT),
+        faq(NARAKU, "奈落の落とし穴", NARAKU_TEXT),
+    ], archetypes=ARCHETYPES_13)
+    pen_lines = ODD_EYES_PEN_EFFECT.split("\n")
+    strix_lines = BRAVE_STRIX_TEXT.split("\n")
+    freshia_lines = FRESHIA_TEXT.split("\n")
+    tag_cards = [
+        # 靈擺卡:效果標記表先列靈擺效果再列主文(與實際資料同序)。主文另有一句 ②,
+        # 靈擺效果的 ② 不能對到它。
+        {"id": ODD_EYES_PENDULUM_DRAGON, "clauses": [
+            clause("0", pen_lines[0], "pendulum"),
+            clause("①", pen_lines[1], "pendulum"),
+            clause("②", pen_lines[2], "pendulum"),
+            clause("①", ODD_EYES_TEXT),
+            clause("②", "②：このカードは主文の②ではない。")]},
+        # 舊式無編號卡:五句拆成四個效果句,區塊 b0 跨了前兩個效果句。
+        {"id": SPROUT, "clauses": [
+            clause("0", "このカードが特殊召喚に成功した時、自分のデッキの上からカードを２枚まで"
+                        "めくる事ができる。"),
+            clause("1", "めくったカードの中に植物族モンスターがあった場合、それらのモンスターを全て"
+                        "墓地へ送る。残りのカードは好きな順番でデッキの一番下に戻す。"),
+            clause("2", "また、デッキのこのカードがカードの効果によってめくられて墓地へ送られた"
+                        "場合、デッキから植物族・レベル１モンスター１体を特殊召喚できる。"),
+            clause("3", "「森羅の神芽 スプラウト」のこの効果は１ターンに１度しか使用できない。")]},
+        # ③ 的「以下の効果を得る」:● 子效果另成一句(③-●1)。
+        {"id": BRAVE_STRIX, "clauses": [
+            clause("0", strix_lines[0]), clause("0", strix_lines[1]),
+            clause("①", strix_lines[2]), clause("②", strix_lines[3]),
+            clause("③", strix_lines[4]), clause("③-●1", strix_lines[5])]},
+        {"id": FRESHIA, "clauses": [clause("0", freshia_lines[0])]
+         + [clause(line[0], line) for line in freshia_lines[1:]]},
+        # 落とし穴:效果標記表的日文是舊的卡文,編號也沒有 ①,兩種對法都對不上。
+        {"id": OTOSHIANA, "clauses": [clause("0", "相手が召喚した時に発動できる。")]},
+    ]
+    frontend = [{"id": entry["id"]} for entry in cards]
+    for entry in frontend:
+        clauses = next((t["clauses"] for t in tag_cards if t["id"] == entry["id"]), [])
+        if clauses:
+            entry["tx"] = [c["text_zh"] for c in clauses]
+    return structures, cards, frontend, tag_cards
+
+
+class EffectMappingTest(unittest.TestCase):
+    """效果對應:每一段對回前端索引的哪個效果句(效果句的序號 = 在前端索引 `tx` 裡的位置)。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.structures, cls.cards, cls.frontend, cls.tag_cards = mapping_fixture()
+        cls.text, cls.report = build_action_index(
+            cls.structures, cls.cards, cls.frontend, ARCHETYPES_13, tag_cards=cls.tag_cards)
+        cls.index = decode_action_index(cls.text)
+
+    def clauses(self, cid):
+        """段 id → 效果句的序號。"""
+        return {seg["id"]: seg["clause"] for seg in self.index["cards"][cid]["segments"]}
+
+    def test_builds_without_problems(self):
+        self.assertEqual(self.report["problems"], [])
+
+    def test_numbered_pendulum_block_maps_to_the_pendulum_clause(self):
+        """靈擺效果的 ② 區塊對到靈擺效果的 ②(序號 2),不是主文的 ②(序號 4)。"""
+        self.assertEqual(self.clauses(ODD_EYES_PENDULUM_DRAGON),
+                         {"p72.s2": 2, "p72.s18": 2, "p72.s28": 2})
+
+    def test_unnumbered_segments_map_by_position(self):
+        """舊式無編號卡:區塊 b0 的前兩段在第一句、後三段在第二句;區塊 b111 在第三句。"""
+        self.assertEqual(self.clauses(SPROUT), {
+            "b0.s0": 0, "b0.s17": 0,
+            "b0.s44": 1, "b0.s69": 1, "b0.s87": 1,
+            "b111.s3": 2, "b111.s38": 2})
+
+    def test_embedded_segment_counts_on_its_block(self):
+        """③「以下の効果を得る」裡內嵌效果的段算在 ③ 上;③ 拆出 ● 子效果時落在 ● 那句(序號 5)。"""
+        clauses = self.clauses(BRAVE_STRIX)
+        self.assertEqual(clauses["b185e39.s1"], 5)
+        self.assertEqual(clauses["b49.s25"], 2)
+        self.assertEqual(clauses["b108.s51"], 3)
+
+    def test_reference_row_counts_on_the_referencing_effect(self):
+        """フレシアの蟲惑魔 的引用列在 ③ 裡:算在 ③(序號 3)。"""
+        ref, = self.index["cards"][FRESHIA]["references"]
+        self.assertEqual(ref["clause"], 3)
+
+    def test_unmapped_segments_are_left_empty_and_reported(self):
+        """落とし穴:效果標記表的日文對不上、也沒有 ①;沒有效果標記表的奈落の落とし穴 也對不上。"""
+        for cid in (OTOSHIANA, NARAKU):
+            self.assertTrue(self.clauses(cid))
+            self.assertEqual(set(self.clauses(cid).values()), {None})
+        mapping = self.report["clause_mapping"]
+        self.assertEqual(mapping["unmapped_cards"], [OTOSHIANA, NARAKU])
+        unmapped = len(self.clauses(OTOSHIANA)) + len(self.clauses(NARAKU))
+        self.assertEqual(mapping["unmapped"], unmapped)
+        # 靠位置的:スプラウト 7 段,加兩張超量怪獸素材行(沒有編號的區塊)各 1 段。
+        self.assertEqual(self.clauses(BRAVE_STRIX)["b0.s0"], 0)
+        self.assertEqual(self.clauses(FRESHIA)["b0.s0"], 0)
+        self.assertEqual(mapping["by_position"], 9)
+        segments = sum(len(entry["segments"]) for entry in self.index["cards"].values())
+        self.assertEqual(mapping["by_number"] + mapping["by_position"] + mapping["unmapped"],
+                         segments)
+        self.assertEqual((mapping["references"], mapping["unmapped_references"]), (1, 0))
+
+    def test_clause_count_mismatch_fails(self):
+        """前端索引的效果句數和效果標記表不同(序號會錯位):建置失敗,問題寫出卡號。"""
+        frontend = copy.deepcopy(self.frontend)
+        sprout = next(entry for entry in frontend if entry["id"] == SPROUT)
+        sprout["tx"].pop()
+        text, report = build_action_index(self.structures, self.cards, frontend,
+                                          ARCHETYPES_13, tag_cards=self.tag_cards)
+        self.assertIsNone(text)
+        self.assertEqual(len(report["problems"]), 1)
+        self.assertIn("效果句數", report["problems"][0])
+        self.assertIn(str(SPROUT), report["problems"][0])
+
+    def test_same_input_same_bytes(self):
+        text, _ = build_action_index(copy.deepcopy(self.structures), copy.deepcopy(self.cards),
+                                     copy.deepcopy(self.frontend), ARCHETYPES_13,
+                                     tag_cards=copy.deepcopy(self.tag_cards))
+        self.assertEqual(text, self.text)
+
 
 class CommandLineTest(unittest.TestCase):
     """建置入口:讀檔、寫檔、印報告;只驗證不寫檔的模式;建置失敗時不寫檔、結束碼非 0。"""
 
     @classmethod
     def setUpClass(cls):
-        structures, cards, frontend = fixture()
+        structures, cards, frontend, tag_cards = mapping_fixture()
         cls.tmp = tempfile.TemporaryDirectory()
         cls.paths = {name: os.path.join(cls.tmp.name, name) for name in
-                     ("structures.json", "cards.json", "data.js", "archetypes.json")}
+                     ("structures.json", "cards.json", "data.js", "archetypes.json",
+                      "tag_cards.json")}
         texts = {
             "structures.json": serialize_structures(structures),
             "cards.json": json.dumps(cards, ensure_ascii=False),
             "data.js": ("window.CARD_DATA=[\n" + ",\n".join(map(json.dumps, frontend))
                         + "\n];\nwindow.VOCAB={\n};\n"),
             "archetypes.json": json.dumps(ARCHETYPES_13, ensure_ascii=False),
+            "tag_cards.json": json.dumps(tag_cards, ensure_ascii=False),
         }
         for name, text in texts.items():
             with open(cls.paths[name], "w", encoding="utf-8") as f:
                 f.write(text)
-        cls.expected, _ = build_action_index(structures, cards, frontend, ARCHETYPES_13)
+        cls.expected, _ = build_action_index(structures, cards, frontend, ARCHETYPES_13,
+                                             tag_cards=tag_cards)
 
     @classmethod
     def tearDownClass(cls):
@@ -209,7 +358,8 @@ class CommandLineTest(unittest.TestCase):
             code = cli.main([
                 "--structures", self.paths["structures.json"],
                 "--cards", self.paths["cards.json"], "--frontend", self.paths["data.js"],
-                "--archetypes", self.paths["archetypes.json"], "-o", output, *extra])
+                "--archetypes", self.paths["archetypes.json"],
+                "--tags", self.paths["tag_cards.json"], "-o", output, *extra])
         written = None
         if os.path.exists(output):
             with open(output, encoding="utf-8", newline="") as f:
@@ -220,8 +370,19 @@ class CommandLineTest(unittest.TestCase):
         code, printed, written = self.run_cli()
         self.assertEqual(code, 0)
         self.assertEqual(written, self.expected)
-        for label in ("列 ", "候選卡集合", "產物", "gzip", "時間", "讀檔", "攤平", "候選卡 "):
+        for label in ("列 ", "候選卡集合", "產物", "gzip", "時間", "讀檔", "攤平", "候選卡 ",
+                      "tag_cards.json digest="):
             self.assertIn(label, printed)
+
+    def test_report_lists_unmapped_segments_and_cards(self):
+        """報告印出效果對應三種結果的段數,與留空的段所在的卡號。"""
+        code, printed, _ = self.run_cli("--no-write")
+        self.assertEqual(code, 0)
+        line = next(line for line in printed.splitlines() if line.startswith("效果對應"))
+        self.assertIn("靠位置 9", line)
+        self.assertIn("留空 ", line)
+        unmapped = next(line for line in printed.splitlines() if line.startswith("留空的卡"))
+        self.assertIn(f"{OTOSHIANA}, {NARAKU}", unmapped)
 
     def test_no_write_only_checks(self):
         code, printed, written = self.run_cli("--no-write")

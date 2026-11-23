@@ -18,6 +18,8 @@ from action_index import build_action_index
 from action_query import run_query
 from card_structure import build_structures
 from test_action_index import fixture
+from test_draw import (DARK_WORLD_DEALINGS, DARK_WORLD_DEALINGS_TEXT, SPELL, TSUPPA_REACH,
+                       TSUPPA_REACH_TEXT)
 from test_effect_reference import ARCHETYPES_13
 from test_golden import card, faq
 from test_resistance_restriction import (ELEKIRIN, ELEKIRIN_TEXT, MASTER_MONK, MASTER_MONK_TEXT,
@@ -39,18 +41,49 @@ CONDS = [
     {"actions": ["解放", "特殊召喚"]},      # 同一張卡、不同段
     {"actions": ["破壞", "特殊召喚"]},
     {"actions": ["不存在的動作"]},
+] + [
+    # 票 09:從、到(含哪一方、子區域、推得的不算)、段類別勾選、極性三選一。夾具裡:
+    # 特殊召喚從我方牌組(大皇帝ペンギン);除外從墓地到除外(幻獣機サーバルホーク);
+    # 送墓是代價、從我方牌組到墓地(特異点の悪魔);抽牌從我方牌組(ツッパリーチ)與
+    # 雙方各自的牌組(暗黒界の取引);ツッパリーチ回到牌組底(子區域,查牌組也算)。
+    {"actions": ["特殊召喚"], "from": {"zone": "牌組", "side": "我方"}},
+    {"actions": ["特殊召喚"], "from": {"zone": "牌組", "side": "對手"}},
+    {"actions": ["特殊召喚"], "to": {"zone": "場上"}},              # 到場上全是推得的
+    {"actions": ["除外"], "from": {"zone": "墓地"}, "to": {"zone": "除外"}},
+    {"actions": ["破壞"], "from": {"zone": "場上"}},
+    {"to": {"zone": "墓地"}},
+    {"from": {"zone": "牌組"}, "to": {"zone": "墓地"}, "kinds": ["cost"]},
+    {"actions": ["返回"], "to": {"zone": "牌組"}},
+    {"actions": ["返回"], "to": {"zone": "牌組底"}},
+    {"actions": ["抽牌"], "from": {"zone": "牌組", "side": "我方"}},
+    {"actions": ["抽牌"], "from": {"zone": "牌組", "side": "對手"}},
+    {"actions": ["抽牌"], "from": {"zone": "牌組"}},
+    {"actions": ["破壞"], "kinds": ["eff", "cost", "cond"]},
+    {"actions": ["特殊召喚"], "kinds": ["cond"]},
+    {"actions": ["解放"], "kinds": ["cost"]},
+    {"actions": ["解放"], "kinds": ["eff"]},
+    {"actions": ["破壞"], "pol": "resist"},
+    {"actions": ["破壞"], "pol": "resist", "kinds": ["eff", "cond"]},
+    {"actions": ["通常召喚"], "pol": "limit"},
+    {"actions": ["直接攻擊"], "pol": "limit"},
+    {"actions": ["特殊召喚"], "pol": "limit", "kinds": ["eff", "cond"]},
+    {"actions": ["攻擊"], "pol": "limit", "kinds": ["cost"]},
 ]
 
 
 def parity_fixture():
     structures, cards, _ = fixture()
     extra = [card(ELEKIRIN, name_ja="エレキリン"), card(MASTER_MONK, name_ja="マスターモンク"),
-             card(SERVAL_HAWK, name_ja="幻獣機サーバルホーク")]
+             card(SERVAL_HAWK, name_ja="幻獣機サーバルホーク"),
+             card(DARK_WORLD_DEALINGS, name_ja="暗黒界の取引", type=SPELL, setcode=0x6),
+             card(TSUPPA_REACH, name_ja="ツッパリーチ", type=0x80002)]
     archetypes = {row["setcode"]: row for row in ARCHETYPES_13 + RESISTANCE_ARCHETYPES}
     more, _ = build_structures(extra, [
         faq(ELEKIRIN, "エレキリン", ELEKIRIN_TEXT),
         faq(MASTER_MONK, "マスターモンク", MASTER_MONK_TEXT),
         faq(SERVAL_HAWK, "幻獣機サーバルホーク", SERVAL_HAWK_TEXT),
+        faq(DARK_WORLD_DEALINGS, "暗黒界の取引", DARK_WORLD_DEALINGS_TEXT),
+        faq(TSUPPA_REACH, "ツッパリーチ", TSUPPA_REACH_TEXT),
     ], list(archetypes.values()))
     cards = sorted(cards + extra, key=lambda entry: entry["id"])
     structures = sorted(structures + more, key=lambda s: s["id"])
@@ -81,6 +114,7 @@ class WebParityTest(unittest.TestCase):
         text, report = build_action_index(cls.structures, cls.cards,
                                           [{"id": entry["id"]} for entry in cls.cards], archetypes)
         assert not report["problems"], report["problems"]
+        cls.text = text
         cls.front = front_end(text, cls.cards, CONDS)
 
     def test_player_defaults_become_the_row_query(self):
@@ -96,11 +130,44 @@ class WebParityTest(unittest.TestCase):
                 python = run_query(self.structures, self.cards, front["rowQuery"])
                 self.assertEqual(sorted(front["ids"]), sorted(python["groups"]["全部"]))
         # 夾具要問得出東西:有命中、也有「同一張卡分在兩段」被擋掉的
-        hits = {tuple(c["actions"]): set(f["ids"]) for c, f in zip(CONDS, self.front)}
+        hits = {tuple(c["actions"]): set(f["ids"]) for c, f in zip(CONDS, self.front)
+                if set(c) == {"actions"}}
         self.assertTrue(hits[("破壞",)])
         both = hits[("解放",)] & hits[("特殊召喚",)]
         self.assertTrue(both)
         self.assertFalse(both & hits[("解放", "特殊召喚")])
+
+    def test_zones_kinds_polarity_ask_something(self):
+        """票 09 的查詢問得出東西:哪一方、子區域、推得的不算、觸發條件、抗性與限制各有分別。"""
+        hits = {json.dumps(c, ensure_ascii=False, sort_keys=True): set(f["ids"])
+                for c, f in zip(CONDS, self.front)}
+
+        def of(cond):
+            return hits[json.dumps(cond, ensure_ascii=False, sort_keys=True)]
+        self.assertEqual(of({"actions": ["特殊召喚"], "from": {"zone": "牌組", "side": "我方"}}),
+                         {6836211})
+        self.assertFalse(of({"actions": ["特殊召喚"], "from": {"zone": "牌組", "side": "對手"}}))
+        # 到場上全是推得的:不算
+        self.assertFalse(of({"actions": ["特殊召喚"], "to": {"zone": "場上"}}))
+        # 牌組底算在牌組內
+        self.assertEqual(of({"actions": ["返回"], "to": {"zone": "牌組"}}), {TSUPPA_REACH})
+        # 勾觸發條件才查到條件段;抗性、限制查得到預設不命中的段
+        self.assertTrue(of({"actions": ["特殊召喚"], "kinds": ["cond"]}) - of({"actions": ["特殊召喚"]}))
+        self.assertEqual(of({"actions": ["破壞"], "pol": "resist"}), {6511113})
+        self.assertNotIn(6511113, of({"actions": ["破壞"]}))
+        self.assertEqual(of({"actions": ["通常召喚"], "pol": "limit"}), {MASTER_MONK})
+        self.assertFalse(of({"actions": ["通常召喚"]}))
+
+    def test_kinds_and_polarity_become_the_row_query(self):
+        """介面選項到查詢的對應(spec「玩家介面」對應表):勾觸發條件連條件段開關一起開。"""
+        front = front_end(self.text, self.cards,
+                          [{"actions": ["破壞"], "kinds": ["eff", "cost", "cond"], "pol": "resist"},
+                           {"actions": ["破壞"], "kinds": ["cost"], "pol": "limit"}])
+        self.assertEqual(front[0]["rowQuery"],
+                         {"actions": ["破壞"], "kinds": ["效果", "召喚手續", "限制", "代價", "條件"],
+                          "include_condition": True, "polarities": ["不會"]})
+        self.assertEqual(front[1]["rowQuery"],
+                         {"actions": ["破壞"], "kinds": ["代價"], "polarities": ["不能", "只能"]})
 
 
 if __name__ == "__main__":

@@ -19,6 +19,15 @@ let failed = false;
 let loading = null;
 let selected = [];
 let moreOpen = false;
+/* 票 09:從、到({ zone, side },空字串是不限)、段類別勾選、極性。 */
+const NO_ZONE = () => ({ zone: '', side: '' });
+let from = NO_ZONE();
+let to = NO_ZONE();
+let kinds = Action.DEFAULT_KINDS;
+let pol = Action.DEFAULT_POL;
+
+const KIND_LABELS = { eff: '效果', cost: '代價', cond: '觸發條件' };
+const POL_LABELS = { do: '會做', limit: '限制', resist: '抗性' };
 
 /* 載完(或載入失敗)時 resolve,不 reject:失敗時動作條件不生效,其他條件照常查。 */
 function load() {
@@ -89,8 +98,45 @@ function wordsHtml() {
     <p class="action-hint">多選時,要在同一段裡全部都有</p>`;
 }
 
+const option = (value, label, cur) =>
+  `<option value="${esc(value)}"${value === cur ? ' selected' : ''}>${esc(label)}</option>`;
+
+/* 從、到:區域選項由索引的表生成;還原的區域索引裡沒有時也列出來,才看得到、取消得掉。 */
+function zoneHtml(key, label, cur) {
+  const zones = Action.zoneOptions(index);
+  if (cur.zone && zones.indexOf(cur.zone) < 0) zones.push(cur.zone);
+  return `<span class="group-label">${label}</span>
+    <div class="range-row">
+      <select class="range-in" data-zone="${key}">${option('', '不限', cur.zone)}${
+        zones.map(z => option(z, z, cur.zone)).join('')}</select>
+      <select class="range-in" data-side="${key}">${option('', '不限哪一方', cur.side)}${
+        Action.SIDES.map(sd => option(sd, sd, cur.side)).join('')}</select>
+    </div>`;
+}
+
+/* 段類別三個勾選:只剩一個勾著時那一個不能取消(停用)。 */
+function kindsHtml() {
+  return `<span class="group-label">這個動作是</span>
+    <div class="tri-row">${Object.keys(KIND_LABELS).map(k => {
+      const on = kinds.indexOf(k) >= 0;
+      return `<label><input type="checkbox" data-kind="${k}"${on ? ' checked' : ''}${
+        on && kinds.length === 1 ? ' disabled' : ''}> ${KIND_LABELS[k]}</label>`;
+    }).join('')}</div>`;
+}
+
+function polHtml() {
+  return `<span class="group-label">極性</span>
+    <div class="tri-row">${Object.keys(POL_LABELS).map(k =>
+      `<button type="button" class="tri" data-pol="${k}" data-st="${pol === k ? 'in' : ''}">${
+        POL_LABELS[k]}</button>`).join('')}</div>
+    <p class="action-hint">限制:不能、只能;抗性:不會被…</p>`;
+}
+
 function fieldsHtml() {
-  return index ? wordsHtml() : '';
+  return index
+    ? wordsHtml() + zoneHtml('from', '從哪裡', from) + zoneHtml('to', '到哪裡', to)
+      + kindsHtml() + polHtml()
+    : '';
 }
 
 function paint() {
@@ -98,24 +144,35 @@ function paint() {
   $('actionStatus').textContent = status;
   $('actionStatus').hidden = !status;
   $('actionFields').innerHTML = fieldsHtml();
-  const n = selected.length;
+  const n = Action.count(read());
   $('actionCount').textContent = n ? String(n) : '';
 }
 
+const zoneCond = z => (z.zone ? { zone: z.zone, side: z.side } : null);
+
 function read() {
-  return Action.condOf({ actions: selected });
+  return Action.condOf({ actions: selected, from: zoneCond(from), to: zoneCond(to), kinds, pol });
 }
 
 /* 還原帶動作條件的查詢時展開區塊(和其他軸一樣看得見設了什麼),也就載入索引。 */
 function write(act) {
-  const cond = Action.condOf(act);
-  selected = cond ? cond.actions : [];
-  if (cond) setOpen(true);
+  const cond = Action.condOf(act) || {};
+  selected = cond.actions || [];
+  from = { ...NO_ZONE(), ...cond.from };
+  to = { ...NO_ZONE(), ...cond.to };
+  kinds = cond.kinds || Action.DEFAULT_KINDS;
+  pol = cond.pol || Action.DEFAULT_POL;
+  if (Object.keys(cond).length) setOpen(true);
   paint();
 }
 
+/* 「清除條件」:動作詞取消,從、到、段類別、極性回到預設。 */
 function clear() {
   selected = [];
+  from = NO_ZONE();
+  to = NO_ZONE();
+  kinds = Action.DEFAULT_KINDS;
+  pol = Action.DEFAULT_POL;
   paint();
 }
 
@@ -126,10 +183,27 @@ function init() {
     if (!btn) return;
     if (btn.dataset.more) {
       moreOpen = !moreOpen;
+    } else if (btn.dataset.pol) {
+      pol = btn.dataset.pol;
     } else if (btn.dataset.word) {
       const word = btn.dataset.word;
       selected = selected.indexOf(word) >= 0
         ? selected.filter(w => w !== word) : selected.concat(word);
+    }
+    paint();
+  });
+  $('actionFields').addEventListener('change', e => {
+    const el = e.target;
+    if (el.dataset.zone) {
+      const z = el.dataset.zone === 'from' ? from : to;
+      z.zone = el.value;
+    } else if (el.dataset.side) {
+      const z = el.dataset.side === 'from' ? from : to;
+      z.side = el.value;
+    } else if (el.dataset.kind) {
+      kinds = Action.toggleKind(kinds, el.dataset.kind);
+    } else {
+      return;
     }
     paint();
   });

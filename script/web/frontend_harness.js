@@ -74,6 +74,8 @@ const DRIVER = `
 ;function __optAvail(json) { return JSON.stringify(Query.optionalAvailable(JSON.parse(json))); }
 ;function __critCount(json) { var a = JSON.parse(json); return Query.count(a.q, a.act); }
 ;function __actionOptions() { return JSON.stringify(Action.options(__index())); }
+;function __zoneOptions() { return JSON.stringify(Action.zoneOptions(__index())); }
+;function __toggleKind(json) { var a = JSON.parse(json); return JSON.stringify(Action.toggleKind(a.kinds, a.kind)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
 ;function __treeCounts(json) { return JSON.stringify(Query.treeCounts(JSON.parse(json))); }
 ;function __expandedAxes(json) { return JSON.stringify(Query.expandedAxes(JSON.parse(json))); }
@@ -167,6 +169,16 @@ function rowQuery(sandbox, act) {
  */
 function actionOptions(sandbox) {
   return JSON.parse(sandbox.__actionOptions());
+}
+
+/** 從、到的區域選項(票 09):索引的區域表依列數排。 */
+function zoneOptions(sandbox) {
+  return JSON.parse(sandbox.__zoneOptions());
+}
+
+/** 段類別勾選點一下之後的勾選(票 09):只剩一個勾著時不能取消。 */
+function toggleKind(sandbox, kinds, kind) {
+  return JSON.parse(sandbox.__toggleKind(JSON.stringify({ kinds, kind })));
 }
 
 /**
@@ -274,3 +286,5 @@ function cardHtml(sandbox, entry) {
 module.exports = { load, search, ids, marks, rowQuery, actionOptions, axes, optionalAvailable, nextState,
                    critCount, axisCounts, treeCounts, expandedAxes,
                    sortedIds, sortKeys, savedState, restoreSaved, cardHtml };
+module.exports.zoneOptions = zoneOptions;          // 票 09
+module.exports.toggleKind = toggleKind;            // 票 09

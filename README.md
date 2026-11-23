@@ -134,6 +134,12 @@ python -X utf8 script/action_structure/build_reverse_check.py
 
 # 區塊邊界比對:舊式無編號卡的切法對共識集(stats/boundary_consensus.json)→ .scratch/action-structure/report/block_boundaries.md
 python -X utf8 script/action_structure/build_block_boundaries.py
+
+# 查詢判斷新舊兩條路徑的全庫比對(讀卡片結構 vs 攤平成列):一批查詢的直接命中逐組比,印差異與耗時
+python -X utf8 script/action_structure/compare_query_paths.py
+
+# 現有測試改走攤平成列的路徑(--parity:兩條路徑都跑,只在直接命中不同時失敗)
+python -X utf8 script/action_structure/run_tests_on_rows.py [--parity]
 ```
 
 舊式無編號卡的區塊邊界由規則切,站主判過的寫進 `data/block_boundaries.json`(邊界補丁,一卡一筆、只記官方日文的區塊子字串與雜湊),規則先讀補丁、卡文變動整筆失效。
@@ -218,7 +224,9 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `script/action_structure/build_archetypes.py` | 字段表 CLI 薄殼(讀 strings.conf、補丁、總表、官方 DB 文本 → 寫 data/archetypes.json 與報告;`--fetch` 下載上游) |
 | `script/action_structure/names_attributes.py` | 名稱表與卡片屬性表(純函式):「」引用 → 名稱表;總表參數與「〜として扱う」句 → 帶位置條件的屬性列 |
 | `script/action_structure/card_structure.py` | 建置管線(純函式):總表 + 官方 DB 文本 + 字段表 → 卡片結構 + 報告;序列化與讀回 |
-| `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用分組、未解析組 |
+| `script/action_structure/action_query.py` | 查詢判斷(純函式):全庫結構 + 查詢 → 命中卡、命中段、特定/泛用分組、未解析組;`path="rows"` 改走攤平成列的路徑 |
+| `script/action_structure/action_rows.py`、`row_match.py` | 攤平成列(卡片結構 + 卡片總表 → 每條對象線一列,候選卡用到才算)與比對列(只讀列);目前只做直接命中 |
+| `script/action_structure/compare_query_paths.py`、`run_tests_on_rows.py` | 新舊查詢路徑的全庫比對,與現有測試改走新路徑 |
 | `script/action_structure/build_structure.py` | 建置 CLI 薄殼(讀檔 → 寫 data/action_structure.json → 印報告) |
 | `script/action_structure/coverage_report.py` | 覆蓋報告(純函式):全庫結構 → 依區塊種類、段類別、各格、物件計數,依原因附卡號;略過文本依原因計處數與張數 → markdown |
 | `script/action_structure/build_report.py` | 覆蓋報告 CLI 薄殼(讀產物與總表 → 寫 .scratch/action-structure/report/coverage.md) |

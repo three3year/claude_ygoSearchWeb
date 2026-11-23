@@ -869,9 +869,21 @@ def segment_hit_lines(seg, card, q, judge, objects, names):
     return hit or None
 
 
-def run_query(structures, cards, query):
+PATH_STRUCTURE = "structure"   # 讀卡片結構(舊的讀法)
+PATH_ROWS = "rows"             # 攤平成列再比對列
+
+
+def run_query(structures, cards, query, path=PATH_STRUCTURE):
     """全庫結構 + 卡片總表 + 查詢 → 命中結果;一張卡任一分支、任一段命中即命中。
-    直接沒命中的卡,引用節點指定的被引用卡部分命中時進「經引用」組。"""
+    直接沒命中的卡,引用節點指定的被引用卡部分命中時進「經引用」組。
+    `path`:預設讀卡片結構(舊的讀法,重構期間的標準答案);`PATH_ROWS` 先攤平成列再比對列
+    (`action_rows`、`row_match`;目前只做直接命中,未解析組、經引用、代替還沒有)。"""
+    if path == PATH_ROWS:
+        from action_rows import flatten
+        from row_match import match_rows
+        return match_rows(flatten(structures, cards), query)
+    if path != PATH_STRUCTURE:
+        raise ValueError(f"認不得的查詢路徑: {path}")
     q = _normalise(query)
     judge = _Judge(cards, structures, q)
     literals = action_literals(q["actions"])

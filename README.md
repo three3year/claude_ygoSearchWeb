@@ -34,6 +34,7 @@ python -m unittest discover -s script/card_list
 python -m unittest discover -s script/faq_info
 python -m unittest discover -s script/tag_card
 python -m unittest discover -s script/text_format
+python -m unittest discover -s script/text_glossary
 python -m unittest discover -s script/web
 python -X utf8 -m unittest discover -s script/action_structure   # 動作搜尋的卡片結構(含「兩邊答案一致」,需要 node)
 node --test                       # 前端查詢引擎(node 內建,零 npm 依賴)
@@ -181,6 +182,43 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 一張卡一行、一個候選卡集合一行;不帶時間,
 同一份輸入兩次建置逐位元組相同。格式的讀法只有 `action_index.decode_action_index` 一處。
 
+**動作索引的建置順序**:卡片結構(`build_structure.py`)→ 前端索引(`build_index.py`)→ 動作索引
+(`build_action_index.py`)。動作索引吃卡片結構、卡片總表、前端索引、字段表與效果標記表,任何一份變了都要
+重建它。站主機器上卡片結構約 24 秒、動作索引約 40 秒(報告印各階段時間),合計門檻 2 分鐘;產物門檻 8 MB。
+
+### 動作搜尋怎麼用
+
+網站:側欄「效果文」下面的「動作搜尋」區塊,預設收起;第一次展開時才下載 `action-data.js`(約 5.7 MB,
+載入中會顯示「動作索引載入中…」,按了搜尋會在載完後自動出結果)。區塊裡的條件和側欄其他條件取且:
+
+- **動作**:可多選,選兩個以上時要在同一段裡都有;常用的直接列出,其餘按「更多」。
+- **從哪裡 / 到哪裡**:區域,可再指定我方或對手;推得的終點不算。
+- **被動作的卡**:不指定、這張卡自己、指定一張卡(輸入卡名從建議清單點選)、給條件(大類、屬性、種族、
+  等級、字段、卡名包含)。這裡篩的是被動作的卡,不是有這個效果的卡。
+- **這個動作是**:效果(含召喚手續與召喚條件裡的限制)、代價、觸發條件三個勾選,至少勾一個。
+- **極性**:會做(做、可以、必須)、限制(不能、只能)、抗性(不會)。
+- **誰做的 / 落在誰身上 / 因為什麼**:我方或對手;原因可再指定是哪一方的。「含不限定的」打開時,
+  沒寫誰、沒寫原因的段(條件段、被動句)也算命中。
+
+結果是一份和一般搜尋一樣的清單(排序、分頁照舊),命中的效果整句加底色;判斷不了的卡只在清單下方
+顯示「另有 N 張無法確認」。網址不帶查詢條件,上一頁、下一頁、重新整理從瀏覽紀錄還原。
+
+Python:`action_query.run_query(卡片結構, 卡片總表, 查詢)` 吃同一份攤平的列,查詢鍵(`actions`、
+`from_zones`、`to_zones`、`card`、`this_card`、`condition`、`agent`、`recipient`、`cause`、
+`include_unrestricted`…)與回傳的分組見 `action_query.py` 的模組說明。網站與 Python 的答案一致由
+`script/action_structure/test_web_parity.py` 守(要有 node)。規格與各票在 `.scratch/action-search-web/`。
+
+```python
+import json, sys
+sys.path.insert(0, "script/action_structure")
+from action_query import run_query
+from card_structure import load_structures
+structures = load_structures(open("data/action_structure.json", encoding="utf-8").read())
+cards = json.load(open("data/cards.json", encoding="utf-8"))
+result = run_query(structures, cards, {"actions": ["破壞"], "polarities": ["不會"], "this_card": True})
+print(len(result["groups"]["全部"]), len(result["groups"]["未解析"]))
+```
+
 ## 目錄
 
 | 位置 | 內容 |
@@ -260,7 +298,9 @@ cdb 位元 → 值域的轉換只住在建置期的值域正典 `script/web/voca
 | `web/index.html` | 查卡網站的頁面(雙擊即可跑;`<script>` 依序載入,無建置步驟) |
 | `web/data.js` | 前端索引(建置產物,**入版控**):`window.CARD_DATA` / `VOCAB` / `META` |
 | `web/action-data.js` | 動作索引(建置產物,**入版控**):`window.ACTION_DATA`,動作搜尋第一次打開才載入 |
-| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`sort`(領域序與排序鍵,純函式)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`saved`(存進瀏覽紀錄的查詢狀態:條件與排序的正規形,還原時忽略認不得的欄位或值,純函式)、`render`(卡片呈現、異圖切換、排序與分頁)、`main`(主流程與瀏覽紀錄的寫入時機) |
+| `web/js/` | 前端模組(IIFE 閉包):`util`(工具與值域中文表)、`sort`(領域序與排序鍵,純函式)、`engine`(搜尋判定核心,純函式)、`query`(側欄條件 ⇄ 條件物件)、`saved`(存進瀏覽紀錄的查詢狀態:條件、排序與動作條件的正規形,還原時忽略認不得的欄位或值,純函式)、`action`(動作條件的正規形、換成 Python 查詢鍵的列查詢、讀動作索引與比對列、無法確認的卡,純函式)、`action-panel`(「動作搜尋」區塊的畫面與動作索引的載入)、`render`(卡片呈現、異圖切換、排序與分頁)、`main`(主流程與瀏覽紀錄的寫入時機) |
+| `script/web/action_fixture.js`、`action_*.test.js`、`same_effect.test.js` | 動作搜尋前端的接縫測試(合成的小動作索引) |
+| `script/web/action_parity.js` | 「兩邊答案一致」的前端那一邊(`test_web_parity.py` 呼叫) |
 | `index.html` / `.nojekyll` | GitHub Pages 部署形態(根目錄為來源):轉址到 `web/index.html`、擋掉 Jekyll |
 
 ## cards.json 欄位
@@ -312,6 +352,9 @@ GitHub Pages 以**本 repo 根目錄**為來源:根目錄的 `.nojekyll` 擋掉 
 票 07(領域序與排序選單)、票 08(網址狀態,已由 action-search-web 票 01 取代,見下)、
 票 09(手機版面:側欄收成頂部可摺疊區、卡片單欄)
 與票 10(部署形態:根目錄 `.nojekyll` 與轉址 `index.html`,人工驗收以真實瀏覽器逐項走過)。
+
+動作搜尋的玩家介面(action-search-web 票 01–17,規格與票券見 `.scratch/action-search-web/`)已完成;
+進階模式(分組與標記、未解析組明細、日文原文、取對象等開關)留給下一輪。
 
 查詢狀態不寫進網址,也沒有分享連結(action-search-web 票 01):網址永遠不帶參數,
 每次搜尋在瀏覽紀錄新增一筆、條件與排序存在那一筆裡,上一頁、下一頁、重新整理從那一筆

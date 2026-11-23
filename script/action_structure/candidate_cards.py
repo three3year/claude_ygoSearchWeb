@@ -1,10 +1,10 @@
 import json
 
-from action_query import (SUBSTITUTABLE_KINDS, STATE_ATOMS, _compared_values, _fold, _Judge,
-                          _name_text, card_attr, compare_attr,
-                          eval_condition, is_this_card, same_different_undecidable)
 from archetype_table import setcode_matches
 from condition_atoms import referenced_objects
+from condition_judge import (OBJECT_THIS, OBJECT_UNDECIDABLE, OBJECT_UNSUBSTITUTABLE,
+                             STATE_ATOMS, Judge, card_attr, compare_attr, compared_values,
+                             eval_condition, fold, name_text, object_kind)
 from same_different import SAME, SAME_DIFFERENT
 from structure_shape import zone_names
 
@@ -13,7 +13,7 @@ ALL_KEY = "整份總表"
 TWO_VALUED_OPS = ("大類", "卡名", "卡名包含", "字段")
 
 
-class CandidateCards(_Judge):
+class CandidateCards(Judge):
 
     def __init__(self, cards, structures):
         super().__init__(cards, structures)
@@ -37,10 +37,10 @@ class CandidateCards(_Judge):
         return self.candidate_cache[key]
 
     def _fitting(self, owner, obj, names, from_zones):
-        if (obj["unparsed"] or obj["kind"] not in SUBSTITUTABLE_KINDS
-                or same_different_undecidable(obj)):
+        kind = object_kind(obj, self.objects_of(owner))
+        if kind in (OBJECT_UNDECIDABLE, OBJECT_UNSUBSTITUTABLE):
             return []
-        if is_this_card(obj, self.objects_of(owner)):
+        if kind == OBJECT_THIS:
             ids = {owner["id"], *owner.get("alt_ids", ())}
             pool = sorted(self._position[cid] for cid in ids if cid in self._position)
             return self._judge_pool(pool, owner, obj, names, from_zones)
@@ -118,7 +118,7 @@ class CandidateCards(_Judge):
         distinct, tables, narrowed = self._distinct[key]
         if not tables:
             return distinct
-        mine = tuple(frozenset(_compared_values(atom, attr, view.entry, view, from_zones))
+        mine = tuple(frozenset(compared_values(atom, attr, view.entry, view, from_zones))
                      for atom, attr, _ in tables)
         if mine not in narrowed:
             keep = None
@@ -129,10 +129,10 @@ class CandidateCards(_Judge):
         return narrowed[mine]
 
     def _plain_key(self, owner, obj, names):
-        if (obj["unparsed"] or obj["kind"] not in SUBSTITUTABLE_KINDS
-                or same_different_undecidable(obj)):
-            return "代不進去"
-        if is_this_card(obj, self.objects_of(owner)) or self.referenced(obj, owner) != []:
+        kind = object_kind(obj, self.objects_of(owner))
+        if kind in (OBJECT_UNDECIDABLE, OBJECT_UNSUBSTITUTABLE):
+            return OBJECT_UNSUBSTITUTABLE
+        if kind == OBJECT_THIS or self.referenced(obj, owner) != []:
             return None
         return self._shared_key(obj["condition"], names, None)
 
@@ -170,9 +170,9 @@ def _referenced_names(condition, names):
         if not isinstance(node, dict):
             continue
         if "name" in node:
-            found[node["name"]] = _name_text(node, names)
+            found[node["name"]] = name_text(node, names)
         for name_id in node.get("names", ()):
-            found[name_id] = _name_text({"name": name_id}, names)
+            found[name_id] = name_text({"name": name_id}, names)
         stack.extend(node.get("args", ()))
         if "arg" in node:
             stack.append(node["arg"])
@@ -193,7 +193,7 @@ def _distinct_bindings(condition, ref_id, pool):
             for attr in atom["attrs"]:
                 table = {}
                 for i, bound in enumerate(distinct):
-                    for value in _compared_values(atom, attr, bound):
+                    for value in compared_values(atom, attr, bound):
                         table.setdefault(value, set()).add(i)
                 tables.append((atom, attr, table))
     return distinct, tables
@@ -211,7 +211,7 @@ def _binding_reads(condition, ref_id, bound):
                 value = card_attr(bound, node["ref"]["attr"])
                 reads.append(frozenset(value) if isinstance(value, set) else value)
             elif node["op"] == SAME_DIFFERENT:
-                reads.extend(frozenset(_compared_values(node, attr, bound))
+                reads.extend(frozenset(compared_values(node, attr, bound))
                              for attr in node["attrs"])
         stack.extend(node.get("args", ()))
         if "arg" in node:
@@ -275,10 +275,10 @@ class CardIndex:
             return {i for code, at in self.by_code.items()
                     if any(setcode_matches(code, want) for want in wants) for i in at}
         if op in ("卡名", "卡名包含"):
-            text = _name_text(condition, names)
+            text = name_text(condition, names)
             if text is None:
                 return set()
-            folded = _fold(text)
+            folded = fold(text)
             if op == "卡名":
                 return self.by_name.get(folded, set())
             return self._names_containing(folded)

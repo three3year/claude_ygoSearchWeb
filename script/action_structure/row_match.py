@@ -1,15 +1,15 @@
 import itertools
 from operator import attrgetter
 
-from action_query import eval_condition
-from action_rows import IMPLIED_SELF, OBJECT_THIS, UNRESTRICTED
+from action_rows import IMPLIED_SELF, UNRESTRICTED
+from condition_judge import OBJECT_THIS, eval_condition
 
 REPLACED = "被代替"
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
 MODIFIED_KEYS = ("attr", "form", "value")
 VIA_GROUP = "經引用"
 VIA_GENERIC = "經泛用引用"
-AGENTS = ("我方", "對手")
+SIDES = ("我方", "對手")
 BOTH_SIDES = "雙方各自"
 CAUSE_KINDS = ("戰鬥", "效果", "戰鬥或效果", "戰鬥以外", "作為素材", "召喚方式", "方法", "規則")
 CAUSE_COVERS = {"戰鬥或效果": ("戰鬥", "效果"), "戰鬥以外": ("效果",)}
@@ -41,10 +41,10 @@ def _normalise(query):
     else:
         kinds.discard("被代替")
     q["allowed_kinds"] = kinds
-    if q["agent"] is not None and q["agent"] not in AGENTS:
-        raise ValueError(f"agent 只能是 {AGENTS}: {q['agent']!r}")
-    if q["recipient"] is not None and q["recipient"] not in AGENTS:
-        raise ValueError(f"recipient 只能是 {AGENTS}: {q['recipient']!r}")
+    if q["agent"] is not None and q["agent"] not in SIDES:
+        raise ValueError(f"agent 只能是 {SIDES}: {q['agent']!r}")
+    if q["recipient"] is not None and q["recipient"] not in SIDES:
+        raise ValueError(f"recipient 只能是 {SIDES}: {q['recipient']!r}")
     q["cause"] = _normalise_cause(q["cause"])
     if q["modified"] is not None and set(q["modified"]) - set(MODIFIED_KEYS):
         raise KeyError(f"modified 有不認得的鍵: {sorted(set(q['modified']) - set(MODIFIED_KEYS))}")
@@ -62,8 +62,8 @@ def _normalise_cause(cause):
         raise KeyError(f"cause 有不認得的鍵: {sorted(set(cause) - {'kind', 'side'})}")
     if kind not in CAUSE_KINDS:
         raise ValueError(f"cause 的種類只能是 {CAUSE_KINDS}: {kind!r}")
-    if side is not None and side not in AGENTS:
-        raise ValueError(f"cause 的方只能是 {AGENTS}: {side!r}")
+    if side is not None and side not in SIDES:
+        raise ValueError(f"cause 的方只能是 {SIDES}: {side!r}")
     return kind, side
 
 

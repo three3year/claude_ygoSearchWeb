@@ -37,10 +37,11 @@ import hashlib
 import json
 import time
 
-from action_rows import (OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
-                         OBJECT_UNSUBSTITUTABLE, flatten)
+from action_rows import flatten
 from archetype_table import setcode_matches
 from clause_map import NUMBER, POSITION, ClauseMap
+from condition_judge import (OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
+                             OBJECT_UNSUBSTITUTABLE)
 
 GLOBAL = "window.ACTION_DATA="
 DEFAULT_SIZE_LIMIT = 8_000_000      # spec Q12:8 MB
@@ -71,9 +72,7 @@ def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=
     timings["攤平"] = time.perf_counter() - started
 
     started = time.perf_counter()
-    for row in index.rows:
-        if row.line is not None and row.line.object is not None:
-            row.line.object.candidates.mask
+    index.resolve_candidates()
     timings["候選卡"] = time.perf_counter() - started
 
     started = time.perf_counter()
@@ -264,7 +263,7 @@ class _Encoder:
     def encode_set(self, positions):
         listed = "[" + ",".join(map(str, positions)) + "]"
         bits = bytearray((len(self.order) + 7) // 8)
-        if len(listed) <= 4 * len(bits) // 3 + 4:
+        if len(listed) <= _bitset_text_length(len(bits)):
             return list(positions)
         for p in positions:
             bits[p >> 3] |= 1 << (p & 7)
@@ -395,6 +394,11 @@ class _Encoder:
             rows.append([row["setcode"], row.get("name_zh"),
                          self.add_set(tuple(sorted(members[row["setcode"]])))])
         return rows, empty
+
+
+def _bitset_text_length(n_bytes):
+    """位元集寫進產物的字數估計:base64 是 4/3 倍,加引號與補位的餘裕;清單不比它長就寫清單。"""
+    return 4 * n_bytes // 3 + 4
 
 
 def _bits(mask):
@@ -528,7 +532,8 @@ def decode_action_index(text):
                 "effect": effect, "parts": blocks, "clause": clause}
 
     cards = {}
-    for cid, blocks, segs, unres, refs, clauses, segment_agents, recipients, seg_causes             in raw["cards"]:
+    for (cid, blocks, segs, unres, refs, clauses, segment_agents, recipients,
+         seg_causes) in raw["cards"]:
         cards[cid] = {"blocks": [block_kinds[k] for k in blocks],
                       "segments": [dict(segment(v), clause=c, agent=agents[a],
                                         recipient=sides[r], cause=cause(k))

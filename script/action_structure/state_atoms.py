@@ -2,7 +2,7 @@
 
 `condition_atoms.parse_modifier` 先問這裡的 `parse_modifier`,`condition_atoms.render_atom` 先問這裡的
 `render_atom`;只修飾此卡的狀態字面由 `anaphora.self_state_atoms` 問 `parse_self_state`。
-查詢判斷的代入規則在 `action_query.STATE_ATOMS`(這裡的原子都是狀態,任何卡都代得進去)。
+查詢判斷的代入規則在 `condition_judge.STATE_ATOMS`(這裡的原子都是狀態,任何卡都代得進去)。
 
 - 此卡以外的「他の」:一律 非(同一張 此卡)(站主裁定)——與「このカード以外の」同一個結構,只差字面:
   {"op": "非", "arg": {"op": "同一張", "object": 此卡的物件 id}, "text": "他の"}。

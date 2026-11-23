@@ -2,8 +2,9 @@ import unittest
 
 from action_index import build_action_index, decode_action_index
 from action_query import run_query
-from action_rows import (OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
-                         OBJECT_UNSUBSTITUTABLE, flatten)
+from action_rows import flatten
+from condition_judge import (OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
+                             OBJECT_UNSUBSTITUTABLE)
 from card_structure import build_structures
 from test_golden import ARCHETYPES, card, faq
 

@@ -6,7 +6,8 @@ import sys
 import unittest
 
 from action_index import build_action_index, decode_action_index
-from action_query import CATEGORY_BITS, CardView, eval_condition, run_query
+from action_query import run_query
+from condition_judge import CATEGORY_BITS, CardView, eval_condition
 from attribute_words import ATTRIBUTE_JA, RACE_JA
 from card_structure import build_structures
 from test_action_index import fixture

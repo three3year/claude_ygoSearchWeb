@@ -126,13 +126,8 @@ def is_reference(node):
     return node.get("node") == "內嵌效果" and node.get("reference") is not None
 
 
-def iter_references(block):
-    """區塊(含內嵌效果的區塊、分歧各支)裡的引用節點。"""
-    for _, node in iter_reference_sites(block):
-        yield node
-
-
 def iter_reference_sites(block):
+    """區塊(含內嵌效果的區塊、分歧各支)裡的引用節點與它所在的區塊。"""
     for node in iter_nodes(block["tree"]["items"]):
         if is_reference(node):
             yield block, node
@@ -141,7 +136,7 @@ def iter_reference_sites(block):
 
 
 def card_references(card):
-    return [node for block in card["blocks"] for node in iter_references(block)]
+    return [node for block in card["blocks"] for _, node in iter_reference_sites(block)]
 
 
 def selected_blocks(card, effect):
@@ -213,7 +208,7 @@ def reference_edges(structures):
                     continue
                 if any(not n.get("unparsed") and not n.get("any")
                        for b in selected_blocks(target, node["reference"]["effect"])
-                       for n in iter_references(b)):
+                       for _, n in iter_reference_sites(b)):
                     edges.setdefault(card["id"], set()).add(cid)
     return {cid: sorted(targets) for cid, targets in sorted(edges.items())}
 

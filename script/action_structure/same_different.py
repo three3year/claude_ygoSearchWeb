@@ -1,7 +1,7 @@
 """異同原子:「與某物件的某屬性相同/不同」的抽取與句型模板成對放在一起。
 
 `condition_atoms.parse_modifier` 最後問這裡的 `parse_modifier`,`condition_atoms.render_atom` 問這裡的
-`render_atom`;查詢判斷在 `action_query.same_different_fits`。
+`render_atom`;查詢判斷在 `condition_judge.same_different_fits`。
 
 原子:{"op": "異同", "attrs": [屬性名…], "cmp": "="|"≠", "text": 字面},另帶(有才寫):
 - `original`:寫了「元々の」。

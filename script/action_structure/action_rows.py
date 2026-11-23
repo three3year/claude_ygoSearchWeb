@@ -1,9 +1,9 @@
 import json
 from typing import NamedTuple
 
-from action_query import (SUBSTITUTABLE_KINDS, is_generic, is_this_card,
-                          same_different_undecidable)
 from candidate_cards import CandidateCards
+from condition_judge import (OBJECT_CANDIDATES, OBJECT_UNDECIDABLE, is_generic, object_kind,
+                             same_different_undecidable)
 from condition_atoms import referenced_objects
 from effect_reference import is_reference, iter_reference_sites, selected_blocks
 from structure_shape import iter_nodes, iter_segments, zone_names
@@ -16,11 +16,6 @@ IMPLIED_SELF = "算我方"
 UNRESTRICTED = "不限定"
 IMPLIED_SELF_KINDS = ("效果", "代價", "召喚手續")
 PASSIVE = "被動"
-
-OBJECT_THIS = "此卡"
-OBJECT_CANDIDATES = "候選卡集合"
-OBJECT_UNDECIDABLE = "判不了"
-OBJECT_UNSUBSTITUTABLE = "代不進去"
 
 
 class Position(NamedTuple):
@@ -36,11 +31,12 @@ class Candidates:
         self._index, self._owner, self._line = index, owner, line
         self._mask = None
 
-    @property
-    def mask(self):
+    def resolve(self):
         if self._mask is None:
             self._mask = self._index.candidate_mask(self._owner, self._line)
         return self._mask
+
+    mask = property(resolve)
 
 
 class LineObject(NamedTuple):
@@ -108,14 +104,14 @@ class ActionIndex:
 
     def __init__(self, cards, structures):
         self.cards = cards
-        self._judge = CandidateCards(cards, structures)
+        self._candidates = CandidateCards(cards, structures)
         self.position = {}
         for i, entry in enumerate(cards):
             self.position[entry["id"]] = i
         for i, entry in enumerate(cards):
             for alt in entry.get("alt_ids", ()):
                 self.position.setdefault(alt, i)
-        self.views = [self._judge.view(entry) for entry in cards]
+        self.views = [self._candidates.view(entry) for entry in cards]
         self._masks = {}         # 清單留著,id 才不會被重用
         self._shared = {}
         self._condition_masks = {}
@@ -139,11 +135,17 @@ class ActionIndex:
         return int.from_bytes(bits, "little")
 
     def candidate_mask(self, owner, line):
-        found = self._judge.of_line(owner, line)
+        found = self._candidates.of_line(owner, line)
         if id(found) not in self._masks:
             mask = self.mask_of(self.position[entry["id"]] for entry in found)
             self._masks[id(found)] = (found, self._shared.setdefault(mask, mask))
         return self._masks[id(found)][1]
+
+    def resolve_candidates(self):
+        """每條有物件的線先求好候選卡:建置要量這一段的時間,查詢則等第一次比到才求。"""
+        for row in self.rows:
+            if row.line is not None and row.line.object is not None:
+                row.line.object.candidates.resolve()
 
     def condition_mask(self, condition, fits):
         key = json.dumps(condition, sort_keys=True, ensure_ascii=False)
@@ -361,18 +363,13 @@ def _line(index, card, objects, seg, line, recipient_targeted):
                 object=None if obj is None else LineObject(
                     generic=is_generic(obj, objects),
                     candidates=Candidates(index, card, line),
-                    kind=object_kind(obj, objects)))
+                    kind=line_object_kind(obj, objects)))
 
 
-def object_kind(obj, objects):
-    if obj["unparsed"]:
-        return OBJECT_UNDECIDABLE
-    if obj["kind"] not in SUBSTITUTABLE_KINDS:
-        return OBJECT_UNSUBSTITUTABLE
-    if same_different_undecidable(obj):
-        return OBJECT_UNDECIDABLE
-    if is_this_card(obj, objects):
-        return OBJECT_THIS
+def line_object_kind(obj, objects):
+    kind = object_kind(obj, objects)
+    if kind != OBJECT_CANDIDATES:
+        return kind
     for ref_id in referenced_objects(obj["condition"]):
         ref = objects.get(ref_id)
         if ref is None or _object_incomplete_reason(ref, substituting=True) is not None:

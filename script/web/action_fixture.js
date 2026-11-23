@@ -64,8 +64,9 @@ function unresOf(raw) {
  *     clause:引用節點所在的效果句序號。
  *     bits:候選卡寫成位元集(大集合的寫法);否則寫位置的清單。
  * ids:前端索引的卡號順序(省略時照 cards)。noText:無官方日文的卡號。
+ * archetypes(票 13):字段成員表 [{ code: setcode, zh: 中文名, members: [卡號] }]。
  */
-function actionData(cards, ids, noText) {
+function actionData(cards, ids, noText, archetypes) {
   cards = cards.map(c => ({ segs: [], unres: [], ...c }));
   const segs = cards.flatMap(c => c.segs.map(s => ({ kind: '效果', pol: '做', acts: [], ...s })));
   const unres = cards.flatMap(c => c.unres.map(unresOf));
@@ -148,7 +149,7 @@ function actionData(cards, ids, noText) {
     agents,
     noText: noText || [],
     parts,
-    archetypes: [],
+    archetypes: (archetypes || []).map(a => [a.code, a.zh, setOf(a.members)]),
     sets,
     cards: lines,
   };

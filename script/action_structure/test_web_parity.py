@@ -12,10 +12,12 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import unittest
 
-from action_index import build_action_index
-from action_query import run_query
+from action_index import build_action_index, decode_action_index
+from action_query import CATEGORY_BITS, CardView, eval_condition, run_query
+from attribute_words import ATTRIBUTE_JA, RACE_JA
 from card_structure import build_structures
 from test_action_index import fixture
 from test_draw import (DARK_WORLD_DEALINGS, DARK_WORLD_DEALINGS_TEXT, SPELL, TSUPPA_REACH,
@@ -23,7 +25,9 @@ from test_draw import (DARK_WORLD_DEALINGS, DARK_WORLD_DEALINGS_TEXT, SPELL, TSU
 from test_effect_reference import (ARCHETYPES_13, BLACK_PANTHER, BLACK_PANTHER_TEXT, DESTROYER,
                                    DESTROYER_TEXT, FRESHIA, GISHIKI_MIRROR, GISHIKI_MIRROR_TEXT,
                                    HOSHIAI, HOSHIAI_TEXT, NORMAL_TRAP, RITUAL_SPELL)
+from test_action_index import EMPEROR_PENGUIN
 from test_golden import card, faq
+from test_object_self import CHOBHAM
 from test_resistance_restriction import (ELEKIRIN, ELEKIRIN_TEXT, MASTER_MONK, MASTER_MONK_TEXT,
                                          RESISTANCE_ARCHETYPES, SERVAL_HAWK, SERVAL_HAWK_TEXT)
 
@@ -126,14 +130,17 @@ def parity_fixture():
     return structures, cards, list(archetypes.values())
 
 
-def front_end(action_text, cards, conds):
-    """動作條件 → 前端那一邊的 [{"rowQuery", "ids"}]。"""
+def front_end(action_text, cards, conds, front=None):
+    """動作條件 → 前端那一邊的 [{"rowQuery", "ids"}]。`front` 是真的前端索引(`webindex.build_index`
+    的 index:卡與值域正典);沒給時前端的卡只有卡號與中文名(不看卡片參數的查詢夠用)。"""
     node = shutil.which("node")
     if node is None:
         # 不跳過:跳過的話少了這組檢查也是綠的(spec 接受「這組測試需要 node」)
         raise RuntimeError("機器上沒有 node:「兩邊答案一致」的測試需要 node")
     payload = {"actionData": action_text,
-               "cards": [{"id": entry["id"], "n": entry["name_zh"]} for entry in cards],
+               "cards": front["cards"] if front else
+               [{"id": entry["id"], "n": entry["name_zh"]} for entry in cards],
+               "vocab": front["vocab"] if front else {},
                "conds": conds}
     done = subprocess.run([node, PARITY_JS], input=json.dumps(payload, ensure_ascii=False),
                           capture_output=True, text=True, encoding="utf-8", check=False)
@@ -317,6 +324,121 @@ class ObjectParityTest(unittest.TestCase):
     def test_object_condition_becomes_the_row_query(self):
         self.assertEqual(self.front[0]["rowQuery"]["this_card"], True)
         self.assertEqual(self.front[1]["rowQuery"]["card"], self.conds[1]["target"]["card"])
+
+
+
+# 給條件(票 13):大類、屬性、種族、等級、字段、卡名包含六種,各自與合起來。夾具同上一組(水族的
+# ペンギン、植物族的超量怪獸フレシアの蟲惑魔、龍族、戰士族、獸族;字段有成員的全部問一次);
+# 前端的卡用真的前端索引建(`webindex.build_index`),值域正典也是那一份。
+CONDITION_ACTIONS = [["特殊召喚"], ["破壞"], ["除外"], ["加入手牌"], []]
+CONDITIONS = [
+    {"cat": "m"}, {"cat": "s"}, {"cat": "t"},
+    {"attr": "water"}, {"attr": "earth"}, {"attr": "dark"}, {"attr": "light"}, {"attr": "wind"},
+    {"race": "aqua"}, {"race": "plant"}, {"race": "dragon"}, {"race": "warrior"},
+    {"race": "beast"},
+    {"lvMin": 5}, {"lvMax": 4}, {"lvMin": 4, "lvMax": 4}, {"lvMin": 12},
+    {"race": "plant", "lvMax": 4},          # 植物族只有超量怪獸フレシア:階級不是等級
+    {"name": "ペンギン"}, {"name": "ドラゴン"}, {"name": "N・"}, {"name": "落とし穴"},
+    {"name": "沒有這張"},
+    {"race": "dragon", "lvMin": 5}, {"cat": "m", "attr": "water", "name": "ペンギン"},
+    {"set": 0x5a, "race": "aqua"}, {"cat": "t", "set": 0x4c},
+]
+
+
+def web_index():
+    """`script/web` 的前端索引建置(值域正典與卡片參數的短碼都照網站真的那一份)。"""
+    here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web")
+    if here not in sys.path:
+        sys.path.append(here)
+    import vocab
+    import webindex
+    return vocab, webindex
+
+
+class ConditionParityTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.vocab, webindex = web_index()
+        cls.structures, cls.cards, archetypes = object_parity_fixture()
+        cls.front_index, _ = webindex.build_index(cls.cards, [])
+        text, report = build_action_index(cls.structures, cls.cards, cls.front_index["cards"],
+                                          archetypes)
+        assert not report["problems"], report["problems"]
+        cls.text = text
+        cls.archetypes = decode_action_index(text)["archetypes"]
+        conditions = CONDITIONS + [{"set": code} for code in sorted(cls.archetypes)]
+        cls.conds = [{"actions": actions, "target": {"condition": condition}}
+                     for actions in CONDITION_ACTIONS for condition in conditions]
+        cls.front = front_end(text, cls.cards, cls.conds, cls.front_index)
+
+    def test_given_conditions_hit_the_same_cards(self):
+        """六種條件各自與合起來:命中的卡號(特定、泛用、經引用的聯集)與無法確認的卡號,
+        Python 的只給條件查詢與前端引擎相同。"""
+        for cond, front in zip(self.conds, self.front):
+            with self.subTest(cond=cond):
+                python = run_query(self.structures, self.cards, front["rowQuery"])
+                self.assertEqual(sorted(front["ids"]),
+                                 sorted(python["groups"]["全部"] + python["groups"]["經引用"]))
+                self.assertEqual(sorted(front["unsure"]), sorted(python["groups"]["未解析"]))
+
+    def test_given_conditions_ask_something(self):
+        """夾具要問得出東西:每一種條件都有命中、也都篩掉了卡;合起來比單項少。"""
+        hits = {json.dumps(c, ensure_ascii=False, sort_keys=True): set(f["ids"])
+                for c, f in zip(self.conds, self.front)}
+
+        def of(condition, actions=("特殊召喚",)):
+            return hits[json.dumps({"actions": list(actions), "target": {"condition": condition}},
+                                   ensure_ascii=False, sort_keys=True)]
+        everything = set().union(*hits.values())
+        for kind in ("cat", "attr", "race", "lvMin", "lvMax", "set", "name"):
+            asked = [set(f["ids"]) for c, f in zip(self.conds, self.front)
+                     if set(c["target"]["condition"]) == {kind}]
+            with self.subTest(kind=kind):
+                self.assertTrue(any(asked))
+                self.assertTrue(any(ids < everything for ids in asked))
+        both = of({"race": "dragon", "lvMin": 5}, ())
+        self.assertTrue(both)
+        self.assertTrue(of({"race": "dragon"}, ()) - both)
+        self.assertTrue(of({"lvMin": 5}, ()) - both)
+        # 故事 30:特殊召喚、種族龍族 → 能特殊召喚龍族的卡。チョバムアーマー・ドラゴン 特殊召喚
+        # 自己(龍族);大皇帝ペンギン 特殊召喚的是ペンギン(水族)
+        self.assertEqual(of({"race": "dragon"}), {CHOBHAM})
+        self.assertIn(EMPEROR_PENGUIN, of({"race": "aqua"}))
+
+    def test_archetype_members_are_what_python_calls_members(self):
+        """字段的選項來自索引的字段成員表:每個字段的成員與 Python 判「這張卡屬於這個字段」相同。"""
+        structure = {s["id"]: s for s in self.structures}
+        self.assertTrue(self.archetypes)
+        for code, row in self.archetypes.items():
+            condition = {"op": "字段", "setcodes": [code]}
+            members = {entry["id"] for entry in self.cards
+                       if eval_condition(condition, CardView(entry, structure.get(entry["id"])))
+                       is True}
+            self.assertEqual(set(row["members"]), members, hex(code))
+
+    def test_every_canon_button_asks_python_the_same_value(self):
+        """大類、屬性、種族的每顆按鈕(值域正典的每個碼)換成的列查詢,Python 讀到的是同一個值:
+        換碼的表漏一個碼,那顆按鈕就查不到東西。"""
+        python_value = {"cat": CATEGORY_BITS, "attr": ATTRIBUTE_JA, "race": RACE_JA}
+        domains = {"cat": self.vocab.CAT, "attr": self.vocab.ATTR, "race": self.vocab.RACE}
+        conds = [{"target": {"condition": {key: e["code"]}}}
+                 for key, name in domains.items() for e in self.vocab.entries(name)]
+        front = front_end(self.text, self.cards, conds, self.front_index)
+        for cond, result in zip(conds, front):
+            [(key, code)] = cond["target"]["condition"].items()
+            with self.subTest(cond=cond):
+                atom = result["rowQuery"].get("condition")
+                self.assertIsNotNone(atom)
+                bit = next(e["src"] for e in self.vocab.entries(domains[key]) if e["code"] == code)
+                self.assertEqual(python_value[key].get(atom["value"]), bit)
+
+    def test_given_condition_becomes_the_row_query(self):
+        """給條件換成 Python 的只給條件查詢(`condition` 鍵),與這張卡自己、指定卡三者擇一。"""
+        rq = self.front[0]["rowQuery"]
+        self.assertEqual(rq["condition"], {"op": "大類", "value": "怪獸"})
+        self.assertNotIn("card", rq)
+        self.assertNotIn("this_card", rq)
 
 
 if __name__ == "__main__":

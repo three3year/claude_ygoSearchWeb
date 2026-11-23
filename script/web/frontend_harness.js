@@ -49,7 +49,7 @@ function scriptSrcs() {
 const DRIVER = `
 ;var __actionIndex = null;
 ;function __index() {
-  if (!__actionIndex && window.ACTION_DATA) __actionIndex = Action.prepare(window.ACTION_DATA);
+  if (!__actionIndex && window.ACTION_DATA) __actionIndex = Action.prepare(window.ACTION_DATA, window.CARD_DATA);
   return __actionIndex;
 }
 ;function __runQuery(json) {
@@ -76,6 +76,8 @@ const DRIVER = `
 ;function __critCount(json) { var a = JSON.parse(json); return Query.count(a.q, a.act); }
 ;function __actionOptions() { return JSON.stringify(Action.options(__index())); }
 ;function __cardSuggest(text) { return JSON.stringify(Action.suggest(window.CARD_DATA, text)); }
+;function __conditionOptions() { return JSON.stringify(Action.conditionOptions()); }
+;function __archetypeSuggest(text) { return JSON.stringify(Action.archetypeSuggest(__index(), text)); }
 ;function __zoneOptions() { return JSON.stringify(Action.zoneOptions(__index())); }
 ;function __toggleKind(json) { var a = JSON.parse(json); return JSON.stringify(Action.toggleKind(a.kinds, a.kind)); }
 ;function __axisCounts(json) { return JSON.stringify(Query.axisCounts(JSON.parse(json))); }
@@ -315,3 +317,19 @@ module.exports = { load, search, ids, unsure, unsureText, marks, rowQuery, actio
                    sortedIds, sortKeys, savedState, restoreSaved, cardHtml };
 module.exports.zoneOptions = zoneOptions;          // 票 09
 module.exports.toggleKind = toggleKind;            // 票 09
+
+/**
+ * 給條件的大類、屬性、種族選項(票 13):`{ cat, attr, race }`,各是 [{ code, zh }]。
+ * 與 `axes()` 同一個理由:沙箱裡沒有真的 DOM,區塊只是照這份清單擺按鈕。
+ */
+function conditionOptions(sandbox) {
+  return JSON.parse(sandbox.__conditionOptions());
+}
+
+/** 給條件選字段時的建議清單(票 13):`輸入的字 → [{ code, zh }]`,名字短的排前面。 */
+function archetypeSuggest(sandbox, text) {
+  return JSON.parse(sandbox.__archetypeSuggest(text));
+}
+
+module.exports.conditionOptions = conditionOptions;  // 票 13
+module.exports.archetypeSuggest = archetypeSuggest;  // 票 13

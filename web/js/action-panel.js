@@ -10,7 +10,10 @@
    - 之後的票加的欄位(段類別、極性、從/到…)各自在 `fieldsHtml` 加一段、在 `read`/`write`
      多帶一個鍵;條件的正規形與比對在 `Action`。
    - 被動作的卡(票 12):不指定、這張卡自己、指定一張卡三選一;指定卡時輸入卡名、從建議清單
-     (`Action.suggest`,名字短的排前面)點一張。 */
+     (`Action.suggest`,名字短的排前面)點一張。
+   - 給條件(票 13):大類、屬性、種族的按鈕由值域正典生成(`Action.conditionOptions`),同一列
+     點已選的那顆是取消;等級下限、上限與卡名包含是輸入框;字段輸入名字、從索引的字段成員表的
+     建議清單(`Action.archetypeSuggest`)點一個。一項都沒填時不算條件。 */
 const ActionPanel = (() => {
 const { $, esc, DB, byId } = Util;
 
@@ -25,6 +28,10 @@ let selected = [];
 let targetMode = 'none';
 let targetCard = null;
 let typed = '';
+/* 給條件(票 13):填了的項(鍵同 `Action.condOf` 的 target.condition)與字段輸入框裡的字。
+   輸入框打字時只改狀態與數字,不重畫整個區塊(焦點才不會跑掉)。 */
+let given = {};
+let setTyped = '';
 let moreOpen = false;
 /* 票 09:從、到({ zone, side },空字串是不限)、段類別勾選、極性。 */
 const NO_ZONE = () => ({ zone: '', side: '' });
@@ -45,7 +52,7 @@ function load() {
     const done = ok => {
       if (ok) {
         try {
-          index = Action.prepare(window.ACTION_DATA);
+          index = Action.prepare(window.ACTION_DATA, DB);
         } catch (err) {
           ok = false;
         }
@@ -107,7 +114,8 @@ function wordsHtml() {
     <p class="action-hint">多選時,要在同一段裡全部都有</p>`;
 }
 
-const TARGET_MODES = [['none', '不指定'], ['self', '這張卡自己'], ['card', '指定一張卡']];
+const TARGET_MODES = [['none', '不指定'], ['self', '這張卡自己'], ['card', '指定一張卡'],
+                      ['cond', '給條件']];
 
 function cardName(id) {
   const c = byId(id);
@@ -132,13 +140,49 @@ function cardPickHtml() {
     <div class="tri-row" id="actionSuggest">${suggestHtml()}</div>`;
 }
 
+function setSuggestHtml() {
+  return Action.archetypeSuggest(index, setTyped).map(a => `<button type="button" class="tri"
+    data-setpick="${a.code}">${esc(a.zh)}</button>`).join('');
+}
+
+function setName(code) {
+  const a = index.archetypes.find(x => x.code === code);
+  return a && a.zh ? a.zh : `0x${code.toString(16)}`;
+}
+
+/* 給條件:大類、屬性、種族一列一組按鈕(單選,點已選的取消);等級、字段、卡名包含。 */
+function givenHtml() {
+  if (targetMode !== 'cond') return '';
+  const opts = Action.conditionOptions();
+  const row = (key, label) => `<span class="group-label">${label}</span>
+    <div class="tri-row">${opts[key].map(e => `<button type="button" class="tri"
+      data-gkey="${key}" data-gval="${esc(e.code)}" data-st="${given[key] === e.code ? 'in' : ''}">${
+      esc(e.zh)}</button>`).join('')}</div>`;
+  const lv = end => `<input type="number" class="range-in" data-glv="${end}" min="0" max="13"
+    value="${given[end] == null ? '' : given[end]}" aria-label="等級${end === 'lvMin' ? '下限' : '上限'}">`;
+  const set = given.set
+    ? `<div class="tri-row"><button type="button" class="tri" data-st="in" data-setunpick="1"
+        title="取消這個字段">${esc(setName(given.set))} ×</button></div>`
+    : `<input type="text" class="action-card-input" id="actionSetInput"
+        placeholder="輸入字段名,從下面選一個" value="${esc(setTyped)}" autocomplete="off">
+      <div class="tri-row" id="actionSetSuggest">${setSuggestHtml()}</div>`;
+  return `<p class="action-hint">被動作的卡要符合下面填的全部條件</p>
+    ${row('cat', '大類')}${row('attr', '屬性')}${row('race', '種族')}
+    <span class="group-label">等級</span>
+    <div class="range-row">${lv('lvMin')}<span class="range-sep">～</span>${lv('lvMax')}</div>
+    <span class="group-label">字段</span>${set}
+    <span class="group-label">卡名包含</span>
+    <input type="text" class="action-card-input" data-gname="1" value="${esc(given.name || '')}"
+      placeholder="日文名或中文名的一部分" autocomplete="off">`;
+}
+
 function targetHtml() {
   return `<span class="group-label">被動作的卡</span>
     <p class="action-hint">這裡篩的是被動作的卡,不是有這個效果的卡</p>
     <div class="tri-row">${TARGET_MODES.map(([mode, label]) => `<button type="button"
       class="tri" data-mode="${mode}" data-st="${targetMode === mode ? 'in' : ''}">${
       label}</button>`).join('')}</div>
-    ${cardPickHtml()}`;
+    ${cardPickHtml()}${givenHtml()}`;
 }
 
 const option = (value, label, cur) =>
@@ -194,13 +238,17 @@ function fieldsHtml() {
     : '';
 }
 
+function paintCount() {
+  const n = Action.count(read());
+  $('actionCount').textContent = n ? String(n) : '';
+}
+
 function paint() {
   const status = statusText();
   $('actionStatus').textContent = status;
   $('actionStatus').hidden = !status;
   $('actionFields').innerHTML = fieldsHtml();
-  const n = Action.count(read());
-  $('actionCount').textContent = n ? String(n) : '';
+  paintCount();
 }
 
 const zoneCond = z => (z.zone ? { zone: z.zone, side: z.side } : null);
@@ -208,6 +256,7 @@ const zoneCond = z => (z.zone ? { zone: z.zone, side: z.side } : null);
 function target() {
   if (targetMode === 'self') return 'self';
   if (targetMode === 'card' && targetCard != null) return { card: targetCard };
+  if (targetMode === 'cond') return { condition: given };
   return null;
 }
 
@@ -227,14 +276,17 @@ function write(act) {
   agent = cond.agent || '';
   unrestricted = !!cond.unrestricted;
   const t = cond.target;
-  targetMode = t === 'self' ? 'self' : t ? 'card' : 'none';
-  targetCard = t && t !== 'self' ? t.card : null;
+  targetMode = t === 'self' ? 'self' : t && t.condition ? 'cond' : t ? 'card' : 'none';
+  targetCard = t && t.card != null ? t.card : null;
+  given = t && t.condition ? { ...t.condition } : {};
   typed = '';
+  setTyped = '';
   if (Object.keys(cond).length) setOpen(true);
   paint();
 }
 
-/* 「清除條件」:動作詞取消,從、到、段類別、極性、誰、「含不限定的」、被動作的卡回到預設。 */
+/* 「清除條件」:動作詞取消,從、到、段類別、極性、誰、「含不限定的」、被動作的卡(含給條件)
+   回到預設。 */
 function clear() {
   selected = [];
   agent = '';
@@ -246,6 +298,8 @@ function clear() {
   targetMode = 'none';
   targetCard = null;
   typed = '';
+  given = {};
+  setTyped = '';
   paint();
 }
 
@@ -262,6 +316,15 @@ function init() {
       targetCard = Number(btn.dataset.pick);
     } else if (btn.dataset.unpick) {
       targetCard = null;
+    } else if (btn.dataset.gkey) {
+      const key = btn.dataset.gkey;
+      if (given[key] === btn.dataset.gval) delete given[key];
+      else given[key] = btn.dataset.gval;
+    } else if (btn.dataset.setpick) {
+      given.set = Number(btn.dataset.setpick);
+    } else if (btn.dataset.setunpick) {
+      delete given.set;
+      setTyped = '';
     } else if (btn.dataset.pol) {
       pol = btn.dataset.pol;
     } else if (btn.dataset.agent !== undefined) {
@@ -274,9 +337,22 @@ function init() {
     paint();
   });
   $('actionFields').addEventListener('input', e => {
-    if (e.target.id !== 'actionCardInput') return;
-    typed = e.target.value;
-    $('actionSuggest').innerHTML = suggestHtml();
+    const el = e.target;
+    if (el.id === 'actionCardInput') {
+      typed = el.value;
+      $('actionSuggest').innerHTML = suggestHtml();
+    } else if (el.id === 'actionSetInput') {
+      setTyped = el.value;
+      $('actionSetSuggest').innerHTML = setSuggestHtml();
+    } else if (el.dataset.glv) {
+      const v = el.value.trim() === '' ? NaN : Number(el.value);
+      if (Number.isInteger(v)) given[el.dataset.glv] = v;
+      else delete given[el.dataset.glv];
+      paintCount();
+    } else if (el.dataset.gname) {
+      given.name = el.value;
+      paintCount();
+    }
   });
   $('actionFields').addEventListener('change', e => {
     const el = e.target;

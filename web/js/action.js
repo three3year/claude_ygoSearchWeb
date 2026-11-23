@@ -5,8 +5,8 @@
    - 動作條件:玩家介面填的東西,`{ actions: [動作詞…], from, to: { zone, side }, kinds: [勾選],
      pol, target }`(從起的四個是票 09);之後的票各往這裡加一個欄位(誰…),各自在 condOf、
      count、rowQuery 加一行。
-     `target` 是被動作的卡(票 12):'self'(這張卡自己)或 `{ card: 卡號 }`(指定一張卡);
-     一個欄位只放得下一種,三者擇一由形狀保證(給條件由票 13 加)。
+     `target` 是被動作的卡(票 12):'self'(這張卡自己)、`{ card: 卡號 }`(指定一張卡)或
+     `{ condition: 給條件 }`(票 13);一個欄位只放得下一種,三者擇一由形狀保證。
    - 列查詢:動作條件換成比對列用的查詢,鍵名與值照 Python 的 `run_query`(`row_match`)。
      玩家介面不露出的選項在這裡用固定值;「兩邊答案一致」的測試把同一份列查詢交給
      `run_query`,所以兩邊比的是同一個問題。
@@ -48,12 +48,64 @@ function zoneOf(raw) {
   return z;
 }
 
-/* 被動作的卡的正規形:'self' 或 `{ card: 正整數卡號 }`;其餘(舊版網站存的、壞掉的)是 null。 */
+/* 被動作的卡的正規形:'self'、`{ card: 正整數卡號 }` 或 `{ condition: 給條件 }`;其餘(舊版網站
+   存的、壞掉的)是 null。給條件一項都沒填時等於不指定。 */
 const TARGET_SELF = 'self';
 function targetOf(raw) {
   if (raw === TARGET_SELF) return TARGET_SELF;
   if (isObj(raw) && Number.isInteger(raw.card) && raw.card > 0) return { card: raw.card };
-  return null;
+  const condition = isObj(raw) ? givenOf(raw.condition) : null;
+  return condition ? { condition } : null;
+}
+
+/* ── 給條件(票 13)────────────────────────────────────────
+   玩家介面開放六種:大類、屬性、種族(值域正典的短碼)、等級(下限、上限)、字段(setcode)、
+   卡名包含。列查詢換成 Python `run_query` 的 `condition`(只給條件的查詢,原子照
+   `action_query.eval_condition`):大類的值是中文(與值域正典的中文名同字),種族、屬性是官方
+   日文字面(`attribute_words` 的 RACE_JA、ATTRIBUTE_JA;值域正典的中文名對不到日文)。
+   這幾張表漏一個碼,那顆按鈕就查不到東西;「兩邊答案一致」的測試逐碼對值域正典與 Python 的表。 */
+const CAT_VALUES = { m: '怪獸', s: '魔法', t: '陷阱' };
+const ATTR_JA = { earth: '地', water: '水', fire: '炎', wind: '風', light: '光', dark: '闇',
+                  divine: '神' };
+const RACE_JA = {
+  warrior: '戦士族', spellcaster: '魔法使い族', fairy: '天使族', fiend: '悪魔族',
+  zombie: 'アンデット族', machine: '機械族', aqua: '水族', pyro: '炎族', rock: '岩石族',
+  winged_beast: '鳥獣族', plant: '植物族', insect: '昆虫族', thunder: '雷族',
+  dragon: 'ドラゴン族', beast: '獣族', beast_warrior: '獣戦士族', dinosaur: '恐竜族',
+  fish: '魚族', sea_serpent: '海竜族', reptile: '爬虫類族', psychic: 'サイキック族',
+  divine_beast: '幻神獣族', creator_god: '創造神族', wyrm: '幻竜族', cyberse: 'サイバース族',
+  illusion: '幻想魔族',
+};
+const has = (table, key) => typeof key === 'string' && Object.prototype.hasOwnProperty.call(table, key);
+const level = v => (Number.isInteger(v) && v >= 0 ? v : null);
+
+/* 給條件的正規形:`{ cat, attr, race, lvMin, lvMax, set, name }` 填了的才寫,照這個順序;
+   認不得的值忽略,一項都沒有是 null。 */
+function givenOf(raw) {
+  if (!isObj(raw)) return null;
+  const g = {};
+  if (has(CAT_VALUES, raw.cat)) g.cat = raw.cat;
+  if (has(ATTR_JA, raw.attr)) g.attr = raw.attr;
+  if (has(RACE_JA, raw.race)) g.race = raw.race;
+  if (level(raw.lvMin) !== null) g.lvMin = raw.lvMin;
+  if (level(raw.lvMax) !== null) g.lvMax = raw.lvMax;
+  if (Number.isInteger(raw.set) && raw.set > 0) g.set = raw.set;
+  if (typeof raw.name === 'string' && raw.name.trim()) g.name = raw.name.trim();
+  return Object.keys(g).length ? g : null;
+}
+
+/* 給條件 → Python 的條件式:一項是那個原子本身,多項是「且」。 */
+function conditionQuery(g) {
+  const compare = (attr, cmp, value) => ({ op: '屬性比較', attr, cmp, value });
+  const atoms = [];
+  if (g.cat) atoms.push({ op: '大類', value: CAT_VALUES[g.cat] });
+  if (g.attr) atoms.push(compare('屬性', '=', ATTR_JA[g.attr]));
+  if (g.race) atoms.push(compare('種族', '=', RACE_JA[g.race]));
+  if (g.lvMin != null) atoms.push(compare('等級', '≥', g.lvMin));
+  if (g.lvMax != null) atoms.push(compare('等級', '≤', g.lvMax));
+  if (g.set) atoms.push({ op: '字段', setcodes: [g.set] });
+  if (g.name) atoms.push({ op: '卡名包含', text: g.name });
+  return atoms.length === 1 ? atoms[0] : { op: '且', args: atoms };
 }
 
 /* 正規形:同一組條件只有一種寫法(動作詞去重、照字串排),瀏覽紀錄比得出「這次搜尋與
@@ -111,6 +163,7 @@ function rowQuery(cond) {
   if (c.agent) rq.agent = c.agent;
   if (c.unrestricted) rq.include_unrestricted = true;
   if (c.target === TARGET_SELF) rq.this_card = true;
+  else if (c.target && c.target.condition) rq.condition = conditionQuery(c.target.condition);
   else if (c.target) rq.card = c.target.card;
   return rq;
 }
@@ -130,6 +183,25 @@ function suggest(db, text, limit) {
   return found.sort((a, b) => a.len - b.len || a.i - b.i)
     .slice(0, limit || SUGGESTIONS)
     .map(f => ({ id: f.c.id, n: f.c.n, nj: f.c.nj || '' }));
+}
+
+/* 給條件的大類、屬性、種族按鈕(票 13):由值域正典(`window.VOCAB`)生成,順序照它的宣告序。 */
+function conditionOptions() {
+  const items = name => ((Util.VOCAB[name] || {}).items || []).map(e => ({ code: e.code, zh: e.zh }));
+  return { cat: items('cat'), attr: items('attr'), race: items('race') };
+}
+
+/* 字段的建議清單(票 13):動作索引的字段成員表裡中文名含輸入字的字段,名字短的排前面
+   (同長照表的順序),最多 `limit` 個。 */
+function archetypeSuggest(index, text, limit) {
+  const word = foldName(String(text || '').trim());
+  if (!word) return [];
+  return index.archetypes
+    .map((a, i) => ({ a, i }))
+    .filter(({ a }) => foldName(a.zh).indexOf(word) >= 0)
+    .sort((x, y) => x.a.zh.length - y.a.zh.length || x.i - y.i)
+    .slice(0, limit || SUGGESTIONS)
+    .map(({ a }) => ({ code: a.code, zh: a.zh }));
 }
 
 /* 物件的種類碼(`action_index.OBJECT_CODES`,票 12;沒寫是候選卡集合)。 */
@@ -160,16 +232,40 @@ function clauseAt(clauses, i) {
   return c == null ? null : c;
 }
 
-/* 產物 → 比對用的形狀:值的清單換成「值 → 位置」,段只留比對要用的欄。 */
-function prepare(raw) {
+/* 產物 → 比對用的形狀:值的清單換成「值 → 位置」,段只留比對要用的欄。
+   db 是前端索引的卡(給條件時算滿足條件的卡用,票 13);卡的位置照產物的 `ids`。 */
+function prepare(raw, db) {
   const at = list => new Map(list.map((v, i) => [v, i]));
   const tests = new Map();
-  return {
-    cardAt: at(raw.ids),
+  const cardAt = at(raw.ids);
+  const front = (db || []).map(c => [cardAt.get(c.id), c]).filter(([p]) => p !== undefined);
+  const archetypes = new Map((raw.archetypes || []).map(([code, , key]) => [code, key]));
+  const index = {
+    cardAt,
     /* 候選卡集合 `key` 裡有沒有前端位置 p 的卡;集合用到才讀。 */
     inSet(key, p) {
       if (!tests.has(key)) tests.set(key, memberTest(raw.sets[key]));
       return tests.get(key)(p);
+    },
+    /* 字段成員表(票 13):setcode → 成員的集合鍵;沒有成員的字段不在表裡。 */
+    archetypes: (raw.archetypes || []).map(([code, zh]) => ({ code, zh: zh || '' })),
+    inArchetype: (code, p) => archetypes.has(code) && index.inSet(archetypes.get(code), p),
+    /* 滿足條件式的卡 → 位元集(Uint8Array,第 p 位 = 前端位置 p)。 */
+    satisfying(condition) {
+      const bits = new Uint8Array((raw.ids.length + 7) >> 3);
+      for (const [p, c] of front) {
+        if (fitsCondition(index, condition, c, p)) bits[p >> 3] |= 1 << (p & 7);
+      }
+      return bits;
+    },
+    /* 候選卡集合 `key` 與位元集 bits 有沒有交集;位元集的集合逐位元組比,不展開。 */
+    meets(key, bits) {
+      const value = raw.sets[key];
+      if (Array.isArray(value)) return value.some(p => (bits[p >> 3] >> (p & 7)) & 1);
+      const bytes = atob(value);
+      const n = Math.min(bytes.length, bits.length);
+      for (let i = 0; i < n; i++) if (bytes.charCodeAt(i) & bits[i]) return true;
+      return false;
     },
     words: raw.actions,
     zones: raw.zones,
@@ -190,6 +286,48 @@ function prepare(raw) {
     noText: raw.noText || [],
     refs: references(raw),
   };
+  return index;
+}
+
+/* 給條件的判斷(票 13):列查詢的條件式對前端索引的一張卡(位置 p),照 Python
+   `action_query.eval_condition` 對玩家介面產生得出的那幾種原子;其餘原子不符。
+   - 等級:超量、連結怪獸沒有等級(Python `card_attr`),魔陷沒有 lv。
+   - 卡名包含:全形英數折成半形(Python `fold_width`)。Python 比日文卡名(含卡片屬性表裡
+     不設位置的「〜として扱う」卡名);前端另比中文名、英文名與別名,大小寫不分,
+     與卡名建議清單比的名字相同。 */
+const invert = table => Object.fromEntries(Object.entries(table).map(([k, v]) => [v, k]));
+const CAT_CODE = invert(CAT_VALUES);
+const ATTR_CODE = invert(ATTR_JA);
+const RACE_CODE = invert(RACE_JA);
+const COMPARE = { '=': (a, b) => a === b, '≥': (a, b) => a >= b, '≤': (a, b) => a <= b };
+const foldName = s => String(s).replace(/[\uFF01-\uFF5E]/g,
+  ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, ' ').toLowerCase();
+
+function cardAttr(card, attr) {
+  if (attr === '種族') return card.r || null;
+  if (attr === '屬性') return card.at || null;
+  if (attr === '等級') return (card.s || []).indexOf('xyz') < 0 && card.lv != null ? card.lv : null;
+  return null;
+}
+
+function fitsCondition(index, cond, card, p) {
+  switch (cond.op) {
+    case '且': return cond.args.every(a => fitsCondition(index, a, card, p));
+    case '大類': return card.c === CAT_CODE[cond.value];
+    case '屬性比較': {
+      const want = cond.attr === '種族' ? RACE_CODE[cond.value]
+        : cond.attr === '屬性' ? ATTR_CODE[cond.value] : cond.value;
+      const have = cardAttr(card, cond.attr);
+      return have != null && want != null && !!COMPARE[cond.cmp] && COMPARE[cond.cmp](have, want);
+    }
+    case '字段': return cond.setcodes.some(code => index.inArchetype(code, p));
+    case '卡名包含': {
+      const text = foldName(cond.text);
+      return [card.n, card.nj, card.ne, card.ax]
+        .some(n => typeof n === 'string' && foldName(n).indexOf(text) >= 0);
+    }
+    default: return false;
+  }
 }
 
 /* 引用列(票 14):卡號 → 它的引用列 [{ block, generic, key, part, clause }];
@@ -290,6 +428,15 @@ function zoneTest(index, want) {
    不算);指定卡是那張卡在線的候選卡裡(判不了、代不進去的集合是空的)。沒有時回 null。 */
 function objectTest(index, rq) {
   if (rq.this_card) return obj => obj.kind === OBJECT_THIS;
+  if (rq.condition != null) {
+    // 給條件(票 13):滿足條件的卡與線的候選卡有交集;同一個集合只比一次
+    const fits = index.satisfying(rq.condition);
+    const seen = new Map();
+    return obj => {
+      if (!seen.has(obj.set)) seen.set(obj.set, index.meets(obj.set, fits));
+      return seen.get(obj.set);
+    };
+  }
   if (rq.card == null) return null;
   const p = index.cardAt.get(rq.card);
   return obj => p !== undefined && index.inSet(obj.set, p);
@@ -406,5 +553,6 @@ function reaches(index, blockHits, cid, part, visiting) {
 }
 
   return Object.freeze({ condOf, count, rowQuery, suggest, prepare, options, match, unsure,
-    SIDES, DEFAULT_KINDS, DEFAULT_POL, zoneOptions, toggleKind });
+    SIDES, DEFAULT_KINDS, DEFAULT_POL, zoneOptions, toggleKind,
+    conditionOptions, archetypeSuggest });
 })();

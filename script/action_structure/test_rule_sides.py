@@ -108,6 +108,60 @@ class FieldAnySideTest(unittest.TestCase):
                          [[("手牌", None, None)]])
 
 
+class SelfSideTest(unittest.TestCase):
+    """方是自身 → 換成這一段的誰(解法同查詢判斷算誰的那一套);雙方各自、不限定 → 任一方。"""
+
+    def test_opponent_self_is_opponent(self):
+        self.assertEqual(ends("①：相手は自身の墓地からモンスター１体を選んで特殊召喚できる。",
+                              "特殊召喚", "from"),
+                         [[("墓地", "對手", "規則")]])
+
+    def test_written_self_agent_is_own_side(self):
+        self.assertEqual(ends("①：自分は自身の墓地から通常モンスター１体を特殊召喚できる。",
+                              "特殊召喚", "from"),
+                         [[("墓地", "我方", "規則")]])
+
+    def test_active_segment_without_agent_counts_as_own_side(self):
+        """「ターンプレイヤーは」抽不出誰:效果段的主動句沒寫誰算我方。"""
+        self.assertEqual(ends("①：ターンプレイヤーは自身の手札を１枚選んで捨てる。", "捨棄", "from"),
+                         [[("手牌", "我方", "規則")]])
+
+    def test_anaphoric_agent_resolves_to_the_referred_segment(self):
+        """「ドローしたプレイヤーは」回指抽牌那一段,那一段的誰是對手。"""
+        self.assertEqual(ends("①：相手はデッキから１枚ドローする。"
+                              "その後、ドローしたプレイヤーは自身の手札を１枚選んで捨てる。",
+                              "捨棄", "from"),
+                         [[("手牌", "對手", "規則")]])
+
+    def test_each_player_is_either_side(self):
+        self.assertEqual(ends("①：お互いは自身の手札を全てデッキに戻す。", "返回", "from"),
+                         [[("手牌", "任一方", "規則")]])
+        self.assertEqual(ends("①：お互いのプレイヤーはデッキから１枚ドローする。"
+                              "その後、ドローしたプレイヤーは自身の手札を１枚選んで捨てる。",
+                              "捨棄", "from"),
+                         [[("手牌", "任一方", "規則")]])
+
+    def test_unrestricted_agent_is_either_side(self):
+        """被動句沒寫誰是不限定(建置寫不出這種卡文,直接給補方一步)。"""
+        seg = new_segment("b0.s0", "效果", (0, 1), "", voice="被動")
+        seg["lines"] = [new_line("o0", "受事", from_=position([zone("場上", "自身", "明寫")], "明寫"))]
+        block = new_block("b0", "效果", None, "card_text", (0, 1), "")
+        block["segments"] = [seg]
+        one = new_card(1, "補方テスト")
+        one["blocks"] = [block]
+        fill_rule_sides(one)
+        self.assertEqual(seg["lines"][0]["from"]["zones"], [zone("場上", "任一方", "規則")])
+
+    def test_built_structure_has_no_self_side(self):
+        for text in ("①：相手は自身の手札・デッキから罠カード１枚を選んで自身の魔法＆罠ゾーンに"
+                     "セットできる。",
+                     "①：お互いは自身の墓地の魔法・罠カードを１枚選んでフィールドにセットする。"):
+            sides = {z["side"] for block in build(text)["blocks"]
+                     for _, seg in iter_segments(block) for line in seg["lines"]
+                     for end in ("from", "to") if line[end] for z in line[end]["zones"]}
+            self.assertNotIn("自身", sides, text)
+
+
 class ReverseCheckTest(unittest.TestCase):
     """規則補的方不寫回字面;有字面的條目驗證時只比區域。"""
 
@@ -118,7 +172,14 @@ class ReverseCheckTest(unittest.TestCase):
                      "①：このカード以外の自分の手札・フィールド（表側表示）の炎属性モンスター"
                      "１体を破壊する。",
                      "①：相手モンスター１体を対象として発動できる。"
-                     "そのモンスターをフィールドに特殊召喚する。"):
+                     "そのモンスターをフィールドに特殊召喚する。",
+                     # 「自身の」照字面寫回,結構裡已換成段的誰
+                     "①：相手は自身の墓地からモンスター１体を選んで特殊召喚できる。",
+                     "①：お互いは自身の手札を全てデッキに戻す。",
+                     "①：相手はデッキから１枚ドローする。"
+                     "その後、ドローしたプレイヤーは自身の手札を１枚選んで捨てる。",
+                     "①：相手は自身の手札・デッキから罠カード１枚を選んで自身の魔法＆罠ゾーンに"
+                     "セットできる。"):
             self.assertEqual(check_card(build(text)), [], text)
 
     def test_lines_sharing_one_literal_may_get_different_rule_sides(self):

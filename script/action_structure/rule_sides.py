@@ -3,7 +3,7 @@
 
 段與對象線抽完後,`fill_rule_sides(card)` 走過每條對象線的從、到的每個區域,照 `RULES` 的順序
 問每條規則;第一條給出方的就用它,都不給的區域原樣。每條規則自己判要不要管這個區域
-(「沒寫方」= 區域條目沒有方,不看來源;已經有方的不論來源都不動),所以加一條規則只要
+(「沒寫方」= 區域條目沒有方,不看來源;已經有方的不論來源都不動,只有自身照段的誰換掉),所以加一條規則只要
 寫一個函式、插進 `RULES` 的位置。
 
 前提、條件式的位置原子、卡片屬性表的位置條件不補。結構裡的區域 dict 可能被幾條線共用
@@ -11,10 +11,12 @@
 """
 from typing import NamedTuple
 
+from action_rows import IMPLIED_SELF, agent_of
 from structure_shape import SIDE_SOURCE_RULE, iter_segments
 from zone_phrase import FIELD_ZONES
 
 _CONTROLLER_OP = "控制方"
+_SELF = "自身"
 
 
 class RuleInput(NamedTuple):
@@ -44,10 +46,24 @@ def _field_any_side(given):
     return None
 
 
+def _self_is_segment_agent(given):
+    """方是自身(「ドローしたプレイヤーは自身の手札を」)→ 這一段的誰,解法同查詢判斷(`agent_of`):
+    我方、對手照填,主動句沒寫誰算我方,動作回指解回它指的那一段;雙方各自、不限定 → 任一方。"""
+    if given.zone["side"] != _SELF:
+        return None
+    segments = {seg["id"]: seg for block in given.card["blocks"]
+                for _, seg in iter_segments(block)}
+    agent = agent_of(given.seg, segments)
+    if agent == IMPLIED_SELF:
+        return "我方"
+    return agent if agent in ("我方", "對手") else "任一方"
+
+
 # 依序套用:前面的規則先給方。
 RULES = (
     _written_controller,
     _field_any_side,
+    _self_is_segment_agent,
 )
 
 

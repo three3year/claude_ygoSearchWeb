@@ -16,6 +16,7 @@ EITHER_BANISHED = 30100006   # 自分か相手の除外状態の:從的除外是
 EITHER_FIELD = 30100007      # 自分か相手のフィールドの:從的場上是任一方
 SIDELESS_FIELD = 30100008    # フィールドの:場上沒寫方,建置時照規則記任一方(票 02)
 OWN_GRAVE_OBJECT = 30100009  # このカード以外の自分の墓地の:「自分の」是物件的控制方,從的墓地照它記我方
+OPPONENT_SELF_HAND = 30100010  # 相手は自身の手札を:自身照段的誰(對手),建置時記對手(票 04)
 
 TEXTS = {
     EITHER_GRAVE: ("①：自分か相手の墓地のモンスター１体を対象として発動できる。"
@@ -33,6 +34,7 @@ TEXTS = {
     SIDELESS_FIELD: "①：フィールドのカードを全て破壊する。",
     OWN_GRAVE_OBJECT: ("①：このカード以外の自分の墓地のモンスター１体を対象として発動できる。"
                        "そのモンスターを特殊召喚する。"),
+    OPPONENT_SELF_HAND: "①：相手は自身の手札を１枚選んで捨てる。",
 }
 
 
@@ -92,6 +94,13 @@ class SideCoverageTest(unittest.TestCase):
             return self.hits(actions=["特殊召喚"], from_zones=[{"zone": "墓地", "side": side}])
         self.assertIn(OWN_GRAVE_OBJECT, summon_from_grave("我方"))
         self.assertNotIn(OWN_GRAVE_OBJECT, summon_from_grave("對手"))
+
+    def test_self_zone_hits_the_side_of_the_segment_agent(self):
+        """「相手は自身の手札を」:自身是這一段的誰(對手),查對手的手牌命中、查我方的不命中。"""
+        def discard_from_hand(side):
+            return self.hits(actions=["捨棄"], from_zones=[{"zone": "手牌", "side": side}])
+        self.assertEqual(discard_from_hand("對手"), [OPPONENT_SELF_HAND])
+        self.assertEqual(discard_from_hand("我方"), [])
 
     def test_inferred_zone_still_needs_the_switch(self):
         opponent_field = [{"zone": "場上", "side": "對手"}]

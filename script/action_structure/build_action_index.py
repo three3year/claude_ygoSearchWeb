@@ -46,7 +46,7 @@ def print_report(report, file=None):
         p(f"未解析的來源 {report['unresolved']:,}(寫進索引的 {report['unresolved_written']:,},"
           f"字面不含動作詞的不寫;其中引用節點 {report['unresolved_references']})")
         p(f"引用列 {report['references']}、指定的部分不是整張的 {report['part_entries']:,} 筆、"
-          f"無官方日文的卡 {report['no_text']}")
+          f"無官方日文的卡 {report['no_text']}、有當作卡名的卡 {report['treated_names']}")
         p(f"有列的卡 {report['cards']:,}、字段 {report['archetypes']}"
           f"(沒有成員不寫 {report['empty_archetypes']})")
         p(f"候選卡集合 {report['sets']:,}(清單 {report['list_sets']:,}、位元集 "

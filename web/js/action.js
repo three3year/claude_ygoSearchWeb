@@ -58,7 +58,7 @@ function givenOf(raw) {
   if (level(raw.lvMin) !== null) g.lvMin = raw.lvMin;
   if (level(raw.lvMax) !== null) g.lvMax = raw.lvMax;
   if (Number.isInteger(raw.set) && raw.set > 0) g.set = raw.set;
-  if (typeof raw.name === 'string' && raw.name.trim()) g.name = raw.name.trim();
+  if (typeof raw.name === 'string' && nameParts(raw.name).length) g.name = raw.name.trim();
   return Object.keys(g).length ? g : null;
 }
 
@@ -226,6 +226,7 @@ function prepare(raw, db) {
   const front = (db || []).map(c => [cardAt.get(c.id), c]).filter(([p]) => p !== undefined);
   const archetypes = new Map((raw.archetypes || []).map(([code, , key]) => [code, key]));
   const given = givenTables(raw);
+  const treated = treatedNames(raw, db);
   const index = {
     cardAt,
     sideSlots: raw.format.sideSlots,
@@ -236,6 +237,7 @@ function prepare(raw, db) {
     inSet: (key, p) => setAt(key).has(p),
     archetypes: (raw.archetypes || []).map(([code, zh]) => ({ code, zh: zh || '' })),
     inArchetype: (code, p) => archetypes.has(code) && index.inSet(archetypes.get(code), p),
+    namesOf: card => cardNames(card).concat(treated.get(card.id) || []),
     satisfying(condition) {
       const bits = new Uint8Array((raw.ids.length + 7) >> 3);
       for (const [p, c] of front) {
@@ -272,6 +274,31 @@ const COMPARE = { '=': (a, b) => a === b, '≥': (a, b) => a >= b, '≤': (a, b)
 const foldName = s => String(s).replace(/[\uFF01-\uFF5E]/g,
   ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, ' ').toLowerCase();
 
+/* 卡名包含:打的字去頭尾空白、折疊後以 % 切段並去掉空段(萬用字元同主搜尋的卡名框);
+   沒有段時等於沒給。 */
+const nameParts = text => foldName(String(text).trim()).split('%').filter(Boolean);
+
+/* 卡名包含比的名字:中文名、日文名、英文名、別名(同 Python 查詢側 query_names);
+   當作的卡名另由 treatedNames 併進來。 */
+const cardNames = card => [card.n, card.nj, card.ne, card.ax].filter(n => typeof n === 'string');
+
+/* 「〜として扱う」當作的卡名(動作索引的 treatedNames):卡號 → 對到的卡的四種名字與對不到卡的日文字面。 */
+function treatedNames(raw, db) {
+  const byId = new Map((db || []).map(c => [c.id, c]));
+  return new Map((raw.treatedNames || []).map(([id, ids, literals]) => [id,
+    ids.flatMap(t => (byId.has(t) ? cardNames(byId.get(t)) : [])).concat(literals)]));
+}
+
+function nameContains(name, parts) {
+  const folded = foldName(name);
+  let pos = 0;
+  return parts.every(part => {
+    const at = folded.indexOf(part, pos);
+    pos = at + part.length;
+    return at >= 0;
+  });
+}
+
 function cardAttr(card, attr) {
   if (attr === '種族') return card.r || null;
   if (attr === '屬性') return card.at || null;
@@ -291,9 +318,8 @@ function fitsCondition(index, cond, card, p) {
     }
     case '字段': return cond.setcodes.some(code => index.inArchetype(code, p));
     case '卡名包含': {
-      const text = foldName(cond.text);
-      return [card.n, card.nj, card.ne, card.ax]
-        .some(n => typeof n === 'string' && foldName(n).indexOf(text) >= 0);
+      const parts = nameParts(cond.text);
+      return index.namesOf(card).some(name => nameContains(name, parts));
     }
     default: return false;
   }

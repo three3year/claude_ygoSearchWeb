@@ -11,6 +11,8 @@ const DEFAULT_POL = 'do';
 
 const SIDES = ['我方', '對手'];
 const BOTH_SIDES = '雙方各自';
+// 區域寫的方比查詢的方寬(任一方、雙方各自、持有者)也算命中,同 Python 查詢判斷的 BROAD_ZONE_SIDES
+const BROAD_ZONE_SIDES = ['任一方', BOTH_SIDES, '持有者'];
 const IMPLIED_SELF = '算我方';
 const UNRESTRICTED = '不限定';
 
@@ -404,11 +406,12 @@ function zoneTest(index, want) {
   if (!want) return null;
   const fits = want.map(({ zone, side }) => {
     const z = index.zoneAt.get(zone);
-    const s = side == null ? null : index.sideAt.get(side);
-    if (z === undefined || s === undefined) return () => false;
-    return s === null
-      ? code => Math.floor(code / index.sideSlots) === z
-      : code => code === z * index.sideSlots + s;
+    if (z === undefined) return () => false;
+    if (side == null) return code => Math.floor(code / index.sideSlots) === z;
+    const codes = new Set([side].concat(BROAD_ZONE_SIDES)
+      .filter(s => index.sideAt.has(s))
+      .map(s => z * index.sideSlots + index.sideAt.get(s)));
+    return code => codes.has(code);
   });
   return pos => !!pos && !pos.inferred && pos.codes.some(code => fits.some(f => f(code)));
 }

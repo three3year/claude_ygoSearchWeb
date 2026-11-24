@@ -12,6 +12,9 @@ VIA_GROUP = "經引用"
 VIA_GENERIC = "經泛用引用"
 SIDES = ("我方", "對手")
 BOTH_SIDES = "雙方各自"
+# 區域寫的方比查詢的方寬(任一方、雙方各自、持有者)也算命中,同 Q17 誰與原因「寫得比查詢寬也算」;
+# 持有者站主定兩邊都命中(spec Q2),用過再看要不要細分
+BROAD_ZONE_SIDES = ("任一方", BOTH_SIDES, "持有者")
 CAUSE_KINDS = ("戰鬥", "效果", "戰鬥或效果", "戰鬥以外", "作為素材", "召喚方式", "方法", "規則")
 CAUSE_COVERS = {"戰鬥或效果": ("戰鬥", "效果"), "戰鬥以外": ("效果",)}
 
@@ -194,7 +197,10 @@ def _zones_match(query_zones, pos, include_inferred):
         return False
     for want in query_zones:
         zone, side = (want["zone"], want["side"]) if isinstance(want, dict) else (want, None)
-        if (zone in pos.names) if side is None else ((zone, side) in pos.zones):
+        if side is None:
+            if zone in pos.names:
+                return True
+        elif any((zone, have) in pos.zones for have in (side,) + BROAD_ZONE_SIDES):
             return True
     return False
 

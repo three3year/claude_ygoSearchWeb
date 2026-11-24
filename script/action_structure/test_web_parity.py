@@ -430,5 +430,49 @@ class ConditionParityTest(unittest.TestCase):
         self.assertNotIn("this_card", rq)
 
 
+SIDE_CONDS = [{end: {"zone": zone, "side": side}}
+              for zone in ("墓地", "除外", "場上", "手牌") for side in ("我方", "對手")
+              for end in ("from", "to")]
+
+
+class SideParityTest(unittest.TestCase):
+    """指定方的從、到:區域寫任一方、雙方各自、持有者的,網站與 Python 一樣都算命中。"""
+
+    @classmethod
+    def setUpClass(cls):
+        from test_side_coverage import side_library
+        structures, cards, archetypes = parity_fixture()
+        more_cards, more = side_library()
+        cls.structures = sorted(structures + more, key=lambda s: s["id"])
+        cls.cards = sorted(cards + more_cards, key=lambda entry: entry["id"])
+        text, report = build_action_index(cls.structures, cls.cards,
+                                          [{"id": entry["id"]} for entry in cls.cards], archetypes)
+        assert not report["problems"], report["problems"]
+        cls.front = front_end(text, cls.cards, SIDE_CONDS)
+
+    def test_side_conditions_hit_the_same_cards(self):
+        for cond, front in zip(SIDE_CONDS, self.front):
+            with self.subTest(cond=cond):
+                python = run_query(self.structures, self.cards, front["rowQuery"])
+                self.assertEqual(sorted(front["ids"]),
+                                 sorted(python["groups"]["全部"] + python["groups"]["經引用"]))
+                self.assertEqual(sorted(front["unsure"]), sorted(python["groups"]["未解析"]))
+
+    def test_broad_sides_hit_either_side_on_the_site(self):
+        from test_side_coverage import EITHER_BANISHED, EITHER_FIELD, EITHER_GRAVE, OWNER_HAND
+        hits = {json.dumps(c, ensure_ascii=False, sort_keys=True): set(f["ids"])
+                for c, f in zip(SIDE_CONDS, self.front)}
+
+        def of(end, zone, side):
+            return hits[json.dumps({end: {"zone": zone, "side": side}}, ensure_ascii=False,
+                                   sort_keys=True)]
+        for side in ("我方", "對手"):
+            with self.subTest(side=side):
+                self.assertIn(EITHER_GRAVE, of("from", "墓地", side))
+                self.assertIn(EITHER_BANISHED, of("from", "除外", side))
+                self.assertIn(EITHER_FIELD, of("from", "場上", side))
+                self.assertIn(OWNER_HAND, of("to", "手牌", side))
+
+
 if __name__ == "__main__":
     unittest.main()

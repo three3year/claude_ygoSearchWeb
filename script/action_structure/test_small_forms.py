@@ -373,7 +373,8 @@ class InferredDeckSideTest(unittest.TestCase):
         for text, hit, miss in (
                 ("①：自分は２枚ドローする。", [MINE], [THEIRS, both]),
                 ("①：相手プレイヤーはカードを１枚ドローする。", [THEIRS], [MINE, both]),
-                ("①：お互いはそれぞれ１枚ドローする。", [both], [MINE, THEIRS])):
+                # 雙方各自的牌組查我方、查對手也命中(spec「比對規則」,照 Q17 寫得比查詢寬也算)
+                ("①：お互いはそれぞれ１枚ドローする。", [both, MINE, THEIRS], [])):
             cards, structures = library(text)
             self.assertEqual(check_card(own(structures, SELF)), [])
             for deck in hit + miss:

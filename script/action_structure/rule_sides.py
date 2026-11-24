@@ -12,10 +12,12 @@
 from typing import NamedTuple
 
 from action_rows import IMPLIED_SELF, agent_of
+from condition_judge import is_this_card
 from structure_shape import SIDE_SOURCE_RULE, iter_segments
 from zone_phrase import FIELD_ZONES
 
 _CONTROLLER_OP = "控制方"
+_OWNER_ZONES = ("墓地", "除外")   # 卡一定進持有者的墓地、除外
 _SELF = "自身"
 
 
@@ -46,6 +48,15 @@ def _field_any_side(given):
     return None
 
 
+def _graveyard_banished_owner(given):
+    """墓地、除外沒寫方(從與到)→ 物件是此卡(含帶狀態的此卡)記我方,其他物件記持有者:
+    卡一定進持有者的墓地、除外。「墓地から」沒寫方已是預設我方,不經這條。"""
+    if given.zone["side"] is not None or given.zone["zone"] not in _OWNER_ZONES:
+        return None
+    obj = given.objects.get(given.line["object"])
+    return "我方" if obj is not None and is_this_card(obj, given.objects) else "持有者"
+
+
 def _self_is_segment_agent(given):
     """方是自身(「ドローしたプレイヤーは自身の手札を」)→ 這一段的誰,解法同查詢判斷(`agent_of`):
     我方、對手照填,主動句沒寫誰算我方,動作回指解回它指的那一段;雙方各自、不限定 → 任一方。"""
@@ -63,6 +74,7 @@ def _self_is_segment_agent(given):
 RULES = (
     _written_controller,
     _field_any_side,
+    _graveyard_banished_owner,
     _self_is_segment_agent,
 )
 

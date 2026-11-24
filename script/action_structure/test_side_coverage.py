@@ -16,7 +16,10 @@ EITHER_BANISHED = 30100006   # 自分か相手の除外状態の:從的除外是
 EITHER_FIELD = 30100007      # 自分か相手のフィールドの:從的場上是任一方
 SIDELESS_FIELD = 30100008    # フィールドの:場上沒寫方,建置時照規則記任一方(票 02)
 OWN_GRAVE_OBJECT = 30100009  # このカード以外の自分の墓地の:「自分の」是物件的控制方,從的墓地照它記我方
-OPPONENT_SELF_HAND = 30100010  # 相手は自身の手札を:自身照段的誰(對手),建置時記對手(票 04)
+SEND_OPPONENTS = 30100010    # 相手のモンスターを墓地へ送る:到的墓地沒寫方,其他物件記持有者(票 03)
+THIS_CARD_REVIVES = 30100011  # このカードが墓地へ送られた場合、このカードを特殊召喚:此卡的墓地記我方
+OTHER_REVIVES = 30100012     # モンスターが墓地へ送られた時、そのモンスターを特殊召喚:其他物件的墓地記持有者
+OPPONENT_SELF_HAND = 30100013  # 相手は自身の手札を:自身照段的誰(對手),建置時記對手(票 04)
 
 TEXTS = {
     EITHER_GRAVE: ("①：自分か相手の墓地のモンスター１体を対象として発動できる。"
@@ -34,6 +37,12 @@ TEXTS = {
     SIDELESS_FIELD: "①：フィールドのカードを全て破壊する。",
     OWN_GRAVE_OBJECT: ("①：このカード以外の自分の墓地のモンスター１体を対象として発動できる。"
                        "そのモンスターを特殊召喚する。"),
+    SEND_OPPONENTS: ("①：相手フィールドのモンスター１体を対象として発動できる。"
+                     "そのモンスターを墓地へ送る。"),
+    THIS_CARD_REVIVES: ("①：このカードが戦闘で破壊され墓地へ送られた場合に発動できる。"
+                        "このカードを特殊召喚する。"),
+    OTHER_REVIVES: ("①：モンスターが戦闘で破壊され墓地へ送られた時に発動できる。"
+                    "そのモンスターを特殊召喚する。"),
     OPPONENT_SELF_HAND: "①：相手は自身の手札を１枚選んで捨てる。",
 }
 
@@ -58,9 +67,10 @@ class SideCoverageTest(unittest.TestCase):
     def test_either_side_zone_hits_both_sides(self):
         def summon_from_grave(side):
             return self.hits(actions=["特殊召喚"], from_zones=[{"zone": "墓地", "side": side}])
-        self.assertEqual(summon_from_grave("對手"), [EITHER_GRAVE])
+        self.assertEqual(sorted(summon_from_grave("對手")), [EITHER_GRAVE, OTHER_REVIVES])
         self.assertEqual(sorted(summon_from_grave("我方")),
-                         [EITHER_GRAVE, OWN_GRAVE, OWN_GRAVE_OBJECT])
+                         [EITHER_GRAVE, OWN_GRAVE, OWN_GRAVE_OBJECT, THIS_CARD_REVIVES,
+                          OTHER_REVIVES])
 
     def test_each_side_zone_hits_both_sides(self):
         for side in ("我方", "對手"):
@@ -80,7 +90,8 @@ class SideCoverageTest(unittest.TestCase):
 
     def test_query_without_side_is_unchanged(self):
         self.assertEqual(sorted(self.hits(actions=["特殊召喚"], from_zones=["墓地"])),
-                         [EITHER_GRAVE, OWN_GRAVE, OWN_GRAVE_OBJECT])
+                         [EITHER_GRAVE, OWN_GRAVE, OWN_GRAVE_OBJECT, THIS_CARD_REVIVES,
+                          OTHER_REVIVES])
 
     def test_sideless_field_hits_both_sides(self):
         """「フィールドのカードを全て破壊する」:場上沒寫方是任一方,破壞 從對手、從我方的場上都命中。"""
@@ -94,6 +105,23 @@ class SideCoverageTest(unittest.TestCase):
             return self.hits(actions=["特殊召喚"], from_zones=[{"zone": "墓地", "side": side}])
         self.assertIn(OWN_GRAVE_OBJECT, summon_from_grave("我方"))
         self.assertNotIn(OWN_GRAVE_OBJECT, summon_from_grave("對手"))
+
+    def test_sending_opponents_card_hits_the_opponents_graveyard(self):
+        """「そのモンスターを墓地へ送る」:到的墓地是持有者,送墓 到對手的墓地命中。"""
+        self.assertIn(SEND_OPPONENTS, self.hits(actions=["送墓"], to_zones=[
+            {"zone": "墓地", "side": "對手"}]))
+
+    def test_this_cards_graveyard_is_only_own(self):
+        """此卡戰鬥破壞送墓後特殊召喚自己:從的墓地是我方,查對手的墓地不命中。"""
+        def summon_from_grave(side):
+            return self.hits(actions=["特殊召喚"], from_zones=[{"zone": "墓地", "side": side}])
+        self.assertIn(THIS_CARD_REVIVES, summon_from_grave("我方"))
+        self.assertNotIn(THIS_CARD_REVIVES, summon_from_grave("對手"))
+
+    def test_other_objects_graveyard_hits_both_sides(self):
+        for side in ("我方", "對手"):
+            self.assertIn(OTHER_REVIVES, self.hits(actions=["特殊召喚"], from_zones=[
+                {"zone": "墓地", "side": side}]), side)
 
     def test_self_zone_hits_the_side_of_the_segment_agent(self):
         """「相手は自身の手札を」:自身是這一段的誰(對手),查對手的手牌命中、查我方的不命中。"""

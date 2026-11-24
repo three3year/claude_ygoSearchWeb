@@ -108,6 +108,56 @@ class FieldAnySideTest(unittest.TestCase):
                          [[("手牌", None, None)]])
 
 
+class GraveyardBanishedOwnerTest(unittest.TestCase):
+    """墓地、除外沒寫方(從與到):物件是此卡記我方,其他物件記持有者(卡一定進持有者的墓地、除外)。"""
+
+    def test_this_card_sent_to_graveyard_is_own(self):
+        self.assertEqual(ends("①：このカードを墓地へ送る。", "送墓", "to"),
+                         [[("墓地", "我方", "規則")]])
+
+    def test_this_card_banished_is_own(self):
+        self.assertEqual(ends("①：このカードを除外する。", "除外", "to"),
+                         [[("除外", "我方", "規則")]])
+
+    def test_other_object_sent_to_graveyard_is_owner(self):
+        self.assertEqual(ends("①：相手フィールドのモンスター１体を対象として発動できる。"
+                              "そのモンスターを墓地へ送る。", "送墓", "to"),
+                         [[("墓地", "持有者", "規則")]])
+
+    def test_other_object_banished_is_owner(self):
+        self.assertEqual(ends("①：フィールドのカード１枚を対象として発動できる。"
+                              "そのカードを除外する。", "除外", "to"),
+                         [[("除外", "持有者", "規則")]])
+
+    def test_this_card_leaving_the_graveyard_it_was_sent_to_is_own(self):
+        """「このカードが戦闘で破壊され墓地へ送られた場合、このカードを特殊召喚する」:
+        特殊召喚的從繼承前提的墓地、沒寫方,物件是此卡 → 我方。"""
+        self.assertEqual(ends("①：このカードが戦闘で破壊され墓地へ送られた場合に発動できる。"
+                              "このカードを特殊召喚する。", "特殊召喚", "from"),
+                         [[("墓地", "我方", "規則")]])
+
+    def test_other_object_leaving_the_graveyard_is_owner(self):
+        self.assertEqual(ends("①：モンスターが戦闘で破壊され墓地へ送られた時に発動できる。"
+                              "そのモンスターを特殊召喚する。", "特殊召喚", "from"),
+                         [[("墓地", "持有者", "規則")]])
+
+    def test_other_object_leaving_banishment_is_owner(self):
+        self.assertEqual(ends("①：除外されているモンスター１体を対象として発動できる。"
+                              "そのモンスターを特殊召喚する。", "特殊召喚", "from"),
+                         [[("除外", "持有者", "規則")]])
+
+    def test_graveyard_from_default_side_is_kept(self):
+        """「墓地から」沒寫方是預設我方,已經有方,不套這條。"""
+        self.assertEqual(ends("①：墓地からモンスター１体を特殊召喚する。", "特殊召喚", "from"),
+                         [[("墓地", "我方", "預設")]])
+
+    def test_controller_written_on_the_object_comes_first(self):
+        """物件寫了控制方的從照物件(票 02),不套持有者。"""
+        self.assertEqual(ends("①：除外されている相手モンスター１体を対象として発動できる。"
+                              "そのモンスターを特殊召喚する。", "特殊召喚", "from"),
+                         [[("除外", "對手", "規則")]])
+
+
 class SelfSideTest(unittest.TestCase):
     """方是自身 → 換成這一段的誰(解法同查詢判斷算誰的那一套);雙方各自、不限定 → 任一方。"""
 
@@ -173,6 +223,13 @@ class ReverseCheckTest(unittest.TestCase):
                      "１体を破壊する。",
                      "①：相手モンスター１体を対象として発動できる。"
                      "そのモンスターをフィールドに特殊召喚する。",
+                     "①：このカードを墓地へ送る。",
+                     "①：相手フィールドのモンスター１体を対象として発動できる。"
+                     "そのモンスターを除外する。",
+                     "①：このカードが戦闘で破壊され墓地へ送られた場合に発動できる。"
+                     "このカードを特殊召喚する。",
+                     "①：除外されているモンスター１体を対象として発動できる。"
+                     "そのモンスターを特殊召喚する。",
                      # 「自身の」照字面寫回,結構裡已換成段的誰
                      "①：相手は自身の墓地からモンスター１体を選んで特殊召喚できる。",
                      "①：お互いは自身の手札を全てデッキに戻す。",

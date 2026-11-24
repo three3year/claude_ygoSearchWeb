@@ -56,7 +56,7 @@ function givenOf(raw) {
   if (level(raw.lvMin) !== null) g.lvMin = raw.lvMin;
   if (level(raw.lvMax) !== null) g.lvMax = raw.lvMax;
   if (Number.isInteger(raw.set) && raw.set > 0) g.set = raw.set;
-  if (typeof raw.name === 'string' && raw.name.trim()) g.name = raw.name.trim();
+  if (typeof raw.name === 'string' && nameParts(raw.name).length) g.name = raw.name.trim();
   return Object.keys(g).length ? g : null;
 }
 
@@ -270,6 +270,23 @@ const COMPARE = { '=': (a, b) => a === b, '≥': (a, b) => a >= b, '≤': (a, b)
 const foldName = s => String(s).replace(/[\uFF01-\uFF5E]/g,
   ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, ' ').toLowerCase();
 
+/* \u5361\u540d\u5305\u542b:\u6253\u7684\u5b57\u53bb\u982d\u5c3e\u7a7a\u767d\u3001\u6298\u758a\u5f8c\u4ee5 % \u5207\u6bb5\u4e26\u53bb\u6389\u7a7a\u6bb5(\u842c\u7528\u5b57\u5143\u540c\u4e3b\u641c\u5c0b\u7684\u5361\u540d\u6846);
+   \u6c92\u6709\u6bb5\u6642\u7b49\u65bc\u6c92\u7d66\u3002 */
+const nameParts = text => foldName(String(text).trim()).split('%').filter(Boolean);
+
+/* \u5361\u540d\u5305\u542b\u6bd4\u7684\u540d\u5b57:\u4e2d\u6587\u540d\u3001\u65e5\u6587\u540d\u3001\u82f1\u6587\u540d\u3001\u5225\u540d(\u540c Python \u67e5\u8a62\u5074 query_names)\u3002 */
+const cardNames = card => [card.n, card.nj, card.ne, card.ax].filter(n => typeof n === 'string');
+
+function nameContains(name, parts) {
+  const folded = foldName(name);
+  let pos = 0;
+  return parts.every(part => {
+    const at = folded.indexOf(part, pos);
+    pos = at + part.length;
+    return at >= 0;
+  });
+}
+
 function cardAttr(card, attr) {
   if (attr === '種族') return card.r || null;
   if (attr === '屬性') return card.at || null;
@@ -289,9 +306,8 @@ function fitsCondition(index, cond, card, p) {
     }
     case '字段': return cond.setcodes.some(code => index.inArchetype(code, p));
     case '卡名包含': {
-      const text = foldName(cond.text);
-      return [card.n, card.nj, card.ne, card.ax]
-        .some(n => typeof n === 'string' && foldName(n).indexOf(text) >= 0);
+      const parts = nameParts(cond.text);
+      return cardNames(card).some(name => nameContains(name, parts));
     }
     default: return false;
   }

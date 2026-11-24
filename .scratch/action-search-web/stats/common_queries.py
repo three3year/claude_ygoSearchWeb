@@ -42,7 +42,7 @@ CONDS = [
     ("特殊召喚 給條件 龍族", {"actions": ["特殊召喚"], "target": {"condition": {"race": "dragon"}}}),
     ("破壞 給條件 卡名包含 ブラック・マジシャン",
      {"actions": ["破壞"], "target": {"condition": {"name": "ブラック・マジシャン"}}}),
-    # 票 13 待站主決定:網站比中文、日文、英文名與別名,Python 只比日文名;這一條預期兩邊不同
+    # action-search-coverage 票 05 起兩邊都先換成卡片編號(中日英名與別名);這一條預期兩邊相同
     ("破壞 給條件 卡名包含 黑魔導(中文)",
      {"actions": ["破壞"], "target": {"condition": {"name": "黑魔導"}}}),
 ]

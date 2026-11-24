@@ -3,6 +3,7 @@ from operator import attrgetter
 
 from action_rows import IMPLIED_SELF, UNRESTRICTED
 from condition_judge import OBJECT_THIS, eval_condition
+from query_names import drop_blank_names, resolve_names
 
 REPLACED = "被代替"
 DEFAULT_KINDS = ("效果", "代價", "召喚手續")
@@ -27,6 +28,7 @@ def _normalise(query):
     if unknown:
         raise KeyError(f"查詢有不認得的欄位: {sorted(unknown)}")
     q.update(query)
+    q["condition"] = drop_blank_names(q["condition"])
     if sum((bool(q["this_card"]), q["card"] is not None, q["condition"] is not None)) > 1:
         raise ValueError("被動作的卡三者擇一:this_card、card、condition 只能給一個")
     kinds = set(q["kinds"] or DEFAULT_KINDS)
@@ -343,8 +345,9 @@ class _Wanted:
             at = index.position.get(q["card"])
             self.mask = 0 if at is None else 1 << at
         elif q["condition"] is not None:
+            condition = resolve_names(q["condition"], index.cards)
             self.mask = index.condition_mask(
-                q["condition"], lambda view: eval_condition(q["condition"], view) is True)
+                q["condition"], lambda view: eval_condition(condition, view) is True)
 
     def fits(self, obj):
         if self.this_card:

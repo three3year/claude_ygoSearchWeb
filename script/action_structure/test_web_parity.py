@@ -16,7 +16,7 @@ from test_draw import (DARK_WORLD_DEALINGS, DARK_WORLD_DEALINGS_TEXT, SPELL, TSU
 from test_effect_reference import (ARCHETYPES_13, BLACK_PANTHER, BLACK_PANTHER_TEXT, DESTROYER,
                                    DESTROYER_TEXT, FRESHIA, GISHIKI_MIRROR, GISHIKI_MIRROR_TEXT,
                                    HOSHIAI, HOSHIAI_TEXT, NORMAL_TRAP, RITUAL_SPELL)
-from test_action_index import EMPEROR_PENGUIN
+from test_action_index import EMPEROR_PENGUIN, OTOSHIANA, PENGUIN_SOLDIER
 from test_golden import card, faq
 from test_object_self import CHOBHAM
 from test_resistance_restriction import (ELEKIRIN, ELEKIRIN_TEXT, MASTER_MONK, MASTER_MONK_TEXT,
@@ -322,7 +322,18 @@ CONDITIONS = [
     {"name": "沒有這張"},
     {"race": "dragon", "lvMin": 5}, {"cat": "m", "attr": "water", "name": "ペンギン"},
     {"set": 0x5a, "race": "aqua"}, {"cat": "t", "set": 0x4c},
+] + [
+    {"name": "企鵝士"}, {"name": "penguin SOL"}, {"name": "企鵝兵"}, {"name": "Trap Hole"},
+    {"name": "企%兵"}, {"name": "ペン%ソル"}, {"name": "兵%企"}, {"name": "%落%穴%"},
+    {"name": "ＰＥＮＧＵＩＮ"}, {"name": "ｔｒａｐ　ｈｏｌｅ"}, {"name": "企鵝％兵"},
+    {"cat": "m", "name": "%"}, {"cat": "t", "name": " ％ "},
 ]
+# 卡名包含比中文名、日文名、英文名與別名(中文卡文「※ 別名」):給幾張卡補上這三種名字。
+OTHER_NAMES = {
+    PENGUIN_SOLDIER: {"name_zh": "企鵝士兵", "name_en": "Penguin Soldier",
+                      "desc": "①：這樣。\n\n※企鵝兵"},
+    OTOSHIANA: {"name_zh": "落穴", "name_en": "Trap Hole"},
+}
 
 
 def web_index():
@@ -339,7 +350,8 @@ class ConditionParityTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.vocab, webindex = web_index()
-        cls.structures, cls.cards, archetypes = object_parity_fixture()
+        cls.structures, cards, archetypes = object_parity_fixture()
+        cls.cards = [{**entry, **OTHER_NAMES.get(entry["id"], {})} for entry in cards]
         cls.front_index, _ = webindex.build_index(cls.cards, [])
         text, report = build_action_index(cls.structures, cls.cards, cls.front_index["cards"],
                                           archetypes)
@@ -379,6 +391,13 @@ class ConditionParityTest(unittest.TestCase):
         self.assertTrue(of({"lvMin": 5}, ()) - both)
         self.assertEqual(of({"race": "dragon"}), {CHOBHAM})
         self.assertIn(EMPEROR_PENGUIN, of({"race": "aqua"}))
+        for text in ("企鵝士", "penguin SOL", "企鵝兵", "企%兵", "ＰＥＮＧＵＩＮ", "企鵝％兵"):
+            self.assertIn(EMPEROR_PENGUIN, of({"name": text}), text)
+        self.assertEqual(of({"name": "兵%企"}, ()), set())
+        self.assertTrue(of({"name": "落とし穴"}, ()))
+        for text in ("Trap Hole", "ｔｒａｐ　ｈｏｌｅ", "%落%穴%"):
+            self.assertEqual(of({"name": text}, ()), of({"name": "落とし穴"}, ()), text)
+        self.assertEqual(of({"cat": "m", "name": "%"}), of({"cat": "m"}))
 
     def test_archetype_members_are_what_python_calls_members(self):
         structure = {s["id"]: s for s in self.structures}

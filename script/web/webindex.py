@@ -76,7 +76,7 @@ def _norm(text):
     return _WS.sub("", text)
 
 
-def _split_alias(desc):
+def split_alias(desc):
     """卡文 → (去掉別名的卡文, 別名或空字串)。"""
     match = ALIAS_RE.search(desc)
     if not match:
@@ -146,7 +146,7 @@ def _entry(card, clauses):
     if not cat:
         return None, []
     unknown = []
-    desc, alias = _split_alias(card["desc"])
+    desc, alias = split_alias(card["desc"])
     out = {"id": card["id"]}
     if card["alt_ids"]:
         out["al"] = list(card["alt_ids"])

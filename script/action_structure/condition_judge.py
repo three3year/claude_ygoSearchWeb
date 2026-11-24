@@ -32,6 +32,7 @@ OBJECT_CANDIDATES = "候選卡集合"
 OBJECT_UNDECIDABLE = "判不了"
 OBJECT_UNSUBSTITUTABLE = "代不進去"
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
+CARD_IDS = "卡號屬於"   # 只在查詢側:卡名包含換成的卡號集合(query_names),卡文的條件式沒有這個原子
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
                 "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10,
@@ -368,6 +369,8 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
             return None
         return any(setcode_matches(have, want)
                    for have in view.setcodes(from_zones) for want in wants)
+    if op == CARD_IDS:
+        return view.entry["id"] in condition["ids"]
     if op in ("卡名", "卡名包含", "記載"):
         text = name_text(condition, names)
         if text is None:

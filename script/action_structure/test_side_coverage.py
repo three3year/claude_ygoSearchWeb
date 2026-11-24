@@ -14,6 +14,8 @@ OWN_GRAVE = 30100004      # 自分の墓地の:從的墓地只寫我方
 BOTH_SUMMON = 30100005    # お互いのプレイヤーは〜特殊召喚する:到的場上是推得的雙方各自
 EITHER_BANISHED = 30100006   # 自分か相手の除外状態の:從的除外是任一方
 EITHER_FIELD = 30100007      # 自分か相手のフィールドの:從的場上是任一方
+SIDELESS_FIELD = 30100008    # フィールドの:場上沒寫方,建置時照規則記任一方(票 02)
+OWN_GRAVE_OBJECT = 30100009  # このカード以外の自分の墓地の:「自分の」是物件的控制方,從的墓地照它記我方
 
 TEXTS = {
     EITHER_GRAVE: ("①：自分か相手の墓地のモンスター１体を対象として発動できる。"
@@ -28,6 +30,9 @@ TEXTS = {
                       "そのモンスターを墓地に戻す。"),
     EITHER_FIELD: ("①：自分か相手のフィールドのカード１枚を対象として発動できる。"
                    "そのカードを破壊する。"),
+    SIDELESS_FIELD: "①：フィールドのカードを全て破壊する。",
+    OWN_GRAVE_OBJECT: ("①：このカード以外の自分の墓地のモンスター１体を対象として発動できる。"
+                       "そのモンスターを特殊召喚する。"),
 }
 
 
@@ -52,7 +57,8 @@ class SideCoverageTest(unittest.TestCase):
         def summon_from_grave(side):
             return self.hits(actions=["特殊召喚"], from_zones=[{"zone": "墓地", "side": side}])
         self.assertEqual(summon_from_grave("對手"), [EITHER_GRAVE])
-        self.assertEqual(sorted(summon_from_grave("我方")), [EITHER_GRAVE, OWN_GRAVE])
+        self.assertEqual(sorted(summon_from_grave("我方")),
+                         [EITHER_GRAVE, OWN_GRAVE, OWN_GRAVE_OBJECT])
 
     def test_each_side_zone_hits_both_sides(self):
         for side in ("我方", "對手"):
@@ -72,7 +78,20 @@ class SideCoverageTest(unittest.TestCase):
 
     def test_query_without_side_is_unchanged(self):
         self.assertEqual(sorted(self.hits(actions=["特殊召喚"], from_zones=["墓地"])),
-                         [EITHER_GRAVE, OWN_GRAVE])
+                         [EITHER_GRAVE, OWN_GRAVE, OWN_GRAVE_OBJECT])
+
+    def test_sideless_field_hits_both_sides(self):
+        """「フィールドのカードを全て破壊する」:場上沒寫方是任一方,破壞 從對手、從我方的場上都命中。"""
+        for side in ("我方", "對手"):
+            self.assertIn(SIDELESS_FIELD, self.hits(actions=["破壞"], from_zones=[
+                {"zone": "場上", "side": side}]), side)
+
+    def test_controller_written_on_the_object_only_hits_that_side(self):
+        """「自分の墓地の」寫在物件上:從的墓地是我方,查對手的墓地不命中。"""
+        def summon_from_grave(side):
+            return self.hits(actions=["特殊召喚"], from_zones=[{"zone": "墓地", "side": side}])
+        self.assertIn(OWN_GRAVE_OBJECT, summon_from_grave("我方"))
+        self.assertNotIn(OWN_GRAVE_OBJECT, summon_from_grave("對手"))
 
     def test_inferred_zone_still_needs_the_switch(self):
         opponent_field = [{"zone": "場上", "side": "對手"}]

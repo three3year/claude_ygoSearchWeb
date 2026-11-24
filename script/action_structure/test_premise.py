@@ -139,9 +139,9 @@ class SideSourceTest(unittest.TestCase):
                                     from_zones=[{"zone": "墓地", "side": "對手"}],
                                     card=BLACK_MAGICIAN))
 
-    def test_field_without_written_side_has_no_side(self):
-        """「手札・フィールドから」沒寫方:手牌照慣例是我方,場上不預設(任一方的場上),
-        查「場上(我方)」不命中、查「場上」命中;整張仍通過反向檢查。"""
+    def test_field_without_written_side_is_either_side(self):
+        """「手札・フィールドから」沒寫方:手牌照慣例是我方,場上不預設、建置時照規則記任一方
+        (action-search-coverage 票 02),查「場上(我方)」「場上(對手)」都命中;整張仍通過反向檢查。"""
         cards, structures = library(
             "①：手札・フィールドから魔法カード１枚を墓地へ送って発動できる。"
             "このカードを破壊する。")
@@ -150,8 +150,9 @@ class SideSourceTest(unittest.TestCase):
                                  from_zones=["場上"]))
         self.assertIn(SELF, hits(cards, structures, actions=["送墓"],
                                  from_zones=[{"zone": "手牌", "side": "我方"}]))
-        self.assertNotIn(SELF, hits(cards, structures, actions=["送墓"],
-                                    from_zones=[{"zone": "場上", "side": "我方"}]))
+        for side in ("我方", "對手"):
+            self.assertIn(SELF, hits(cards, structures, actions=["送墓"],
+                                     from_zones=[{"zone": "場上", "side": side}]))
 
 
 class SubjectClauseTest(unittest.TestCase):

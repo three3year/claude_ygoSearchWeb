@@ -218,9 +218,18 @@ class KarakuriInnTest(GoldenCase):
     faq = [faq(KARAKURI_INN, "借カラクリ旅籠蔵", KARAKURI_INN_TEXT)]
 
     def test_the_position_change_is_on_my_monster(self):
-        self.assertIn(KARAKURI_INN, self.hits(actions=["變更表示形式"], from_zones=[FIELD]))
-        self.assertNotIn(KARAKURI_INN,
-                         self.hits(actions=["變更表示形式"], from_zones=[OPPONENT_FIELD]))
+        """①那一段只在我方的場上;②「フィールドの表側表示モンスター」場上沒寫方是任一方
+        (規則推得的方,action-search-coverage 票 02),查對手的場上命中的只有②那一段。"""
+        def changed(zone):
+            result = self.run_(actions=["變更表示形式"], from_zones=[zone])
+            ids = {seg for hit in result["hits"] if hit["id"] == KARAKURI_INN
+                   for seg in hit["segments"]}
+            [structure] = [s for s in self.structures if s["id"] == KARAKURI_INN]
+            return [seg["text"] for block in structure["blocks"] for seg in block["segments"]
+                    if seg["id"] in ids]
+        mine = "その自分のモンスターの表示形式を変更し"
+        self.assertIn(mine, changed(FIELD))
+        self.assertEqual(changed(OPPONENT_FIELD), ["そのモンスターの表示形式を変更する"])
 
     def test_the_segment_writes_back_to_its_text(self):
         self.assertWritesBack(KARAKURI_INN, "その自分のモンスターの表示形式を変更し")

@@ -10,17 +10,18 @@
 import re
 
 from segment_fields import render_display
-from structure_shape import DEFAULT_ZONE_WORD, NoTemplate, ZONE_WORDS, zone
+from structure_shape import DEFAULT_ZONE_WORD, NoTemplate, SIDE_SOURCE_RULE, ZONE_WORDS, zone
 
 
 # 區域字面表在 structure_shape.ZONE_WORDS(三處共用)。
-# 場上系區域:沒寫方時不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
+# 場上系區域:沒寫方時抽取不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是);
+# 對象線的從、到建置時照規則補成任一方(`rule_sides`)。
 FIELD_ZONES = ("場上", "EX怪獸區", "怪獸區", "魔陷區", "P區", "場地區", "主要怪獸區")
 # 從的助詞:新式「墓地の」「墓地から」;舊式連體修飾「墓地に存在するX」(= 墓地のX)。
 FROM_PARTICLES = ("から", "の", "に存在する")
-# 「持ち主の手札に戻す」的持ち主:值持有者,靜態判不了是哪一方,查詢指定我方/對手時不命中。
+# 「持ち主の手札に戻す」的持ち主:值持有者,靜態判不了是哪一方,查詢指定我方/對手時都命中。
 # 「お互いは」(誰,雙方各自);「自身の手札」的自身 = 這一段的誰那一方(「ドローしたプレイヤーは
-# 自身の手札を」),同持有者靜態判不了,查詢指定我方/對手時不命中。
+# 自身の手札を」)。
 SIDE_WORDS = {"自分": "我方", "相手": "對手", "自分か相手": "任一方", "持ち主": "持有者",
               "お互い": "雙方各自", "自身": "自身"}
 _ZONE_WORDS_ALT = "|".join(w for w, _ in ZONE_WORDS)
@@ -61,6 +62,28 @@ def parse_from(phrase):
     return zones
 
 
+def literal_matches(phrase, zones):
+    """區域短語的字面解得回這組區域:來源是規則的條目(卡文沒寫方,建置時補的)只比區域、
+    不比方與來源——「フィールドの」解出沒有方,結構裡是任一方。"""
+    parsed = parse_from(phrase)
+    if parsed is None or len(parsed) != len(zones):
+        return False
+    return all(_sideless(got) == _sideless(have) if have.get("side_source") == SIDE_SOURCE_RULE
+               else got == have for got, have in zip(parsed, zones))
+
+
+def without_rule_sides(pos):
+    """從/到拿掉規則補的方(換回沒有方):規則的方不寫回字面,比幾條線能不能共用一個字面時
+    不看它——幾條線共用「フィールドの」,各自照物件的控制方補了不同的方,字面仍是同一個。"""
+    return {**pos, "zones": [{**z, "side": None, "side_source": None}
+                             if z.get("side_source") == SIDE_SOURCE_RULE else z
+                             for z in pos["zones"]]}
+
+
+def _sideless(z):
+    return {key: value for key, value in z.items() if key not in ("side", "side_source")}
+
+
 def zone_literal(phrase):
     """區域短語用了非預設的字面(舊式「フィールド上」)就回短語本身(要留原文字面),否則 None。
     前提的區域平常照方的來源還原,只有這種情形還原不回原文。"""
@@ -83,7 +106,7 @@ def render_zone_text(pos, particle):
         particles = (f"に{display}存在する",) if display else _POSITION_PARTICLES
         phrase = next((bare[:-len(p)] for p in particles
                        if bare.endswith(p)), None)
-        if phrase is None or parse_from(phrase) != zones:
+        if phrase is None or not literal_matches(phrase, zones):
             raise NoTemplate("從/到的字面與區域不一致")
         return text
     if display:

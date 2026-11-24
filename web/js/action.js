@@ -11,7 +11,7 @@ const DEFAULT_POL = 'do';
 
 const SIDES = ['我方', '對手'];
 const BOTH_SIDES = '雙方各自';
-// 區域寫的方比查詢的方寬(任一方、雙方各自、持有者)也算命中,同 Python 查詢判斷的 BROAD_ZONE_SIDES
+// 同 Python 查詢判斷的 BROAD_ZONE_SIDES
 const BROAD_ZONE_SIDES = ['任一方', BOTH_SIDES, '持有者'];
 const IMPLIED_SELF = '算我方';
 const UNRESTRICTED = '不限定';
@@ -274,15 +274,11 @@ const COMPARE = { '=': (a, b) => a === b, '≥': (a, b) => a >= b, '≤': (a, b)
 const foldName = s => String(s).replace(/[\uFF01-\uFF5E]/g,
   ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, ' ').toLowerCase();
 
-/* 卡名包含:打的字去頭尾空白、折疊後以 % 切段並去掉空段(萬用字元同主搜尋的卡名框);
-   沒有段時等於沒給。 */
 const nameParts = text => foldName(String(text).trim()).split('%').filter(Boolean);
 
-/* 卡名包含比的名字:中文名、日文名、英文名、別名(同 Python 查詢側 query_names);
-   當作的卡名另由 treatedNames 併進來。 */
+/* 同 Python 查詢側 query_names */
 const cardNames = card => [card.n, card.nj, card.ne, card.ax].filter(n => typeof n === 'string');
 
-/* 「〜として扱う」當作的卡名(動作索引的 treatedNames):卡號 → 對到的卡的四種名字與對不到卡的日文字面。 */
 function treatedNames(raw, db) {
   const byId = new Map((db || []).map(c => [c.id, c]));
   return new Map((raw.treatedNames || []).map(([id, ids, literals]) => [id,

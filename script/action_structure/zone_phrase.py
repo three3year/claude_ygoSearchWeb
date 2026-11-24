@@ -14,12 +14,11 @@ from structure_shape import DEFAULT_ZONE_WORD, NoTemplate, SIDE_SOURCE_RULE, ZON
 
 
 # 區域字面表在 structure_shape.ZONE_WORDS(三處共用)。
-# 場上系區域:沒寫方時抽取不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是);
-# 對象線的從、到建置時照規則補成任一方(`rule_sides`)。
+# 場上系區域:沒寫方時抽取不預設(手札・デッキ・墓地沒寫方照慣例是自己的,場上不是)。
 FIELD_ZONES = ("場上", "EX怪獸區", "怪獸區", "魔陷區", "P區", "場地區", "主要怪獸區")
 # 從的助詞:新式「墓地の」「墓地から」;舊式連體修飾「墓地に存在するX」(= 墓地のX)。
 FROM_PARTICLES = ("から", "の", "に存在する")
-# 「持ち主の手札に戻す」的持ち主:值持有者,靜態判不了是哪一方,查詢指定我方/對手時都命中。
+# 「持ち主の手札に戻す」的持ち主:值持有者,靜態判不了是哪一方。
 # 「お互いは」(誰,雙方各自);「自身の手札」的自身 = 這一段的誰那一方(「ドローしたプレイヤーは
 # 自身の手札を」)。
 SIDE_WORDS = {"自分": "我方", "相手": "對手", "自分か相手": "任一方", "持ち主": "持有者",
@@ -63,8 +62,6 @@ def parse_from(phrase):
 
 
 def literal_matches(phrase, zones):
-    """區域短語的字面解得回這組區域:來源是規則的條目(卡文沒寫方,建置時補的)只比區域、
-    不比方與來源——「フィールドの」解出沒有方,結構裡是任一方。"""
     parsed = parse_from(phrase)
     if parsed is None or len(parsed) != len(zones):
         return False
@@ -73,8 +70,6 @@ def literal_matches(phrase, zones):
 
 
 def without_rule_sides(pos):
-    """從/到拿掉規則補的方(換回沒有方):規則的方不寫回字面,比幾條線能不能共用一個字面時
-    不看它——幾條線共用「フィールドの」,各自照物件的控制方補了不同的方,字面仍是同一個。"""
     return {**pos, "zones": [{**z, "side": None, "side_source": None}
                              if z.get("side_source") == SIDE_SOURCE_RULE else z
                              for z in pos["zones"]]}

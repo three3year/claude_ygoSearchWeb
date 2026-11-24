@@ -130,7 +130,6 @@ class IgniteBurstTest(unittest.TestCase):
                                          "placement": "名詞前"})
 
     def test_return_to_owners_hand_hits_either_side(self):
-        """持ち主 靜態判不了,指定我方或對手都命中(spec Q2)。"""
         for side in ("我方", "對手"):
             self.assertEqual(len(hit_segments(self.structures, self.cards, IGNITE_BURST,
                                               actions=["返回"],

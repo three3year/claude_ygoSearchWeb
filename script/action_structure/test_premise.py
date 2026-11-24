@@ -140,8 +140,6 @@ class SideSourceTest(unittest.TestCase):
                                     card=BLACK_MAGICIAN))
 
     def test_field_without_written_side_is_either_side(self):
-        """「手札・フィールドから」沒寫方:手牌照慣例是我方,場上不預設、建置時照規則記任一方
-        (action-search-coverage 票 02),查「場上(我方)」「場上(對手)」都命中;整張仍通過反向檢查。"""
         cards, structures = library(
             "①：手札・フィールドから魔法カード１枚を墓地へ送って発動できる。"
             "このカードを破壊する。")

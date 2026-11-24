@@ -5,8 +5,6 @@
 不看位置條件。
 比法同網站:打的字去頭尾空白,打的字與名字都做全形英數、全形空白當半形與小寫的折疊;
 以 `%` 切段、去掉空段,各段依序出現在名字裡就算;沒有非空的段時等於沒給。
-
-卡文裡的「カード名に「X」を含む」(卡片結構條件式的卡名包含原子)不經過這裡,照舊只比日文。
 """
 import os
 import sys
@@ -27,7 +25,6 @@ def fold_name(text):
 
 
 def like_parts(text):
-    """打的字 → 依序要出現的段;空的(只有空白或 `%`)等於沒給。"""
     return [part for part in fold_name(text.strip()).split("%") if part]
 
 
@@ -42,7 +39,6 @@ def like_match(name, parts):
 
 
 def _own_names(entry):
-    """卡自己的四種名字:中文名、日文名、英文名、別名。"""
     return (entry["name_zh"], entry["name_ja"], entry["name_en"], split_alias(entry["desc"])[1])
 
 
@@ -52,10 +48,7 @@ def _loose(text):
 
 
 def treated_names(structures, cards):
-    """卡片結構 + 卡片總表 → {卡號: (對到的卡號, 對不到卡的日文字面)},只列有當作卡名的卡。
-
-    當作的卡名是卡片屬性表 `name` 的第二列起,不看位置條件;對卡先比日文卡名原字,
-    再比全半形折疊、去空白後的字。"""
+    """卡片結構 + 卡片總表 → {卡號: (對到的卡號, 對不到卡的日文字面)},只列有當作卡名的卡。"""
     exact = {entry["name_ja"]: entry["id"] for entry in cards if entry["name_ja"]}
     loose = {_loose(name): cid for name, cid in exact.items()}
     out = {}
@@ -73,8 +66,6 @@ def treated_names(structures, cards):
 
 
 class CardNames:
-    """卡片總表 + 當作的卡名(`treated_names`)→ 每張卡比卡名包含時用的名字(已折疊)。"""
-
     def __init__(self, cards, treated):
         own = {entry["id"]: _own_names(entry) for entry in cards}
 
@@ -102,8 +93,7 @@ def drop_blank_names(condition):
 
 
 def resolve_names(condition, cards, structures):
-    """查詢條件式 → 卡名包含原子換成卡號集合原子的條件式;其他原子原樣。
-    沒有卡名包含時不收名字。"""
+    """查詢條件式 → 卡名包含原子換成卡號集合原子的條件式;其他原子原樣。"""
     names = None
 
     def walk(node):

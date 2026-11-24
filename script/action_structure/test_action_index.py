@@ -182,8 +182,6 @@ class ActionIndexTest(unittest.TestCase):
 
 
 class TreatedNamesTest(unittest.TestCase):
-    """「當作的卡名」一節:每張有當作卡名的卡 → 對到的卡號與對不到卡的日文字面(票 06)。"""
-
     def test_treated_names_round_trip(self):
         from test_name_contains_query import (CITY, GLOW, OMOI, SAVIOR, TWINKLE,
                                               treated_fixture)

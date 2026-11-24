@@ -1,13 +1,5 @@
 """建置的「補方」:卡文沒寫方、但照遊戲規則推得出方的區域,把方寫進對象線的從、到,
 方的來源記「規則」(spec「規則推得的方」、GLOSSARY「方的來源」)。
-
-段與對象線抽完後,`fill_rule_sides(card)` 走過每條對象線的從、到的每個區域,照 `RULES` 的順序
-問每條規則;第一條給出方的就用它,都不給的區域原樣。每條規則自己判要不要管這個區域
-(「沒寫方」= 區域條目沒有方,不看來源;已經有方的不論來源都不動,只有自身照段的誰換掉),所以加一條規則只要
-寫一個函式、插進 `RULES` 的位置。
-
-前提、條件式的位置原子、卡片屬性表的位置條件不補。結構裡的區域 dict 可能被幾條線共用
-(繼承的從),補方一律換成新的 dict、不就地改,共用的線各自照自己的物件補。
 """
 from typing import NamedTuple
 
@@ -22,8 +14,6 @@ _SELF = "自身"
 
 
 class RuleInput(NamedTuple):
-    """一條規則看得到的東西:這個區域、它在從還是到(`end` 是 "from" / "to")、
-    這條對象線、所在的段與區塊、卡片結構與物件表(id → 物件)。"""
     zone: dict
     end: str
     line: dict
@@ -34,23 +24,18 @@ class RuleInput(NamedTuple):
 
 
 def _written_controller(given):
-    """從的區域沒寫方、物件的條件式寫了控制方(「相手の表側表示モンスター」;物件是子集或剩餘時
-    往上找來源物件)→ 照寫的方。到不用:控制方說的是物件出發時在哪一方,不是去處。"""
     if given.end != "from" or given.zone["side"] is not None:
         return None
     return _controller_of(given.objects.get(given.line["object"]), given.objects)
 
 
 def _field_any_side(given):
-    """場上系區域沒寫方 → 任一方(「フィールドのカードを全て破壊する」)。"""
     if given.zone["side"] is None and given.zone["zone"] in FIELD_ZONES:
         return "任一方"
     return None
 
 
 def _graveyard_banished_owner(given):
-    """墓地、除外沒寫方(從與到)→ 物件是此卡(含帶狀態的此卡)記我方,其他物件記持有者:
-    卡一定進持有者的墓地、除外。「墓地から」沒寫方已是預設我方,不經這條。"""
     if given.zone["side"] is not None or given.zone["zone"] not in _OWNER_ZONES:
         return None
     obj = given.objects.get(given.line["object"])
@@ -58,8 +43,6 @@ def _graveyard_banished_owner(given):
 
 
 def _self_is_segment_agent(given):
-    """方是自身(「ドローしたプレイヤーは自身の手札を」)→ 這一段的誰,解法同查詢判斷(`agent_of`):
-    我方、對手照填,主動句沒寫誰算我方,動作回指解回它指的那一段;雙方各自、不限定 → 任一方。"""
     if given.zone["side"] != _SELF:
         return None
     segments = {seg["id"]: seg for block in given.card["blocks"]
@@ -70,7 +53,6 @@ def _self_is_segment_agent(given):
     return agent if agent in ("我方", "對手") else "任一方"
 
 
-# 依序套用:前面的規則先給方。
 RULES = (
     _written_controller,
     _field_any_side,
@@ -80,8 +62,6 @@ RULES = (
 
 
 def _controller_of(obj, objects):
-    """物件條件式寫的控制方(只看最外層與「且」裡的原子;寫了兩種不同的方就不算);
-    物件是子集或剩餘、自己沒寫時往上找來源物件。沒寫回 None。"""
     seen = set()
     while obj is not None and obj["id"] not in seen:
         seen.add(obj["id"])

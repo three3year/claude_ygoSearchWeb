@@ -84,7 +84,6 @@ def build_card(entry, faq_entry, lookups, boundary_patch=None, patch_status=None
             continue
         extract_block(block, card, lookups)
         card["blocks"].append(block)
-    # 段與對象線都抽完才補方:規則要看整張卡的物件表。
     fill_rule_sides(card)
     card["omitted"].sort(key=lambda item: (item["source"] != "card_text", item["span"][0]))
     return card

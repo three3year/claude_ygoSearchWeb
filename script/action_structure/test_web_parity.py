@@ -331,7 +331,6 @@ CONDITIONS = [
 ] + [
     {"name": "セイヴァー"}, {"name": "救世龍"}, {"name": "光輝苔"}, {"name": "海"},
 ]
-# 卡名包含比中文名、日文名、英文名與別名(中文卡文「※ 別名」):給幾張卡補上這三種名字。
 OTHER_NAMES = {
     PENGUIN_SOLDIER: {"name_zh": "企鵝士兵", "name_en": "Penguin Soldier",
                       "desc": "①：這樣。\n\n※企鵝兵"},
@@ -447,8 +446,6 @@ SIDE_CONDS = [{end: {"zone": zone, "side": side}}
 
 
 class SideParityTest(unittest.TestCase):
-    """指定方的從、到:區域寫任一方、雙方各自、持有者的,網站與 Python 一樣都算命中。"""
-
     @classmethod
     def setUpClass(cls):
         from test_side_coverage import side_library

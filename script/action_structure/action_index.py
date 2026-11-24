@@ -33,7 +33,7 @@
 - `givenValues`:{大類、屬性、種族: [[值域正典的碼, 條件式原子帶的值]…]},給條件換成條件式時用(`given_values`)。
 - `noText`:無官方日文的卡號。
 - `treatedNames`:[卡號, [對到的卡號…], [對不到卡的日文字面…]]…,只列有「〜として扱う」當作卡名的卡
-  (`query_names.treated_names`);網站的卡名包含用它加上前端索引的四種名字。
+  (`query_names.treated_names`)。
 """
 import base64
 import gzip

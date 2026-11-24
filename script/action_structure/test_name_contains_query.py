@@ -1,13 +1,3 @@
-"""查詢側的卡名包含(action-search-coverage 票 05):只走接縫 `run_query`。
-
-給條件的卡名包含先把打的字換成一組卡片編號:中文名、日文名、英文名、別名(中文卡文「※ 別名」)
-任一個含這段字的卡;被動作的卡在這組裡就命中(滿足條件的卡與這條線的候選卡有交集)。
-打的字先去頭尾空白,打的字與名字都做全形英數、全形空白當半形與小寫的折疊;以 `%` 切段、
-去掉空段,各段依序出現在名字裡就算;沒有非空的段時等於沒給。
-
-大皇帝ペンギン 的「デッキから「大皇帝ペンギン」以外の「ペンギン」モンスターを…特殊召喚する」:
-候選卡是 ペンギン・ソルジャー,所以查得到它的名字就命中、查別張的名字不命中。
-"""
 import unittest
 
 from action_query import run_query
@@ -15,7 +5,7 @@ from card_structure import build_structures
 from test_golden import (ARCHETYPES, BLACK_MAGICIAN, EMPEROR_PENGUIN, EMPEROR_PENGUIN_TEXT,
                          PENGUIN_SOLDIER, card, faq)
 
-BURNER = 20000051   # 測試用:傷害段沒有對象線,給了條件就不命中
+BURNER = 20000051
 
 
 def name_contains(text):
@@ -94,18 +84,16 @@ class QueryNameContainsTest(unittest.TestCase):
         self.assertTrue(self.hits({"op": "且", "args": [monster, name_contains(" ")]}))
 
 
-OMOI = 20000061      # 想い集いし竜:場上、墓地當作「救世竜 セイヴァー・ドラゴン」
-SAVIOR = 20000062    # 救世竜 セイヴァー・ドラゴン:沒有卡文,只當被指到的卡
-CITY = 20000063      # 伝説の都 アトランティス:ルール上當作「海」;卡片總表沒有「海」
-TWINKLE = 20000064   # N・ティンクル・モス:場上當作「N・グロー・モス」(卡名是全形 Ｎ)
-GLOW = 20000065      # Ｎ・グロー・モス
-UMI = 20000066       # 海:只在 FAQ 有,卡片總表沒有
+OMOI = 20000061
+SAVIOR = 20000062
+CITY = 20000063
+TWINKLE = 20000064
+GLOW = 20000065
+UMI = 20000066
 WARRIOR = 0x1
 
 
 def treated_fixture():
-    """當作的卡名(票 06):各卡都有「このカードを手札から特殊召喚する」,給條件時看這張卡自己。
-    種族都是戰士族,不擾動兩邊答案一致測試裡「龍族」的斷言。→ (卡片總表, FAQ 條目)。"""
     summon = "①：このカードを手札から特殊召喚する。"
     cards = [
         card(OMOI, name_zh="思念聚集之龍", name_ja="想い集いし竜", level=1, race=WARRIOR),
@@ -131,9 +119,6 @@ def treated_fixture():
 
 
 class QueryTreatedNameTest(unittest.TestCase):
-    """卡名包含也比「〜として扱う」當作的卡名:先換成它指的那張卡、用那張卡的四種名字比;
-    對不到卡的比日文字面;不看位置條件(想い集いし竜 只在場上、墓地當作救世竜,從手牌特殊召喚也命中)。"""
-
     @classmethod
     def setUpClass(cls):
         cls.cards, entries = treated_fixture()
@@ -152,7 +137,6 @@ class QueryTreatedNameTest(unittest.TestCase):
         self.assertEqual(self.hits("majestic"), {OMOI})
 
     def test_treated_name_counts_outside_its_zones(self):
-        """當作的卡名只在場上、墓地,特殊召喚的是手牌的這張卡:照樣命中。"""
         self.assertIn(OMOI, self.hits("救世%セイヴァー"))
 
     def test_treated_name_matches_a_card_after_folding_width(self):

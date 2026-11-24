@@ -244,7 +244,6 @@ class GustaFalcoTest(unittest.TestCase):
         self.assertEqual(seg["trigger"], "時")
         self.assertEqual(seg["cause"], {"kind": "戰鬥以外", "text": "戦闘以外によって"})
         line = seg["lines"][0]
-        # 場上沒寫方:建置時照規則記任一方(action-search-coverage 票 02)。
         self.assertEqual(line["from"]["zones"], [{"zone": "場上", "side": "任一方",
                                                   "side_source": "規則"}])
         self.assertEqual(line["from"]["form"]["display"]["alternatives"],

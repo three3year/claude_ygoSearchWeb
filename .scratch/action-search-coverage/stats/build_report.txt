@@ -1,0 +1,18 @@
+來源 action_structure.json digest=68dea7f55870059e
+來源 cards.json digest=191d91281bc6b5e9
+來源 data.js digest=1bd21dab2cdfe5d5
+來源 archetypes.json digest=a2fad6f157b678c6
+來源 tag_cards.json digest=6c14160f2b16efb4
+列 45,302(段 43,316,有對象線的 42,210、線上有物件的 42,210)
+未解析的來源 25,483(寫進索引的 17,967,字面不含動作詞的不寫;其中引用節點 9)
+引用列 28、指定的部分不是整張的 468 筆、無官方日文的卡 20、有當作卡名的卡 123
+有列的卡 13,599、字段 592(沒有成員不寫 6)
+候選卡集合 11,911(清單 11,529、位元集 382;成員合計 1,442,609,最大 14,207)
+值的清單 actions 45、zones 14、sides 6、kinds 8、polarities 7、blockKinds 5、agents 5、causes 10
+產物 5,671,518 位元組(gzip 1,654,134);門檻 8,000,000
+各部分 format 219、ids 126,238、actions 829、zones 256、sides 71、kinds 86、polarities 70、blockKinds 83、agents 67、causes 187、givenValues 863、noText 190、treatedNames 3,181、parts 5,398、archetypes 17,302、sets 1,786,479、cards 3,729,942
+效果對應 段 43,316:靠編號 34,061(78.6%)、靠位置 9,252(21.4%)、留空 3(0.0%);引用列 28(留空 0)
+留空的卡 1 張:96782886
+時間 讀檔 5.0 秒、攤平 3.7 秒、候選卡 25.5 秒、編碼 4.3 秒
+全部檢查通過
+已寫出 <暫存>/action-data.js

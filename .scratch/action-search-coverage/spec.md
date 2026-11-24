@@ -1,6 +1,6 @@
 # 動作搜尋:區域的方照 Q17 涵蓋、卡名包含換成卡片編號
 
-Status: needs-triage
+Status: ready-for-agent
 
 ## 需要你決定的
 

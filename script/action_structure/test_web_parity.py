@@ -18,6 +18,7 @@ from test_effect_reference import (ARCHETYPES_13, BLACK_PANTHER, BLACK_PANTHER_T
                                    HOSHIAI, HOSHIAI_TEXT, NORMAL_TRAP, RITUAL_SPELL)
 from test_action_index import EMPEROR_PENGUIN, OTOSHIANA, PENGUIN_SOLDIER
 from test_golden import card, faq
+from test_name_contains_query import CITY, OMOI, TWINKLE, treated_fixture
 from test_object_self import CHOBHAM
 from test_resistance_restriction import (ELEKIRIN, ELEKIRIN_TEXT, MASTER_MONK, MASTER_MONK_TEXT,
                                          RESISTANCE_ARCHETYPES, SERVAL_HAWK, SERVAL_HAWK_TEXT)
@@ -327,6 +328,8 @@ CONDITIONS = [
     {"name": "企%兵"}, {"name": "ペン%ソル"}, {"name": "兵%企"}, {"name": "%落%穴%"},
     {"name": "ＰＥＮＧＵＩＮ"}, {"name": "ｔｒａｐ　ｈｏｌｅ"}, {"name": "企鵝％兵"},
     {"cat": "m", "name": "%"}, {"cat": "t", "name": " ％ "},
+] + [
+    {"name": "セイヴァー"}, {"name": "救世龍"}, {"name": "光輝苔"}, {"name": "海"},
 ]
 # 卡名包含比中文名、日文名、英文名與別名(中文卡文「※ 別名」):給幾張卡補上這三種名字。
 OTHER_NAMES = {
@@ -350,8 +353,12 @@ class ConditionParityTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.vocab, webindex = web_index()
-        cls.structures, cards, archetypes = object_parity_fixture()
-        cls.cards = [{**entry, **OTHER_NAMES.get(entry["id"], {})} for entry in cards]
+        structures, cards, archetypes = object_parity_fixture()
+        treated_cards, entries = treated_fixture()
+        treated, _ = build_structures(treated_cards, entries, archetypes=[])
+        cls.structures = sorted(structures + treated, key=lambda s: s["id"])
+        cls.cards = sorted(({**entry, **OTHER_NAMES.get(entry["id"], {})}
+                            for entry in cards + treated_cards), key=lambda entry: entry["id"])
         cls.front_index, _ = webindex.build_index(cls.cards, [])
         text, report = build_action_index(cls.structures, cls.cards, cls.front_index["cards"],
                                           archetypes)
@@ -398,6 +405,10 @@ class ConditionParityTest(unittest.TestCase):
         for text in ("Trap Hole", "ｔｒａｐ　ｈｏｌｅ", "%落%穴%"):
             self.assertEqual(of({"name": text}, ()), of({"name": "落とし穴"}, ()), text)
         self.assertEqual(of({"cat": "m", "name": "%"}), of({"cat": "m"}))
+        for text in ("セイヴァー", "救世龍"):
+            self.assertIn(OMOI, of({"name": text}), text)
+        self.assertIn(TWINKLE, of({"name": "光輝苔"}))
+        self.assertIn(CITY, of({"name": "海"}))
 
     def test_archetype_members_are_what_python_calls_members(self):
         structure = {s["id"]: s for s in self.structures}

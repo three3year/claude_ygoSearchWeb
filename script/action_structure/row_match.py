@@ -351,7 +351,7 @@ class _Wanted:
             at = index.position.get(q["card"])
             self.mask = 0 if at is None else 1 << at
         elif q["condition"] is not None:
-            condition = resolve_names(q["condition"], index.cards)
+            condition = resolve_names(q["condition"], index.cards, index.structures)
             self.mask = index.condition_mask(
                 q["condition"], lambda view: eval_condition(condition, view) is True)
 

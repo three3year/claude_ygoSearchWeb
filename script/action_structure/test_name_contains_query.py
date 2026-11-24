@@ -94,5 +94,77 @@ class QueryNameContainsTest(unittest.TestCase):
         self.assertTrue(self.hits({"op": "且", "args": [monster, name_contains(" ")]}))
 
 
+OMOI = 20000061      # 想い集いし竜:場上、墓地當作「救世竜 セイヴァー・ドラゴン」
+SAVIOR = 20000062    # 救世竜 セイヴァー・ドラゴン:沒有卡文,只當被指到的卡
+CITY = 20000063      # 伝説の都 アトランティス:ルール上當作「海」;卡片總表沒有「海」
+TWINKLE = 20000064   # N・ティンクル・モス:場上當作「N・グロー・モス」(卡名是全形 Ｎ)
+GLOW = 20000065      # Ｎ・グロー・モス
+UMI = 20000066       # 海:只在 FAQ 有,卡片總表沒有
+WARRIOR = 0x1
+
+
+def treated_fixture():
+    """當作的卡名(票 06):各卡都有「このカードを手札から特殊召喚する」,給條件時看這張卡自己。
+    種族都是戰士族,不擾動兩邊答案一致測試裡「龍族」的斷言。→ (卡片總表, FAQ 條目)。"""
+    summon = "①：このカードを手札から特殊召喚する。"
+    cards = [
+        card(OMOI, name_zh="思念聚集之龍", name_ja="想い集いし竜", level=1, race=WARRIOR),
+        card(SAVIOR, name_zh="救世龍 救世龍", name_ja="救世竜 セイヴァー・ドラゴン",
+             name_en="Majestic Dragon", level=1, race=WARRIOR),
+        card(CITY, name_zh="傳說之都 亞特蘭提斯", name_ja="伝説の都 アトランティス", race=WARRIOR),
+        card(TWINKLE, name_zh="新宇宙俠 閃爍苔", name_ja="N・ティンクル・モス", level=1,
+             race=WARRIOR),
+        card(GLOW, name_zh="新宇宙俠 光輝苔", name_ja="Ｎ・グロー・モス", level=1, race=WARRIOR),
+    ]
+    entries = [
+        faq(OMOI, "想い集いし竜",
+            "①：このカードのカード名は、フィールド・墓地に存在する限り"
+            "「救世竜 セイヴァー・ドラゴン」として扱う。\n" + summon),
+        faq(CITY, "伝説の都 アトランティス",
+            "このカード名はルール上「海」として扱う。\n" + summon),
+        faq(TWINKLE, "N・ティンクル・モス",
+            "このカードのカード名は、フィールドに存在する限り「N・グロー・モス」として扱う。\n"
+            + summon),
+        faq(UMI, "海", ""),
+    ]
+    return cards, entries
+
+
+class QueryTreatedNameTest(unittest.TestCase):
+    """卡名包含也比「〜として扱う」當作的卡名:先換成它指的那張卡、用那張卡的四種名字比;
+    對不到卡的比日文字面;不看位置條件(想い集いし竜 只在場上、墓地當作救世竜,從手牌特殊召喚也命中)。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cards, entries = treated_fixture()
+        cls.structures, _ = build_structures(cls.cards, entries, archetypes=[])
+
+    def hits(self, text):
+        result = run_query(self.structures, self.cards,
+                           {"actions": ["特殊召喚"], "condition": name_contains(text)})
+        return set(result["groups"]["全部"])
+
+    def test_treated_name_in_japanese(self):
+        self.assertEqual(self.hits("セイヴァー"), {OMOI})
+
+    def test_treated_card_matches_by_its_chinese_and_english_names(self):
+        self.assertEqual(self.hits("救世龍"), {OMOI})
+        self.assertEqual(self.hits("majestic"), {OMOI})
+
+    def test_treated_name_counts_outside_its_zones(self):
+        """當作的卡名只在場上、墓地,特殊召喚的是手牌的這張卡:照樣命中。"""
+        self.assertIn(OMOI, self.hits("救世%セイヴァー"))
+
+    def test_treated_name_matches_a_card_after_folding_width(self):
+        self.assertEqual(self.hits("光輝苔"), {TWINKLE})
+
+    def test_treated_name_without_a_card_matches_its_japanese_text(self):
+        self.assertEqual(self.hits("海"), {CITY})
+
+    def test_own_names_still_match(self):
+        self.assertEqual(self.hits("思念聚集"), {OMOI})
+        self.assertEqual(self.hits("アトランティス"), {CITY})
+
+
 if __name__ == "__main__":
     unittest.main()

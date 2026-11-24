@@ -177,6 +177,27 @@ class ActionIndexTest(unittest.TestCase):
         self.assertLess(report["gzip_bytes"], report["bytes"])
         self.assertEqual(set(report["timings"]), {"攤平", "候選卡", "編碼"})
 
+    def test_no_treated_names_section_is_empty(self):
+        self.assertEqual(self.index["treated_names"], {})
+
+
+class TreatedNamesTest(unittest.TestCase):
+    """「當作的卡名」一節:每張有當作卡名的卡 → 對到的卡號與對不到卡的日文字面(票 06)。"""
+
+    def test_treated_names_round_trip(self):
+        from test_name_contains_query import (CITY, GLOW, OMOI, SAVIOR, TWINKLE,
+                                              treated_fixture)
+        cards, entries = treated_fixture()
+        structures, _ = build_structures(cards, entries, archetypes=[])
+        text, report = build_action_index(structures, cards,
+                                          [{"id": entry["id"]} for entry in cards], [])
+        self.assertEqual(report["problems"], [])
+        self.assertEqual(decode_action_index(text)["treated_names"],
+                         {OMOI: {"ids": [SAVIOR], "literals": []},
+                          CITY: {"ids": [], "literals": ["海"]},
+                          TWINKLE: {"ids": [GLOW], "literals": []}})
+        self.assertIn("treatedNames", report["section_bytes"])
+
 
 def clause(index, text_ja, section="main"):
     return {"index": index, "section": section, "text_ja": text_ja, "text_zh": f"句{index}"}

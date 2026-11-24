@@ -139,6 +139,7 @@ function actionData(cards, ids, noText, archetypes, options) {
     causes: causes.map(k => [k, causeRows[k] || 0]),
     givenValues: (options && options.given) || GIVEN_VALUES,
     noText: noText || [],
+    treatedNames: (options && options.treated) || [],
     parts,
     archetypes: (archetypes || []).map(a => [a.code, a.zh, setOf(a.members)]),
     sets,

@@ -104,6 +104,7 @@ class ActionIndex:
 
     def __init__(self, cards, structures):
         self.cards = cards
+        self.structures = structures
         self._candidates = CandidateCards(cards, structures)
         self.position = {}
         for i, entry in enumerate(cards):

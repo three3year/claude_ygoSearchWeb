@@ -226,6 +226,7 @@ function prepare(raw, db) {
   const front = (db || []).map(c => [cardAt.get(c.id), c]).filter(([p]) => p !== undefined);
   const archetypes = new Map((raw.archetypes || []).map(([code, , key]) => [code, key]));
   const given = givenTables(raw);
+  const treated = treatedNames(raw, db);
   const index = {
     cardAt,
     sideSlots: raw.format.sideSlots,
@@ -236,6 +237,7 @@ function prepare(raw, db) {
     inSet: (key, p) => setAt(key).has(p),
     archetypes: (raw.archetypes || []).map(([code, zh]) => ({ code, zh: zh || '' })),
     inArchetype: (code, p) => archetypes.has(code) && index.inSet(archetypes.get(code), p),
+    namesOf: card => cardNames(card).concat(treated.get(card.id) || []),
     satisfying(condition) {
       const bits = new Uint8Array((raw.ids.length + 7) >> 3);
       for (const [p, c] of front) {
@@ -272,12 +274,20 @@ const COMPARE = { '=': (a, b) => a === b, '≥': (a, b) => a >= b, '≤': (a, b)
 const foldName = s => String(s).replace(/[\uFF01-\uFF5E]/g,
   ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, ' ').toLowerCase();
 
-/* \u5361\u540d\u5305\u542b:\u6253\u7684\u5b57\u53bb\u982d\u5c3e\u7a7a\u767d\u3001\u6298\u758a\u5f8c\u4ee5 % \u5207\u6bb5\u4e26\u53bb\u6389\u7a7a\u6bb5(\u842c\u7528\u5b57\u5143\u540c\u4e3b\u641c\u5c0b\u7684\u5361\u540d\u6846);
-   \u6c92\u6709\u6bb5\u6642\u7b49\u65bc\u6c92\u7d66\u3002 */
+/* 卡名包含:打的字去頭尾空白、折疊後以 % 切段並去掉空段(萬用字元同主搜尋的卡名框);
+   沒有段時等於沒給。 */
 const nameParts = text => foldName(String(text).trim()).split('%').filter(Boolean);
 
-/* \u5361\u540d\u5305\u542b\u6bd4\u7684\u540d\u5b57:\u4e2d\u6587\u540d\u3001\u65e5\u6587\u540d\u3001\u82f1\u6587\u540d\u3001\u5225\u540d(\u540c Python \u67e5\u8a62\u5074 query_names)\u3002 */
+/* 卡名包含比的名字:中文名、日文名、英文名、別名(同 Python 查詢側 query_names);
+   當作的卡名另由 treatedNames 併進來。 */
 const cardNames = card => [card.n, card.nj, card.ne, card.ax].filter(n => typeof n === 'string');
+
+/* 「〜として扱う」當作的卡名(動作索引的 treatedNames):卡號 → 對到的卡的四種名字與對不到卡的日文字面。 */
+function treatedNames(raw, db) {
+  const byId = new Map((db || []).map(c => [c.id, c]));
+  return new Map((raw.treatedNames || []).map(([id, ids, literals]) => [id,
+    ids.flatMap(t => (byId.has(t) ? cardNames(byId.get(t)) : [])).concat(literals)]));
+}
 
 function nameContains(name, parts) {
   const folded = foldName(name);
@@ -309,7 +319,7 @@ function fitsCondition(index, cond, card, p) {
     case '字段': return cond.setcodes.some(code => index.inArchetype(code, p));
     case '卡名包含': {
       const parts = nameParts(cond.text);
-      return cardNames(card).some(name => nameContains(name, parts));
+      return index.namesOf(card).some(name => nameContains(name, parts));
     }
     default: return false;
   }

@@ -32,6 +32,8 @@
 - `archetypes`:[setcode, 中文名, 集合鍵]…,成員照卡片屬性表(位置條件不設限的列),沒有成員的不寫。
 - `givenValues`:{大類、屬性、種族: [[值域正典的碼, 條件式原子帶的值]…]},給條件換成條件式時用(`given_values`)。
 - `noText`:無官方日文的卡號。
+- `treatedNames`:[卡號, [對到的卡號…], [對不到卡的日文字面…]]…,只列有「〜として扱う」當作卡名的卡
+  (`query_names.treated_names`);網站的卡名包含用它加上前端索引的四種名字。
 """
 import base64
 import gzip
@@ -47,6 +49,7 @@ from attribute_words import ATTRIBUTE_JA, RACE_JA
 from clause_map import NUMBER, POSITION, ClauseMap
 from condition_judge import (CATEGORY_BITS, OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
                              OBJECT_UNSUBSTITUTABLE)
+from query_names import treated_names
 
 # 值域正典住在 script/web(ADR-0008);給條件的值要拿它的碼與位元去接條件式的值。
 _WEB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web")
@@ -100,7 +103,7 @@ def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=
     started = time.perf_counter()
     encoder = _Encoder(index, cards, order, at, ClauseMap(tag_cards, index.texts))
     given, given_problems = given_values(domains)
-    sections, report = encoder.encode(archetypes, given)
+    sections, report = encoder.encode(archetypes, given, treated_names(structures, cards))
     problems.extend(encoder.problems + given_problems)
     text = _serialize(sections)
     timings["編碼"] = time.perf_counter() - started
@@ -210,7 +213,7 @@ class _Encoder:
                 self.problems.append(f"{what}的卡 {cid} 不在前端索引裡")
         return self.add_set(tuple(sorted(positions)))
 
-    def encode(self, archetypes, given):
+    def encode(self, archetypes, given, treated):
         index = self.index
         vocab = {name: _Vocab() for name in
                  ("actions", "zones", "sides", "kinds", "polarities", "blockKinds", "agents",
@@ -269,6 +272,8 @@ class _Encoder:
             ("causes", [[c, vocab["causes"].count[c]] for c in vocab["causes"].items]),
             ("givenValues", given),
             ("noText", [cid for cid, _ in index.no_text]),
+            ("treatedNames", _Lines([[cid, ids, literals]
+                                     for cid, (ids, literals) in sorted(treated.items())])),
             ("parts", parts),
             ("archetypes", _Lines([keyed(row) for row in archetype_rows])),
             ("sets", _Keyed([(key, self.encode_set(p)) for key, p in sets])),
@@ -287,6 +292,7 @@ class _Encoder:
             "references": sum(len(refs) for refs in index.references.values()),
             "part_entries": sum(len(entries) for _, entries in parts),
             "no_text": len(index.no_text),
+            "treated_names": len(treated),
             "cards": len(card_lines),
             "sets": len(sets),
             "list_sets": list_sets,
@@ -505,6 +511,7 @@ def decode_action_index(text):
     """產物文字 → 讀好的動作索引(卡號、值都換回來,候選卡是卡號的 frozenset)。
 
     {"actions": {動作詞: 列數}, "zones": {區域: 列數}, "no_text": [卡號],
+     "treated_names": {卡號: {"ids": [對到的卡號], "literals": [對不到卡的日文字面]}},
      "given": {大類、屬性、種族: {值域正典的碼: 條件式原子帶的值}},
      "archetypes": {setcode: {"name", "members"}},
      "cards": {卡號: {"blocks": [區塊種類], "segments": [段], "unresolved": [...],
@@ -587,6 +594,8 @@ def decode_action_index(text):
             "actions": dict(map(tuple, raw["actions"])),
             "zones": dict(map(tuple, raw["zones"])),
             "no_text": raw["noText"],
+            "treated_names": {cid: {"ids": ids, "literals": literals}
+                              for cid, ids, literals in raw["treatedNames"]},
             "archetypes": {code: {"name": name, "members": sets[key]}
                            for code, name, key in raw["archetypes"]},
             "cards": cards}

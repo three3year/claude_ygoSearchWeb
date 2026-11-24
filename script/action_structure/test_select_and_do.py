@@ -129,12 +129,12 @@ class IgniteBurstTest(unittest.TestCase):
         self.assertEqual(line["count"], {"kind": "算式", "text": "破壊した数だけ",
                                          "placement": "名詞前"})
 
-    def test_return_to_my_hand_does_not_hit(self):
-        """持ち主 靜態判不了,指定我方或對手都不命中。"""
+    def test_return_to_owners_hand_hits_either_side(self):
+        """持ち主 靜態判不了,指定我方或對手都命中(spec Q2)。"""
         for side in ("我方", "對手"):
-            self.assertEqual(hit_segments(self.structures, self.cards, IGNITE_BURST,
-                                          actions=["返回"],
-                                          to_zones=[{"zone": "手牌", "side": side}]), [])
+            self.assertEqual(len(hit_segments(self.structures, self.cards, IGNITE_BURST,
+                                              actions=["返回"],
+                                              to_zones=[{"zone": "手牌", "side": side}])), 1)
 
     def test_add_to_hand_from_extra_deck_face_up(self):
         seg, = hit_segments(self.structures, self.cards, IGNITE_BURST,

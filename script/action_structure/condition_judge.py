@@ -33,6 +33,7 @@ OBJECT_UNDECIDABLE = "判不了"
 OBJECT_UNSUBSTITUTABLE = "代不進去"
 CATEGORY_BITS = {"怪獸": 0x1, "魔法": 0x2, "陷阱": 0x4}
 CARD_IDS = "卡號屬於"
+NAME_CONTAINS = "卡名包含"
 # 卡片子類型 → cards.json type 位元(值域正典 script/web/vocab.py 的怪獸側子類型)。
 SUBTYPE_BITS = {"融合": 0x40, "儀式": 0x80, "同步": 0x2000, "超量": 0x800000,
                 "靈擺": 0x1000000, "連結": 0x4000000, "協調": 0x1000, "通常": 0x10,
@@ -371,7 +372,7 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
                    for have in view.setcodes(from_zones) for want in wants)
     if op == CARD_IDS:
         return view.entry["id"] in condition["ids"]
-    if op in ("卡名", "卡名包含", "記載"):
+    if op in ("卡名", NAME_CONTAINS, "記載"):
         text = name_text(condition, names)
         if text is None:
             return None
@@ -383,6 +384,19 @@ def eval_condition(condition, view, names=None, from_zones=None, binding=None):
             return f"「{folded}」" in view.text
         return any(folded in name for name in view.names(from_zones))
     return None
+
+
+def map_atoms(condition, change):
+    """條件式的每個原子換成 `change(原子)`;回 None 的原子拿掉:「且」「或」的運算元拿光、
+    「非」的運算元被拿掉時,那個「且」「或」「非」也拿掉;整個拿光回 None。"""
+    op = condition["op"]
+    if op in ("且", "或"):
+        args = [arg for arg in (map_atoms(a, change) for a in condition["args"]) if arg is not None]
+        return {**condition, "args": args} if args else None
+    if op == "非":
+        arg = map_atoms(condition["arg"], change)
+        return None if arg is None else {**condition, "arg": arg}
+    return change(condition)
 
 
 def _fits_apart_from_references(condition, view, names, from_zones):

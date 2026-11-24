@@ -355,6 +355,7 @@ class ConditionParityTest(unittest.TestCase):
         structures, cards, archetypes = object_parity_fixture()
         treated_cards, entries = treated_fixture()
         treated, _ = build_structures(treated_cards, entries, archetypes=[])
+        cls.object_ids = {s["id"] for s in structures}
         cls.structures = sorted(structures + treated, key=lambda s: s["id"])
         cls.cards = sorted(({**entry, **OTHER_NAMES.get(entry["id"], {})}
                             for entry in cards + treated_cards), key=lambda entry: entry["id"])
@@ -395,7 +396,7 @@ class ConditionParityTest(unittest.TestCase):
         self.assertTrue(both)
         self.assertTrue(of({"race": "dragon"}, ()) - both)
         self.assertTrue(of({"lvMin": 5}, ()) - both)
-        self.assertEqual(of({"race": "dragon"}), {CHOBHAM})
+        self.assertEqual(of({"race": "dragon"}) & self.object_ids, {CHOBHAM})
         self.assertIn(EMPEROR_PENGUIN, of({"race": "aqua"}))
         for text in ("企鵝士", "penguin SOL", "企鵝兵", "企%兵", "ＰＥＮＧＵＩＮ", "企鵝％兵"):
             self.assertIn(EMPEROR_PENGUIN, of({"name": text}), text)

@@ -365,7 +365,7 @@ GitHub Pages 以**本 repo 根目錄**為來源:根目錄的 `.nojekyll` 擋掉 
 動作搜尋的玩家介面(action-search-web 票 01–17,規格與票券見 `.scratch/action-search-web/`)已完成;
 進階模式(分組與標記、未解析組明細、日文原文、取對象等開關)留給下一輪。
 接著的 action-search-coverage(票 01–07,`.scratch/action-search-coverage/`)讓從、到的方照 Q17 涵蓋、
-卡文沒寫方的照規則補,卡名包含換成卡片編號(中日英名、別名、當作的卡名),Python 與網站一起改。
+卡文沒寫方的照規則補,卡名包含換成卡號(中日英名、別名、當作的卡名),Python 與網站一起改。
 
 查詢狀態不寫進網址,也沒有分享連結(action-search-web 票 01):網址永遠不帶參數,
 每次搜尋在瀏覽紀錄新增一筆、條件與排序存在那一筆裡,上一頁、下一頁、重新整理從那一筆

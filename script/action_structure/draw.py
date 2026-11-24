@@ -170,9 +170,9 @@ def fill_clause(ctx, clause_text):
             f"{state.block['id']}.o{offset}", {"kind": "新建"}, block=state.block["id"],
             condition=category_condition(DRAWN_OBJECT)))
     if g("from"):
-        from_ = position(drawer_deck(parse_from(g("from")), agent_side(seg["agent"])),
-                         "明寫", text=g("from") + "から")
-        state.find(obj_id)["initial_position"] = list(from_["zones"])
+        zones = drawer_deck(parse_from(g("from")), agent_side(seg["agent"]))
+        from_ = position(zones, "明寫", text=g("from") + "から")
+        state.find(obj_id)["initial_position"] = list(zones)
     else:
         from_ = position(inferred_deck(agent_side(seg["agent"])), "推得", inferred=True)
     line = new_line(obj_id, "受事", marker=DRAWN_MARKER if g("object") else None,

@@ -39,8 +39,6 @@ import base64
 import gzip
 import hashlib
 import json
-import os
-import sys
 import time
 
 from action_rows import flatten
@@ -50,12 +48,10 @@ from clause_map import NUMBER, POSITION, ClauseMap
 from condition_judge import (CATEGORY_BITS, OBJECT_CANDIDATES, OBJECT_THIS, OBJECT_UNDECIDABLE,
                              OBJECT_UNSUBSTITUTABLE)
 from query_names import treated_names
+from web_modules import web_module
 
-# 值域正典住在 script/web(ADR-0008);給條件的值要拿它的碼與位元去接條件式的值。
-_WEB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web")
-if _WEB not in sys.path:
-    sys.path.append(_WEB)
-import vocab as web_vocab  # noqa: E402
+# 給條件的值要拿值域正典的碼與位元去接條件式的值。
+web_vocab = web_module("vocab")
 
 GLOBAL = "window.ACTION_DATA="
 DEFAULT_SIZE_LIMIT = 8_000_000      # spec Q12:8 MB
@@ -103,7 +99,7 @@ def build_action_index(structures, cards, frontend_cards, archetypes, tag_cards=
     started = time.perf_counter()
     encoder = _Encoder(index, cards, order, at, ClauseMap(tag_cards, index.texts))
     given, given_problems = given_values(domains)
-    sections, report = encoder.encode(archetypes, given, treated_names(structures, cards))
+    sections, report = encoder.encode(archetypes, given, treated_names(cards, structures))
     problems.extend(encoder.problems + given_problems)
     text = _serialize(sections)
     timings["編碼"] = time.perf_counter() - started

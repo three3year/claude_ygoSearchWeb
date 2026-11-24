@@ -223,12 +223,14 @@ class BlockState:
         return None
 
     def current_position(self, obj_id):
-        """物件目前位置:動過就是最後的「到」,沒動過就是初始位置;都沒有回 None。"""
+        """物件目前位置:動過就是最後的「到」,沒動過就是初始位置;都沒有回 None。
+        區域是複本:繼承的線、物件各自擁有自己的區域,建置事後補方才能就地改。"""
         if obj_id in self.positions:
-            return self.positions[obj_id]
+            current = self.positions[obj_id]
+            return {**current, "zones": [dict(z) for z in current["zones"]]}
         obj = self.find(obj_id)
         if obj and obj["initial_position"]:
-            return {"zones": list(obj["initial_position"]), "inferred": False}
+            return {"zones": [dict(z) for z in obj["initial_position"]], "inferred": False}
         return None
 
     def recent_of(self, head, among=None, action=None, restated=()):

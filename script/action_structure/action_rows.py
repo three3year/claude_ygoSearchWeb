@@ -6,6 +6,7 @@ from condition_judge import (OBJECT_CANDIDATES, OBJECT_UNDECIDABLE, is_generic, 
                              same_different_undecidable)
 from condition_atoms import referenced_objects
 from effect_reference import is_reference, iter_reference_sites, selected_blocks
+from query_names import CardNames
 from structure_shape import iter_nodes, iter_segments, zone_names
 from synonyms import PREDICATE_STEMS, STEM_FALSE_FRIENDS, action_ancestors
 
@@ -104,7 +105,7 @@ class ActionIndex:
 
     def __init__(self, cards, structures):
         self.cards = cards
-        self.structures = structures
+        self.card_names = CardNames(cards, structures)
         self._candidates = CandidateCards(cards, structures)
         self.position = {}
         for i, entry in enumerate(cards):

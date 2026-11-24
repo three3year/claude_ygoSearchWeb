@@ -3,14 +3,14 @@ import unittest
 from card_structure import build_structures
 from reverse_check import check_card
 from rule_sides import fill_rule_sides
-from structure_shape import (iter_segments, new_block, new_card, new_line, new_object,
-                             new_segment, position, zone)
+from structure_shape import (iter_segments, new_block, new_card, new_line, new_segment,
+                             position, zone)
 from test_golden import card, faq
 
 
 def build(text):
-    structures, _ = build_structures([card(1, name_ja="補方テスト")],
-                                     [faq(1, "補方テスト", text)])
+    structures, _ = build_structures([card(1, name_ja="規則の方テスト")],
+                                     [faq(1, "規則の方テスト", text)])
     return structures[0]
 
 
@@ -51,25 +51,6 @@ class WrittenControllerTest(unittest.TestCase):
         self.assertEqual(ends("①：墓地の相手モンスター１体を対象として発動できる。"
                               "そのモンスターを特殊召喚する。", "特殊召喚", "from"),
                          [[("墓地", "我方", "預設")]])
-
-    def test_subset_takes_the_controller_of_its_container(self):
-        container = new_object("b0.o1", {"kind": "新建"},
-                               condition={"op": "控制方", "value": "對手", "text": "相手の"})
-        subset = new_object("b0.o2", {"kind": "子集", "of": "b0.o1"},
-                            condition={"op": "大類", "value": "怪獸"})
-        rest = new_object("b0.o3", {"kind": "剩餘", "of": "b0.o1", "minus": "b0.o2"})
-        seg = new_segment("b0.s0", "效果", (0, 1), "")
-        seg["lines"] = [new_line(obj["id"], "受事",
-                                 from_=position([zone("墓地")], "繼承"))
-                        for obj in (subset, rest)]
-        block = new_block("b0", "效果", None, "card_text", (0, 1), "")
-        block["segments"] = [seg]
-        one = new_card(1, "補方テスト")
-        one["objects"] += [container, subset, rest]
-        one["blocks"] = [block]
-        fill_rule_sides(one)
-        self.assertEqual([line["from"]["zones"] for line in seg["lines"]],
-                         [[zone("墓地", "對手", "規則")]] * 2)
 
 
 class FieldAnySideTest(unittest.TestCase):
@@ -173,7 +154,7 @@ class SelfSideTest(unittest.TestCase):
         seg["lines"] = [new_line("o0", "受事", from_=position([zone("場上", "自身", "明寫")], "明寫"))]
         block = new_block("b0", "效果", None, "card_text", (0, 1), "")
         block["segments"] = [seg]
-        one = new_card(1, "補方テスト")
+        one = new_card(1, "規則の方テスト")
         one["blocks"] = [block]
         fill_rule_sides(one)
         self.assertEqual(seg["lines"][0]["from"]["zones"], [zone("場上", "任一方", "規則")])

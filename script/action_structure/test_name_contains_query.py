@@ -83,6 +83,23 @@ class QueryNameContainsTest(unittest.TestCase):
         monster = {"op": "大類", "value": "怪獸"}
         self.assertTrue(self.hits({"op": "且", "args": [monster, name_contains(" ")]}))
 
+    def test_blank_name_inside_or_and_not_is_dropped(self):
+        spell = {"op": "大類", "value": "魔法"}
+        monster = {"op": "大類", "value": "怪獸"}
+        self.assertFalse(self.hits({"op": "或", "args": [spell, name_contains("%")]}))
+        self.assertTrue(self.hits({"op": "且", "args": [
+            monster, {"op": "非", "arg": name_contains(" ")}]}))
+        blank_or = {"op": "或", "args": [name_contains(""),
+                                         {"op": "非", "arg": name_contains("％")}]}
+        self.assertTrue(self.hits({"op": "且", "args": [monster, blank_or]}))
+        plain = run_query(self.structures, self.cards, {"actions": ["傷害"]})
+        for condition in ({"op": "或", "args": [name_contains("%")]},
+                          {"op": "非", "arg": name_contains(" ")},
+                          {"op": "且", "args": [{"op": "或", "args": [
+                              {"op": "非", "arg": name_contains("")}]}]}):
+            with self.subTest(condition=condition):
+                self.assertEqual(self.query(condition, ["傷害"]), plain)
+
 
 OMOI = 20000061
 SAVIOR = 20000062
@@ -90,19 +107,17 @@ CITY = 20000063
 TWINKLE = 20000064
 GLOW = 20000065
 UMI = 20000066
-WARRIOR = 0x1
 
 
 def treated_fixture():
     summon = "①：このカードを手札から特殊召喚する。"
     cards = [
-        card(OMOI, name_zh="思念聚集之龍", name_ja="想い集いし竜", level=1, race=WARRIOR),
+        card(OMOI, name_zh="思念聚集之龍", name_ja="想い集いし竜", level=1),
         card(SAVIOR, name_zh="救世龍 救世龍", name_ja="救世竜 セイヴァー・ドラゴン",
-             name_en="Majestic Dragon", level=1, race=WARRIOR),
-        card(CITY, name_zh="傳說之都 亞特蘭提斯", name_ja="伝説の都 アトランティス", race=WARRIOR),
-        card(TWINKLE, name_zh="新宇宙俠 閃爍苔", name_ja="N・ティンクル・モス", level=1,
-             race=WARRIOR),
-        card(GLOW, name_zh="新宇宙俠 光輝苔", name_ja="Ｎ・グロー・モス", level=1, race=WARRIOR),
+             name_en="Majestic Dragon", level=1),
+        card(CITY, name_zh="傳說之都 亞特蘭提斯", name_ja="伝説の都 アトランティス"),
+        card(TWINKLE, name_zh="新宇宙俠 閃爍苔", name_ja="N・ティンクル・モス", level=1),
+        card(GLOW, name_zh="新宇宙俠 光輝苔", name_ja="Ｎ・グロー・モス", level=1),
     ]
     entries = [
         faq(OMOI, "想い集いし竜",

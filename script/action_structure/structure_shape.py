@@ -148,8 +148,9 @@ def position(zones, source, inferred=False, text=None, form=None):
     `form` 是到的放置形式 `placement_form(...)`,沒有任何一槽時是 None。
     明寫的「到」寫在物件前(自分フィールドにXが特殊召喚された)時另帶 `placement`: 名詞前(票 05);
     明寫的「從」寫在物件後(XをデッキからYに加える)時另帶 `placement`: 述語前(票 07),
-    模板據此放回原位;寫在物件前(預設)不帶。"""
-    return {"zones": list(zones), "source": source, "inferred": inferred,
+    模板據此放回原位;寫在物件前(預設)不帶。
+    區域是複本:同一個短語的幾條線、物件的初始位置各自擁有自己的區域,建置事後補方才能就地改。"""
+    return {"zones": [dict(z) for z in zones], "source": source, "inferred": inferred,
             "text": text, "form": form}
 
 

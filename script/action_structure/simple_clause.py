@@ -82,7 +82,7 @@ from synonyms import (ACTION_PAST, ATTACK_PREFIX_PATTERN, LEAVE_VERB, ONLY_MARKE
                       action_ancestors, attack_times, is_summon, merged_voice,
                       parse_material_predicates, parse_predicates, predicate_move_summon_cut)
 from zone_phrase import (FROM_PARTICLES, SIDE_TEXT, SIDE_WORDS, ZONE_PHRASE, ZONE_PHRASE_RE,
-                         parse_from, render_zone_text)
+                         literal_matches, parse_from, render_zone_text, without_rule_sides)
 
 
 # 受方可以是物件的回指(「この効果で特殊召喚したモンスターに装備できる」),或裝備段的此卡
@@ -641,7 +641,8 @@ def render_from(lines, predicate_from=None):
                if line["from"] and line["from"]["source"] == "明寫" and not _is_zone_object(line)]
     if not written:
         return "", "名詞前"
-    if len(written) != len(lines) or any(w != written[0] for w in written):
+    literals = [without_rule_sides(w) for w in written]
+    if len(written) != len(lines) or any(w != literals[0] for w in literals):
         raise NoTemplate("對象線的從不一致")
     return render_zone_text(written[0], "から"), written[0].get("placement") or "名詞前"
 
@@ -656,7 +657,7 @@ def _render_zone_object(line, obj):
     pos = line["from"]
     if (obj["source"]["kind"] != "新建" or obj["condition"] != {"op": "大類", "value": "卡"}
             or obj["count"] or obj["unparsed"] or line["ref"] or pos["source"] != "明寫"
-            or not pos.get("text") or parse_from(pos["text"]) != pos["zones"]):
+            or not pos.get("text") or not literal_matches(pos["text"], pos["zones"])):
         raise NoTemplate("區域當物件無模板")
     return pos["text"]
 
@@ -680,7 +681,8 @@ def _render_to(lines, predicate_to):
         if form and predicate_to:
             raise NoTemplate("到的形式無模板")
         return form, "", "述語前", display
-    if len(written) != len(lines) or any(w != written[0] for w in written):
+    literals = [without_rule_sides(w) for w in written]
+    if len(written) != len(lines) or any(w != literals[0] for w in literals):
         raise NoTemplate("對象線的到不一致")
     return (form, render_zone_text(written[0], "に"),
             written[0].get("placement") or "述語前", display)

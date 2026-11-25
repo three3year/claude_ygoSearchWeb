@@ -22,7 +22,7 @@ Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `read
 
 ### implement-spec
 
-工作樹要複製 `data/sources/`、票分支不 commit 建置產物,見 `docs/agents/implement-spec.md`。
+工作樹要複製 `data/sources/`、票分支不 commit 建置產物、收尾清 scratchpad 大檔,見 `docs/agents/implement-spec.md`。
 
 ### Domain docs
 

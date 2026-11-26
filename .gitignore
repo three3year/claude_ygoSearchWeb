@@ -6,3 +6,6 @@ data/sources/
 
 # implement-spec 的子代理工作樹(整合分支 frame-args-v4)
 .worktrees/
+
+# 瀏覽器自動驗收的截圖(每次重跑重產)
+.scratch/*/browser-acceptance/shots/
